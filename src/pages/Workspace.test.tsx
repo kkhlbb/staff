@@ -688,7 +688,7 @@ function installBackupDownloadMock(): BackupDownloadMock {
 }
 
 describe('Workspace：保存失败时的备份导出', () => {
-  it('草稿有效时导出当前有效链，草稿无效时导出上次有效版本，并提示不含未通过校验的修改', async () => {
+  it('草稿有效时导出当前有效链，草稿无效时导出最后一次有效链，并提示不含未通过校验的修改', async () => {
     const user = userEvent.setup()
     const backupMock = installBackupDownloadMock()
     const saveMock = vi.fn(
@@ -730,7 +730,8 @@ describe('Workspace：保存失败时的备份导出', () => {
       )
       expect(validH?.upperDeviationQ).toBe(300)
 
-      // 草稿无效时回退到上一次成功保存的案例 A。
+      // 草稿无效时导出内存中最后一次有效链（保存失败后改过的 H 上偏差 0.0300），
+      // 而不是更早成功保存的案例 A。
       fireEvent.change(screen.getByRole('textbox', { name: 'H 基本尺寸' }), {
         target: { value: '' },
       })
@@ -744,7 +745,7 @@ describe('Workspace：保存失败时的备份导出', () => {
         (term) => term.symbol === 'H',
       )
       expect(fallbackH?.nominalQ).toBe(1_000_000)
-      expect(fallbackH?.upperDeviationQ).toBe(1000)
+      expect(fallbackH?.upperDeviationQ).toBe(300)
     } finally {
       backupMock.restore()
     }

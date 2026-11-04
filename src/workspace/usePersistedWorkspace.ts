@@ -230,7 +230,7 @@ export function usePersistedWorkspace(
   options: PersistedWorkspaceOptions = {},
 ): UsePersistedWorkspaceResult {
   const workspace = useWorkspace(initialDraft, options.initialValidChain)
-  const { draft, dispatch, chain } = workspace
+  const { draft, dispatch, chain, lastValidChain } = workspace
   const debounceMs = options.debounceMs ?? AUTO_SAVE_DEBOUNCE_MS
   const saveRef = useRef<SaveDraftFn | null>(options.saveDraft ?? null)
   const generationRef = useRef(0)
@@ -362,13 +362,12 @@ export function usePersistedWorkspace(
   }, [baseline, dispatch, project.id])
 
   const exportBackup = useCallback(() => {
-    // 当前草稿有效时导出当前有效链；无效时回退到上一次成功保存的有效版本。
-    const projectForExport: Project =
-      chain === null
-        ? { ...lastSavedProject, baseline }
-        : { ...lastSavedProject, working: chain, baseline }
+    // 当前草稿有效时导出当前有效链；无效时导出内存中最后一次有效链
+    // （保存失败期间它可能比 lastSavedProject.working 更新），都没有才回退到已保存版本。
+    const working = chain ?? lastValidChain ?? lastSavedProject.working
+    const projectForExport: Project = { ...lastSavedProject, working, baseline }
     downloadProjectBackup(projectForExport)
-  }, [baseline, chain, lastSavedProject])
+  }, [baseline, chain, lastValidChain, lastSavedProject])
 
   return {
     ...workspace,
