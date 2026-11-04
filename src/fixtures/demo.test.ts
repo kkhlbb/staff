@@ -12,7 +12,10 @@ describe('演示案例 fixture', () => {
   })
 
   it('案例 A 经 calculateChain 得到文档期望的 C₀、Cmin、Cmax、EIc、ESc、Tc、裕量与判定', () => {
-    const result = calculateChain(createDemoChain('A'))
+    const result = calculateChain({
+      ...createDemoChain('A'),
+      relationConfirmed: true,
+    })
 
     expect(result.nominalQ).toBe(parseMm('0.2000'))
     expect(result.minQ).toBe(parseMm('0.1500'))
@@ -26,7 +29,10 @@ describe('演示案例 fixture', () => {
   })
 
   it('案例 B 经 calculateChain 得到修改后方案的期望值，并判定满足', () => {
-    const result = calculateChain(createDemoChain('B'))
+    const result = calculateChain({
+      ...createDemoChain('B'),
+      relationConfirmed: true,
+    })
 
     expect(result.nominalQ).toBe(parseMm('0.2000'))
     expect(result.minQ).toBe(parseMm('0.1800'))
@@ -40,7 +46,10 @@ describe('演示案例 fixture', () => {
   })
 
   it('案例 C 经 calculateChain 得到负间隙结果，目标边界相等时判定满足', () => {
-    const result = calculateChain(createDemoChain('C'))
+    const result = calculateChain({
+      ...createDemoChain('C'),
+      relationConfirmed: true,
+    })
 
     expect(result.nominalQ).toBe(parseMm('-0.0500'))
     expect(result.minQ).toBe(parseMm('-0.2000'))

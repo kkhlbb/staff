@@ -542,7 +542,7 @@ describe('ProjectList：内置演示案例', () => {
     }
   })
 
-  it('打开演示案例后进入工作台并显示案例 A 的计算结果', async () => {
+  it('打开演示案例后进入工作台，确认关系后才显示案例 A 的正式判定', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -552,7 +552,50 @@ describe('ProjectList：内置演示案例', () => {
 
     await screen.findByRole('button', { name: '增加行' })
     expect(screen.getByText(/演示案例 A：不满足目标的轴向间隙/)).toBeInTheDocument()
-    expect(resultStatus()).toBe('不满足')
+    expect(resultStatus()).toBe('待确认（预览）')
     expect(screen.getByTestId('result-max')).toHaveTextContent('0.3900')
+
+    await user.click(
+      screen.getByRole('checkbox', { name: '已核对尺寸关系与作用方向' }),
+    )
+    expect(resultStatus()).toBe('不满足')
+    await waitForAutoSave()
+
+    await user.click(screen.getByRole('button', { name: '返回项目列表' }))
+    await screen.findByRole('list', { name: '项目列表' })
+  })
+
+  it('分别打开演示案例 A/B/C，均先显示待确认，勾选关系确认后才显示正式判定', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await screen.findByText(/还没有项目/)
+
+    const cases: Array<{ id: DemoCaseId; name: RegExp; status: string }> = [
+      { id: 'A', name: /演示案例 A：不满足目标的轴向间隙/, status: '不满足' },
+      { id: 'B', name: /演示案例 B：修改后的满足方案/, status: '满足' },
+      { id: 'C', name: /演示案例 C：负间隙和边界/, status: '满足' },
+    ]
+
+    for (const item of cases) {
+      await user.selectOptions(screen.getByLabelText('演示案例'), item.id)
+      await user.click(screen.getByRole('button', { name: '打开演示案例' }))
+
+      await screen.findByRole('button', { name: '增加行' })
+      expect(screen.getByText(item.name)).toBeInTheDocument()
+      const confirmed = screen.getByRole('checkbox', {
+        name: '已核对尺寸关系与作用方向',
+      })
+      expect(confirmed).not.toBeChecked()
+      expect(resultStatus()).toBe('待确认（预览）')
+
+      await user.click(confirmed)
+      expect(confirmed).toBeChecked()
+      expect(resultStatus()).toBe(item.status)
+      await waitForAutoSave()
+
+      await user.click(screen.getByRole('button', { name: '返回项目列表' }))
+      await screen.findByRole('list', { name: '项目列表' })
+    }
   })
 })
