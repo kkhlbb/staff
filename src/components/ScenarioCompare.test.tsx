@@ -127,6 +127,57 @@ describe('ScenarioCompare：文档第 8 节案例 A → B', () => {
     expect(screen.queryByRole('table')).toBeNull()
   })
 
+  it('字段变化表第一列显示代号而不是内部 termId，代号缺失时回退 termId', () => {
+    const baseline = caseA()
+    baseline.terms = baseline.terms.map((term) =>
+      term.symbol === 'H'
+        ? { ...term, id: 'internal-h', symbol: 'H' }
+        : term.symbol === 'S'
+          ? { ...term, id: 'internal-s', symbol: 'S' }
+          : term.symbol === 'B2'
+            ? { ...term, id: 'internal-b2', symbol: '' }
+            : term,
+    )
+    const working: ChainDefinition = {
+      ...baseline,
+      terms: baseline.terms.map((term) => {
+        if (term.id === 'internal-h') {
+          return { ...term, upperDeviationQ: mm('0.0300') }
+        }
+        if (term.id === 'internal-s') {
+          return { ...term, upperDeviationQ: mm('0.0200') }
+        }
+        if (term.id === 'internal-b2') {
+          return { ...term, upperDeviationQ: mm('-0.0100') }
+        }
+        return term
+      }),
+    }
+
+    render(<ScenarioCompare baseline={baseline} working={working} />)
+
+    const fieldTable = screen.getByRole('table', { name: '字段变化对比' })
+    const hRow = within(fieldTable).getByTestId(
+      'compare-change-internal-h-upperDeviationQ',
+    )
+    expect(within(hRow).getByRole('rowheader')).toHaveTextContent('H')
+    expect(within(hRow).getByRole('rowheader')).not.toHaveTextContent(
+      'internal-h',
+    )
+
+    const sRow = within(fieldTable).getByTestId(
+      'compare-change-internal-s-upperDeviationQ',
+    )
+    expect(within(sRow).getByRole('rowheader')).toHaveTextContent('S')
+
+    const fallbackRow = within(fieldTable).getByTestId(
+      'compare-change-internal-b2-upperDeviationQ',
+    )
+    expect(within(fallbackRow).getByRole('rowheader')).toHaveTextContent(
+      'internal-b2',
+    )
+  })
+
   it('没有目标区间时，裕量变化显示为 —', () => {
     const withoutTarget: ChainDefinition = { ...caseA(), target: null }
     render(

@@ -1,7 +1,72 @@
+import { useEffect, useState } from 'react'
+import { ProjectList } from './pages/ProjectList'
 import { Workspace } from './pages/Workspace'
 
+type Route = { page: 'projects' } | { page: 'workspace'; projectId: string }
+
+const PROJECTS_HASH = '#/projects'
+
+function parseRoute(hash: string): Route {
+  const match = /^#\/(?:projects|workspace)\/(.+)$/.exec(hash)
+  if (match === null) {
+    return { page: 'projects' }
+  }
+  try {
+    return { page: 'workspace', projectId: decodeURIComponent(match[1]) }
+  } catch {
+    return { page: 'projects' }
+  }
+}
+
+function workspaceHash(projectId: string): string {
+  return `${PROJECTS_HASH}/${encodeURIComponent(projectId)}`
+}
+
+/**
+ * 不引入第三方路由库：项目列表与工作台通过 location.hash 切换，
+ * 同时保留浏览器前进/后退能力。
+ */
 function App() {
-  return <Workspace />
+  const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash))
+
+  useEffect(() => {
+    const syncRoute = (): void => {
+      setRoute(parseRoute(window.location.hash))
+    }
+    window.addEventListener('hashchange', syncRoute)
+    window.addEventListener('popstate', syncRoute)
+    return () => {
+      window.removeEventListener('hashchange', syncRoute)
+      window.removeEventListener('popstate', syncRoute)
+    }
+  }, [])
+
+  const openProject = (projectId: string): void => {
+    const nextHash = workspaceHash(projectId)
+    if (window.location.hash !== nextHash) {
+      window.history.pushState(null, '', nextHash)
+    }
+    setRoute({ page: 'workspace', projectId })
+  }
+
+  const backToProjects = (): void => {
+    if (window.location.hash !== PROJECTS_HASH) {
+      window.history.pushState(null, '', PROJECTS_HASH)
+    }
+    setRoute({ page: 'projects' })
+  }
+
+  if (route.page === 'workspace') {
+    return (
+      <Workspace
+        key={route.projectId}
+        projectId={route.projectId}
+        onBackToList={backToProjects}
+      />
+    )
+  }
+
+  return <ProjectList onOpenProject={openProject} />
 }
 
 export default App

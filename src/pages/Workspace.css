@@ -40,8 +40,24 @@
 .workspace__header-meta {
   display: flex;
   flex: none;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.workspace__nav-button,
+.workspace__export-button {
+  white-space: nowrap;
+}
+
+.workspace__nav-button {
+  color: var(--muted);
+}
+
+.workspace__export-button {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .workspace__save {
@@ -117,9 +133,20 @@
 }
 
 .workspace__loading {
-  margin: 48px auto;
+  margin: 48px auto 12px;
   color: var(--muted);
   text-align: center;
+}
+
+.workspace__loading-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.workspace__load-error-actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
 }
 
 .workspace__grid {

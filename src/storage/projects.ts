@@ -1,5 +1,11 @@
 import { calculateChain, ENGINE_VERSION } from '../domain/calculate'
-import { Q_PER_MM, type ChainDefinition, type ChainResult, type Project } from '../domain/types'
+import {
+  Q_PER_MM,
+  type ChainDefinition,
+  type ChainResult,
+  type DimensionTerm,
+  type Project,
+} from '../domain/types'
 import { validateChain, type ValidationError } from '../domain/validation'
 import { draftToChain, type CellErrors, type WorkspaceDraft } from '../workspace/draft'
 
@@ -127,6 +133,41 @@ function toStorageIssues(
 }
 
 /**
+ * 给 0 项尺寸链做非数量字段校验时使用的占位环。
+ *
+ * validateChain 要求 2–20 项，但空项目的工作方案必须能导出再导入。导入路径
+ * 对 0 项只放宽“数量”这一条规则：借用两个合法占位环让领域校验继续检查
+ * target、assumptions、relationConfirmed 等其余字段，最后丢弃占位环。
+ */
+const EMPTY_CHAIN_PLACEHOLDER_TERMS: DimensionTerm[] = [
+  {
+    id: '__empty_chain_check_a__',
+    symbol: '__empty_chain_check_a__',
+    name: '__empty_chain_check_a__',
+    nominalQ: 1,
+    lowerDeviationQ: 0,
+    upperDeviationQ: 0,
+    sign: 1,
+    sourceNote: '',
+  },
+  {
+    id: '__empty_chain_check_b__',
+    symbol: '__empty_chain_check_b__',
+    name: '__empty_chain_check_b__',
+    nominalQ: 1,
+    lowerDeviationQ: 0,
+    upperDeviationQ: 0,
+    sign: -1,
+    sourceNote: '',
+  },
+]
+
+interface ValidateChainFieldOptions {
+  /** 仅 storage 导入工作方案的 0 项项目使用；1 项和 21 项仍走常规拒收。 */
+  allowEmptyTerms?: boolean
+}
+
+/**
  * 调用唯一的领域校验入口，并把结构化错误加上路径前缀。
  * 额外检查一次组成环上限，保证 >20 项有独立的 too_many_terms 错误码。
  */
@@ -134,7 +175,14 @@ function validateChainField(
   input: unknown,
   prefix: (string | number)[],
   issues: StorageIssue[],
+  options: ValidateChainFieldOptions = {},
 ): ChainDefinition | null {
+  const isEmptyChain =
+    options.allowEmptyTerms === true &&
+    isRecord(input) &&
+    Array.isArray(input.terms) &&
+    input.terms.length === 0
+
   if (
     isRecord(input) &&
     Array.isArray(input.terms) &&
@@ -147,10 +195,18 @@ function validateChainField(
     })
   }
 
-  const validation = validateChain(input)
+  // 0 项空项目：数量规则单独放宽，其余字段仍交给 validateChain 校验。
+  const validation = validateChain(
+    isEmptyChain
+      ? { ...input, terms: EMPTY_CHAIN_PLACEHOLDER_TERMS }
+      : input,
+  )
   if (!validation.ok) {
     issues.push(...toStorageIssues(validation.errors, prefix))
     return null
+  }
+  if (isEmptyChain) {
+    return { ...validation.value, terms: [] }
   }
   return validation.value
 }
@@ -294,7 +350,9 @@ function parseImportedProject(input: unknown): StorageResult<ParsedProjectJson> 
   const createdAt = readDateField(input.createdAt, ['createdAt'], issues)
   const updatedAt = readDateField(input.updatedAt, ['updatedAt'], issues)
 
-  const working = validateChainField(input.working, ['working'], issues)
+  const working = validateChainField(input.working, ['working'], issues, {
+    allowEmptyTerms: true,
+  })
 
   let baseline: Project['baseline'] = null
   if (input.baseline !== undefined && input.baseline !== null) {

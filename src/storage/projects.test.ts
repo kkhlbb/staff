@@ -14,6 +14,7 @@ import {
   MAX_CHAIN_TERMS,
   MAX_IMPORT_BYTES,
   PROJECT_DB_NAME,
+  createEmptyProject,
   createProject,
   deleteProject,
   exportProjectJson,
@@ -334,6 +335,37 @@ describe('项目 JSON 导出导入', () => {
     expect(all.map((item) => item.id).sort()).toEqual(
       [created.id, imported.project.id].sort(),
     )
+  })
+
+  it('0 项空项目导出再导入成功，作为未完成项目保留且原项目不变', async () => {
+    const empty = expectOk(await createEmptyProject('空项目'))
+    const json = exportProjectJson(empty)
+
+    const imported = expectOk(await importProjectJson(json))
+    expect(imported.project.working.terms).toEqual([])
+    expect(imported.project.name).toBe('空项目')
+    expect(imported.result).toEqual(calculateChain(empty.working))
+    expect(imported.idChanged).toBe(true)
+    expect(imported.project.id).not.toBe(empty.id)
+    expect(expectOk(await getProject(empty.id))).toEqual(empty)
+    expect(expectOk(await listProjects())).toHaveLength(2)
+  })
+
+  it('1 项工作链仍拒收，已有项目保持不变', async () => {
+    const existing = await seedProject()
+    const before = expectOk(await listProjects())
+    const json = mutateJson(exportProjectJson(existing), (raw) => {
+      const terms = asRecord(raw.working).terms as Record<string, unknown>[]
+      asRecord(raw.working).terms = [terms[0]]
+    })
+
+    const result = await importProjectJson(json)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.details.map((item) => item.code)).toContain('terms_count')
+    }
+    expect(expectOk(await listProjects())).toEqual(before)
+    expect(expectOk(await getProject(existing.id))).toEqual(existing)
   })
 
   it('文件中的结果字段一律忽略，导入后必须重新计算', async () => {

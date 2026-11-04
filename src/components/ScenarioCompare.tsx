@@ -108,6 +108,25 @@ export function ScenarioCompare({ baseline, working }: ScenarioCompareProps) {
     [baseline, working],
   )
 
+  // 字段变化行以用户熟悉的代号展示；termId 只是内部标识。
+  // 当前工作方案优先，找不到时回退基线，再找不到才显示 termId。
+  const symbolByTermId = useMemo(() => {
+    const symbols = new Map<string, string>()
+    for (const term of baseline.terms) {
+      const symbol = term.symbol.trim()
+      if (symbol !== '') {
+        symbols.set(term.id, symbol)
+      }
+    }
+    for (const term of working.terms) {
+      const symbol = term.symbol.trim()
+      if (symbol !== '') {
+        symbols.set(term.id, symbol)
+      }
+    }
+    return symbols
+  }, [baseline, working])
+
   if (!hasAnyChange(diff)) {
     return (
       <div className="scenario-compare" data-testid="scenario-compare">
@@ -141,7 +160,9 @@ export function ScenarioCompare({ baseline, working }: ScenarioCompareProps) {
                   key={`${change.termId}-${change.field}`}
                   data-testid={`compare-change-${change.termId}-${change.field}`}
                 >
-                  <th scope="row">{change.termId}</th>
+                  <th scope="row">
+                    {symbolByTermId.get(change.termId) ?? change.termId}
+                  </th>
                   <td>{TERM_FIELD_LABEL[change.field]}</td>
                   <td>{formatFieldValue(change, 'before')}</td>
                   <td>{formatFieldValue(change, 'after')}</td>

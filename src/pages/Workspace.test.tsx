@@ -8,7 +8,10 @@ import type {
   SaveDraftResult,
   StorageResult,
 } from '../storage/projects'
-import { saveDraft as persistDraft } from '../storage/projects'
+import {
+  createEmptyProject,
+  saveDraft as persistDraft,
+} from '../storage/projects'
 import { deleteProjectDatabase } from '../test/projectDb'
 import type { WorkspaceDraft } from '../workspace/draft'
 import { Workspace } from './Workspace'
@@ -311,6 +314,55 @@ async function waitForAutoSave(): Promise<void> {
   await screen.findByText('保存中')
   await screen.findByText('已保存', undefined, { timeout: 3000 })
 }
+
+describe('Workspace：按 projectId 打开与返回列表', () => {
+  it('指定 projectId 时打开该项目，并可点击返回项目列表', async () => {
+    const first = await createEmptyProject('项目一')
+    expect(first.ok).toBe(true)
+    if (!first.ok) {
+      return
+    }
+    const second = await createEmptyProject('项目二')
+    expect(second.ok).toBe(true)
+    if (!second.ok) {
+      return
+    }
+
+    const onBackToList = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <Workspace
+        projectId={first.value.id}
+        onBackToList={onBackToList}
+      />,
+    )
+
+    await screen.findByRole('button', { name: '增加行' })
+    expect(screen.getByText(/项目：项目一/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: '导出 JSON' }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: '返回项目列表' }),
+    )
+    expect(onBackToList).toHaveBeenCalledTimes(1)
+  })
+
+  it('指定不存在的 projectId 时显示错误，而不是打开其它项目', async () => {
+    await createEmptyProject('项目一')
+    render(
+      <Workspace projectId="missing-project" onBackToList={() => undefined} />,
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '项目不存在：missing-project',
+    )
+    expect(
+      screen.queryByRole('button', { name: '增加行' }),
+    ).toBeNull()
+  })
+})
 
 describe('Workspace：自动保存与刷新恢复', () => {
   it('建立案例 A 后卸载并重新挂载，输入、确认状态和结果一致', async () => {

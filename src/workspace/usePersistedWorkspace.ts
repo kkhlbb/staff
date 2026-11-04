@@ -5,6 +5,7 @@ import {
   createEmptyProject,
   exportProjectJson,
   getDraft,
+  getProject,
   listProjects,
   saveDraft as persistDraft,
   updateProject,
@@ -67,14 +68,14 @@ function emptyBootstrapError(): StorageError {
 
 /**
  * 打开工作台的引导流程：
- * 1. 读取本地项目，没有项目时创建一个空白项目（不建设项目列表页）；
- * 2. 有项目时使用 updatedAt 最新的那个（listProjects 已按该顺序排序）；
- * 3. 读取该项目草稿；没有草稿时从最后一个有效方案还原输入。
+ * 1. 指定 projectId 时只打开该项目；未指定时读取本地项目，没有项目时创建一个
+ *    空白项目，有项目时使用 updatedAt 最新的那个（listProjects 已按该顺序排序）；
+ * 2. 读取该项目草稿；没有草稿时从最后一个有效方案还原输入。
  *
  * 只有全部读取完成后才返回 ready。页面在 ready 之前只渲染加载状态，
  * 不会先渲染空项目再被恢复的数据覆盖。
  */
-export function useWorkspaceBootstrap(): WorkspaceBootstrap {
+export function useWorkspaceBootstrap(projectId?: string): WorkspaceBootstrap {
   const [reloadToken, setReloadToken] = useState(0)
   const [state, setState] = useState<BootstrapState>({ status: 'loading' })
 
@@ -87,28 +88,52 @@ export function useWorkspaceBootstrap(): WorkspaceBootstrap {
     let cancelled = false
 
     const load = async (): Promise<void> => {
-      const listed = await listProjects()
-      if (cancelled) {
-        return
-      }
-      if (!listed.ok) {
-        setState({ status: 'error', error: listed.error })
-        return
-      }
-
       let project: Project
-      if (listed.value.length === 0) {
-        const created = await createEmptyProject()
+
+      if (projectId !== undefined) {
+        const loaded = await getProject(projectId)
         if (cancelled) {
           return
         }
-        if (!created.ok) {
-          setState({ status: 'error', error: created.error })
+        if (!loaded.ok) {
+          setState({ status: 'error', error: loaded.error })
           return
         }
-        project = created.value
+        if (loaded.value === null) {
+          setState({
+            status: 'error',
+            error: {
+              code: 'not_found',
+              message: `项目不存在：${projectId}`,
+              details: [],
+            },
+          })
+          return
+        }
+        project = loaded.value
       } else {
-        project = listed.value[0]
+        const listed = await listProjects()
+        if (cancelled) {
+          return
+        }
+        if (!listed.ok) {
+          setState({ status: 'error', error: listed.error })
+          return
+        }
+
+        if (listed.value.length === 0) {
+          const created = await createEmptyProject()
+          if (cancelled) {
+            return
+          }
+          if (!created.ok) {
+            setState({ status: 'error', error: created.error })
+            return
+          }
+          project = created.value
+        } else {
+          project = listed.value[0]
+        }
       }
 
       const storedDraft = await getDraft(project.id)
@@ -141,7 +166,7 @@ export function useWorkspaceBootstrap(): WorkspaceBootstrap {
     return () => {
       cancelled = true
     }
-  }, [reloadToken])
+  }, [reloadToken, projectId])
 
   return { ...state, retry }
 }

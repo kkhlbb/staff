@@ -16,6 +16,10 @@ import type { WorkspaceDraft } from '../workspace/draft'
 import './Workspace.css'
 
 export interface WorkspaceProps {
+  /** 指定要打开的项目；未指定时保持原有“最新项目或新建空项目”的行为。 */
+  projectId?: string
+  /** 返回项目列表；未提供时回退到 location.hash 路由。 */
+  onBackToList?: () => void
   /** 仅测试或特殊场景注入保存实现；默认写入 IndexedDB。 */
   saveDraft?: SaveDraftFn
 }
@@ -37,6 +41,7 @@ interface WorkspaceEditorProps {
   project: Project
   initialDraft: WorkspaceDraft
   initialValidChain: ChainDefinition | null
+  onBackToList: () => void
   saveDraft?: SaveDraftFn
 }
 
@@ -50,6 +55,7 @@ function WorkspaceEditor({
   project,
   initialDraft,
   initialValidChain,
+  onBackToList,
   saveDraft,
 }: WorkspaceEditorProps) {
   const {
@@ -127,7 +133,7 @@ function WorkspaceEditor({
         <div>
           <h1 className="workspace__title">轴系轴向公差链分析</h1>
           <p className="workspace__subtitle">
-            输入组成环与目标区间，核对尺寸关系与作用方向后查看正式判定。
+            项目：{project.name}。输入组成环与目标区间，核对尺寸关系与作用方向后查看正式判定。
             所有数值使用 mm，计算由本地计算内核完成。
           </p>
         </div>
@@ -142,6 +148,20 @@ function WorkspaceEditor({
           >
             {SAVE_STATUS_LABEL[saveStatus]}
           </span>
+          <button
+            type="button"
+            className="workspace__nav-button"
+            onClick={onBackToList}
+          >
+            返回项目列表
+          </button>
+          <button
+            type="button"
+            className="workspace__export-button"
+            onClick={exportBackup}
+          >
+            导出 JSON
+          </button>
           <span className="workspace__badge">MVP · 一维极值法</span>
         </div>
       </header>
@@ -293,8 +313,17 @@ function WorkspaceEditor({
  * 分析工作台入口：先从 IndexedDB 恢复（或创建）项目，读取完成前只显示加载状态。
  * 尺寸链计算全部来自 useWorkspace（内部调用 calculateChain），这里不写公式。
  */
-export function Workspace({ saveDraft }: WorkspaceProps = {}) {
-  const bootstrap = useWorkspaceBootstrap()
+export function Workspace({
+  projectId,
+  onBackToList,
+  saveDraft,
+}: WorkspaceProps = {}) {
+  const bootstrap = useWorkspaceBootstrap(projectId)
+  const backToList =
+    onBackToList ??
+    (() => {
+      window.location.hash = '#/projects'
+    })
 
   if (bootstrap.status === 'loading') {
     return (
@@ -302,6 +331,11 @@ export function Workspace({ saveDraft }: WorkspaceProps = {}) {
         <p className="workspace__loading" role="status">
           正在加载本地项目…
         </p>
+        <div className="workspace__loading-actions">
+          <button type="button" onClick={backToList}>
+            返回项目列表
+          </button>
+        </div>
       </main>
     )
   }
@@ -311,9 +345,14 @@ export function Workspace({ saveDraft }: WorkspaceProps = {}) {
       <main className="workspace">
         <div className="workspace__load-error" role="alert">
           <p>无法加载本地项目：{bootstrap.error.message}</p>
-          <button type="button" onClick={bootstrap.retry}>
-            重试
-          </button>
+          <div className="workspace__load-error-actions">
+            <button type="button" onClick={bootstrap.retry}>
+              重试
+            </button>
+            <button type="button" onClick={backToList}>
+              返回项目列表
+            </button>
+          </div>
         </div>
       </main>
     )
@@ -325,6 +364,7 @@ export function Workspace({ saveDraft }: WorkspaceProps = {}) {
       project={bootstrap.project}
       initialDraft={bootstrap.initialDraft}
       initialValidChain={bootstrap.initialValidChain}
+      onBackToList={backToList}
       saveDraft={saveDraft}
     />
   )
