@@ -110,6 +110,26 @@
   text-indent: -14px;
 }
 
+.project-list__error-next {
+  padding: 9px 12px;
+  border: 1px solid #fcd34d;
+  border-radius: var(--radius);
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 13px;
+}
+
+.project-list__error-next p + p {
+  margin-top: 4px;
+}
+
+.project-list__error-next button {
+  margin-top: 8px;
+  border-color: #b45309;
+  color: #b45309;
+  font-weight: 600;
+}
+
 .project-list__reason::before {
   content: '· ';
 }

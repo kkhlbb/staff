@@ -53,7 +53,9 @@
 }
 
 .scenario-compare__scroll {
+  max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .scenario-compare__list {

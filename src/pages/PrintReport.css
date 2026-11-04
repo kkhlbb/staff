@@ -62,6 +62,19 @@
   font-size: 13px;
 }
 
+.print-report__error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.print-report__error-actions button {
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .print-report__document {
   padding: clamp(20px, 3vw, 40px);
   border: 1px solid var(--border);

@@ -349,18 +349,55 @@ describe('Workspace：按 projectId 打开与返回列表', () => {
     expect(onBackToList).toHaveBeenCalledTimes(1)
   })
 
-  it('指定不存在的 projectId 时显示错误，而不是打开其它项目', async () => {
+  it('指定不存在的 projectId 时显示错误和返回项目列表，而不是打开其它项目', async () => {
     await createEmptyProject('项目一')
+    const onBackToList = vi.fn()
+    const user = userEvent.setup()
     render(
-      <Workspace projectId="missing-project" onBackToList={() => undefined} />,
+      <Workspace projectId="missing-project" onBackToList={onBackToList} />,
     )
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      '项目不存在：missing-project',
-    )
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('项目不存在：missing-project')
+    expect(alert).toHaveTextContent('它可能已被删除')
     expect(
       screen.queryByRole('button', { name: '增加行' }),
     ).toBeNull()
+
+    await user.click(
+      within(alert).getByRole('button', { name: '返回项目列表' }),
+    )
+    expect(onBackToList).toHaveBeenCalledTimes(1)
+  })
+
+  it('IndexedDB 打开失败时说明草稿可能没保存，重试会重新打开数据库', async () => {
+    const originalOpen = indexedDB.open.bind(indexedDB)
+    let openCount = 0
+    vi.spyOn(IDBFactory.prototype, 'open').mockImplementation(
+      (name, version) => {
+        openCount += 1
+        if (openCount === 1) {
+          throw new Error('模拟 IndexedDB 打开失败')
+        }
+        return originalOpen(name, version)
+      },
+    )
+
+    const user = userEvent.setup()
+    render(<Workspace onBackToList={() => undefined} />)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('本地存储不可用')
+    expect(alert).toHaveTextContent('草稿可能没有保存')
+    expect(alert).toHaveTextContent('无法打开')
+    expect(
+      within(alert).getByRole('button', { name: '导出 JSON 备份' }),
+    ).toBeInTheDocument()
+
+    await user.click(within(alert).getByRole('button', { name: '重试' }))
+
+    await screen.findByRole('button', { name: '增加行' })
+    expect(openCount).toBeGreaterThan(1)
   })
 })
 
@@ -449,11 +486,67 @@ describe('Workspace：自动保存与刷新恢复', () => {
 
     await screen.findByText('保存失败', undefined, { timeout: 3000 })
     expect(screen.queryByText('已保存')).toBeNull()
+    expect(screen.getByText(/本地存储不可用，草稿可能没有保存/)).toBeInTheDocument()
     expect(screen.getByText(/请立即导出 JSON 备份/)).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: '导出 JSON 备份' }),
     ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '重试' })).toBeInTheDocument()
     expect(screen.getByText(/模拟 IndexedDB 写入失败/)).toBeInTheDocument()
+  })
+
+  it('点“重试”会立即重新保存当前草稿，成功后恢复“已保存”并移除错误', async () => {
+    const savedAt = '2025-01-01T00:00:00.000Z'
+    const fakeProject: Project = {
+      schemaVersion: 1,
+      engineVersion: 'test',
+      id: 'retry-project',
+      name: '重试保存',
+      createdAt: savedAt,
+      updatedAt: savedAt,
+      working: {
+        terms: [],
+        target: null,
+        assumptions: '',
+        relationConfirmed: false,
+      },
+      baseline: null,
+    }
+    const saveMock = vi.fn(
+      async (
+        projectId: string,
+        draft: WorkspaceDraft,
+      ): Promise<StorageResult<SaveDraftResult>> => ({
+        ok: true,
+        value: {
+          project: fakeProject,
+          draft: { projectId, draft, savedAt },
+          modelUpdated: false,
+          cellErrors: {},
+        },
+      }),
+    )
+    saveMock.mockRejectedValueOnce(new Error('模拟第一次写入失败'))
+
+    const user = userEvent.setup()
+    render(<Workspace saveDraft={saveMock} />)
+    await screen.findByRole('button', { name: '增加行' })
+
+    fireEvent.change(screen.getByLabelText('目标下限'), {
+      target: { value: '0.1000' },
+    })
+
+    await screen.findByText('保存失败', undefined, { timeout: 3000 })
+    expect(saveMock).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole('button', { name: '重试' }))
+
+    expect(await screen.findByText('已保存', undefined, { timeout: 3000 }))
+      .toBeInTheDocument()
+    expect(saveMock).toHaveBeenCalledTimes(2)
+    expect(
+      screen.queryByText(/本地存储不可用，草稿可能没有保存/),
+    ).toBeNull()
   })
 
   it('500 ms 内多次编辑只触发一次防抖写入', async () => {

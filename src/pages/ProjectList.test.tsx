@@ -322,6 +322,32 @@ describe('ProjectList：项目列表操作', () => {
     expect(expectOk(await getProject(project.id))).toBeNull()
   })
 
+  it('项目列表读取失败时说明存储不可用，点“重试”会重新打开数据库', async () => {
+    const originalOpen = indexedDB.open.bind(indexedDB)
+    let openCount = 0
+    vi.spyOn(IDBFactory.prototype, 'open').mockImplementation(
+      (name, version) => {
+        openCount += 1
+        if (openCount === 1) {
+          throw new Error('模拟 IndexedDB 打开失败')
+        }
+        return originalOpen(name, version)
+      },
+    )
+
+    const user = userEvent.setup()
+    render(<ProjectList onOpenProject={() => undefined} />)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('无法打开本地数据库')
+    expect(alert).toHaveTextContent('接下来')
+
+    await user.click(within(alert).getByRole('button', { name: '重试' }))
+
+    expect(await screen.findByText(/还没有项目/)).toBeInTheDocument()
+    expect(openCount).toBeGreaterThan(1)
+  })
+
   it('坏 JSON、未知版本、超过 1 MB 分别逐条显示拒收原因，已有项目不变', async () => {
     const existing = await seedCaseA()
     const before = expectOk(await listProjects())
@@ -334,6 +360,9 @@ describe('ProjectList：项目列表操作', () => {
     await uploadJson(jsonFile('{ not json', 'bad.json'))
     expect(await screen.findByText('JSON.parse 失败')).toBeInTheDocument()
     expect(screen.getByText(/项目 JSON 格式无效/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/现有项目不会被覆盖或删除/),
+    ).toBeInTheDocument()
 
     const unknownVersion = mutateJson(exportProjectJson(existing), (raw) => {
       raw.schemaVersion = 2

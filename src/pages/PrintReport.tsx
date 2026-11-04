@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useCallback, useEffect, useId, useState } from 'react'
 import { ChainExpression } from '../components/ChainExpression'
 import { ContributionTable } from '../components/ContributionTable'
 import { ScenarioCompare } from '../components/ScenarioCompare'
@@ -24,6 +24,8 @@ export interface PrintReportProps {
   projectId: string
   /** 返回工作台；未提供时回退到 location.hash 路由。 */
   onBackToWorkspace?: (projectId: string) => void
+  /** 返回项目列表；未提供时回退到 location.hash 路由。 */
+  onBackToList?: () => void
 }
 
 interface ReportLoaded {
@@ -36,9 +38,11 @@ interface ReportLoaded {
   reportTime: string
 }
 
+type ReportErrorKind = 'not_found' | 'storage'
+
 type ReportState =
   | { status: 'loading' }
-  | { status: 'error'; message: string }
+  | { status: 'error'; kind: ReportErrorKind; message: string }
   | ReportLoaded
 
 const NEGATIVE_CLEARANCE_NOTE =
@@ -95,15 +99,21 @@ async function loadReport(projectId: string): Promise<ReportState> {
   if (!loadedProject.ok) {
     return {
       status: 'error',
+      kind: 'storage',
       message: `无法读取项目：${loadedProject.error.message}`,
     }
   }
   if (loadedProject.value === null) {
-    return { status: 'error', message: `项目不存在：${projectId}` }
+    return {
+      status: 'error',
+      kind: 'not_found',
+      message: `项目不存在：${projectId}`,
+    }
   }
   if (!loadedDraft.ok) {
     return {
       status: 'error',
+      kind: 'storage',
       message: `无法读取输入草稿：${loadedDraft.error.message}`,
     }
   }
@@ -420,8 +430,10 @@ function ReportDocument({
 export function PrintReport({
   projectId,
   onBackToWorkspace,
+  onBackToList,
 }: PrintReportProps) {
   const [state, setState] = useState<ReportState>({ status: 'loading' })
+  const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -436,6 +448,7 @@ export function PrintReport({
         if (!cancelled) {
           setState({
             status: 'error',
+            kind: 'storage',
             message: `无法加载打印报告：${
               error instanceof Error ? error.message : String(error)
             }`,
@@ -446,7 +459,12 @@ export function PrintReport({
     return () => {
       cancelled = true
     }
-  }, [projectId])
+  }, [projectId, reloadToken])
+
+  const retry = useCallback((): void => {
+    setState({ status: 'loading' })
+    setReloadToken((token) => token + 1)
+  }, [])
 
   const backToWorkspace = (): void => {
     if (onBackToWorkspace !== undefined) {
@@ -454,6 +472,14 @@ export function PrintReport({
       return
     }
     window.location.hash = `#/projects/${encodeURIComponent(projectId)}`
+  }
+
+  const backToList = (): void => {
+    if (onBackToList !== undefined) {
+      onBackToList()
+      return
+    }
+    window.location.hash = '#/projects'
   }
 
   if (state.status === 'loading') {
@@ -467,14 +493,38 @@ export function PrintReport({
   }
 
   if (state.status === 'error') {
+    const notFound = state.kind === 'not_found'
     return (
       <main className="print-report">
         <section className="print-report__blocked" role="alert">
-          <h1>无法打开打印报告</h1>
-          <p>{state.message}</p>
-          <button type="button" onClick={backToWorkspace}>
-            返回工作台
-          </button>
+          <h1>{notFound ? '项目不存在' : '本地存储不可用'}</h1>
+          <p>
+            发生了什么：{state.message}
+            {notFound
+              ? '。该项目可能已被删除，或报告链接中的项目 ID 不正确。'
+              : '。浏览器无法打开本地数据库，报告数据可能没有读取成功。'}
+          </p>
+          <p>
+            接下来：
+            {notFound
+              ? '返回项目列表，重新选择或新建项目后再生成报告。'
+              : '先点“重试”重新读取；如果仍然失败，请返回项目列表。'}
+          </p>
+          <div className="print-report__error-actions">
+            {notFound ? null : (
+              <button type="button" onClick={retry}>
+                重试
+              </button>
+            )}
+            <button type="button" onClick={backToList}>
+              返回项目列表
+            </button>
+            {notFound ? null : (
+              <button type="button" onClick={backToWorkspace}>
+                返回工作台
+              </button>
+            )}
+          </div>
         </section>
       </main>
     )
@@ -487,11 +537,6 @@ export function PrintReport({
   if (!reportable) {
     return (
       <main className="print-report">
-        <div className="print-report__toolbar">
-          <button type="button" onClick={backToWorkspace}>
-            返回工作台
-          </button>
-        </div>
         <section
           className="print-report__blocked"
           role="alert"
@@ -499,10 +544,23 @@ export function PrintReport({
         >
           <h1>无法生成打印报告</h1>
           <p>
+            发生了什么：
             {eligibility.message ??
               '当前方案不满足“已确认且有效”的出报告条件。'}
           </p>
+          <p>
+            接下来：返回工作台修正输入并重新核对尺寸关系，或返回项目列表。
+            报告只包含已确认且有效的工程数据。
+          </p>
           <p className="print-report__blocked-project">项目：{project.name}</p>
+          <div className="print-report__error-actions">
+            <button type="button" onClick={backToWorkspace}>
+              返回工作台
+            </button>
+            <button type="button" onClick={backToList}>
+              返回项目列表
+            </button>
+          </div>
         </section>
       </main>
     )

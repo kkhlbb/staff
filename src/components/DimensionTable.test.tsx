@@ -434,4 +434,16 @@ describe('DimensionTable：受控边界', () => {
     expect(screen.getByRole('status')).toHaveTextContent('暂无组成环')
     expect(screen.queryAllByRole('row')).toHaveLength(1)
   })
+
+  it('表格位于可聚焦且带 aria-label 的横向滚动 region 中', () => {
+    render(<Harness initial={caseADraft()} />)
+
+    const region = screen.getByRole('region', {
+      name: '组成环表横向滚动区域',
+    })
+    expect(region).toHaveAttribute('tabindex', '0')
+    expect(
+      within(region).getByRole('table', { name: '组成环表' }),
+    ).toBeInTheDocument()
+  })
 })

@@ -29,4 +29,27 @@ describe('Workspace 布局约束', () => {
       /@media \(max-width: 1180px\)[\s\S]*?\.dimension-table__table\s*\{[^}]*min-width:\s*0/,
     )
   })
+
+  it('375px 窄屏把组成环表放进可聚焦的横向滚动 region，页面本身不横向滚动', () => {
+    // 滚动只发生在表格区域：容器有 aria-label，并由组件设置 role=region / tabIndex=0。
+    expect(workspaceCss).toMatch(
+      /\.dimension-table__scroll\s*\{[^}]*max-width:\s*100%[^}]*overflow-x:\s*auto/s,
+    )
+    expect(workspaceCss).toMatch(/\.dimension-table__scroll:focus-visible/)
+    expect(workspaceCss).toMatch(
+      /@media \(max-width: 720px\)[\s\S]*?\.workspace\s*\{[^}]*overflow-x:\s*hidden/,
+    )
+    expect(workspaceCss).toMatch(
+      /@media \(max-width: 720px\)[\s\S]*?\.dimension-table__table\s*\{[^}]*min-width:\s*820px/,
+    )
+  })
+
+  it('贡献表和方案对比表在窄屏内单独滚动，不把页面撑宽', () => {
+    expect(workspaceCss).toMatch(
+      /\.contribution-table\s*\{[^}]*max-width:\s*100%[^}]*overflow-x:\s*auto/s,
+    )
+    expect(workspaceCss).toMatch(
+      /@media \(max-width: 720px\)[\s\S]*?\.scenario-compare__table th,[\s\S]*?white-space:\s*normal/,
+    )
+  })
 })

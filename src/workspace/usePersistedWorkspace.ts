@@ -189,6 +189,8 @@ export interface UsePersistedWorkspaceResult extends UseWorkspaceResult {
   saveBaseline: () => Promise<StorageResult<Project>>
   /** 恢复基线到工作方案并清除关系确认；基线本身保持不变。 */
   restoreBaseline: () => Promise<StorageResult<SaveDraftResult>>
+  /** 保存失败后立即重新保存当前草稿，不再等待防抖。 */
+  retrySave: () => Promise<void>
   exportBackup: () => void
 }
 
@@ -225,7 +227,8 @@ function missingBaselineFailure(): { ok: false; error: StorageError } {
   }
 }
 
-function downloadProjectBackup(project: Project): void {
+/** 用浏览器下载导出项目 JSON；存储失败和引导失败时共用。 */
+export function downloadProjectBackup(project: Project): void {
   const json = exportProjectJson(project)
   // jsdom 等测试环境没有 Blob URL；浏览器中正常下载，测试环境无操作即可。
   if (typeof URL.createObjectURL !== 'function') {
@@ -271,6 +274,39 @@ export function usePersistedWorkspace(
     saveRef.current = options.saveDraft ?? null
   }, [options.saveDraft])
 
+  /**
+   * 写入一次草稿，并只在这次写入仍是最新代数时更新保存状态。
+   * 自动保存与保存失败后的手动重试都走这里，避免两处对状态解释不一致。
+   */
+  const persistDraftWithState = useCallback(
+    async (
+      draftToSave: WorkspaceDraft,
+      generation: number,
+    ): Promise<StorageResult<SaveDraftResult>> => {
+      let result: StorageResult<SaveDraftResult>
+      try {
+        // 默认直接调用 storage 模块的 saveDraft，便于测试 spy；只有显式注入时才走 ref。
+        result = await (saveRef.current ?? persistDraft)(project.id, draftToSave)
+      } catch (error) {
+        result = saveFailure(error)
+      }
+
+      // 期间又有编辑时，旧请求的结果不能把状态改回“已保存”。
+      if (generation !== generationRef.current) {
+        return result
+      }
+
+      if (result.ok) {
+        setLastSavedProject(result.value.project)
+        setSaveState({ status: 'saved', error: null })
+      } else {
+        setSaveState({ status: 'failed', error: result.error })
+      }
+      return result
+    },
+    [project.id],
+  )
+
   useEffect(() => {
     if (isInitialRenderRef.current) {
       isInitialRenderRef.current = false
@@ -286,25 +322,7 @@ export function usePersistedWorkspace(
     let timer: ReturnType<typeof setTimeout> | null = null
 
     const performSave = async (): Promise<void> => {
-      let result: StorageResult<SaveDraftResult>
-      try {
-        // 默认直接调用 storage 模块的 saveDraft，便于测试 spy；只有显式注入时才走 ref。
-        result = await (saveRef.current ?? persistDraft)(project.id, draftToSave)
-      } catch (error) {
-        result = saveFailure(error)
-      }
-
-      // 期间又有编辑时，旧请求的结果不能把状态改回“已保存”。
-      if (generation !== generationRef.current) {
-        return
-      }
-
-      if (result.ok) {
-        setLastSavedProject(result.value.project)
-        setSaveState({ status: 'saved', error: null })
-      } else {
-        setSaveState({ status: 'failed', error: result.error })
-      }
+      await persistDraftWithState(draftToSave, generation)
     }
 
     /** 防抖到点或页面切到 hidden 时只触发一次保存。 */
@@ -336,7 +354,18 @@ export function usePersistedWorkspace(
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [draft, project.id, debounceMs])
+  }, [draft, project.id, debounceMs, persistDraftWithState])
+
+  /**
+   * 保存失败后的“重试”：立即重新写入当前草稿。
+   * 进入新的代数后，之前遗留的写入结果不能再覆盖本次重试的状态。
+   */
+  const retrySave = useCallback(async (): Promise<void> => {
+    const generation = generationRef.current + 1
+    generationRef.current = generation
+    setSaveState({ status: 'saving', error: null })
+    await persistDraftWithState(draft, generation)
+  }, [draft, persistDraftWithState])
 
   const saveBaseline = useCallback(async (): Promise<StorageResult<Project>> => {
     if (chain === null) {
@@ -402,6 +431,7 @@ export function usePersistedWorkspace(
     baseline,
     saveBaseline,
     restoreBaseline,
+    retrySave,
     exportBackup,
   }
 }

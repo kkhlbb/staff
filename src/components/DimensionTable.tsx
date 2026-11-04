@@ -163,23 +163,29 @@ export function DimensionTable({
         使用每行的上移、下移按钮调整顺序，重排不会改变计算结果。
       </p>
 
-      <table
-        id={tableElementId}
-        aria-label="组成环表"
-        aria-describedby={hintId}
-        className="dimension-table__table"
+      <div
+        className="dimension-table__scroll"
+        role="region"
+        aria-label="组成环表横向滚动区域"
+        tabIndex={0}
       >
-        <thead>
-          <tr>
-            {COLUMNS.map((column) => (
-              <th key={column} scope="col">
-                {column}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {draft.terms.map((term, index) => {
+        <table
+          id={tableElementId}
+          aria-label="组成环表"
+          aria-describedby={hintId}
+          className="dimension-table__table"
+        >
+          <thead>
+            <tr>
+              {COLUMNS.map((column) => (
+                <th key={column} scope="col">
+                  {column}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {draft.terms.map((term, index) => {
             const label = rowLabel(term, index)
             const chainTerm = chain?.terms.find(
               (candidate) => candidate.id === term.id,
@@ -387,7 +393,8 @@ export function DimensionTable({
             )
           })}
         </tbody>
-      </table>
+        </table>
+      </div>
 
       {draft.terms.length === 0 ? (
         <p className="dimension-table__empty" role="status">

@@ -142,34 +142,36 @@ export function ScenarioCompare({ baseline, working }: ScenarioCompareProps) {
         {diff.termChanges.length === 0 ? (
           <p className="scenario-compare__empty">共有组成环的字段没有变化。</p>
         ) : (
-          <table
-            className="scenario-compare__table"
-            aria-label="字段变化对比"
-          >
-            <thead>
-              <tr>
-                <th scope="col">代号</th>
-                <th scope="col">字段</th>
-                <th scope="col">基线值</th>
-                <th scope="col">当前值</th>
-              </tr>
-            </thead>
-            <tbody>
-              {diff.termChanges.map((change) => (
-                <tr
-                  key={`${change.termId}-${change.field}`}
-                  data-testid={`compare-change-${change.termId}-${change.field}`}
-                >
-                  <th scope="row">
-                    {symbolByTermId.get(change.termId) ?? change.termId}
-                  </th>
-                  <td>{TERM_FIELD_LABEL[change.field]}</td>
-                  <td>{formatFieldValue(change, 'before')}</td>
-                  <td>{formatFieldValue(change, 'after')}</td>
+          <div className="scenario-compare__scroll">
+            <table
+              className="scenario-compare__table"
+              aria-label="字段变化对比"
+            >
+              <thead>
+                <tr>
+                  <th scope="col">代号</th>
+                  <th scope="col">字段</th>
+                  <th scope="col">基线值</th>
+                  <th scope="col">当前值</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {diff.termChanges.map((change) => (
+                  <tr
+                    key={`${change.termId}-${change.field}`}
+                    data-testid={`compare-change-${change.termId}-${change.field}`}
+                  >
+                    <th scope="row">
+                      {symbolByTermId.get(change.termId) ?? change.termId}
+                    </th>
+                    <td>{TERM_FIELD_LABEL[change.field]}</td>
+                    <td>{formatFieldValue(change, 'before')}</td>
+                    <td>{formatFieldValue(change, 'after')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

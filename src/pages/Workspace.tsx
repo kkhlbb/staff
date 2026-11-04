@@ -6,8 +6,10 @@ import { DimensionTable } from '../components/DimensionTable'
 import { ResultPanel } from '../components/ResultPanel'
 import { ScenarioCompare } from '../components/ScenarioCompare'
 import type { ChainDefinition, Project } from '../domain/types'
+import { getProject, listProjects } from '../storage/projects'
 import { resolveReportEligibility } from '../workspace/status'
 import {
+  downloadProjectBackup,
   usePersistedWorkspace,
   useWorkspaceBootstrap,
   type SaveDraftFn,
@@ -73,6 +75,7 @@ function WorkspaceEditor({
     stale,
     saveStatus,
     saveError,
+    retrySave,
     exportBackup,
     baseline,
     saveBaseline,
@@ -214,17 +217,29 @@ function WorkspaceEditor({
       {saveStatus === 'failed' ? (
         <div className="workspace__save-error" role="alert">
           <div>
+            <h2 className="workspace__error-title">
+              本地存储不可用，草稿可能没有保存
+            </h2>
             <p>
-              保存失败：{saveError?.message ?? '无法写入本地数据库'}。
-              请立即导出 JSON 备份，避免刷新或关闭页面后丢失输入。
+              发生了什么：保存失败（{saveError?.message ?? '无法写入本地数据库'}）。
+              当前修改可能只保留在本页面内存中，刷新或关闭页面后会丢失。
+            </p>
+            <p>
+              接下来：请立即导出 JSON 备份，避免丢失输入；修复浏览器存储后，
+              再点“重试”重新保存当前草稿。
             </p>
             <p className="workspace__backup-note">
               备份不含未通过校验的修改。
             </p>
           </div>
-          <button type="button" onClick={exportBackup}>
-            导出 JSON 备份
-          </button>
+          <div className="workspace__save-error-actions">
+            <button type="button" onClick={exportBackup}>
+              导出 JSON 备份
+            </button>
+            <button type="button" onClick={() => void retrySave()}>
+              重试
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -365,11 +380,43 @@ export function Workspace({
   saveDraft,
 }: WorkspaceProps = {}) {
   const bootstrap = useWorkspaceBootstrap(projectId)
+  const [bootstrapExportMessage, setBootstrapExportMessage] = useState<
+    string | null
+  >(null)
   const backToList =
     onBackToList ??
     (() => {
       window.location.hash = '#/projects'
     })
+
+  /**
+   * 引导失败时仍尝试重新读取一次项目并导出：如果只是某次读取/打开失败，
+   * 用户仍可能拿到上一次保存的 JSON；若完全读不到，则明确说明暂无备份。
+   */
+  const handleBootstrapExport = async (): Promise<void> => {
+    setBootstrapExportMessage(null)
+
+    let project: Project | null
+    if (projectId !== undefined) {
+      const loaded = await getProject(projectId)
+      project = loaded.ok ? loaded.value : null
+    } else {
+      const listed = await listProjects()
+      project = listed.ok ? (listed.value[0] ?? null) : null
+    }
+
+    if (project === null) {
+      setBootstrapExportMessage(
+        '仍然无法读取本地项目，当前页面没有可导出的数据。请先重试；若持续失败，请返回项目列表。',
+      )
+      return
+    }
+
+    downloadProjectBackup(project)
+    setBootstrapExportMessage(
+      '已导出可读取的项目 JSON 备份；当前页面中尚未保存的输入不在备份内。',
+    )
+  }
 
   if (bootstrap.status === 'loading') {
     return (
@@ -387,11 +434,55 @@ export function Workspace({
   }
 
   if (bootstrap.status === 'error') {
+    const notFound = bootstrap.error.code === 'not_found'
+
+    if (notFound) {
+      return (
+        <main className="workspace">
+          <section className="workspace__load-error" role="alert">
+            <div>
+              <h1 className="workspace__error-title">项目不存在</h1>
+              <p>
+                发生了什么：找不到项目
+                <span className="workspace__mono">{projectId}</span>
+                （{bootstrap.error.message}）。它可能已被删除，或链接中的项目 ID
+                不正确。
+              </p>
+              <p>接下来：返回项目列表，重新打开或新建一个项目。</p>
+            </div>
+            <div className="workspace__load-error-actions">
+              <button type="button" onClick={backToList}>
+                返回项目列表
+              </button>
+            </div>
+          </section>
+        </main>
+      )
+    }
+
     return (
       <main className="workspace">
-        <div className="workspace__load-error" role="alert">
-          <p>无法加载本地项目：{bootstrap.error.message}</p>
+        <section className="workspace__load-error" role="alert">
+          <div>
+            <h1 className="workspace__error-title">本地存储不可用</h1>
+            <p>
+              发生了什么：{bootstrap.error.message}。浏览器无法打开 IndexedDB
+              数据库，当前输入和草稿可能没有保存。
+            </p>
+            <p>
+              接下来：先点“重试”重新打开本地数据库；如果仍然失败，请返回项目列表。
+              若之前保存过项目，可以尝试导出 JSON 备份。
+            </p>
+            {bootstrapExportMessage !== null ? (
+              <p className="workspace__backup-note" role="status">
+                {bootstrapExportMessage}
+              </p>
+            ) : null}
+          </div>
           <div className="workspace__load-error-actions">
+            <button type="button" onClick={() => void handleBootstrapExport()}>
+              导出 JSON 备份
+            </button>
             <button type="button" onClick={bootstrap.retry}>
               重试
             </button>
@@ -399,7 +490,7 @@ export function Workspace({
               返回项目列表
             </button>
           </div>
-        </div>
+        </section>
       </main>
     )
   }

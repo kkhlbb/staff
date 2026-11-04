@@ -307,14 +307,53 @@ describe('PrintReport：报告门槛', () => {
       expect(saved.value.modelUpdated).toBe(false)
     }
 
-    render(<PrintReport projectId={project.id} />)
+    const onBackToWorkspace = vi.fn()
+    const onBackToList = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <PrintReport
+        projectId={project.id}
+        onBackToWorkspace={onBackToWorkspace}
+        onBackToList={onBackToList}
+      />,
+    )
 
     const blocked = await screen.findByTestId('report-blocked')
     expect(blocked).toHaveTextContent('当前输入未通过校验')
+    expect(blocked).toHaveTextContent('发生了什么')
+    expect(blocked).toHaveTextContent('接下来')
     expect(screen.queryByTestId('print-report')).toBeNull()
     expect(
       screen.queryByRole('button', { name: '打印报告' }),
     ).toBeNull()
+
+    await user.click(
+      screen.getByRole('button', { name: '返回工作台' }),
+    )
+    expect(onBackToWorkspace).toHaveBeenCalledWith(project.id)
+
+    await user.click(
+      screen.getByRole('button', { name: '返回项目列表' }),
+    )
+    expect(onBackToList).toHaveBeenCalledTimes(1)
+  })
+
+  it('项目不存在时说明原因并可返回项目列表', async () => {
+    const onBackToList = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <PrintReport projectId="missing-report-project" onBackToList={onBackToList} />,
+    )
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('项目不存在：missing-report-project')
+    expect(alert).toHaveTextContent('可能已被删除')
+    expect(alert).toHaveTextContent('接下来')
+
+    await user.click(
+      within(alert).getByRole('button', { name: '返回项目列表' }),
+    )
+    expect(onBackToList).toHaveBeenCalledTimes(1)
   })
 })
 

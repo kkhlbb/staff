@@ -146,6 +146,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
   )
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [retryingLoad, setRetryingLoad] = useState(false)
   const [listError, setListError] = useState<UiError | null>(null)
   const [actionError, setActionError] = useState<UiError | null>(null)
   const [importError, setImportError] = useState<UiError | null>(null)
@@ -205,6 +206,15 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
       cancelled = true
     }
   }, [])
+
+  /** 项目列表读取失败时重新打开 IndexedDB，而不是只清掉错误文案。 */
+  const handleRetryLoad = (): void => {
+    void (async () => {
+      setRetryingLoad(true)
+      await refresh()
+      setRetryingLoad(false)
+    })()
+  }
 
   const runAction = async (action: () => Promise<void>): Promise<void> => {
     setBusy(true)
@@ -402,6 +412,30 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
               ))}
             </div>
           ))}
+          {listError !== null ? (
+            <div className="project-list__error-next">
+              <p>
+                发生了什么：无法打开本地数据库，项目列表与草稿状态可能没有读取成功。
+              </p>
+              <p>
+                接下来：点“重试”重新打开本地数据库；如果仍然失败，请检查浏览器存储权限。
+              </p>
+              <button
+                type="button"
+                onClick={handleRetryLoad}
+                disabled={retryingLoad}
+              >
+                {retryingLoad ? '重试中…' : '重试'}
+              </button>
+            </div>
+          ) : null}
+          {importError !== null ? (
+            <p className="project-list__error-next">
+              发生了什么：本次导入未成功，未写入任何数据。
+              接下来：请按上面的原因修正文件后重新导入；如果是本地存储问题，
+              请检查浏览器存储后再试。现有项目不会被覆盖或删除。
+            </p>
+          ) : null}
         </div>
       ) : null}
 

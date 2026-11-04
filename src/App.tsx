@@ -71,7 +71,14 @@ function App() {
   }
 
   if (route.page === 'report') {
-    return <PrintReport key={route.projectId} projectId={route.projectId} />
+    return (
+      <PrintReport
+        key={route.projectId}
+        projectId={route.projectId}
+        onBackToWorkspace={openProject}
+        onBackToList={backToProjects}
+      />
+    )
   }
 
   if (route.page === 'workspace') {
