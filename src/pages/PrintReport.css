@@ -315,6 +315,12 @@
     break-inside: avoid;
   }
 
+  /* C₀…判定是一组完整结果，避免分页从这组中间切开。 */
+  .print-report__values {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   .print-report__table {
     font-size: 9.5pt;
   }

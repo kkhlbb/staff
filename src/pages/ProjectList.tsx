@@ -2,7 +2,15 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'reac
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { Project } from '../domain/types'
 import {
+  DEMO_CASES,
+  DEMO_DISCLAIMER,
+  createDemoChain,
+  demoCaseName,
+  type DemoCaseId,
+} from '../fixtures/demo'
+import {
   createEmptyProject,
+  createProject,
   deleteProject,
   exportProjectJson,
   importProject,
@@ -143,6 +151,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
   const [importError, setImportError] = useState<UiError | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Project | null>(null)
+  const [demoCase, setDemoCase] = useState<DemoCaseId>('A')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const openProject = useCallback(
@@ -219,6 +228,26 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
         return
       }
       await refresh()
+      openProject(created.value.id)
+    })
+  }
+
+  /**
+   * 演示案例每次都用 createProject 新建项目：storage 生成新 ID，已有项目不受影响。
+   * fixture 只提供文档第 8 节的数值，尺寸链计算仍由工作台调用统一计算内核完成。
+   */
+  const handleOpenDemo = (): void => {
+    void runAction(async () => {
+      const created = await createProject({
+        name: demoCaseName(demoCase),
+        working: createDemoChain(demoCase),
+      })
+      if (!created.ok) {
+        setActionError(toUiError(created.error))
+        return
+      }
+      await refresh()
+      setNotice(`已打开${created.value.name}（新建项目，未覆盖已有项目）`)
       openProject(created.value.id)
     })
   }
@@ -328,7 +357,35 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
           onChange={handleFileChange}
           disabled={busy}
         />
+        <label className="project-list__demo-label" htmlFor="demo-case-select">
+          演示案例
+        </label>
+        <select
+          id="demo-case-select"
+          className="project-list__demo-select"
+          value={demoCase}
+          onChange={(event) => setDemoCase(event.target.value as DemoCaseId)}
+          disabled={busy}
+        >
+          {DEMO_CASES.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="project-list__demo-open"
+          onClick={handleOpenDemo}
+          disabled={busy}
+        >
+          打开演示案例
+        </button>
       </div>
+
+      <p className="project-list__demo-note" role="note">
+        {DEMO_DISCLAIMER}
+      </p>
 
       {errors.length > 0 ? (
         <div className="project-list__errors" role="alert">
@@ -360,7 +417,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
         </p>
       ) : projects.length === 0 ? (
         <div className="project-list__empty">
-          <p>还没有项目。点击“新建”开始，或导入一个 JSON 项目文件。</p>
+          <p>还没有项目。点击“新建”开始，打开内置演示案例，或导入一个 JSON 项目文件。</p>
         </div>
       ) : (
         <ul className="project-list__items" aria-label="项目列表">

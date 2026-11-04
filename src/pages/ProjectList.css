@@ -51,6 +51,39 @@
   white-space: nowrap;
 }
 
+.project-list__demo-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.project-list__demo-select {
+  max-width: 22rem;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.project-list__demo-open {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.project-list__demo-note {
+  max-width: 80ch;
+  margin: -6px 0 18px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
 .project-list__errors {
   display: flex;
   flex-direction: column;

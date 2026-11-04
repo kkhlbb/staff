@@ -13,6 +13,12 @@ import { calculateChain } from '../domain/calculate'
 import type { ChainDefinition, DimensionTerm, Project } from '../domain/types'
 import { parseMm } from '../domain/units'
 import {
+  DEMO_DISCLAIMER,
+  createDemoChain,
+  demoCaseName,
+  type DemoCaseId,
+} from '../fixtures/demo'
+import {
   MAX_IMPORT_BYTES,
   createEmptyProject,
   createProject,
@@ -486,5 +492,67 @@ describe('ProjectList：JSON 导出再导入', () => {
     await screen.findByRole('button', { name: '增加行' })
     expect(screen.getByText(/暂无组成环/)).toBeInTheDocument()
     expect(screen.getByText('请先添加组成环')).toBeInTheDocument()
+  })
+})
+
+describe('ProjectList：内置演示案例', () => {
+  it('依次打开 A/B/C 都经 storage 新建项目，已有项目不变，免责说明可见', async () => {
+    const user = userEvent.setup()
+    const original = await seedCaseA('原有项目')
+    const opened: string[] = []
+    render(<ProjectList onOpenProject={(id) => opened.push(id)} />)
+
+    await waitFor(() => {
+      expect(projectRows()).toHaveLength(1)
+    })
+    expect(screen.getByText(DEMO_DISCLAIMER)).toBeInTheDocument()
+
+    const cases: DemoCaseId[] = ['A', 'B', 'C']
+    for (const [index, caseId] of cases.entries()) {
+      await user.selectOptions(screen.getByLabelText('演示案例'), caseId)
+      await user.click(screen.getByRole('button', { name: '打开演示案例' }))
+
+      await waitFor(() => {
+        expect(opened).toHaveLength(index + 1)
+      })
+      await waitFor(() => {
+        expect(projectRows()).toHaveLength(index + 2)
+      })
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', { name: '打开演示案例' }),
+        ).toBeEnabled()
+      })
+      expect(screen.getByText(DEMO_DISCLAIMER)).toBeInTheDocument()
+    }
+
+    expect(new Set(opened).size).toBe(3)
+    expect(opened).not.toContain(original.id)
+
+    const all = expectOk(await listProjects())
+    expect(all).toHaveLength(4)
+    expect(new Set(all.map((project) => project.id)).size).toBe(4)
+    expect(expectOk(await getProject(original.id))).toEqual(original)
+
+    for (const [index, caseId] of cases.entries()) {
+      const created = all.find((project) => project.id === opened[index])
+      expect(created).toBeDefined()
+      expect(created?.name).toBe(demoCaseName(caseId))
+      expect(created?.working).toEqual(createDemoChain(caseId))
+    }
+  })
+
+  it('打开演示案例后进入工作台并显示案例 A 的计算结果', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await screen.findByText(/还没有项目/)
+    expect(screen.getByText(DEMO_DISCLAIMER)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '打开演示案例' }))
+
+    await screen.findByRole('button', { name: '增加行' })
+    expect(screen.getByText(/演示案例 A：不满足目标的轴向间隙/)).toBeInTheDocument()
+    expect(resultStatus()).toBe('不满足')
+    expect(screen.getByTestId('result-max')).toHaveTextContent('0.3900')
   })
 })
