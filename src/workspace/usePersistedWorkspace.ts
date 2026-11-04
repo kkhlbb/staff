@@ -7,6 +7,7 @@ import {
   getDraft,
   listProjects,
   saveDraft as persistDraft,
+  updateProject,
   type SaveDraftResult,
   type StorageError,
   type StorageResult,
@@ -157,7 +158,46 @@ export interface UsePersistedWorkspaceResult extends UseWorkspaceResult {
   saveError: StorageError | null
   /** 最近一次成功保存后的项目快照，保存失败时用于导出 JSON 备份。 */
   lastSavedProject: Project
+  /** 项目当前唯一的不可变基线；自动保存工作方案不会改变它。 */
+  baseline: Project['baseline']
+  /** 把当前有效链保存为基线（覆盖由调用方先确认）。 */
+  saveBaseline: () => Promise<StorageResult<Project>>
+  /** 恢复基线到工作方案并清除关系确认；基线本身保持不变。 */
+  restoreBaseline: () => Promise<StorageResult<SaveDraftResult>>
   exportBackup: () => void
+}
+
+function saveFailure(error: unknown): { ok: false; error: StorageError } {
+  return {
+    ok: false,
+    error: {
+      code: 'storage_failure',
+      message: `保存草稿失败：${error instanceof Error ? error.message : String(error)}`,
+      details: [],
+    },
+  }
+}
+
+function invalidChainFailure(): { ok: false; error: StorageError } {
+  return {
+    ok: false,
+    error: {
+      code: 'invalid_chain',
+      message: '当前草稿未通过校验，不能保存为基线',
+      details: [],
+    },
+  }
+}
+
+function missingBaselineFailure(): { ok: false; error: StorageError } {
+  return {
+    ok: false,
+    error: {
+      code: 'baseline_missing',
+      message: '项目还没有基线，无法恢复',
+      details: [],
+    },
+  }
 }
 
 function downloadProjectBackup(project: Project): void {
@@ -190,7 +230,7 @@ export function usePersistedWorkspace(
   options: PersistedWorkspaceOptions = {},
 ): UsePersistedWorkspaceResult {
   const workspace = useWorkspace(initialDraft, options.initialValidChain)
-  const { draft } = workspace
+  const { draft, dispatch, chain } = workspace
   const debounceMs = options.debounceMs ?? AUTO_SAVE_DEBOUNCE_MS
   const saveRef = useRef<SaveDraftFn | null>(options.saveDraft ?? null)
   const generationRef = useRef(0)
@@ -200,6 +240,7 @@ export function usePersistedWorkspace(
     error: null,
   })
   const [lastSavedProject, setLastSavedProject] = useState<Project>(project)
+  const [baseline, setBaseline] = useState<Project['baseline']>(project.baseline)
 
   useEffect(() => {
     saveRef.current = options.saveDraft ?? null
@@ -216,53 +257,127 @@ export function usePersistedWorkspace(
     setSaveState({ status: 'saving', error: null })
 
     const draftToSave = draft
-    const timer = setTimeout(() => {
-      void (async () => {
-        let result: StorageResult<SaveDraftResult>
-        try {
-          // 默认直接调用 storage 模块的 saveDraft，便于测试 spy；只有显式注入时才走 ref。
-          result = await (saveRef.current ?? persistDraft)(project.id, draftToSave)
-        } catch (error) {
-          result = {
-            ok: false,
-            error: {
-              code: 'storage_failure',
-              message: `保存草稿失败：${
-                error instanceof Error ? error.message : String(error)
-              }`,
-              details: [],
-            },
-          }
-        }
+    let started = false
+    let timer: ReturnType<typeof setTimeout> | null = null
 
-        // 期间又有编辑时，旧请求的结果不能把状态改回“已保存”。
-        if (generation !== generationRef.current) {
-          return
-        }
+    const performSave = async (): Promise<void> => {
+      let result: StorageResult<SaveDraftResult>
+      try {
+        // 默认直接调用 storage 模块的 saveDraft，便于测试 spy；只有显式注入时才走 ref。
+        result = await (saveRef.current ?? persistDraft)(project.id, draftToSave)
+      } catch (error) {
+        result = saveFailure(error)
+      }
 
-        if (result.ok) {
-          setLastSavedProject(result.value.project)
-          setSaveState({ status: 'saved', error: null })
-        } else {
-          setSaveState({ status: 'failed', error: result.error })
-        }
-      })()
-    }, debounceMs)
+      // 期间又有编辑时，旧请求的结果不能把状态改回“已保存”。
+      if (generation !== generationRef.current) {
+        return
+      }
+
+      if (result.ok) {
+        setLastSavedProject(result.value.project)
+        setSaveState({ status: 'saved', error: null })
+      } else {
+        setSaveState({ status: 'failed', error: result.error })
+      }
+    }
+
+    /** 防抖到点或页面切到 hidden 时只触发一次保存。 */
+    const flush = (): void => {
+      if (started) {
+        return
+      }
+      started = true
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
+      }
+      void performSave()
+    }
+
+    timer = setTimeout(flush, debounceMs)
+
+    // 文档第 7 节：页面不可见时立即保存待保存草稿，不再等待防抖。
+    const handleVisibilityChange = (): void => {
+      if (document.visibilityState === 'hidden') {
+        flush()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
-      clearTimeout(timer)
+      if (timer !== null) {
+        clearTimeout(timer)
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [draft, project.id, debounceMs])
 
+  const saveBaseline = useCallback(async (): Promise<StorageResult<Project>> => {
+    if (chain === null) {
+      return invalidChainFailure()
+    }
+    const result = await updateProject(project.id, {
+      baseline: {
+        savedAt: new Date().toISOString(),
+        definition: chain,
+      },
+    })
+    if (result.ok) {
+      setBaseline(result.value.baseline)
+      setLastSavedProject(result.value)
+    }
+    return result
+  }, [chain, project.id])
+
+  const restoreBaseline = useCallback(async (): Promise<
+    StorageResult<SaveDraftResult>
+  > => {
+    if (baseline === null) {
+      return missingBaselineFailure()
+    }
+
+    // 恢复的是基线的工程输入；关系确认必须重新由用户核对。
+    const restoredDraft: WorkspaceDraft = {
+      ...chainToDraft(baseline.definition),
+      relationConfirmed: false,
+    }
+    dispatch({ type: 'replaceDraft', draft: restoredDraft })
+
+    // 立即写入一次，避免恢复后在防抖窗口内刷新或关闭页面丢失工作方案。
+    let result: StorageResult<SaveDraftResult>
+    try {
+      result = await (saveRef.current ?? persistDraft)(project.id, restoredDraft)
+    } catch (error) {
+      result = saveFailure(error)
+    }
+
+    if (result.ok) {
+      setLastSavedProject(result.value.project)
+      setSaveState({ status: 'saved', error: null })
+    } else {
+      setSaveState({ status: 'failed', error: result.error })
+    }
+    return result
+  }, [baseline, dispatch, project.id])
+
   const exportBackup = useCallback(() => {
-    downloadProjectBackup(lastSavedProject)
-  }, [lastSavedProject])
+    // 当前草稿有效时导出当前有效链；无效时回退到上一次成功保存的有效版本。
+    const projectForExport: Project =
+      chain === null
+        ? { ...lastSavedProject, baseline }
+        : { ...lastSavedProject, working: chain, baseline }
+    downloadProjectBackup(projectForExport)
+  }, [baseline, chain, lastSavedProject])
 
   return {
     ...workspace,
     saveStatus: saveState.status,
     saveError: saveState.error,
     lastSavedProject,
+    baseline,
+    saveBaseline,
+    restoreBaseline,
     exportBackup,
   }
 }

@@ -3,11 +3,12 @@ import 'fake-indexeddb/auto'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Project } from '../domain/types'
+import type { ChainDefinition, Project } from '../domain/types'
 import type {
   SaveDraftResult,
   StorageResult,
 } from '../storage/projects'
+import { saveDraft as persistDraft } from '../storage/projects'
 import { deleteProjectDatabase } from '../test/projectDb'
 import type { WorkspaceDraft } from '../workspace/draft'
 import { Workspace } from './Workspace'
@@ -18,6 +19,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   vi.useRealTimers()
+  vi.restoreAllMocks()
   await deleteProjectDatabase()
 })
 
@@ -459,5 +461,351 @@ describe('Workspace：自动保存与刷新恢复', () => {
       expect(screen.getByText('已保存')).toBeInTheDocument()
     })
     expect(saveMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('Workspace：基线、方案对比与恢复', () => {
+  it('保存案例 A 为基线，改到 B 后显示 Cmin/Cmax/Tc 与判定变化，恢复后回到 A 且清除确认', async () => {
+    const user = userEvent.setup()
+    const first = render(<Workspace />)
+    await screen.findByRole('button', { name: '增加行' })
+
+    await buildCaseA(user)
+    await user.click(confirmationCheckbox())
+    await waitForAutoSave()
+
+    const saveBaselineButton = screen.getByRole('button', { name: '保存为基线' })
+    expect(saveBaselineButton).not.toBeDisabled()
+    await user.click(saveBaselineButton)
+
+    expect(await screen.findByText('已保存为基线')).toBeInTheDocument()
+    expect(screen.getByText(/已有基线/)).toBeInTheDocument()
+    expect(screen.getByText(/未发现差异/)).toBeInTheDocument()
+
+    // 改成案例 B：H 上偏差 +0.0300，S 下偏差 -0.0200、上偏差 +0.0200。
+    fireEvent.change(screen.getByRole('textbox', { name: 'H 上偏差' }), {
+      target: { value: '0.0300' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'S 下偏差' }), {
+      target: { value: '-0.0200' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'S 上偏差' }), {
+      target: { value: '0.0200' },
+    })
+
+    expect(confirmationCheckbox()).not.toBeChecked()
+
+    const resultCompare = screen.getByRole('table', {
+      name: '结果变化对比',
+    })
+    expect(
+      within(resultCompare).getByTestId('compare-min-delta'),
+    ).toHaveTextContent('+0.0300')
+    expect(
+      within(resultCompare).getByTestId('compare-max-delta'),
+    ).toHaveTextContent('-0.1000')
+    expect(
+      within(resultCompare).getByTestId('compare-tolerance-delta'),
+    ).toHaveTextContent('-0.1300')
+    expect(
+      within(resultCompare).getByTestId('compare-status-before'),
+    ).toHaveTextContent('不满足')
+    expect(
+      within(resultCompare).getByTestId('compare-status-after'),
+    ).toHaveTextContent('满足')
+
+    const fieldCompare = screen.getByRole('table', { name: '字段变化对比' })
+    const hUpperRow = within(fieldCompare).getByText('0.1000').closest('tr')
+    expect(hUpperRow).not.toBeNull()
+    expect(hUpperRow).toHaveTextContent('上偏差')
+    expect(hUpperRow).toHaveTextContent('0.0300')
+
+    // 已有基线时再次保存必须先经过确认；取消后基线不变。
+    await user.click(screen.getByRole('button', { name: '保存为基线' }))
+    const overwriteDialog = await screen.findByRole('alertdialog', {
+      name: '覆盖基线？',
+    })
+    expect(overwriteDialog).toHaveTextContent('原基线不能恢复')
+    await user.click(
+      within(overwriteDialog).getByRole('button', { name: '取消' }),
+    )
+    expect(
+      screen.queryByRole('alertdialog', { name: '覆盖基线？' }),
+    ).toBeNull()
+
+    // 恢复基线也要确认；确认后回到 A，并清除关系确认。
+    await user.click(screen.getByRole('button', { name: '恢复基线' }))
+    const restoreDialog = await screen.findByRole('alertdialog', {
+      name: '恢复基线？',
+    })
+    expect(restoreDialog).toHaveTextContent('关系确认会被清除')
+    await user.click(
+      within(restoreDialog).getByRole('button', { name: '确认恢复' }),
+    )
+
+    expect(
+      await screen.findByText('已恢复基线，关系确认已清除'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'H 上偏差' })).toHaveValue(
+      '0.1000',
+    )
+    expect(screen.getByRole('textbox', { name: 'S 下偏差' })).toHaveValue(
+      '-0.0500',
+    )
+    expect(screen.getByRole('textbox', { name: 'S 上偏差' })).toHaveValue(
+      '0.0500',
+    )
+    expect(confirmationCheckbox()).not.toBeChecked()
+    expect(screen.getByText(/未发现差异/)).toBeInTheDocument()
+
+    // 重新挂载后基线和恢复后的工作方案都还在。
+    first.unmount()
+    render(<Workspace />)
+    await screen.findByRole('button', { name: '增加行' })
+
+    expect(await screen.findByText(/已有基线/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '恢复基线' })).not.toBeDisabled()
+    expect(screen.getByRole('textbox', { name: 'H 上偏差' })).toHaveValue(
+      '0.1000',
+    )
+    expect(confirmationCheckbox()).not.toBeChecked()
+    expect(screen.getByText(/未发现差异/)).toBeInTheDocument()
+  })
+
+  it('当前草稿无效时“保存为基线”不可点击', async () => {
+    const user = userEvent.setup()
+    await renderWorkspace()
+
+    await buildCaseA(user)
+    const saveBaselineButton = screen.getByRole('button', {
+      name: '保存为基线',
+    })
+    expect(saveBaselineButton).not.toBeDisabled()
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'H 基本尺寸' }), {
+      target: { value: '' },
+    })
+
+    expect(saveBaselineButton).toBeDisabled()
+    expect(
+      screen.getByText(/当前草稿未通过校验，修正后才能保存基线/),
+    ).toBeInTheDocument()
+  })
+
+  it('确认覆盖后基线更新为当前方案', async () => {
+    const user = userEvent.setup()
+    await renderWorkspace()
+
+    await buildCaseA(user)
+    await user.click(confirmationCheckbox())
+    await waitForAutoSave()
+    await user.click(screen.getByRole('button', { name: '保存为基线' }))
+    await screen.findByText('已保存为基线')
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'H 上偏差' }), {
+      target: { value: '0.0300' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'S 下偏差' }), {
+      target: { value: '-0.0200' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'S 上偏差' }), {
+      target: { value: '0.0200' },
+    })
+
+    await user.click(screen.getByRole('button', { name: '保存为基线' }))
+    const dialog = await screen.findByRole('alertdialog', {
+      name: '覆盖基线？',
+    })
+    await user.click(within(dialog).getByRole('button', { name: '覆盖基线' }))
+
+    expect(await screen.findByText('已覆盖基线')).toBeInTheDocument()
+    expect(screen.getByText(/未发现差异/)).toBeInTheDocument()
+  })
+})
+
+/** 从 Blob 读出 JSON 文本；jsdom 的 Blob 通过 FileReader 读取。 */
+function readBlobText(blob: Blob): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      resolve(typeof reader.result === 'string' ? reader.result : '')
+    }
+    reader.onerror = () => {
+      reject(reader.error ?? new Error('读取备份 Blob 失败'))
+    }
+    reader.readAsText(blob)
+  })
+}
+
+interface BackupDownloadMock {
+  blobs: Blob[]
+  restore: () => void
+}
+
+function installBackupDownloadMock(): BackupDownloadMock {
+  const blobs: Blob[] = []
+  const createObjectURL = vi.fn((value: Blob | MediaSource) => {
+    blobs.push(value as Blob)
+    return 'blob:backup'
+  })
+  const originalCreateObjectURL = URL.createObjectURL
+  const originalRevokeObjectURL = URL.revokeObjectURL
+
+  Object.defineProperty(URL, 'createObjectURL', {
+    configurable: true,
+    writable: true,
+    value: createObjectURL,
+  })
+  Object.defineProperty(URL, 'revokeObjectURL', {
+    configurable: true,
+    writable: true,
+    value: vi.fn(),
+  })
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+
+  const restore = (): void => {
+    if (typeof originalCreateObjectURL === 'function') {
+      Object.defineProperty(URL, 'createObjectURL', {
+        configurable: true,
+        writable: true,
+        value: originalCreateObjectURL,
+      })
+    } else {
+      Reflect.deleteProperty(URL, 'createObjectURL')
+    }
+    if (typeof originalRevokeObjectURL === 'function') {
+      Object.defineProperty(URL, 'revokeObjectURL', {
+        configurable: true,
+        writable: true,
+        value: originalRevokeObjectURL,
+      })
+    } else {
+      Reflect.deleteProperty(URL, 'revokeObjectURL')
+    }
+  }
+
+  return { blobs, restore }
+}
+
+describe('Workspace：保存失败时的备份导出', () => {
+  it('草稿有效时导出当前有效链，草稿无效时导出上次有效版本，并提示不含未通过校验的修改', async () => {
+    const user = userEvent.setup()
+    const backupMock = installBackupDownloadMock()
+    const saveMock = vi.fn(
+      async (
+        projectId: string,
+        draft: WorkspaceDraft,
+      ): Promise<StorageResult<SaveDraftResult>> =>
+        persistDraft(projectId, draft),
+    )
+
+    try {
+      render(<Workspace saveDraft={saveMock} />)
+      await screen.findByRole('button', { name: '增加行' })
+
+      await buildCaseA(user)
+      await waitForAutoSave()
+      expect(saveMock).toHaveBeenCalled()
+
+      // 此后的保存全部失败，但此前案例 A 已成功保存。
+      saveMock.mockImplementation(async () => {
+        throw new Error('模拟磁盘写入失败')
+      })
+      fireEvent.change(screen.getByRole('textbox', { name: 'H 上偏差' }), {
+        target: { value: '0.0300' },
+      })
+      await screen.findByText('保存失败', undefined, { timeout: 3000 })
+
+      expect(
+        screen.getByText(/备份不含未通过校验的修改/),
+      ).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: '导出 JSON 备份' }))
+      expect(backupMock.blobs).toHaveLength(1)
+      const validBackup = JSON.parse(
+        await readBlobText(backupMock.blobs[0]),
+      ) as { working: ChainDefinition }
+      const validH = validBackup.working.terms.find(
+        (term) => term.symbol === 'H',
+      )
+      expect(validH?.upperDeviationQ).toBe(300)
+
+      // 草稿无效时回退到上一次成功保存的案例 A。
+      fireEvent.change(screen.getByRole('textbox', { name: 'H 基本尺寸' }), {
+        target: { value: '' },
+      })
+      await screen.findByText('保存失败', undefined, { timeout: 3000 })
+      await user.click(screen.getByRole('button', { name: '导出 JSON 备份' }))
+      expect(backupMock.blobs).toHaveLength(2)
+      const fallbackBackup = JSON.parse(
+        await readBlobText(backupMock.blobs[1]),
+      ) as { working: ChainDefinition }
+      const fallbackH = fallbackBackup.working.terms.find(
+        (term) => term.symbol === 'H',
+      )
+      expect(fallbackH?.nominalQ).toBe(1_000_000)
+      expect(fallbackH?.upperDeviationQ).toBe(1000)
+    } finally {
+      backupMock.restore()
+    }
+  })
+})
+
+describe('Workspace：document hidden 立即保存', () => {
+  it('切到 hidden 时立即写入待保存草稿，不再等待 500 ms 防抖', async () => {
+    const savedAt = '2025-01-01T00:00:00.000Z'
+    const fakeProject: Project = {
+      schemaVersion: 1,
+      engineVersion: 'test',
+      id: 'visibility-project',
+      name: '可见性测试',
+      createdAt: savedAt,
+      updatedAt: savedAt,
+      working: {
+        terms: [],
+        target: null,
+        assumptions: '',
+        relationConfirmed: false,
+      },
+      baseline: null,
+    }
+    const saveMock = vi.fn(
+      async (
+        projectId: string,
+        draft: WorkspaceDraft,
+      ): Promise<StorageResult<SaveDraftResult>> => ({
+        ok: true,
+        value: {
+          project: fakeProject,
+          draft: { projectId, draft, savedAt },
+          modelUpdated: false,
+          cellErrors: {},
+        },
+      }),
+    )
+
+    render(<Workspace saveDraft={saveMock} />)
+    await screen.findByRole('button', { name: '增加行' })
+
+    vi.useFakeTimers()
+    fireEvent.change(screen.getByLabelText('目标下限'), {
+      target: { value: '0.1000' },
+    })
+    expect(saveMock).not.toHaveBeenCalled()
+
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    fireEvent(document, new Event('visibilitychange'))
+
+    expect(saveMock).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      vi.advanceTimersByTime(500)
+    })
+    expect(saveMock).toHaveBeenCalledTimes(1)
+
+    vi.useRealTimers()
+    await waitFor(() => {
+      expect(screen.getByText('已保存')).toBeInTheDocument()
+    })
   })
 })

@@ -44,6 +44,7 @@ export type UpdateFieldAction =
 
 export type WorkspaceAction =
   | { type: 'addTerm'; term: TermDraft }
+  | { type: 'replaceDraft'; draft: WorkspaceDraft }
   | { type: 'removeTerm'; termId: string }
   | { type: 'moveTerm'; termId: string; direction: 'up' | 'down' }
   | UpdateFieldAction
@@ -224,6 +225,9 @@ export function workspaceReducer(
         terms: [...draft.terms, { ...action.term }],
         relationConfirmed: false,
       }
+
+    case 'replaceDraft':
+      return action.draft
 
     case 'removeTerm': {
       const terms = draft.terms.filter((term) => term.id !== action.termId)
