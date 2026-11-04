@@ -1,5 +1,5 @@
 import { useId, type Dispatch } from 'react'
-import type { ChainResult, Q } from '../domain/types'
+import type { ChainDefinition, ChainResult, Q } from '../domain/types'
 import { formatMm } from '../domain/units'
 import type {
   CellErrors,
@@ -11,32 +11,10 @@ export interface ResultPanelProps {
   draft: WorkspaceDraft
   dispatch: Dispatch<WorkspaceAction>
   result: ChainResult | null
+  /** 与 ChainDefinition['target'] 同类型，由调用方从 chain.target 直接传入。 */
+  target: ChainDefinition['target']
   cellErrors: CellErrors
   stale: boolean
-}
-
-interface TargetInterval {
-  minQ: Q
-  maxQ: Q
-}
-
-/**
- * 目标区间不在 ChainResult 中冗余存储；用上次有效结果的极限值和裕量反推，
- * 这样 stale 时显示的允许区间仍然与上次有效结果属于同一次计算。
- */
-function targetFromResult(result: ChainResult | null): TargetInterval | null {
-  if (
-    result === null ||
-    result.lowerMarginQ === null ||
-    result.upperMarginQ === null
-  ) {
-    return null
-  }
-
-  return {
-    minQ: result.minQ - result.lowerMarginQ,
-    maxQ: result.maxQ + result.upperMarginQ,
-  }
 }
 
 function statusLabel(
@@ -64,7 +42,7 @@ function formatValue(value: Q | null, signed = false): string {
   return value === null ? '—' : formatMm(value, { signed })
 }
 
-function formatTarget(target: TargetInterval | null): string {
+function formatTarget(target: ChainDefinition['target']): string {
   return target === null
     ? '—'
     : `${formatMm(target.minQ)} ~ ${formatMm(target.maxQ)}`
@@ -72,9 +50,10 @@ function formatTarget(target: TargetInterval | null): string {
 
 interface ResultChartProps {
   result: ChainResult | null
-  target: TargetInterval | null
+  target: ChainDefinition['target']
 }
 
+/** SVG 视口与布局常量，仅用于绘图定位，不参与任何尺寸结论。 */
 const CHART_WIDTH = 360
 const CHART_HEIGHT = 108
 const PLOT_LEFT = 82
@@ -84,6 +63,50 @@ const AXIS_Y = 88
 const TARGET_Y = 30
 const RESULT_Y = 58
 const BAR_HEIGHT = 12
+
+interface ChartScale {
+  hasData: boolean
+  dataMin: Q
+  dataMax: Q
+  /** 把 q 值线性映射到 SVG 横坐标。 */
+  xFor: (value: Q) => number
+  /** 由两端 q 值得到 SVG 矩形宽度，只用于像素定位。 */
+  widthFor: (minQ: Q, maxQ: Q) => number
+}
+
+/**
+ * 仅做 SVG 坐标缩放的纯函数：把数值区间映射到绘图区像素。
+ *
+ * 这里的最小/最大值、留白和比例只影响图形是否易读，不参与尺寸、公差、
+ * 裕量或判定结论；所有结论仍直接来自 calculateChain 的结果和调用方
+ * 传入的 chain.target。
+ */
+function createChartScale(values: readonly Q[]): ChartScale {
+  if (values.length === 0) {
+    return {
+      hasData: false,
+      dataMin: 0,
+      dataMax: 0,
+      xFor: () => PLOT_LEFT,
+      widthFor: () => 0,
+    }
+  }
+
+  const dataMin = Math.min(...values)
+  const dataMax = Math.max(...values)
+  const dataSpan = dataMax - dataMin
+  const padding =
+    dataSpan === 0 ? Math.max(Math.abs(dataMin), 100) : Math.max(dataSpan * 0.08, 1)
+  const domainMin = dataMin - padding
+  const domainMax = dataMax + padding
+
+  const xFor = (value: Q): number =>
+    PLOT_LEFT + ((value - domainMin) / (domainMax - domainMin)) * PLOT_WIDTH
+  const widthFor = (minQ: Q, maxQ: Q): number =>
+    Math.max(1, xFor(maxQ) - xFor(minQ))
+
+  return { hasData: true, dataMin, dataMax, xFor, widthFor }
+}
 
 /**
  * 结果区间与允许区间共用一条数值坐标轴。零宽区间仍绘制 circle，
@@ -100,25 +123,17 @@ function ResultChart({ result, target }: ResultChartProps) {
     target?.maxQ,
   ].filter((value): value is Q => value !== undefined)
 
-  const hasData = values.length > 0
-  const dataMin = hasData ? Math.min(...values) : 0
-  const dataMax = hasData ? Math.max(...values) : 1
-  const dataSpan = dataMax - dataMin
-  // 留白只用于绘图可读性，不参与任何工程判定；所有区间仍使用同一比例。
-  const padding =
-    dataSpan === 0 ? Math.max(Math.abs(dataMin), 100) : Math.max(dataSpan * 0.08, 1)
-  const domainMin = dataMin - padding
-  const domainMax = dataMax + padding
-
-  const xFor = (value: Q): number =>
-    PLOT_LEFT + ((value - domainMin) / (domainMax - domainMin)) * PLOT_WIDTH
+  const scale = createChartScale(values)
+  const { hasData, dataMin, dataMax } = scale
 
   const targetZeroWidth = target !== null && target.minQ === target.maxQ
   const resultZeroWidth = result !== null && result.minQ === result.maxQ
-  const targetX = target === null ? 0 : xFor(target.minQ)
-  const resultX = result === null ? 0 : xFor(result.minQ)
-  const targetWidth = target === null ? 0 : Math.max(1, xFor(target.maxQ) - targetX)
-  const resultWidth = result === null ? 0 : Math.max(1, xFor(result.maxQ) - resultX)
+  const targetX = target === null ? 0 : scale.xFor(target.minQ)
+  const resultX = result === null ? 0 : scale.xFor(result.minQ)
+  const targetWidth =
+    target === null ? 0 : scale.widthFor(target.minQ, target.maxQ)
+  const resultWidth =
+    result === null ? 0 : scale.widthFor(result.minQ, result.maxQ)
 
   return (
     <div className="result-panel__chart">
@@ -249,13 +264,14 @@ function ResultChart({ result, target }: ResultChartProps) {
 }
 
 /**
- * 受控结果卡：目标区间由 draft 提供，操作通过 dispatch 回传；
- * 组件内部不调用 useWorkspace，也不重新计算公式。
+ * 受控结果卡：目标区间由调用方从 chain.target 直接传入，输入通过 dispatch 回传；
+ * 组件只负责展示和格式化，不重新计算目标区间，也不做任何尺寸换算。
  */
 export function ResultPanel({
   draft,
   dispatch,
   result,
+  target,
   cellErrors,
   stale,
 }: ResultPanelProps) {
@@ -267,7 +283,6 @@ export function ResultPanel({
   const targetMaxErrorId = `${baseId}-target-max-error`
   const confirmedId = `${baseId}-confirmed`
 
-  const target = targetFromResult(result)
   const targetMinError = cellErrors['target.min']
   const targetMaxError = cellErrors['target.max']
   const currentStatus = statusLabel(result, draft.relationConfirmed, stale)

@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
+import { useState } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import type { ChainDefinition } from '../domain/types'
 import type { TermDraft, WorkspaceDraft } from '../workspace/draft'
 import { useWorkspace } from '../workspace/useWorkspace'
 import { ResultPanel } from './ResultPanel'
@@ -162,12 +164,24 @@ function zeroToleranceDraft(): WorkspaceDraft {
 }
 
 function ResultPanelHarness({ initial }: { initial: WorkspaceDraft }) {
-  const { draft, dispatch, result, cellErrors, stale } = useWorkspace(initial)
+  const { draft, dispatch, result, chain, cellErrors, stale } =
+    useWorkspace(initial)
+
+  // 目标区间只从 calculateChain 的输入链取得；草稿无效时沿用上次有效链的 target。
+  const [lastValidTarget, setLastValidTarget] = useState<
+    ChainDefinition['target']
+  >(chain?.target ?? null)
+  if (chain !== null && chain.target !== lastValidTarget) {
+    setLastValidTarget(chain.target)
+  }
+  const target = chain !== null ? chain.target : lastValidTarget
+
   return (
     <ResultPanel
       draft={draft}
       dispatch={dispatch}
       result={result}
+      target={target}
       cellErrors={cellErrors}
       stale={stale}
     />
@@ -311,6 +325,9 @@ describe('ResultPanel：无效输入与 stale', () => {
     expect(displayed('result-nominal')).toBe('0.2000')
     expect(displayed('result-min')).toBe('0.1500')
     expect(displayed('result-max')).toBe('0.3900')
+    // stale 时允许区间仍来自上次有效链的 target，而不是由无效草稿或裕量反推。
+    expect(displayed('result-target')).toBe('0.1000 ~ 0.3000')
+    expect(screen.getByTestId('target-range')).toBeInTheDocument()
     expect(displayed('result-status')).toBe('待确认（预览）')
 
     const maxInput = screen.getByLabelText('目标上限')
