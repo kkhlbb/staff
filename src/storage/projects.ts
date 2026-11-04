@@ -582,6 +582,41 @@ export async function createProject(
   }
 }
 
+/**
+ * 首次打开工作台且本地没有项目时创建一个空白项目。
+ *
+ * 空白方案的组成环为 0，尚不满足 validateChain 的 2–20 项要求，因此不能走
+ * createProject 的常规校验路径；它只是“还没有有效模型”的初始记录。之后的
+ * 自动保存通过 saveDraft 处理：无效草稿只写 drafts 表，合法草稿才更新 working。
+ */
+export async function createEmptyProject(
+  name = '未命名项目',
+): Promise<StorageResult<Project>> {
+  const now = nowIso()
+  const project: Project = {
+    schemaVersion: STORAGE_SCHEMA_VERSION,
+    engineVersion: ENGINE_VERSION,
+    id: newProjectId(),
+    name: name.trim() || '未命名项目',
+    createdAt: now,
+    updatedAt: now,
+    working: {
+      terms: [],
+      target: null,
+      assumptions: '',
+      relationConfirmed: false,
+    },
+    baseline: null,
+  }
+
+  try {
+    const inserted = await withDatabase((db) => addProjectWithUniqueId(db, project))
+    return { ok: true, value: inserted.project }
+  } catch (error) {
+    return storageFailure(error, '创建空项目失败')
+  }
+}
+
 export async function getProject(id: string): Promise<StorageResult<Project | null>> {
   try {
     const project = await withDatabase(async (db) => {

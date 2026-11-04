@@ -3,29 +3,64 @@ import { ChainDiagram } from '../components/ChainDiagram'
 import { ChainExpression } from '../components/ChainExpression'
 import { DimensionTable } from '../components/DimensionTable'
 import { ResultPanel } from '../components/ResultPanel'
-import type { ChainDefinition } from '../domain/types'
-import { useWorkspace } from '../workspace/useWorkspace'
+import type { ChainDefinition, Project } from '../domain/types'
+import {
+  usePersistedWorkspace,
+  useWorkspaceBootstrap,
+  type SaveDraftFn,
+  type SaveStatus,
+} from '../workspace/usePersistedWorkspace'
+import type { WorkspaceDraft } from '../workspace/draft'
 import './Workspace.css'
 
+export interface WorkspaceProps {
+  /** 仅测试或特殊场景注入保存实现；默认写入 IndexedDB。 */
+  saveDraft?: SaveDraftFn
+}
+
+const SAVE_STATUS_LABEL: Record<SaveStatus, string> = {
+  saving: '保存中',
+  saved: '已保存',
+  failed: '保存失败',
+}
+
+interface WorkspaceEditorProps {
+  project: Project
+  initialDraft: WorkspaceDraft
+  initialValidChain: ChainDefinition | null
+  saveDraft?: SaveDraftFn
+}
+
 /**
- * 分析工作台：左侧组成环表、中部表达式与示意图、右侧结果卡。
+ * 加载完成后的编辑区。
  *
- * 页面只负责组合受控组件和保存交互状态；尺寸链计算全部来自 useWorkspace
- * （内部调用 calculateChain），这里不写任何计算或校验公式。
+ * 这个组件第一次挂载时已经拿到恢复后的草稿和项目里的最后一个有效链，
+ * 因此不会先渲染空项目、再在 effect 里覆盖成缓存内容。
  */
-export function Workspace() {
-  const { draft, dispatch, chain, result, cellErrors, stale } = useWorkspace()
+function WorkspaceEditor({
+  project,
+  initialDraft,
+  initialValidChain,
+  saveDraft,
+}: WorkspaceEditorProps) {
+  const {
+    draft,
+    dispatch,
+    chain,
+    lastValidChain,
+    result,
+    cellErrors,
+    stale,
+    saveStatus,
+    saveError,
+    exportBackup,
+  } = usePersistedWorkspace(project, initialDraft, {
+    initialValidChain,
+    saveDraft,
+  })
   const [selectedTermId, setSelectedTermId] = useState<string | null>(null)
 
-  // 按 React 文档“存储前一次渲染的信息”的写法记住最后一次有效链。
-  // 草稿无效时 useWorkspace 会保留上次结果，但 chain 为 null，
-  // 因此结果卡需要从这里取得上次有效链的目标区间。不要在渲染期读写 ref。
-  const [lastValidChain, setLastValidChain] = useState<ChainDefinition | null>(
-    chain,
-  )
-  if (chain !== null && chain !== lastValidChain) {
-    setLastValidChain(chain)
-  }
+  // 当前草稿无效时由 hook 保留上一次有效链；结果卡和示意图都只读取这一份数据。
   const displayChain = chain ?? lastValidChain
   const target = displayChain?.target ?? null
 
@@ -39,8 +74,32 @@ export function Workspace() {
             所有数值使用 mm，计算由本地计算内核完成。
           </p>
         </div>
-        <span className="workspace__badge">MVP · 一维极值法</span>
+        <div className="workspace__header-meta">
+          {stale && draft.terms.length > 0 ? (
+            <span className="workspace__draft-state">待修正</span>
+          ) : null}
+          <span
+            className={`workspace__save workspace__save--${saveStatus}`}
+            role="status"
+            aria-live="polite"
+          >
+            {SAVE_STATUS_LABEL[saveStatus]}
+          </span>
+          <span className="workspace__badge">MVP · 一维极值法</span>
+        </div>
       </header>
+
+      {saveStatus === 'failed' ? (
+        <div className="workspace__save-error" role="alert">
+          <p>
+            保存失败：{saveError?.message ?? '无法写入本地数据库'}。
+            请立即导出 JSON 备份，避免刷新或关闭页面后丢失输入。
+          </p>
+          <button type="button" onClick={exportBackup}>
+            导出 JSON 备份
+          </button>
+        </div>
+      ) : null}
 
       <div className="workspace__grid">
         <div className="workspace__column workspace__column--table">
@@ -77,5 +136,46 @@ export function Workspace() {
         </div>
       </div>
     </main>
+  )
+}
+
+/**
+ * 分析工作台入口：先从 IndexedDB 恢复（或创建）项目，读取完成前只显示加载状态。
+ * 尺寸链计算全部来自 useWorkspace（内部调用 calculateChain），这里不写公式。
+ */
+export function Workspace({ saveDraft }: WorkspaceProps = {}) {
+  const bootstrap = useWorkspaceBootstrap()
+
+  if (bootstrap.status === 'loading') {
+    return (
+      <main className="workspace">
+        <p className="workspace__loading" role="status">
+          正在加载本地项目…
+        </p>
+      </main>
+    )
+  }
+
+  if (bootstrap.status === 'error') {
+    return (
+      <main className="workspace">
+        <div className="workspace__load-error" role="alert">
+          <p>无法加载本地项目：{bootstrap.error.message}</p>
+          <button type="button" onClick={bootstrap.retry}>
+            重试
+          </button>
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <WorkspaceEditor
+      key={bootstrap.project.id}
+      project={bootstrap.project}
+      initialDraft={bootstrap.initialDraft}
+      initialValidChain={bootstrap.initialValidChain}
+      saveDraft={saveDraft}
+    />
   )
 }

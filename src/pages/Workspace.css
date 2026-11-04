@@ -37,6 +37,86 @@
   white-space: nowrap;
 }
 
+.workspace__header-meta {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace__save {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.workspace__save--saving {
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.workspace__save--saved {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.workspace__save--failed {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: var(--danger);
+}
+
+.workspace__draft-state {
+  padding: 4px 10px;
+  border: 1px solid #fcd34d;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.workspace__save-error,
+.workspace__load-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius);
+  background: #fef2f2;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.workspace__save-error p,
+.workspace__load-error p {
+  margin: 0;
+}
+
+.workspace__save-error button {
+  flex: none;
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.workspace__loading {
+  margin: 48px auto;
+  color: var(--muted);
+  text-align: center;
+}
+
 .workspace__grid {
   display: grid;
   grid-template-columns:

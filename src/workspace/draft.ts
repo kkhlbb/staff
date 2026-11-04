@@ -1,5 +1,5 @@
 import type { ChainDefinition, DimensionTerm, Q } from '../domain/types'
-import { tryParseMm } from '../domain/units'
+import { formatMm, tryParseMm } from '../domain/units'
 import { validateChain } from '../domain/validation'
 
 /**
@@ -57,6 +57,31 @@ export const emptyDraft: WorkspaceDraft = {
   targetMax: '',
   assumptions: '',
   relationConfirmed: false,
+}
+
+/**
+ * 把已校验的领域链还原为输入草稿。
+ *
+ * 只在没有草稿缓存时用于打开项目（例如导入的旧项目）。所有数值按领域层的
+ * formatMm 输出为十进制字符串，不经过浮点缩放；确认状态原样保留。
+ */
+export function chainToDraft(chain: ChainDefinition): WorkspaceDraft {
+  return {
+    terms: chain.terms.map((term) => ({
+      id: term.id,
+      symbol: term.symbol,
+      name: term.name,
+      nominal: formatMm(term.nominalQ),
+      lower: formatMm(term.lowerDeviationQ),
+      upper: formatMm(term.upperDeviationQ),
+      sign: term.sign,
+      sourceNote: term.sourceNote,
+    })),
+    targetMin: chain.target === null ? '' : formatMm(chain.target.minQ),
+    targetMax: chain.target === null ? '' : formatMm(chain.target.maxQ),
+    assumptions: chain.assumptions,
+    relationConfirmed: chain.relationConfirmed,
+  }
 }
 
 const TERM_PATH_FIELDS: Record<string, string> = {

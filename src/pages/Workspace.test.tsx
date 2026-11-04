@@ -1,8 +1,31 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import 'fake-indexeddb/auto'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent, { type UserEvent } from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Project } from '../domain/types'
+import type {
+  SaveDraftResult,
+  StorageResult,
+} from '../storage/projects'
+import { deleteProjectDatabase } from '../test/projectDb'
+import type { WorkspaceDraft } from '../workspace/draft'
 import { Workspace } from './Workspace'
+
+beforeEach(async () => {
+  await deleteProjectDatabase()
+})
+
+afterEach(async () => {
+  vi.useRealTimers()
+  await deleteProjectDatabase()
+})
+
+/** 等待 IndexedDB 完成首次加载（没有项目时先创建空白项目）。 */
+async function renderWorkspace(): Promise<void> {
+  render(<Workspace />)
+  await screen.findByRole('button', { name: '增加行' })
+}
 
 interface TermInput {
   symbol: string
@@ -115,7 +138,12 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     const user = userEvent.setup()
     render(<Workspace />)
 
-    expect(screen.getByRole('status')).toHaveTextContent('暂无组成环')
+    // 加载完成前只显示加载状态，不能先渲染空项目。
+    expect(screen.getByRole('status')).toHaveTextContent('正在加载本地项目')
+    expect(screen.queryByRole('table', { name: '组成环表' })).toBeNull()
+    await screen.findByRole('button', { name: '增加行' })
+
+    expect(screen.getByText(/暂无组成环/)).toBeInTheDocument()
     expect(screen.getByText('请先添加组成环')).toBeInTheDocument()
     expect(
       screen.queryByText('输入有误，显示的是上次有效结果'),
@@ -207,7 +235,7 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
 
   it('输入无效时结果卡沿用上次有效链的目标区间，并标注待确认预览', async () => {
     const user = userEvent.setup()
-    render(<Workspace />)
+    await renderWorkspace()
 
     await buildCaseA(user)
     await user.click(confirmationCheckbox())
@@ -241,7 +269,7 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
 
   it('编辑清除确认状态时显示重新核对提示，重新勾选后提示消失', async () => {
     const user = userEvent.setup()
-    render(<Workspace />)
+    await renderWorkspace()
 
     await buildCaseA(user)
     await user.click(confirmationCheckbox())
@@ -273,5 +301,163 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     expect(
       screen.queryByText('输入已变更，请重新核对'),
     ).toBeNull()
+  })
+})
+
+/** 等本轮防抖真正写入完成：先确认进入“保存中”，再等“已保存”。 */
+async function waitForAutoSave(): Promise<void> {
+  await screen.findByText('保存中')
+  await screen.findByText('已保存', undefined, { timeout: 3000 })
+}
+
+describe('Workspace：自动保存与刷新恢复', () => {
+  it('建立案例 A 后卸载并重新挂载，输入、确认状态和结果一致', async () => {
+    const user = userEvent.setup()
+    const first = render(<Workspace />)
+    await screen.findByRole('button', { name: '增加行' })
+
+    await buildCaseA(user)
+    await user.click(confirmationCheckbox())
+    await waitForAutoSave()
+
+    expect(resultValue('result-status')).toBe('不满足')
+    expect(resultValue('result-min')).toBe('0.1500')
+    expect(resultValue('result-max')).toBe('0.3900')
+
+    first.unmount()
+
+    render(<Workspace />)
+    await screen.findByRole('button', { name: '增加行' })
+
+    expect(screen.getByRole('textbox', { name: 'H 基本尺寸' })).toHaveValue(
+      '100.0000',
+    )
+    expect(screen.getByRole('textbox', { name: 'S 下偏差' })).toHaveValue(
+      '-0.0500',
+    )
+    expect(screen.getByLabelText('目标下限')).toHaveValue('0.1000')
+    expect(screen.getByLabelText('目标上限')).toHaveValue('0.3000')
+    expect(confirmationCheckbox()).toBeChecked()
+    expect(resultValue('result-status')).toBe('不满足')
+    expect(resultValue('result-min')).toBe('0.1500')
+    expect(resultValue('result-max')).toBe('0.3900')
+  })
+
+  it('无效草稿刷新后仍然保留，并显示上一次有效结果和待修正状态', async () => {
+    const user = userEvent.setup()
+    const first = render(<Workspace />)
+    await screen.findByRole('button', { name: '增加行' })
+
+    await buildCaseA(user)
+    await user.click(confirmationCheckbox())
+    await waitForAutoSave()
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'H 基本尺寸' }), {
+      target: { value: '' },
+    })
+    expect(
+      screen.getByText('输入有误，显示的是上次有效结果'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('待修正')).toBeInTheDocument()
+    await waitForAutoSave()
+
+    first.unmount()
+
+    render(<Workspace />)
+    await screen.findByRole('button', { name: '增加行' })
+
+    // 草稿中的无效输入原样恢复，提示待修正。
+    expect(screen.getByRole('textbox', { name: 'H 基本尺寸' })).toHaveValue('')
+    expect(
+      screen.getByText('输入有误，显示的是上次有效结果'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('待修正')).toBeInTheDocument()
+    expect(confirmationCheckbox()).not.toBeChecked()
+
+    // 结果卡显示的是项目里上一次有效模型（案例 A），而不是空结果。
+    expect(resultValue('result-status')).toBe('待确认（预览）')
+    expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
+    expect(resultValue('result-min')).toBe('0.1500')
+    expect(resultValue('result-max')).toBe('0.3900')
+  })
+
+  it('保存失败时显示“保存失败”并提示导出 JSON，不显示“已保存”', async () => {
+    const failingSave = async (): Promise<StorageResult<SaveDraftResult>> => {
+      throw new Error('模拟 IndexedDB 写入失败')
+    }
+
+    render(<Workspace saveDraft={failingSave} />)
+    await screen.findByRole('button', { name: '增加行' })
+
+    fireEvent.change(screen.getByLabelText('目标下限'), {
+      target: { value: '0.1000' },
+    })
+
+    await screen.findByText('保存失败', undefined, { timeout: 3000 })
+    expect(screen.queryByText('已保存')).toBeNull()
+    expect(screen.getByText(/请立即导出 JSON 备份/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: '导出 JSON 备份' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/模拟 IndexedDB 写入失败/)).toBeInTheDocument()
+  })
+
+  it('500 ms 内多次编辑只触发一次防抖写入', async () => {
+    const savedAt = '2025-01-01T00:00:00.000Z'
+    const fakeProject: Project = {
+      schemaVersion: 1,
+      engineVersion: 'test',
+      id: 'debounce-project',
+      name: '防抖测试',
+      createdAt: savedAt,
+      updatedAt: savedAt,
+      working: {
+        terms: [],
+        target: null,
+        assumptions: '',
+        relationConfirmed: false,
+      },
+      baseline: null,
+    }
+    const saveMock = vi.fn(
+      async (
+        projectId: string,
+        draft: WorkspaceDraft,
+      ): Promise<StorageResult<SaveDraftResult>> => ({
+        ok: true,
+        value: {
+          project: fakeProject,
+          draft: { projectId, draft, savedAt },
+          modelUpdated: false,
+          cellErrors: {},
+        },
+      }),
+    )
+
+    render(<Workspace saveDraft={saveMock} />)
+    await screen.findByRole('button', { name: '增加行' })
+
+    vi.useFakeTimers()
+    const targetMin = screen.getByLabelText('目标下限')
+    fireEvent.change(targetMin, { target: { value: '0.1000' } })
+    fireEvent.change(targetMin, { target: { value: '0.2000' } })
+    fireEvent.change(targetMin, { target: { value: '0.3000' } })
+
+    expect(saveMock).not.toHaveBeenCalled()
+    act(() => {
+      vi.advanceTimersByTime(499)
+    })
+    expect(saveMock).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(saveMock).toHaveBeenCalledTimes(1)
+
+    vi.useRealTimers()
+    await waitFor(() => {
+      expect(screen.getByText('已保存')).toBeInTheDocument()
+    })
+    expect(saveMock).toHaveBeenCalledTimes(1)
   })
 })
