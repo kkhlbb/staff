@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { calculateChain } from '../domain/calculate'
 import type { Project } from '../domain/types'
-import { validateChain } from '../domain/validation'
 import {
   createEmptyProject,
   deleteProject,
   exportProjectJson,
   importProject,
+  listDrafts,
   listProjects,
   updateProject,
   type StorageError,
+  type StorageResult,
 } from '../storage/projects'
+import type { WorkspaceDraft } from '../workspace/draft'
+import { resolveStoredWorkspaceStatus } from '../workspace/status'
 import './ProjectList.css'
 
 export interface ProjectListProps {
@@ -23,12 +25,6 @@ interface UiError {
   message: string
   reasons: string[]
 }
-
-const STATUS_LABEL = {
-  within: '满足',
-  outside: '不满足',
-  'no-target': '未设置目标',
-} as const
 
 type StatusTone = 'done' | 'pending' | 'invalid' | 'outside'
 
@@ -42,27 +38,32 @@ function workspaceHash(projectId: string): string {
 }
 
 /**
- * 项目列表中的“当前计算状态”只读取领域层结果。
- * 空项目还没有有效尺寸链，单独标为“未完成”；1 项等非法链标为“输入有误”。
+ * 项目列表中的“当前计算状态”与工作台共用同一份判定：
+ * 有效草稿（或工作方案）的领域结果 + relationConfirmed + 草稿是否有效。
+ * 列表只负责把共享状态映射成徽标文案和颜色，不重新计算尺寸或判定。
  */
-function projectStatus(project: Project): ProjectStatus {
-  if (project.working.terms.length === 0) {
-    return { label: '未完成', tone: 'pending' }
+function projectStatus(
+  project: Project,
+  draft: WorkspaceDraft | null,
+): ProjectStatus {
+  const status = resolveStoredWorkspaceStatus({ working: project.working, draft })
+
+  if (status.kind === 'no-result') {
+    const hasDraftTerms = draft !== null && draft.terms.length > 0
+    return project.working.terms.length === 0 && !hasDraftTerms
+      ? { label: '未完成', tone: 'pending' }
+      : { label: '输入有误', tone: 'invalid' }
   }
 
-  const validation = validateChain(project.working)
-  if (!validation.ok) {
-    return { label: '输入有误', tone: 'invalid' }
-  }
-
-  try {
-    const result = calculateChain(project.working)
-    return {
-      label: STATUS_LABEL[result.status],
-      tone: result.status === 'within' ? 'done' : result.status === 'outside' ? 'outside' : 'pending',
-    }
-  } catch {
-    return { label: '计算失败', tone: 'invalid' }
+  switch (status.kind) {
+    case 'within':
+      return { label: status.label, tone: 'done' }
+    case 'outside':
+      return { label: status.label, tone: 'outside' }
+    case 'pending':
+      return { label: status.label, tone: 'pending' }
+    case 'no-target':
+      return { label: status.label, tone: 'pending' }
   }
 }
 
@@ -99,6 +100,31 @@ function readFileText(file: File): Promise<string> {
   })
 }
 
+interface ProjectListSnapshot {
+  projects: Project[]
+  drafts: ReadonlyMap<string, WorkspaceDraft>
+}
+
+/** 项目列表与草稿分开存储；展示状态前必须同时读取两者。 */
+async function loadProjectList(): Promise<StorageResult<ProjectListSnapshot>> {
+  const [listed, storedDrafts] = await Promise.all([listProjects(), listDrafts()])
+  if (!listed.ok) {
+    return listed
+  }
+  if (!storedDrafts.ok) {
+    return storedDrafts
+  }
+  return {
+    ok: true,
+    value: {
+      projects: listed.value,
+      drafts: new Map(
+        storedDrafts.value.map((stored) => [stored.projectId, stored.draft]),
+      ),
+    },
+  }
+}
+
 /**
  * 项目首页。
  *
@@ -107,6 +133,9 @@ function readFileText(file: File): Promise<string> {
  */
 export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
   const [projects, setProjects] = useState<Project[]>([])
+  const [drafts, setDrafts] = useState<ReadonlyMap<string, WorkspaceDraft>>(
+    () => new Map(),
+  )
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [listError, setListError] = useState<UiError | null>(null)
@@ -128,12 +157,13 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
   )
 
   const refresh = useCallback(async (): Promise<boolean> => {
-    const listed = await listProjects()
-    if (!listed.ok) {
-      setListError(toUiError(listed.error))
+    const snapshot = await loadProjectList()
+    if (!snapshot.ok) {
+      setListError(toUiError(snapshot.error))
       return false
     }
-    setProjects(listed.value)
+    setProjects(snapshot.value.projects)
+    setDrafts(snapshot.value.drafts)
     setListError(null)
     return true
   }, [])
@@ -141,16 +171,17 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
   useEffect(() => {
     let cancelled = false
     const load = async (): Promise<void> => {
-      const listed = await listProjects()
+      const snapshot = await loadProjectList()
       if (cancelled) {
         return
       }
-      if (!listed.ok) {
-        setListError(toUiError(listed.error))
+      if (!snapshot.ok) {
+        setListError(toUiError(snapshot.error))
         setLoading(false)
         return
       }
-      setProjects(listed.value)
+      setProjects(snapshot.value.projects)
+      setDrafts(snapshot.value.drafts)
       setLoading(false)
     }
 
@@ -334,7 +365,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
       ) : (
         <ul className="project-list__items" aria-label="项目列表">
           {projects.map((project) => {
-            const status = projectStatus(project)
+            const status = projectStatus(project, drafts.get(project.id) ?? null)
             return (
               <li
                 key={project.id}

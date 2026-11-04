@@ -149,12 +149,17 @@
   gap: 8px;
 }
 
+/*
+ * 桌面端让组成环表独占首行，表达式/示意图与结果卡在下方两栏。
+ * 三栏布局会把 1280px 视口的表格压到 1040px 最小宽度以下，导致极限尺寸
+ * 列横向滚动；独占整行后 1280px 与 1440px 都能完整显示表格。
+ */
 .workspace__grid {
   display: grid;
-  grid-template-columns:
-    minmax(0, 1.55fr)
-    minmax(340px, 1fr)
-    minmax(310px, 0.85fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    'table table'
+    'middle result';
   gap: 16px;
   align-items: start;
 }
@@ -164,6 +169,18 @@
   min-width: 0;
   flex-direction: column;
   gap: 16px;
+}
+
+.workspace__column--table {
+  grid-area: table;
+}
+
+.workspace__column--middle {
+  grid-area: middle;
+}
+
+.workspace__column--result {
+  grid-area: result;
 }
 
 .workspace__baseline {
@@ -476,6 +493,8 @@
 
 .result-panel__row dt {
   color: var(--muted);
+  /* 结果卡变窄时“允许区间”等标签保持单行，不把数值挤到下一行。 */
+  white-space: nowrap;
 }
 
 .result-panel__row dd {
@@ -584,18 +603,10 @@
 @media (max-width: 1180px) {
   .workspace__grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .workspace__column--table {
-    order: 1;
-  }
-
-  .workspace__column--middle {
-    order: 2;
-  }
-
-  .workspace__column--result {
-    order: 3;
+    grid-template-areas:
+      'table'
+      'middle'
+      'result';
   }
 
   /* 单列布局下让组成环表在 1024px 视口内完整显示，极限尺寸列无需横向滚动。 */

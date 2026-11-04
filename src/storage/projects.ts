@@ -867,6 +867,24 @@ export async function getDraft(
   }
 }
 
+/** 一次读取全部草稿，供项目列表按草稿推导与工作台一致的状态。 */
+export async function listDrafts(): Promise<StorageResult<StoredDraft[]>> {
+  try {
+    const drafts = await withDatabase(async (db) => {
+      const transaction = db.transaction(DRAFT_STORE_NAME, 'readonly')
+      const done = transactionDone(transaction)
+      const value = await requestResult(
+        transaction.objectStore(DRAFT_STORE_NAME).getAll(),
+      )
+      await done
+      return value as StoredDraft[]
+    })
+    return { ok: true, value: drafts }
+  } catch (error) {
+    return storageFailure(error, '读取草稿列表失败')
+  }
+}
+
 /**
  * 自动保存入口：草稿永远写入独立 drafts 表，只有通过 draftToChain 时才同步更新
  * projects.working。无效草稿只更新草稿，项目模型与 updatedAt 都保持不变。

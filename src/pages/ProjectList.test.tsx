@@ -23,6 +23,7 @@ import {
   type StorageResult,
 } from '../storage/projects'
 import { deleteProjectDatabase } from '../test/projectDb'
+import App from '../App'
 import { Workspace } from './Workspace'
 import { ProjectList } from './ProjectList'
 
@@ -101,6 +102,36 @@ function chainB(): ChainDefinition {
 
 async function seedCaseA(name = '案例 A'): Promise<Project> {
   return expectOk(await createProject({ name, working: chainA() }))
+}
+
+async function seedCaseB(name = '案例 B'): Promise<Project> {
+  return expectOk(await createProject({ name, working: chainB() }))
+}
+
+function openWorkspace(project: Project): void {
+  window.location.hash = workspaceHashForTest(project.id)
+}
+
+function workspaceHashForTest(projectId: string): string {
+  return `#/projects/${encodeURIComponent(projectId)}`
+}
+
+function resultStatus(): string {
+  const cell = screen.getByTestId('result-status').querySelector('dd')
+  if (cell === null) {
+    throw new Error('结果状态行缺少 dd')
+  }
+  return cell.textContent ?? ''
+}
+
+function statusBadge(project: Project): HTMLElement {
+  return screen.getByTestId(`project-status-${project.id}`)
+}
+
+/** 等待自动保存从“保存中”落到“已保存”，确保返回列表前草稿已写入 IndexedDB。 */
+async function waitForAutoSave(): Promise<void> {
+  await screen.findByText('保存中')
+  await screen.findByText('已保存', undefined, { timeout: 3000 })
 }
 
 function projectRows(): HTMLElement[] {
@@ -314,6 +345,67 @@ describe('ProjectList：项目列表操作', () => {
     expect(projectRows()).toHaveLength(1)
     expect(expectOk(await listProjects())).toEqual(before)
     expect(expectOk(await getProject(existing.id))).toEqual(existing)
+  })
+})
+
+describe('ProjectList：状态与工作台一致', () => {
+  it('改值清除确认后列表显示待确认，重新确认并保存后显示满足', async () => {
+    const user = userEvent.setup()
+    const project = await seedCaseB()
+    openWorkspace(project)
+    render(<App />)
+
+    await screen.findByRole('button', { name: '增加行' })
+    expect(resultStatus()).toBe('满足')
+
+    // 与工作台同一路径：编辑数值会清除 relationConfirmed，但数值仍在目标区间内。
+    fireEvent.change(screen.getByRole('textbox', { name: 'H 上偏差' }), {
+      target: { value: '0.0200' },
+    })
+    expect(resultStatus()).toBe('待确认（预览）')
+    await waitForAutoSave()
+
+    await user.click(screen.getByRole('button', { name: '返回项目列表' }))
+    await screen.findByRole('list', { name: '项目列表' })
+    expect(statusBadge(project)).toHaveTextContent('待确认')
+    expect(statusBadge(project)).not.toHaveTextContent('满足')
+
+    await user.click(within(rowFor(project)).getByRole('button', { name: '打开' }))
+    await screen.findByRole('button', { name: '增加行' })
+    await user.click(
+      screen.getByRole('checkbox', { name: '已核对尺寸关系与作用方向' }),
+    )
+    expect(resultStatus()).toBe('满足')
+    await waitForAutoSave()
+
+    await user.click(screen.getByRole('button', { name: '返回项目列表' }))
+    await screen.findByRole('list', { name: '项目列表' })
+    expect(statusBadge(project)).toHaveTextContent('满足')
+  })
+
+  it('草稿无效时列表不使用已保存方案的满足结论', async () => {
+    const user = userEvent.setup()
+    const project = await seedCaseB()
+    openWorkspace(project)
+    render(<App />)
+
+    await screen.findByRole('button', { name: '增加行' })
+    expect(resultStatus()).toBe('满足')
+
+    // 基本尺寸清空后草稿无效；已保存工作方案仍是满足的案例 B。
+    fireEvent.change(screen.getByRole('textbox', { name: 'H 基本尺寸' }), {
+      target: { value: '' },
+    })
+    expect(
+      screen.getByText('输入有误，显示的是上次有效结果'),
+    ).toBeInTheDocument()
+    await waitForAutoSave()
+
+    await user.click(screen.getByRole('button', { name: '返回项目列表' }))
+    await screen.findByRole('list', { name: '项目列表' })
+
+    expect(statusBadge(project)).not.toHaveTextContent('满足')
+    expect(statusBadge(project)).toHaveTextContent('待确认')
   })
 })
 

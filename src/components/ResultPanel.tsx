@@ -6,6 +6,7 @@ import type {
   WorkspaceAction,
   WorkspaceDraft,
 } from '../workspace/draft'
+import { resolveWorkspaceStatus } from '../workspace/status'
 import {
   ContributionTable,
   type ContributionTermLabel,
@@ -26,27 +27,6 @@ export interface ResultPanelProps {
 interface ConfirmationSnapshot {
   relationConfirmed: boolean
   terms: WorkspaceDraft['terms']
-}
-
-function statusLabel(
-  result: ChainResult | null,
-  relationConfirmed: boolean,
-  stale: boolean,
-): string {
-  if (result === null) {
-    return '暂无结果'
-  }
-  // 正式判定必须同时满足“已确认”和“当前输入有效”；stale 时只展示预览。
-  if (!relationConfirmed || stale) {
-    return '待确认（预览）'
-  }
-  if (result.status === 'within') {
-    return '满足'
-  }
-  if (result.status === 'outside') {
-    return '不满足'
-  }
-  return '未设置目标'
 }
 
 function formatValue(value: Q | null, signed = false): string {
@@ -297,7 +277,11 @@ export function ResultPanel({
 
   const targetMinError = cellErrors['target.min']
   const targetMaxError = cellErrors['target.max']
-  const currentStatus = statusLabel(result, draft.relationConfirmed, stale)
+  const currentStatus = resolveWorkspaceStatus({
+    result,
+    relationConfirmed: draft.relationConfirmed,
+    stale,
+  }).label
 
   // 按 React 文档“存储前一次渲染的信息”的写法比较前后两次草稿：
   // 仅当确认状态由“已确认”变为“未确认”，且 terms 引用也发生变化时，
