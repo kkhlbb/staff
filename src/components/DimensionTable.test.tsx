@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useState } from 'react'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { calculateChain } from '../domain/calculate'
@@ -127,6 +128,26 @@ function symbolValues(): string[] {
   return screen
     .getAllByRole('textbox', { name: / 代号$/ })
     .map((input) => (input as HTMLInputElement).value)
+}
+
+function SelectionHarness({ initial }: { initial: WorkspaceDraft }) {
+  const workspace = useWorkspace(initial)
+  const [selectedTermId, setSelectedTermId] = useState<string | null>(null)
+
+  return (
+    <>
+      <DimensionTable
+        draft={workspace.draft}
+        dispatch={workspace.dispatch}
+        chain={workspace.chain}
+        cellErrors={workspace.cellErrors}
+        stale={workspace.stale}
+        selectedTermId={selectedTermId}
+        onSelect={setSelectedTermId}
+      />
+      <output data-testid="selected-term">{selectedTermId ?? ''}</output>
+    </>
+  )
 }
 
 describe('DimensionTable：字段与只读极限尺寸', () => {
@@ -334,6 +355,35 @@ describe('DimensionTable：方向、重排与确认状态', () => {
     expect(screen.getByTestId('result-values').textContent).toBe(
       resultValues(chainOf(changedDraft)),
     )
+  })
+})
+
+describe('DimensionTable：可选行选中联动', () => {
+  it('点击行首选择按钮或行内非按钮区域都会回传并标记选中行', () => {
+    render(<SelectionHarness initial={caseADraft()} />)
+
+    const selectB1 = screen.getByRole('button', { name: '选择 B1' })
+    expect(selectB1).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.click(selectB1)
+
+    expect(screen.getByTestId('selected-term')).toHaveTextContent('B1')
+    expect(selectB1).toHaveAttribute('aria-pressed', 'true')
+    expect(selectB1.closest('tr')).toHaveAttribute('data-selected', 'true')
+
+    fireEvent.click(screen.getByRole('cell', { name: 'H 上极限尺寸' }))
+
+    expect(screen.getByTestId('selected-term')).toHaveTextContent('H')
+    expect(selectB1).toHaveAttribute('aria-pressed', 'false')
+    expect(selectB1.closest('tr')).not.toHaveAttribute('data-selected')
+  })
+
+  it('不传 selectedTermId/onSelect 时不显示选择控件，保持原有行为和布局', () => {
+    render(<Harness initial={caseADraft()} />)
+
+    expect(screen.queryByRole('button', { name: /^选择 / })).toBeNull()
+    expect(screen.getAllByRole('rowheader')).toHaveLength(4)
+    expect(screen.getByRole('rowheader', { name: '1' })).toBeInTheDocument()
   })
 })
 

@@ -1,4 +1,4 @@
-import { useId, type Dispatch } from 'react'
+import { useId, type Dispatch, type MouseEvent } from 'react'
 import { termLimits } from '../domain/calculate'
 import type { ChainDefinition } from '../domain/types'
 import { formatMm } from '../domain/units'
@@ -21,6 +21,10 @@ export interface DimensionTableProps {
   cellErrors?: CellErrors
   /** 当前草稿无效时，所有极限尺寸只显示占位符，不展示上一次有效结果。 */
   stale?: boolean
+  /** 当前选中的组成环，用于与示意图联动；不传时不改变表格原有行为。 */
+  selectedTermId?: string | null
+  /** 点击行或行首选择按钮时回传组成环 id；不传时不显示选择控件。 */
+  onSelect?: (termId: string) => void
 }
 
 type EditableField =
@@ -118,6 +122,8 @@ export function DimensionTable({
   chain = null,
   cellErrors = EMPTY_CELL_ERRORS,
   stale = false,
+  selectedTermId = null,
+  onSelect,
 }: DimensionTableProps) {
   // useId 生成不含空白的唯一前缀，避免多个表格的错误文案 id 冲突。
   const tableId = useId().replace(/[^A-Za-z0-9_-]/g, '')
@@ -183,10 +189,47 @@ export function DimensionTable({
             const lowerLimit = limits === null ? '—' : formatMm(limits.lowerQ)
             const upperLimit = limits === null ? '—' : formatMm(limits.upperQ)
             const signError = cellErrors[`${term.id}.sign`]
+            const selected = selectedTermId === term.id
+            const handleRowClick =
+              onSelect === undefined
+                ? undefined
+                : (event: MouseEvent<HTMLTableRowElement>) => {
+                    const target = event.target
+                    if (
+                      target instanceof HTMLElement &&
+                      target.closest('button, a') !== null
+                    ) {
+                      return
+                    }
+                    onSelect(term.id)
+                  }
 
             return (
-              <tr key={term.id}>
-                <th scope="row">{index + 1}</th>
+              <tr
+                key={term.id}
+                className={
+                  selected
+                    ? 'dimension-table__row dimension-table__row--selected'
+                    : 'dimension-table__row'
+                }
+                data-selected={selected ? 'true' : undefined}
+                onClick={handleRowClick}
+              >
+                <th scope="row">
+                  {onSelect === undefined ? (
+                    index + 1
+                  ) : (
+                    <button
+                      type="button"
+                      className="dimension-table__row-select"
+                      aria-label={`选择 ${label}`}
+                      aria-pressed={selected}
+                      onClick={() => onSelect(term.id)}
+                    >
+                      {index + 1}
+                    </button>
+                  )}
+                </th>
                 <td>
                   <TextCell
                     label={`${label} 代号`}
