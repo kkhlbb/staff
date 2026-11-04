@@ -26,7 +26,8 @@ export function Workspace() {
   if (chain !== null && chain !== lastValidChain) {
     setLastValidChain(chain)
   }
-  const target = chain !== null ? chain.target : (lastValidChain?.target ?? null)
+  const displayChain = chain ?? lastValidChain
+  const target = displayChain?.target ?? null
 
   return (
     <main className="workspace">
@@ -69,6 +70,7 @@ export function Workspace() {
             dispatch={dispatch}
             result={result}
             target={target}
+            terms={displayChain?.terms}
             cellErrors={cellErrors}
             stale={stale}
           />

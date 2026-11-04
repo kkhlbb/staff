@@ -1,4 +1,4 @@
-import { useId, type Dispatch } from 'react'
+import { useId, useState, type Dispatch } from 'react'
 import type { ChainDefinition, ChainResult, Q } from '../domain/types'
 import { formatMm } from '../domain/units'
 import type {
@@ -6,6 +6,10 @@ import type {
   WorkspaceAction,
   WorkspaceDraft,
 } from '../workspace/draft'
+import {
+  ContributionTable,
+  type ContributionTermLabel,
+} from './ContributionTable'
 
 export interface ResultPanelProps {
   draft: WorkspaceDraft
@@ -13,8 +17,15 @@ export interface ResultPanelProps {
   result: ChainResult | null
   /** 与 ChainDefinition['target'] 同类型，由调用方从 chain.target 直接传入。 */
   target: ChainDefinition['target']
+  /** 与 result 同一次有效计算的组成环代号；stale 时由调用方传上次有效链。 */
+  terms?: readonly ContributionTermLabel[]
   cellErrors: CellErrors
   stale: boolean
+}
+
+interface ConfirmationSnapshot {
+  relationConfirmed: boolean
+  terms: WorkspaceDraft['terms']
 }
 
 function statusLabel(
@@ -272,6 +283,7 @@ export function ResultPanel({
   dispatch,
   result,
   target,
+  terms,
   cellErrors,
   stale,
 }: ResultPanelProps) {
@@ -287,9 +299,40 @@ export function ResultPanel({
   const targetMaxError = cellErrors['target.max']
   const currentStatus = statusLabel(result, draft.relationConfirmed, stale)
 
+  // 按 React 文档“存储前一次渲染的信息”的写法比较前后两次草稿：
+  // 仅当确认状态由“已确认”变为“未确认”，且 terms 引用也发生变化时，
+  // 才认定为编辑清除了确认；用户手动取消勾选不会误报。
+  const [confirmationSnapshot, setConfirmationSnapshot] =
+    useState<ConfirmationSnapshot>({
+      relationConfirmed: draft.relationConfirmed,
+      terms: draft.terms,
+    })
+  const [confirmationCleared, setConfirmationCleared] = useState(false)
+
+  const relationConfirmedChanged =
+    draft.relationConfirmed !== confirmationSnapshot.relationConfirmed
+  const termsChanged = draft.terms !== confirmationSnapshot.terms
+  if (relationConfirmedChanged || termsChanged) {
+    if (
+      confirmationSnapshot.relationConfirmed &&
+      !draft.relationConfirmed &&
+      termsChanged
+    ) {
+      setConfirmationCleared(true)
+    } else if (draft.relationConfirmed) {
+      setConfirmationCleared(false)
+    }
+    setConfirmationSnapshot({
+      relationConfirmed: draft.relationConfirmed,
+      terms: draft.terms,
+    })
+  }
+
   const updateTarget = (targetMin: string, targetMax: string) => {
     dispatch({ type: 'setTarget', targetMin, targetMax })
   }
+
+  const isEmptyProject = draft.terms.length === 0
 
   return (
     <section className="result-panel" aria-labelledby={headingId}>
@@ -297,11 +340,13 @@ export function ResultPanel({
         结果卡
       </h2>
 
-      {stale && (
+      {isEmptyProject ? (
+        <p className="result-panel__empty-hint">请先添加组成环</p>
+      ) : stale ? (
         <p className="result-panel__stale" role="alert">
           输入有误，显示的是上次有效结果
         </p>
-      )}
+      ) : null}
 
       <div className="result-panel__target">
         <div className="result-panel__target-field">
@@ -398,20 +443,31 @@ export function ResultPanel({
 
       <ResultChart result={result} target={target} />
 
-      <label className="result-panel__confirmed" htmlFor={confirmedId}>
-        <input
-          id={confirmedId}
-          type="checkbox"
-          checked={draft.relationConfirmed}
-          onChange={(event) =>
-            dispatch({
-              type: 'setConfirmed',
-              confirmed: event.target.checked,
-            })
-          }
-        />
-        已核对尺寸关系与作用方向
-      </label>
+      {!isEmptyProject && (
+        <ContributionTable result={result} terms={terms} />
+      )}
+
+      <div className="result-panel__confirmation">
+        <label className="result-panel__confirmed" htmlFor={confirmedId}>
+          <input
+            id={confirmedId}
+            type="checkbox"
+            checked={draft.relationConfirmed}
+            onChange={(event) =>
+              dispatch({
+                type: 'setConfirmed',
+                confirmed: event.target.checked,
+              })
+            }
+          />
+          已核对尺寸关系与作用方向
+        </label>
+        {confirmationCleared && (
+          <p className="result-panel__confirmation-hint" role="status">
+            输入已变更，请重新核对
+          </p>
+        )}
+      </div>
     </section>
   )
 }

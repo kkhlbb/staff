@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { Workspace } from './Workspace'
@@ -116,6 +116,10 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     render(<Workspace />)
 
     expect(screen.getByRole('status')).toHaveTextContent('暂无组成环')
+    expect(screen.getByText('请先添加组成环')).toBeInTheDocument()
+    expect(
+      screen.queryByText('输入有误，显示的是上次有效结果'),
+    ).toBeNull()
     expect(screen.getByTestId('chain-expression')).toHaveTextContent(
       'C = （空链，请添加组成环）',
     )
@@ -127,7 +131,11 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     expect(screen.getByTestId('chain-expression')).toHaveTextContent(
       'C = +H - B1 - S - B2',
     )
-    expect(screen.getAllByRole('rowheader')).toHaveLength(4)
+    expect(
+      within(screen.getByRole('table', { name: '组成环表' })).getAllByRole(
+        'rowheader',
+      ),
+    ).toHaveLength(4)
     expect(screen.getAllByRole('button', { name: /^选择 / })).toHaveLength(4)
 
     // 未勾选时只显示预览，即使数值已可计算。
@@ -142,6 +150,7 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
 
     expect(checkbox).toBeChecked()
     expect(resultValue('result-status')).toBe('不满足')
+    expect(screen.getByRole('table', { name: '公差贡献表' })).toBeInTheDocument()
     expect(resultValue('result-nominal')).toBe('0.2000')
     expect(resultValue('result-min')).toBe('0.1500')
     expect(resultValue('result-max')).toBe('0.3900')
@@ -220,5 +229,49 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     expect(resultValue('result-status')).toBe('待确认（预览）')
     expect(resultValue('result-lower-margin')).toBe('+0.0500')
     expect(resultValue('result-upper-margin')).toBe('-0.0900')
+
+    // 贡献表也沿用上次有效结果，而不是当前无效草稿。
+    const contributionTable = screen.getByRole('table', {
+      name: '公差贡献表',
+    })
+    expect(within(contributionTable).getAllByRole('row')).toHaveLength(5)
+    expect(contributionTable).toHaveTextContent('H')
+    expect(contributionTable).toHaveTextContent('0.1000')
+  })
+
+  it('编辑清除确认状态时显示重新核对提示，重新勾选后提示消失', async () => {
+    const user = userEvent.setup()
+    render(<Workspace />)
+
+    await buildCaseA(user)
+    await user.click(confirmationCheckbox())
+    expect(confirmationCheckbox()).toBeChecked()
+    expect(
+      screen.queryByText('输入已变更，请重新核对'),
+    ).toBeNull()
+
+    // 单次完整 change：上偏差从 0.1000 改为 0.0300，reducer 会清除确认状态。
+    fireEvent.change(screen.getByRole('textbox', { name: 'H 上偏差' }), {
+      target: { value: '0.0300' },
+    })
+
+    expect(confirmationCheckbox()).not.toBeChecked()
+    expect(
+      screen.getByText('输入已变更，请重新核对'),
+    ).toBeInTheDocument()
+
+    await user.click(confirmationCheckbox())
+
+    expect(confirmationCheckbox()).toBeChecked()
+    expect(
+      screen.queryByText('输入已变更，请重新核对'),
+    ).toBeNull()
+
+    // 用户手动取消勾选是主动操作，不应误报“编辑清除了确认”。
+    await user.click(confirmationCheckbox())
+    expect(confirmationCheckbox()).not.toBeChecked()
+    expect(
+      screen.queryByText('输入已变更，请重新核对'),
+    ).toBeNull()
   })
 })
