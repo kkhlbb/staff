@@ -1,12 +1,26 @@
 import { useEffect, useState } from 'react'
+import { PrintReport } from './pages/PrintReport'
 import { ProjectList } from './pages/ProjectList'
 import { Workspace } from './pages/Workspace'
 
-type Route = { page: 'projects' } | { page: 'workspace'; projectId: string }
+type Route =
+  | { page: 'projects' }
+  | { page: 'workspace'; projectId: string }
+  | { page: 'report'; projectId: string }
 
 const PROJECTS_HASH = '#/projects'
 
 function parseRoute(hash: string): Route {
+  // 报告路由先于工作台路由匹配，避免 #/projects/<id>/report 被当成项目 id。
+  const reportMatch = /^#\/(?:project|projects)\/([^/]+)\/report\/?$/.exec(hash)
+  if (reportMatch !== null) {
+    try {
+      return { page: 'report', projectId: decodeURIComponent(reportMatch[1]) }
+    } catch {
+      return { page: 'projects' }
+    }
+  }
+
   const match = /^#\/(?:projects|workspace)\/(.+)$/.exec(hash)
   if (match === null) {
     return { page: 'projects' }
@@ -54,6 +68,10 @@ function App() {
       window.history.pushState(null, '', PROJECTS_HASH)
     }
     setRoute({ page: 'projects' })
+  }
+
+  if (route.page === 'report') {
+    return <PrintReport key={route.projectId} projectId={route.projectId} />
   }
 
   if (route.page === 'workspace') {

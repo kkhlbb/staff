@@ -1,0 +1,363 @@
+.print-report {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px clamp(16px, 2vw, 32px) 48px;
+}
+
+.print-report__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.print-report__print {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.print-report__print:hover:not(:disabled) {
+  border-color: var(--accent);
+  filter: brightness(1.06);
+}
+
+.print-report__toolbar-hint {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.print-report__loading {
+  margin: 48px auto;
+  color: var(--muted);
+  text-align: center;
+}
+
+.print-report__blocked {
+  max-width: 720px;
+  margin: 48px auto;
+  padding: 24px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius);
+  background: #fef2f2;
+  color: var(--danger);
+}
+
+.print-report__blocked h1 {
+  margin: 0 0 12px;
+  color: var(--danger);
+  font-size: 22px;
+}
+
+.print-report__blocked p {
+  margin-bottom: 10px;
+  line-height: 1.65;
+}
+
+.print-report__blocked-project {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.print-report__document {
+  padding: clamp(20px, 3vw, 40px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.print-report__eyebrow {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+}
+
+.print-report__title {
+  margin: 0 0 18px;
+  font-size: clamp(24px, 2.4vw, 32px);
+  overflow-wrap: anywhere;
+}
+
+.print-report__header {
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--text-h);
+}
+
+.print-report__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 24px;
+  margin: 0;
+}
+
+.print-report__meta div {
+  min-width: 0;
+}
+
+.print-report__meta dt,
+.print-report__values dt,
+.print-report__notes dt {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.print-report__meta dd,
+.print-report__values dd,
+.print-report__notes dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.print-report__mono,
+.print-report__number {
+  font-family: var(--mono);
+}
+
+.print-report__section {
+  margin-top: 24px;
+}
+
+.print-report__section h2 {
+  margin: 0 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 19px;
+}
+
+.print-report__section h3 {
+  margin: 14px 0 8px;
+  font-size: 15px;
+}
+
+.print-report__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.print-report__table th,
+.print-report__table td {
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.print-report__table thead th {
+  background: #f1f5f9;
+  color: var(--text-h);
+  font-weight: 650;
+}
+
+.print-report__table tbody th {
+  color: var(--text-h);
+  font-weight: 650;
+}
+
+.print-report__table td.print-report__number {
+  text-align: right;
+  white-space: normal;
+}
+
+.print-report__input-meta {
+  margin-top: 14px;
+}
+
+.print-report__formula {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.print-report__formula p + p {
+  margin-top: 6px;
+}
+
+.print-report__substitution {
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}
+
+.print-report__values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.print-report__values > div {
+  min-width: 0;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.print-report__values > div:nth-child(odd) {
+  border-right: 1px solid var(--border);
+}
+
+.print-report__values > div:nth-last-child(-n + 2) {
+  border-bottom: none;
+}
+
+.print-report__values dd {
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.print-report__baseline-note {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.print-report__notes {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.print-report__notes > div {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.print-report__notes dd {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* 复用组件在工作台里用 nowrap；报告必须允许换行，否则 A4 会截断长备注。 */
+.print-report .contribution-table__table th,
+.print-report .contribution-table__table td,
+.print-report .scenario-compare__table th,
+.print-report .scenario-compare__table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.print-report .scenario-compare__scroll {
+  overflow-x: visible;
+}
+
+.print-report .contribution-table__title,
+.print-report .scenario-compare__title {
+  margin: 0 0 8px;
+}
+
+.print-report__footer {
+  margin-top: 28px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@page {
+  size: A4;
+  margin: 14mm 12mm;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .print-report {
+    max-width: none;
+    padding: 0;
+  }
+
+  /* 报告正文之外的按钮和导航不进入打印结果。 */
+  .print-report__toolbar,
+  .print-report button,
+  .print-report nav {
+    display: none !important;
+  }
+
+  .print-report__document {
+    padding: 0;
+    border: none;
+    border-radius: 0;
+  }
+
+  .print-report__header {
+    break-after: avoid;
+  }
+
+  .print-report__section {
+    break-inside: auto;
+  }
+
+  .print-report__section h2,
+  .print-report__section h3 {
+    break-after: avoid;
+  }
+
+  .print-report__values > div,
+  .print-report__notes > div {
+    break-inside: avoid;
+  }
+
+  .print-report__table {
+    font-size: 9.5pt;
+  }
+
+  .print-report__table th,
+  .print-report__table td {
+    padding: 4pt 5pt;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-report a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .print-report {
+    padding: 16px 12px 32px;
+  }
+
+  .print-report__meta,
+  .print-report__values {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .print-report__values > div:nth-child(odd) {
+    border-right: none;
+  }
+
+  .print-report__values > div:nth-last-child(-n + 2) {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .print-report__values > div:last-child {
+    border-bottom: none;
+  }
+}

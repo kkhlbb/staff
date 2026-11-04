@@ -51,6 +51,48 @@ export function resolveWorkspaceStatus({
   return { kind: result.status, label: STATUS_LABEL[result.status] }
 }
 
+/** 报告被拒绝的原因；工作台入口和打印页必须显示同一份说明。 */
+export type ReportBlockReason = 'invalid-draft' | 'unconfirmed'
+
+export const REPORT_BLOCK_MESSAGE: Record<ReportBlockReason, string> = {
+  'invalid-draft':
+    '当前输入未通过校验或不是有效方案，不能打印报告。请修正输入并重新核对尺寸关系。',
+  unconfirmed:
+    '尺寸关系与作用方向尚未确认，不能打印报告。请先勾选“已核对尺寸关系与作用方向”。',
+}
+
+export interface ReportEligibility {
+  eligible: boolean
+  status: WorkspaceStatus
+  reason: ReportBlockReason | null
+  message: string | null
+}
+
+/**
+ * 报告门槛：只有“当前草稿有效且关系已确认”的正式方案可以出报告。
+ *
+ * 复用 resolveWorkspaceStatus，所以工作台入口、项目列表和打印页对
+ * “待确认 / 暂无结果”的解释保持一致；未设置目标仍是有效且已确认的方案。
+ */
+export function resolveReportEligibility(
+  input: WorkspaceStatusInput,
+): ReportEligibility {
+  const status = resolveWorkspaceStatus(input)
+
+  if (status.kind === 'pending' || status.kind === 'no-result') {
+    const reason: ReportBlockReason =
+      input.result === null || input.stale ? 'invalid-draft' : 'unconfirmed'
+    return {
+      eligible: false,
+      status,
+      reason,
+      message: REPORT_BLOCK_MESSAGE[reason],
+    }
+  }
+
+  return { eligible: true, status, reason: null, message: null }
+}
+
 export interface StoredWorkspaceStatusInput {
   /** 已保存的最后一个有效工作方案。 */
   working: ChainDefinition

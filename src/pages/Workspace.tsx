@@ -6,6 +6,7 @@ import { DimensionTable } from '../components/DimensionTable'
 import { ResultPanel } from '../components/ResultPanel'
 import { ScenarioCompare } from '../components/ScenarioCompare'
 import type { ChainDefinition, Project } from '../domain/types'
+import { resolveReportEligibility } from '../workspace/status'
 import {
   usePersistedWorkspace,
   useWorkspaceBootstrap,
@@ -20,6 +21,8 @@ export interface WorkspaceProps {
   projectId?: string
   /** 返回项目列表；未提供时回退到 location.hash 路由。 */
   onBackToList?: () => void
+  /** 打开打印报告；未提供时回退到 location.hash 路由。 */
+  onOpenReport?: (projectId: string) => void
   /** 仅测试或特殊场景注入保存实现；默认写入 IndexedDB。 */
   saveDraft?: SaveDraftFn
 }
@@ -42,6 +45,7 @@ interface WorkspaceEditorProps {
   initialDraft: WorkspaceDraft
   initialValidChain: ChainDefinition | null
   onBackToList: () => void
+  onOpenReport?: (projectId: string) => void
   saveDraft?: SaveDraftFn
 }
 
@@ -56,6 +60,7 @@ function WorkspaceEditor({
   initialDraft,
   initialValidChain,
   onBackToList,
+  onOpenReport,
   saveDraft,
 }: WorkspaceEditorProps) {
   const {
@@ -86,6 +91,24 @@ function WorkspaceEditor({
   // 当前草稿无效时由 hook 保留上一次有效链；结果卡和示意图都只读取这一份数据。
   const displayChain = chain ?? lastValidChain
   const target = displayChain?.target ?? null
+
+  // 打印报告与结果卡共用同一份“有效 + 已确认”门槛；入口禁用时显示具体原因。
+  const reportEligibility = resolveReportEligibility({
+    result,
+    relationConfirmed: chain?.relationConfirmed ?? false,
+    stale,
+  })
+
+  const handleOpenReport = (): void => {
+    if (!reportEligibility.eligible) {
+      return
+    }
+    if (onOpenReport !== undefined) {
+      onOpenReport(project.id)
+      return
+    }
+    window.location.hash = `#/project/${encodeURIComponent(project.id)}/report`
+  }
 
   const performSaveBaseline = async (): Promise<void> => {
     const overwriting = baseline !== null
@@ -157,6 +180,18 @@ function WorkspaceEditor({
           </button>
           <button
             type="button"
+            className="workspace__print-button"
+            onClick={handleOpenReport}
+            disabled={!reportEligibility.eligible}
+            aria-describedby={
+              reportEligibility.eligible ? undefined : 'workspace-print-reason'
+            }
+            title={reportEligibility.message ?? undefined}
+          >
+            打印报告
+          </button>
+          <button
+            type="button"
             className="workspace__export-button"
             onClick={exportBackup}
           >
@@ -165,6 +200,16 @@ function WorkspaceEditor({
           <span className="workspace__badge">MVP · 一维极值法</span>
         </div>
       </header>
+
+      {!reportEligibility.eligible && reportEligibility.message !== null ? (
+        <p
+          id="workspace-print-reason"
+          className="workspace__print-reason"
+          role="status"
+        >
+          {reportEligibility.message}
+        </p>
+      ) : null}
 
       {saveStatus === 'failed' ? (
         <div className="workspace__save-error" role="alert">
@@ -316,6 +361,7 @@ function WorkspaceEditor({
 export function Workspace({
   projectId,
   onBackToList,
+  onOpenReport,
   saveDraft,
 }: WorkspaceProps = {}) {
   const bootstrap = useWorkspaceBootstrap(projectId)
@@ -365,6 +411,7 @@ export function Workspace({
       initialDraft={bootstrap.initialDraft}
       initialValidChain={bootstrap.initialValidChain}
       onBackToList={backToList}
+      onOpenReport={onOpenReport}
       saveDraft={saveDraft}
     />
   )

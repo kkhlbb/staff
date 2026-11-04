@@ -46,7 +46,8 @@
 }
 
 .workspace__nav-button,
-.workspace__export-button {
+.workspace__export-button,
+.workspace__print-button {
   white-space: nowrap;
 }
 
@@ -58,6 +59,22 @@
   border-color: var(--accent);
   color: var(--accent);
   font-weight: 600;
+}
+
+.workspace__print-button {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.workspace__print-reason {
+  margin: -8px 0 16px;
+  padding: 8px 10px;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 13px;
 }
 
 .workspace__save {
