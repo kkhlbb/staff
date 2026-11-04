@@ -133,9 +133,10 @@ describe('DimensionTable：字段与只读极限尺寸', () => {
   it('显示全部可编辑字段、方向选项和按 chain 计算的上下极限尺寸', () => {
     render(<Harness initial={caseADraft()} />)
 
-    const grid = screen.getByRole('grid', { name: '组成环表' })
-    expect(grid).toHaveAttribute('aria-rowcount', '5')
-    expect(grid).toHaveAttribute('aria-colcount', '11')
+    const table = screen.getByRole('table', { name: '组成环表' })
+    expect(table).not.toHaveAttribute('role')
+    expect(table).not.toHaveAttribute('aria-rowcount')
+    expect(table).not.toHaveAttribute('aria-colcount')
     expect(screen.getAllByRole('columnheader')).toHaveLength(11)
     expect(screen.getAllByRole('rowheader')).toHaveLength(4)
 
@@ -164,22 +165,22 @@ describe('DimensionTable：字段与只读极限尺寸', () => {
     ).toBeInTheDocument()
 
     expect(
-      screen.getByRole('gridcell', { name: 'H 下极限尺寸' }),
+      screen.getByRole('cell', { name: 'H 下极限尺寸' }),
     ).toHaveTextContent('100.0000')
     expect(
-      screen.getByRole('gridcell', { name: 'H 上极限尺寸' }),
+      screen.getByRole('cell', { name: 'H 上极限尺寸' }),
     ).toHaveTextContent('100.1000')
     expect(
-      screen.getByRole('gridcell', { name: 'B1 下极限尺寸' }),
+      screen.getByRole('cell', { name: 'B1 下极限尺寸' }),
     ).toHaveTextContent('19.9800')
     expect(
-      screen.getByRole('gridcell', { name: 'B1 上极限尺寸' }),
+      screen.getByRole('cell', { name: 'B1 上极限尺寸' }),
     ).toHaveTextContent('20.0000')
     expect(
-      screen.getByRole('gridcell', { name: 'S 下极限尺寸' }),
+      screen.getByRole('cell', { name: 'S 下极限尺寸' }),
     ).toHaveTextContent('59.7500')
     expect(
-      screen.getByRole('gridcell', { name: 'S 上极限尺寸' }),
+      screen.getByRole('cell', { name: 'S 上极限尺寸' }),
     ).toHaveTextContent('59.8500')
 
     expect(screen.getByTestId('relation-confirmed')).toHaveTextContent('true')
@@ -225,13 +226,13 @@ describe('DimensionTable：逐格错误', () => {
     // 草稿整体无效时，stale 行不能继续显示上一次有效结果的极限尺寸。
     expect(screen.getByTestId('stale')).toHaveTextContent('true')
     expect(
-      screen.getByRole('gridcell', { name: 'H 下极限尺寸' }),
+      screen.getByRole('cell', { name: 'H 下极限尺寸' }),
     ).toHaveTextContent('—')
     expect(
-      screen.getByRole('gridcell', { name: 'H 上极限尺寸' }),
+      screen.getByRole('cell', { name: 'H 上极限尺寸' }),
     ).toHaveTextContent('—')
     expect(
-      screen.getByRole('gridcell', { name: 'S 下极限尺寸' }),
+      screen.getByRole('cell', { name: 'S 下极限尺寸' }),
     ).toHaveTextContent('—')
   })
 
@@ -356,7 +357,7 @@ describe('DimensionTable：受控边界', () => {
     )
 
     expect(
-      screen.getByRole('gridcell', { name: 'H 下极限尺寸' }),
+      screen.getByRole('cell', { name: 'H 下极限尺寸' }),
     ).toHaveTextContent('—')
     expect(screen.getByRole('textbox', { name: 'H 基本尺寸' })).toHaveValue(
       '100.0000',

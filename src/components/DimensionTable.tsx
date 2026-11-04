@@ -1,4 +1,5 @@
 import { useId, type Dispatch } from 'react'
+import { termLimits } from '../domain/calculate'
 import type { ChainDefinition } from '../domain/types'
 import { formatMm } from '../domain/units'
 import type {
@@ -120,7 +121,7 @@ export function DimensionTable({
 }: DimensionTableProps) {
   // useId 生成不含空白的唯一前缀，避免多个表格的错误文案 id 冲突。
   const tableId = useId().replace(/[^A-Za-z0-9_-]/g, '')
-  const gridId = `${tableId}-grid`
+  const tableElementId = `${tableId}-table`
   const hintId = `${tableId}-hint`
   const errorId = (index: number, field: string): string =>
     `${tableId}-${index}-${field}-error`
@@ -139,7 +140,7 @@ export function DimensionTable({
         <button
           type="button"
           className="dimension-table__add"
-          aria-controls={gridId}
+          aria-controls={tableElementId}
           onClick={() =>
             dispatch({ type: 'addTerm', term: createEmptyTerm(draft.terms) })
           }
@@ -157,18 +158,15 @@ export function DimensionTable({
       </p>
 
       <table
-        id={gridId}
-        role="grid"
+        id={tableElementId}
         aria-label="组成环表"
         aria-describedby={hintId}
-        aria-rowcount={draft.terms.length + 1}
-        aria-colcount={COLUMNS.length}
-        className="dimension-table__grid"
+        className="dimension-table__table"
       >
         <thead>
-          <tr role="row" aria-rowindex={1}>
+          <tr>
             {COLUMNS.map((column) => (
-              <th key={column} role="columnheader" scope="col">
+              <th key={column} scope="col">
                 {column}
               </th>
             ))}
@@ -181,20 +179,15 @@ export function DimensionTable({
               (candidate) => candidate.id === term.id,
             )
             const limitsAvailable = !stale && chainTerm !== undefined
-            const lowerLimit = limitsAvailable
-              ? formatMm(chainTerm.nominalQ + chainTerm.lowerDeviationQ)
-              : '—'
-            const upperLimit = limitsAvailable
-              ? formatMm(chainTerm.nominalQ + chainTerm.upperDeviationQ)
-              : '—'
+            const limits = limitsAvailable ? termLimits(chainTerm) : null
+            const lowerLimit = limits === null ? '—' : formatMm(limits.lowerQ)
+            const upperLimit = limits === null ? '—' : formatMm(limits.upperQ)
             const signError = cellErrors[`${term.id}.sign`]
 
             return (
-              <tr key={term.id} role="row" aria-rowindex={index + 2}>
-                <th scope="row" role="rowheader">
-                  {index + 1}
-                </th>
-                <td role="gridcell">
+              <tr key={term.id}>
+                <th scope="row">{index + 1}</th>
+                <td>
                   <TextCell
                     label={`${label} 代号`}
                     value={term.symbol}
@@ -205,7 +198,7 @@ export function DimensionTable({
                     }
                   />
                 </td>
-                <td role="gridcell">
+                <td>
                   <TextCell
                     label={`${label} 名称`}
                     value={term.name}
@@ -214,7 +207,7 @@ export function DimensionTable({
                     onChange={(value) => updateText(term.id, 'name', value)}
                   />
                 </td>
-                <td role="gridcell">
+                <td>
                   <TextCell
                     label={`${label} 基本尺寸`}
                     value={term.nominal}
@@ -226,7 +219,7 @@ export function DimensionTable({
                     }
                   />
                 </td>
-                <td role="gridcell">
+                <td>
                   <TextCell
                     label={`${label} 下偏差`}
                     value={term.lower}
@@ -236,7 +229,7 @@ export function DimensionTable({
                     onChange={(value) => updateText(term.id, 'lower', value)}
                   />
                 </td>
-                <td role="gridcell">
+                <td>
                   <TextCell
                     label={`${label} 上偏差`}
                     value={term.upper}
@@ -246,7 +239,7 @@ export function DimensionTable({
                     onChange={(value) => updateText(term.id, 'upper', value)}
                   />
                 </td>
-                <td role="gridcell">
+                <td>
                   <select
                     className="dimension-table__select"
                     aria-label={`${label} 方向`}
@@ -284,20 +277,18 @@ export function DimensionTable({
                   ) : null}
                 </td>
                 <td
-                  role="gridcell"
                   aria-label={`${label} 下极限尺寸`}
                   className="dimension-table__limit"
                 >
                   {lowerLimit}
                 </td>
                 <td
-                  role="gridcell"
                   aria-label={`${label} 上极限尺寸`}
                   className="dimension-table__limit"
                 >
                   {upperLimit}
                 </td>
-                <td role="gridcell">
+                <td>
                   <TextCell
                     label={`${label} 来源备注`}
                     value={term.sourceNote}
@@ -308,7 +299,7 @@ export function DimensionTable({
                     }
                   />
                 </td>
-                <td role="gridcell">
+                <td>
                   <div className="dimension-table__actions">
                     <button
                       type="button"

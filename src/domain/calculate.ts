@@ -1,4 +1,4 @@
-import type { ChainDefinition, ChainResult } from './types'
+import type { ChainDefinition, ChainResult, DimensionTerm, Q } from './types'
 
 /** 计算引擎版本，写入项目和报告。 */
 export const ENGINE_VERSION = '0.1.0'
@@ -29,6 +29,18 @@ function safeMul(a: number, b: number, context: string): number {
 }
 
 /**
+ * 单个组成环的极限尺寸：Lᵢ = Nᵢ + EIᵢ，Uᵢ = Nᵢ + ESᵢ。
+ *
+ * 纯函数，UI 与 calculateChain 共用这一份实现，避免在组件里另写加减公式。
+ */
+export function termLimits(term: DimensionTerm): { lowerQ: Q; upperQ: Q } {
+  return {
+    lowerQ: safeAdd(term.nominalQ, term.lowerDeviationQ, `L(${term.id})`),
+    upperQ: safeAdd(term.nominalQ, term.upperDeviationQ, `U(${term.id})`),
+  }
+}
+
+/**
  * 按文档 4.1–4.3 计算线性尺寸链的极值与目标判定。
  *
  * 纯函数：不修改输入，不依赖 UI、存储或校验模块；输入默认已经通过 validateChain。
@@ -51,9 +63,8 @@ export function calculateChain(chain: ChainDefinition): ChainResult {
       sign,
     } = term
 
-    // Lᵢ = Nᵢ + EIᵢ，Uᵢ = Nᵢ + ESᵢ，Tᵢ = ESᵢ − EIᵢ
-    const lowerLimitQ = safeAdd(termNominalQ, termLowerDeviationQ, `L(${id})`)
-    const upperLimitQ = safeAdd(termNominalQ, termUpperDeviationQ, `U(${id})`)
+    // Lᵢ、Uᵢ 由 termLimits 统一计算；Tᵢ = ESᵢ − EIᵢ 仍只依赖偏差。
+    const { lowerQ: lowerLimitQ, upperQ: upperLimitQ } = termLimits(term)
     const termToleranceQ = safeSub(termUpperDeviationQ, termLowerDeviationQ, `T(${id})`)
 
     // 基本尺寸：nominalQ = Σ sᵢNᵢ
