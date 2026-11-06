@@ -23,12 +23,22 @@ export interface ChainDiagramProps {
   onSelect: (termId: string) => void
 }
 
-const AXIS_Y = 92
+const AXIS_BASE_Y = 92
 const VIEWBOX_HEIGHT = 176
 const VIEWBOX_MIN_WIDTH = 520
 const PADDING_X = 56
 const MIN_SEGMENT_WIDTH = 84
 const MAX_SEGMENT_WIDTH = 180
+
+/** 标签块按两行文字估算；只用于示意图排版，不参与尺寸或公差结论。 */
+const LABEL_BOX_HEIGHT = 36
+const LABEL_BOX_TOP = 14
+const LABEL_BOX_BOTTOM = 22
+const LABEL_ROW_GAP = 42
+const LABEL_HORIZONTAL_GAP = 4
+const ABOVE_LABEL_OFFSET = 34
+const BELOW_LABEL_OFFSET = 38
+const LABEL_EDGE_PADDING = 8
 
 /**
  * 示意图允许非等比例。用平方根压缩长短尺寸的悬殊差异，
@@ -83,6 +93,8 @@ function describeNominal(term: ChainDiagramTerm): NominalDisplay {
   return { text: '未填写尺寸', valueQ: null, invalid: true }
 }
 
+type LabelSide = 'above' | 'below'
+
 interface SegmentGeometry {
   term: ChainDiagramTerm
   nominal: NominalDisplay
@@ -92,13 +104,78 @@ interface SegmentGeometry {
   startX: number
   endX: number
   labelX: number
+  labelY: number
+  labelWidth: number
+  labelText: string
+  labelSide: LabelSide
+  labelLane: number
   markerY: number
   zeroWidth: boolean
+}
+
+function labelTextFor(nominal: NominalDisplay): string {
+  if (nominal.valueQ === 0) {
+    return `${nominal.text}（零宽）`
+  }
+  if (nominal.invalid) {
+    return `${nominal.text}（无效）`
+  }
+  return nominal.text
+}
+
+function labelWidthFor(symbol: string, text: string): number {
+  return Math.max(56, Math.max(symbol.length, text.length) * 8 + 16)
+}
+
+interface LabelPlacement {
+  lane: number
+}
+
+/**
+ * 同一侧按标签中心从左到右分配“行”。同一行内的标签互不重叠，
+ * 行与行之间保持固定垂直间距；这样 7 环 REAL-01 这类正负交错、
+ * 同侧标签密集的布局也不需要把文字压在一起。
+ */
+function assignLabelLanes(
+  items: readonly {
+    index: number
+    labelX: number
+    labelWidth: number
+  }[],
+): { placements: Map<number, LabelPlacement>; laneCount: number } {
+  const placements = new Map<number, LabelPlacement>()
+  const laneRightEdges: number[] = []
+
+  const sorted = items.slice().sort(
+    (left, right) => left.labelX - right.labelX || left.index - right.index,
+  )
+
+  for (const item of sorted) {
+    const left = item.labelX - item.labelWidth / 2
+    const right = item.labelX + item.labelWidth / 2
+    let lane = 0
+    while (
+      lane < laneRightEdges.length &&
+      left < laneRightEdges[lane] + LABEL_HORIZONTAL_GAP
+    ) {
+      lane += 1
+    }
+    if (lane === laneRightEdges.length) {
+      laneRightEdges.push(right)
+    } else {
+      laneRightEdges[lane] = right
+    }
+    placements.set(item.index, { lane })
+  }
+
+  return { placements, laneCount: laneRightEdges.length }
 }
 
 function layoutSegments(terms: readonly ChainDiagramTerm[]): {
   segments: SegmentGeometry[]
   viewWidth: number
+  viewHeight: number
+  axisY: number
 } {
   const parsed = terms.map((term) => {
     const nominal = describeNominal(term)
@@ -106,16 +183,35 @@ function layoutSegments(terms: readonly ChainDiagramTerm[]): {
   })
 
   let cursor = 0
+  let zeroRank = 0
   const raw = parsed.map((item, index) => {
     const startX = cursor
     const endX = cursor + item.term.sign * item.width
     cursor = endX
+
+    const zeroWidth = item.width === 0
+    // 连续零宽段都落在同一 x 上；轻微错开标记点，避免完全重叠后无法选择。
+    const markerOffset = zeroWidth ? ((zeroRank++ % 3) - 1) * 16 : 0
+    const labelText = labelTextFor(item.nominal)
+    const labelSide: LabelSide = zeroWidth
+      ? markerOffset < 0
+        ? 'above'
+        : 'below'
+      : index % 2 === 0
+        ? 'above'
+        : 'below'
+
     return {
       ...item,
       index,
       direction: (item.term.sign === 1 ? 'right' : 'left') as 'right' | 'left',
       startX,
       endX,
+      zeroWidth,
+      markerOffset,
+      labelText,
+      labelWidth: labelWidthFor(item.term.symbol, labelText),
+      labelSide,
     }
   })
 
@@ -132,24 +228,57 @@ function layoutSegments(terms: readonly ChainDiagramTerm[]): {
     maxX - minX + PADDING_X * 2,
   )
 
-  let zeroRank = 0
-  const segments = raw.map((segment): SegmentGeometry => {
-    const zeroWidth = segment.width === 0
-    // 连续零宽段都落在同一 x 上；轻微错开标记点，避免完全重叠后无法选择。
-    const markerY = zeroWidth
-      ? AXIS_Y + ((zeroRank++ % 3) - 1) * 16
-      : AXIS_Y
+  const shifted = raw.map((segment) => ({
+    ...segment,
+    startX: segment.startX + shift,
+    endX: segment.endX + shift,
+    labelX: (segment.startX + segment.endX) / 2 + shift,
+  }))
+
+  const above = assignLabelLanes(
+    shifted.filter((segment) => segment.labelSide === 'above'),
+  )
+  const below = assignLabelLanes(
+    shifted.filter((segment) => segment.labelSide === 'below'),
+  )
+
+  // 上方标签行数增加时把轴线整体下移，保证最上面一行仍在视口内。
+  const axisY = Math.max(
+    AXIS_BASE_Y,
+    ABOVE_LABEL_OFFSET +
+      LABEL_BOX_TOP +
+      LABEL_EDGE_PADDING +
+      Math.max(0, above.laneCount - 1) * LABEL_ROW_GAP,
+  )
+  const viewHeight = Math.max(
+    VIEWBOX_HEIGHT,
+    axisY +
+      BELOW_LABEL_OFFSET +
+      Math.max(0, below.laneCount - 1) * LABEL_ROW_GAP +
+      LABEL_BOX_BOTTOM +
+      LABEL_EDGE_PADDING,
+  )
+
+  const segments = shifted.map((segment): SegmentGeometry => {
+    const lane =
+      (segment.labelSide === 'above' ? above : below).placements.get(
+        segment.index,
+      )?.lane ?? 0
+    const labelY =
+      segment.labelSide === 'above'
+        ? axisY - ABOVE_LABEL_OFFSET - lane * LABEL_ROW_GAP
+        : axisY + BELOW_LABEL_OFFSET + lane * LABEL_ROW_GAP
+
     return {
       ...segment,
-      startX: segment.startX + shift,
-      endX: segment.endX + shift,
-      labelX: (segment.startX + segment.endX) / 2 + shift,
-      markerY,
-      zeroWidth,
+      labelY,
+      labelSide: segment.labelSide,
+      labelLane: lane,
+      markerY: axisY + segment.markerOffset,
     }
   })
 
-  return { segments, viewWidth }
+  return { segments, viewWidth, viewHeight, axisY }
 }
 
 function signLabel(sign: 1 | -1): string {
@@ -189,7 +318,7 @@ export function ChainDiagram({
   const titleId = `chain-diagram-title-${reactId}`
   const markerId = `chain-diagram-arrow-${reactId}`
   const selectedMarkerId = `chain-diagram-arrow-selected-${reactId}`
-  const { segments, viewWidth } = layoutSegments(terms)
+  const { segments, viewWidth, viewHeight, axisY } = layoutSegments(terms)
 
   const handleSelect = (termId: string) => {
     onSelect(termId)
@@ -255,7 +384,7 @@ export function ChainDiagram({
         <svg
           role="img"
           aria-labelledby={titleId}
-          viewBox={`0 0 ${viewWidth} ${VIEWBOX_HEIGHT}`}
+          viewBox={`0 0 ${viewWidth} ${viewHeight}`}
           style={{ display: 'block', width: '100%', minWidth: 320, height: 'auto' }}
         >
           <title id={titleId}>{accessibleDescription(terms)}</title>
@@ -286,9 +415,9 @@ export function ChainDiagram({
 
           <line
             x1={0}
-            y1={AXIS_Y}
+            y1={axisY}
             x2={viewWidth}
-            y2={AXIS_Y}
+            y2={axisY}
             stroke="var(--border, #e5e4e7)"
             strokeDasharray="4 6"
             pointerEvents="none"
@@ -297,7 +426,7 @@ export function ChainDiagram({
           {terms.length === 0 ? (
             <text
               x={viewWidth / 2}
-              y={AXIS_Y - 18}
+              y={axisY - 18}
               textAnchor="middle"
               fill="currentColor"
               fontSize={14}
@@ -308,23 +437,6 @@ export function ChainDiagram({
 
           {segments.map((segment) => {
             const selected = segment.term.id === selectedTermId
-            const labelY = segment.zeroWidth
-              ? segment.markerY < AXIS_Y
-                ? segment.markerY - 24
-                : segment.markerY + 32
-              : segment.index % 2 === 0
-                ? AXIS_Y - 34
-                : AXIS_Y + 38
-            const labelText =
-              segment.nominal.valueQ === 0
-                ? `${segment.nominal.text}（零宽）`
-                : segment.nominal.invalid
-                  ? `${segment.nominal.text}（无效）`
-                  : segment.nominal.text
-            const labelWidth = Math.max(
-              56,
-              Math.max(segment.term.symbol.length, labelText.length) * 8 + 16,
-            )
             const stroke = selected
               ? 'var(--accent, #aa3bff)'
               : 'currentColor'
@@ -342,16 +454,22 @@ export function ChainDiagram({
                 data-selected={selected ? 'true' : 'false'}
                 data-zero-width={segment.zeroWidth ? 'true' : 'false'}
                 data-invalid={segment.nominal.invalid ? 'true' : 'false'}
+                data-label-x={segment.labelX}
+                data-label-y={segment.labelY}
+                data-label-width={segment.labelWidth}
+                data-label-height={LABEL_BOX_HEIGHT}
+                data-label-side={segment.labelSide}
+                data-label-lane={segment.labelLane}
                 onClick={() => handleSelect(segment.term.id)}
                 onKeyDown={(event) => handleKeyDown(event, segment.term.id)}
                 style={{ cursor: 'pointer', outline: 'none' }}
               >
                 {selected ? (
                   <rect
-                    x={segment.labelX - labelWidth / 2}
-                    y={labelY - 14}
-                    width={labelWidth}
-                    height={36}
+                    x={segment.labelX - segment.labelWidth / 2}
+                    y={segment.labelY - LABEL_BOX_TOP}
+                    width={segment.labelWidth}
+                    height={LABEL_BOX_HEIGHT}
                     rx={6}
                     fill="var(--accent-bg, rgba(170, 59, 255, 0.12))"
                     pointerEvents="none"
@@ -372,7 +490,7 @@ export function ChainDiagram({
                     />
                     <line
                       x1={segment.startX}
-                      y1={AXIS_Y}
+                      y1={axisY}
                       x2={segment.startX}
                       y2={segment.markerY}
                       stroke={stroke}
@@ -392,9 +510,9 @@ export function ChainDiagram({
                     <line
                       data-segment-line="true"
                       x1={segment.startX}
-                      y1={AXIS_Y}
+                      y1={axisY}
                       x2={segment.endX}
-                      y2={AXIS_Y}
+                      y2={axisY}
                       stroke={stroke}
                       strokeWidth={selected ? 6 : 3}
                       strokeLinecap="round"
@@ -403,9 +521,9 @@ export function ChainDiagram({
                     />
                     <line
                       x1={Math.min(segment.startX, segment.endX)}
-                      y1={AXIS_Y}
+                      y1={axisY}
                       x2={Math.max(segment.startX, segment.endX)}
-                      y2={AXIS_Y}
+                      y2={axisY}
                       stroke="transparent"
                       strokeWidth={24}
                       strokeLinecap="round"
@@ -413,7 +531,7 @@ export function ChainDiagram({
                     />
                     <circle
                       cx={segment.startX}
-                      cy={AXIS_Y}
+                      cy={axisY}
                       r={3}
                       fill={stroke}
                       pointerEvents="none"
@@ -423,7 +541,7 @@ export function ChainDiagram({
 
                 <text
                   x={segment.labelX}
-                  y={labelY}
+                  y={segment.labelY}
                   textAnchor="middle"
                   fill={stroke}
                   fontSize={13}
@@ -434,14 +552,14 @@ export function ChainDiagram({
                 </text>
                 <text
                   x={segment.labelX}
-                  y={labelY + 16}
+                  y={segment.labelY + 16}
                   textAnchor="middle"
                   fill={stroke}
                   fontSize={12}
                   fontFamily="var(--mono, ui-monospace, monospace)"
                   pointerEvents="none"
                 >
-                  {labelText}
+                  {segment.labelText}
                 </text>
               </g>
             )

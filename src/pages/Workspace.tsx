@@ -15,7 +15,10 @@ import {
   type SaveDraftFn,
   type SaveStatus,
 } from '../workspace/usePersistedWorkspace'
-import type { WorkspaceDraft } from '../workspace/draft'
+import {
+  hasTargetInputError,
+  type WorkspaceDraft,
+} from '../workspace/draft'
 import './Workspace.css'
 
 export interface WorkspaceProps {
@@ -92,8 +95,11 @@ function WorkspaceEditor({
   const [baselineError, setBaselineError] = useState<string | null>(null)
 
   // 当前草稿无效时由 hook 保留上一次有效链；结果卡和示意图都只读取这一份数据。
+  // 但目标字段本身无效时不能把上次有效链的 target 继续喂给结果卡，
+  // 否则「当前无效目标 + 上次有效结果」会混在同一组允许区间和裕量里。
   const displayChain = chain ?? lastValidChain
-  const target = displayChain?.target ?? null
+  const targetInvalid = hasTargetInputError(cellErrors)
+  const target = targetInvalid ? null : (displayChain?.target ?? null)
 
   // 打印报告与结果卡共用同一份“有效 + 已确认”门槛；入口禁用时显示具体原因。
   const reportEligibility = resolveReportEligibility({

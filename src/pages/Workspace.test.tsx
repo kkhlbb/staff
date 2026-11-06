@@ -238,7 +238,7 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
   })
 
-  it('输入无效时结果卡沿用上次有效链的目标区间，并标注待确认预览', async () => {
+  it('F-01 目标下限大于上限时允许区间、裕量和目标图不套用上次有效目标', async () => {
     const user = userEvent.setup()
     await renderWorkspace()
 
@@ -246,22 +246,33 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     await user.click(confirmationCheckbox())
     expect(resultValue('result-status')).toBe('不满足')
     expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
+    expect(
+      screen.getByRole('button', { name: '打印报告' }),
+    ).not.toBeDisabled()
 
-    // 目标下限大于上限：当前草稿无效，chain 为 null，结果卡应沿用上次有效链的 target。
+    // 目标下限大于上限：当前草稿无效，chain 为 null。
     // 用一次完整的 change 模拟“把 0.1000 改成 0.5000”，避免逐字符输入时
     // 中间值 0.0000 也短暂成为有效链。
-    const targetMin = screen.getByLabelText('目标下限')
-    fireEvent.change(targetMin, { target: { value: '0.5000' } })
+    fireEvent.change(screen.getByLabelText('目标下限'), {
+      target: { value: '0.5000' },
+    })
 
     expect(
       screen.getByText('输入有误，显示的是上次有效结果'),
     ).toBeInTheDocument()
-    expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
+    // C₀/Cmin/Cmax 仍可显示上次有效结果。
     expect(resultValue('result-min')).toBe('0.1500')
     expect(resultValue('result-max')).toBe('0.3900')
+    // 允许区间、两侧裕量和目标图不能混入旧的 target。
+    expect(resultValue('result-target')).toBe('—')
+    expect(resultValue('result-lower-margin')).toBe('—')
+    expect(resultValue('result-upper-margin')).toBe('—')
+    expect(screen.queryByTestId('target-range')).toBeNull()
+    expect(screen.queryByTestId('target-zero-marker')).toBeNull()
+    expect(screen.getByTestId('chart-target-invalid')).toHaveTextContent('—')
+    // 不给出“满足/不满足”的正式判定，打印入口禁用。
     expect(resultValue('result-status')).toBe('待确认（预览）')
-    expect(resultValue('result-lower-margin')).toBe('+0.0500')
-    expect(resultValue('result-upper-margin')).toBe('-0.0900')
+    expect(screen.getByRole('button', { name: '打印报告' })).toBeDisabled()
 
     // 贡献表也沿用上次有效结果，而不是当前无效草稿。
     const contributionTable = screen.getByRole('table', {
@@ -270,6 +281,34 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     expect(within(contributionTable).getAllByRole('row')).toHaveLength(5)
     expect(contributionTable).toHaveTextContent('H')
     expect(contributionTable).toHaveTextContent('0.1000')
+  })
+
+  it('F-02 改回合法目标后允许区间、裕量与判定恢复，打印入口重新可用', async () => {
+    const user = userEvent.setup()
+    await renderWorkspace()
+
+    await buildCaseA(user)
+    await user.click(confirmationCheckbox())
+    expect(confirmationCheckbox()).toBeChecked()
+
+    const targetMin = screen.getByLabelText('目标下限')
+    fireEvent.change(targetMin, { target: { value: '0.5000' } })
+    expect(resultValue('result-target')).toBe('—')
+    expect(resultValue('result-lower-margin')).toBe('—')
+
+    fireEvent.change(targetMin, { target: { value: '0.1000' } })
+
+    expect(
+      screen.queryByText('输入有误，显示的是上次有效结果'),
+    ).toBeNull()
+    expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
+    expect(resultValue('result-lower-margin')).toBe('+0.0500')
+    expect(resultValue('result-upper-margin')).toBe('-0.0900')
+    expect(resultValue('result-status')).toBe('不满足')
+    expect(screen.getByTestId('target-range')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: '打印报告' }),
+    ).not.toBeDisabled()
   })
 
   it('编辑清除确认状态时显示重新核对提示，重新勾选后提示消失', async () => {

@@ -29,6 +29,18 @@ export interface WorkspaceDraft {
 /** 键为 `${termId}.${field}`、`target.min` 或 `target.max`。 */
 export type CellErrors = Record<string, string>
 
+/**
+ * 目标输入本身是否无效。目标上下限任一非空时，draftToChain 会解析两侧字段，
+ * 并把格式、精度、区间顺序等错误映射到 target.min / target.max。
+ * 结果卡据此放弃上次有效目标，避免把当前无效输入与旧结果的允许区间混在一起。
+ */
+export function hasTargetInputError(cellErrors: CellErrors): boolean {
+  return (
+    cellErrors['target.min'] !== undefined ||
+    cellErrors['target.max'] !== undefined
+  )
+}
+
 export type DraftToChainResult =
   | { ok: true; chain: ChainDefinition }
   | { ok: false; cellErrors: CellErrors }

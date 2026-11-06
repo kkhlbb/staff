@@ -302,11 +302,39 @@ describe('项目 JSON 导出导入', () => {
     }
 
     const imported = expectOk(await importProjectJson(json))
-    expect(imported.project.working).toEqual(chain)
+    expect(imported.project.working).toEqual({
+      ...chain,
+      relationConfirmed: false,
+    })
     expect(imported.result).toEqual(originalResult)
     expect(calculateChain(imported.project.working)).toEqual(originalResult)
     expect(imported.idChanged).toBe(true)
     expect(imported.project.id).not.toBe(created.id)
+  })
+
+  it('导入已确认项目时清除 working 与 baseline.definition 的人工确认并重算', async () => {
+    const savedAt = '2024-01-02T03:04:05.000Z'
+    const created = expectOk(
+      await createProject({
+        name: '已确认项目',
+        working: chainA(),
+        baseline: { savedAt, definition: chainA() },
+      }),
+    )
+    const json = exportProjectJson(created)
+
+    const imported = expectOk(await importProjectJson(json))
+
+    expect(imported.project.working.relationConfirmed).toBe(false)
+    expect(imported.project.baseline?.definition.relationConfirmed).toBe(false)
+    expect(imported.project.baseline?.savedAt).toBe(savedAt)
+    // 数值、方向与结果不因清除确认而变化；结果由导入后的定义重新计算。
+    expect(
+      imported.project.working.terms.map((item) => item.id),
+    ).toEqual(chainA().terms.map((item) => item.id))
+    expect(imported.result).toEqual(calculateChain(imported.project.working))
+    expect(imported.result.minQ).toBe(parseMm('0.1500'))
+    expect(imported.result.maxQ).toBe(parseMm('0.3900'))
   })
 
   it('没有 ID 冲突时保留原项目 ID', async () => {

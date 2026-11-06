@@ -393,9 +393,26 @@ function parseImportedProject(input: unknown): StorageResult<ParsedProjectJson> 
     ])
   }
 
+  // 外部导入必须重新建立人工确认：工作方案和基线定义快照都清除 relationConfirmed，
+  // 再按清除后的定义重新计算，避免带着旧确认绕过核对。
+  const importedWorking: ChainDefinition = {
+    ...working,
+    relationConfirmed: false,
+  }
+  const importedBaseline: Project['baseline'] =
+    baseline === null
+      ? null
+      : {
+          savedAt: baseline.savedAt,
+          definition: {
+            ...baseline.definition,
+            relationConfirmed: false,
+          },
+        }
+
   let result: ChainResult
   try {
-    result = calculateChain(working)
+    result = calculateChain(importedWorking)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return failure('calculation_failed', '导入项目重新计算失败，未导入任何数据', [
@@ -413,8 +430,8 @@ function parseImportedProject(input: unknown): StorageResult<ParsedProjectJson> 
         name,
         createdAt,
         updatedAt,
-        working,
-        baseline,
+        working: importedWorking,
+        baseline: importedBaseline,
       },
       result,
     },

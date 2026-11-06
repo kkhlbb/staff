@@ -3,7 +3,11 @@ import { useState } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { ChainDefinition } from '../domain/types'
-import type { TermDraft, WorkspaceDraft } from '../workspace/draft'
+import {
+  hasTargetInputError,
+  type TermDraft,
+  type WorkspaceDraft,
+} from '../workspace/draft'
 import { useWorkspace } from '../workspace/useWorkspace'
 import { ResultPanel } from './ResultPanel'
 
@@ -175,13 +179,16 @@ function ResultPanelHarness({ initial }: { initial: WorkspaceDraft }) {
     setLastValidChain(chain)
   }
   const displayChain = chain ?? lastValidChain
+  const target = hasTargetInputError(cellErrors)
+    ? null
+    : displayChain?.target ?? null
 
   return (
     <ResultPanel
       draft={draft}
       dispatch={dispatch}
       result={result}
-      target={displayChain?.target ?? null}
+      target={target}
       terms={displayChain?.terms}
       cellErrors={cellErrors}
       stale={stale}
@@ -315,7 +322,7 @@ describe('ResultPanel：目标区间状态', () => {
 })
 
 describe('ResultPanel：无效输入与 stale', () => {
-  it('目标上下限颠倒时显示 stale 提示和上次有效结果，并用 aria 关联错误', () => {
+  it('目标上下限颠倒时不套用上次有效目标，允许区间、裕量与目标图显示「—」', () => {
     renderPanel(caseADraft())
 
     fireEvent.change(screen.getByLabelText('目标下限'), {
@@ -323,12 +330,18 @@ describe('ResultPanel：无效输入与 stale', () => {
     })
 
     expect(screen.getByText('输入有误，显示的是上次有效结果')).toBeInTheDocument()
+    // 链数值仍来自上次有效结果。
     expect(displayed('result-nominal')).toBe('0.2000')
     expect(displayed('result-min')).toBe('0.1500')
     expect(displayed('result-max')).toBe('0.3900')
-    // stale 时允许区间仍来自上次有效链的 target，而不是由无效草稿或裕量反推。
-    expect(displayed('result-target')).toBe('0.1000 ~ 0.3000')
-    expect(screen.getByTestId('target-range')).toBeInTheDocument()
+    expect(screen.getByTestId('result-range')).toBeInTheDocument()
+    // 当前无效目标不能混用上次有效链的允许区间和裕量。
+    expect(displayed('result-target')).toBe('—')
+    expect(displayed('result-lower-margin')).toBe('—')
+    expect(displayed('result-upper-margin')).toBe('—')
+    expect(screen.queryByTestId('target-range')).toBeNull()
+    expect(screen.queryByTestId('target-zero-marker')).toBeNull()
+    expect(screen.getByTestId('chart-target-invalid')).toHaveTextContent('—')
     expect(displayed('result-status')).toBe('待确认（预览）')
 
     const maxInput = screen.getByLabelText('目标上限')
@@ -342,7 +355,7 @@ describe('ResultPanel：无效输入与 stale', () => {
     )
   })
 
-  it('目标下限格式错误也定位到对应输入', () => {
+  it('目标下限格式错误也定位到对应输入，并隐藏旧目标区间与裕量', () => {
     renderPanel(caseADraft())
 
     const minInput = screen.getByLabelText('目标下限')
@@ -355,6 +368,28 @@ describe('ResultPanel：无效输入与 stale', () => {
     }
     expect(document.getElementById(describedBy)).toHaveTextContent('格式不正确')
     expect(displayed('result-min')).toBe('0.1500')
+    expect(displayed('result-target')).toBe('—')
+    expect(displayed('result-lower-margin')).toBe('—')
+    expect(displayed('result-upper-margin')).toBe('—')
+    expect(screen.queryByTestId('target-range')).toBeNull()
+    expect(screen.getByTestId('chart-target-invalid')).toHaveTextContent('—')
+  })
+
+  it('目标只填一侧时也视为无效，不显示旧允许区间与裕量', () => {
+    renderPanel(caseADraft())
+
+    fireEvent.change(screen.getByLabelText('目标上限'), {
+      target: { value: '' },
+    })
+
+    expect(
+      screen.getByText('输入有误，显示的是上次有效结果'),
+    ).toBeInTheDocument()
+    expect(displayed('result-target')).toBe('—')
+    expect(displayed('result-lower-margin')).toBe('—')
+    expect(displayed('result-upper-margin')).toBe('—')
+    expect(screen.queryByTestId('target-range')).toBeNull()
+    expect(screen.getByTestId('chart-target-invalid')).toHaveTextContent('—')
   })
 })
 

@@ -130,6 +130,14 @@ function resultStatus(): string {
   return cell.textContent ?? ''
 }
 
+function resultValue(testId: string): string {
+  const cell = screen.getByTestId(testId).querySelector('dd')
+  if (cell === null) {
+    throw new Error(`结果行 ${testId} 缺少 dd`)
+  }
+  return cell.textContent ?? ''
+}
+
 function statusBadge(project: Project): HTMLElement {
   return screen.getByTestId(`project-status-${project.id}`)
 }
@@ -281,7 +289,8 @@ describe('ProjectList：项目列表操作', () => {
       return
     }
     expect(copy.name).toBe('案例 A（副本）')
-    expect(copy.working).toEqual(chainA())
+    // 复制通过导出/导入生成新项目，人工确认按导入规则清除。
+    expect(copy.working).toEqual({ ...chainA(), relationConfirmed: false })
     expect(expectOk(await getProject(original.id))).toEqual(original)
 
     expectOk(await updateProject(copy.id, { working: chainB() }))
@@ -480,11 +489,40 @@ describe('ProjectList：JSON 导出再导入', () => {
       if (imported === undefined) {
         return
       }
-      expect(imported.working).toEqual(original.working)
+      // F-04：导入清除人工确认，但数值与重算结果保持一致。
+      expect(imported.working).toEqual({
+        ...original.working,
+        relationConfirmed: false,
+      })
+      expect(imported.working.relationConfirmed).toBe(false)
       expect(calculateChain(imported.working)).toEqual(
         calculateChain(original.working),
       )
       expect(expectOk(await getProject(original.id))).toEqual(original)
+      // 列表徽标与工作台共用确认门槛：导入后显示待确认。
+      expect(
+        within(rowFor(imported)).getByTestId(`project-status-${imported.id}`),
+      ).toHaveTextContent('待确认')
+
+      // F-04/F-05：打开导入项目先显示待确认，重新勾选后才给出正式判定。
+      const user = userEvent.setup()
+      const importedWorkspace = render(
+        <Workspace projectId={imported.id} onBackToList={() => undefined} />,
+      )
+      await screen.findByRole('button', { name: '增加行' })
+      const importedCheckbox = screen.getByRole('checkbox', {
+        name: '已核对尺寸关系与作用方向',
+      })
+      expect(importedCheckbox).not.toBeChecked()
+      expect(resultStatus()).toBe('待确认（预览）')
+      expect(resultValue('result-min')).toBe('0.1500')
+      expect(resultValue('result-max')).toBe('0.3900')
+      expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
+
+      await user.click(importedCheckbox)
+      expect(importedCheckbox).toBeChecked()
+      expect(resultStatus()).toBe('不满足')
+      importedWorkspace.unmount()
     } finally {
       download.restore()
     }

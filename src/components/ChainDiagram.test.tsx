@@ -41,6 +41,55 @@ function lineX(group: SVGGElement): { x1: number; x2: number } {
   }
 }
 
+interface LabelBox {
+  id: string
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
+
+/** 读取渲染时使用的标签块几何，用于检查同屏标签是否重叠。 */
+function labelBoxes(container: HTMLElement): LabelBox[] {
+  return groups(container).map((group) => {
+    const id = group.getAttribute('data-term-id') ?? ''
+    const centerX = Number(group.getAttribute('data-label-x'))
+    const labelY = Number(group.getAttribute('data-label-y'))
+    const width = Number(group.getAttribute('data-label-width'))
+    const height = Number(group.getAttribute('data-label-height'))
+    return {
+      id,
+      left: centerX - width / 2,
+      right: centerX + width / 2,
+      // 标签块从第一行文字上方 14 开始，总高 36。
+      top: labelY - 14,
+      bottom: labelY - 14 + height,
+    }
+  })
+}
+
+function boxesOverlap(left: LabelBox, right: LabelBox): boolean {
+  return (
+    left.left < right.right &&
+    right.left < left.right &&
+    left.top < right.bottom &&
+    right.top < left.bottom
+  )
+}
+
+/** REAL-01（MITCalc 例 1）七环：A + / B - / C - / D + / E - / F + / G -。 */
+function real01Terms(): ChainDiagramTerm[] {
+  return [
+    { id: 'A', symbol: 'A', sign: 1, nominal: '208.0000' },
+    { id: 'B', symbol: 'B', sign: -1, nominal: '1.7500' },
+    { id: 'C', symbol: 'C', sign: -1, nominal: '23.0000' },
+    { id: 'D', symbol: 'D', sign: 1, nominal: '20.0000' },
+    { id: 'E', symbol: 'E', sign: -1, nominal: '200.0000' },
+    { id: 'F', symbol: 'F', sign: 1, nominal: '20.0000' },
+    { id: 'G', symbol: 'G', sign: -1, nominal: '23.0000' },
+  ]
+}
+
 describe('ChainDiagram：几何与方向', () => {
   it('按输入顺序绘制四段，正项向右、负项向左且首尾相接', () => {
     const { container } = render(
@@ -99,6 +148,36 @@ describe('ChainDiagram：几何与方向', () => {
       expect(text).toContain(id)
       expect(text).toContain(nominal)
     }
+  })
+
+  it('REAL-01 七环的代号与基本尺寸标签互不重叠，并继续标注“非比例”', () => {
+    const { container } = render(
+      <ChainDiagram terms={real01Terms()} onSelect={vi.fn()} />,
+    )
+
+    const rendered = groups(container)
+    expect(rendered).toHaveLength(7)
+    for (const term of real01Terms()) {
+      const text = groupById(container, term.id).textContent
+      expect(text).toContain(term.symbol)
+      expect(text).toContain(term.nominal)
+    }
+
+    const boxes = labelBoxes(container)
+    for (let leftIndex = 0; leftIndex < boxes.length; leftIndex += 1) {
+      for (
+        let rightIndex = leftIndex + 1;
+        rightIndex < boxes.length;
+        rightIndex += 1
+      ) {
+        expect(
+          boxesOverlap(boxes[leftIndex], boxes[rightIndex]),
+          `${boxes[leftIndex].id} 与 ${boxes[rightIndex].id} 的标签重叠`,
+        ).toBe(false)
+      }
+    }
+
+    expect(screen.getByText('非比例')).toBeInTheDocument()
   })
 
   it('title、可见标题与“非比例”标注都存在，svg 以 img 角色暴露可读名称', () => {

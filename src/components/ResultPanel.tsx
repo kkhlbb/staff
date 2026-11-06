@@ -1,10 +1,11 @@
 import { useId, useState, type Dispatch } from 'react'
 import type { ChainDefinition, ChainResult, Q } from '../domain/types'
 import { formatMm } from '../domain/units'
-import type {
-  CellErrors,
-  WorkspaceAction,
-  WorkspaceDraft,
+import {
+  hasTargetInputError,
+  type CellErrors,
+  type WorkspaceAction,
+  type WorkspaceDraft,
 } from '../workspace/draft'
 import { resolveWorkspaceStatus } from '../workspace/status'
 import {
@@ -42,6 +43,8 @@ function formatTarget(target: ChainDefinition['target']): string {
 interface ResultChartProps {
   result: ChainResult | null
   target: ChainDefinition['target']
+  /** 目标输入无效时，图中不能继续画上次有效目标。 */
+  targetInvalid: boolean
 }
 
 /** SVG 视口与布局常量，仅用于绘图定位，不参与任何尺寸结论。 */
@@ -103,7 +106,7 @@ function createChartScale(values: readonly Q[]): ChartScale {
  * 结果区间与允许区间共用一条数值坐标轴。零宽区间仍绘制 circle，
  * 避免宽度为 0 的 rect 在视觉上消失。
  */
-function ResultChart({ result, target }: ResultChartProps) {
+function ResultChart({ result, target, targetInvalid }: ResultChartProps) {
   const titleId = `${useId()}-result-chart-title`
   const descriptionId = `${useId()}-result-chart-description`
 
@@ -138,7 +141,9 @@ function ResultChart({ result, target }: ResultChartProps) {
       >
         <title id={titleId}>结果区间与允许区间示意</title>
         <desc id={descriptionId}>
-          结果区间与允许区间绘制在同一数值坐标轴上；零宽区间用圆点标记。
+          {targetInvalid
+            ? '目标输入无效，图中不绘制允许区间；结果区间来自上次有效结果。'
+            : '结果区间与允许区间绘制在同一数值坐标轴上；零宽区间用圆点标记。'}
         </desc>
 
         <text x={8} y={TARGET_Y + 4} fontSize={12} fill="#374151">
@@ -157,7 +162,17 @@ function ResultChart({ result, target }: ResultChartProps) {
           strokeWidth={1}
         />
 
-        {target === null ? (
+        {targetInvalid ? (
+          <text
+            x={PLOT_LEFT}
+            y={TARGET_Y + 4}
+            fontSize={12}
+            fill="#9ca3af"
+            data-testid="chart-target-invalid"
+          >
+            —
+          </text>
+        ) : target === null ? (
           <text
             x={PLOT_LEFT}
             y={TARGET_Y + 4}
@@ -277,6 +292,10 @@ export function ResultPanel({
 
   const targetMinError = cellErrors['target.min']
   const targetMaxError = cellErrors['target.max']
+  // Workspace 已经不会把上次有效 target 传进来；这里再按单元格错误兜底，
+  // 防止调用方遗漏时仍把旧允许区间或旧裕量显示成当前输入的结果。
+  const targetInvalid = hasTargetInputError(cellErrors)
+  const displayTarget = targetInvalid ? null : target
   const currentStatus = resolveWorkspaceStatus({
     result,
     relationConfirmed: draft.relationConfirmed,
@@ -409,7 +428,7 @@ export function ResultPanel({
         </div>
         <div className="result-panel__row" data-testid="result-target">
           <dt>允许区间</dt>
-          <dd>{formatTarget(target)}</dd>
+          <dd>{formatTarget(displayTarget)}</dd>
         </div>
         <div className="result-panel__row" data-testid="result-status">
           <dt>状态</dt>
@@ -417,15 +436,29 @@ export function ResultPanel({
         </div>
         <div className="result-panel__row" data-testid="result-lower-margin">
           <dt>下限裕量</dt>
-          <dd>{formatValue(result?.lowerMarginQ ?? null, true)}</dd>
+          <dd>
+            {formatValue(
+              targetInvalid ? null : (result?.lowerMarginQ ?? null),
+              true,
+            )}
+          </dd>
         </div>
         <div className="result-panel__row" data-testid="result-upper-margin">
           <dt>上限裕量</dt>
-          <dd>{formatValue(result?.upperMarginQ ?? null, true)}</dd>
+          <dd>
+            {formatValue(
+              targetInvalid ? null : (result?.upperMarginQ ?? null),
+              true,
+            )}
+          </dd>
         </div>
       </dl>
 
-      <ResultChart result={result} target={target} />
+      <ResultChart
+        result={result}
+        target={displayTarget}
+        targetInvalid={targetInvalid}
+      />
 
       {!isEmptyProject && (
         <ContributionTable result={result} terms={terms} />
