@@ -471,6 +471,7 @@ describe('Workspace：按 projectId 打开与返回列表', () => {
   })
 
   it('引导失败后的应急导出仍收集来源元数据，提示里写明来源版本数与不含附件', async () => {
+    const download = installBackupDownloadMock()
     const created = await createProject({ name: '应急导出项目', working: caseAChain() })
     expect(created.ok).toBe(true)
     if (!created.ok) {
@@ -514,6 +515,15 @@ describe('Workspace：按 projectId 打开与返回列表', () => {
     const notice = await screen.findByText(/含 1 个来源版本的元数据与绑定坐标/)
     expect(notice).toBeInTheDocument()
     expect(notice).toHaveTextContent('不含来源附件')
+
+    // 不只看提示：真正导出的 JSON 必须带来源元数据，而不是空 sources。
+    await waitFor(() => expect(download.blobs).toHaveLength(1))
+    const exported = JSON.parse(await readBlobText(download.blobs[0])) as {
+      sources: { revisions: unknown[]; attachmentsIncluded: boolean }
+    }
+    expect(exported.sources.revisions).toHaveLength(1)
+    expect(exported.sources.attachmentsIncluded).toBe(false)
+    download.restore()
   })
 
   it('来源元数据也读不到时明确说明是降级备份，不把空来源当作普通备份', async () => {
