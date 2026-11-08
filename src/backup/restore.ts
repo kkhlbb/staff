@@ -512,7 +512,9 @@ const snapshotSchema = z.object({
   baseline: z
     .object({ savedAt: isoString, definition: z.unknown() })
     .nullable(),
-  comparison: snapshotComparisonSchema.nullable(),
+  // 旧版快照没有 comparison 字段（有基线时也没有冻结对比）。恢复必须接受，
+  // 且不补算、不伪造；报告按“未冻结”显示。
+  comparison: snapshotComparisonSchema.nullish(),
   status: z.enum(['complete', 'pending']),
   pendingCount: z.number().int().nonnegative(),
 })
@@ -579,13 +581,18 @@ function sameJson(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
 }
 
-function sameDocument(left: SourceDocument, right: SourceDocument): boolean {
-  return (
-    left.id === right.id &&
-    left.projectId === right.projectId &&
-    left.title === right.title &&
-    left.latestRevisionId === right.latestRevisionId
-  )
+function sameDocumentIdentity(
+  left: SourceDocument,
+  right: SourceDocument,
+): boolean {
+  // 只比较真正的不变量：文档身份与项目作用域。
+  //
+  // latestRevisionId 是“当前”指针：快照冻结的是创建时的版本（例如 v1），
+  // 而来源文档之后升级到 v2 是完全合法的历史状态；title 同样是可编辑的
+  // 当前元数据。二者都不能作为历史快照的校验条件。
+  // 冻结指针本身仍由清单内部一致性保证：manifest.documents 的
+  // latestRevisionId 必须指向 manifest.revisions 中的版本。
+  return left.id === right.id && left.projectId === right.projectId
 }
 
 function sameRevision(left: SourceRevision, right: SourceRevision): boolean {
@@ -872,7 +879,7 @@ function validateSourceManifestRecord(
       return `${prefix}的来源版本 ${revision.id} 与备份记录不一致`
     }
     const backupDocument = backupDocuments.get(document.id)
-    if (backupDocument === undefined || !sameDocument(document, backupDocument)) {
+    if (backupDocument === undefined || !sameDocumentIdentity(document, backupDocument)) {
       return `${prefix}的来源文档 ${document.id} 与备份记录不一致`
     }
     revisionById.set(revision.id, revision)
@@ -953,11 +960,14 @@ function validateSourceManifestRecord(
 
 function validateComparisonRecord(snapshot: AnalysisSnapshot): string | null {
   const comparison = snapshot.comparison
-  if ((snapshot.baseline === null) !== (comparison === null || comparison === undefined)) {
-    return `分析快照 ${snapshot.id} 的基线与冻结对比结果不一致`
-  }
-  if (snapshot.baseline === null || comparison === null || comparison === undefined) {
+  if (comparison === null || comparison === undefined) {
+    // 兼容旧快照：允许“有基线但没有冻结对比结果”。恢复只原样保留，不补算、
+    // 不伪造冻结值；报告按“未冻结”显示。仍拒绝反向不一致：没有基线却带
+    // 冻结对比结果（下面处理）。
     return null
+  }
+  if (snapshot.baseline === null) {
+    return `分析快照 ${snapshot.id} 有冻结对比结果却没有基线`
   }
   const { baselineResult, diff } = comparison
   const prefix = `分析快照 ${snapshot.id} 的冻结基线对比`

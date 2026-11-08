@@ -415,8 +415,8 @@ rawZip('malicious-duplicate-entry.cunlian.zip', [
     minQ: 800000,
     maxQ: 1001200,
     lowerDeviationQ: 0,
-    upperDeviationQ: 1200,
-    toleranceQ: 1200,
+    upperDeviationQ: 201200,
+    toleranceQ: 201200,
     status: 'no-target',
     lowerMarginQ: null,
     upperMarginQ: null,
@@ -541,6 +541,87 @@ rawZip('malicious-duplicate-entry.cunlian.zip', [
   await writeSnapshotFixture('invalid-snapshot-inconsistent.cunlian.zip', (snapshot) => {
     snapshot.review.byStatus.passed = 99
   })
+  // 没有基线却带冻结对比结果：F3-B 的兼容只放行“有基线、无对比”的旧快照，
+  // 反向不一致必须继续拒绝，避免把兼容写成不校验。
+  await writeSnapshotFixture('invalid-snapshot-comparison.cunlian.zip', (snapshot) => {
+    const delta = (value) => ({ before: value, after: value, delta: 0 })
+    snapshot.baseline = null
+    snapshot.comparison = {
+      baselineResult: structuredClone(result),
+      diff: {
+        addedTermIds: [],
+        removedTermIds: [],
+        orderChanged: false,
+        termChanges: [],
+        targetChanged: false,
+        minQ: delta(result.minQ),
+        maxQ: delta(result.maxQ),
+        toleranceQ: delta(result.toleranceQ),
+        lowerMarginQ: delta(null),
+        upperMarginQ: delta(null),
+        statusBefore: 'no-target',
+        statusAfter: 'no-target',
+      },
+    }
+  })
+  // 冻结指针必须落在冻结清单之内：快照文档的 latestRevisionId 指向清单外版本，
+  // 与“当前文档已升级”不同，属于坏结构，必须拒绝。
+  {
+    const blobBytes = encoder.encode('%PDF-1.4 snapshot pointer')
+    const blobSha = await sha256(blobBytes)
+    const document = {
+      id: 'doc-snapshot',
+      projectId: project.id,
+      title: '快照来源',
+      latestRevisionId: 'rev-snapshot',
+    }
+    const revision = {
+      id: 'rev-snapshot',
+      projectId: project.id,
+      documentId: document.id,
+      fileName: 'snapshot.pdf',
+      sha256: blobSha,
+      byteSize: blobBytes.byteLength,
+      pageCount: 1,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      blobKey: 'blob-snapshot',
+    }
+    const snapshot = structuredClone(baseSnapshot)
+    snapshot.sourceManifest = {
+      bindings: [],
+      documents: [{ ...document, latestRevisionId: 'rev-outside-manifest' }],
+      revisions: [revision],
+      unboundTermIds: ['h', 'b1'],
+      availability: 'complete',
+    }
+    const files = [
+      projectEntry,
+      ['sourceDocuments/doc-snapshot.json', json(document)],
+      ['sourceRevisions/rev-snapshot.json', json(revision)],
+      [
+        'sourceBlobs/blob-snapshot.json',
+        json({
+          blobKey: revision.blobKey,
+          projectId: project.id,
+          sha256: blobSha,
+          byteSize: blobBytes.byteLength,
+        }),
+      ],
+      ['sourceFiles/blob-snapshot.bin', blobBytes],
+      ['snapshots/snapshot-fixture.json', json(snapshot)],
+    ]
+    const manifest = await manifestFor(files, projectSummary, {
+      projects: 1,
+      documents: 1,
+      revisions: 1,
+      blobs: 1,
+      snapshots: 1,
+    })
+    await writeZip('invalid-snapshot-pointer.cunlian.zip', [
+      ['manifest.json', json(manifest)],
+      ...files,
+    ])
+  }
 }
 
 console.log(`fixtures written to ${outDir}`)

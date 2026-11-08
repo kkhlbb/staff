@@ -15,6 +15,7 @@ import {
 } from '../sources/bindings'
 import {
   importSourceRevision,
+  listSourceDocuments,
   listSourceRevisions,
   readSourceBlobBytes,
 } from '../sources/revisions'
@@ -698,6 +699,135 @@ describe('完整备份：空库恢复', () => {
   })
 })
 
+describe('完整备份：历史快照兼容（F3）', () => {
+  it('快照冻结 v1 而来源文档已升级 v2 时仍可导出并恢复，冻结指针与历史结论不变', async () => {
+    const working = caseA()
+    const created = await createProject({
+      name: '历史快照项目',
+      working,
+      baseline: {
+        savedAt: '2026-11-04T08:00:00.000Z',
+        definition: caseBaseline(),
+      },
+      relationRevision: 1,
+      relationReview: createRelationReview(
+        working,
+        1,
+        '2026-11-05T08:00:00.000Z',
+      ),
+    })
+    if (!created.ok) {
+      throw new Error(created.error.message)
+    }
+    const project = created.value
+    const draft = await saveDraft(project.id, chainToDraft(working), {
+      relationState: {
+        relationRevision: project.relationRevision,
+        relationReview: project.relationReview,
+      },
+    })
+    expect(draft.ok).toBe(true)
+
+    // 快照创建时文档只有 v1：冻结清单里的 latestRevisionId 指向 v1。
+    const first = await importSourceRevision({
+      projectId: project.id,
+      fileName: 'source-v1.pdf',
+      bytes: buildSyntheticPdf({ pageCount: 2, variant: 'v1' }),
+    })
+    if (!first.ok) {
+      throw new Error(first.error.message)
+    }
+    const frozen = await createAnalysisSnapshot({
+      project,
+      draft: chainToDraft(working),
+      relationState: {
+        relationRevision: project.relationRevision,
+        relationReview: project.relationReview,
+      },
+      baseline: project.baseline,
+      now: '2026-11-06T08:00:00.000Z',
+    })
+    if (!frozen.ok) {
+      throw new Error(frozen.error.message)
+    }
+    expect(frozen.value.sourceManifest.documents).toHaveLength(1)
+    expect(frozen.value.sourceManifest.documents[0].latestRevisionId).toBe(
+      first.value.revision.id,
+    )
+    expect(frozen.value.comparison).not.toBeNull()
+
+    // 之后来源文档升级到 v2：这是正常的当前状态，不是历史快照的变更。
+    const second = await importSourceRevision({
+      projectId: project.id,
+      documentId: first.value.document.id,
+      fileName: 'source-v2.pdf',
+      bytes: buildSyntheticPdf({ pageCount: 3, variant: 'v2' }),
+    })
+    if (!second.ok) {
+      throw new Error(second.error.message)
+    }
+    expect(second.value.document.latestRevisionId).toBe(
+      second.value.revision.id,
+    )
+    expect(second.value.revision.id).not.toBe(first.value.revision.id)
+
+    // 文档标题也是可编辑的当前元数据：这里直接改库模拟改名（当前没有改名 API），
+    // 快照仍冻结旧标题。恢复不得因标题漂移拒绝历史快照。
+    const renamedTitle = 'source-v2 改名后.pdf'
+    await withDatabase(async (db) => {
+      const transaction = db.transaction(SOURCE_DOCUMENT_STORE_NAME, 'readwrite')
+      const done = transactionDone(transaction)
+      const store = transaction.objectStore(SOURCE_DOCUMENT_STORE_NAME)
+      const record = (await requestResult(
+        store.get(first.value.document.id),
+      )) as Record<string, unknown>
+      store.put({ ...record, title: renamedTitle })
+      await done
+    })
+
+    const bundle = await makeBundle()
+    await deleteProjectDatabase()
+
+    const restored = await restoreBackup(bundle.bytes, {
+      now: '2026-11-08T13:10:00.000Z',
+    })
+    expect(restored.ok, restored.ok ? '' : `${restored.error.code}: ${restored.error.message}`).toBe(true)
+    if (!restored.ok) {
+      return
+    }
+
+    // 当前文档仍是 v2：恢复不回退“当前”指针。
+    const documents = await listSourceDocuments(project.id)
+    expect(documents.ok).toBe(true)
+    if (documents.ok) {
+      expect(documents.value).toHaveLength(1)
+      expect(documents.value[0].latestRevisionId).toBe(
+        second.value.revision.id,
+      )
+      expect(documents.value[0].title).toBe(renamedTitle)
+    }
+
+    // 冻结快照原样保留：指针仍是 v1，结果/审查/冻结对比逐字段不变。
+    const snapshots = await withDatabase(async (db) => {
+      const transaction = db.transaction(SNAPSHOT_STORE_NAME, 'readonly')
+      const done = transactionDone(transaction)
+      const rows = (await requestResult(
+        transaction.objectStore(SNAPSHOT_STORE_NAME).getAll(),
+      )) as AnalysisSnapshot[]
+      await done
+      return rows
+    })
+    expect(snapshots).toHaveLength(1)
+    expect(snapshots[0].sourceManifest.documents[0].latestRevisionId).toBe(
+      first.value.revision.id,
+    )
+    expect(snapshots[0].sourceManifest.documents[0].title).toBe(
+      first.value.document.title,
+    )
+    expect(snapshots[0]).toEqual(frozen.value)
+  })
+})
+
 describe('完整备份：恶意与坏结构 ZIP 真实夹具', () => {
   it('每个路径穿越变体、结构坏包与引用错误都按具体错误码拒绝且零写入', async () => {
     const cases: { name: string; code: string }[] = [
@@ -754,6 +884,14 @@ describe('完整备份：恶意与坏结构 ZIP 真实夹具', () => {
         name: 'invalid-snapshot-inconsistent.cunlian.zip',
         code: 'invalid_record',
       },
+      {
+        name: 'invalid-snapshot-comparison.cunlian.zip',
+        code: 'invalid_record',
+      },
+      {
+        name: 'invalid-snapshot-pointer.cunlian.zip',
+        code: 'invalid_record',
+      },
     ]
 
     for (const testCase of cases) {
@@ -764,6 +902,26 @@ describe('完整备份：恶意与坏结构 ZIP 真实夹具', () => {
         expect(result.error.code, testCase.name).toBe(testCase.code)
       }
       expect(await dumpStores(), `${testCase.name} 零写入`).toEqual(before)
+    }
+  })
+
+  it('新坏包夹具按预期原因拒绝：缺基线却带冻结对比、冻结指针指向清单外版本', async () => {
+    const comparison = await restoreBackup(
+      fixture('invalid-snapshot-comparison.cunlian.zip'),
+    )
+    expect(comparison.ok).toBe(false)
+    if (!comparison.ok) {
+      expect(comparison.error.code).toBe('invalid_record')
+      expect(comparison.error.message).toContain('有冻结对比结果却没有基线')
+    }
+
+    const pointer = await restoreBackup(
+      fixture('invalid-snapshot-pointer.cunlian.zip'),
+    )
+    expect(pointer.ok).toBe(false)
+    if (!pointer.ok) {
+      expect(pointer.error.code).toBe('invalid_record')
+      expect(pointer.error.message).toContain('最新版本不在清单内')
     }
   })
 

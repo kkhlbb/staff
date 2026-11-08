@@ -9,6 +9,7 @@ import type { ChainDefinition, DimensionTerm, Project } from '../domain/types'
 import { parseMm } from '../domain/units'
 import {
   createAnalysisSnapshot,
+  getAnalysisSnapshot,
   type AnalysisSnapshot,
 } from '../history/snapshots'
 import { REVIEW_RULES_VERSION } from '../review/rules'
@@ -31,6 +32,8 @@ import {
 } from '../storage/db'
 import { PrintReport } from './PrintReport'
 import { snapshotShortId } from '../history/snapshotId'
+import { createProjectBundle } from '../backup/projectBundle'
+import { restoreBackup } from '../backup/restore'
 
 beforeEach(async () => {
   window.location.hash = ''
@@ -472,6 +475,67 @@ describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
     ).toHaveTextContent('不补算')
     expect(within(report).queryByTestId('scenario-compare')).toBeNull()
     expect(within(report).queryByTestId('compare-min')).toBeNull()
+  })
+
+  it('旧快照缺少冻结对比：导出备份→空库恢复后逐字段一致，报告仍显示未冻结不补算', async () => {
+    const project = await createCaseAProject(true, {
+      savedAt: '2026-11-04T08:00:00.000Z',
+      definition: makeCaseB(),
+    })
+    const snapshot = await snapshotProject(project)
+
+    // 模拟旧版快照：基线仍在，但没有冻结对比结果字段。
+    const legacy = await withDatabase(async (db) => {
+      const transaction = db.transaction(SNAPSHOT_STORE_NAME, 'readwrite')
+      const done = transactionDone(transaction)
+      const store = transaction.objectStore(SNAPSHOT_STORE_NAME)
+      const record = (await requestResult(store.get(snapshot.id))) as Record<
+        string,
+        unknown
+      >
+      delete record.comparison
+      store.put(record)
+      await done
+      return record as unknown as AnalysisSnapshot
+    })
+    expect(legacy.baseline).not.toBeNull()
+    expect(legacy.comparison).toBeUndefined()
+
+    const bundle = await createProjectBundle({
+      now: '2026-11-08T11:30:00.000Z',
+    })
+    expect(bundle.ok).toBe(true)
+    if (!bundle.ok) {
+      return
+    }
+
+    await deleteProjectDatabase()
+    const restored = await restoreBackup(bundle.value.bytes, {
+      now: '2026-11-08T12:30:00.000Z',
+    })
+    expect(restored.ok, restored.ok ? '' : `${restored.error.code}: ${restored.error.message}`).toBe(true)
+    if (!restored.ok) {
+      return
+    }
+
+    // 恢复不补算、不伪造：快照逐字段与原记录一致，comparison 仍然缺失。
+    const reloaded = await getAnalysisSnapshot(snapshot.id)
+    expect(reloaded.ok).toBe(true)
+    if (!reloaded.ok || reloaded.value === null) {
+      return
+    }
+    expect(reloaded.value).toEqual(legacy)
+    expect(reloaded.value.comparison).toBeUndefined()
+    expect(reloaded.value.review).toEqual(legacy.review)
+
+    render(
+      <PrintReport projectId={project.id} snapshotId={snapshot.id} />,
+    )
+    const report = await screen.findByTestId('print-report')
+    expect(
+      within(report).getByTestId('report-comparison-missing'),
+    ).toHaveTextContent('不补算')
+    expect(within(report).queryByTestId('scenario-compare')).toBeNull()
   })
 })
 
