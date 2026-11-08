@@ -9,6 +9,7 @@ import {
   type RelationReview,
 } from '../domain/types'
 import { validateChain, type ValidationError } from '../domain/validation'
+import { formatMm } from '../domain/units'
 import { draftToChain, type CellErrors, type WorkspaceDraft } from '../workspace/draft'
 import {
   BINDING_STORE_NAME,
@@ -27,6 +28,7 @@ import {
   withDatabase,
 } from './db'
 import { migrateDraftV1, migrateProjectV1 } from './migrateV1'
+import { changeEventId } from '../history/events'
 import type { SourceBinding } from '../sources/bindings'
 import type { SourceDocument, SourceRevision } from '../sources/types'
 
@@ -308,6 +310,32 @@ function daysInMonth(year: number, month: number): number {
     return leap ? 29 : 28
   }
   return [31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
+}
+
+/**
+ * 解析导入文件里的历史来源接受凭据。
+ * 理由/适用范围/时间/最新版本任一缺失或非法就整体丢弃为 null：
+ * 不能把半截字段当成“已说明的历史来源”。
+ */
+function parseHistoricalAcceptance(
+  value: unknown,
+): SourceBinding['historicalAcceptance'] {
+  if (typeof value !== 'object' || value === null) {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  const reason = typeof record.reason === 'string' ? record.reason.trim() : ''
+  const scope = typeof record.scope === 'string' ? record.scope.trim() : ''
+  const latestRevisionId =
+    typeof record.latestRevisionId === 'string' ? record.latestRevisionId.trim() : ''
+  const acceptedAt =
+    typeof record.acceptedAt === 'string' && isValidIsoDateTime(record.acceptedAt)
+      ? record.acceptedAt
+      : null
+  if (reason === '' || scope === '' || latestRevisionId === '' || acceptedAt === null) {
+    return null
+  }
+  return { reason, scope, acceptedAt, latestRevisionId }
 }
 
 /** 接受带时区的 ISO 8601 时间戳；拒绝 Date.parse 会静默进位的非法日期。 */
@@ -645,6 +673,7 @@ function parseSourceMetadata(
         createdAt,
         reviewedTermRevision: reviewedAt === null ? null : reviewedTermRevision,
         reviewedAt,
+        historicalAcceptance: parseHistoricalAcceptance(item.historicalAcceptance),
       })
     }
   }
@@ -1741,7 +1770,10 @@ export async function updateProject(
 
   try {
     return await withDatabase(async (db) => {
-      const transaction = db.transaction(PROJECT_STORE_NAME, 'readwrite')
+      const transaction = db.transaction(
+        [PROJECT_STORE_NAME, EVENT_STORE_NAME],
+        'readwrite',
+      )
       const done = transactionDone(transaction)
       try {
         const store = transaction.objectStore(PROJECT_STORE_NAME)
@@ -1752,6 +1784,7 @@ export async function updateProject(
           return failure('not_found', '项目不存在')
         }
 
+        const savedAt = nowIso()
         const updated: Project = {
           ...existing,
           name: name ?? existing.name,
@@ -1761,9 +1794,76 @@ export async function updateProject(
           relationReview:
             relationReview === undefined ? existing.relationReview : relationReview,
           baseline: baseline === undefined ? existing.baseline : baseline,
-          updatedAt: nowIso(),
+          updatedAt: savedAt,
         }
         store.put(updated)
+
+        // 确认、基线保存与项目改名与项目记录同事务：写入失败时事件一起回滚。
+        const eventStore = transaction.objectStore(EVENT_STORE_NAME)
+        if (name !== undefined && name !== existing.name) {
+          eventStore.put({
+            id: changeEventId('project_name_changed', `${id}:${savedAt}`),
+            projectId: id,
+            type: 'project_name_changed',
+            createdAt: savedAt,
+            before: existing.name,
+            after: name,
+            message: '项目名称已修改。',
+          })
+        }
+
+        const wasConfirmed = existing.relationReview !== null
+        const nowConfirmed = updated.relationReview !== null
+        const reviewChanged =
+          existing.relationReview !== updated.relationReview &&
+          (existing.relationReview?.confirmedAt !== updated.relationReview?.confirmedAt ||
+            existing.relationReview?.fingerprint !== updated.relationReview?.fingerprint)
+        if (!wasConfirmed && nowConfirmed) {
+          eventStore.put({
+            id: changeEventId('relation_confirmed', `${id}:${savedAt}`),
+            projectId: id,
+            type: 'relation_confirmed',
+            createdAt: savedAt,
+            after: `relationRevision=${updated.relationRevision}`,
+            message:
+              '用户自述确认尺寸关系与作用方向；这不是身份认证、电子签名或工程批准。',
+          })
+        } else if (wasConfirmed && !nowConfirmed) {
+          eventStore.put({
+            id: changeEventId('relation_confirmation_cleared', `${id}:${savedAt}`),
+            projectId: id,
+            type: 'relation_confirmation_cleared',
+            createdAt: savedAt,
+            before: `relationRevision=${existing.relationRevision}`,
+            message: '尺寸关系确认已清除。',
+          })
+        } else if (wasConfirmed && nowConfirmed && reviewChanged) {
+          eventStore.put({
+            id: changeEventId('relation_confirmed', `${id}:${savedAt}`),
+            projectId: id,
+            type: 'relation_confirmed',
+            createdAt: savedAt,
+            after: `relationRevision=${updated.relationRevision}`,
+            message: '尺寸关系与作用方向已重新确认。',
+          })
+        }
+
+        if (
+          baseline !== undefined &&
+          baseline !== null &&
+          baseline.savedAt !== existing.baseline?.savedAt
+        ) {
+          eventStore.put({
+            id: changeEventId('baseline_saved', `${id}:${savedAt}`),
+            projectId: id,
+            type: 'baseline_saved',
+            createdAt: savedAt,
+            after: baseline.savedAt,
+            message:
+              existing.baseline === null ? '已保存基线。' : '已用当前方案覆盖基线。',
+          })
+        }
+
         await done
         return { ok: true, value: updated }
       } catch (error) {
@@ -2025,25 +2125,142 @@ export async function saveDraft(
             : existing.relationReview
 
         if (conversion.ok) {
-          // 代号变化记录名称变更事件：来源数值核对保留（termRevision 不变），
-          // 但关系确认已因 relationRevision 递增而失效。事件与草稿同事务。
-          const previousSymbols = new Map(
-            existing.working.terms.map((term) => [term.id, term.symbol]),
+          // 输入变化事件与草稿/项目写入同事务：失败时事件一起回滚。
+          // 只比较“上一个有效工作方案 → 本次有效方案”，不伪造没有发生的变更。
+          const eventStore = transaction.objectStore(EVENT_STORE_NAME)
+          const previousTerms = new Map(
+            existing.working.terms.map((term) => [term.id, term]),
           )
           for (const term of conversion.chain.terms) {
-            const before = previousSymbols.get(term.id)
-            if (before === undefined || before === term.symbol) {
+            const previous = previousTerms.get(term.id)
+            if (previous === undefined) {
               continue
             }
-            transaction.objectStore(EVENT_STORE_NAME).put({
-              id: `term_symbol_changed:${projectId}:${term.id}:${draft.relationRevision}`,
+            if (previous.symbol !== term.symbol) {
+              eventStore.put({
+                id: changeEventId('term_symbol_changed', `${term.id}:${savedAt}`),
+                projectId,
+                type: 'term_symbol_changed',
+                createdAt: savedAt,
+                termId: term.id,
+                before: previous.symbol,
+                after: term.symbol,
+                message: `组成环代号由「${previous.symbol}」改为「${term.symbol}」；来源数值核对保留，关系确认需要重新核对。`,
+              })
+            }
+            if (previous.name !== term.name) {
+              eventStore.put({
+                id: changeEventId('term_name_changed', `${term.id}:${savedAt}`),
+                projectId,
+                type: 'term_name_changed',
+                createdAt: savedAt,
+                termId: term.id,
+                before: previous.name,
+                after: term.name,
+                message: '组成环名称已修改；来源数值核对与关系确认保留。',
+              })
+            }
+            if (previous.sourceNote !== term.sourceNote) {
+              eventStore.put({
+                id: changeEventId('term_note_changed', `${term.id}:${savedAt}`),
+                projectId,
+                type: 'term_note_changed',
+                createdAt: savedAt,
+                termId: term.id,
+                before: previous.sourceNote,
+                after: term.sourceNote,
+                message: '组成环来源说明已修改；来源数值核对与关系确认保留。',
+              })
+            }
+            const numericFields = [
+              ['nominal', '基本尺寸', previous.nominalQ, term.nominalQ],
+              ['lower', '下偏差', previous.lowerDeviationQ, term.lowerDeviationQ],
+              ['upper', '上偏差', previous.upperDeviationQ, term.upperDeviationQ],
+            ] as const
+            for (const [field, label, beforeQ, afterQ] of numericFields) {
+              if (beforeQ === afterQ) {
+                continue
+              }
+              eventStore.put({
+                id: changeEventId(
+                  'term_numeric_changed',
+                  `${term.id}:${field}:${savedAt}`,
+                ),
+                projectId,
+                type: 'term_numeric_changed',
+                createdAt: savedAt,
+                termId: term.id,
+                numeric: { field, beforeQ, afterQ },
+                before: `${label} ${formatMm(beforeQ)} mm`,
+                after: `${label} ${formatMm(afterQ)} mm`,
+                message: `组成环「${term.symbol}」${label}已修改；该环来源数值核对失效，关系确认需要重新核对。`,
+              })
+            }
+            if (previous.sign !== term.sign) {
+              eventStore.put({
+                id: changeEventId('term_numeric_changed', `${term.id}:sign:${savedAt}`),
+                projectId,
+                type: 'term_numeric_changed',
+                createdAt: savedAt,
+                termId: term.id,
+                before: `方向 ${previous.sign === 1 ? '+1' : '-1'}`,
+                after: `方向 ${term.sign === 1 ? '+1' : '-1'}`,
+                message: `组成环「${term.symbol}」作用方向已修改；该环来源数值核对失效，关系确认需要重新核对。`,
+              })
+            }
+          }
+
+          const targetText = (target: ChainDefinition['target']): string =>
+            target === null
+              ? '未设置'
+              : `${formatMm(target.minQ)} … ${formatMm(target.maxQ)} mm`
+          const beforeTarget = existing.working.target
+          const afterTarget = conversion.chain.target
+          if (
+            beforeTarget?.minQ !== afterTarget?.minQ ||
+            beforeTarget?.maxQ !== afterTarget?.maxQ
+          ) {
+            eventStore.put({
+              id: changeEventId('target_changed', savedAt),
               projectId,
-              type: 'term_symbol_changed',
+              type: 'target_changed',
               createdAt: savedAt,
-              termId: term.id,
-              before,
-              after: term.symbol,
-              message: `组成环代号由「${before}」改为「${term.symbol}」；来源数值核对保留，关系确认需要重新核对。`,
+              before: targetText(beforeTarget),
+              after: targetText(afterTarget),
+              message:
+                '目标区间已修改；来源核对与关系确认保留，原有分析快照应标记为历史。',
+            })
+          }
+
+          const beforeOrder = existing.working.terms
+            .map((term) => term.id)
+            .filter((id) => conversion.chain.terms.some((term) => term.id === id))
+          const afterOrder = conversion.chain.terms
+            .map((term) => term.id)
+            .filter((id) => previousTerms.has(id))
+          if (beforeOrder.join('\u0000') !== afterOrder.join('\u0000')) {
+            const labelOf = (id: string): string =>
+              conversion.chain.terms.find((term) => term.id === id)?.symbol ?? id
+            eventStore.put({
+              id: changeEventId('term_reordered', savedAt),
+              projectId,
+              type: 'term_reordered',
+              createdAt: savedAt,
+              before: beforeOrder.map(labelOf).join(' → '),
+              after: afterOrder.map(labelOf).join(' → '),
+              message: '组成环行顺序已调整；关系确认与来源数值核对均保留。',
+            })
+          }
+
+          if (existing.working.assumptions !== conversion.chain.assumptions) {
+            eventStore.put({
+              id: changeEventId('assumptions_changed', savedAt),
+              projectId,
+              type: 'assumptions_changed',
+              createdAt: savedAt,
+              before: existing.working.assumptions,
+              after: conversion.chain.assumptions,
+              message: '假设与说明已修改。',
             })
           }
 
@@ -2272,6 +2489,11 @@ async function addProjectWithSources(
             projectId: candidate.id,
             revisionId: revisionIdMap.get(binding.revisionId) as string,
             documentId: documentIdMap.get(binding.documentId) as string,
+            // 外部导入不采信文件中的任何人工确认：绑定核对与历史来源接受
+            // 都必须由当前用户在本地重新建立（规格 §6.2 / REV-05）。
+            reviewedTermRevision: null,
+            reviewedAt: null,
+            historicalAcceptance: null,
           })
         }
       }

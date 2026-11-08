@@ -315,7 +315,12 @@ export function ResultPanel({
   const isEmptyProject = draft.terms.length === 0
 
   return (
-    <section className="result-panel" aria-labelledby={headingId}>
+    <section
+      id="workspace-result-panel"
+      className="result-panel"
+      aria-labelledby={headingId}
+      tabIndex={-1}
+    >
       <h2 id={headingId} className="result-panel__title">
         结果卡
       </h2>

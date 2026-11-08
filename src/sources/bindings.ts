@@ -16,6 +16,7 @@
 import {
   BINDING_STORE_NAME,
   EVENT_STORE_NAME,
+  SOURCE_DOCUMENT_STORE_NAME,
   SOURCE_REVISION_STORE_NAME,
   errorName,
   requestResult,
@@ -30,7 +31,25 @@ import {
   type PdfPageBox,
   type PdfRect,
 } from './pdfCoordinates'
-import type { SourceRevision } from './types'
+import type { SourceDocument, SourceRevision } from './types'
+
+/**
+ * 明确选择“继续采用旧版来源”的凭据（规格 §6.3 第 2 条）。
+ *
+ * 只解决 SOURCE_CURRENT（版本处置），不代表数值已核对，也不冒充最新版本。
+ * latestRevisionId 记录本次处理时文档的最新版本；之后再导入新版必须重新处置，
+ * 旧凭据不会自动批准未来版本。
+ */
+export interface HistoricalAcceptance {
+  /** 必填理由。 */
+  reason: string
+  /** 必填适用范围：说明哪些结论仍可使用该历史版本。 */
+  scope: string
+  /** ISO 8601 时间戳。 */
+  acceptedAt: string
+  /** 接受时文档的 latestRevisionId。 */
+  latestRevisionId: string
+}
 
 export interface SourceBinding {
   id: string
@@ -53,6 +72,11 @@ export interface SourceBinding {
   reviewedTermRevision: number | null
   /** 核对时间 ISO 8601；未核对为 null。 */
   reviewedAt: string | null
+  /**
+   * “继续采用旧版（已说明）”凭据；null 表示未接受历史版本。
+   * 旧记录缺少该字段时按 null 解释。
+   */
+  historicalAcceptance: HistoricalAcceptance | null
 }
 
 export interface CreateSourceBindingInput {
@@ -215,6 +239,7 @@ export async function createSourceBinding(
           // 新建绑定尚未经过用户对照当前数值的显式核对。
           reviewedTermRevision: null,
           reviewedAt: null,
+          historicalAcceptance: null,
         }
 
         await requestResult(transaction.objectStore(BINDING_STORE_NAME).add(binding))
@@ -465,6 +490,117 @@ export async function reviewSourceBinding(
   }
 }
 
+/**
+ * 记录“继续采用旧版来源”的显式决定（规格 §6.3 第 2 条）。
+ *
+ * 必须填写理由与适用范围；只解决 SOURCE_CURRENT，不代替 SOURCE_VALUE_REVIEWED，
+ * 也不冒充最新版本。凭据记录本次处理时的 latestRevisionId：之后再导入更新版本，
+ * 旧凭据不会自动批准，必须重新处置。
+ */
+export interface AcceptHistoricalSourceInput {
+  reason: string
+  scope: string
+  /** 测试注入；默认当前时间。 */
+  acceptedAt?: string
+}
+
+export async function acceptHistoricalSource(
+  id: string,
+  input: AcceptHistoricalSourceInput,
+  context: CreateSourceBindingContext = {},
+): Promise<BindingResult<SourceBinding>> {
+  const reason = input.reason.trim()
+  const scope = input.scope.trim()
+  if (reason === '') {
+    return failure('invalid_input', '必须填写继续使用旧版来源的理由')
+  }
+  if (scope === '') {
+    return failure('invalid_input', '必须填写继续使用旧版来源的适用范围')
+  }
+  if (input.acceptedAt !== undefined && Number.isNaN(new Date(input.acceptedAt).getTime())) {
+    return failure('invalid_input', '接受时间不是有效的 ISO 8601 时间')
+  }
+  const now = context.now ?? (() => new Date().toISOString())
+  const acceptedAt = input.acceptedAt ?? now()
+
+  try {
+    return await withDatabase(async (db) => {
+      const transaction = db.transaction(
+        [BINDING_STORE_NAME, SOURCE_DOCUMENT_STORE_NAME, EVENT_STORE_NAME],
+        'readwrite',
+      )
+      const done = transactionDone(transaction)
+      try {
+        const store = transaction.objectStore(BINDING_STORE_NAME)
+        const existing = (await requestResult(store.get(id))) as
+          | SourceBinding
+          | undefined
+        if (existing === undefined) {
+          await done
+          return failure('binding_not_found', '来源绑定不存在，未记录历史来源接受')
+        }
+        const document = (await requestResult(
+          transaction.objectStore(SOURCE_DOCUMENT_STORE_NAME).get(existing.documentId),
+        )) as SourceDocument | undefined
+        if (document === undefined || document.projectId !== existing.projectId) {
+          await done.catch(() => undefined)
+          return failure('invalid_input', '来源文档记录不存在，未记录历史来源接受')
+        }
+        if (document.latestRevisionId === existing.revisionId) {
+          await done.catch(() => undefined)
+          return failure(
+            'invalid_input',
+            '该绑定已指向文档最新版本，无需接受历史来源',
+          )
+        }
+
+        const updated: SourceBinding = {
+          ...existing,
+          historicalAcceptance: {
+            reason,
+            scope,
+            acceptedAt,
+            latestRevisionId: document.latestRevisionId,
+          },
+        }
+        store.put(updated)
+        await requestResult(
+          addChangeEvent(transaction, {
+            id: changeEventId('source_binding_historical_accepted', `${id}:${acceptedAt}`),
+            projectId: existing.projectId,
+            type: 'source_binding_historical_accepted',
+            createdAt: acceptedAt,
+            documentId: existing.documentId,
+            revisionId: existing.revisionId,
+            bindingId: existing.id,
+            termId: existing.termId,
+            after: `latestRevisionId=${document.latestRevisionId}`,
+            message:
+              `继续采用旧版来源（已说明）：理由「${reason}」；适用范围「${scope}」。` +
+              '该决定只处理版本事件，不代替数值核对，也不表示该版本是最新版本。',
+          }),
+        )
+        await done
+        return { ok: true as const, value: updated }
+      } catch (error) {
+        try {
+          transaction.abort()
+        } catch {
+          // 事务可能已经结束，保留原始错误。
+        }
+        await done.catch(() => undefined)
+        throw error
+      }
+    })
+  } catch (error) {
+    return failure(
+      'storage_failure',
+      '记录历史来源接受失败，绑定未改变',
+      error instanceof Error ? error.message : String(error),
+    )
+  }
+}
+
 export interface UpdateSourceBindingRegionInput {
   page?: number
   rectPdf?: PdfRect
@@ -657,9 +793,11 @@ export async function rebindSourceBinding(
           rectPdf: normalizePdfRect(input.rectPdf),
           pageBoxPdf: [pageBox[0], pageBox[1], pageBox[2], pageBox[3]],
           note: input.note === undefined ? existing.note : input.note.trim(),
-          // 换关联来源 → 该绑定核对失效。
+          // 换关联来源 → 该绑定核对失效；旧版接受凭据也随之失效，
+          // 因为接受的是“继续用这个旧版本”，换源后不再成立。
           reviewedTermRevision: null,
           reviewedAt: null,
+          historicalAcceptance: null,
         }
         store.put(updated)
         await requestResult(

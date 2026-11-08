@@ -1189,3 +1189,70 @@
   padding: 2px 8px;
   font-size: 12px;
 }
+
+.source-panel__historical {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-left: 3px solid #c69a4a;
+  background: #fdf8ee;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.source-panel__historical p {
+  margin: 0;
+}
+
+.source-panel__pending-version {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #e3b7b2;
+  border-radius: 8px;
+  background: #fdf3f2;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.source-panel__pending-version p {
+  margin: 0 0 6px;
+}
+
+.source-panel__accept-form {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  background: #f7f9fc;
+  font-size: 12px;
+}
+
+.source-panel__accept-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.source-panel__accept-form textarea,
+.source-panel__accept-form input {
+  font: inherit;
+  padding: 4px 6px;
+}
+
+.source-panel__confirm-remove {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #edbcb8;
+  border-radius: 8px;
+  background: #fdecea;
+  font-size: 12px;
+}
+
+.source-panel__confirm-remove p {
+  margin: 0 0 6px;
+}
+
+.source-panel__review--historical-accepted {
+  color: #8a5a13;
+  background: #fdf3df;
+}

@@ -19,6 +19,7 @@ export type BindingReviewKind =
   | 'unreviewed'
   | 'stale-term'
   | 'stale-version'
+  | 'historical-accepted'
   | 'attachment-missing'
   | 'term-missing'
 
@@ -34,6 +35,7 @@ const LABELS: Record<BindingReviewKind, string> = {
   unreviewed: '未核对',
   'stale-term': '数值已变，待重新核对',
   'stale-version': '待版本复核',
+  'historical-accepted': '使用历史来源（已说明）',
   'attachment-missing': '来源附件不可用',
   'term-missing': '组成环已不存在',
 }
@@ -61,6 +63,22 @@ export function resolveBindingReview(input: BindingReviewInput): BindingReview {
     return make('term-missing')
   }
   if (latestRevisionId === undefined || binding.revisionId !== latestRevisionId) {
+    const acceptance = binding.historicalAcceptance ?? null
+    if (
+      latestRevisionId !== undefined &&
+      acceptance !== null &&
+      acceptance.latestRevisionId === latestRevisionId
+    ) {
+      // 版本事件已由用户明确处置；这不代表数值核对仍有效。
+      const valuePending =
+        binding.reviewedTermRevision === null ||
+        binding.reviewedTermRevision !== termRevision
+      return {
+        kind: 'historical-accepted',
+        label: LABELS['historical-accepted'],
+        needsReview: valuePending,
+      }
+    }
     return make('stale-version')
   }
   if (!attachmentAvailable) {

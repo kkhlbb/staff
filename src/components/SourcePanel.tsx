@@ -7,9 +7,11 @@
  */
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import {
+  acceptHistoricalSource,
   createSourceBinding,
   listSourceBindings,
   rebindSourceBinding,
+  removeSourceBinding,
   reviewSourceBinding,
   updateSourceBindingRegion,
   type SourceBinding,
@@ -26,6 +28,23 @@ import { useDatabaseStaleVersion } from '../storage/databaseStale'
 import type { TermDraft } from '../workspace/draft'
 import { PdfViewer, type LoadRevisionBytes, type RenderPdfPage, type SaveBindingInput } from './PdfViewer'
 
+/** 供工作台审查清单消费的只读来源快照；不在侧栏内重复判定规则状态。 */
+export interface SourcePanelState {
+  documents: SourceDocument[]
+  revisions: SourceRevision[]
+  bindings: SourceBinding[]
+  availableBlobKeys: ReadonlySet<string>
+}
+
+/** 审查清单点击“定位”时，打开确切的绑定版本与页码。 */
+export interface SourceLocateRequest {
+  bindingId: string
+  revisionId: string
+  page: number
+  /** 同一绑定连续定位也要重新触发的序号。 */
+  token: number
+}
+
 export interface SourcePanelProps {
   projectId: string
   terms: readonly TermDraft[]
@@ -34,6 +53,10 @@ export interface SourcePanelProps {
   onBindingsChange?: (bindings: SourceBinding[]) => void
   /** 每个组成环需要处理的绑定数量，用于表格徽标提示待复核。 */
   onReviewSummaryChange?: (counts: Record<string, number>) => void
+  /** 加载完成后上报完整来源快照，供统一审查规则计算。 */
+  onSourceStateChange?: (state: SourcePanelState) => void
+  /** 从审查侧栏定位到某条绑定的确切版本/页。 */
+  locateRequest?: SourceLocateRequest | null
   /** 测试注入：读取 revision 字节；默认从 sourceBlobs 读取。 */
   loadBytes?: LoadRevisionBytes
   /** 测试注入：绘制页面；默认使用项目内 pdfjs-dist。 */
@@ -58,6 +81,8 @@ export function SourcePanel({
   selectedTermId,
   onBindingsChange,
   onReviewSummaryChange,
+  onSourceStateChange,
+  locateRequest = null,
   loadBytes,
   renderPage,
 }: SourcePanelProps) {
@@ -91,6 +116,19 @@ export function SourcePanel({
   >(null)
   const [editMessage, setEditMessage] = useState<string | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
+
+  /** 继续采用旧版的行内表单与解除绑定的二次确认。 */
+  const [acceptingBindingId, setAcceptingBindingId] = useState<string | null>(null)
+  const [acceptReason, setAcceptReason] = useState('')
+  const [acceptScope, setAcceptScope] = useState('')
+  const [acceptError, setAcceptError] = useState<string | null>(null)
+  const [acceptMessage, setAcceptMessage] = useState<string | null>(null)
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null)
+
+  const onSourceStateChangeRef = useRef(onSourceStateChange)
+  useEffect(() => {
+    onSourceStateChangeRef.current = onSourceStateChange
+  }, [onSourceStateChange])
 
   const reload = (): void => {
     setReloadToken((token) => token + 1)
@@ -144,6 +182,13 @@ export function SourcePanel({
       setBindings(loadedBindings.value)
       setAvailableBlobKeys(new Set(loadedBlobKeys.value))
       setLoading(false)
+      // 上报同一份已加载数据；工作台审查规则不另读一份可能不同的状态。
+      onSourceStateChangeRef.current?.({
+        documents: nextDocuments,
+        revisions: nextRevisions,
+        bindings: loadedBindings.value,
+        availableBlobKeys: new Set(loadedBlobKeys.value),
+      })
     }
     void load()
     return () => {
@@ -154,6 +199,31 @@ export function SourcePanel({
   useEffect(() => {
     onBindingsChange?.(bindings)
   }, [bindings, onBindingsChange])
+
+  /**
+   * 审查侧栏定位：打开确切 revision 与页码，并滚动到该绑定。
+   * 只改变查看位置，不触发保存、确认或版本处置。
+   *
+   * 查看位置在渲染期按新请求调整（React 推荐的“props 变化时调整 state”模式），
+   * 滚动留给没有 setState 的 effect，避免级联渲染。
+   */
+  const [handledLocateToken, setHandledLocateToken] = useState<number | null>(null)
+  if (locateRequest !== null && locateRequest.token !== handledLocateToken) {
+    setHandledLocateToken(locateRequest.token)
+    setActiveRevisionId(locateRequest.revisionId)
+    setPage(locateRequest.page)
+  }
+  useEffect(() => {
+    if (locateRequest === null) {
+      return
+    }
+    const element = document.querySelector(
+      `[data-review-binding="${locateRequest.bindingId}"]`,
+    )
+    if (element instanceof HTMLElement && typeof element.scrollIntoView === 'function') {
+      element.scrollIntoView({ block: 'center' })
+    }
+  }, [locateRequest])
 
   /**
    * 刷新/重新打开后的默认定位：优先打开当前选中组成环最近一条绑定所指向的
@@ -259,6 +329,65 @@ export function SourcePanel({
       setLoadError(result.error.message)
       return
     }
+    reload()
+  }
+
+  /**
+   * 迁移到新版：只打开最新版本并进入换关联流程，页码仅作为建议起点。
+   * 不自动沿用旧坐标、不自动核对；用户必须重新框选并保存。
+   */
+  const startMigrateBinding = (binding: SourceBinding): void => {
+    const document = documentsById.get(binding.documentId)
+    const latest =
+      document === undefined ? undefined : revisionsById.get(document.latestRevisionId)
+    if (latest === undefined) {
+      setLoadError('来源文档的最新版本记录不存在，无法迁移；可解除绑定后重新导入。')
+      return
+    }
+    setEditError(null)
+    setAcceptError(null)
+    setEditMessage(
+      `已打开最新版本「${latest.fileName}」第 ${binding.page} 页作为建议位置；` +
+        '请重新框选并保存。旧坐标不会自动沿用，核对也会重新开始。',
+    )
+    setEditMode({ kind: 'source', bindingId: binding.id, termId: binding.termId })
+    setActiveRevisionId(latest.id)
+    setPage(binding.page)
+  }
+
+  const handleAcceptHistorical = async (binding: SourceBinding): Promise<void> => {
+    setAcceptError(null)
+    setAcceptMessage(null)
+    if (acceptReason.trim() === '' || acceptScope.trim() === '') {
+      setAcceptError('继续使用旧版必须填写理由与适用范围。')
+      return
+    }
+    const accepted = await acceptHistoricalSource(binding.id, {
+      reason: acceptReason,
+      scope: acceptScope,
+    })
+    if (!accepted.ok) {
+      setAcceptError(accepted.error.message)
+      return
+    }
+    setAcceptMessage(
+      '已记录“继续使用旧版（已说明）”。该绑定仍指向旧版本，不冒充最新；' +
+        '版本处置不代替数值核对，仍需与本环当前修订核对。',
+    )
+    setAcceptingBindingId(null)
+    setAcceptReason('')
+    setAcceptScope('')
+    reload()
+  }
+
+  const handleRemoveBinding = async (binding: SourceBinding): Promise<void> => {
+    const removed = await removeSourceBinding(binding.id)
+    if (!removed.ok) {
+      setLoadError(removed.error.message)
+      return
+    }
+    setPendingRemoveId(null)
+    setEditMessage('已解除绑定：来源状态变为未检查；旧版本与附件仍保留，不会被删除。')
     reload()
   }
 
@@ -447,6 +576,11 @@ export function SourcePanel({
           {importMessage}
         </p>
       ) : null}
+      {acceptMessage !== null ? (
+        <p className="source-panel__message" role="status" data-testid="historical-accept-message">
+          {acceptMessage}
+        </p>
+      ) : null}
       {loadError !== null ? (
         <div className="source-panel__error" role="alert">
           <p>读取来源列表失败：{loadError}</p>
@@ -605,7 +739,11 @@ export function SourcePanel({
                 const review = reviewByBinding[binding.id]
                 const term = termsById.get(binding.termId)
                 return (
-                  <li key={binding.id} className="source-panel__binding">
+                  <li
+                    key={binding.id}
+                    className="source-panel__binding"
+                    data-review-binding={binding.id}
+                  >
                     <button
                       type="button"
                       className="source-panel__binding-open"
@@ -622,8 +760,24 @@ export function SourcePanel({
                         {review.label}
                       </span>
                     )}
-                    {term !== undefined &&
-                    (review?.kind === 'unreviewed' || review?.kind === 'stale-term') ? (
+                    {binding.historicalAcceptance === null ? null : (
+                      <div
+                        className="source-panel__historical"
+                        data-testid={`binding-historical-${binding.id}`}
+                      >
+                        <p>
+                          <strong>使用历史来源（已说明），不是最新版本</strong>
+                        </p>
+                        <p>理由：{binding.historicalAcceptance.reason}</p>
+                        <p>适用范围：{binding.historicalAcceptance.scope}</p>
+                        <p>
+                          接受时间：{formatDateTime(binding.historicalAcceptance.acceptedAt)}
+                          ；接受时文档最新版本{' '}
+                          {binding.historicalAcceptance.latestRevisionId.slice(0, 8)}…
+                        </p>
+                      </div>
+                    )}
+                    {term !== undefined && review?.needsReview === true ? (
                       <button
                         type="button"
                         className="source-panel__binding-review"
@@ -632,6 +786,121 @@ export function SourcePanel({
                       >
                         标记已核对
                       </button>
+                    ) : null}
+                    {review?.kind === 'stale-version' ? (
+                      <div
+                        className="source-panel__pending-version"
+                        data-testid={`binding-version-actions-${binding.id}`}
+                      >
+                        <p>
+                          文档已导入更新版本。请逐绑定选择：迁移新版、继续用旧版（必填理由与
+                          适用范围），或解除绑定。未处理前不会算作审查完成。
+                        </p>
+                        <div className="source-panel__binding-actions">
+                          <button
+                            type="button"
+                            data-testid={`binding-migrate-${binding.id}`}
+                            onClick={() => startMigrateBinding(binding)}
+                            disabled={editMode !== null || editingDisabled}
+                          >
+                            迁移到新版（重新框选）
+                          </button>
+                          <button
+                            type="button"
+                            data-testid={`binding-accept-old-${binding.id}`}
+                            onClick={() => {
+                              setAcceptingBindingId(binding.id)
+                              setAcceptReason('')
+                              setAcceptScope('')
+                              setAcceptError(null)
+                              setAcceptMessage(null)
+                            }}
+                            disabled={editingDisabled}
+                          >
+                            继续用旧版（填理由）
+                          </button>
+                          <button
+                            type="button"
+                            data-testid={`binding-remove-${binding.id}`}
+                            onClick={() => setPendingRemoveId(binding.id)}
+                            disabled={editingDisabled}
+                          >
+                            解除绑定
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                    {acceptingBindingId === binding.id ? (
+                      <div
+                        className="source-panel__accept-form"
+                        data-testid={`binding-accept-form-${binding.id}`}
+                      >
+                        <label>
+                          理由（必填）
+                          <textarea
+                            aria-label="继续使用旧版的理由"
+                            value={acceptReason}
+                            onChange={(event) => setAcceptReason(event.target.value)}
+                          />
+                        </label>
+                        <label>
+                          适用范围（必填）
+                          <input
+                            aria-label="继续使用旧版的适用范围"
+                            value={acceptScope}
+                            onChange={(event) => setAcceptScope(event.target.value)}
+                          />
+                        </label>
+                        {acceptError === null ? null : (
+                          <p className="source-panel__error" role="alert">
+                            {acceptError}
+                          </p>
+                        )}
+                        <div className="source-panel__binding-actions">
+                          <button
+                            type="button"
+                            data-testid={`binding-accept-submit-${binding.id}`}
+                            onClick={() => void handleAcceptHistorical(binding)}
+                            disabled={editingDisabled}
+                          >
+                            记录继续使用旧版
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAcceptingBindingId(null)
+                              setAcceptError(null)
+                            }}
+                          >
+                            取消
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                    {pendingRemoveId === binding.id ? (
+                      <div
+                        className="source-panel__confirm-remove"
+                        role="alertdialog"
+                        aria-label="确认解除绑定"
+                        data-testid={`binding-remove-confirm-${binding.id}`}
+                      >
+                        <p>
+                          解除后该环的来源状态变为未检查；旧版本与附件不会被删除，可重新绑定。
+                        </p>
+                        <div className="source-panel__binding-actions">
+                          <button
+                            type="button"
+                            data-testid={`binding-remove-confirm-yes-${binding.id}`}
+                            onClick={() => void handleRemoveBinding(binding)}
+                            disabled={editingDisabled}
+                          >
+                            确认解除绑定
+                          </button>
+                          <button type="button" onClick={() => setPendingRemoveId(null)}>
+                            取消
+                          </button>
+                        </div>
+                      </div>
                     ) : null}
                     <div className="source-panel__binding-actions">
                       <button
@@ -650,6 +919,16 @@ export function SourcePanel({
                       >
                         换关联来源
                       </button>
+                      {review?.kind === 'stale-version' ? null : (
+                        <button
+                          type="button"
+                          data-testid={`binding-remove-inline-${binding.id}`}
+                          onClick={() => setPendingRemoveId(binding.id)}
+                          disabled={editingDisabled}
+                        >
+                          解除绑定
+                        </button>
+                      )}
                     </div>
                     <span className="source-panel__binding-meta">
                       版本 {binding.revisionId.slice(0, 8)}… · 区域{' '}

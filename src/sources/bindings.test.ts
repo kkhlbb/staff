@@ -299,6 +299,7 @@ describe('来源绑定：不复制数值、不改项目', () => {
       [
         'createdAt',
         'documentId',
+        'historicalAcceptance',
         'id',
         'note',
         'page',

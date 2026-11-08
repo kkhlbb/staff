@@ -236,6 +236,7 @@ export function DimensionTable({
                     : 'dimension-table__row'
                 }
                 data-selected={selected ? 'true' : undefined}
+                data-review-term={term.id}
                 onClick={handleRowClick}
               >
                 <th scope="row">

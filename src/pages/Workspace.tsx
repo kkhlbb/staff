@@ -1,15 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChainDiagram } from '../components/ChainDiagram'
 import { ChainExpression } from '../components/ChainExpression'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DimensionTable } from '../components/DimensionTable'
 import { ImportWizard } from '../components/ImportWizard'
 import { ResultPanel } from '../components/ResultPanel'
+import { ReviewSidebar } from '../components/ReviewSidebar'
 import { ScenarioCompare } from '../components/ScenarioCompare'
-import { SourcePanel } from '../components/SourcePanel'
+import {
+  SourcePanel,
+  type SourceLocateRequest,
+  type SourcePanelState,
+} from '../components/SourcePanel'
 import type { ChainDefinition, Project } from '../domain/types'
 import type { CommitImportSuccess } from '../import/commit'
 import { countBindingsByTerm, type SourceBinding } from '../sources/bindings'
+import { evaluateReviewChecklist, type ReviewFinding } from '../review/rules'
 import { useDatabaseStaleVersion } from '../storage/databaseStale'
 import { subscribeDatabaseVersionChange } from '../storage/db'
 import { getProject, listProjects, loadProjectSources } from '../storage/projects'
@@ -57,6 +63,21 @@ function formatBaselineTime(savedAt: string): string {
 }
 
 type PendingBaselineAction = 'overwrite' | 'restore' | null
+
+/** 定位只滚动/聚焦，不触发保存或确认；测试环境没有 scrollIntoView 时静默跳过。 */
+function scrollToReviewTarget(selector: string): void {
+  if (typeof document.querySelector !== 'function') {
+    return
+  }
+  const element = document.querySelector(selector)
+  if (!(element instanceof HTMLElement)) {
+    return
+  }
+  if (typeof element.scrollIntoView === 'function') {
+    element.scrollIntoView({ block: 'center' })
+  }
+  element.focus({ preventScroll: true })
+}
 
 interface WorkspaceEditorProps {
   project: Project
@@ -116,6 +137,18 @@ function WorkspaceEditor({
   const [tableImportMessage, setTableImportMessage] = useState<string | null>(null)
   const [sourceBindings, setSourceBindings] = useState<SourceBinding[]>([])
   const sourceBindingCounts = countBindingsByTerm(sourceBindings)
+  /**
+   * SourcePanel 已加载的完整来源快照：审查规则消费这一份数据，
+   * 不另开事务读取可能与侧栏不一致的状态。
+   */
+  const [sourceState, setSourceState] = useState<SourcePanelState>({
+    documents: [],
+    revisions: [],
+    bindings: [],
+    availableBlobKeys: new Set(),
+  })
+  const [locateRequest, setLocateRequest] = useState<SourceLocateRequest | null>(null)
+  const locateTokenRef = useRef(0)
   const [sourceReviewPendingCounts, setSourceReviewPendingCounts] = useState<
     Record<string, number>
   >({})
@@ -123,6 +156,72 @@ function WorkspaceEditor({
   const [migrationNoticeDismissed, setMigrationNoticeDismissed] = useState(false)
   const [exportNotice, setExportNotice] = useState<string | null>(null)
   const editingDisabled = useDatabaseStaleVersion() !== null
+
+  /**
+   * 统一审查清单：与快照/报告使用同一规则版本。
+   * 计算满足来自 result；“审查完成”由规则待办决定，两者分开显示。
+   */
+  const reviewSummary = useMemo(
+    () =>
+      evaluateReviewChecklist({
+        chain,
+        cellErrors,
+        result,
+        relationConfirmed,
+        relationReviewStale,
+        relationRevision: draft.relationRevision,
+        terms: draft.terms.map((term) => ({
+          id: term.id,
+          symbol: term.symbol,
+          name: term.name,
+          termRevision: term.termRevision,
+        })),
+        bindings: sourceState.bindings,
+        documents: sourceState.documents,
+        revisions: sourceState.revisions,
+        availableBlobKeys: sourceState.availableBlobKeys,
+      }),
+    [
+      chain,
+      cellErrors,
+      draft.relationRevision,
+      draft.terms,
+      relationConfirmed,
+      relationReviewStale,
+      result,
+      sourceState,
+    ],
+  )
+
+  /**
+   * 审查侧栏定位：链级项定位到错误单元格/关系入口/目标，绑定项打开确切
+   * 版本与页。只改变选中与查看位置，不触发保存或确认。
+   */
+  const handleReviewLocate = (finding: ReviewFinding): void => {
+    const target = finding.target
+    if (target.kind === 'term') {
+      setSelectedTermId(target.termId)
+      scrollToReviewTarget(`[data-review-term="${target.termId}"]`)
+      return
+    }
+    if (target.kind === 'binding') {
+      setSelectedTermId(target.termId)
+      locateTokenRef.current += 1
+      setLocateRequest({
+        bindingId: target.bindingId,
+        revisionId: target.revisionId,
+        page: target.page,
+        token: locateTokenRef.current,
+      })
+      scrollToReviewTarget(`[data-review-term="${target.termId}"]`)
+      return
+    }
+    if (target.kind === 'relation' || target.kind === 'target') {
+      scrollToReviewTarget('#workspace-result-panel')
+      return
+    }
+    scrollToReviewTarget('.dimension-table')
+  }
 
   /**
    * 顶部“导出 JSON”和保存失败提示里的“导出 JSON 备份”共用同一条路径：
@@ -404,12 +503,20 @@ function WorkspaceEditor({
         </div>
       </div>
 
+      <ReviewSidebar
+        summary={reviewSummary}
+        stale={stale}
+        onLocate={handleReviewLocate}
+      />
+
       <SourcePanel
         projectId={project.id}
         terms={draft.terms}
         selectedTermId={selectedTermId}
         onBindingsChange={setSourceBindings}
         onReviewSummaryChange={setSourceReviewPendingCounts}
+        onSourceStateChange={setSourceState}
+        locateRequest={locateRequest}
       />
 
       <section

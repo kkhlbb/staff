@@ -98,7 +98,7 @@ describe('Workspace：打印报告入口', () => {
     await waitFor(() => {
       expect(printButton).toBeDisabled()
     })
-    expect(screen.getByText(/当前输入未通过校验/)).toBeInTheDocument()
+    expect(screen.getByText(/不能打印报告/)).toBeInTheDocument()
     expect(onOpenReport).toHaveBeenCalledTimes(1)
   })
 })
