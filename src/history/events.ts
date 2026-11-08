@@ -15,6 +15,9 @@ export type ChangeEventType =
   | 'source_binding_added'
   | 'source_binding_removed'
   | 'project_sources_retired'
+  | 'project_imported'
+  | 'schema_migrated_v1_to_v2'
+  | 'term_symbol_changed'
 
 export interface ChangeEvent {
   id: string

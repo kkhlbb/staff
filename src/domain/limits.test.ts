@@ -19,11 +19,12 @@ function makeTerm(
     upperDeviationQ: parseMm(upperDeviation),
     sign,
     sourceNote: '',
+    termRevision: 1,
   }
 }
 
 function makeChain(terms: DimensionTerm[]): ChainDefinition {
-  return { terms, target: null, assumptions: '', relationConfirmed: false }
+  return { terms, target: null, assumptions: '' }
 }
 
 /** 只用于一致性断言：按 sᵢ=+1 取 L/U、sᵢ=−1 取 −U/−L 汇总。 */

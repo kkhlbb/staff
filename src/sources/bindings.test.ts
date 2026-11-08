@@ -50,6 +50,7 @@ const sampleChain: ChainDefinition = {
       upperDeviationQ: parseMm('0.1'),
       sign: 1,
       sourceNote: '图纸备注 ≠ 来源绑定',
+      termRevision: 1,
     },
     {
       id: 't-b',
@@ -60,11 +61,11 @@ const sampleChain: ChainDefinition = {
       upperDeviationQ: parseMm('0'),
       sign: -1,
       sourceNote: '',
+      termRevision: 1,
     },
   ],
   target: null,
   assumptions: '',
-  relationConfirmed: false,
 }
 
 function unsupportedCapacity(): Promise<StorageCapacity> {
@@ -351,7 +352,7 @@ describe('来源绑定：不复制数值、不改项目', () => {
   })
 })
 
-describe('数据库升级到 v5', () => {
+describe('数据库升级到 v6', () => {
   it('bindings store 使用 id 主键并建立 projectId / termId / revisionId 索引', async () => {
     const projectId = await createTestProject()
     const revision = await importRevision(projectId, 'A')
@@ -368,7 +369,7 @@ describe('数据库升级到 v5', () => {
       await transactionDone(transaction)
       return info
     })
-    expect(meta.version).toBe(5)
+    expect(meta.version).toBe(6)
     expect(meta.keyPath).toBe('id')
     expect(meta.indexes).toEqual(['projectId', 'revisionId', 'termId'])
   })

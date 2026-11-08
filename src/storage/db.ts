@@ -18,11 +18,17 @@
  * 确认结论；events 记录来源导入、绑定新增/解除等变更，供后续审查与删除项目
  * 时确定归属。版本升到 5。
  *
- * 升级只增补缺失的 store / index，绝不重建或清空。库一旦升到 v5，指定 version=4
- * 的旧前端打开会得到 VersionError；部署回滚不能只回退前端，更不能删库降级。
+ * V2.1 第三组把项目 schema 升到 v2（termRevision、关系确认凭据），本地 V1
+ * 项目首次升级前必须保留原始记录：新增 migrationBackups（keyPath=id，
+ * index=projectId），与迁移后的 projects/drafts 在同一个事务写入，失败一起
+ * 回滚。数据库版本升到 6。数据库版本（6）与项目 JSON schemaVersion（2）
+ * 是两回事，不能混用。
+ *
+ * 升级只增补缺失的 store / index，绝不重建或清空。库一旦升到 v6，指定更低
+ * 版本的旧前端打开会得到 VersionError；部署回滚不能只回退前端，更不能删库降级。
  */
 export const PROJECT_DB_NAME = 'shaft-tolerance-chain'
-export const PROJECT_DB_VERSION = 5
+export const PROJECT_DB_VERSION = 6
 
 export const PROJECT_STORE_NAME = 'projects'
 export const DRAFT_STORE_NAME = 'drafts'
@@ -33,6 +39,7 @@ export const SOURCE_REVISION_STORE_NAME = 'sourceRevisions'
 export const SOURCE_BLOB_STORE_NAME = 'sourceBlobs'
 export const BINDING_STORE_NAME = 'bindings'
 export const EVENT_STORE_NAME = 'events'
+export const MIGRATION_BACKUP_STORE_NAME = 'migrationBackups'
 
 interface StoreDefinition {
   name: string
@@ -61,6 +68,11 @@ const STORE_DEFINITIONS: StoreDefinition[] = [
     name: EVENT_STORE_NAME,
     keyPath: 'id',
     indexes: ['projectId', 'createdAt'],
+  },
+  {
+    name: MIGRATION_BACKUP_STORE_NAME,
+    keyPath: 'id',
+    indexes: ['projectId'],
   },
 ]
 

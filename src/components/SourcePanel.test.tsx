@@ -24,6 +24,7 @@ const terms: TermDraft[] = [
     upper: '0.1',
     sign: 1,
     sourceNote: '',
+    termRevision: 1,
   },
   {
     id: 't-b',
@@ -34,6 +35,7 @@ const terms: TermDraft[] = [
     upper: '0',
     sign: -1,
     sourceNote: '',
+    termRevision: 1,
   },
 ]
 
@@ -48,6 +50,7 @@ const chain: ChainDefinition = {
       upperDeviationQ: parseMm('0.1'),
       sign: 1,
       sourceNote: '',
+      termRevision: 1,
     },
     {
       id: 't-b',
@@ -58,11 +61,11 @@ const chain: ChainDefinition = {
       upperDeviationQ: parseMm('0'),
       sign: -1,
       sourceNote: '',
+      termRevision: 1,
     },
   ],
   target: null,
   assumptions: '',
-  relationConfirmed: false,
 }
 
 const bytesA = buildSyntheticPdf({ pageCount: 2, variant: 'A' })

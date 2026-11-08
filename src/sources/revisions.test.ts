@@ -60,6 +60,7 @@ const sampleChain: ChainDefinition = {
       upperDeviationQ: parseMm('0.1'),
       sign: 1,
       sourceNote: '',
+      termRevision: 1,
     },
     {
       id: 't-b',
@@ -70,11 +71,11 @@ const sampleChain: ChainDefinition = {
       upperDeviationQ: parseMm('0'),
       sign: -1,
       sourceNote: '',
+      termRevision: 1,
     },
   ],
   target: null,
   assumptions: '',
-  relationConfirmed: false,
 }
 
 const FIXED_NOW = '2026-11-08T03:00:00.000Z'
@@ -792,8 +793,25 @@ describe('项目 ID 与项目身份', () => {
     }
     expect(reimported.value.project.id).toBe(projectId)
     expect(reimported.value.idChanged).toBe(false)
-    expect(await listSourceDocuments(projectId)).toEqual({ ok: true, value: [] })
-    expect(await listSourceRevisions(projectId)).toEqual({ ok: true, value: [] })
+    // 导入的 JSON 携带来源元数据：新项目恢复文档/版本/绑定，但 Blob 不随
+    // JSON 来。旧记录仍占用原主键，所以文档/版本 ID 都重映射为新 ID，
+    // blobKey 也重新生成，避免读到已退役项目留下的旧 Blob。
+    const revs = await listSourceRevisions(projectId)
+    expect(revs.ok).toBe(true)
+    const docs = await listSourceDocuments(projectId)
+    expect(docs.ok).toBe(true)
+    if (revs.ok && docs.ok) {
+      expect(revs.value).toHaveLength(1)
+      expect(revs.value[0].projectId).toBe(projectId)
+      expect(revs.value[0].id).not.toBe('rev-1')
+      expect(revs.value[0].blobKey).not.toBe('blob-1')
+      expect(docs.value).toHaveLength(1)
+      expect(docs.value[0].latestRevisionId).toBe(revs.value[0].id)
+      expect(await readSourceBlobBytes(revs.value[0].blobKey)).toEqual({
+        ok: true,
+        value: null,
+      })
+    }
 
     // 旧 revision 的字节数不再占新项目额度：这个上限只容得下本次导入。
     const bytesB = buildSyntheticPdf({ pageCount: 2, variant: 'B' })
@@ -810,8 +828,10 @@ describe('项目 ID 与项目身份', () => {
       },
     )
     expect(second.ok, second.ok ? '' : second.error.message).toBe(true)
-    expect(await countStore(SOURCE_DOCUMENT_STORE_NAME)).toBe(2)
-    expect(await countStore(SOURCE_REVISION_STORE_NAME)).toBe(2)
+    // 退役记录 1 + JSON 恢复的元数据 1 + 本次导入 1（文档与版本）；
+    // Blob 只有退役旧文件和本次新文件，JSON 恢复的 revision 没有附件。
+    expect(await countStore(SOURCE_DOCUMENT_STORE_NAME)).toBe(3)
+    expect(await countStore(SOURCE_REVISION_STORE_NAME)).toBe(3)
     expect(await countStore(SOURCE_BLOB_STORE_NAME)).toBe(2)
   })
 })

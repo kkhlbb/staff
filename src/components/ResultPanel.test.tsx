@@ -2,12 +2,14 @@
 import { useState } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { ChainDefinition } from '../domain/types'
+import type { ChainDefinition, RelationReview } from '../domain/types'
 import {
+  draftToChain,
   hasTargetInputError,
   type TermDraft,
   type WorkspaceDraft,
 } from '../workspace/draft'
+import { createRelationReview } from '../workspace/relation'
 import { useWorkspace } from '../workspace/useWorkspace'
 import { ResultPanel } from './ResultPanel'
 
@@ -21,6 +23,7 @@ function term(overrides: Partial<TermDraft> = {}): TermDraft {
     upper: '0.1000',
     sign: 1,
     sourceNote: '',
+    termRevision: 1,
     ...overrides,
   }
 }
@@ -63,8 +66,8 @@ function caseADraft(overrides: Partial<WorkspaceDraft> = {}): WorkspaceDraft {
     terms: caseATerms(),
     targetMin: '0.1000',
     targetMax: '0.3000',
+    relationRevision: 0,
     assumptions: '案例 A：不满足目标的轴向间隙',
-    relationConfirmed: true,
     ...overrides,
   }
 }
@@ -133,8 +136,8 @@ function caseCDraft(): WorkspaceDraft {
     ],
     targetMin: '-0.2000',
     targetMax: '-0.0500',
+    relationRevision: 0,
     assumptions: '案例 C：负间隙和边界',
-    relationConfirmed: true,
   }
 }
 
@@ -162,14 +165,33 @@ function zeroToleranceDraft(): WorkspaceDraft {
     ],
     targetMin: '5.0000',
     targetMax: '5.0000',
+    relationRevision: 0,
     assumptions: '全零公差',
-    relationConfirmed: true,
   }
 }
 
-function ResultPanelHarness({ initial }: { initial: WorkspaceDraft }) {
-  const { draft, dispatch, result, chain, cellErrors, stale } =
-    useWorkspace(initial)
+function ResultPanelHarness({
+  initial,
+  initialConfirmed = false,
+}: {
+  initial: WorkspaceDraft
+  initialConfirmed?: boolean
+}) {
+  const initialConversion = draftToChain(initial)
+  const [relationReview, setRelationReview] = useState<RelationReview | null>(() =>
+    initialConfirmed && initialConversion.ok
+      ? createRelationReview(
+          initialConversion.chain,
+          initial.relationRevision,
+          '2026-01-01T00:00:00.000Z',
+        )
+      : null,
+  )
+  const { draft, dispatch, result, chain, cellErrors, stale, relationConfirmed, relationReviewStale } =
+    useWorkspace(initial, undefined, {
+      relationRevision: initial.relationRevision,
+      relationReview,
+    })
 
   // 目标区间与代号只从 calculateChain 的输入链取得；草稿无效时沿用上次有效链。
   const [lastValidChain, setLastValidChain] = useState<ChainDefinition | null>(
@@ -192,12 +214,29 @@ function ResultPanelHarness({ initial }: { initial: WorkspaceDraft }) {
       terms={displayChain?.terms}
       cellErrors={cellErrors}
       stale={stale}
+      relationConfirmed={relationConfirmed}
+      relationReviewStale={relationReviewStale}
+      onSetRelationConfirmed={(confirmed) => {
+        if (!confirmed || chain === null) {
+          setRelationReview(null)
+          return
+        }
+        setRelationReview(
+          createRelationReview(
+            chain,
+            initial.relationRevision,
+            new Date().toISOString(),
+          ),
+        )
+      }}
     />
   )
 }
 
-function renderPanel(initial: WorkspaceDraft) {
-  return render(<ResultPanelHarness initial={initial} />)
+function renderPanel(initial: WorkspaceDraft, initialConfirmed = true) {
+  return render(
+    <ResultPanelHarness initial={initial} initialConfirmed={initialConfirmed} />,
+  )
 }
 
 function displayed(testId: string): string {
@@ -257,7 +296,7 @@ describe('ResultPanel：标准案例数值', () => {
 
 describe('ResultPanel：确认状态', () => {
   it('未确认时只显示待确认预览，勾选后显示正式判定', () => {
-    renderPanel(caseADraft({ relationConfirmed: false }))
+    renderPanel(caseADraft(), false)
 
     expect(displayed('result-status')).toBe('待确认（预览）')
     expect(screen.queryByText('输入有误，显示的是上次有效结果')).toBeNull()
@@ -274,7 +313,7 @@ describe('ResultPanel：确认状态', () => {
   })
 
   it('已确认时显示正式判定', () => {
-    renderPanel(caseBDraft())
+    renderPanel(caseBDraft(), true)
 
     expect(displayed('result-status')).toBe('满足')
     expect(screen.getByRole('checkbox')).toBeChecked()
@@ -287,7 +326,7 @@ describe('ResultPanel：目标区间状态', () => {
       caseADraft({
         targetMin: '',
         targetMax: '',
-        relationConfirmed: true,
+        relationRevision: 0,
       }),
     )
 

@@ -113,6 +113,7 @@ function term(
     upperDeviationQ: parseMm(upper),
     sign,
     sourceNote: '',
+    termRevision: 1,
   }
 }
 
@@ -126,7 +127,6 @@ function chainA(): ChainDefinition {
     ],
     target: { minQ: parseMm('0.1000'), maxQ: parseMm('0.3000') },
     assumptions: '原项目假设',
-    relationConfirmed: true,
   }
 }
 
@@ -145,7 +145,6 @@ async function seedFullChain(): Promise<Project> {
         terms,
         target: null,
         assumptions: '',
-        relationConfirmed: true,
       },
     }),
   )
@@ -198,7 +197,8 @@ describe('commitImport：新建与追加 / 替换', () => {
 
     const project = committed.value.project
     expect(project.name).toBe('表格导入项目')
-    expect(project.working.relationConfirmed).toBe(false)
+    expect(project.relationReview).toBeNull()
+    expect(project.working.terms.every((term) => term.termRevision === 1)).toBe(true)
     expect(project.working.terms).toHaveLength(4)
     expect(project.working.target).toBeNull()
 
@@ -227,7 +227,6 @@ describe('commitImport：新建与追加 / 替换', () => {
       return
     }
     expect(committed.value.chain.terms).toHaveLength(5)
-    expect(committed.value.chain.relationConfirmed).toBe(false)
     expect(committed.value.chain.target).toEqual(project.working.target)
     expect(committed.value.chain.assumptions).toBe('原项目假设')
 
@@ -235,7 +234,7 @@ describe('commitImport：新建与追加 / 替换', () => {
     expect(stored?.working).toEqual(committed.value.chain)
     const draft = expectOk(await getDraft(project.id))
     expect(draft?.draft).toEqual(committed.value.draft)
-    expect(draft?.draft.relationConfirmed).toBe(false)
+    expect(draft?.draft.relationRevision).toBeGreaterThan(0)
   })
 
   it('替换全部保留目标、清除确认并同步草稿', async () => {
@@ -253,7 +252,6 @@ describe('commitImport：新建与追加 / 替换', () => {
       return
     }
     expect(committed.value.chain.terms.map((item) => item.symbol)).toEqual(['P', 'Q'])
-    expect(committed.value.chain.relationConfirmed).toBe(false)
     expect(committed.value.chain.target).toEqual(project.working.target)
     expect(committed.value.chain.assumptions).toBe('原项目假设')
 

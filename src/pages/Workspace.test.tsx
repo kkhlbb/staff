@@ -354,6 +354,14 @@ async function waitForAutoSave(): Promise<void> {
   await screen.findByText('已保存', undefined, { timeout: 3000 })
 }
 
+/**
+ * 关系确认只写凭据、不改草稿，持久化可能在一次渲染内完成，
+ * 因此只等待“已保存”落定，不要求捕捉到瞬时的“保存中”。
+ */
+async function waitForSaveSettled(): Promise<void> {
+  await screen.findByText('已保存', undefined, { timeout: 3000 })
+}
+
 describe('Workspace：按 projectId 打开与返回列表', () => {
   it('指定 projectId 时打开该项目，并可点击返回项目列表', async () => {
     const first = await createEmptyProject('项目一')
@@ -448,7 +456,7 @@ describe('Workspace：自动保存与刷新恢复', () => {
 
     await buildCaseA(user)
     await user.click(confirmationCheckbox())
-    await waitForAutoSave()
+    await waitForSaveSettled()
 
     expect(resultValue('result-status')).toBe('不满足')
     expect(resultValue('result-min')).toBe('0.1500')
@@ -480,7 +488,7 @@ describe('Workspace：自动保存与刷新恢复', () => {
 
     await buildCaseA(user)
     await user.click(confirmationCheckbox())
-    await waitForAutoSave()
+    await waitForSaveSettled()
 
     fireEvent.change(screen.getByRole('textbox', { name: 'H 基本尺寸' }), {
       target: { value: '' },
@@ -537,17 +545,19 @@ describe('Workspace：自动保存与刷新恢复', () => {
   it('点“重试”会立即重新保存当前草稿，成功后恢复“已保存”并移除错误', async () => {
     const savedAt = '2025-01-01T00:00:00.000Z'
     const fakeProject: Project = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       engineVersion: 'test',
       id: 'retry-project',
       name: '重试保存',
       createdAt: savedAt,
       updatedAt: savedAt,
+      relationRevision: 0,
+      relationReview: null,
+      migration: null,
       working: {
         terms: [],
         target: null,
         assumptions: '',
-        relationConfirmed: false,
       },
       baseline: null,
     }
@@ -592,17 +602,19 @@ describe('Workspace：自动保存与刷新恢复', () => {
   it('500 ms 内多次编辑只触发一次防抖写入', async () => {
     const savedAt = '2025-01-01T00:00:00.000Z'
     const fakeProject: Project = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       engineVersion: 'test',
       id: 'debounce-project',
       name: '防抖测试',
       createdAt: savedAt,
       updatedAt: savedAt,
+      relationRevision: 0,
+      relationReview: null,
+      migration: null,
       working: {
         terms: [],
         target: null,
         assumptions: '',
-        relationConfirmed: false,
       },
       baseline: null,
     }
@@ -658,7 +670,7 @@ describe('Workspace：基线、方案对比与恢复', () => {
 
     await buildCaseA(user)
     await user.click(confirmationCheckbox())
-    await waitForAutoSave()
+    await waitForSaveSettled()
 
     const saveBaselineButton = screen.getByRole('button', { name: '保存为基线' })
     expect(saveBaselineButton).not.toBeDisabled()
@@ -784,7 +796,7 @@ describe('Workspace：基线、方案对比与恢复', () => {
 
     await buildCaseA(user)
     await user.click(confirmationCheckbox())
-    await waitForAutoSave()
+    await waitForSaveSettled()
     await user.click(screen.getByRole('button', { name: '保存为基线' }))
     await screen.findByText('已保存为基线')
 
@@ -942,17 +954,19 @@ describe('Workspace：document hidden 立即保存', () => {
   it('切到 hidden 时立即写入待保存草稿，不再等待 500 ms 防抖', async () => {
     const savedAt = '2025-01-01T00:00:00.000Z'
     const fakeProject: Project = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       engineVersion: 'test',
       id: 'visibility-project',
       name: '可见性测试',
       createdAt: savedAt,
       updatedAt: savedAt,
+      relationRevision: 0,
+      relationReview: null,
+      migration: null,
       working: {
         terms: [],
         target: null,
         assumptions: '',
-        relationConfirmed: false,
       },
       baseline: null,
     }

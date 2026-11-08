@@ -22,6 +22,7 @@ function term(overrides: Partial<TermDraft> = {}): TermDraft {
     upper: '0.1000',
     sign: 1,
     sourceNote: '',
+    termRevision: 1,
     ...overrides,
   }
 }
@@ -64,18 +65,21 @@ function caseADraft(): WorkspaceDraft {
     terms: caseATerms(),
     targetMin: '0.1000',
     targetMax: '0.3000',
+    // 4 次 addTerm 各递增一次。
+    relationRevision: 4,
     assumptions: '案例 A：不满足目标的轴向间隙',
-    relationConfirmed: true,
   }
 }
 
 function caseBDraft(): WorkspaceDraft {
   const terms = caseATerms()
-  terms[0] = { ...terms[0], upper: '0.0300' }
-  terms[2] = { ...terms[2], lower: '-0.0200', upper: '0.0200' }
+  terms[0] = { ...terms[0], upper: '0.0300', termRevision: 2 }
+  terms[2] = { ...terms[2], lower: '-0.0200', upper: '0.0200', termRevision: 3 }
   return {
     ...caseADraft(),
     terms,
+    // 3 次数值修改各递增一次。
+    relationRevision: caseADraft().relationRevision + 3,
     assumptions: '案例 B：修改后的满足方案',
   }
 }
@@ -95,7 +99,7 @@ function buildCaseA(): WorkspaceDraft {
     type: 'setAssumptions',
     assumptions: '案例 A：不满足目标的轴向间隙',
   })
-  return workspaceReducer(draft, { type: 'setConfirmed', confirmed: true })
+  return draft
 }
 
 function reduce(
@@ -129,8 +133,8 @@ describe('emptyDraft', () => {
       terms: [],
       targetMin: '',
       targetMax: '',
+      relationRevision: 0,
       assumptions: '',
-      relationConfirmed: false,
     })
   })
 
@@ -154,6 +158,7 @@ describe('draftToChain：合法转换', () => {
           upperDeviationQ: q('0.1000'),
           sign: 1,
           sourceNote: '',
+          termRevision: 1,
         },
         {
           id: 'B1',
@@ -164,6 +169,7 @@ describe('draftToChain：合法转换', () => {
           upperDeviationQ: q('0.0000'),
           sign: -1,
           sourceNote: '',
+          termRevision: 1,
         },
         {
           id: 'S',
@@ -174,6 +180,7 @@ describe('draftToChain：合法转换', () => {
           upperDeviationQ: q('0.0500'),
           sign: -1,
           sourceNote: '',
+          termRevision: 1,
         },
         {
           id: 'B2',
@@ -184,11 +191,11 @@ describe('draftToChain：合法转换', () => {
           upperDeviationQ: q('0.0000'),
           sign: -1,
           sourceNote: '',
+          termRevision: 1,
         },
       ],
       target: { minQ: q('0.1000'), maxQ: q('0.3000') },
       assumptions: '案例 A：不满足目标的轴向间隙',
-      relationConfirmed: true,
     })
 
     const result = calculateChain(chain)
@@ -218,6 +225,7 @@ describe('draftToChain：合法转换', () => {
       ...caseADraft(),
       targetMin: '',
       targetMax: '',
+      relationRevision: 0,
     })
     expect(chain.target).toBeNull()
     expect(calculateChain(chain).status).toBe('no-target')
@@ -228,6 +236,7 @@ describe('draftToChain：合法转换', () => {
       ...caseADraft(),
       targetMin: '  ',
       targetMax: ' ',
+      relationRevision: 0,
     })
     expect(chain.target).toBeNull()
   })
@@ -309,6 +318,7 @@ describe('draftToChain：单元格错误定位', () => {
       ...caseADraft(),
       targetMin: '0.1000',
       targetMax: '',
+      relationRevision: 0,
     })
     expect(missingMax).toEqual({ 'target.max': '请输入数值' })
   })
@@ -335,7 +345,7 @@ describe('workspaceReducer：建立案例 A 并修改为 B', () => {
   it('从空草稿逐步建出案例 A，再逐步改成案例 B', () => {
     const draftA = buildCaseA()
     expect(draftA).toEqual(caseADraft())
-    expect(draftA.relationConfirmed).toBe(true)
+    expect(draftA.relationRevision).toBe(caseADraft().relationRevision)
 
     const draftB = reduce(
       draftA,
@@ -346,11 +356,10 @@ describe('workspaceReducer：建立案例 A 并修改为 B', () => {
         type: 'setAssumptions',
         assumptions: '案例 B：修改后的满足方案',
       },
-      { type: 'setConfirmed', confirmed: true },
     )
 
     expect(draftB).toEqual(caseBDraft())
-    expect(draftB.relationConfirmed).toBe(true)
+    expect(draftB.relationRevision).toBe(caseBDraft().relationRevision)
   })
 
   it('增删组成环不会修改原草稿', () => {
@@ -386,7 +395,7 @@ describe('workspaceReducer：建立案例 A 并修改为 B', () => {
     })
 
     expect(moved.terms.map((item) => item.id)).toEqual(['H', 'S', 'B1', 'B2'])
-    expect(moved.relationConfirmed).toBe(true)
+    expect(moved.relationRevision).toBe(draft.relationRevision)
     const after = calculateChain(expectConversionSuccess(moved))
     expect(after.nominalQ).toBe(before.nominalQ)
     expect(after.minQ).toBe(before.minQ)
@@ -421,13 +430,13 @@ describe('workspaceReducer：建立案例 A 并修改为 B', () => {
   })
 })
 
-describe('workspaceReducer：清除关系确认', () => {
+describe('workspaceReducer：影响关系的编辑使修订号递增（旧确认必失效）', () => {
   it('addTerm 清除确认', () => {
     const next = workspaceReducer(caseADraft(), {
       type: 'addTerm',
       term: term({ id: 'X', symbol: 'X', name: '新增' }),
     })
-    expect(next.relationConfirmed).toBe(false)
+    expect(next.relationRevision).toBeGreaterThan(caseADraft().relationRevision)
   })
 
   it('removeTerm 清除确认', () => {
@@ -435,7 +444,7 @@ describe('workspaceReducer：清除关系确认', () => {
       type: 'removeTerm',
       termId: 'B1',
     })
-    expect(next.relationConfirmed).toBe(false)
+    expect(next.relationRevision).toBeGreaterThan(caseADraft().relationRevision)
   })
 
   it('改 symbol 清除确认', () => {
@@ -445,7 +454,7 @@ describe('workspaceReducer：清除关系确认', () => {
       field: 'symbol',
       value: 'H2',
     })
-    expect(next.relationConfirmed).toBe(false)
+    expect(next.relationRevision).toBeGreaterThan(caseADraft().relationRevision)
   })
 
   it('改 sign 清除确认', () => {
@@ -455,7 +464,7 @@ describe('workspaceReducer：清除关系确认', () => {
       field: 'sign',
       value: -1,
     })
-    expect(next.relationConfirmed).toBe(false)
+    expect(next.relationRevision).toBeGreaterThan(caseADraft().relationRevision)
   })
 
   it.each([
@@ -469,11 +478,11 @@ describe('workspaceReducer：清除关系确认', () => {
       field,
       value,
     })
-    expect(next.relationConfirmed).toBe(false)
+    expect(next.relationRevision).toBeGreaterThan(caseADraft().relationRevision)
   })
 })
 
-describe('workspaceReducer：不清除关系确认', () => {
+describe('workspaceReducer：不影响关系的编辑保持修订号', () => {
   it('改 name 不清除确认', () => {
     const next = workspaceReducer(caseADraft(), {
       type: 'updateField',
@@ -482,7 +491,7 @@ describe('workspaceReducer：不清除关系确认', () => {
       value: '机架（改名）',
     })
     expect(next.terms[0].name).toBe('机架（改名）')
-    expect(next.relationConfirmed).toBe(true)
+    expect(next.relationRevision).toBe(caseADraft().relationRevision)
   })
 
   it('改 sourceNote 不清除确认', () => {
@@ -493,7 +502,7 @@ describe('workspaceReducer：不清除关系确认', () => {
       value: '图纸 A-01',
     })
     expect(next.terms[0].sourceNote).toBe('图纸 A-01')
-    expect(next.relationConfirmed).toBe(true)
+    expect(next.relationRevision).toBe(caseADraft().relationRevision)
   })
 
   it('setAssumptions 不清除确认', () => {
@@ -502,7 +511,7 @@ describe('workspaceReducer：不清除关系确认', () => {
       assumptions: '按一维尺寸链计算',
     })
     expect(next.assumptions).toBe('按一维尺寸链计算')
-    expect(next.relationConfirmed).toBe(true)
+    expect(next.relationRevision).toBe(caseADraft().relationRevision)
   })
 
   it('setTarget 不清除确认', () => {
@@ -513,7 +522,7 @@ describe('workspaceReducer：不清除关系确认', () => {
     })
     expect(next.targetMin).toBe('0.2000')
     expect(next.targetMax).toBe('0.4000')
-    expect(next.relationConfirmed).toBe(true)
+    expect(next.relationRevision).toBe(caseADraft().relationRevision)
   })
 
   it('moveTerm 向上不清除确认', () => {
@@ -523,7 +532,7 @@ describe('workspaceReducer：不清除关系确认', () => {
       direction: 'up',
     })
     expect(next.terms.map((item) => item.id)).toEqual(['B1', 'H', 'S', 'B2'])
-    expect(next.relationConfirmed).toBe(true)
+    expect(next.relationRevision).toBe(caseADraft().relationRevision)
   })
 
   it('moveTerm 向下不清除确认', () => {
@@ -533,7 +542,7 @@ describe('workspaceReducer：不清除关系确认', () => {
       direction: 'down',
     })
     expect(next.terms.map((item) => item.id)).toEqual(['B1', 'H', 'S', 'B2'])
-    expect(next.relationConfirmed).toBe(true)
+    expect(next.relationRevision).toBe(caseADraft().relationRevision)
   })
 
   it('值没有实际变化时是空操作，不改变确认状态', () => {
@@ -555,12 +564,4 @@ describe('workspaceReducer：不清除关系确认', () => {
     ).toBe(draft)
   })
 
-  it('setConfirmed 可以重新设为 true', () => {
-    const draft = { ...caseADraft(), relationConfirmed: false }
-    const next = workspaceReducer(draft, {
-      type: 'setConfirmed',
-      confirmed: true,
-    })
-    expect(next.relationConfirmed).toBe(true)
-  })
 })

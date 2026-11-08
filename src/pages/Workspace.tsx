@@ -54,6 +54,8 @@ interface WorkspaceEditorProps {
   project: Project
   initialDraft: WorkspaceDraft
   initialValidChain: ChainDefinition | null
+  /** 本地 V1 升级提示；未迁移为 null。 */
+  migrationNotice: string | null
   onBackToList: () => void
   onOpenReport?: (projectId: string) => void
   saveDraft?: SaveDraftFn
@@ -69,6 +71,7 @@ function WorkspaceEditor({
   project,
   initialDraft,
   initialValidChain,
+  migrationNotice,
   onBackToList,
   onOpenReport,
   saveDraft,
@@ -81,6 +84,9 @@ function WorkspaceEditor({
     result,
     cellErrors,
     stale,
+    relationConfirmed,
+    relationReviewStale,
+    setRelationConfirmed,
     saveStatus,
     saveError,
     retrySave,
@@ -103,6 +109,8 @@ function WorkspaceEditor({
   const [sourceBindings, setSourceBindings] = useState<SourceBinding[]>([])
   const sourceBindingCounts = countBindingsByTerm(sourceBindings)
   const [databaseNotice, setDatabaseNotice] = useState<string | null>(null)
+  const [migrationNoticeDismissed, setMigrationNoticeDismissed] = useState(false)
+  const [exportNotice, setExportNotice] = useState<string | null>(null)
 
   // 其它标签页升级/删除数据库时，本页旧连接已被关闭；明确提示刷新，
   // 不要让用户继续在断开的状态下输入。
@@ -128,7 +136,7 @@ function WorkspaceEditor({
   // 打印报告与结果卡共用同一份“有效 + 已确认”门槛；入口禁用时显示具体原因。
   const reportEligibility = resolveReportEligibility({
     result,
-    relationConfirmed: chain?.relationConfirmed ?? false,
+    relationConfirmed,
     stale,
   })
 
@@ -245,13 +253,45 @@ function WorkspaceEditor({
           <button
             type="button"
             className="workspace__export-button"
-            onClick={exportBackup}
+            onClick={() => {
+              void exportBackup().then((revisionCount) => {
+                if (revisionCount === null) {
+                  setExportNotice('导出失败：无法读取项目来源元数据，未生成 JSON 文件。')
+                  return
+                }
+                setExportNotice(
+                  revisionCount > 0
+                    ? `已导出项目 JSON。数据备份不含来源附件：${revisionCount} 个来源版本只保留元数据与绑定坐标，附件需另行保留。`
+                    : '已导出项目 JSON。数据备份不含来源附件。',
+                )
+              })
+            }}
           >
             导出 JSON
           </button>
           <span className="workspace__badge">MVP · 一维极值法</span>
         </div>
       </header>
+
+      {migrationNotice !== null && !migrationNoticeDismissed ? (
+        <div className="workspace__migration-notice" role="status">
+          <div>
+            <h2 className="workspace__error-title">项目已从旧版本升级</h2>
+            <p>{migrationNotice}</p>
+          </div>
+          <div className="workspace__save-error-actions">
+            <button type="button" onClick={() => setMigrationNoticeDismissed(true)}>
+              知道了
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {exportNotice !== null ? (
+        <p className="workspace__export-note" role="status">
+          {exportNotice}
+        </p>
+      ) : null}
 
       {databaseNotice !== null ? (
         <div className="workspace__save-error" role="alert">
@@ -339,6 +379,11 @@ function WorkspaceEditor({
             terms={displayChain?.terms}
             cellErrors={cellErrors}
             stale={stale}
+            relationConfirmed={relationConfirmed}
+            relationReviewStale={relationReviewStale}
+            onSetRelationConfirmed={(confirmed) => {
+              void setRelationConfirmed(confirmed)
+            }}
           />
         </div>
       </div>
@@ -635,6 +680,7 @@ export function Workspace({
       project={bootstrap.project}
       initialDraft={bootstrap.initialDraft}
       initialValidChain={bootstrap.initialValidChain}
+      migrationNotice={bootstrap.migrationNotice}
       onBackToList={backToList}
       onOpenReport={onOpenReport}
       saveDraft={saveDraft}

@@ -23,6 +23,7 @@ function makeTerm(
     upperDeviationQ: mm(upper),
     sign,
     sourceNote: '',
+    termRevision: 1,
   }
 }
 
@@ -40,7 +41,6 @@ function caseA(): ChainDefinition {
     ],
     target: makeTarget('0.1000', '0.3000'),
     assumptions: '',
-    relationConfirmed: true,
   }
 }
 

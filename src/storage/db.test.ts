@@ -1,16 +1,16 @@
 // @vitest-environment node
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { Project } from '../domain/types'
+import type { V1Project } from './migrateV1'
 import { parseMm } from '../domain/units'
 import { deleteProjectDatabase } from '../test/projectDb'
-import type { StoredDraft } from './projects'
 import {
   BINDING_STORE_NAME,
   DRAFT_STORE_NAME,
   EVENT_STORE_NAME,
   IMPORT_SNAPSHOT_STORE_NAME,
   MAPPING_TEMPLATE_STORE_NAME,
+  MIGRATION_BACKUP_STORE_NAME,
   PROJECT_DB_NAME,
   PROJECT_DB_VERSION,
   PROJECT_STORE_NAME,
@@ -30,13 +30,14 @@ const ALL_STORES = [
   EVENT_STORE_NAME,
   IMPORT_SNAPSHOT_STORE_NAME,
   MAPPING_TEMPLATE_STORE_NAME,
+  MIGRATION_BACKUP_STORE_NAME,
   PROJECT_STORE_NAME,
   SOURCE_BLOB_STORE_NAME,
   SOURCE_DOCUMENT_STORE_NAME,
   SOURCE_REVISION_STORE_NAME,
 ]
 
-const sampleProject: Project = {
+const sampleProject: V1Project = {
   schemaVersion: 1,
   engineVersion: 'test-engine',
   id: 'v1-project',
@@ -102,7 +103,7 @@ const sampleProject: Project = {
   },
 }
 
-const sampleDraft: StoredDraft = {
+const sampleDraft = {
   projectId: sampleProject.id,
   savedAt: '2026-01-02T00:00:00.000Z',
   draft: {
@@ -206,38 +207,111 @@ function readV2Raw(): Promise<{ project: unknown; draft: unknown }> {
   })
 }
 
-describe('数据库迁移：v1 数据在升级后保持不变', () => {
-  it('有数据的 v1 库升级到当前版本后 projects / drafts 完全不变', async () => {
+describe('数据库迁移：v1 项目首次升级', () => {
+  it('原始记录留备份，项目/基线/草稿保留并清除旧人工确认', async () => {
     await createV1Database()
 
     const raw = await readV2Raw()
     expect(raw.project).toEqual(sampleProject)
     expect(raw.draft).toEqual(sampleDraft)
 
-    // 再由当前代码（v5）打开同一个库：只会补缺失 store，不重建、不清空。
+    // 当前代码（v6）打开同一个库：只补缺失 store，不重建、不清空。
     const db = await openDatabase()
     expect(db.version).toBe(PROJECT_DB_VERSION)
-    expect(db.version).toBe(5)
+    expect(db.version).toBe(6)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(
       ALL_STORES.slice().sort(),
     )
     db.close()
 
-    expect(await getProject(sampleProject.id)).toEqual({
-      ok: true,
-      value: sampleProject,
-    })
-    expect(await getDraft(sampleProject.id)).toEqual({
-      ok: true,
-      value: sampleDraft,
-    })
+    // 公开读取路径负责迁移：项目、基线、草稿全部保留，旧确认被清除。
+    const loaded = await getProject(sampleProject.id)
+    expect(loaded.ok).toBe(true)
+    if (!loaded.ok || loaded.value === null) {
+      throw new Error(loaded.ok ? '项目缺失' : loaded.error.message)
+    }
+    const project = loaded.value
+    expect(project.schemaVersion).toBe(2)
+    expect(project.name).toBe('V1 迁移前项目')
+    expect(project.engineVersion).toBe('test-engine')
+    expect(project.createdAt).toBe(sampleProject.createdAt)
+    expect(project.updatedAt).toBe(sampleProject.updatedAt)
+    expect(project.working.target).toEqual(sampleProject.working.target)
+    expect(project.working.assumptions).toBe('V1 假设')
+    expect(
+      project.working.terms.map((term) => [
+        term.id,
+        term.nominalQ,
+        term.lowerDeviationQ,
+        term.upperDeviationQ,
+        term.sign,
+        term.termRevision,
+      ]),
+    ).toEqual([
+      ['t-h', parseMm('100'), parseMm('0'), parseMm('0.1'), 1, 1],
+      ['t-b', parseMm('99.9'), parseMm('-0.05'), parseMm('0'), -1, 1],
+    ])
+    expect(project.relationRevision).toBe(1)
+    expect(project.relationReview).toBeNull()
+    expect(project.migration?.fromSchemaVersion).toBe(1)
+    expect(project.migration?.migratedAt).toEqual(expect.any(String))
+    expect(project.baseline?.savedAt).toBe(sampleProject.baseline?.savedAt)
+    expect(
+      project.baseline?.definition.terms.every((term) => term.termRevision === 1),
+    ).toBe(true)
+
+    const draft = await getDraft(sampleProject.id)
+    expect(draft.ok).toBe(true)
+    if (!draft.ok) {
+      throw new Error(draft.error.message)
+    }
+    expect(draft.value?.draft.relationRevision).toBe(1)
+    expect(draft.value?.draft.terms.every((term) => term.termRevision === 1)).toBe(
+      true,
+    )
+    expect(draft.value?.draft.terms.map((term) => term.nominal)).toEqual([
+      '100.0000',
+      '99.9000',
+    ])
+
+    // 原始 V1 记录必须完整留在 migrationBackups，不能只靠“升级后字段”冒充历史。
+    const backups = await readMigrationBackups(sampleProject.id)
+    expect(backups).toHaveLength(1)
+    expect(backups[0].fromSchemaVersion).toBe(1)
+    expect(backups[0].raw).toEqual(sampleProject)
+
     const projects = await listProjects()
     expect(projects.ok).toBe(true)
     if (projects.ok) {
-      expect(projects.value).toEqual([sampleProject])
+      expect(projects.value).toHaveLength(1)
+      expect(projects.value[0].id).toBe(sampleProject.id)
+      expect(projects.value[0].relationReview).toBeNull()
     }
   })
 })
+
+function readMigrationBackups(
+  projectId: string,
+): Promise<{ raw: unknown; fromSchemaVersion: number }[]> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(PROJECT_DB_NAME)
+    request.onerror = () => reject(request.error ?? new Error('open failed'))
+    request.onsuccess = () => {
+      const db = request.result
+      const transaction = db.transaction(MIGRATION_BACKUP_STORE_NAME, 'readonly')
+      const backupRequest = transaction
+        .objectStore(MIGRATION_BACKUP_STORE_NAME)
+        .index('projectId')
+        .getAll(projectId)
+      transaction.oncomplete = () => {
+        db.close()
+        resolve(backupRequest.result as { raw: unknown; fromSchemaVersion: number }[])
+      }
+      transaction.onerror = () =>
+        reject(transaction.error ?? new Error('read backups failed'))
+    }
+  })
+}
 
 interface DatabaseMeta {
   version: number
@@ -321,7 +395,7 @@ async function recordOpenCalls<T>(
 }
 
 describe('数据库迁移：真实老用户从 v1 直接打开 v5', () => {
-  it('v1 库由当前代码一次性升级到 v5：同一次升级建出新 store，旧数据逐字段不变', async () => {
+  it('v1 库由当前代码一次性升级到 v6：同一次升级建出新 store，旧数据逐字段不变', async () => {
     await createV1Database()
 
     // 前提：库确实是 version=1，只有老用户就有的两个 store。
@@ -331,14 +405,14 @@ describe('数据库迁移：真实老用户从 v1 直接打开 v5', () => {
       [DRAFT_STORE_NAME, PROJECT_STORE_NAME].slice().sort(),
     )
 
-    // 当前代码（PROJECT_DB_VERSION=5）一次性打开：oldVersion=1、newVersion=5。
+    // 当前代码（PROJECT_DB_VERSION=6）一次性打开：oldVersion=1、newVersion=6。
     const { value: db, calls } = await recordOpenCalls(() => openDatabase())
 
-    expect(calls.map((call) => call.version)).toEqual([5])
-    expect(calls[0].upgrades).toEqual([{ oldVersion: 1, newVersion: 5 }])
+    expect(calls.map((call) => call.version)).toEqual([6])
+    expect(calls[0].upgrades).toEqual([{ oldVersion: 1, newVersion: 6 }])
 
     expect(db.version).toBe(PROJECT_DB_VERSION)
-    expect(db.version).toBe(5)
+    expect(db.version).toBe(6)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(
       ALL_STORES.slice().sort(),
     )
@@ -404,7 +478,7 @@ describe('数据库迁移：真实老用户从 v1 直接打开 v5', () => {
     expect(raw.project).toEqual(sampleProject)
     expect(raw.draft).toEqual(sampleDraft)
 
-    const stored = raw.project as Project
+    const stored = raw.project as unknown as V1Project
     expect(stored.working).toEqual(sampleProject.working)
     expect(
       stored.working.terms.map((term) => [
@@ -430,21 +504,32 @@ describe('数据库迁移：真实老用户从 v1 直接打开 v5', () => {
     expect(stored.baseline).toEqual(sampleProject.baseline)
     db.close()
 
-    // 再用公开 API 走一遍，确认读取路径同样拿到原值。
-    expect(await getProject(sampleProject.id)).toEqual({
-      ok: true,
-      value: sampleProject,
+    // 再用公开 API 走一遍：读取路径会迁移，数值保留、旧确认清除。
+    const migrated = await getProject(sampleProject.id)
+    expect(migrated.ok).toBe(true)
+    if (!migrated.ok || migrated.value === null) {
+      throw new Error(migrated.ok ? '项目缺失' : migrated.error.message)
+    }
+    expect(migrated.value.working).toEqual({
+      terms: sampleProject.working.terms.map((term) => ({ ...term, termRevision: 1 })),
+      target: sampleProject.working.target,
+      assumptions: sampleProject.working.assumptions,
     })
-    expect(await getDraft(sampleProject.id)).toEqual({
-      ok: true,
-      value: sampleDraft,
-    })
+    expect(migrated.value.relationReview).toBeNull()
+    const migratedDraft = await getDraft(sampleProject.id)
+    expect(migratedDraft.ok).toBe(true)
+    if (migratedDraft.ok) {
+      expect(migratedDraft.value?.draft.relationRevision).toBe(1)
+      expect(
+        migratedDraft.value?.draft.terms.every((term) => term.termRevision === 1),
+      ).toBe(true)
+    }
     const projects = await listProjects()
     expect(projects.ok).toBe(true)
     if (projects.ok) {
-      expect(projects.value).toEqual([sampleProject])
+      expect(projects.value.map((project) => project.id)).toEqual([sampleProject.id])
     }
-    expect((await readDatabaseMeta()).version).toBe(5)
+    expect((await readDatabaseMeta()).version).toBe(6)
   })
 })
 
@@ -552,7 +637,7 @@ function readOldStoresFromConnection(db: IDBDatabase): Promise<OldStoreData> {
   })
 }
 
-describe('数据库迁移：V2.0 的真实 v3 库升级到 v5', () => {
+describe('数据库迁移：V2.0 的真实 v3 库升级到 v6', () => {
   it('四类旧数据逐字段不变，只新增来源/绑定 store 与索引，新表为空', async () => {
     await createV3Database()
 
@@ -568,8 +653,8 @@ describe('数据库迁移：V2.0 的真实 v3 库升级到 v5', () => {
     )
 
     const { value: db, calls } = await recordOpenCalls(() => openDatabase())
-    expect(calls.map((call) => call.version)).toEqual([5])
-    expect(calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 5 }])
+    expect(calls.map((call) => call.version)).toEqual([6])
+    expect(calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 6 }])
     expect(db.version).toBe(PROJECT_DB_VERSION)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(
       ALL_STORES.slice().sort(),
@@ -633,20 +718,20 @@ describe('数据库迁移：V2.0 的真实 v3 库升级到 v5', () => {
     ).toBe(true)
     db.close()
 
-    expect((await readDatabaseMeta()).version).toBe(5)
+    expect((await readDatabaseMeta()).version).toBe(6)
   })
 
-  it('已升级到 v5 的库重复打开不会再次触发升级', async () => {
+  it('已升级到 v6 的库重复打开不会再次触发升级', async () => {
     await createV3Database()
 
     const first = await recordOpenCalls(() => openDatabase())
-    expect(first.calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 5 }])
+    expect(first.calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 6 }])
     first.value.close()
 
     const second = await recordOpenCalls(() => openDatabase())
-    expect(second.calls.map((call) => call.version)).toEqual([5])
+    expect(second.calls.map((call) => call.version)).toEqual([6])
     expect(second.calls[0].upgrades).toEqual([])
-    expect(second.value.version).toBe(5)
+    expect(second.value.version).toBe(6)
     second.value.close()
   })
 })
@@ -741,8 +826,8 @@ function createV4Database(): Promise<void> {
   })
 }
 
-describe('数据库迁移：V2.1 第一组的真实 v4 库升级到 v5', () => {
-  it('项目/草稿/模板/快照/来源记录与 Blob 字节逐字段不变，只增补 bindings / events', async () => {
+describe('数据库迁移：V2.1 第一组的真实 v4 库升级到 v6', () => {
+  it('项目/草稿/模板/快照/来源记录与 Blob 字节逐字段不变，只增补 bindings / events / migrationBackups', async () => {
     const v4BlobBytes = [37, 80, 68, 70, 45]
     await createV4Database()
     const before = await readDatabaseMeta()
@@ -757,8 +842,8 @@ describe('数据库迁移：V2.1 第一组的真实 v4 库升级到 v5', () => {
     beforeDb.close()
 
     const { value: db, calls } = await recordOpenCalls(() => openDatabase())
-    expect(calls.map((call) => call.version)).toEqual([5])
-    expect(calls[0].upgrades).toEqual([{ oldVersion: 4, newVersion: 5 }])
+    expect(calls.map((call) => call.version)).toEqual([6])
+    expect(calls[0].upgrades).toEqual([{ oldVersion: 4, newVersion: 6 }])
     expect(db.version).toBe(PROJECT_DB_VERSION)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(ALL_STORES.slice().sort())
 
@@ -810,7 +895,7 @@ describe('数据库迁移：V2.1 第一组的真实 v4 库升级到 v5', () => {
     ])
     db.close()
 
-    expect((await readDatabaseMeta()).version).toBe(5)
+    expect((await readDatabaseMeta()).version).toBe(6)
   })
 })
 
@@ -897,7 +982,7 @@ function readBlobBytes(db: IDBDatabase, blobKey: string): Promise<number[]> {
 describe('数据库版本与阻塞', () => {
   it('库升到 v5 后，指定 version=4 的旧前端打开得到明确的 VersionError 提示', async () => {
     const current = await openDatabase()
-    expect(current.version).toBe(5)
+    expect(current.version).toBe(6)
     current.close()
 
     let rejection: unknown

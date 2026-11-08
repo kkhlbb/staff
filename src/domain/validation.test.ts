@@ -19,6 +19,7 @@ function makeTerm(overrides: Partial<DimensionTerm> = {}): DimensionTerm {
     upperDeviationQ: mm('0.1'),
     sign: 1,
     sourceNote: '',
+    termRevision: 1,
     ...overrides,
   }
 }
@@ -36,11 +37,11 @@ function makeChain(overrides: Partial<ChainDefinition> = {}): ChainDefinition {
         upperDeviationQ: 0,
         sign: -1,
         sourceNote: '图纸 A-01',
+        termRevision: 1,
       }),
     ],
     target: { minQ: mm('0.1'), maxQ: mm('0.3') },
     assumptions: '按一维尺寸链计算',
-    relationConfirmed: true,
     ...overrides,
   }
 }
@@ -55,6 +56,7 @@ function makeTerms(count: number): DimensionTerm[] {
     upperDeviationQ: mm('0.01'),
     sign: (index % 2 === 0 ? 1 : -1) as 1 | -1,
     sourceNote: '',
+    termRevision: 1,
   }))
 }
 
@@ -304,12 +306,15 @@ describe('目标区间与其它字段', () => {
     expectValid({ ...makeChain(), assumptions: '' })
   })
 
-  it('relationConfirmed 不是布尔值被拒', () => {
-    expectError(
-      { ...makeChain(), relationConfirmed: 'true' },
-      ['relationConfirmed'],
-      'relation_confirmed_type',
-    )
+  it('termRevision 缺失、0 或非整数被拒', () => {
+    const chain = makeChain()
+    const withRevision = (revision: unknown) => ({
+      ...chain,
+      terms: [{ ...chain.terms[0], termRevision: revision }, chain.terms[1]],
+    })
+    expectError(withRevision(0), ['terms', 0, 'termRevision'], 'term_revision_invalid')
+    expectError(withRevision(1.5), ['terms', 0, 'termRevision'], 'term_revision_invalid')
+    expectError(withRevision(undefined), ['terms', 0, 'termRevision'], 'term_revision_invalid')
   })
 
   it('输入不是对象时返回 chain_type', () => {
@@ -331,12 +336,12 @@ describe('一次返回所有错误', () => {
           lowerDeviationQ: 0.5,
           upperDeviationQ: undefined,
           sourceNote: 1,
+          termRevision: 0,
         },
         makeTerm({ id: 'id-2', symbol: 'H', name: '重复代号', sign: -1 }),
       ],
       target: { minQ: 10, maxQ: 5 },
       assumptions: 1,
-      relationConfirmed: 'yes',
     }
     const errors = errorsOf(input)
     const expected: [(string | number)[], string][] = [
@@ -350,7 +355,7 @@ describe('一次返回所有错误', () => {
       [['terms', 1, 'symbol'], 'duplicate_symbol'],
       [['target', 'maxQ'], 'target_order'],
       [['assumptions'], 'assumptions_type'],
-      [['relationConfirmed'], 'relation_confirmed_type'],
+      [['terms', 0, 'termRevision'], 'term_revision_invalid'],
     ]
     for (const [path, code] of expected) {
       expect(findError(errors, path, code)).toBeDefined()
@@ -413,7 +418,6 @@ describe('文档第 8 节案例', () => {
     ],
     target: { minQ: mm('0.1000'), maxQ: mm('0.3000') },
     assumptions: '案例 A：不满足目标的轴向间隙',
-    relationConfirmed: true,
   })
 
   const caseB: ChainDefinition = makeChain({
@@ -457,7 +461,6 @@ describe('文档第 8 节案例', () => {
     ],
     target: { minQ: mm('0.1000'), maxQ: mm('0.3000') },
     assumptions: '案例 B：修改后的满足方案',
-    relationConfirmed: true,
   })
 
   const caseC: ChainDefinition = makeChain({
@@ -483,7 +486,6 @@ describe('文档第 8 节案例', () => {
     ],
     target: { minQ: mm('-0.2000'), maxQ: mm('-0.0500') },
     assumptions: '案例 C：负间隙和边界',
-    relationConfirmed: true,
   })
 
   it('案例 A 通过校验且数值保持为 q', () => {

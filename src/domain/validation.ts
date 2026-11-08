@@ -16,7 +16,6 @@ type Path = ValidationError['path']
 const objectSchema = z.record(z.string(), z.unknown())
 const stringSchema = z.string()
 const numberSchema = z.number()
-const booleanSchema = z.boolean()
 const signSchema = z.union([z.literal(1), z.literal(-1)])
 
 function termLabel(index: number): string {
@@ -151,6 +150,21 @@ export function validateChain(input: unknown): ValidationResult {
         addError(['terms', index, 'sign'], 'sign_invalid', `${label}的方向系数只能是 1 或 -1`)
       }
 
+      // 环修订号必须是从 1 开始的正安全整数；缺失或非法时拒绝整条链，
+      // 不能静默补 1，否则来源核对凭据可能把未知历史误当“第 1 版”。
+      const termRevisionResult = numberSchema.safeParse(term.termRevision)
+      if (
+        !termRevisionResult.success ||
+        !Number.isSafeInteger(termRevisionResult.data) ||
+        termRevisionResult.data < 1
+      ) {
+        addError(
+          ['terms', index, 'termRevision'],
+          'term_revision_invalid',
+          `${label}的修订号必须是大于等于 1 的安全整数`,
+        )
+      }
+
       if (nominalQ !== undefined && nominalQ <= 0) {
         addError(['terms', index, 'nominalQ'], 'nominal_not_positive', `${label}的基本尺寸必须大于 0`)
       }
@@ -213,6 +227,7 @@ export function validateChain(input: unknown): ValidationResult {
         upperDeviationQ: upperDeviationQ ?? 0,
         sign: signResult.success ? signResult.data : 1,
         sourceNote,
+        termRevision: termRevisionResult.success ? termRevisionResult.data : 1,
       })
     }
   }
@@ -238,11 +253,6 @@ export function validateChain(input: unknown): ValidationResult {
     addError(['assumptions'], 'assumptions_type', '假设说明必须是字符串')
   }
 
-  const relationResult = booleanSchema.safeParse(chain.relationConfirmed)
-  if (!relationResult.success) {
-    addError(['relationConfirmed'], 'relation_confirmed_type', '关系确认状态必须是布尔值')
-  }
-
   if (errors.length > 0) {
     return { ok: false, errors }
   }
@@ -253,7 +263,6 @@ export function validateChain(input: unknown): ValidationResult {
       terms,
       target,
       assumptions: assumptionsResult.success ? assumptionsResult.data : '',
-      relationConfirmed: relationResult.success ? relationResult.data : false,
     },
   }
 }

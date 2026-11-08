@@ -79,7 +79,7 @@ function emptyDraftFromTerms(terms: TermDraft[]): WorkspaceDraft {
     targetMax: '',
     assumptions: '',
     // 新建 / 替换 / 追加都必须重新建立人工确认。
-    relationConfirmed: false,
+    relationRevision: 1,
   }
 }
 
@@ -96,7 +96,7 @@ function importDraftTerm(
     suffix += 1
   }
   usedIds.add(id)
-  return { id, ...termToDraftValues(term) }
+  return { id, termRevision: 1, ...termToDraftValues(term) }
 }
 
 function translateCellErrors(
@@ -175,12 +175,12 @@ export function planImportCommit(
         ? {
             ...baseDraft,
             terms: [...baseDraft.terms, ...importedTerms],
-            relationConfirmed: false,
+            relationRevision: baseDraft.relationRevision + 1,
           }
         : {
             ...baseDraft,
             terms: importedTerms,
-            relationConfirmed: false,
+            relationRevision: baseDraft.relationRevision + 1,
           }
   } else {
     return { ok: false, message: '追加或替换必须从已有项目发起', cellErrors }

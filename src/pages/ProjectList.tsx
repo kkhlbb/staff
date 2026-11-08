@@ -56,7 +56,12 @@ function projectStatus(
   project: Project,
   draft: WorkspaceDraft | null,
 ): ProjectStatus {
-  const status = resolveStoredWorkspaceStatus({ working: project.working, draft })
+  const status = resolveStoredWorkspaceStatus({
+    working: project.working,
+    draft,
+    relationRevision: project.relationRevision,
+    relationReview: project.relationReview,
+  })
 
   if (status.kind === 'no-result') {
     const hasDraftTerms = draft !== null && draft.terms.length > 0

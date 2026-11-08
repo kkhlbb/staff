@@ -6,6 +6,7 @@ import type { ChainDefinition } from '../domain/types'
 import { calculateChain } from '../domain/calculate'
 import { formatMm, parseMm } from '../domain/units'
 import { exportProject, createProject } from '../storage/projects'
+import { createRelationReview } from '../workspace/relation'
 import { deleteProjectDatabase } from '../test/projectDb'
 import { Workspace } from './Workspace'
 
@@ -20,6 +21,7 @@ const chain: ChainDefinition = {
       upperDeviationQ: parseMm('0.1'),
       sign: 1,
       sourceNote: '',
+      termRevision: 1,
     },
     {
       id: 't-b',
@@ -30,11 +32,11 @@ const chain: ChainDefinition = {
       upperDeviationQ: parseMm('0'),
       sign: -1,
       sourceNote: '',
+      termRevision: 1,
     },
   ],
   target: { minQ: parseMm('0.05'), maxQ: parseMm('0.2') },
   assumptions: '',
-  relationConfirmed: true,
 }
 
 function resultValue(testId: string): string {
@@ -52,7 +54,12 @@ beforeEach(async () => {
 
 describe('Workspace：没有 PDF 来源的项目', () => {
   it('仍可计算、导出，每行标注“无来源绑定”，且不显示来源审查通过', async () => {
-    const created = await createProject({ name: '无来源项目', working: chain })
+    const created = await createProject({
+      name: '无来源项目',
+      working: chain,
+      relationRevision: 1,
+      relationReview: createRelationReview(chain, 1, '2026-01-01T00:00:00.000Z'),
+    })
     expect(created.ok).toBe(true)
     if (!created.ok) {
       throw new Error(created.error.message)
@@ -90,11 +97,14 @@ describe('Workspace：没有 PDF 来源的项目', () => {
     const parsed = JSON.parse(exported.value) as {
       working: ChainDefinition
       schemaVersion: number
+      sources: { attachmentsIncluded: boolean; revisions: unknown[] }
     }
-    expect(parsed.schemaVersion).toBe(1)
+    // v2 契约：包含来源元数据声明，但明确不含附件。
+    expect(parsed.schemaVersion).toBe(2)
     expect(parsed.working.terms.map((term) => term.symbol)).toEqual(['H', 'B'])
-    expect(exported.value).not.toContain('rectPdf')
-    expect(exported.value).not.toContain('revisionId')
+    expect(parsed.sources.attachmentsIncluded).toBe(false)
+    expect(parsed.sources.revisions).toEqual([])
+    expect(exported.value).toContain('数据备份不含来源附件')
 
     // 导出按钮在界面上也可点击，不因没有来源而被禁用。
     const exportButton = screen.getByRole('button', { name: '导出 JSON' })

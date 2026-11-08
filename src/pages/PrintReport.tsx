@@ -14,6 +14,7 @@ import { formatMm } from '../domain/units'
 import { validateChain } from '../domain/validation'
 import { getDraft, getProject } from '../storage/projects'
 import { chainToDraft, draftToChain } from '../workspace/draft'
+import { isRelationConfirmed } from '../workspace/relation'
 import {
   resolveReportEligibility,
   type ReportEligibility,
@@ -133,7 +134,8 @@ async function loadReport(projectId: string): Promise<ReportState> {
       result: null,
       eligibility: resolveReportEligibility({
         result: null,
-        relationConfirmed: effectiveDraft.relationConfirmed,
+        // 草稿无效时没有可核对的当前链，不能算已确认。
+        relationConfirmed: false,
         stale: true,
       }),
       baseline: null,
@@ -145,7 +147,10 @@ async function loadReport(projectId: string): Promise<ReportState> {
   const result = calculateChain(chain)
   const eligibility = resolveReportEligibility({
     result,
-    relationConfirmed: chain.relationConfirmed,
+    relationConfirmed: isRelationConfirmed(chain, {
+      relationRevision: Math.max(project.relationRevision, effectiveDraft.relationRevision),
+      relationReview: project.relationReview,
+    }),
     stale: false,
   })
 

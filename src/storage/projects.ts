@@ -1,10 +1,12 @@
 import { calculateChain, ENGINE_VERSION } from '../domain/calculate'
 import {
+  PROJECT_SCHEMA_VERSION,
   Q_PER_MM,
   type ChainDefinition,
   type ChainResult,
   type DimensionTerm,
   type Project,
+  type RelationReview,
 } from '../domain/types'
 import { validateChain, type ValidationError } from '../domain/validation'
 import { draftToChain, type CellErrors, type WorkspaceDraft } from '../workspace/draft'
@@ -13,6 +15,7 @@ import {
   DRAFT_STORE_NAME,
   EVENT_STORE_NAME,
   IMPORT_SNAPSHOT_STORE_NAME,
+  MIGRATION_BACKUP_STORE_NAME,
   PROJECT_STORE_NAME,
   SOURCE_BLOB_STORE_NAME,
   SOURCE_DOCUMENT_STORE_NAME,
@@ -23,9 +26,14 @@ import {
   transactionDone,
   withDatabase,
 } from './db'
+import { migrateDraftV1, migrateProjectV1 } from './migrateV1'
+import type { SourceBinding } from '../sources/bindings'
+import type { SourceDocument, SourceRevision } from '../sources/types'
 
-/** 项目 JSON 结构版本；导入只接受这一版本。 */
-export const STORAGE_SCHEMA_VERSION = 1
+/** 项目 JSON 结构版本；导入同时接受 v1（迁移）与 v2。 */
+export const STORAGE_SCHEMA_VERSION = PROJECT_SCHEMA_VERSION
+/** V1 项目 JSON 的版本，只用于导入分派与本地迁移。 */
+export const LEGACY_SCHEMA_VERSION = 1
 /** 项目 JSON 中的数值单位声明：整数 q，1 q = 0.0001 mm。 */
 export const PROJECT_JSON_UNIT = 'q'
 /** 单个项目 JSON 的字节上限（1 MB）。 */
@@ -62,6 +70,9 @@ export interface CreateProjectInput {
   engineVersion?: string
   working: ChainDefinition
   baseline?: Project['baseline']
+  /** 仅测试/迁移使用；正常新建从 0 和 null 开始。 */
+  relationRevision?: number
+  relationReview?: RelationReview | null
 }
 
 export interface UpdateProjectInput {
@@ -69,6 +80,8 @@ export interface UpdateProjectInput {
   engineVersion?: string
   working?: ChainDefinition
   baseline?: Project['baseline']
+  relationRevision?: number
+  relationReview?: RelationReview | null
 }
 
 export interface SaveDraftResult {
@@ -96,6 +109,14 @@ export interface ImportSnapshot {
 export interface SaveDraftOptions {
   /** 替换全部组成环时，在同一事务内备份写入前的 working。 */
   snapshotBefore?: 'replace'
+  /**
+   * 关系修订号与确认凭据。提供时即使草稿非法也会写入 projects，
+   * 保证“改成非法再改回”不会因为没落库而保留旧确认。
+   */
+  relationState?: {
+    relationRevision: number
+    relationReview: RelationReview | null
+  }
 }
 
 export interface ImportProjectResult {
@@ -104,11 +125,37 @@ export interface ImportProjectResult {
   result: ChainResult
   /** 文件里的项目 ID 与本地已有项目冲突时为 true。 */
   idChanged: boolean
+  /** 导入过程中必须向用户明示的事实（清除确认、缺附件、版本迁移等）。 */
+  warnings: string[]
+  /** 外部导入的文件版本；与当前 schema 相同则为 null。 */
+  migratedFrom: number | null
+  /** 随文件导入的来源元数据与绑定数量；无来源信息时为 null。 */
+  sources: {
+    documents: number
+    revisions: number
+    bindings: number
+    attachmentsMissing: boolean
+  } | null
 }
 
-/** 导出文件中的字段：只含工程输入与单位声明，不含派生结果。 */
+/** 导出文件中的来源元数据与绑定；明确不含 Blob 字节。 */
+export interface ExportedProjectSources {
+  documents: SourceDocument[]
+  revisions: SourceRevision[]
+  bindings: SourceBinding[]
+  /** 固定提示：JSON 数据备份不包含来源附件。 */
+  attachmentsIncluded: false
+  /** 面向人的明确说明，避免把元数据误当完整备份。 */
+  notice: string
+}
+
+/** 导出 JSON 里的固定提示文本。 */
+export const EXPORT_SOURCES_NOTICE =
+  '数据备份不含来源附件：sources 只包含来源文档/版本元数据与绑定坐标，PDF 原文件未包含在 JSON 中。'
+
+/** 导出文件中的字段：工程输入、关系确认凭据与来源元数据，不含派生结果与附件。 */
 export interface ExportedProjectJson {
-  schemaVersion: 1
+  schemaVersion: typeof PROJECT_SCHEMA_VERSION
   unit: 'q'
   qPerMm: number
   engineVersion: string
@@ -116,8 +163,11 @@ export interface ExportedProjectJson {
   name: string
   createdAt: string
   updatedAt: string
+  relationRevision: number
+  relationReview: RelationReview | null
   working: ChainDefinition
   baseline: Project['baseline']
+  sources: ExportedProjectSources
 }
 
 export type ProjectJsonInput = string | ArrayBuffer | Uint8Array
@@ -185,6 +235,7 @@ const EMPTY_CHAIN_PLACEHOLDER_TERMS: DimensionTerm[] = [
     upperDeviationQ: 0,
     sign: 1,
     sourceNote: '',
+    termRevision: 1,
   },
   {
     id: '__empty_chain_check_b__',
@@ -195,6 +246,7 @@ const EMPTY_CHAIN_PLACEHOLDER_TERMS: DimensionTerm[] = [
     upperDeviationQ: 0,
     sign: -1,
     sourceNote: '',
+    termRevision: 1,
   },
 ]
 
@@ -317,33 +369,314 @@ function readStringField(
   return value
 }
 
+export interface ParsedProjectSources {
+  documents: SourceDocument[]
+  revisions: SourceRevision[]
+  bindings: SourceBinding[]
+}
+
 interface ParsedProjectJson {
   project: Project
   result: ChainResult
+  /** 导入时必须向用户明示的事实。 */
+  warnings: string[]
+  /** 文件版本；V1 文件为 1，V2 文件为 null。 */
+  migratedFrom: number | null
+  /** 文件中的来源元数据；V1 文件或没有来源信息时为 null。 */
+  sources: ParsedProjectSources | null
 }
 
-/** 只读取已知字段；文件里即使带 result 等结果字段也完全忽略。 */
-function parseImportedProject(input: unknown): StorageResult<ParsedProjectJson> {
-  if (!isRecord(input)) {
-    return failure('invalid_import', '项目 JSON 必须是对象', [
-      { path: [], code: 'invalid_project', message: '项目 JSON 必须是对象' },
-    ])
+/**
+ * 读取非负整数（关系修订号）。缺失时用 0；类型或范围非法则记录错误。
+ */
+function readNonNegativeInteger(
+  value: unknown,
+  path: (string | number)[],
+  label: string,
+  issues: StorageIssue[],
+): number | null {
+  if (value === undefined) {
+    return 0
+  }
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    issues.push({ path, code: 'invalid_integer', message: `${label}必须是非负安全整数` })
+    return null
+  }
+  return value
+}
+
+function readPositiveInteger(
+  value: unknown,
+  path: (string | number)[],
+  label: string,
+  issues: StorageIssue[],
+): number | null {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) {
+    issues.push({ path, code: 'invalid_integer', message: `${label}必须是大于等于 1 的整数` })
+    return null
+  }
+  return value
+}
+
+/**
+ * V1 组成环没有 termRevision：迁移时统一补 1，不伪造历史版本。
+ * 其余字段原样交给统一领域校验。
+ */
+function withLegacyTermRevisions(value: unknown): unknown {
+  if (!isRecord(value) || !Array.isArray(value.terms)) {
+    return value
+  }
+  return {
+    ...value,
+    terms: value.terms.map((term) =>
+      isRecord(term) ? { ...term, termRevision: 1 } : term,
+    ),
+  }
+}
+
+function parseSourceMetadata(
+  raw: unknown,
+  working: ChainDefinition,
+  issues: StorageIssue[],
+): ParsedProjectSources | null {
+  if (raw === undefined) {
+    return null
+  }
+  if (!isRecord(raw)) {
+    issues.push({
+      path: ['sources'],
+      code: 'invalid_sources',
+      message: 'sources 必须是包含 documents、revisions、bindings 的对象',
+    })
+    return null
   }
 
-  if (input.schemaVersion !== STORAGE_SCHEMA_VERSION) {
-    return failure(
-      'unknown_schema_version',
-      `只接受 schemaVersion=${STORAGE_SCHEMA_VERSION} 的项目文件`,
-      [
-        {
-          path: ['schemaVersion'],
-          code: 'unknown_schema_version',
-          message: `未知版本：${String(input.schemaVersion)}`,
-        },
-      ],
+  const rawDocuments = raw.documents ?? []
+  const rawRevisions = raw.revisions ?? []
+  const rawBindings = raw.bindings ?? []
+  if (!Array.isArray(rawDocuments) || !Array.isArray(rawRevisions) || !Array.isArray(rawBindings)) {
+    issues.push({
+      path: ['sources'],
+      code: 'invalid_sources',
+      message: 'documents、revisions、bindings 必须是数组',
+    })
+    return null
+  }
+
+  const termIds = new Set(working.terms.map((term) => term.id))
+  const documents: SourceDocument[] = []
+  const revisions: SourceRevision[] = []
+  const bindings: SourceBinding[] = []
+
+  for (let index = 0; index < rawDocuments.length; index += 1) {
+    const item = rawDocuments[index]
+    const path = ['sources', 'documents', index]
+    if (!isRecord(item)) {
+      issues.push({ path, code: 'invalid_source_document', message: '来源文档必须是对象' })
+      continue
+    }
+    const id = readStringField(item.id, [...path, 'id'], 'invalid_source_document', '文档 id', issues)
+    const title = readStringField(item.title, [...path, 'title'], 'invalid_source_document', '文档标题', issues)
+    const latestRevisionId = readStringField(
+      item.latestRevisionId,
+      [...path, 'latestRevisionId'],
+      'invalid_source_document',
+      '最新版本 id',
+      issues,
     )
+    if (id !== null && title !== null && latestRevisionId !== null) {
+      documents.push({ id, projectId: '', title, latestRevisionId })
+    }
   }
 
+  for (let index = 0; index < rawRevisions.length; index += 1) {
+    const item = rawRevisions[index]
+    const path = ['sources', 'revisions', index]
+    if (!isRecord(item)) {
+      issues.push({ path, code: 'invalid_source_revision', message: '来源版本必须是对象' })
+      continue
+    }
+    const id = readStringField(item.id, [...path, 'id'], 'invalid_source_revision', '版本 id', issues)
+    const documentId = readStringField(
+      item.documentId,
+      [...path, 'documentId'],
+      'invalid_source_revision',
+      '所属文档 id',
+      issues,
+    )
+    const fileName = readStringField(
+      item.fileName,
+      [...path, 'fileName'],
+      'invalid_source_revision',
+      '文件名',
+      issues,
+    )
+    const sha256 = readStringField(
+      item.sha256,
+      [...path, 'sha256'],
+      'invalid_source_revision',
+      'SHA-256',
+      issues,
+    )
+    const blobKey = readStringField(
+      item.blobKey,
+      [...path, 'blobKey'],
+      'invalid_source_revision',
+      'blobKey',
+      issues,
+    )
+    const createdAt = readDateField(item.createdAt, [...path, 'createdAt'], issues)
+    const byteSize = readPositiveInteger(
+      item.byteSize,
+      [...path, 'byteSize'],
+      '字节大小',
+      issues,
+    )
+    const pageCount = readPositiveInteger(
+      item.pageCount,
+      [...path, 'pageCount'],
+      '页数',
+      issues,
+    )
+    if (
+      id !== null &&
+      documentId !== null &&
+      fileName !== null &&
+      sha256 !== null &&
+      blobKey !== null &&
+      createdAt !== null &&
+      byteSize !== null &&
+      pageCount !== null
+    ) {
+      revisions.push({
+        id,
+        projectId: '',
+        documentId,
+        fileName,
+        sha256: sha256.toLowerCase(),
+        byteSize,
+        pageCount,
+        createdAt,
+        blobKey,
+      })
+    }
+  }
+
+  for (let index = 0; index < rawBindings.length; index += 1) {
+    const item = rawBindings[index]
+    const path = ['sources', 'bindings', index]
+    if (!isRecord(item)) {
+      issues.push({ path, code: 'invalid_binding', message: '来源绑定必须是对象' })
+      continue
+    }
+    const id = readStringField(item.id, [...path, 'id'], 'invalid_binding', '绑定 id', issues)
+    const termId = readStringField(item.termId, [...path, 'termId'], 'invalid_binding', '组成环 id', issues)
+    const revisionId = readStringField(
+      item.revisionId,
+      [...path, 'revisionId'],
+      'invalid_binding',
+      '来源版本 id',
+      issues,
+    )
+    const documentId = readStringField(
+      item.documentId,
+      [...path, 'documentId'],
+      'invalid_binding',
+      '来源文档 id',
+      issues,
+    )
+    const page = readPositiveInteger(item.page, [...path, 'page'], '页码', issues)
+    const createdAt = readDateField(item.createdAt, [...path, 'createdAt'], issues)
+    const note = typeof item.note === 'string' ? item.note : ''
+    const rectPdf = item.rectPdf
+    const pageBoxPdf = item.pageBoxPdf
+    const validGeometry =
+      Array.isArray(rectPdf) &&
+      rectPdf.length === 4 &&
+      rectPdf.every((value) => typeof value === 'number' && Number.isFinite(value)) &&
+      Array.isArray(pageBoxPdf) &&
+      pageBoxPdf.length === 4 &&
+      pageBoxPdf.every((value) => typeof value === 'number' && Number.isFinite(value))
+    if (!validGeometry) {
+      issues.push({
+        path,
+        code: 'invalid_binding_geometry',
+        message: '绑定区域必须是 4 个有限数值（PDF 坐标）',
+      })
+    }
+    if (termId !== null && !termIds.has(termId)) {
+      issues.push({
+        path: [...path, 'termId'],
+        code: 'binding_term_missing',
+        message: `绑定指向的组成环 ${termId} 不在导入的尺寸链中`,
+      })
+    }
+    if (
+      id !== null &&
+      termId !== null &&
+      revisionId !== null &&
+      documentId !== null &&
+      page !== null &&
+      createdAt !== null &&
+      validGeometry
+    ) {
+      bindings.push({
+        id,
+        projectId: '',
+        termId,
+        revisionId,
+        documentId,
+        page,
+        rectPdf: rectPdf as unknown as SourceBinding['rectPdf'],
+        pageBoxPdf: pageBoxPdf as unknown as SourceBinding['pageBoxPdf'],
+        note,
+        createdAt,
+      })
+    }
+  }
+
+  const documentIds = new Set(documents.map((document) => document.id))
+  const revisionIds = new Set(revisions.map((revision) => revision.id))
+  for (const document of documents) {
+    if (!revisionIds.has(document.latestRevisionId)) {
+      issues.push({
+        path: ['sources', 'documents'],
+        code: 'source_reference_missing',
+        message: `来源文档 ${document.id} 的最新版本 ${document.latestRevisionId} 不在文件中`,
+      })
+    }
+  }
+  for (const revision of revisions) {
+    if (!documentIds.has(revision.documentId)) {
+      issues.push({
+        path: ['sources', 'revisions'],
+        code: 'source_reference_missing',
+        message: `来源版本 ${revision.id} 的文档 ${revision.documentId} 不在文件中`,
+      })
+    }
+  }
+  for (const binding of bindings) {
+    if (!revisionIds.has(binding.revisionId)) {
+      issues.push({
+        path: ['sources', 'bindings'],
+        code: 'source_reference_missing',
+        message: `绑定 ${binding.id} 的来源版本 ${binding.revisionId} 不在文件中`,
+      })
+    }
+  }
+
+  return { documents, revisions, bindings }
+}
+
+/**
+ * V1 文件：保留整数 q、项目/基线/草稿数据，迁移为 v2。
+ *
+ * - 所有环补 termRevision=1；
+ * - 旧 relationConfirmed 没有任何版本凭据，一律清除；
+ * - 来源状态为“未检查”（没有来源元数据）；
+ * - ID 冲突由写入层换新 ID，绝不覆盖已有项目。
+ */
+function parseImportedProjectV1(input: Record<string, unknown>): StorageResult<ParsedProjectJson> {
   const issues: StorageIssue[] = []
 
   // 兼容文档第 6 节省略单位声明的对象；一旦声明就必须是整数 q。
@@ -386,7 +719,7 @@ function parseImportedProject(input: unknown): StorageResult<ParsedProjectJson> 
   const createdAt = readDateField(input.createdAt, ['createdAt'], issues)
   const updatedAt = readDateField(input.updatedAt, ['updatedAt'], issues)
 
-  const working = validateChainField(input.working, ['working'], issues, {
+  const working = validateChainField(withLegacyTermRevisions(input.working), ['working'], issues, {
     allowEmptyTerms: true,
   })
 
@@ -401,7 +734,7 @@ function parseImportedProject(input: unknown): StorageResult<ParsedProjectJson> 
     } else {
       const savedAt = readDateField(input.baseline.savedAt, ['baseline', 'savedAt'], issues)
       const definition = validateChainField(
-        input.baseline.definition,
+        withLegacyTermRevisions(input.baseline.definition),
         ['baseline', 'definition'],
         issues,
       )
@@ -423,32 +756,14 @@ function parseImportedProject(input: unknown): StorageResult<ParsedProjectJson> 
     updatedAt === null ||
     working === null
   ) {
-    // 正常情况下上面任一字段为空都会产生 issues；这里只做类型收窄兜底。
     return failure('invalid_import', '项目 JSON 缺少必要字段，未导入任何数据', [
       { path: [], code: 'missing_field', message: '项目 JSON 缺少必要字段' },
     ])
   }
 
-  // 外部导入必须重新建立人工确认：工作方案和基线定义快照都清除 relationConfirmed，
-  // 再按清除后的定义重新计算，避免带着旧确认绕过核对。
-  const importedWorking: ChainDefinition = {
-    ...working,
-    relationConfirmed: false,
-  }
-  const importedBaseline: Project['baseline'] =
-    baseline === null
-      ? null
-      : {
-          savedAt: baseline.savedAt,
-          definition: {
-            ...baseline.definition,
-            relationConfirmed: false,
-          },
-        }
-
   let result: ChainResult
   try {
-    result = calculateChain(importedWorking)
+    result = calculateChain(working)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return failure('calculation_failed', '导入项目重新计算失败，未导入任何数据', [
@@ -456,22 +771,214 @@ function parseImportedProject(input: unknown): StorageResult<ParsedProjectJson> 
     ])
   }
 
+  const hadConfirmation =
+    (isRecord(input.working) && input.working.relationConfirmed === true) ||
+    (isRecord(input.baseline) &&
+      isRecord(input.baseline.definition) &&
+      input.baseline.definition.relationConfirmed === true)
+
+  const warnings = [
+    '已从 V1 项目文件迁移到 v2；数值、方向与单位保持不变。',
+  ]
+  if (hadConfirmation) {
+    warnings.push(
+      '旧的人工确认没有版本凭据，已清除，需要重新核对尺寸关系与作用方向。',
+    )
+  }
+  warnings.push('来源核对状态为未检查（V1 文件没有来源绑定）。')
+
   return {
     ok: true,
     value: {
       project: {
-        schemaVersion: STORAGE_SCHEMA_VERSION,
+        schemaVersion: PROJECT_SCHEMA_VERSION,
         engineVersion,
         id,
         name,
         createdAt,
         updatedAt,
-        working: importedWorking,
-        baseline: importedBaseline,
+        working,
+        // 外部导入一律从“未确认”重新建立；旧布尔没有任何凭据。
+        relationRevision: 1,
+        relationReview: null,
+        migration: null,
+        baseline,
       },
       result,
+      warnings,
+      migratedFrom: LEGACY_SCHEMA_VERSION,
+      sources: null,
     },
   }
+}
+
+/**
+ * V2 文件：工程输入、关系凭据与来源元数据（不含附件）。
+ *
+ * - 关系确认一律清除（REV-05）；文件里的 relationReview 即使存在也不采用；
+ * - 来源文档/版本/绑定保留，但 Blob 不在 JSON 中：导入后明确标记附件不可用；
+ * - 引用不完整、几何非法或指向不存在环的绑定拒绝整个文件，避免半套来源。
+ */
+function parseImportedProjectV2(input: Record<string, unknown>): StorageResult<ParsedProjectJson> {
+  const issues: StorageIssue[] = []
+
+  if (input.unit !== undefined && input.unit !== PROJECT_JSON_UNIT) {
+    issues.push({
+      path: ['unit'],
+      code: 'invalid_unit',
+      message: `单位声明必须是 "${PROJECT_JSON_UNIT}"（整数 0.0001 mm）`,
+    })
+  }
+  if (input.qPerMm !== undefined && input.qPerMm !== Q_PER_MM) {
+    issues.push({ path: ['qPerMm'], code: 'invalid_unit', message: `qPerMm 必须是 ${Q_PER_MM}` })
+  }
+
+  const id = readStringField(input.id, ['id'], 'invalid_project_id', '项目 id', issues)
+  if (id !== null && id.trim() === '') {
+    issues.push({ path: ['id'], code: 'invalid_project_id', message: '项目 id 不能为空' })
+  }
+  const name = readStringField(input.name, ['name'], 'invalid_name', '项目名称', issues)
+  const engineVersion = readStringField(
+    input.engineVersion,
+    ['engineVersion'],
+    'invalid_engine_version',
+    'engineVersion',
+    issues,
+  )
+  if (engineVersion !== null && engineVersion.trim() === '') {
+    issues.push({
+      path: ['engineVersion'],
+      code: 'invalid_engine_version',
+      message: 'engineVersion 不能为空',
+    })
+  }
+  const createdAt = readDateField(input.createdAt, ['createdAt'], issues)
+  const updatedAt = readDateField(input.updatedAt, ['updatedAt'], issues)
+  const relationRevision =
+    readNonNegativeInteger(input.relationRevision, ['relationRevision'], '关系修订号', issues) ?? 0
+
+  const working = validateChainField(input.working, ['working'], issues, {
+    allowEmptyTerms: true,
+  })
+
+  let baseline: Project['baseline'] = null
+  if (input.baseline !== undefined && input.baseline !== null) {
+    if (!isRecord(input.baseline)) {
+      issues.push({
+        path: ['baseline'],
+        code: 'invalid_baseline',
+        message: 'baseline 必须是 null 或包含 savedAt、definition 的对象',
+      })
+    } else {
+      const savedAt = readDateField(input.baseline.savedAt, ['baseline', 'savedAt'], issues)
+      const definition = validateChainField(input.baseline.definition, ['baseline', 'definition'], issues)
+      if (savedAt !== null && definition !== null) {
+        baseline = { savedAt, definition }
+      }
+    }
+  }
+
+  let sources: ParsedProjectSources | null = null
+  if (working !== null) {
+    sources = parseSourceMetadata(input.sources, working, issues)
+  }
+
+  // 文件里带 relationReview 说明它曾确认过；导入后不采用，必须提示。
+  const hadReview =
+    isRecord(input.relationReview) ||
+    (input.relationReview !== undefined && input.relationReview !== null)
+
+  if (issues.length > 0) {
+    return failure('invalid_import', '项目 JSON 校验失败，未导入任何数据', issues)
+  }
+  if (
+    id === null ||
+    name === null ||
+    engineVersion === null ||
+    createdAt === null ||
+    updatedAt === null ||
+    working === null
+  ) {
+    return failure('invalid_import', '项目 JSON 缺少必要字段，未导入任何数据', [
+      { path: [], code: 'missing_field', message: '项目 JSON 缺少必要字段' },
+    ])
+  }
+
+  let result: ChainResult
+  try {
+    result = calculateChain(working)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return failure('calculation_failed', '导入项目重新计算失败，未导入任何数据', [
+      { path: [], code: 'calculation_failed', message },
+    ])
+  }
+
+  const warnings: string[] = []
+  if (hadReview) {
+    warnings.push(
+      '文件里的人工确认没有可核对的本机凭据，已清除，需要重新核对尺寸关系与作用方向。',
+    )
+  }
+  if (sources !== null && sources.revisions.length > 0) {
+    warnings.push(
+      `数据备份不含来源附件：文件中的 ${sources.revisions.length} 个来源版本在导入后标记为附件不可用，` +
+        '绑定区域与页码保留，但需要重新导入对应 PDF 才能查看原文。',
+    )
+  }
+
+  return {
+    ok: true,
+    value: {
+      project: {
+        schemaVersion: PROJECT_SCHEMA_VERSION,
+        engineVersion,
+        id,
+        name,
+        createdAt,
+        updatedAt,
+        working,
+        // 导入不继承任何确认；修订号保留文件值并 +1，确保即使文件里残留
+        // relationReview 也不可能匹配（双保险，读取时已置 null）。
+        relationRevision: relationRevision + 1,
+        relationReview: null,
+        migration: null,
+        baseline,
+      },
+      result,
+      warnings,
+      migratedFrom: null,
+      sources,
+    },
+  }
+}
+
+/** 只读取已知字段；文件里即使带 result 等结果字段也完全忽略。按版本分派。 */
+function parseImportedProject(input: unknown): StorageResult<ParsedProjectJson> {
+  if (!isRecord(input)) {
+    return failure('invalid_import', '项目 JSON 必须是对象', [
+      { path: [], code: 'invalid_project', message: '项目 JSON 必须是对象' },
+    ])
+  }
+
+  if (input.schemaVersion === LEGACY_SCHEMA_VERSION) {
+    return parseImportedProjectV1(input)
+  }
+  if (input.schemaVersion === PROJECT_SCHEMA_VERSION) {
+    return parseImportedProjectV2(input)
+  }
+
+  return failure(
+    'unknown_schema_version',
+    `只接受 schemaVersion=${LEGACY_SCHEMA_VERSION}（V1，导入时迁移）或 ${PROJECT_SCHEMA_VERSION} 的项目文件`,
+    [
+      {
+        path: ['schemaVersion'],
+        code: 'unknown_schema_version',
+        message: `未知版本：${String(input.schemaVersion)}`,
+      },
+    ],
+  )
 }
 
 function decodeProjectJson(input: ProjectJsonInput): StorageResult<string> {
@@ -569,6 +1076,111 @@ async function addProjectWithUniqueId(
 }
 
 /* -------------------------------------------------------------------------- */
+/* 本地 V1 项目升级                                                           */
+/* -------------------------------------------------------------------------- */
+
+interface MigrationBackupRecord {
+  id: string
+  projectId: string
+  createdAt: string
+  fromSchemaVersion: number
+  /** 原始 V1 记录（不可变副本）；恢复旧版本程序时可据此导出。 */
+  raw: unknown
+}
+
+/**
+ * 把本地全部 V1 项目升级到 v2。
+ *
+ * 同一个 readwrite 事务覆盖 projects / drafts / migrationBackups / events：
+ * - 每个项目的原始记录先写备份，再改写项目与草稿；
+ * - 任一步失败都 abort，所有项目保持 V1，不会留下“项目已升、备份没写”
+ *   或“备份已写、项目只改了一半”的半成品；
+ * - 迁移会清除 V1 的人工确认布尔（没有版本凭据），并要求界面提示重新确认。
+ *
+ * 返回本次实际迁移的项目 ID；没有 V1 项目时返回空数组。
+ */
+async function migrateLegacyProjects(db: IDBDatabase): Promise<string[]> {
+  const transaction = db.transaction(
+    [PROJECT_STORE_NAME, DRAFT_STORE_NAME, MIGRATION_BACKUP_STORE_NAME, EVENT_STORE_NAME],
+    'readwrite',
+  )
+  const done = transactionDone(transaction)
+  const migratedIds: string[] = []
+
+  try {
+    const projectStore = transaction.objectStore(PROJECT_STORE_NAME)
+    const records = (await requestResult(projectStore.getAll())) as unknown[]
+    const legacy = records.filter(
+      (record): record is Record<string, unknown> =>
+        isRecord(record) && record.schemaVersion === LEGACY_SCHEMA_VERSION,
+    )
+    if (legacy.length === 0) {
+      await done
+      return migratedIds
+    }
+
+    const migratedAt = nowIso()
+    const draftStore = transaction.objectStore(DRAFT_STORE_NAME)
+    const backupStore = transaction.objectStore(MIGRATION_BACKUP_STORE_NAME)
+    const eventStore = transaction.objectStore(EVENT_STORE_NAME)
+
+    for (const record of legacy) {
+      const projectId = String(record.id)
+      const backupId = `migration-backup-${projectId}-${migratedAt}`
+      const migrated = migrateProjectV1(record, { migratedAt, backupId })
+      if (!migrated.ok) {
+        throw new Error(
+          `项目 ${projectId} 无法从 V1 升级：${migrated.error.message}。` +
+            '本地数据库未被修改，原始 V1 记录仍保留。',
+        )
+      }
+
+      const backup: MigrationBackupRecord = {
+        id: backupId,
+        projectId,
+        createdAt: migratedAt,
+        fromSchemaVersion: LEGACY_SCHEMA_VERSION,
+        raw: record,
+      }
+      backupStore.add(backup)
+      projectStore.put(migrated.value.project)
+
+      const storedDraft = (await requestResult(draftStore.get(projectId))) as unknown
+      if (isRecord(storedDraft)) {
+        const migratedDraft = migrateDraftV1(storedDraft.draft)
+        if (migratedDraft !== null) {
+          draftStore.put({ ...storedDraft, draft: migratedDraft, savedAt: migratedAt })
+        }
+      }
+
+      // 迁移事件与项目/备份同事务；失败时一起回滚。
+      eventStore.add({
+        id: `schema_migrated_v1_to_v2:${projectId}`,
+        projectId,
+        type: 'schema_migrated_v1_to_v2',
+        createdAt: migratedAt,
+        message: migrated.value.clearedManualConfirmation
+          ? '本地项目已从 V1 升级到 v2；旧人工确认无版本凭据，已清除，需要重新确认。'
+          : '本地项目已从 V1 升级到 v2；来源核对状态为未检查。',
+      })
+
+      migratedIds.push(projectId)
+    }
+
+    await done
+    return migratedIds
+  } catch (error) {
+    try {
+      transaction.abort()
+    } catch {
+      // 事务可能已 abort/error，忽略二次取消异常。
+    }
+    await done.catch(() => undefined)
+    throw error
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* CRUD                                                                       */
 /* -------------------------------------------------------------------------- */
 
@@ -611,13 +1223,16 @@ export async function createProject(
 
   const now = nowIso()
   const project: Project = {
-    schemaVersion: STORAGE_SCHEMA_VERSION,
+    schemaVersion: PROJECT_SCHEMA_VERSION,
     engineVersion: input.engineVersion?.trim() || ENGINE_VERSION,
     id: newProjectId(),
     name: input.name?.trim() || '未命名项目',
     createdAt: now,
     updatedAt: now,
     working: workingValidation.value,
+    relationRevision: input.relationRevision ?? 0,
+    relationReview: input.relationReview ?? null,
+    migration: null,
     baseline,
   }
 
@@ -641,7 +1256,7 @@ export async function createEmptyProject(
 ): Promise<StorageResult<Project>> {
   const now = nowIso()
   const project: Project = {
-    schemaVersion: STORAGE_SCHEMA_VERSION,
+    schemaVersion: PROJECT_SCHEMA_VERSION,
     engineVersion: ENGINE_VERSION,
     id: newProjectId(),
     name: name.trim() || '未命名项目',
@@ -651,8 +1266,10 @@ export async function createEmptyProject(
       terms: [],
       target: null,
       assumptions: '',
-      relationConfirmed: false,
     },
+    relationRevision: 0,
+    relationReview: null,
+    migration: null,
     baseline: null,
   }
 
@@ -667,12 +1284,22 @@ export async function createEmptyProject(
 export async function getProject(id: string): Promise<StorageResult<Project | null>> {
   try {
     const project = await withDatabase(async (db) => {
-      const transaction = db.transaction(PROJECT_STORE_NAME, 'readonly')
-      const done = transactionDone(transaction)
-      const value = await requestResult(
-        transaction.objectStore(PROJECT_STORE_NAME).get(id),
-      )
-      await done
+      const read = async (): Promise<unknown> => {
+        const transaction = db.transaction(PROJECT_STORE_NAME, 'readonly')
+        const done = transactionDone(transaction)
+        const value = await requestResult(
+          transaction.objectStore(PROJECT_STORE_NAME).get(id),
+        )
+        await done
+        return value
+      }
+
+      let value = await read()
+      // 本地旧库首次打开：先在同一事务里备份并升级，再返回 v2 记录。
+      if (isRecord(value) && value.schemaVersion === LEGACY_SCHEMA_VERSION) {
+        await migrateLegacyProjects(db)
+        value = await read()
+      }
       return value as Project | undefined
     })
     return { ok: true, value: project ?? null }
@@ -684,13 +1311,26 @@ export async function getProject(id: string): Promise<StorageResult<Project | nu
 export async function listProjects(): Promise<StorageResult<Project[]>> {
   try {
     const projects = await withDatabase(async (db) => {
-      const transaction = db.transaction(PROJECT_STORE_NAME, 'readonly')
-      const done = transactionDone(transaction)
-      const value = await requestResult(
-        transaction.objectStore(PROJECT_STORE_NAME).getAll(),
-      )
-      await done
-      return value as Project[]
+      const readAll = async (): Promise<unknown[]> => {
+        const transaction = db.transaction(PROJECT_STORE_NAME, 'readonly')
+        const done = transactionDone(transaction)
+        const value = await requestResult(
+          transaction.objectStore(PROJECT_STORE_NAME).getAll(),
+        )
+        await done
+        return value as unknown[]
+      }
+
+      let values = await readAll()
+      if (
+        values.some(
+          (record) => isRecord(record) && record.schemaVersion === LEGACY_SCHEMA_VERSION,
+        )
+      ) {
+        await migrateLegacyProjects(db)
+        values = await readAll()
+      }
+      return values as Project[]
     })
     projects.sort(
       (left, right) =>
@@ -774,6 +1414,25 @@ export async function updateProject(
     }
   }
 
+  let relationRevision: number | undefined
+  if (patch.relationRevision !== undefined) {
+    if (!Number.isSafeInteger(patch.relationRevision) || patch.relationRevision < 0) {
+      return failure('invalid_integer', '关系修订号必须是非负安全整数', [
+        {
+          path: ['relationRevision'],
+          code: 'invalid_integer',
+          message: '关系修订号必须是非负安全整数',
+        },
+      ])
+    }
+    relationRevision = patch.relationRevision
+  }
+
+  let relationReview: RelationReview | null | undefined
+  if (patch.relationReview !== undefined) {
+    relationReview = patch.relationReview
+  }
+
   try {
     return await withDatabase(async (db) => {
       const transaction = db.transaction(PROJECT_STORE_NAME, 'readwrite')
@@ -792,6 +1451,9 @@ export async function updateProject(
           name: name ?? existing.name,
           engineVersion: engineVersion ?? existing.engineVersion,
           working: working ?? existing.working,
+          relationRevision: relationRevision ?? existing.relationRevision,
+          relationReview:
+            relationReview === undefined ? existing.relationReview : relationReview,
           baseline: baseline === undefined ? existing.baseline : baseline,
           updatedAt: nowIso(),
         }
@@ -1047,14 +1709,37 @@ export async function saveDraft(
 
         let project = existing
         let modelUpdated = false
+        const nextRelationRevision =
+          options.relationState?.relationRevision ??
+          draft.relationRevision ??
+          existing.relationRevision
+        const nextRelationReview =
+          options.relationState !== undefined
+            ? options.relationState.relationReview
+            : existing.relationReview
+
         if (conversion.ok) {
           project = {
             ...existing,
             working: conversion.chain,
+            relationRevision: nextRelationRevision,
+            relationReview: nextRelationReview,
             updatedAt: savedAt,
           }
           projectStore.put(project)
           modelUpdated = true
+        } else if (
+          nextRelationRevision !== existing.relationRevision ||
+          nextRelationReview !== existing.relationReview
+        ) {
+          // 草稿非法时仍要落关系修订号：失效不能等“合法落库”。
+          project = {
+            ...existing,
+            relationRevision: nextRelationRevision,
+            relationReview: nextRelationReview,
+            updatedAt: savedAt,
+          }
+          projectStore.put(project)
         }
 
         await done
@@ -1089,9 +1774,12 @@ export async function saveDraft(
 /* 导入导出                                                                   */
 /* -------------------------------------------------------------------------- */
 
-export function exportProjectJson(project: Project): string {
+export function exportProjectJson(
+  project: Project,
+  sources: ParsedProjectSources | null = null,
+): string {
   const exported: ExportedProjectJson = {
-    schemaVersion: STORAGE_SCHEMA_VERSION,
+    schemaVersion: PROJECT_SCHEMA_VERSION,
     unit: PROJECT_JSON_UNIT,
     qPerMm: Q_PER_MM,
     engineVersion: project.engineVersion,
@@ -1099,10 +1787,49 @@ export function exportProjectJson(project: Project): string {
     name: project.name,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
+    relationRevision: project.relationRevision,
+    relationReview: project.relationReview,
     working: project.working,
     baseline: project.baseline,
+    // 来源元数据与绑定随 JSON 导出，但 Blob 字节不在 JSON 中。
+    sources: {
+      documents: sources?.documents ?? [],
+      revisions: sources?.revisions ?? [],
+      bindings: sources?.bindings ?? [],
+      attachmentsIncluded: false,
+      notice: EXPORT_SOURCES_NOTICE,
+    },
   }
   return JSON.stringify(exported, null, 2)
+}
+
+/** 读取项目的来源元数据（文档 / 版本 / 绑定），不读取 Blob 字节。 */
+export async function loadProjectSources(
+  projectId: string,
+): Promise<StorageResult<ParsedProjectSources>> {
+  try {
+    const sources = await withDatabase(async (db) => {
+      const transaction = db.transaction(
+        [SOURCE_DOCUMENT_STORE_NAME, SOURCE_REVISION_STORE_NAME, BINDING_STORE_NAME],
+        'readonly',
+      )
+      const done = transactionDone(transaction)
+      const documents = (await requestResult(
+        transaction.objectStore(SOURCE_DOCUMENT_STORE_NAME).index('projectId').getAll(projectId),
+      )) as SourceDocument[]
+      const revisions = (await requestResult(
+        transaction.objectStore(SOURCE_REVISION_STORE_NAME).index('projectId').getAll(projectId),
+      )) as SourceRevision[]
+      const bindings = (await requestResult(
+        transaction.objectStore(BINDING_STORE_NAME).index('projectId').getAll(projectId),
+      )) as SourceBinding[]
+      await done
+      return { documents, revisions, bindings }
+    })
+    return { ok: true, value: sources }
+  } catch (error) {
+    return storageFailure(error, '读取项目来源元数据失败')
+  }
 }
 
 export async function exportProject(id: string): Promise<StorageResult<string>> {
@@ -1113,12 +1840,148 @@ export async function exportProject(id: string): Promise<StorageResult<string>> 
   if (loaded.value === null) {
     return failure('not_found', '项目不存在')
   }
-  return { ok: true, value: exportProjectJson(loaded.value) }
+  const sources = await loadProjectSources(id)
+  if (!sources.ok) {
+    return sources
+  }
+  return { ok: true, value: exportProjectJson(loaded.value, sources.value) }
+}
+
+function newImportedSourceId(prefix: string): string {
+  const cryptoApi = globalThis.crypto
+  const suffix =
+    cryptoApi !== undefined && typeof cryptoApi.randomUUID === 'function'
+      ? cryptoApi.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  return `${prefix}-${suffix}`
 }
 
 /**
- * 导入项目。校验、重新校验和重新计算都在写库之前完成；任何拒绝都不会写数据。
- * 通过 add 而不是 put 落库，ID 冲突时自动换新 ID，不覆盖已有项目。
+ * 写入导入项目与来源元数据。
+ *
+ * - 项目 ID 冲突时整个事务换新 ID 重试，绝不覆盖本地项目；
+ * - 文档 / 版本 / 绑定 ID 冲突时生成新 ID，并同步重写所有引用
+ *   （document.latestRevisionId、revision.documentId、binding.revisionId /
+ *   documentId），保证关联 ID 一致；
+ * - 项目、来源、导入事件在同一个事务，失败一起回滚。
+ */
+async function addProjectWithSources(
+  db: IDBDatabase,
+  initial: Project,
+  sources: ParsedProjectSources | null,
+): Promise<{ project: Project; idChanged: boolean }> {
+  let candidate = initial
+  let idChanged = false
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const transaction = db.transaction(
+      [
+        PROJECT_STORE_NAME,
+        SOURCE_DOCUMENT_STORE_NAME,
+        SOURCE_REVISION_STORE_NAME,
+        BINDING_STORE_NAME,
+        EVENT_STORE_NAME,
+      ],
+      'readwrite',
+    )
+    const done = transactionDone(transaction)
+    try {
+      const projectStore = transaction.objectStore(PROJECT_STORE_NAME)
+      const existing = await requestResult(projectStore.get(candidate.id))
+      if (existing !== undefined) {
+        candidate = { ...candidate, id: newProjectId() }
+        idChanged = true
+        await done
+        continue
+      }
+
+      if (sources !== null) {
+        const documentStore = transaction.objectStore(SOURCE_DOCUMENT_STORE_NAME)
+        const revisionStore = transaction.objectStore(SOURCE_REVISION_STORE_NAME)
+        const bindingStore = transaction.objectStore(BINDING_STORE_NAME)
+
+        const documentIdMap = new Map<string, string>()
+        for (const document of sources.documents) {
+          const conflict = await requestResult(documentStore.get(document.id))
+          documentIdMap.set(
+            document.id,
+            conflict === undefined ? document.id : newImportedSourceId('source-document'),
+          )
+        }
+        const revisionIdMap = new Map<string, string>()
+        for (const revision of sources.revisions) {
+          const conflict = await requestResult(revisionStore.get(revision.id))
+          revisionIdMap.set(
+            revision.id,
+            conflict === undefined ? revision.id : newImportedSourceId('source-revision'),
+          )
+        }
+
+        for (const document of sources.documents) {
+          documentStore.add({
+            ...document,
+            id: documentIdMap.get(document.id) as string,
+            projectId: candidate.id,
+            latestRevisionId: revisionIdMap.get(document.latestRevisionId) as string,
+          })
+        }
+        for (const revision of sources.revisions) {
+          revisionStore.add({
+            ...revision,
+            id: revisionIdMap.get(revision.id) as string,
+            projectId: candidate.id,
+            documentId: documentIdMap.get(revision.documentId) as string,
+            // JSON 不含 Blob 字节；blobKey 必须重新生成，否则会按旧键
+            // 读到已退役项目留下的同名 Blob，把缺附件伪装成可用来源。
+            blobKey: newImportedSourceId('source-blob'),
+          })
+        }
+        for (const binding of sources.bindings) {
+          const conflict = await requestResult(bindingStore.get(binding.id))
+          bindingStore.add({
+            ...binding,
+            id: conflict === undefined ? binding.id : newImportedSourceId('source-binding'),
+            projectId: candidate.id,
+            revisionId: revisionIdMap.get(binding.revisionId) as string,
+            documentId: documentIdMap.get(binding.documentId) as string,
+          })
+        }
+      }
+
+      projectStore.add(candidate)
+      transaction.objectStore(EVENT_STORE_NAME).add({
+        id: `project_imported:${candidate.id}`,
+        projectId: candidate.id,
+        type: 'project_imported',
+        createdAt: nowIso(),
+        message:
+          sources === null || sources.revisions.length === 0
+            ? '已导入项目 JSON（不含来源附件）。'
+            : `已导入项目 JSON 与 ${sources.revisions.length} 个来源版本元数据；附件未包含在数据备份中，需重新导入 PDF。`,
+      })
+      await done
+      return { project: candidate, idChanged }
+    } catch (error) {
+      try {
+        transaction.abort()
+      } catch {
+        // 事务可能已经 error/abort，忽略二次取消异常。
+      }
+      await done.catch(() => undefined)
+      if (errorName(error) !== 'ConstraintError') {
+        throw error
+      }
+      candidate = { ...candidate, id: newProjectId() }
+      idChanged = true
+    }
+  }
+
+  throw new Error('无法生成唯一的项目 ID')
+}
+
+/**
+ * 导入项目。校验、迁移和重新计算都在写库之前完成；任何拒绝都不会写数据。
+ * V1 文件迁移为 v2，V2 文件保留来源元数据但清除人工确认。
  */
 export async function importProject(
   input: ProjectJsonInput,
@@ -1144,14 +2007,27 @@ export async function importProject(
 
   try {
     const inserted = await withDatabase((db) =>
-      addProjectWithUniqueId(db, parsed.value.project),
+      addProjectWithSources(db, parsed.value.project, parsed.value.sources),
     )
+    const sourceSummary =
+      parsed.value.sources === null
+        ? null
+        : {
+            documents: parsed.value.sources.documents.length,
+            revisions: parsed.value.sources.revisions.length,
+            bindings: parsed.value.sources.bindings.length,
+            // JSON 数据备份不带 Blob：只要文件里有来源版本，附件就不可用。
+            attachmentsMissing: parsed.value.sources.revisions.length > 0,
+          }
     return {
       ok: true,
       value: {
         project: inserted.project,
         result: parsed.value.result,
         idChanged: inserted.idChanged,
+        warnings: parsed.value.warnings,
+        migratedFrom: parsed.value.migratedFrom,
+        sources: sourceSummary,
       },
     }
   } catch (error) {

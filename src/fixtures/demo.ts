@@ -46,6 +46,7 @@ function term(
     upperDeviationQ: parseMm(upper),
     sign,
     sourceNote: 'docs/MVP开发文档.md 第 8 节',
+    termRevision: 1,
   }
 }
 
@@ -60,7 +61,6 @@ function caseA(): ChainDefinition {
     ],
     target: { minQ: parseMm('0.1000'), maxQ: parseMm('0.3000') },
     assumptions: '内置演示案例 A，数值来自 docs/MVP开发文档.md 第 8 节。',
-    relationConfirmed: false,
   }
 }
 
@@ -75,7 +75,6 @@ function caseB(): ChainDefinition {
     ],
     target: { minQ: parseMm('0.1000'), maxQ: parseMm('0.3000') },
     assumptions: '内置演示案例 B，数值来自 docs/MVP开发文档.md 第 8 节。',
-    relationConfirmed: false,
   }
 }
 
@@ -88,7 +87,6 @@ function caseC(): ChainDefinition {
     ],
     target: { minQ: parseMm('-0.2000'), maxQ: parseMm('-0.0500') },
     assumptions: '内置演示案例 C，数值来自 docs/MVP开发文档.md 第 8 节。',
-    relationConfirmed: false,
   }
 }
 

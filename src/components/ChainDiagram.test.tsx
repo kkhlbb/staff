@@ -332,6 +332,7 @@ describe('ChainDiagram：与 useWorkspace 草稿数据衔接', () => {
             upper: '0.1000',
             sign: 1,
             sourceNote: '',
+            termRevision: 1,
           },
           {
             id: 'B1',
@@ -342,6 +343,7 @@ describe('ChainDiagram：与 useWorkspace 草稿数据衔接', () => {
             upper: '0.0000',
             sign: -1,
             sourceNote: '',
+            termRevision: 1,
           },
           {
             id: 'S',
@@ -352,6 +354,7 @@ describe('ChainDiagram：与 useWorkspace 草稿数据衔接', () => {
             upper: '0.0500',
             sign: -1,
             sourceNote: '',
+            termRevision: 1,
           },
           {
             id: 'B2',
@@ -362,12 +365,13 @@ describe('ChainDiagram：与 useWorkspace 草稿数据衔接', () => {
             upper: '0.0000',
             sign: -1,
             sourceNote: '',
+            termRevision: 1,
           },
         ],
         targetMin: '0.1000',
         targetMax: '0.3000',
+        relationRevision: 0,
         assumptions: '案例 A',
-        relationConfirmed: false,
       })
 
       return (

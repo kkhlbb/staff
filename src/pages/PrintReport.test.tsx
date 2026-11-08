@@ -8,6 +8,7 @@ import { ENGINE_VERSION } from '../domain/calculate'
 import type { ChainDefinition, DimensionTerm, Project } from '../domain/types'
 import { parseMm } from '../domain/units'
 import { createProject, saveDraft } from '../storage/projects'
+import { createRelationReview } from '../workspace/relation'
 import { deleteProjectDatabase } from '../test/projectDb'
 import { chainToDraft } from '../workspace/draft'
 import { PrintReport } from './PrintReport'
@@ -44,6 +45,7 @@ function makeTerm(input: TermInput): DimensionTerm {
     upperDeviationQ: parseMm(input.upper),
     sign: input.sign,
     sourceNote: input.sourceNote ?? '',
+    termRevision: 1,
   }
 }
 
@@ -90,12 +92,11 @@ const CASE_A_TERMS: TermInput[] = [
   },
 ]
 
-function makeCaseA(relationConfirmed: boolean): ChainDefinition {
+function makeCaseA(): ChainDefinition {
   return {
     terms: CASE_A_TERMS.map(makeTerm),
     target: { minQ: parseMm('0.1000'), maxQ: parseMm('0.3000') },
     assumptions: '假设各组成环独立，作用方向如表达式中标注。',
-    relationConfirmed,
   }
 }
 
@@ -113,7 +114,6 @@ function makeCaseB(): ChainDefinition {
     terms,
     target: { minQ: parseMm('0.1000'), maxQ: parseMm('0.3000') },
     assumptions: '基线方案：收紧 H 与 S 的偏差。',
-    relationConfirmed: true,
   }
 }
 
@@ -121,10 +121,16 @@ async function createCaseAProject(
   relationConfirmed = true,
   baseline: Project['baseline'] = null,
 ): Promise<Project> {
+  const working = makeCaseA()
+  const relationRevision = 1
   const created = await createProject({
     name: '案例 A 打印报告',
-    working: makeCaseA(relationConfirmed),
+    working,
     baseline,
+    relationRevision,
+    relationReview: relationConfirmed
+      ? createRelationReview(working, relationRevision, '2026-01-01T00:00:00.000Z')
+      : null,
   })
   if (!created.ok) {
     throw new Error(`创建测试项目失败：${created.error.message}`)
@@ -296,7 +302,7 @@ describe('PrintReport：报告门槛', () => {
 
   it('草稿无效时即使项目里保留已确认的有效方案，也不能出报告', async () => {
     const project = await createCaseAProject(true)
-    const invalidDraft = chainToDraft(makeCaseA(true))
+    const invalidDraft = chainToDraft(makeCaseA())
     invalidDraft.terms[0] = {
       ...invalidDraft.terms[0],
       upper: '-0.0100',

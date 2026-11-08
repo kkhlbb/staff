@@ -1,6 +1,10 @@
 import type { ChainDefinition, DimensionTerm, Q } from '../domain/types'
 import { formatMm, tryParseMm } from '../domain/units'
 import { validateChain } from '../domain/validation'
+import {
+  isRelationAffectingTermField,
+  isTermRevisionBumpingField,
+} from './relation'
 
 /**
  * 工作台输入草稿。所有尺寸和偏差保持用户输入的十进制字符串，
@@ -15,6 +19,8 @@ export interface TermDraft {
   upper: string
   sign: 1 | -1
   sourceNote: string
+  /** 与 DimensionTerm.termRevision 对应；数值/方向变化时递增。 */
+  termRevision: number
 }
 
 export interface WorkspaceDraft {
@@ -23,7 +29,11 @@ export interface WorkspaceDraft {
   targetMin: string
   targetMax: string
   assumptions: string
-  relationConfirmed: boolean
+  /**
+   * 关系修订号。影响关系确认的编辑（数值/方向/代号/增删环）递增；
+   * 草稿非法时也必须保留递增，不能在合法落库时才失效。
+   */
+  relationRevision: number
 }
 
 /** 键为 `${termId}.${field}`、`target.min` 或 `target.max`。 */
@@ -62,21 +72,20 @@ export type WorkspaceAction =
   | UpdateFieldAction
   | { type: 'setTarget'; targetMin: string; targetMax: string }
   | { type: 'setAssumptions'; assumptions: string }
-  | { type: 'setConfirmed'; confirmed: boolean }
 
 export const emptyDraft: WorkspaceDraft = {
   terms: [],
   targetMin: '',
   targetMax: '',
   assumptions: '',
-  relationConfirmed: false,
+  relationRevision: 0,
 }
 
 /**
  * 把已校验的领域链还原为输入草稿。
  *
  * 只在没有草稿缓存时用于打开项目（例如导入的旧项目）。所有数值按领域层的
- * formatMm 输出为十进制字符串，不经过浮点缩放；确认状态原样保留。
+ * formatMm 输出为十进制字符串，不经过浮点缩放；环修订号原样保留。
  */
 export function chainToDraft(chain: ChainDefinition): WorkspaceDraft {
   return {
@@ -89,11 +98,12 @@ export function chainToDraft(chain: ChainDefinition): WorkspaceDraft {
       upper: formatMm(term.upperDeviationQ),
       sign: term.sign,
       sourceNote: term.sourceNote,
+      termRevision: term.termRevision,
     })),
     targetMin: chain.target === null ? '' : formatMm(chain.target.minQ),
     targetMax: chain.target === null ? '' : formatMm(chain.target.maxQ),
     assumptions: chain.assumptions,
-    relationConfirmed: chain.relationConfirmed,
+    relationRevision: 0,
   }
 }
 
@@ -171,6 +181,7 @@ export function draftToChain(draft: WorkspaceDraft): DraftToChainResult {
       parseNumericField(term.upper, cellKey(term.id, 'upper'), cellErrors) ?? Number.NaN,
     sign: term.sign,
     sourceNote: term.sourceNote,
+    termRevision: term.termRevision,
   }))
 
   let target: ChainDefinition['target'] = null
@@ -184,7 +195,6 @@ export function draftToChain(draft: WorkspaceDraft): DraftToChainResult {
     terms,
     target,
     assumptions: draft.assumptions,
-    relationConfirmed: draft.relationConfirmed,
   })
 
   if (!validation.ok) {
@@ -204,18 +214,6 @@ export function draftToChain(draft: WorkspaceDraft): DraftToChainResult {
   return { ok: true, chain: validation.value }
 }
 
-function isConfirmationClearingField(
-  field: UpdateFieldAction['field'],
-): boolean {
-  return (
-    field === 'symbol' ||
-    field === 'sign' ||
-    field === 'nominal' ||
-    field === 'lower' ||
-    field === 'upper'
-  )
-}
-
 function replaceTerm(
   draft: WorkspaceDraft,
   termIndex: number,
@@ -226,6 +224,13 @@ function replaceTerm(
   return { ...draft, terms }
 }
 
+/**
+ * 唯一的草稿编辑入口。
+ *
+ * 关系修订号与环修订号在这里递增，而不是等 draftToChain 成功后才处理：
+ * 用户可以先把数值改成非法再改回，这一路径也留下单调递增的修订号，
+ * 从而保证旧确认不会因为“最终值相同”而自动恢复。
+ */
 export function workspaceReducer(
   draft: WorkspaceDraft,
   action: WorkspaceAction,
@@ -235,7 +240,8 @@ export function workspaceReducer(
       return {
         ...draft,
         terms: [...draft.terms, { ...action.term }],
-        relationConfirmed: false,
+        // 增环改变组成环集合，关系确认必然失效。
+        relationRevision: draft.relationRevision + 1,
       }
 
     case 'replaceDraft':
@@ -246,7 +252,11 @@ export function workspaceReducer(
       if (terms.length === draft.terms.length) {
         return draft
       }
-      return { ...draft, terms, relationConfirmed: false }
+      return {
+        ...draft,
+        terms,
+        relationRevision: draft.relationRevision + 1,
+      }
     }
 
     case 'moveTerm': {
@@ -261,6 +271,7 @@ export function workspaceReducer(
       const terms = draft.terms.slice()
       const [moved] = terms.splice(index, 1)
       terms.splice(targetIndex, 0, moved)
+      // 行顺序不在关系指纹里，调顺序不改变确认状态。
       return { ...draft, terms }
     }
 
@@ -276,20 +287,28 @@ export function workspaceReducer(
           return draft
         }
         return {
-          ...replaceTerm(draft, index, { ...term, sign: action.value }),
-          relationConfirmed: false,
+          ...replaceTerm(draft, index, {
+            ...term,
+            sign: action.value,
+            termRevision: term.termRevision + 1,
+          }),
+          relationRevision: draft.relationRevision + 1,
         }
       }
 
       if (term[action.field] === action.value) {
         return draft
       }
-      const next = replaceTerm(draft, index, {
+      const nextTerm: TermDraft = {
         ...term,
         [action.field]: action.value,
-      })
-      return isConfirmationClearingField(action.field)
-        ? { ...next, relationConfirmed: false }
+        termRevision: isTermRevisionBumpingField(action.field)
+          ? term.termRevision + 1
+          : term.termRevision,
+      }
+      const next = replaceTerm(draft, index, nextTerm)
+      return isRelationAffectingTermField(action.field)
+        ? { ...next, relationRevision: draft.relationRevision + 1 }
         : next
     }
 
@@ -300,6 +319,7 @@ export function workspaceReducer(
       ) {
         return draft
       }
+      // 目标不在关系指纹内：只影响判定，保留关系确认。
       return {
         ...draft,
         targetMin: action.targetMin,
@@ -311,11 +331,5 @@ export function workspaceReducer(
         return draft
       }
       return { ...draft, assumptions: action.assumptions }
-
-    case 'setConfirmed':
-      if (draft.relationConfirmed === action.confirmed) {
-        return draft
-      }
-      return { ...draft, relationConfirmed: action.confirmed }
   }
 }

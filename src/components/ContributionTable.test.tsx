@@ -22,11 +22,12 @@ function makeTerm(
     upperDeviationQ: parseMm(upperDeviation),
     sign,
     sourceNote: '',
+    termRevision: 1,
   }
 }
 
 function makeChain(terms: DimensionTerm[]): ChainDefinition {
-  return { terms, target: null, assumptions: '', relationConfirmed: false }
+  return { terms, target: null, assumptions: '' }
 }
 
 function caseAChain(): ChainDefinition {

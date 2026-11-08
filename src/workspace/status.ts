@@ -1,7 +1,8 @@
 import { calculateChain } from '../domain/calculate'
-import type { ChainDefinition, ChainResult } from '../domain/types'
+import type { ChainDefinition, ChainResult, RelationReview } from '../domain/types'
 import { validateChain } from '../domain/validation'
 import { chainToDraft, draftToChain, type WorkspaceDraft } from './draft'
+import { isRelationConfirmed } from './relation'
 
 /**
  * 工作台正式状态。数值判定只来自 calculateChain；是否已确认和当前草稿是否
@@ -98,6 +99,9 @@ export interface StoredWorkspaceStatusInput {
   working: ChainDefinition
   /** 独立保存的输入草稿；没有草稿时按工作方案还原输入。 */
   draft?: WorkspaceDraft | null
+  /** 项目当前的关系修订号与确认凭据。 */
+  relationRevision: number
+  relationReview: RelationReview | null
 }
 
 /**
@@ -110,14 +114,20 @@ export interface StoredWorkspaceStatusInput {
 export function resolveStoredWorkspaceStatus({
   working,
   draft = null,
+  relationRevision,
+  relationReview,
 }: StoredWorkspaceStatusInput): WorkspaceStatus {
   const effectiveDraft = draft ?? chainToDraft(working)
   const conversion = draftToChain(effectiveDraft)
+  // 草稿可能来自“失效之前”的版本：取项目与草稿修订号的较大值，
+  // 保证改后改回、非法中间态都不会让旧确认复活。
+  const currentRevision = Math.max(relationRevision, effectiveDraft.relationRevision)
+  const relationState = { relationRevision: currentRevision, relationReview }
 
   if (conversion.ok) {
     return resolveWorkspaceStatus({
       result: calculateChain(conversion.chain),
-      relationConfirmed: conversion.chain.relationConfirmed,
+      relationConfirmed: isRelationConfirmed(conversion.chain, relationState),
       stale: false,
     })
   }
@@ -125,7 +135,8 @@ export function resolveStoredWorkspaceStatus({
   const fallback = validateChain(working)
   return resolveWorkspaceStatus({
     result: fallback.ok ? calculateChain(fallback.value) : null,
-    relationConfirmed: effectiveDraft.relationConfirmed,
+    // 草稿无效时当前输入没有可核对的链，不能算已确认。
+    relationConfirmed: false,
     stale: true,
   })
 }

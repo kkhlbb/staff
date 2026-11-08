@@ -46,6 +46,7 @@ const chain: ChainDefinition = {
       upperDeviationQ: parseMm('0.1'),
       sign: 1,
       sourceNote: '',
+      termRevision: 1,
     },
     {
       id: 't-b',
@@ -56,11 +57,11 @@ const chain: ChainDefinition = {
       upperDeviationQ: parseMm('0'),
       sign: -1,
       sourceNote: '',
+      termRevision: 1,
     },
   ],
   target: { minQ: parseMm('0.05'), maxQ: parseMm('0.2') },
   assumptions: '',
-  relationConfirmed: true,
 }
 
 function draftFromChain(source: ChainDefinition): WorkspaceDraft {
@@ -74,11 +75,12 @@ function draftFromChain(source: ChainDefinition): WorkspaceDraft {
       upper: '0.1000',
       sign: term.sign,
       sourceNote: term.sourceNote,
+      termRevision: 1,
     })),
     targetMin: '0.05',
     targetMax: '0.2',
+    relationRevision: 0,
     assumptions: '',
-    relationConfirmed: true,
   }
 }
 

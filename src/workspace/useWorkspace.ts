@@ -9,6 +9,11 @@ import {
   type WorkspaceAction,
   type WorkspaceDraft,
 } from './draft'
+import {
+  isRelationConfirmed,
+  isRelationReviewStale,
+  type RelationState,
+} from './relation'
 
 export interface UseWorkspaceResult {
   draft: WorkspaceDraft
@@ -22,6 +27,10 @@ export interface UseWorkspaceResult {
   cellErrors: CellErrors
   /** 当前草稿是否无效（显示中的 result 已不是当前输入的结论）。 */
   stale: boolean
+  /** 由 relationRevision + 指纹 + 当前环数据派生，不是第二份可写布尔。 */
+  relationConfirmed: boolean
+  /** 曾确认过、但后续编辑已使凭据失效。 */
+  relationReviewStale: boolean
 }
 
 const EMPTY_CELL_ERRORS: CellErrors = {}
@@ -48,6 +57,7 @@ function validEvaluation(chain: ChainDefinition): Extract<Evaluation, { ok: true
 export function useWorkspace(
   initial?: WorkspaceDraft,
   fallbackChain?: ChainDefinition | null,
+  relationState: RelationState = { relationRevision: 0, relationReview: null },
 ): UseWorkspaceResult {
   const [draft, dispatch] = useReducer(workspaceReducer, initial ?? emptyDraft)
 
@@ -82,6 +92,23 @@ export function useWorkspace(
     setLastValid(evaluation)
   }
 
+  const relationConfirmed = isRelationConfirmed(
+    evaluation.ok ? evaluation.chain : null,
+    {
+      // 草稿修订号可能已超过持久化记录（编辑先于保存）；取较大值保证旧凭据
+      // 在首帧就失效，不必等 effect 再同步一次状态。
+      relationRevision: Math.max(draft.relationRevision, relationState.relationRevision),
+      relationReview: relationState.relationReview,
+    },
+  )
+  const relationReviewStale = isRelationReviewStale(
+    evaluation.ok ? evaluation.chain : null,
+    {
+      relationRevision: Math.max(draft.relationRevision, relationState.relationRevision),
+      relationReview: relationState.relationReview,
+    },
+  )
+
   if (evaluation.ok) {
     return {
       draft,
@@ -91,6 +118,8 @@ export function useWorkspace(
       result: evaluation.result,
       cellErrors: EMPTY_CELL_ERRORS,
       stale: false,
+      relationConfirmed,
+      relationReviewStale,
     }
   }
 
@@ -102,5 +131,7 @@ export function useWorkspace(
     result: lastValid?.result ?? null,
     cellErrors: evaluation.cellErrors,
     stale: true,
+    relationConfirmed: false,
+    relationReviewStale,
   }
 }

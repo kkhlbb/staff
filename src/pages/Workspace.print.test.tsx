@@ -36,10 +36,11 @@ function term(
     upperDeviationQ: parseMm(upper),
     sign,
     sourceNote: '',
+    termRevision: 1,
   }
 }
 
-function caseA(relationConfirmed: boolean): ChainDefinition {
+function caseA(): ChainDefinition {
   return {
     terms: [
       term('h', 'H', '机架', '100.0000', '0.0000', '0.1000', 1),
@@ -49,7 +50,6 @@ function caseA(relationConfirmed: boolean): ChainDefinition {
     ],
     target: { minQ: parseMm('0.1000'), maxQ: parseMm('0.3000') },
     assumptions: '',
-    relationConfirmed,
   }
 }
 
@@ -57,7 +57,7 @@ describe('Workspace：打印报告入口', () => {
   it('未确认时禁用并说明原因；确认后可打开；输入无效时再次禁用并说明原因', async () => {
     const created = await createProject({
       name: '打印入口测试',
-      working: caseA(false),
+      working: caseA(),
     })
     if (!created.ok) {
       throw new Error(created.error.message)

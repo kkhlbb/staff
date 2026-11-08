@@ -3,12 +3,14 @@ import { useState } from 'react'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { calculateChain } from '../domain/calculate'
-import type { ChainDefinition } from '../domain/types'
+import type { ChainDefinition, RelationReview } from '../domain/types'
 import {
   draftToChain,
+  emptyDraft,
   type TermDraft,
   type WorkspaceDraft,
 } from '../workspace/draft'
+import { createRelationReview } from '../workspace/relation'
 import { useWorkspace } from '../workspace/useWorkspace'
 import { DimensionTable } from './DimensionTable'
 
@@ -22,6 +24,7 @@ function term(overrides: Partial<TermDraft> = {}): TermDraft {
     upper: '0.1000',
     sign: 1,
     sourceNote: '',
+    termRevision: 1,
     ...overrides,
   }
 }
@@ -38,6 +41,7 @@ function caseATerms(): TermDraft[] {
       upper: '0.0000',
       sign: -1,
       sourceNote: '图纸 A-01',
+      termRevision: 1,
     }),
     term({
       id: 'S',
@@ -65,8 +69,8 @@ function caseADraft(): WorkspaceDraft {
     terms: caseATerms(),
     targetMin: '0.1000',
     targetMax: '0.3000',
+    relationRevision: 0,
     assumptions: '案例 A：不满足目标的轴向间隙',
-    relationConfirmed: true,
   }
 }
 
@@ -91,10 +95,24 @@ function resultValues(chain: ChainDefinition): string {
 
 /**
  * 只用真实 useWorkspace 驱动 DimensionTable；组件本身保持受控、无状态。
- * 额外的 output 便于断言 reducer 中的 relationConfirmed 和计算结果。
+ * 额外的 output 便于断言派生出的关系确认状态和计算结果。
  */
 function Harness({ initial }: { initial?: WorkspaceDraft }) {
-  const workspace = useWorkspace(initial)
+  const base = initial ?? emptyDraft
+  const initialConversion = draftToChain(base)
+  const [relationReview] = useState<RelationReview | null>(() =>
+    initialConversion.ok
+      ? createRelationReview(
+          initialConversion.chain,
+          base.relationRevision,
+          '2026-01-01T00:00:00.000Z',
+        )
+      : null,
+  )
+  const workspace = useWorkspace(base, undefined, {
+    relationRevision: base.relationRevision,
+    relationReview,
+  })
   const values =
     workspace.result === null
       ? ''
@@ -116,7 +134,7 @@ function Harness({ initial }: { initial?: WorkspaceDraft }) {
         stale={workspace.stale}
       />
       <output data-testid="relation-confirmed">
-        {String(workspace.draft.relationConfirmed)}
+        {String(workspace.relationConfirmed)}
       </output>
       <output data-testid="stale">{String(workspace.stale)}</output>
       <output data-testid="result-values">{values}</output>
@@ -219,7 +237,6 @@ describe('DimensionTable：字段与只读极限尺寸', () => {
     const remainingDraft: WorkspaceDraft = {
       ...caseADraft(),
       terms: caseATerms().filter((item) => item.id !== 'B1'),
-      relationConfirmed: false,
     }
     expect(screen.getByTestId('result-values').textContent).toBe(
       resultValues(chainOf(remainingDraft)),
@@ -285,7 +302,6 @@ describe('DimensionTable：方向、重排与确认状态', () => {
       terms: caseATerms().map((item, index) =>
         index === 0 ? { ...item, sign: -1 } : item,
       ),
-      relationConfirmed: false,
     }
     expect(screen.getByTestId('result-values').textContent).toBe(
       resultValues(chainOf(changedDraft)),
@@ -350,7 +366,6 @@ describe('DimensionTable：方向、重排与确认状态', () => {
       terms: caseATerms().map((item, index) =>
         index === 0 ? { ...item, upper: '0.0300' } : item,
       ),
-      relationConfirmed: false,
     }
     expect(screen.getByTestId('result-values').textContent).toBe(
       resultValues(chainOf(changedDraft)),
@@ -421,8 +436,8 @@ describe('DimensionTable：受控边界', () => {
           terms: [],
           targetMin: '',
           targetMax: '',
+          relationRevision: 0,
           assumptions: '',
-          relationConfirmed: false,
         }}
         dispatch={() => undefined}
         chain={null}

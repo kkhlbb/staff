@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { calculateChain } from '../domain/calculate'
 import type { ChainDefinition, DimensionTerm, Project } from '../domain/types'
 import { parseMm } from '../domain/units'
+import { createRelationReview } from '../workspace/relation'
 import {
   DEMO_DISCLAIMER,
   createDemoChain,
@@ -69,6 +70,7 @@ function term(
     upperDeviationQ: parseMm(upper),
     sign,
     sourceNote: '',
+    termRevision: 1,
   }
 }
 
@@ -83,7 +85,6 @@ function chainA(): ChainDefinition {
     ],
     target: { minQ: parseMm('0.1000'), maxQ: parseMm('0.3000') },
     assumptions: '',
-    relationConfirmed: true,
   }
 }
 
@@ -107,11 +108,27 @@ function chainB(): ChainDefinition {
 }
 
 async function seedCaseA(name = '案例 A'): Promise<Project> {
-  return expectOk(await createProject({ name, working: chainA() }))
+  const working = chainA()
+  return expectOk(
+    await createProject({
+      name,
+      working,
+      relationRevision: 1,
+      relationReview: createRelationReview(working, 1, '2026-01-01T00:00:00.000Z'),
+    }),
+  )
 }
 
 async function seedCaseB(name = '案例 B'): Promise<Project> {
-  return expectOk(await createProject({ name, working: chainB() }))
+  const working = chainB()
+  return expectOk(
+    await createProject({
+      name,
+      working,
+      relationRevision: 1,
+      relationReview: createRelationReview(working, 1, '2026-01-01T00:00:00.000Z'),
+    }),
+  )
 }
 
 function openWorkspace(project: Project): void {
@@ -145,6 +162,11 @@ function statusBadge(project: Project): HTMLElement {
 /** 等待自动保存从“保存中”落到“已保存”，确保返回列表前草稿已写入 IndexedDB。 */
 async function waitForAutoSave(): Promise<void> {
   await screen.findByText('保存中')
+  await screen.findByText('已保存', undefined, { timeout: 3000 })
+}
+
+/** 关系确认只写凭据、不改草稿，持久化可能瞬时完成；只等待落定。 */
+async function waitForSaveSettled(): Promise<void> {
   await screen.findByText('已保存', undefined, { timeout: 3000 })
 }
 
@@ -290,7 +312,7 @@ describe('ProjectList：项目列表操作', () => {
     }
     expect(copy.name).toBe('案例 A（副本）')
     // 复制通过导出/导入生成新项目，人工确认按导入规则清除。
-    expect(copy.working).toEqual({ ...chainA(), relationConfirmed: false })
+    expect(copy.working).toEqual({ ...chainA() })
     expect(expectOk(await getProject(original.id))).toEqual(original)
 
     expectOk(await updateProject(copy.id, { working: chainB() }))
@@ -374,10 +396,10 @@ describe('ProjectList：项目列表操作', () => {
     ).toBeInTheDocument()
 
     const unknownVersion = mutateJson(exportProjectJson(existing), (raw) => {
-      raw.schemaVersion = 2
+      raw.schemaVersion = 3
     })
     await uploadJson(jsonFile(unknownVersion, 'unknown-version.json'))
-    expect(await screen.findByText('未知版本：2')).toBeInTheDocument()
+    expect(await screen.findByText('未知版本：3')).toBeInTheDocument()
 
     await uploadJson(
       jsonFile('x'.repeat(MAX_IMPORT_BYTES + 1), 'too-large.json'),
@@ -420,7 +442,7 @@ describe('ProjectList：状态与工作台一致', () => {
       screen.getByRole('checkbox', { name: '已核对尺寸关系与作用方向' }),
     )
     expect(resultStatus()).toBe('满足')
-    await waitForAutoSave()
+    await waitForSaveSettled()
 
     await user.click(screen.getByRole('button', { name: '返回项目列表' }))
     await screen.findByRole('list', { name: '项目列表' })
@@ -467,7 +489,9 @@ describe('ProjectList：JSON 导出再导入', () => {
         .setup()
         .click(screen.getByRole('button', { name: '导出 JSON' }))
 
-      expect(download.blobs).toHaveLength(1)
+      await waitFor(() => {
+        expect(download.blobs).toHaveLength(1)
+      })
       const exportedJson = await readBlobText(download.blobs[0])
       const exportedRaw = JSON.parse(exportedJson) as Record<string, unknown>
       expect(exportedRaw.id).toBe(original.id)
@@ -492,9 +516,8 @@ describe('ProjectList：JSON 导出再导入', () => {
       // F-04：导入清除人工确认，但数值与重算结果保持一致。
       expect(imported.working).toEqual({
         ...original.working,
-        relationConfirmed: false,
       })
-      expect(imported.working.relationConfirmed).toBe(false)
+      expect(imported.relationReview).toBeNull()
       expect(calculateChain(imported.working)).toEqual(
         calculateChain(original.working),
       )
@@ -626,7 +649,7 @@ describe('ProjectList：内置演示案例', () => {
       screen.getByRole('checkbox', { name: '已核对尺寸关系与作用方向' }),
     )
     expect(resultStatus()).toBe('不满足')
-    await waitForAutoSave()
+    await waitForSaveSettled()
 
     await user.click(screen.getByRole('button', { name: '返回项目列表' }))
     await screen.findByRole('list', { name: '项目列表' })
@@ -659,7 +682,7 @@ describe('ProjectList：内置演示案例', () => {
       await user.click(confirmed)
       expect(confirmed).toBeChecked()
       expect(resultStatus()).toBe(item.status)
-      await waitForAutoSave()
+      await waitForSaveSettled()
 
       await user.click(screen.getByRole('button', { name: '返回项目列表' }))
       await screen.findByRole('list', { name: '项目列表' })

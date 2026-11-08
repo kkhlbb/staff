@@ -14,6 +14,7 @@ function term(overrides: Partial<TermDraft> = {}): TermDraft {
     upper: '0.1000',
     sign: 1,
     sourceNote: '',
+    termRevision: 1,
     ...overrides,
   }
 }

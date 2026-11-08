@@ -22,6 +22,7 @@ function term(overrides: Partial<TermDraft> = {}): TermDraft {
     upper: '0.1000',
     sign: 1,
     sourceNote: '',
+    termRevision: 1,
     ...overrides,
   }
 }
@@ -64,8 +65,8 @@ function caseADraft(): WorkspaceDraft {
     terms: caseATerms(),
     targetMin: '0.1000',
     targetMax: '0.3000',
+    relationRevision: 4,
     assumptions: '案例 A：不满足目标的轴向间隙',
-    relationConfirmed: true,
   }
 }
 
@@ -114,11 +115,10 @@ function buildCaseA(hook: { current: UseWorkspaceResult }): UseWorkspaceResult {
     targetMin: '0.1000',
     targetMax: '0.3000',
   })
-  dispatchAndCheck(hook, {
+  return dispatchAndCheck(hook, {
     type: 'setAssumptions',
     assumptions: '案例 A：不满足目标的轴向间隙',
   })
-  return dispatchAndCheck(hook, { type: 'setConfirmed', confirmed: true })
 }
 
 function chainOf(draft: WorkspaceDraft): ChainDefinition {
@@ -200,14 +200,14 @@ describe('useWorkspace：从空草稿建立 A 再改成 B', () => {
       type: 'setAssumptions',
       assumptions: '案例 A：不满足目标的轴向间隙',
     })
-    expect(state.draft.relationConfirmed).toBe(false)
-
-    state = dispatchAndCheck(result, { type: 'setConfirmed', confirmed: true })
+    // 4 次 addTerm 各递增一次；确认状态不再属于草稿。
+    expect(state.draft.relationRevision).toBe(4)
     expect(state.draft).toEqual(caseADraft())
     expect(state.result).toEqual(calculateChain(chainOf(state.draft)))
     expect(state.result?.minQ).toBe(q('0.1500'))
     expect(state.result?.maxQ).toBe(q('0.3900'))
     expect(state.result?.status).toBe('outside')
+    expect(state.relationConfirmed).toBe(false)
   })
 
   it('修改到 B 的每一步结果都等于对应 chain 的 calculateChain 输出', () => {
@@ -220,7 +220,7 @@ describe('useWorkspace：从空草稿建立 A 再改成 B', () => {
       field: 'upper',
       value: '0.0300',
     })
-    expect(state.draft.relationConfirmed).toBe(false)
+    expect(state.draft.relationRevision).toBeGreaterThan(4)
     expect(state.result?.maxQ).toBe(q('0.3200'))
 
     state = dispatchAndCheck(result, {
@@ -240,20 +240,14 @@ describe('useWorkspace：从空草稿建立 A 再改成 B', () => {
     })
     expect(state.result?.maxQ).toBe(q('0.2900'))
 
-    dispatchAndCheck(result, {
+    state = dispatchAndCheck(result, {
       type: 'setAssumptions',
       assumptions: '案例 B：修改后的满足方案',
     })
-    const confirmedB = dispatchAndCheck(result, {
-      type: 'setConfirmed',
-      confirmed: true,
-    })
-
-    expect(confirmedB.draft.relationConfirmed).toBe(true)
-    expect(confirmedB.result?.status).toBe('within')
-    expect(confirmedB.result?.minQ).toBe(q('0.1800'))
-    expect(confirmedB.result?.maxQ).toBe(q('0.2900'))
-    expect(confirmedB.result?.toleranceQ).toBe(q('0.1100'))
+    expect(state.result?.status).toBe('within')
+    expect(state.result?.minQ).toBe(q('0.1800'))
+    expect(state.result?.maxQ).toBe(q('0.2900'))
+    expect(state.result?.toleranceQ).toBe(q('0.1100'))
   })
 })
 

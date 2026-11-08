@@ -42,6 +42,7 @@ function chainA(): ChainDefinition {
         upperDeviationQ: parseMm('0.1'),
         sign: 1,
         sourceNote: '',
+        termRevision: 1,
       },
       {
         id: 'a-b1',
@@ -52,6 +53,7 @@ function chainA(): ChainDefinition {
         upperDeviationQ: parseMm('0'),
         sign: -1,
         sourceNote: '',
+        termRevision: 1,
       },
       {
         id: 'a-s',
@@ -62,6 +64,7 @@ function chainA(): ChainDefinition {
         upperDeviationQ: parseMm('0.05'),
         sign: -1,
         sourceNote: '',
+        termRevision: 1,
       },
       {
         id: 'a-b2',
@@ -72,11 +75,11 @@ function chainA(): ChainDefinition {
         upperDeviationQ: parseMm('0'),
         sign: -1,
         sourceNote: '',
+        termRevision: 1,
       },
     ],
     target: { minQ: parseMm('0.1'), maxQ: parseMm('0.3') },
     assumptions: '',
-    relationConfirmed: true,
   }
 }
 
@@ -125,7 +128,7 @@ describe('ImportWizard：IMP-01 主路径', () => {
 
     const imported = onImported.mock.calls[0][0]
     expect(imported.chain.terms).toHaveLength(4)
-    expect(imported.chain.relationConfirmed).toBe(false)
+    expect(imported.chain.terms.every((term) => term.termRevision === 1)).toBe(true)
     const result = calculateChain(imported.chain)
     expect(result.minQ).toBe(1500)
     expect(result.maxQ).toBe(3900)

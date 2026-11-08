@@ -25,6 +25,7 @@ function makeTerm(
     upperDeviationQ: mm(upperDeviation),
     sign,
     sourceNote: '',
+    termRevision: 1,
   }
 }
 
@@ -35,9 +36,8 @@ function makeTarget(min: string, max: string): { minQ: number; maxQ: number } {
 function makeChain(
   terms: DimensionTerm[],
   target: ChainDefinition['target'] = null,
-  relationConfirmed = false,
 ): ChainDefinition {
-  return { terms, target, assumptions: '', relationConfirmed }
+  return { terms, target, assumptions: '' }
 }
 
 function caseA(): ChainDefinition {
@@ -203,6 +203,7 @@ describe('文档第 8 节案例与单字段修改', () => {
       upperDeviationQ: mm('0.1200'),
       sign: -1,
       sourceNote: '图纸 A-02',
+      termRevision: 1,
     }
     const after = makeChain(
       before.terms.map((term) => (term.id === 'H' ? changedH : term)),
@@ -343,7 +344,7 @@ interface GeneratedTermValues {
 function toTerms(values: readonly GeneratedTermValues[]): DimensionTerm[] {
   return values.map((value, index) => {
     const id = `T${index + 1}`
-    return { id, symbol: id, name: id, ...value, sourceNote: '' }
+    return { id, symbol: id, name: id, ...value, sourceNote: '', termRevision: 1 }
   })
 }
 

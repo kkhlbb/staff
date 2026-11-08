@@ -373,10 +373,15 @@ export async function importSourceRevision(
         }
 
         const revisionStore = transaction.objectStore(SOURCE_REVISION_STORE_NAME)
-        const retained = (await requestResult(
-          revisionStore.index('projectId').getAll(projectId),
-        )) as SourceRevision[]
-        const usedBytes = sumRevisionBytes(retained)
+        // 额度按实际占用的 Blob 字节统计，而不是 revision.byteSize：从 JSON
+        // 恢复的来源元数据没有附件，不能因为“文件里写着 2 MB”就占满新项目额度。
+        const retainedBlobs = (await requestResult(
+          transaction
+            .objectStore(SOURCE_BLOB_STORE_NAME)
+            .index('projectId')
+            .getAll(projectId),
+        )) as { byteSize: number }[]
+        const usedBytes = retainedBlobs.reduce((total, blob) => total + blob.byteSize, 0)
         if (exceedsProjectLimit(usedBytes, byteSize, limits)) {
           abortQuietly(transaction)
           await done.catch(() => undefined)

@@ -10,6 +10,14 @@ import {
 } from '../domain/types'
 import { formatMm, parseMm } from '../domain/units'
 import { draftToChain, type WorkspaceDraft } from '../workspace/draft'
+import { createRelationReview } from '../workspace/relation'
+import { createSourceBinding, listSourceBindings } from '../sources/bindings'
+import {
+  importSourceRevision,
+  listSourceDocuments,
+  listSourceRevisions,
+} from '../sources/revisions'
+import { buildSyntheticPdf } from '../test/pdfFixtures'
 import {
   MAX_CHAIN_TERMS,
   MAX_IMPORT_BYTES,
@@ -17,6 +25,7 @@ import {
   createEmptyProject,
   createProject,
   deleteProject,
+  exportProject,
   exportProjectJson,
   getDraft,
   getProject,
@@ -25,7 +34,6 @@ import {
   saveDraft,
   updateProject,
   type ProjectJsonInput,
-  type StorageResult,
 } from './projects'
 
 function deleteProjectDatabase(): Promise<void> {
@@ -69,6 +77,7 @@ function term(
     upperDeviationQ: parseMm(upper),
     sign,
     sourceNote: '',
+    termRevision: 1,
   }
 }
 
@@ -83,7 +92,6 @@ function chainA(): ChainDefinition {
     ],
     target: { minQ: parseMm('0.1000'), maxQ: parseMm('0.3000') },
     assumptions: '案例 A 假设',
-    relationConfirmed: true,
   }
 }
 
@@ -108,7 +116,6 @@ function chainC(): ChainDefinition {
     ],
     target: { minQ: parseMm('-0.2000'), maxQ: parseMm('-0.0500') },
     assumptions: '案例 C 假设',
-    relationConfirmed: true,
   }
 }
 
@@ -123,15 +130,18 @@ function draftFromChain(chain: ChainDefinition): WorkspaceDraft {
       upper: formatMm(item.upperDeviationQ),
       sign: item.sign,
       sourceNote: item.sourceNote,
+      termRevision: 1,
     })),
     targetMin: chain.target === null ? '' : formatMm(chain.target.minQ),
     targetMax: chain.target === null ? '' : formatMm(chain.target.maxQ),
+    relationRevision: 0,
     assumptions: chain.assumptions,
-    relationConfirmed: chain.relationConfirmed,
   }
 }
 
-function expectOk<T>(result: StorageResult<T>): T {
+function expectOk<T>(
+  result: { ok: true; value: T } | { ok: false; error: { code: string; message: string } },
+): T {
   expect(result.ok).toBe(true)
   if (!result.ok) {
     throw new Error(`expected ok, got ${result.error.code}: ${result.error.message}`)
@@ -167,7 +177,7 @@ describe('IndexedDB 项目 CRUD 与草稿', () => {
       }),
     )
 
-    expect(created.schemaVersion).toBe(1)
+    expect(created.schemaVersion).toBe(2)
     expect(created.name).toBe('案例 A')
     expect(created.baseline).toEqual({ savedAt, definition: chainA() })
     expect(created.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
@@ -225,12 +235,13 @@ describe('IndexedDB 项目 CRUD 与草稿', () => {
           upper: '0.1000',
           sign: 1,
           sourceNote: '',
+          termRevision: 1,
         },
       ],
       targetMin: '',
       targetMax: '',
+      relationRevision: 0,
       assumptions: '待修正',
-      relationConfirmed: false,
     }
 
     const savedInvalid = expectOk(await saveDraft(created.id, invalidDraft))
@@ -304,7 +315,6 @@ describe('项目 JSON 导出导入', () => {
     const imported = expectOk(await importProjectJson(json))
     expect(imported.project.working).toEqual({
       ...chain,
-      relationConfirmed: false,
     })
     expect(imported.result).toEqual(originalResult)
     expect(calculateChain(imported.project.working)).toEqual(originalResult)
@@ -319,14 +329,16 @@ describe('项目 JSON 导出导入', () => {
         name: '已确认项目',
         working: chainA(),
         baseline: { savedAt, definition: chainA() },
+        relationRevision: 1,
+        relationReview: createRelationReview(chainA(), 1, savedAt),
       }),
     )
     const json = exportProjectJson(created)
 
     const imported = expectOk(await importProjectJson(json))
 
-    expect(imported.project.working.relationConfirmed).toBe(false)
-    expect(imported.project.baseline?.definition.relationConfirmed).toBe(false)
+    expect(imported.project.relationReview).toBeNull()
+    expect(imported.project.relationRevision).toBe(2)
     expect(imported.project.baseline?.savedAt).toBe(savedAt)
     // 数值、方向与结果不因清除确认而变化；结果由导入后的定义重新计算。
     expect(
@@ -428,7 +440,7 @@ describe('项目 JSON 拒收规则', () => {
       expectedCode: 'unknown_schema_version',
       makePayload: (json) =>
         mutateJson(json, (raw) => {
-          raw.schemaVersion = 2
+          raw.schemaVersion = 3
         }),
     },
     {
@@ -557,5 +569,238 @@ describe('项目 JSON 拒收规则', () => {
 
     expect(expectOk(await listProjects())).toEqual(before)
     expect(expectOk(await getProject(existing.id))).toEqual(existing)
+  })
+})
+
+describe('V1 项目 JSON 导入：迁移到 v2、清确认、ID 冲突', () => {
+  function legacyJson(id: string): string {
+    return JSON.stringify({
+      schemaVersion: 1,
+      unit: 'q',
+      qPerMm: Q_PER_MM,
+      engineVersion: 'v1-engine',
+      id,
+      name: '旧文件项目',
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-02T00:00:00.000Z',
+      working: {
+        terms: [
+          {
+            id: 'a-h',
+            symbol: 'H',
+            name: '孔',
+            nominalQ: parseMm('100'),
+            lowerDeviationQ: parseMm('0'),
+            upperDeviationQ: parseMm('0.1'),
+            sign: 1,
+            sourceNote: '旧备注',
+          },
+          {
+            id: 'a-b',
+            symbol: 'B',
+            name: '轴',
+            nominalQ: parseMm('99.9'),
+            lowerDeviationQ: parseMm('-0.05'),
+            upperDeviationQ: parseMm('0'),
+            sign: -1,
+            sourceNote: '',
+          },
+        ],
+        target: { minQ: parseMm('0.05'), maxQ: parseMm('0.2') },
+        assumptions: '旧假设',
+        relationConfirmed: true,
+      },
+      baseline: {
+        savedAt: '2025-01-01T12:00:00.000Z',
+        definition: {
+          terms: [
+            {
+              id: 'b-h',
+              symbol: 'H',
+              name: '孔',
+              nominalQ: parseMm('100'),
+              lowerDeviationQ: parseMm('0'),
+              upperDeviationQ: parseMm('0.05'),
+              sign: 1,
+              sourceNote: '',
+            },
+            {
+              id: 'b-b',
+              symbol: 'B',
+              name: '轴',
+              nominalQ: parseMm('99.9'),
+              lowerDeviationQ: parseMm('-0.05'),
+              upperDeviationQ: parseMm('0'),
+              sign: -1,
+              sourceNote: '',
+            },
+          ],
+          target: null,
+          assumptions: '',
+          relationConfirmed: true,
+        },
+      },
+    })
+  }
+
+  it('保留整数 q、基线与项目信息，补 termRevision=1，清除旧人工确认', async () => {
+    const imported = expectOk(await importProjectJson(legacyJson('legacy-1')))
+
+    expect(imported.project.schemaVersion).toBe(2)
+    expect(imported.project.name).toBe('旧文件项目')
+    expect(imported.project.engineVersion).toBe('v1-engine')
+    expect(imported.project.working.terms.map((term) => term.nominalQ)).toEqual([
+      parseMm('100'),
+      parseMm('99.9'),
+    ])
+    expect(imported.project.working.terms.map((term) => term.termRevision)).toEqual([1, 1])
+    expect(imported.project.working.terms[1].sign).toBe(-1)
+    expect(imported.project.working.assumptions).toBe('旧假设')
+    expect(imported.project.relationRevision).toBe(1)
+    expect(imported.project.relationReview).toBeNull()
+    expect(imported.project.baseline?.savedAt).toBe('2025-01-01T12:00:00.000Z')
+    expect(
+      imported.project.baseline?.definition.terms.map((term) => term.termRevision),
+    ).toEqual([1, 1])
+    expect(imported.migratedFrom).toBe(1)
+    expect(imported.sources).toBeNull()
+    expect(imported.warnings.join(' ')).toContain('V1')
+    expect(imported.warnings.join(' ')).toContain('旧的人工确认没有版本凭据')
+    // 文件里的结果字段从不读取，一律由导入后的定义重新计算。
+    expect(imported.result).toEqual(calculateChain(imported.project.working))
+  })
+
+  it('ID 冲突时生成新 ID，已有项目不被覆盖', async () => {
+    const existing = expectOk(
+      await createProject({ name: '本地项目', working: chainA() }),
+    )
+    const imported = expectOk(await importProjectJson(legacyJson(existing.id)))
+
+    expect(imported.idChanged).toBe(true)
+    expect(imported.project.id).not.toBe(existing.id)
+    expect(expectOk(await getProject(existing.id))).toEqual(existing)
+    const all = expectOk(await listProjects())
+    expect(all.map((project) => project.id).sort()).toEqual(
+      [existing.id, imported.project.id].sort(),
+    )
+  })
+
+  it('V1 文件里的非法数值仍整体拒收，零写入', async () => {
+    const existing = await seedProject()
+    const before = expectOk(await listProjects())
+    const raw = JSON.parse(legacyJson('bad-1')) as {
+      working: { terms: { nominalQ: number }[] }
+    }
+    raw.working.terms[0].nominalQ = 0.5
+    const result = await importProjectJson(JSON.stringify(raw))
+    expect(result.ok).toBe(false)
+    expect(expectOk(await listProjects())).toEqual(before)
+    expect(expectOk(await getProject(existing.id))).toEqual(existing)
+  })
+})
+
+describe('V2 项目 JSON：来源元数据与绑定往返，附件不包含', () => {
+  it('导出包含文档/版本/绑定与不含附件提示，导入后附件不可用', async () => {
+    const project = expectOk(
+      await createProject({
+        name: '带来源项目',
+        working: chainA(),
+        relationRevision: 1,
+        relationReview: createRelationReview(chainA(), 1, '2026-01-01T00:00:00.000Z'),
+      }),
+    )
+    const bytes = buildSyntheticPdf({ pageCount: 2 })
+    const source = await importSourceRevision({
+      projectId: project.id,
+      fileName: '图纸 A.pdf',
+      bytes,
+    })
+    expect(source.ok, source.ok ? '' : source.error.message).toBe(true)
+    if (!source.ok) {
+      return
+    }
+    const revision = source.value.revision
+
+    const binding = await createSourceBinding({
+      projectId: project.id,
+      termId: 'a-h',
+      revisionId: revision.id,
+      page: 1,
+      rectPdf: [10, 20, 110, 120],
+      pageBoxPdf: [0, 0, 600, 800],
+      note: 'H 尺寸',
+    })
+    expect(binding.ok, binding.ok ? '' : binding.error.message).toBe(true)
+
+    const exported = expectOk(await exportProject(project.id))
+    const raw = JSON.parse(exported) as {
+      schemaVersion: number
+      relationReview: unknown
+      sources: {
+        attachmentsIncluded: boolean
+        notice: string
+        documents: unknown[]
+        revisions: { blobKey: string }[]
+        bindings: { rectPdf: number[]; reviewedTermRevision?: unknown }[]
+      }
+    }
+    expect(raw.schemaVersion).toBe(2)
+    expect(raw.relationReview).not.toBeNull()
+    expect(raw.sources.attachmentsIncluded).toBe(false)
+    expect(raw.sources.notice).toContain('数据备份不含来源附件')
+    expect(raw.sources.documents).toHaveLength(1)
+    expect(raw.sources.revisions).toHaveLength(1)
+    expect(raw.sources.bindings).toHaveLength(1)
+    expect(raw.sources.bindings[0].rectPdf).toEqual([10, 20, 110, 120])
+    // JSON 里不能出现 Blob 字节。
+    expect(exported).not.toContain('base64')
+
+    const imported = expectOk(await importProjectJson(exported))
+    expect(imported.project.relationReview).toBeNull()
+    expect(imported.sources).toEqual({
+      documents: 1,
+      revisions: 1,
+      bindings: 1,
+      attachmentsMissing: true,
+    })
+    expect(imported.warnings.join(' ')).toContain('数据备份不含来源附件')
+
+    const importedRevisions = expectOk(
+      await listSourceRevisions(imported.project.id),
+    )
+    expect(importedRevisions).toHaveLength(1)
+    expect(importedRevisions[0].blobKey).not.toBe(revision.blobKey)
+    const importedBindings = expectOk(await listSourceBindings(imported.project.id))
+    expect(importedBindings).toHaveLength(1)
+    expect(importedBindings[0].termId).toBe('a-h')
+    expect(importedBindings[0].page).toBe(1)
+    expect(importedBindings[0].rectPdf).toEqual([10, 20, 110, 120])
+    expect(importedBindings[0].revisionId).toBe(importedRevisions[0].id)
+  })
+
+  it('来源 ID 与本地冲突时整体重映射，引用保持一致', async () => {
+    const first = expectOk(await createProject({ name: '第一个', working: chainA() }))
+    const bytes = buildSyntheticPdf({ pageCount: 1 })
+    const source = await importSourceRevision({
+      projectId: first.id,
+      fileName: '同名.pdf',
+      bytes,
+    })
+    expect(source.ok).toBe(true)
+    if (!source.ok) {
+      return
+    }
+    const exported = expectOk(await exportProject(first.id))
+
+    const second = expectOk(await importProjectJson(exported))
+    expect(second.idChanged).toBe(true)
+    const revisions = expectOk(await listSourceRevisions(second.project.id))
+    const documents = expectOk(await listSourceDocuments(second.project.id))
+    expect(revisions).toHaveLength(1)
+    expect(documents).toHaveLength(1)
+    expect(revisions[0].id).not.toBe(source.value.revision.id)
+    expect(documents[0].id).not.toBe(source.value.document.id)
+    expect(documents[0].latestRevisionId).toBe(revisions[0].id)
+    expect(revisions[0].documentId).toBe(documents[0].id)
   })
 })

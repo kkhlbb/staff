@@ -332,7 +332,9 @@ function cellErrorsForRow(
 }
 
 /** 把预览行转成工作台草稿 term；id 基于原文行号，提交前还会按现有环去重。 */
-export function termToDraftValues(term: ImportTerm): Omit<TermDraft, 'id'> {
+export function termToDraftValues(
+  term: ImportTerm,
+): Omit<TermDraft, 'id' | 'termRevision'> {
   return {
     symbol: term.symbol,
     name: term.name,

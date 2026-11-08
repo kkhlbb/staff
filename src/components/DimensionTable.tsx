@@ -115,6 +115,7 @@ function createEmptyTerm(terms: TermDraft[]): TermDraft {
     upper: '0.0000',
     sign: 1,
     sourceNote: '',
+    termRevision: 1,
   }
 }
 

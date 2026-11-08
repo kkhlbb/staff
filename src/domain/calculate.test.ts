@@ -20,6 +20,7 @@ function makeTerm(
     upperDeviationQ: parseMm(upperDeviation),
     sign,
     sourceNote: '',
+    termRevision: 1,
   }
 }
 
@@ -30,9 +31,8 @@ function makeTarget(min: string, max: string): { minQ: number; maxQ: number } {
 function makeChain(
   terms: DimensionTerm[],
   target: { minQ: number; maxQ: number } | null = null,
-  relationConfirmed = false,
 ): ChainDefinition {
-  return { terms, target, assumptions: '', relationConfirmed }
+  return { terms, target, assumptions: '' }
 }
 
 function caseA(): ChainDefinition {
@@ -199,9 +199,9 @@ describe('特殊输入', () => {
     expect(ratios[1].ratio).toBeCloseTo(1 / 3, 12)
   })
 
-  it('status 不读取 relationConfirmed', () => {
-    expect(calculateChain({ ...caseA(), relationConfirmed: true }).status).toBe('outside')
-    expect(calculateChain({ ...caseB(), relationConfirmed: false }).status).toBe('within')
+  it('status 只由数值与目标决定，不读取确认凭据', () => {
+    expect(calculateChain({ ...caseA(), assumptions: '任意说明' }).status).toBe('outside')
+    expect(calculateChain({ ...caseB(), assumptions: '' }).status).toBe('within')
   })
 
   it('不修改输入', () => {
@@ -224,6 +224,7 @@ describe('特殊输入', () => {
       upperDeviationQ: 0,
       sign: 1,
       sourceNote: '',
+      termRevision: 1,
       ...overrides,
     })
 
@@ -258,7 +259,7 @@ interface GeneratedTermValues {
 function toTerms(values: readonly GeneratedTermValues[]): DimensionTerm[] {
   return values.map((value, index) => {
     const id = `T${index + 1}`
-    return { id, symbol: id, name: id, ...value, sourceNote: '' }
+    return { id, symbol: id, name: id, ...value, sourceNote: '', termRevision: 1 }
   })
 }
 

@@ -1,4 +1,4 @@
-import { useId, useState, type Dispatch } from 'react'
+import { useId, type Dispatch } from 'react'
 import type { ChainDefinition, ChainResult, Q } from '../domain/types'
 import { formatMm } from '../domain/units'
 import {
@@ -23,11 +23,12 @@ export interface ResultPanelProps {
   terms?: readonly ContributionTermLabel[]
   cellErrors: CellErrors
   stale: boolean
-}
-
-interface ConfirmationSnapshot {
+  /** 由关系凭据派生的只读状态；不是可写布尔。 */
   relationConfirmed: boolean
-  terms: WorkspaceDraft['terms']
+  /** 曾经确认、但后续编辑已使凭据失效。 */
+  relationReviewStale: boolean
+  /** 唯一的确认命令，持久化关系凭据。 */
+  onSetRelationConfirmed: (confirmed: boolean) => void
 }
 
 function formatValue(value: Q | null, signed = false): string {
@@ -281,6 +282,9 @@ export function ResultPanel({
   terms,
   cellErrors,
   stale,
+  relationConfirmed,
+  relationReviewStale,
+  onSetRelationConfirmed,
 }: ResultPanelProps) {
   const baseId = useId()
   const headingId = `${baseId}-heading`
@@ -298,38 +302,9 @@ export function ResultPanel({
   const displayTarget = targetInvalid ? null : target
   const currentStatus = resolveWorkspaceStatus({
     result,
-    relationConfirmed: draft.relationConfirmed,
+    relationConfirmed,
     stale,
   }).label
-
-  // 按 React 文档“存储前一次渲染的信息”的写法比较前后两次草稿：
-  // 仅当确认状态由“已确认”变为“未确认”，且 terms 引用也发生变化时，
-  // 才认定为编辑清除了确认；用户手动取消勾选不会误报。
-  const [confirmationSnapshot, setConfirmationSnapshot] =
-    useState<ConfirmationSnapshot>({
-      relationConfirmed: draft.relationConfirmed,
-      terms: draft.terms,
-    })
-  const [confirmationCleared, setConfirmationCleared] = useState(false)
-
-  const relationConfirmedChanged =
-    draft.relationConfirmed !== confirmationSnapshot.relationConfirmed
-  const termsChanged = draft.terms !== confirmationSnapshot.terms
-  if (relationConfirmedChanged || termsChanged) {
-    if (
-      confirmationSnapshot.relationConfirmed &&
-      !draft.relationConfirmed &&
-      termsChanged
-    ) {
-      setConfirmationCleared(true)
-    } else if (draft.relationConfirmed) {
-      setConfirmationCleared(false)
-    }
-    setConfirmationSnapshot({
-      relationConfirmed: draft.relationConfirmed,
-      terms: draft.terms,
-    })
-  }
 
   const updateTarget = (targetMin: string, targetMax: string) => {
     dispatch({ type: 'setTarget', targetMin, targetMax })
@@ -469,17 +444,12 @@ export function ResultPanel({
           <input
             id={confirmedId}
             type="checkbox"
-            checked={draft.relationConfirmed}
-            onChange={(event) =>
-              dispatch({
-                type: 'setConfirmed',
-                confirmed: event.target.checked,
-              })
-            }
+            checked={relationConfirmed}
+            onChange={(event) => onSetRelationConfirmed(event.target.checked)}
           />
           已核对尺寸关系与作用方向
         </label>
-        {confirmationCleared && (
+        {relationReviewStale && (
           <p className="result-panel__confirmation-hint" role="status">
             输入已变更，请重新核对
           </p>

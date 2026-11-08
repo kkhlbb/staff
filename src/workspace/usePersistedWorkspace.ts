@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ChainDefinition, Project } from '../domain/types'
+import type { ChainDefinition, Project, RelationReview } from '../domain/types'
 import { validateChain } from '../domain/validation'
 import {
   createEmptyProject,
@@ -7,8 +7,10 @@ import {
   getDraft,
   getProject,
   listProjects,
+  loadProjectSources,
   saveDraft as persistDraft,
   updateProject,
+  type ParsedProjectSources,
   type SaveDraftResult,
   type StorageError,
   type StorageResult,
@@ -17,6 +19,7 @@ import {
   chainToDraft,
   type WorkspaceDraft,
 } from './draft'
+import { createRelationReview, type RelationState } from './relation'
 import { useWorkspace, type UseWorkspaceResult } from './useWorkspace'
 
 /** 文档第 7 节要求自动保存防抖约 500 ms。 */
@@ -52,6 +55,8 @@ interface BootstrapReady {
    * 空白项目和从未保存过有效方案的项目为 null。
    */
   initialValidChain: ChainDefinition | null
+  /** 本地 V1 项目刚升级时的提示；未迁移为 null。 */
+  migrationNotice: string | null
 }
 
 type BootstrapState = BootstrapLoading | BootstrapError | BootstrapReady
@@ -74,6 +79,9 @@ function emptyBootstrapError(): StorageError {
  *
  * 只有全部读取完成后才返回 ready。页面在 ready 之前只渲染加载状态，
  * 不会先渲染空项目再被恢复的数据覆盖。
+ *
+ * 本地 V1 项目由 storage 在读取时升级；升级后的项目带 migration 标记，
+ * 这里据此给出“旧确认已清除，需要重新确认”的明确提示。
  */
 export function useWorkspaceBootstrap(projectId?: string): WorkspaceBootstrap {
   const [reloadToken, setReloadToken] = useState(0)
@@ -147,13 +155,24 @@ export function useWorkspaceBootstrap(projectId?: string): WorkspaceBootstrap {
 
       const workingDraft = chainToDraft(project.working)
       const workingValidation = validateChain(project.working)
+      // 草稿优先于项目里的最后一个有效方案；无效草稿也要原样恢复。
+      const restoredDraft = storedDraft.value === null ? workingDraft : storedDraft.value.draft
       setState({
         status: 'ready',
         project,
-        // 草稿优先于项目里的最后一个有效方案；无效草稿也要原样恢复。
-        initialDraft:
-          storedDraft.value === null ? workingDraft : storedDraft.value.draft,
+        initialDraft: {
+          ...restoredDraft,
+          // 项目记录是关系修订号的权威；草稿可能停在上一次保存。
+          relationRevision: Math.max(
+            project.relationRevision,
+            restoredDraft.relationRevision,
+          ),
+        },
         initialValidChain: workingValidation.ok ? workingValidation.value : null,
+        migrationNotice:
+          project.migration === null
+            ? null
+            : '此项目从旧版本（V1）升级。旧的人工确认没有版本凭据，已清除；请重新核对尺寸关系与作用方向。项目、基线与未通过的草稿输入均已保留。',
       })
     }
 
@@ -191,7 +210,13 @@ export interface UsePersistedWorkspaceResult extends UseWorkspaceResult {
   restoreBaseline: () => Promise<StorageResult<SaveDraftResult>>
   /** 保存失败后立即重新保存当前草稿，不再等待防抖。 */
   retrySave: () => Promise<void>
-  exportBackup: () => void
+  /** 导出项目 JSON（含来源元数据与绑定，但不含附件）；返回来源版本数，失败为 null。 */
+  exportBackup: () => Promise<number | null>
+  /**
+   * 唯一的确认命令：写入或清除关系确认凭据。
+   * 确认状态本身不写入草稿布尔，判定始终由 relation.ts 派生。
+   */
+  setRelationConfirmed: (confirmed: boolean) => Promise<StorageResult<Project>>
 }
 
 function saveFailure(error: unknown): { ok: false; error: StorageError } {
@@ -227,9 +252,23 @@ function missingBaselineFailure(): { ok: false; error: StorageError } {
   }
 }
 
+function unconfirmedFailure(): { ok: false; error: StorageError } {
+  return {
+    ok: false,
+    error: {
+      code: 'invalid_chain',
+      message: '当前输入未通过校验，不能确认尺寸关系',
+      details: [],
+    },
+  }
+}
+
 /** 用浏览器下载导出项目 JSON；存储失败和引导失败时共用。 */
-export function downloadProjectBackup(project: Project): void {
-  const json = exportProjectJson(project)
+export function downloadProjectBackup(
+  project: Project,
+  sources: ParsedProjectSources | null = null,
+): void {
+  const json = exportProjectJson(project, sources)
   // jsdom 等测试环境没有 Blob URL；浏览器中正常下载，测试环境无操作即可。
   if (typeof URL.createObjectURL !== 'function') {
     return
@@ -246,23 +285,32 @@ export function downloadProjectBackup(project: Project): void {
 }
 
 /**
- * 工作台编辑状态 + 自动保存。
+ * 工作台编辑状态 + 自动保存 + 关系确认。
  *
  * 草稿每次变化后先显示“保存中”，500 ms 内没有新变化才写入 IndexedDB。
- * 保存失败始终进入 failed，绝不显示“已保存”；并发保存用代数计数防止
- * 旧请求覆盖新状态。
+ * 关系修订号变化时不等防抖，立即写入项目记录，保证“改成非法再改回”
+ * 或短时间刷新也不会保留旧确认。
  */
 export function usePersistedWorkspace(
   project: Project,
   initialDraft: WorkspaceDraft,
   options: PersistedWorkspaceOptions = {},
 ): UsePersistedWorkspaceResult {
-  const workspace = useWorkspace(initialDraft, options.initialValidChain)
+  const [relationState, setRelationState] = useState<RelationState>({
+    relationRevision: project.relationRevision,
+    relationReview: project.relationReview,
+  })
+  // 当前生效修订号取草稿与已确认状态的最大值：编辑会先递增草稿修订号，
+  // 首帧即可让旧凭据失效，不需要在 effect 里补一次 setState。
+  const workspace = useWorkspace(initialDraft, options.initialValidChain, relationState)
   const { draft, dispatch, chain, lastValidChain } = workspace
   const debounceMs = options.debounceMs ?? AUTO_SAVE_DEBOUNCE_MS
   const saveRef = useRef<SaveDraftFn | null>(options.saveDraft ?? null)
   const generationRef = useRef(0)
   const isInitialRenderRef = useRef(true)
+  const relationStateRef = useRef<RelationState>(relationState)
+  /** 已经写入项目记录的关系修订号，避免重复持久化同一次编辑。 */
+  const persistedRevisionRef = useRef(project.relationRevision)
   const [saveState, setSaveState] = useState<SaveState>({
     status: 'saved',
     error: null,
@@ -273,6 +321,58 @@ export function usePersistedWorkspace(
   useEffect(() => {
     saveRef.current = options.saveDraft ?? null
   }, [options.saveDraft])
+
+  /** 只更新关系修订号与凭据的小事务；失败时明确显示保存失败。 */
+  const persistRelationState = useCallback(
+    async (next: RelationState): Promise<StorageResult<Project>> => {
+      let result: StorageResult<Project>
+      try {
+        result = await updateProject(project.id, {
+          relationRevision: next.relationRevision,
+          relationReview: next.relationReview,
+        })
+      } catch (error) {
+        result = saveFailure(error)
+      }
+      if (result.ok) {
+        setLastSavedProject(result.value)
+        // 立即同步 ref：后续草稿保存与最后一次确认比较时不能再用旧修订号。
+        relationStateRef.current = next
+        // 保存状态由草稿防抖路径负责：关系修订号的立即落库不应把
+        // “草稿仍在防抖”误显示成已保存。
+      } else {
+        setSaveState({ status: 'failed', error: result.error })
+      }
+      return result
+    },
+    [project.id],
+  )
+
+  /**
+   * 编辑使关系修订号递增时立即落库，不等待 500 ms 防抖。
+   * 这里只写关系字段，草稿与 working 仍按原防抖路径保存。
+   */
+  useEffect(() => {
+    if (draft.relationRevision <= relationState.relationRevision) {
+      return
+    }
+    if (draft.relationRevision <= persistedRevisionRef.current) {
+      return
+    }
+    const next: RelationState = {
+      relationRevision: draft.relationRevision,
+      relationReview: relationState.relationReview,
+    }
+    // 先记下已提交的修订号，避免同一次编辑触发重复写入；失效判定本身由
+    // useWorkspace 按草稿修订号即时完成，不依赖这次 setState。
+    persistedRevisionRef.current = next.relationRevision
+    void persistRelationState(next)
+  }, [
+    draft.relationRevision,
+    relationState.relationReview,
+    relationState.relationRevision,
+    persistRelationState,
+  ])
 
   /**
    * 写入一次草稿，并只在这次写入仍是最新代数时更新保存状态。
@@ -287,6 +387,11 @@ export function usePersistedWorkspace(
       try {
         // 默认直接调用 storage 模块的 saveDraft，便于测试 spy；只有显式注入时才走 ref。
         result = await (saveRef.current ?? persistDraft)(project.id, draftToSave)
+        // 注入实现（测试）不接收 relationState；真实 storage 路径需要它把修订号
+        // 与凭据和草稿写在同一事务里。
+        if (result.ok && result.value.project.relationRevision !== relationStateRef.current.relationRevision) {
+          await persistRelationState(relationStateRef.current)
+        }
       } catch (error) {
         result = saveFailure(error)
       }
@@ -304,7 +409,7 @@ export function usePersistedWorkspace(
       }
       return result
     },
-    [project.id],
+    [persistRelationState, project.id],
   )
 
   useEffect(() => {
@@ -392,11 +497,18 @@ export function usePersistedWorkspace(
     }
 
     // 恢复的是基线的工程输入；关系确认必须重新由用户核对。
+    const revision = Math.max(draft.relationRevision, relationState.relationRevision) + 1
     const restoredDraft: WorkspaceDraft = {
       ...chainToDraft(baseline.definition),
-      relationConfirmed: false,
+      relationRevision: revision,
     }
+    const nextRelationState: RelationState = {
+      relationRevision: revision,
+      relationReview: null,
+    }
+    setRelationState(nextRelationState)
     dispatch({ type: 'replaceDraft', draft: restoredDraft })
+    await persistRelationState(nextRelationState)
 
     // 立即写入一次，避免恢复后在防抖窗口内刷新或关闭页面丢失工作方案。
     let result: StorageResult<SaveDraftResult>
@@ -413,15 +525,73 @@ export function usePersistedWorkspace(
       setSaveState({ status: 'failed', error: result.error })
     }
     return result
-  }, [baseline, dispatch, project.id])
+  }, [baseline, dispatch, draft.relationRevision, persistRelationState, project.id, relationState.relationRevision])
 
-  const exportBackup = useCallback(() => {
+  const exportBackup = useCallback(async (): Promise<number | null> => {
     // 当前草稿有效时导出当前有效链；无效时导出内存中最后一次有效链
     // （保存失败期间它可能比 lastSavedProject.working 更新），都没有才回退到已保存版本。
     const working = chain ?? lastValidChain ?? lastSavedProject.working
-    const projectForExport: Project = { ...lastSavedProject, working, baseline }
-    downloadProjectBackup(projectForExport)
-  }, [baseline, chain, lastValidChain, lastSavedProject])
+    const projectForExport: Project = {
+      ...lastSavedProject,
+      working,
+      baseline,
+      relationRevision: relationState.relationRevision,
+      relationReview: relationState.relationReview,
+    }
+    const sources = await loadProjectSources(project.id)
+    if (!sources.ok) {
+      setSaveState({ status: 'failed', error: sources.error })
+      return null
+    }
+    downloadProjectBackup(projectForExport, sources.value)
+    return sources.value.revisions.length
+  }, [
+    baseline,
+    chain,
+    lastValidChain,
+    lastSavedProject,
+    project.id,
+    relationState.relationRevision,
+    relationState.relationReview,
+  ])
+
+  const setRelationConfirmed = useCallback(
+    async (confirmed: boolean): Promise<StorageResult<Project>> => {
+      const revision = Math.max(draft.relationRevision, relationState.relationRevision)
+      let next: RelationState
+      if (confirmed) {
+        if (chain === null) {
+          return unconfirmedFailure()
+        }
+        const review: RelationReview = createRelationReview(
+          chain,
+          revision,
+          new Date().toISOString(),
+        )
+        next = { relationRevision: revision, relationReview: review }
+      } else {
+        next = { relationRevision: revision, relationReview: null }
+      }
+      setRelationState(next)
+      relationStateRef.current = next
+      persistedRevisionRef.current = revision
+      // 确认/取消本身也是一次持久化：先显示保存中，写入完成后再回到已保存。
+      setSaveState({ status: 'saving', error: null })
+      const result = await persistRelationState(next)
+      if (!result.ok) {
+        setSaveState({ status: 'failed', error: result.error })
+        return result
+      }
+      // 确认后立即把当前草稿也写入（不等 500 ms 防抖），避免“确认已保存、
+      // 草稿却还在内存里”。同一份草稿同时更新 working 与 drafts。
+      const generation = generationRef.current + 1
+      generationRef.current = generation
+      await persistDraftWithState(draft, generation)
+      setSaveState({ status: 'saved', error: null })
+      return result
+    },
+    [chain, draft, persistDraftWithState, persistRelationState, relationState.relationRevision],
+  )
 
   return {
     ...workspace,
@@ -433,5 +603,6 @@ export function usePersistedWorkspace(
     restoreBaseline,
     retrySave,
     exportBackup,
+    setRelationConfirmed,
   }
 }
