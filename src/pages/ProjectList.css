@@ -270,3 +270,94 @@
     justify-content: flex-start;
   }
 }
+
+.project-list__migration {
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  background: #fffbeb;
+}
+
+.project-list__migration-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.project-list__migration-list {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.project-list__migration-list li {
+  margin-bottom: 6px;
+}
+
+.project-list__migration-name {
+  font-weight: 600;
+}
+
+.project-list__migration-meta {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.project-list__migration-blocker {
+  display: block;
+  margin-top: 4px;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.project-list__migration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.project-list__migration-start {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.project-list__migration-notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  background: #f0f9ff;
+}
+
+.project-list__migration-error {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--danger);
+  background: #fef2f2;
+  color: var(--danger);
+}
+
+.project-list__migration-help {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  font-size: 14px;
+}
+
+.project-list__migration-help summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.project-list__migration-help ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.project-list__migration-help li {
+  margin-bottom: 6px;
+}

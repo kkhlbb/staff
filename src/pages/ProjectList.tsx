@@ -13,11 +13,17 @@ import {
   createEmptyProject,
   createProject,
   deleteProject,
+  exportLegacyBackup,
   exportProjectJson,
   importProject,
+  inspectLegacyProjects,
+  LEGACY_SCHEMA_VERSION,
   listDrafts,
   listProjects,
+  migrateLegacyProjectsNow,
+  restoreLegacyBackup,
   updateProject,
+  type LegacyImpactReport,
   type StorageError,
   type StorageResult,
 } from '../storage/projects'
@@ -87,6 +93,16 @@ function formatUpdatedAt(updatedAt: string): string {
   return Number.isNaN(date.getTime()) ? updatedAt : date.toLocaleString('zh-CN')
 }
 
+/**
+ * listProjects({migrate:false}) 可能返回尚未迁移的 V1 原始记录；它们没有
+ * relationRevision 等 v2 字段，必须先分流到迁移面板，不能进入正常状态计算。
+ */
+function isLegacyProjectRecord(project: Project): boolean {
+  return (
+    (project as { schemaVersion?: number }).schemaVersion === LEGACY_SCHEMA_VERSION
+  )
+}
+
 function toUiError(error: StorageError): UiError {
   const reasons = error.details
     .map((detail) => detail.message)
@@ -116,18 +132,30 @@ function readFileText(file: File): Promise<string> {
 }
 
 interface ProjectListSnapshot {
+  /** 可能含尚未迁移的 V1 原始记录（migrate:false 读取）。 */
   projects: Project[]
   drafts: ReadonlyMap<string, WorkspaceDraft>
+  legacy: LegacyImpactReport
 }
 
-/** 项目列表与草稿分开存储；展示状态前必须同时读取两者。 */
+/**
+ * 项目列表与草稿分开存储；展示状态前必须同时读取两者。
+ * 这里刻意不自动迁移：先拿到迁移前影响报告，让用户能导出原始备份后再决定。
+ */
 async function loadProjectList(): Promise<StorageResult<ProjectListSnapshot>> {
-  const [listed, storedDrafts] = await Promise.all([listProjects(), listDrafts()])
+  const [listed, storedDrafts, legacy] = await Promise.all([
+    listProjects({ migrate: false }),
+    listDrafts(),
+    inspectLegacyProjects(),
+  ])
   if (!listed.ok) {
     return listed
   }
   if (!storedDrafts.ok) {
     return storedDrafts
+  }
+  if (!legacy.ok) {
+    return legacy
   }
   return {
     ok: true,
@@ -136,8 +164,25 @@ async function loadProjectList(): Promise<StorageResult<ProjectListSnapshot>> {
       drafts: new Map(
         storedDrafts.value.map((stored) => [stored.projectId, stored.draft]),
       ),
+      legacy: legacy.value,
     },
   }
+}
+
+/** 浏览器下载一段文本文件；jsdom 没有 Blob URL 时静默跳过。 */
+function downloadTextFile(fileName: string, text: string): void {
+  if (typeof URL.createObjectURL !== 'function') {
+    return
+  }
+  const blob = new Blob([text], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = fileName
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
 }
 
 /**
@@ -161,7 +206,12 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
   const [pendingDelete, setPendingDelete] = useState<Project | null>(null)
   const [tableImportOpen, setTableImportOpen] = useState(false)
   const [demoCase, setDemoCase] = useState<DemoCaseId>('A')
+  const [legacy, setLegacy] = useState<LegacyImpactReport | null>(null)
+  const [legacyNotice, setLegacyNotice] = useState<string | null>(null)
+  const [legacyError, setLegacyError] = useState<string | null>(null)
+  const [legacyBusy, setLegacyBusy] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const legacyRestoreInputRef = useRef<HTMLInputElement>(null)
 
   const openProject = useCallback(
     (projectId: string) => {
@@ -182,6 +232,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
     }
     setProjects(snapshot.value.projects)
     setDrafts(snapshot.value.drafts)
+    setLegacy(snapshot.value.legacy)
     setListError(null)
     return true
   }, [])
@@ -200,6 +251,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
       }
       setProjects(snapshot.value.projects)
       setDrafts(snapshot.value.drafts)
+      setLegacy(snapshot.value.legacy)
       setLoading(false)
     }
 
@@ -304,6 +356,87 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
     }
   }
 
+  /** 迁移前导出：原始 V1 项目与草稿，文件落在用户本机，而不是只在库里。 */
+  const handleExportLegacyBackup = (): void => {
+    void (async () => {
+      setLegacyBusy(true)
+      setLegacyError(null)
+      setLegacyNotice(null)
+      const exported = await exportLegacyBackup()
+      setLegacyBusy(false)
+      if (!exported.ok) {
+        setLegacyError(exported.error.message)
+        return
+      }
+      const stamp = new Date().toISOString().slice(0, 10)
+      downloadTextFile(`迁移前原始备份-${stamp}.json`, exported.value.json)
+      setLegacyNotice(
+        `已导出迁移前原始备份：${exported.value.projectCount} 个项目、${exported.value.draftCount} 份草稿。` +
+          '文件保存在本机，含原始 V1 记录与无效草稿输入；恢复方式见下方“迁移与恢复步骤”。',
+      )
+    })()
+  }
+
+  const handleMigrateLegacy = (): void => {
+    void (async () => {
+      setLegacyBusy(true)
+      setLegacyError(null)
+      setLegacyNotice(null)
+      const migrated = await migrateLegacyProjectsNow()
+      if (!migrated.ok) {
+        setLegacyError(migrated.error.message)
+        await refresh()
+        setLegacyBusy(false)
+        return
+      }
+      await refresh()
+      setLegacyBusy(false)
+      setLegacyNotice(
+        `已迁移 ${migrated.value.length} 个旧版项目：数值、方向、基线与无效草稿输入保留；` +
+          '旧的人工确认已清除，需要重新确认。原始记录已写入 migrationBackups。',
+      )
+    })()
+  }
+
+  const handleRestoreLegacyFile = (event: ChangeEvent<HTMLInputElement>): void => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (file === undefined) {
+      return
+    }
+    void (async () => {
+      setLegacyBusy(true)
+      setLegacyError(null)
+      setLegacyNotice(null)
+      try {
+        const text = await readFileText(file)
+        const restored = await restoreLegacyBackup(text)
+        if (!restored.ok) {
+          setLegacyError(restored.error.message)
+          setLegacyBusy(false)
+          return
+        }
+        await refresh()
+        setLegacyBusy(false)
+        const names = restored.value.restored
+          .slice(0, 5)
+          .map((item) => `「${item.name}」（新 ID ${item.newProjectId.slice(0, 8)}…）`)
+          .join('、')
+        setLegacyNotice(
+          `已从迁移前备份恢复 ${restored.value.restored.length} 个项目为新项目：${names}` +
+            (restored.value.restored.length > 5 ? ' 等' : '') +
+            '。原有项目未被覆盖，数据库版本未降级；请重新确认关系。' +
+            (restored.value.failed.length > 0
+              ? ` 有 ${restored.value.failed.length} 个项目恢复失败。`
+              : ''),
+        )
+      } catch (error) {
+        setLegacyBusy(false)
+        setLegacyError(unexpectedError(error).message)
+      }
+    })()
+  }
+
   const handleCopy = (project: Project): void => {
     void runAction(async () => {
       const imported = await importProject(exportProjectJson(project))
@@ -343,6 +476,8 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
     })
   }
 
+  const legacyProjects = projects.filter(isLegacyProjectRecord)
+  const activeProjects = projects.filter((project) => !isLegacyProjectRecord(project))
   const errors = [listError, actionError, importError].filter(
     (error): error is UiError => error !== null,
   )
@@ -421,6 +556,131 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
         {DEMO_DISCLAIMER}
       </p>
 
+      {legacyNotice !== null ? (
+        <p className="project-list__migration-notice" role="status">
+          {legacyNotice}
+        </p>
+      ) : null}
+      {legacyError !== null ? (
+        <p className="project-list__migration-error" role="alert">
+          {legacyError}
+        </p>
+      ) : null}
+
+      {legacyProjects.length > 0 && legacy !== null ? (
+        <section
+          className="project-list__migration"
+          aria-labelledby="legacy-migration-heading"
+          data-testid="legacy-migration-panel"
+        >
+          <h2 id="legacy-migration-heading" className="project-list__migration-title">
+            检测到 {legacyProjects.length} 个旧版（V1）项目，尚未迁移
+          </h2>
+          <p>
+            迁移会在本地数据库内把项目升级到 v2：数值、方向、基线与未通过的草稿输入都保留；
+            旧的人工确认没有版本凭据，会被清除并要求重新确认。原始记录同时写入
+            migrationBackups。
+          </p>
+          <p>
+            <strong>建议先导出“迁移前原始备份”保存到本机</strong>
+            （含全部 V1 项目与草稿的原始记录；V1 没有 PDF 来源，因此不含附件），再开始迁移。
+          </p>
+          <ul className="project-list__migration-list">
+            {legacy.projects.map((project) => (
+              <li key={project.id} data-testid={`legacy-project-${project.id}`}>
+                <span className="project-list__migration-name">{project.name}</span>
+                <span className="project-list__migration-meta">
+                  {project.termCount} 个组成环 ·{' '}
+                  {project.baselineTermCount === null
+                    ? '无基线'
+                    : `基线 ${project.baselineTermCount} 个环`}{' '}
+                  ·{' '}
+                  {project.draftPresent
+                    ? project.draftInvalid
+                      ? '草稿（含无效输入，将保留）'
+                      : '草稿'
+                    : '无草稿'}{' '}
+                  ·{' '}
+                  {project.workingConfirmationWillClear ||
+                  project.baselineConfirmationWillClear
+                    ? '旧人工确认将被清除'
+                    : '无旧人工确认'}
+                </span>
+                {project.migrationError !== null ? (
+                  <span className="project-list__migration-blocker">
+                    无法迁移：{project.migrationError}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <div className="project-list__migration-actions">
+            <button
+              type="button"
+              onClick={handleExportLegacyBackup}
+              disabled={legacyBusy}
+            >
+              导出迁移前原始备份（{legacyProjects.length} 个项目）
+            </button>
+            <button
+              type="button"
+              className="project-list__migration-start"
+              onClick={handleMigrateLegacy}
+              disabled={legacyBusy || legacy.blocking > 0}
+            >
+              {legacyBusy ? '处理中…' : `开始迁移（${legacyProjects.length} 个项目）`}
+            </button>
+          </div>
+          {legacy.blocking > 0 ? (
+            <p className="project-list__migration-blocker" role="alert">
+              有 {legacy.blocking} 个项目会让整批迁移失败；“开始迁移”已禁用。
+              迁移失败会整批回滚，原始 V1 记录仍在，可修正后重试。
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      <details className="project-list__migration-help" data-testid="legacy-migration-help">
+        <summary>迁移与恢复步骤</summary>
+        <ol>
+          <li>
+            <strong>迁移前：</strong>在上面的“旧版项目”提示里点“导出迁移前原始备份”，
+            文件会下载到本机（含全部 V1 项目与草稿原始记录，不含 PDF 附件）。
+          </li>
+          <li>
+            <strong>迁移：</strong>点“开始迁移”。整批迁移在同一个数据库事务内完成；
+            任一步失败都会整体回滚，原始 V1 记录仍在，可重试，不会留下半迁移项目。
+          </li>
+          <li>
+            <strong>恢复：</strong>点下面的“导入迁移前原始备份”并选择该文件。
+            恢复会把原始记录重新导入为<strong>新项目（新 ID）</strong>，保留数值、基线与草稿输入；
+            不覆盖现有项目，也不会把数据库降级。恢复后需要重新确认关系。
+          </li>
+          <li>
+            <strong>版本提示：</strong>若页面提示“本地数据库版本高于当前页面”，刷新到最新页面；
+            不要删除浏览器数据或降级数据库，仅回退前端打不开已升级的库。
+          </li>
+        </ol>
+        <div className="project-list__migration-actions">
+          <button
+            type="button"
+            onClick={() => legacyRestoreInputRef.current?.click()}
+            disabled={legacyBusy}
+          >
+            导入迁移前原始备份
+          </button>
+          <input
+            ref={legacyRestoreInputRef}
+            className="project-list__file-input"
+            type="file"
+            accept=".json,application/json"
+            aria-label="迁移前原始备份文件"
+            onChange={handleRestoreLegacyFile}
+            disabled={legacyBusy}
+          />
+        </div>
+      </details>
+
       {errors.length > 0 ? (
         <div className="project-list__errors" role="alert">
           {errors.map((error, index) => (
@@ -473,13 +733,13 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
         <p className="project-list__loading" role="status">
           正在加载项目…
         </p>
-      ) : projects.length === 0 ? (
+      ) : activeProjects.length === 0 ? (
         <div className="project-list__empty">
           <p>还没有项目。点击“新建”开始，打开内置演示案例，或导入一个 JSON 项目文件。</p>
         </div>
       ) : (
         <ul className="project-list__items" aria-label="项目列表">
-          {projects.map((project) => {
+          {activeProjects.map((project) => {
             const status = projectStatus(project, drafts.get(project.id) ?? null)
             return (
               <li

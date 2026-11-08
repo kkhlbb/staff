@@ -1195,6 +1195,285 @@ async function migrateLegacyProjects(db: IDBDatabase): Promise<string[]> {
 }
 
 /* -------------------------------------------------------------------------- */
+/* 迁移前预览、原始备份与恢复（V2.1 收官补）                                  */
+/* -------------------------------------------------------------------------- */
+
+/** 迁移前原始备份文件的格式标记；只有本应用能识别，避免把普通 JSON 当备份。 */
+export const LEGACY_BACKUP_FORMAT = 'cunlian-legacy-backup'
+export const LEGACY_BACKUP_FORMAT_VERSION = 1
+
+export interface LegacyProjectImpact {
+  id: string
+  name: string
+  updatedAt: string
+  termCount: number
+  baselineTermCount: number | null
+  /** 旧记录里的“已确认”没有版本凭据，迁移时会被清除。 */
+  workingConfirmationWillClear: boolean
+  baselineConfirmationWillClear: boolean
+  draftPresent: boolean
+  /** 草稿迁移后仍不能通过输入校验（原始输入会被保留）。 */
+  draftInvalid: boolean
+  /** 非 null 表示这条项目会阻止整批迁移；整批回滚，不产生半迁移项目。 */
+  migrationError: string | null
+}
+
+export interface LegacyImpactReport {
+  /** 尚未迁移的 V1 项目；空数组表示没有待迁移项目。 */
+  projects: LegacyProjectImpact[]
+  draftCount: number
+  /** 会导致整批迁移失败的项目数；大于 0 时界面必须禁止“开始迁移”。 */
+  blocking: number
+}
+
+interface LegacyRawSnapshot {
+  projects: unknown[]
+  drafts: { projectId: string; draft: unknown; savedAt: unknown }[]
+}
+
+/**
+ * 只读扫描本地 V1 项目与草稿，不写库、不迁移。
+ *
+ * 这是“迁移前先看到影响”的数据来源：项目数、环数、基线、旧确认是否会清除，
+ * 以及哪些项目会让整批迁移失败。真正的迁移仍由 getProject / listProjects 或
+ * 显式的 migrateLegacyProjectsNow() 触发。
+ */
+async function readLegacyRawSnapshot(db: IDBDatabase): Promise<LegacyRawSnapshot> {
+  const transaction = db.transaction([PROJECT_STORE_NAME, DRAFT_STORE_NAME], 'readonly')
+  const done = transactionDone(transaction)
+  const records = (await requestResult(
+    transaction.objectStore(PROJECT_STORE_NAME).getAll(),
+  )) as unknown[]
+  const drafts = (await requestResult(
+    transaction.objectStore(DRAFT_STORE_NAME).getAll(),
+  )) as unknown[]
+  await done
+  return {
+    projects: records.filter(
+      (record): record is Record<string, unknown> =>
+        isRecord(record) && record.schemaVersion === LEGACY_SCHEMA_VERSION,
+    ),
+    drafts: drafts.filter(
+      (record): record is { projectId: string; draft: unknown; savedAt: unknown } =>
+        isRecord(record) && typeof record.projectId === 'string',
+    ),
+  }
+}
+
+/** 迁移前影响报告。打开数据库本身只补缺失 store，不会迁移任何项目记录。 */
+export async function inspectLegacyProjects(): Promise<StorageResult<LegacyImpactReport>> {
+  try {
+    const snapshot = await withDatabase(readLegacyRawSnapshot)
+    const draftsByProject = new Map(snapshot.drafts.map((draft) => [draft.projectId, draft]))
+    const projects: LegacyProjectImpact[] = snapshot.projects.map((record) => {
+      const projectId = String((record as Record<string, unknown>).id ?? '')
+      // 复用真实迁移函数做预检：预检对象不会被写入，只用于提前暴露失败原因。
+      const migrated = migrateProjectV1(record, {
+        migratedAt: 'preflight',
+        backupId: 'preflight',
+      })
+      const draftRecord = draftsByProject.get(projectId)
+      let draftInvalid = false
+      if (draftRecord !== undefined) {
+        const migratedDraft = migrateDraftV1(draftRecord.draft)
+        draftInvalid = migratedDraft !== null && !draftToChain(migratedDraft).ok
+      }
+      const raw = record as Record<string, unknown>
+      const rawWorking = isRecord(raw.working) ? raw.working : null
+      const rawBaseline = isRecord(raw.baseline) ? raw.baseline : null
+      const rawBaselineDefinition =
+        rawBaseline !== null && isRecord(rawBaseline.definition)
+          ? rawBaseline.definition
+          : null
+      const workingTerms = rawWorking !== null && Array.isArray(rawWorking.terms)
+        ? rawWorking.terms.length
+        : 0
+      const baselineTerms =
+        rawBaselineDefinition !== null && Array.isArray(rawBaselineDefinition.terms)
+          ? rawBaselineDefinition.terms.length
+          : null
+      return {
+        id: projectId,
+        name: typeof raw.name === 'string' ? raw.name : projectId,
+        updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : '',
+        termCount: workingTerms,
+        baselineTermCount: baselineTerms,
+        workingConfirmationWillClear:
+          rawWorking !== null && rawWorking.relationConfirmed === true,
+        baselineConfirmationWillClear:
+          rawBaselineDefinition !== null &&
+          rawBaselineDefinition.relationConfirmed === true,
+        draftPresent: draftRecord !== undefined,
+        draftInvalid,
+        migrationError: migrated.ok ? null : migrated.error.message,
+      }
+    })
+    return {
+      ok: true,
+      value: {
+        projects,
+        draftCount: snapshot.drafts.length,
+        blocking: projects.filter((project) => project.migrationError !== null).length,
+      },
+    }
+  } catch (error) {
+    return storageFailure(error, '读取迁移前影响失败')
+  }
+}
+
+function legacyBackupFailure(message: string): StorageFailure {
+  return failure('invalid_legacy_backup', message)
+}
+
+/**
+ * 导出迁移前的原始 V1 项目与草稿为一份可保存到本机的 JSON 文件。
+ *
+ * 内容是完全未改写的原始记录（含旧 relationConfirmed 与无效草稿输入），
+ * 不是 migrationBackups 的展示副本，也不含来源 Blob（V1 没有来源）。
+ * 恢复方式：界面“迁移与恢复”里的“导入迁移前原始备份”，会重新导入为新项目。
+ */
+export async function exportLegacyBackup(): Promise<
+  StorageResult<{ json: string; projectCount: number; draftCount: number }>
+> {
+  try {
+    const snapshot = await withDatabase(readLegacyRawSnapshot)
+    if (snapshot.projects.length === 0) {
+      return failure('no_legacy_projects', '当前没有待迁移的旧版项目，无需导出迁移前备份')
+    }
+    const exportedAt = nowIso()
+    const payload = {
+      format: LEGACY_BACKUP_FORMAT,
+      formatVersion: LEGACY_BACKUP_FORMAT_VERSION,
+      exportedAt,
+      note:
+        '迁移前原始备份：projects 与 drafts 均为未改写的 V1 记录。恢复时导入为新项目（新 ID），不会覆盖或降级已迁移的项目。',
+      projects: snapshot.projects,
+      drafts: snapshot.drafts,
+    }
+    return {
+      ok: true,
+      value: {
+        json: JSON.stringify(payload, null, 2),
+        projectCount: snapshot.projects.length,
+        draftCount: snapshot.drafts.length,
+      },
+    }
+  } catch (error) {
+    return storageFailure(error, '导出迁移前原始备份失败')
+  }
+}
+
+/** 显式触发整批本地 V1 → v2 迁移；返回本次实际迁移的项目 ID。 */
+export async function migrateLegacyProjectsNow(): Promise<StorageResult<string[]>> {
+  try {
+    const ids = await withDatabase((db) => migrateLegacyProjects(db))
+    return { ok: true, value: ids }
+  } catch (error) {
+    return storageFailure(
+      error,
+      '迁移旧版项目失败，整批已回滚，原始 V1 记录仍在；可重试',
+    )
+  }
+}
+
+export interface RestoredLegacyProject {
+  originalId: string
+  newProjectId: string
+  name: string
+  draftRestored: boolean
+}
+
+/**
+ * 用迁移前原始备份恢复数据。
+ *
+ * 数据库版本不能降级，因此“恢复”不是回退数据库，而是把原始 V1 记录重新
+ * 导入为新项目（新 ID），保留数值/基线/草稿输入，并要求重新确认关系。
+ * 每个项目单独提交：某个项目失败不会覆盖已有项目；返回值列出成功项。
+ */
+export async function restoreLegacyBackup(
+  input: string,
+): Promise<
+  StorageResult<{ restored: RestoredLegacyProject[]; failed: { id: string; message: string }[] }>
+> {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(input)
+  } catch {
+    return legacyBackupFailure('备份文件不是有效的 JSON')
+  }
+  if (!isRecord(parsed) || parsed.format !== LEGACY_BACKUP_FORMAT) {
+    return legacyBackupFailure('不是本应用导出的迁移前原始备份文件')
+  }
+  if (parsed.formatVersion !== LEGACY_BACKUP_FORMAT_VERSION) {
+    return legacyBackupFailure('备份文件版本不受支持')
+  }
+  if (!Array.isArray(parsed.projects) || parsed.projects.length === 0) {
+    return legacyBackupFailure('备份文件里没有项目记录')
+  }
+  const drafts = Array.isArray(parsed.drafts)
+    ? parsed.drafts.filter(
+        (draft): draft is { projectId: string; draft: unknown } =>
+          isRecord(draft) &&
+          typeof draft.projectId === 'string' &&
+          draft.draft !== undefined,
+      )
+    : []
+
+  // 先对全部项目做纯迁移预检，避免写到一半才发现某条记录不可迁移。
+  for (const record of parsed.projects) {
+    if (!isRecord(record)) {
+      return legacyBackupFailure('备份文件包含非对象的项目记录')
+    }
+    const projectId = String(record.id ?? '')
+    const preflight = migrateProjectV1(record, {
+      migratedAt: 'preflight',
+      backupId: 'preflight',
+    })
+    if (!preflight.ok) {
+      return legacyBackupFailure(
+        `备份中的项目 ${projectId} 无法恢复：${preflight.error.message}`,
+      )
+    }
+  }
+
+  const restored: RestoredLegacyProject[] = []
+  const failed: { id: string; message: string }[] = []
+  for (const record of parsed.projects) {
+    const raw = record as Record<string, unknown>
+    const originalId = String(raw.id ?? '')
+    const imported = await importProject(JSON.stringify(raw))
+    if (!imported.ok) {
+      failed.push({ id: originalId, message: imported.error.message })
+      continue
+    }
+    const newProjectId = imported.value.project.id
+    const draftRecord = drafts.find((draft) => draft.projectId === originalId)
+    let draftRestored = false
+    if (draftRecord !== undefined) {
+      const migratedDraft = migrateDraftV1(draftRecord.draft)
+      if (migratedDraft !== null) {
+        const saved = await saveDraft(newProjectId, migratedDraft)
+        draftRestored = saved.ok
+      }
+    }
+    restored.push({
+      originalId,
+      newProjectId,
+      name: imported.value.project.name,
+      draftRestored,
+    })
+  }
+  if (restored.length === 0) {
+    return legacyBackupFailure(
+      failed.length > 0
+        ? `备份恢复失败：${failed.map((item) => `${item.id}（${item.message}）`).join('；')}`
+        : '备份恢复失败，未写入任何项目',
+    )
+  }
+  return { ok: true, value: { restored, failed } }
+}
+
+/* -------------------------------------------------------------------------- */
 /* CRUD                                                                       */
 /* -------------------------------------------------------------------------- */
 
@@ -1322,7 +1601,19 @@ export async function getProject(id: string): Promise<StorageResult<Project | nu
   }
 }
 
-export async function listProjects(): Promise<StorageResult<Project[]>> {
+export interface ListProjectsOptions {
+  /**
+   * 默认 true：读取时顺带迁移本地 V1 项目（工作台深链等路径）。
+   * false 只读返回原始记录，供项目列表在迁移前展示影响；此时数组里可能
+   * 含有 schemaVersion=1 的记录，调用方必须先按版本分支。
+   */
+  migrate?: boolean
+}
+
+export async function listProjects(
+  options: ListProjectsOptions = {},
+): Promise<StorageResult<Project[]>> {
+  const migrate = options.migrate ?? true
   try {
     const projects = await withDatabase(async (db) => {
       const readAll = async (): Promise<unknown[]> => {
@@ -1337,6 +1628,7 @@ export async function listProjects(): Promise<StorageResult<Project[]>> {
 
       let values = await readAll()
       if (
+        migrate &&
         values.some(
           (record) => isRecord(record) && record.schemaVersion === LEGACY_SCHEMA_VERSION,
         )

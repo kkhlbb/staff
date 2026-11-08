@@ -689,3 +689,214 @@ describe('ProjectList：内置演示案例', () => {
     }
   })
 })
+
+describe('ProjectList：迁移前预览、原始备份与恢复入口', () => {
+  const legacy = {
+    schemaVersion: 1,
+    engineVersion: 'v1-engine',
+    id: 'legacy-ui',
+    name: '旧版界面项目',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+    working: {
+      terms: [
+        {
+          id: 't-h',
+          symbol: 'H',
+          name: '孔',
+          nominalQ: parseMm('100'),
+          lowerDeviationQ: parseMm('0'),
+          upperDeviationQ: parseMm('0.1'),
+          sign: 1,
+          sourceNote: '',
+        },
+        {
+          id: 't-b',
+          symbol: 'B',
+          name: '轴',
+          nominalQ: parseMm('99.9'),
+          lowerDeviationQ: parseMm('-0.05'),
+          upperDeviationQ: parseMm('0'),
+          sign: -1,
+          sourceNote: '',
+        },
+      ],
+      target: null,
+      assumptions: '',
+      relationConfirmed: true,
+    },
+    baseline: null,
+  }
+
+  async function seedLegacy(project: unknown): Promise<void> {
+    const { openDatabase, transactionDone } = await import('../storage/db')
+    const db = await openDatabase()
+    try {
+      const transaction = db.transaction(['projects', 'drafts'], 'readwrite')
+      const done = transactionDone(transaction)
+      transaction.objectStore('projects').put(project)
+      transaction.objectStore('drafts').put({
+        projectId: 'legacy-ui',
+        savedAt: '2026-01-02T00:00:00.000Z',
+        draft: {
+          terms: [
+            {
+              id: 't-h',
+              symbol: 'H',
+              name: '孔',
+              nominal: '',
+              lower: '0.0000',
+              upper: '0.1000',
+              sign: 1,
+              sourceNote: '',
+            },
+          ],
+          targetMin: '',
+          targetMax: 'bad',
+          assumptions: '',
+          relationConfirmed: true,
+        },
+      })
+      await done
+    } finally {
+      db.close()
+    }
+  }
+
+  it('先看到影响并拿到原始备份文件，再显式迁移；迁移后原项目变为 v2', async () => {
+    await seedLegacy(legacy)
+    const download = installDownloadMock()
+    try {
+      render(<ProjectList onOpenProject={() => undefined} />)
+
+      const panel = await screen.findByTestId('legacy-migration-panel')
+      expect(panel).toHaveTextContent('检测到 1 个旧版（V1）项目，尚未迁移')
+      const row = within(panel).getByTestId('legacy-project-legacy-ui')
+      expect(row).toHaveTextContent('旧版界面项目')
+      expect(row).toHaveTextContent('2 个组成环')
+      expect(row).toHaveTextContent('草稿（含无效输入，将保留）')
+      expect(row).toHaveTextContent('旧人工确认将被清除')
+      // 未迁移的 V1 记录不进入正常项目列表，避免按 v2 字段计算状态。
+      expect(screen.queryByTestId('project-legacy-ui')).toBeNull()
+
+      // 恢复步骤在界面上始终可找到。
+      const help = screen.getByTestId('legacy-migration-help')
+      expect(help).toHaveTextContent('迁移与恢复步骤')
+      expect(help).toHaveTextContent('导入迁移前原始备份')
+
+      fireEvent.click(
+        within(panel).getByRole('button', {
+          name: '导出迁移前原始备份（1 个项目）',
+        }),
+      )
+      // 必须等提示真正出现，不能点完立即断言。
+      const exportedNotice = await screen.findByText(/已导出迁移前原始备份：1 个项目、1 份草稿/)
+      expect(exportedNotice).toBeInTheDocument()
+      await waitFor(() => expect(download.blobs).toHaveLength(1))
+      const backupText = await readBlobText(download.blobs[0])
+      const backup = JSON.parse(backupText) as {
+        format: string
+        projects: { id: string; schemaVersion: number; working: { relationConfirmed: boolean } }[]
+        drafts: { projectId: string; draft: { terms: { nominal: string }[] } }[]
+      }
+      expect(backup.format).toBe('cunlian-legacy-backup')
+      expect(backup.projects).toHaveLength(1)
+      expect(backup.projects[0].id).toBe('legacy-ui')
+      expect(backup.projects[0].schemaVersion).toBe(1)
+      expect(backup.projects[0].working.relationConfirmed).toBe(true)
+      expect(backup.drafts[0].draft.terms[0].nominal).toBe('')
+
+      // 迁移前仍是 V1（导出动作没有偷偷迁移）。这里直接读原始记录，
+      // 不能用 getProject——它在读取时会自动迁移。
+      const stillLegacy = await (async () => {
+        const { openDatabase, requestResult, transactionDone } = await import(
+          '../storage/db'
+        )
+        const db = await openDatabase()
+        try {
+          const transaction = db.transaction('projects', 'readonly')
+          const done = transactionDone(transaction)
+          const record = await requestResult(
+            transaction.objectStore('projects').get('legacy-ui'),
+          )
+          await done
+          return record as { schemaVersion: number }
+        } finally {
+          db.close()
+        }
+      })()
+      expect(stillLegacy.schemaVersion).toBe(1)
+
+      fireEvent.click(
+        screen.getByRole('button', { name: '开始迁移（1 个项目）' }),
+      )
+      await screen.findByText(/已迁移 1 个旧版项目/)
+      await waitFor(() =>
+        expect(screen.queryByTestId('legacy-migration-panel')).toBeNull(),
+      )
+      const migrated = await getProject('legacy-ui')
+      expect(migrated.ok && migrated.value?.schemaVersion).toBe(2)
+      expect(migrated.ok && migrated.value?.relationReview).toBeNull()
+      expect(screen.getByTestId('project-legacy-ui')).toBeInTheDocument()
+
+      // 迁移后用同一份备份在界面上恢复：得到新项目，原项目仍在。
+      fireEvent.change(screen.getByLabelText('迁移前原始备份文件'), {
+        target: {
+          files: [new File([backupText], '迁移前原始备份.json', { type: 'application/json' })],
+        },
+      })
+      const restoredNotice = await screen.findByText(/已从迁移前备份恢复 1 个项目为新项目/)
+      expect(restoredNotice).toBeInTheDocument()
+      const afterRestore = expectOk(await listProjects())
+      expect(afterRestore.map((project) => project.id)).toContain('legacy-ui')
+      expect(afterRestore).toHaveLength(2)
+    } finally {
+      download.restore()
+    }
+  })
+
+  it('存在会阻止迁移的记录时禁用“开始迁移”并说明整批回滚', async () => {
+    await seedLegacy({
+      ...legacy,
+      id: 'legacy-broken-ui',
+      name: '坏记录',
+      working: {
+        terms: [
+          {
+            id: 'bad',
+            symbol: 'X',
+            name: '非法',
+            nominalQ: 0,
+            lowerDeviationQ: 0,
+            upperDeviationQ: 0,
+            sign: 1,
+            sourceNote: '',
+          },
+          {
+            id: 'ok',
+            symbol: 'Y',
+            name: '合法',
+            nominalQ: parseMm('10'),
+            lowerDeviationQ: parseMm('0'),
+            upperDeviationQ: parseMm('0.1'),
+            sign: 1,
+            sourceNote: '',
+          },
+        ],
+        target: null,
+        assumptions: '',
+        relationConfirmed: false,
+      },
+    })
+
+    render(<ProjectList onOpenProject={() => undefined} />)
+    const panel = await screen.findByTestId('legacy-migration-panel')
+    expect(within(panel).getByText(/无法迁移：/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /开始迁移/ }),
+    ).toBeDisabled()
+    expect(
+      within(panel).getByText(/有 1 个项目会让整批迁移失败/),
+    ).toBeInTheDocument()
+  })
+})
