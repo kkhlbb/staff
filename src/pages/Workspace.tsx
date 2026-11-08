@@ -10,6 +10,7 @@ import { SourcePanel } from '../components/SourcePanel'
 import type { ChainDefinition, Project } from '../domain/types'
 import type { CommitImportSuccess } from '../import/commit'
 import { countBindingsByTerm, type SourceBinding } from '../sources/bindings'
+import { useDatabaseStaleVersion } from '../storage/databaseStale'
 import { subscribeDatabaseVersionChange } from '../storage/db'
 import { getProject, listProjects, loadProjectSources } from '../storage/projects'
 import { resolveReportEligibility } from '../workspace/status'
@@ -121,6 +122,7 @@ function WorkspaceEditor({
   const [databaseNotice, setDatabaseNotice] = useState<string | null>(null)
   const [migrationNoticeDismissed, setMigrationNoticeDismissed] = useState(false)
   const [exportNotice, setExportNotice] = useState<string | null>(null)
+  const editingDisabled = useDatabaseStaleVersion() !== null
 
   /**
    * 顶部“导出 JSON”和保存失败提示里的“导出 JSON 备份”共用同一条路径：
@@ -271,6 +273,7 @@ function WorkspaceEditor({
             type="button"
             className="workspace__table-import-button"
             onClick={() => setTableImportOpen(true)}
+            disabled={editingDisabled}
           >
             从表格追加/替换
           </button>
@@ -428,14 +431,14 @@ function WorkspaceEditor({
             <button
               type="button"
               onClick={handleSaveBaseline}
-              disabled={chain === null || baselineBusy}
+              disabled={editingDisabled || chain === null || baselineBusy}
             >
               保存为基线
             </button>
             <button
               type="button"
               onClick={() => setPendingBaselineAction('restore')}
-              disabled={baseline === null || baselineBusy}
+              disabled={editingDisabled || baseline === null || baselineBusy}
             >
               恢复基线
             </button>

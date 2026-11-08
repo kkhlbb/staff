@@ -8,6 +8,7 @@ import {
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { Project } from '../domain/types'
 import { formatMm } from '../domain/units'
+import { useDatabaseStaleVersion } from '../storage/databaseStale'
 import type { WorkspaceDraft } from '../workspace/draft'
 import {
   commitImport,
@@ -163,6 +164,7 @@ export function ImportWizard({
 }: ImportWizardProps) {
   const titleId = `${useId()}-import-title`
   const editableProject = project !== undefined && baseDraft !== undefined
+  const editingDisabled = useDatabaseStaleVersion() !== null
 
   const [step, setStep] = useState<WizardStep>('input')
   const [text, setText] = useState('')
@@ -671,7 +673,7 @@ export function ImportWizard({
                   <button
                     type="button"
                     onClick={handleSaveTemplate}
-                    disabled={templateBusy}
+                    disabled={templateBusy || editingDisabled}
                   >
                     {templateBusy ? '保存中…' : '保存当前映射为模板'}
                   </button>
@@ -1180,7 +1182,7 @@ export function ImportWizard({
                 type="button"
                 className="import-wizard__primary"
                 onClick={handleSubmit}
-                disabled={!canSubmit}
+                disabled={!canSubmit || editingDisabled}
               >
                 {busy
                   ? '提交中…'

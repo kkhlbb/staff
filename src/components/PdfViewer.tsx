@@ -25,6 +25,7 @@ import {
 } from '../sources/render'
 import { readSourceBlobBytes } from '../sources/revisions'
 import type { SourceRevision } from '../sources/types'
+import { useDatabaseStaleVersion } from '../storage/databaseStale'
 import { PdfPageSurface, type PdfPageHighlight } from './PdfPageSurface'
 
 export type LoadRevisionBytes = (
@@ -152,6 +153,7 @@ export function PdfViewer({
   const [draftRect, setDraftRect] = useState<PdfRect | null>(null)
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const editingDisabled = useDatabaseStaleVersion() !== null
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
@@ -499,7 +501,9 @@ export function PdfViewer({
             draftRectPdf={surfaceReady ? draftRect : null}
             onDraftChange={(rect) => setDraftRect(rect)}
             ariaLabel={`${revision.fileName} 第 ${clampedPage} 页`}
-            disabled={!surfaceReady || selectedTermId === null}
+            disabled={
+              !surfaceReady || selectedTermId === null || editingDisabled
+            }
           />
           {!surfaceReady && activeRenderError === null ? (
             <p
@@ -521,6 +525,7 @@ export function PdfViewer({
                 aria-label="来源备注"
                 value={note}
                 placeholder="例如：第 2 页孔公差框"
+                disabled={editingDisabled}
                 onChange={(event) => setNote(event.target.value)}
               />
             </label>
@@ -529,6 +534,7 @@ export function PdfViewer({
               onClick={() => void handleSave()}
               disabled={
                 saving ||
+                editingDisabled ||
                 !surfaceReady ||
                 selectedTermId === null ||
                 draftRect === null

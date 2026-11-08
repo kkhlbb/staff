@@ -106,3 +106,46 @@ select:focus-visible {
 a {
   color: var(--accent);
 }
+
+/*
+ * 跨版本守卫的常驻提示。放在 #root 顶部，position: sticky 保证滚动工作台时
+ * 仍然可见；不覆盖页面内容，也不使用 fixed 抢走查看器的滚动区域。
+ */
+.database-stale-banner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px clamp(16px, 2vw, 32px);
+  border-bottom: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+}
+
+.database-stale-banner__body {
+  max-width: 120ch;
+}
+
+.database-stale-banner__title {
+  margin: 0 0 4px;
+  color: #92400e;
+  font-size: 16px;
+}
+
+.database-stale-banner p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.database-stale-banner__reload {
+  flex: none;
+  border-color: #d97706;
+  background: #ffffff;
+  color: #92400e;
+  font-weight: 600;
+}

@@ -22,6 +22,7 @@ import {
   listSourceRevisions,
 } from '../sources/revisions'
 import type { SourceDocument, SourceRevision } from '../sources/types'
+import { useDatabaseStaleVersion } from '../storage/databaseStale'
 import type { TermDraft } from '../workspace/draft'
 import { PdfViewer, type LoadRevisionBytes, type RenderPdfPage, type SaveBindingInput } from './PdfViewer'
 
@@ -193,6 +194,7 @@ export function SourcePanel({
   const activeRevision =
     revisions.find((revision) => revision.id === activeRevisionId) ?? null
   const activeTerm = terms.find((term) => term.id === selectedTermId)
+  const editingDisabled = useDatabaseStaleVersion() !== null
 
   const termBindings =
     selectedTermId === null
@@ -405,7 +407,7 @@ export function SourcePanel({
               aria-label="导入方式"
               value={importTarget}
               onChange={(event) => setImportTarget(event.target.value)}
-              disabled={importing}
+              disabled={importing || editingDisabled}
             >
               <option value="">作为新文件导入</option>
               {documents.map((document) => (
@@ -421,13 +423,14 @@ export function SourcePanel({
             accept="application/pdf,.pdf"
             aria-label="选择 PDF 文件"
             className="source-panel__file-input"
+            disabled={editingDisabled}
             onChange={(event) => void handleImport(event)}
           />
           <button
             type="button"
             className="source-panel__import-button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
+            disabled={importing || editingDisabled}
           >
             {importing ? '导入中…' : '导入 PDF'}
           </button>
@@ -625,6 +628,7 @@ export function SourcePanel({
                         type="button"
                         className="source-panel__binding-review"
                         onClick={() => void handleReviewBinding(binding, term)}
+                        disabled={editingDisabled}
                       >
                         标记已核对
                       </button>
@@ -634,7 +638,7 @@ export function SourcePanel({
                         type="button"
                         data-testid={`binding-reframe-${binding.id}`}
                         onClick={() => startEditBinding(binding, 'region')}
-                        disabled={editMode !== null}
+                        disabled={editMode !== null || editingDisabled}
                       >
                         重框
                       </button>
@@ -642,7 +646,7 @@ export function SourcePanel({
                         type="button"
                         data-testid={`binding-rebind-${binding.id}`}
                         onClick={() => startEditBinding(binding, 'source')}
-                        disabled={editMode !== null}
+                        disabled={editMode !== null || editingDisabled}
                       >
                         换关联来源
                       </button>

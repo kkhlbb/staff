@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react'
+import { useDatabaseStaleVersion } from '../storage/databaseStale'
 import './ConfirmDialog.css'
 
 export interface ConfirmDialogProps {
@@ -26,6 +27,7 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const titleId = `${useId()}-confirm-title`
   const descriptionId = `${useId()}-confirm-description`
+  const editingDisabled = useDatabaseStaleVersion() !== null
 
   return (
     <div className="confirm-dialog__backdrop">
@@ -50,6 +52,7 @@ export function ConfirmDialog({
             type="button"
             className="confirm-dialog__confirm"
             onClick={onConfirm}
+            disabled={editingDisabled}
           >
             {confirmLabel}
           </button>

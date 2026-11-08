@@ -2,6 +2,7 @@ import { useId, type Dispatch, type MouseEvent } from 'react'
 import { termLimits } from '../domain/calculate'
 import type { ChainDefinition } from '../domain/types'
 import { formatMm } from '../domain/units'
+import { useDatabaseStaleVersion } from '../storage/databaseStale'
 import type {
   CellErrors,
   TermDraft,
@@ -61,6 +62,7 @@ interface TextCellProps {
   error?: string
   errorId: string
   inputMode?: 'decimal'
+  disabled?: boolean
   onChange: (value: string) => void
 }
 
@@ -70,6 +72,7 @@ function TextCell({
   error,
   errorId,
   inputMode,
+  disabled = false,
   onChange,
 }: TextCellProps) {
   const hasError = error !== undefined && error !== ''
@@ -82,6 +85,7 @@ function TextCell({
         value={value}
         inputMode={inputMode}
         spellCheck={false}
+        disabled={disabled}
         aria-invalid={hasError ? true : undefined}
         aria-describedby={hasError ? errorId : undefined}
         aria-errormessage={hasError ? errorId : undefined}
@@ -136,6 +140,7 @@ export function DimensionTable({
   const tableId = useId().replace(/[^A-Za-z0-9_-]/g, '')
   const tableElementId = `${tableId}-table`
   const hintId = `${tableId}-hint`
+  const editingDisabled = useDatabaseStaleVersion() !== null
   const errorId = (index: number, field: string): string =>
     `${tableId}-${index}-${field}-error`
 
@@ -148,12 +153,17 @@ export function DimensionTable({
   }
 
   return (
-    <section className="dimension-table" aria-label="组成环编辑区">
+    <section
+      className="dimension-table"
+      aria-label="组成环编辑区"
+      data-editing-disabled={editingDisabled ? 'true' : undefined}
+    >
       <div className="dimension-table__toolbar">
         <button
           type="button"
           className="dimension-table__add"
           aria-controls={tableElementId}
+          disabled={editingDisabled}
           onClick={() =>
             dispatch({ type: 'addTerm', term: createEmptyTerm(draft.terms) })
           }
@@ -249,6 +259,7 @@ export function DimensionTable({
                     value={term.symbol}
                     error={cellErrors[`${term.id}.symbol`]}
                     errorId={errorId(index, 'symbol')}
+                    disabled={editingDisabled}
                     onChange={(value) =>
                       updateText(term.id, 'symbol', value)
                     }
@@ -260,6 +271,7 @@ export function DimensionTable({
                     value={term.name}
                     error={cellErrors[`${term.id}.name`]}
                     errorId={errorId(index, 'name')}
+                    disabled={editingDisabled}
                     onChange={(value) => updateText(term.id, 'name', value)}
                   />
                 </td>
@@ -269,6 +281,7 @@ export function DimensionTable({
                     value={term.nominal}
                     error={cellErrors[`${term.id}.nominal`]}
                     errorId={errorId(index, 'nominal')}
+                    disabled={editingDisabled}
                     inputMode="decimal"
                     onChange={(value) =>
                       updateText(term.id, 'nominal', value)
@@ -281,6 +294,7 @@ export function DimensionTable({
                     value={term.lower}
                     error={cellErrors[`${term.id}.lower`]}
                     errorId={errorId(index, 'lower')}
+                    disabled={editingDisabled}
                     inputMode="decimal"
                     onChange={(value) => updateText(term.id, 'lower', value)}
                   />
@@ -291,6 +305,7 @@ export function DimensionTable({
                     value={term.upper}
                     error={cellErrors[`${term.id}.upper`]}
                     errorId={errorId(index, 'upper')}
+                    disabled={editingDisabled}
                     inputMode="decimal"
                     onChange={(value) => updateText(term.id, 'upper', value)}
                   />
@@ -300,6 +315,7 @@ export function DimensionTable({
                     className="dimension-table__select"
                     aria-label={`${label} 方向`}
                     value={term.sign}
+                    disabled={editingDisabled}
                     aria-invalid={signError === undefined ? undefined : true}
                     aria-describedby={
                       signError === undefined
@@ -350,6 +366,7 @@ export function DimensionTable({
                     value={term.sourceNote}
                     error={cellErrors[`${term.id}.sourceNote`]}
                     errorId={errorId(index, 'sourceNote')}
+                    disabled={editingDisabled}
                     onChange={(value) =>
                       updateText(term.id, 'sourceNote', value)
                     }
@@ -377,7 +394,7 @@ export function DimensionTable({
                     <button
                       type="button"
                       aria-label={`上移 ${label}`}
-                      disabled={index === 0}
+                      disabled={editingDisabled || index === 0}
                       onClick={() =>
                         dispatch({
                           type: 'moveTerm',
@@ -391,7 +408,7 @@ export function DimensionTable({
                     <button
                       type="button"
                       aria-label={`下移 ${label}`}
-                      disabled={index === draft.terms.length - 1}
+                      disabled={editingDisabled || index === draft.terms.length - 1}
                       onClick={() =>
                         dispatch({
                           type: 'moveTerm',
@@ -405,6 +422,7 @@ export function DimensionTable({
                     <button
                       type="button"
                       aria-label={`删除 ${label}`}
+                      disabled={editingDisabled}
                       onClick={() =>
                         dispatch({ type: 'removeTerm', termId: term.id })
                       }

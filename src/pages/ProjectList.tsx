@@ -28,6 +28,7 @@ import {
   type StorageResult,
 } from '../storage/projects'
 import type { CommitImportSuccess } from '../import/commit'
+import { useDatabaseStaleVersion } from '../storage/databaseStale'
 import type { WorkspaceDraft } from '../workspace/draft'
 import { resolveStoredWorkspaceStatus } from '../workspace/status'
 import './ProjectList.css'
@@ -197,6 +198,7 @@ function downloadTextFile(fileName: string, text: string): void {
  * 交给 storage/projects.ts。导入被拒时只展示原因，不修改列表里的已有项目。
  */
 export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
+  const editingDisabled = useDatabaseStaleVersion() !== null
   const [projects, setProjects] = useState<Project[]>([])
   const [drafts, setDrafts] = useState<ReadonlyMap<string, WorkspaceDraft>>(
     () => new Map(),
@@ -503,7 +505,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
           type="button"
           className="project-list__create"
           onClick={handleCreate}
-          disabled={busy}
+          disabled={busy || editingDisabled}
         >
           新建
         </button>
@@ -511,14 +513,14 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
           type="button"
           className="project-list__table-import"
           onClick={() => setTableImportOpen(true)}
-          disabled={busy}
+          disabled={busy || editingDisabled}
         >
           从表格导入
         </button>
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          disabled={busy}
+          disabled={busy || editingDisabled}
         >
           导入 JSON
         </button>
@@ -529,7 +531,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
           accept=".json,application/json"
           aria-label="导入 JSON 文件"
           onChange={handleFileChange}
-          disabled={busy}
+          disabled={busy || editingDisabled}
         />
         <label className="project-list__demo-label" htmlFor="demo-case-select">
           演示案例
@@ -539,7 +541,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
           className="project-list__demo-select"
           value={demoCase}
           onChange={(event) => setDemoCase(event.target.value as DemoCaseId)}
-          disabled={busy}
+          disabled={busy || editingDisabled}
         >
           {DEMO_CASES.map((item) => (
             <option key={item.id} value={item.id}>
@@ -551,7 +553,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
           type="button"
           className="project-list__demo-open"
           onClick={handleOpenDemo}
-          disabled={busy}
+          disabled={busy || editingDisabled}
         >
           打开演示案例
         </button>
@@ -631,7 +633,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
               type="button"
               className="project-list__migration-start"
               onClick={handleMigrateLegacy}
-              disabled={legacyBusy || legacy.blocking > 0}
+              disabled={legacyBusy || legacy.blocking > 0 || editingDisabled}
             >
               {legacyBusy ? '处理中…' : `开始迁移（${legacyProjects.length} 个项目）`}
             </button>
@@ -670,7 +672,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
           <button
             type="button"
             onClick={() => legacyRestoreInputRef.current?.click()}
-            disabled={legacyBusy}
+            disabled={legacyBusy || editingDisabled}
           >
             导入迁移前原始备份
           </button>
@@ -681,7 +683,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
             accept=".json,application/json"
             aria-label="迁移前原始备份文件"
             onChange={handleRestoreLegacyFile}
-            disabled={legacyBusy}
+            disabled={legacyBusy || editingDisabled}
           />
         </div>
       </details>
@@ -789,7 +791,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
                   <button
                     type="button"
                     onClick={() => handleCopy(project)}
-                    disabled={busy}
+                    disabled={busy || editingDisabled}
                   >
                     复制
                   </button>
@@ -797,7 +799,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
                     type="button"
                     className="project-list__delete"
                     onClick={() => setPendingDelete(project)}
-                    disabled={busy}
+                    disabled={busy || editingDisabled}
                   >
                     删除
                   </button>

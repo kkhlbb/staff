@@ -8,6 +8,7 @@ import {
   type WorkspaceDraft,
 } from '../workspace/draft'
 import { resolveWorkspaceStatus } from '../workspace/status'
+import { useDatabaseStaleVersion } from '../storage/databaseStale'
 import {
   ContributionTable,
   type ContributionTermLabel,
@@ -293,6 +294,7 @@ export function ResultPanel({
   const targetMinErrorId = `${baseId}-target-min-error`
   const targetMaxErrorId = `${baseId}-target-max-error`
   const confirmedId = `${baseId}-confirmed`
+  const editingDisabled = useDatabaseStaleVersion() !== null
 
   const targetMinError = cellErrors['target.min']
   const targetMaxError = cellErrors['target.max']
@@ -335,6 +337,7 @@ export function ResultPanel({
             inputMode="decimal"
             autoComplete="off"
             value={draft.targetMin}
+            disabled={editingDisabled}
             onChange={(event) =>
               updateTarget(event.target.value, draft.targetMax)
             }
@@ -359,6 +362,7 @@ export function ResultPanel({
             inputMode="decimal"
             autoComplete="off"
             value={draft.targetMax}
+            disabled={editingDisabled}
             onChange={(event) =>
               updateTarget(draft.targetMin, event.target.value)
             }
@@ -445,6 +449,7 @@ export function ResultPanel({
             id={confirmedId}
             type="checkbox"
             checked={relationConfirmed}
+            disabled={editingDisabled}
             onChange={(event) => onSetRelationConfirmed(event.target.checked)}
           />
           已核对尺寸关系与作用方向

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { DatabaseVersionGuard } from './storage/DatabaseVersionGuard'
 import { PrintReport } from './pages/PrintReport'
 import { ProjectList } from './pages/ProjectList'
 import { Workspace } from './pages/Workspace'
@@ -70,8 +71,9 @@ function App() {
     setRoute({ page: 'projects' })
   }
 
+  let content: ReactNode
   if (route.page === 'report') {
-    return (
+    content = (
       <PrintReport
         key={route.projectId}
         projectId={route.projectId}
@@ -79,19 +81,19 @@ function App() {
         onBackToList={backToProjects}
       />
     )
-  }
-
-  if (route.page === 'workspace') {
-    return (
+  } else if (route.page === 'workspace') {
+    content = (
       <Workspace
         key={route.projectId}
         projectId={route.projectId}
         onBackToList={backToProjects}
       />
     )
+  } else {
+    content = <ProjectList onOpenProject={openProject} />
   }
 
-  return <ProjectList onOpenProject={openProject} />
+  return <DatabaseVersionGuard>{content}</DatabaseVersionGuard>
 }
 
 export default App

@@ -327,6 +327,105 @@ export function openDatabase(
   })
 }
 
+/** 版本探测的兜底超时；探测只读，不能因为长期挂起拖住焦点切换。 */
+export const DATABASE_VERSION_PROBE_TIMEOUT_MS = 3_000
+
+type DatabasesApi = IDBFactory & {
+  databases?: () => Promise<IDBDatabaseInfo[]>
+}
+
+/**
+ * 不带版本号打开数据库，读到实际版本后立即关闭。
+ *
+ * 只用于“不知道库是否已被其它标签页升级”的探测：不运行建表/迁移逻辑，
+ * 也不把打开失败当成版本过旧。数据库不存在时浏览器会建一个空的 v1 库；
+ * 随后正常启动仍会按 PROJECT_DB_VERSION 升级，不会丢数据。
+ */
+function openAndReadVersion(
+  name: string,
+  timeoutMs: number,
+): Promise<number | null> {
+  return new Promise<number | null>((resolve) => {
+    let request: IDBOpenDBRequest
+    let settled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const finish = (version: number | null): void => {
+      if (settled) {
+        return
+      }
+      settled = true
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
+      }
+      resolve(version)
+    }
+    const closeQuietly = (): void => {
+      try {
+        request.result.close()
+      } catch {
+        // 请求未成功（result 不可用）或连接已关闭。
+      }
+    }
+
+    try {
+      request = indexedDB.open(name)
+    } catch {
+      resolve(null)
+      return
+    }
+
+    timer = setTimeout(() => {
+      closeQuietly()
+      finish(null)
+    }, timeoutMs)
+
+    // 数据库不存在时会走到这里；探测不创建 store，正常启动会再升级。
+    request.onupgradeneeded = () => undefined
+    request.onsuccess = () => {
+      const db = request.result
+      db.onversionchange = () => {
+        try {
+          db.close()
+        } catch {
+          // 连接可能已关闭。
+        }
+      }
+      const version = db.version
+      db.close()
+      finish(settled ? null : version)
+    }
+    request.onerror = () => finish(null)
+    request.onblocked = () => finish(null)
+  })
+}
+
+/**
+ * 便宜地探测当前数据库的实际版本，不写任何数据。
+ *
+ * 优先使用 IndexedDB.databases()：它不打开连接，也不会和升级请求互相阻塞。
+ * 浏览器不支持时才退回不带版本号的 open()。返回 null 表示“探测不到”，
+ * 调用方不能把 null 当成“版本过旧”。
+ */
+export async function probeDatabaseVersion(
+  options: { name?: string; timeoutMs?: number } = {},
+): Promise<number | null> {
+  const name = options.name ?? PROJECT_DB_NAME
+  const timeoutMs = options.timeoutMs ?? DATABASE_VERSION_PROBE_TIMEOUT_MS
+  const factory = indexedDB as DatabasesApi
+  if (typeof factory.databases === 'function') {
+    try {
+      const databases = await factory.databases()
+      const found = databases.find((database) => database.name === name)
+      return found?.version ?? null
+    } catch {
+      // 隐私模式或实现限制：退回打开的探测方式。
+    }
+  }
+  return openAndReadVersion(name, timeoutMs)
+}
+
 export async function withDatabase<T>(
   operation: (db: IDBDatabase) => Promise<T>,
 ): Promise<T> {
