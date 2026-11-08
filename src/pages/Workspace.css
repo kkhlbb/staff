@@ -47,7 +47,8 @@
 
 .workspace__nav-button,
 .workspace__export-button,
-.workspace__print-button {
+.workspace__print-button,
+.workspace__table-import-button {
   white-space: nowrap;
 }
 
@@ -55,10 +56,21 @@
   color: var(--muted);
 }
 
-.workspace__export-button {
+.workspace__export-button,
+.workspace__table-import-button {
   border-color: var(--accent);
   color: var(--accent);
   font-weight: 600;
+}
+
+.workspace__table-import-message {
+  margin: -8px 0 16px;
+  padding: 8px 10px;
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 13px;
 }
 
 .workspace__print-button {

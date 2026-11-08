@@ -562,6 +562,7 @@ describe('Workspace：自动保存与刷新恢复', () => {
           draft: { projectId, draft, savedAt },
           modelUpdated: false,
           cellErrors: {},
+          importSnapshot: null,
         },
       }),
     )
@@ -616,6 +617,7 @@ describe('Workspace：自动保存与刷新恢复', () => {
           draft: { projectId, draft, savedAt },
           modelUpdated: false,
           cellErrors: {},
+          importSnapshot: null,
         },
       }),
     )
@@ -965,6 +967,7 @@ describe('Workspace：document hidden 立即保存', () => {
           draft: { projectId, draft, savedAt },
           modelUpdated: false,
           cellErrors: {},
+          importSnapshot: null,
         },
       }),
     )

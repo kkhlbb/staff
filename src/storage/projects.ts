@@ -8,6 +8,15 @@ import {
 } from '../domain/types'
 import { validateChain, type ValidationError } from '../domain/validation'
 import { draftToChain, type CellErrors, type WorkspaceDraft } from '../workspace/draft'
+import {
+  DRAFT_STORE_NAME,
+  IMPORT_SNAPSHOT_STORE_NAME,
+  PROJECT_STORE_NAME,
+  errorName,
+  requestResult,
+  transactionDone,
+  withDatabase,
+} from './db'
 
 /** 项目 JSON 结构版本；导入只接受这一版本。 */
 export const STORAGE_SCHEMA_VERSION = 1
@@ -18,11 +27,7 @@ export const MAX_IMPORT_BYTES = 1024 * 1024
 /** 文档第 7 节：组成环最多 20 项。 */
 export const MAX_CHAIN_TERMS = 20
 /** fake-indexeddb 测试也用它清理数据库。 */
-export const PROJECT_DB_NAME = 'shaft-tolerance-chain'
-
-const PROJECT_DB_VERSION = 1
-const PROJECT_STORE_NAME = 'projects'
-const DRAFT_STORE_NAME = 'drafts'
+export { PROJECT_DB_NAME } from './db'
 
 export interface StorageIssue {
   path: (string | number)[]
@@ -66,6 +71,25 @@ export interface SaveDraftResult {
   /** 只有草稿通过 draftToChain 时才为 true；否则只写 drafts 表。 */
   modelUpdated: boolean
   cellErrors: CellErrors
+  /** 替换导入时写入的“操作前快照”；其他保存路径为 null。 */
+  importSnapshot: ImportSnapshot | null
+}
+
+/**
+ * 替换导入前的方案快照。与项目基线、V2.2 的 AnalysisSnapshot 都不是同一概念：
+ * 它只记录本次替换发生时 projects.working 的完整副本，供失败排查或后续恢复使用。
+ */
+export interface ImportSnapshot {
+  id: string
+  projectId: string
+  createdAt: string
+  kind: 'replace-before-import'
+  definition: ChainDefinition
+}
+
+export interface SaveDraftOptions {
+  /** 替换全部组成环时，在同一事务内备份写入前的 working。 */
+  snapshotBefore?: 'replace'
 }
 
 export interface ImportProjectResult {
@@ -480,79 +504,6 @@ function decodeProjectJson(input: ProjectJsonInput): StorageResult<string> {
 /* IndexedDB                                                                  */
 /* -------------------------------------------------------------------------- */
 
-function requestResult<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    request.onsuccess = () => {
-      resolve(request.result)
-    }
-    request.onerror = () => {
-      reject(request.error ?? new Error('IndexedDB 请求失败'))
-    }
-  })
-}
-
-function transactionDone(transaction: IDBTransaction): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    transaction.oncomplete = () => {
-      resolve()
-    }
-    transaction.onerror = () => {
-      reject(transaction.error ?? new Error('IndexedDB 事务失败'))
-    }
-    transaction.onabort = () => {
-      reject(transaction.error ?? new Error('IndexedDB 事务已取消'))
-    }
-  })
-}
-
-function openDatabase(): Promise<IDBDatabase> {
-  return new Promise<IDBDatabase>((resolve, reject) => {
-    let request: IDBOpenDBRequest
-    try {
-      request = indexedDB.open(PROJECT_DB_NAME, PROJECT_DB_VERSION)
-    } catch (error) {
-      reject(error)
-      return
-    }
-
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains(PROJECT_STORE_NAME)) {
-        db.createObjectStore(PROJECT_STORE_NAME, { keyPath: 'id' })
-      }
-      if (!db.objectStoreNames.contains(DRAFT_STORE_NAME)) {
-        db.createObjectStore(DRAFT_STORE_NAME, { keyPath: 'projectId' })
-      }
-    }
-    request.onsuccess = () => {
-      resolve(request.result)
-    }
-    request.onerror = () => {
-      reject(request.error ?? new Error('无法打开项目数据库'))
-    }
-    request.onblocked = () => {
-      reject(new Error('项目数据库被其它页面占用'))
-    }
-  })
-}
-
-async function withDatabase<T>(operation: (db: IDBDatabase) => Promise<T>): Promise<T> {
-  const db = await openDatabase()
-  try {
-    return await operation(db)
-  } finally {
-    db.close()
-  }
-}
-
-function errorName(error: unknown): string | undefined {
-  if (typeof error === 'object' && error !== null && 'name' in error) {
-    const name = (error as { name?: unknown }).name
-    return typeof name === 'string' ? name : undefined
-  }
-  return undefined
-}
-
 function newProjectId(): string {
   const cryptoApi = globalThis.crypto
   if (cryptoApi !== undefined && typeof cryptoApi.randomUUID === 'function') {
@@ -563,6 +514,15 @@ function newProjectId(): string {
 
 function nowIso(): string {
   return new Date().toISOString()
+}
+
+function newImportSnapshotId(projectId: string): string {
+  const cryptoApi = globalThis.crypto
+  const suffix =
+    cryptoApi !== undefined && typeof cryptoApi.randomUUID === 'function'
+      ? cryptoApi.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  return `import-snapshot-${projectId}-${suffix}`
 }
 
 /**
@@ -840,7 +800,7 @@ export async function deleteProject(id: string): Promise<StorageResult<boolean>>
   try {
     return await withDatabase(async (db) => {
       const transaction = db.transaction(
-        [PROJECT_STORE_NAME, DRAFT_STORE_NAME],
+        [PROJECT_STORE_NAME, DRAFT_STORE_NAME, IMPORT_SNAPSHOT_STORE_NAME],
         'readwrite',
       )
       const done = transactionDone(transaction)
@@ -849,6 +809,15 @@ export async function deleteProject(id: string): Promise<StorageResult<boolean>>
         const existing = (await requestResult(projectStore.get(id))) as Project | undefined
         projectStore.delete(id)
         transaction.objectStore(DRAFT_STORE_NAME).delete(id)
+        const snapshotStore = transaction.objectStore(IMPORT_SNAPSHOT_STORE_NAME)
+        if (snapshotStore.indexNames.contains('projectId')) {
+          const snapshots = (await requestResult(
+            snapshotStore.index('projectId').getAll(id),
+          )) as ImportSnapshot[]
+          for (const snapshot of snapshots) {
+            snapshotStore.delete(snapshot.id)
+          }
+        }
         await done
         return { ok: true, value: existing !== undefined }
       } catch (error) {
@@ -903,12 +872,39 @@ export async function listDrafts(): Promise<StorageResult<StoredDraft[]>> {
 }
 
 /**
+ * 读取替换导入前的方案快照。传入 projectId 时只返回该项目的快照；
+ * 不传时返回全部（测试与后续恢复界面使用）。
+ */
+export async function listImportSnapshots(
+  projectId?: string,
+): Promise<StorageResult<ImportSnapshot[]>> {
+  try {
+    const snapshots = await withDatabase(async (db) => {
+      const transaction = db.transaction(IMPORT_SNAPSHOT_STORE_NAME, 'readonly')
+      const done = transactionDone(transaction)
+      const store = transaction.objectStore(IMPORT_SNAPSHOT_STORE_NAME)
+      const request =
+        projectId === undefined
+          ? store.getAll()
+          : store.index('projectId').getAll(projectId)
+      const value = await requestResult(request)
+      await done
+      return value as ImportSnapshot[]
+    })
+    return { ok: true, value: snapshots }
+  } catch (error) {
+    return storageFailure(error, '读取替换前快照失败')
+  }
+}
+
+/**
  * 自动保存入口：草稿永远写入独立 drafts 表，只有通过 draftToChain 时才同步更新
  * projects.working。无效草稿只更新草稿，项目模型与 updatedAt 都保持不变。
  */
 export async function saveDraft(
   projectId: string,
   draft: WorkspaceDraft,
+  options: SaveDraftOptions = {},
 ): Promise<StorageResult<SaveDraftResult>> {
   let conversion: ReturnType<typeof draftToChain>
   try {
@@ -919,10 +915,11 @@ export async function saveDraft(
 
   try {
     return await withDatabase(async (db) => {
-      const transaction = db.transaction(
-        [PROJECT_STORE_NAME, DRAFT_STORE_NAME],
-        'readwrite',
-      )
+      const withSnapshot = options.snapshotBefore === 'replace'
+      const storeNames = withSnapshot
+        ? [PROJECT_STORE_NAME, DRAFT_STORE_NAME, IMPORT_SNAPSHOT_STORE_NAME]
+        : [PROJECT_STORE_NAME, DRAFT_STORE_NAME]
+      const transaction = db.transaction(storeNames, 'readwrite')
       const done = transactionDone(transaction)
       try {
         const projectStore = transaction.objectStore(PROJECT_STORE_NAME)
@@ -939,6 +936,22 @@ export async function saveDraft(
         const savedAt = nowIso()
         const storedDraft: StoredDraft = { projectId, draft, savedAt }
         draftStore.put(storedDraft)
+
+        // 快照必须与替换写入处于同一事务：任一步失败都会整体 abort，
+        // 不会留下“快照已写、方案未换”或“方案已换、快照丢失”的半成品。
+        let importSnapshot: ImportSnapshot | null = null
+        if (withSnapshot) {
+          importSnapshot = {
+            id: newImportSnapshotId(projectId),
+            projectId,
+            createdAt: savedAt,
+            kind: 'replace-before-import',
+            definition: existing.working,
+          }
+          transaction
+            .objectStore(IMPORT_SNAPSHOT_STORE_NAME)
+            .add(importSnapshot)
+        }
 
         let project = existing
         let modelUpdated = false
@@ -960,9 +973,17 @@ export async function saveDraft(
             draft: storedDraft,
             modelUpdated,
             cellErrors: conversion.ok ? {} : conversion.cellErrors,
+            importSnapshot,
           },
         }
       } catch (error) {
+        // 同步异常（例如写请求抛 DataError）不会自动 abort 事务；
+        // 必须显式取消，保证已排队的 projects / drafts / importSnapshots 写入全部回滚。
+        try {
+          transaction.abort()
+        } catch {
+          // 事务可能已经 error/abort，忽略二次取消异常。
+        }
         await done.catch(() => undefined)
         throw error
       }

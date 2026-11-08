@@ -3,9 +3,11 @@ import { ChainDiagram } from '../components/ChainDiagram'
 import { ChainExpression } from '../components/ChainExpression'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DimensionTable } from '../components/DimensionTable'
+import { ImportWizard } from '../components/ImportWizard'
 import { ResultPanel } from '../components/ResultPanel'
 import { ScenarioCompare } from '../components/ScenarioCompare'
 import type { ChainDefinition, Project } from '../domain/types'
+import type { CommitImportSuccess } from '../import/commit'
 import { getProject, listProjects } from '../storage/projects'
 import { resolveReportEligibility } from '../workspace/status'
 import {
@@ -93,6 +95,8 @@ function WorkspaceEditor({
   const [baselineBusy, setBaselineBusy] = useState(false)
   const [baselineMessage, setBaselineMessage] = useState<string | null>(null)
   const [baselineError, setBaselineError] = useState<string | null>(null)
+  const [tableImportOpen, setTableImportOpen] = useState(false)
+  const [tableImportMessage, setTableImportMessage] = useState<string | null>(null)
 
   // 当前草稿无效时由 hook 保留上一次有效链；结果卡和示意图都只读取这一份数据。
   // 但目标字段本身无效时不能把上次有效链的 target 继续喂给结果卡，
@@ -107,6 +111,18 @@ function WorkspaceEditor({
     relationConfirmed: chain?.relationConfirmed ?? false,
     stale,
   })
+
+  /**
+   * 表格导入已在 commitImport 内通过 saveDraft 原子写入 projects.working 与草稿；
+   * 这里把同一份草稿放进工作台状态，避免界面继续显示导入前的旧值。
+   */
+  const handleTableImported = (imported: CommitImportSuccess): void => {
+    dispatch({ type: 'replaceDraft', draft: imported.draft })
+    setTableImportOpen(false)
+    setTableImportMessage(
+      `已从表格导入，当前共 ${imported.chain.terms.length} 个组成环；关系确认已清除，请重新核对。`,
+    )
+  }
 
   const handleOpenReport = (): void => {
     if (!reportEligibility.eligible) {
@@ -201,6 +217,13 @@ function WorkspaceEditor({
           </button>
           <button
             type="button"
+            className="workspace__table-import-button"
+            onClick={() => setTableImportOpen(true)}
+          >
+            从表格追加/替换
+          </button>
+          <button
+            type="button"
             className="workspace__export-button"
             onClick={exportBackup}
           >
@@ -217,6 +240,12 @@ function WorkspaceEditor({
           role="status"
         >
           {reportEligibility.message}
+        </p>
+      ) : null}
+
+      {tableImportMessage !== null ? (
+        <p className="workspace__table-import-message" role="status">
+          {tableImportMessage}
         </p>
       ) : null}
 
@@ -357,6 +386,15 @@ function WorkspaceEditor({
             void performSaveBaseline()
           }}
           onCancel={() => setPendingBaselineAction(null)}
+        />
+      ) : null}
+
+      {tableImportOpen ? (
+        <ImportWizard
+          project={project}
+          baseDraft={draft}
+          onClose={() => setTableImportOpen(false)}
+          onImported={handleTableImported}
         />
       ) : null}
 

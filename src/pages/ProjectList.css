@@ -51,6 +51,12 @@
   white-space: nowrap;
 }
 
+.project-list__table-import {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .project-list__demo-label {
   color: var(--muted);
   font-size: 13px;

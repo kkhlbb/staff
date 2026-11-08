@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { ImportWizard } from '../components/ImportWizard'
 import type { Project } from '../domain/types'
 import {
   DEMO_CASES,
@@ -20,6 +21,7 @@ import {
   type StorageError,
   type StorageResult,
 } from '../storage/projects'
+import type { CommitImportSuccess } from '../import/commit'
 import type { WorkspaceDraft } from '../workspace/draft'
 import { resolveStoredWorkspaceStatus } from '../workspace/status'
 import './ProjectList.css'
@@ -152,6 +154,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
   const [importError, setImportError] = useState<UiError | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Project | null>(null)
+  const [tableImportOpen, setTableImportOpen] = useState(false)
   const [demoCase, setDemoCase] = useState<DemoCaseId>('A')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -262,6 +265,14 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
     })
   }
 
+  const handleTableImported = (result: CommitImportSuccess): void => {
+    setNotice(
+      `已从表格新建项目「${result.project.name}」；请在工作台核对关系并重新确认。`,
+    )
+    void refresh()
+    openProject(result.project.id)
+  }
+
   const handleImport = (file: File): void => {
     void runAction(async () => {
       const json = await readFileText(file)
@@ -350,6 +361,14 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
           disabled={busy}
         >
           新建
+        </button>
+        <button
+          type="button"
+          className="project-list__table-import"
+          onClick={() => setTableImportOpen(true)}
+          disabled={busy}
+        >
+          从表格导入
         </button>
         <button
           type="button"
@@ -526,6 +545,13 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
           confirmLabel="确认删除"
           onConfirm={handleConfirmDelete}
           onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
+
+      {tableImportOpen ? (
+        <ImportWizard
+          onClose={() => setTableImportOpen(false)}
+          onImported={handleTableImported}
         />
       ) : null}
     </main>
