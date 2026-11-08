@@ -11,11 +11,18 @@
  *
  * V2.1 第一组新增本地 PDF 来源底座：sourceDocuments / sourceRevisions /
  * sourceBlobs。版本升到 4；升级逻辑始终只创建缺失 store 和索引，不重建、
- * 不清空已有数据。bindings / events 等绑定与事件 store 在实现对应功能时再
- * 追加，不在本组提前建空表。
+ * 不清空已有数据。
+ *
+ * V2.1 第二组新增 bindings / events：一条组成环可有多个来源区域绑定，绑定只
+ * 保存 revisionId、页码、PDF 坐标（page.view 四元组）与备注，不保存数值或
+ * 确认结论；events 记录来源导入、绑定新增/解除等变更，供后续审查与删除项目
+ * 时确定归属。版本升到 5。
+ *
+ * 升级只增补缺失的 store / index，绝不重建或清空。库一旦升到 v5，指定 version=4
+ * 的旧前端打开会得到 VersionError；部署回滚不能只回退前端，更不能删库降级。
  */
 export const PROJECT_DB_NAME = 'shaft-tolerance-chain'
-export const PROJECT_DB_VERSION = 4
+export const PROJECT_DB_VERSION = 5
 
 export const PROJECT_STORE_NAME = 'projects'
 export const DRAFT_STORE_NAME = 'drafts'
@@ -24,6 +31,8 @@ export const IMPORT_SNAPSHOT_STORE_NAME = 'importSnapshots'
 export const SOURCE_DOCUMENT_STORE_NAME = 'sourceDocuments'
 export const SOURCE_REVISION_STORE_NAME = 'sourceRevisions'
 export const SOURCE_BLOB_STORE_NAME = 'sourceBlobs'
+export const BINDING_STORE_NAME = 'bindings'
+export const EVENT_STORE_NAME = 'events'
 
 interface StoreDefinition {
   name: string
@@ -43,6 +52,16 @@ const STORE_DEFINITIONS: StoreDefinition[] = [
     indexes: ['projectId', 'documentId'],
   },
   { name: SOURCE_BLOB_STORE_NAME, keyPath: 'blobKey', indexes: ['projectId'] },
+  {
+    name: BINDING_STORE_NAME,
+    keyPath: 'id',
+    indexes: ['projectId', 'termId', 'revisionId'],
+  },
+  {
+    name: EVENT_STORE_NAME,
+    keyPath: 'id',
+    indexes: ['projectId', 'createdAt'],
+  },
 ]
 
 export function requestResult<T>(request: IDBRequest<T>): Promise<T> {
@@ -75,6 +94,84 @@ export interface OpenDatabaseOptions {
   name?: string
   /** 仅供测试注入；默认使用 PROJECT_DB_VERSION。 */
   version?: number
+}
+
+export type DatabaseErrorCode = 'database_too_new' | 'database_blocked'
+
+/**
+ * 库的版本比当前页面程序请求的高。IndexedDB 会抛 VersionError；旧前端无法
+ * 通过“回退代码”继续使用已升级的库，也不允许删库降级。
+ */
+export class DatabaseVersionError extends Error {
+  readonly code = 'database_too_new' as const
+
+  constructor(message: string) {
+    super(message)
+    this.name = 'DatabaseVersionError'
+  }
+}
+
+/** 升级被其它标签页的旧连接挡住；本次打开失败，但阻塞解除后升级仍会完成。 */
+export class DatabaseBlockedError extends Error {
+  readonly code = 'database_blocked' as const
+
+  constructor(message: string) {
+    super(message)
+    this.name = 'DatabaseBlockedError'
+  }
+}
+
+/** 跨 realm 的 DOMException 不能只靠 instanceof；名称在两种情况下都保留。 */
+export function databaseErrorCode(error: unknown): DatabaseErrorCode | undefined {
+  if (error instanceof DatabaseVersionError) {
+    return error.code
+  }
+  if (error instanceof DatabaseBlockedError) {
+    return error.code
+  }
+  const name = errorName(error)
+  if (name === 'DatabaseVersionError' || name === 'VersionError') {
+    return 'database_too_new'
+  }
+  if (name === 'DatabaseBlockedError') {
+    return 'database_blocked'
+  }
+  return undefined
+}
+
+export interface DatabaseVersionChangeInfo {
+  /** 本页连接原先的版本。 */
+  oldVersion: number
+  /** 其它页面请求的新版本；deleteDatabase 时为 null。 */
+  newVersion: number | null
+}
+
+const versionChangeListeners = new Set<
+  (info: DatabaseVersionChangeInfo) => void
+>()
+
+/**
+ * 订阅“其它标签页正在升级/删除数据库”。本页收到 versionchange 后会立即
+ * 关闭旧连接（否则会阻塞对方），并通知 UI 明确提示刷新；旧代码没有这个
+ * 处理器时只能显示浏览器原始错误，因此部署时必须同时更新所有页面。
+ */
+export function subscribeDatabaseVersionChange(
+  listener: (info: DatabaseVersionChangeInfo) => void,
+): () => void {
+  versionChangeListeners.add(listener)
+  return () => {
+    versionChangeListeners.delete(listener)
+  }
+}
+
+function notifyDatabaseVersionChange(info: DatabaseVersionChangeInfo): void {
+  for (const listener of versionChangeListeners) {
+    try {
+      listener(info)
+    } catch {
+      // 单个界面回调失败不影响数据库连接处理。
+    }
+  }
 }
 
 export function openDatabase(
@@ -110,6 +207,15 @@ export function openDatabase(
     try {
       request = indexedDB.open(name, version)
     } catch (error) {
+      if (databaseErrorCode(error) === 'database_too_new') {
+        reject(
+          new DatabaseVersionError(
+            `本地数据库版本高于当前页面请求的 v${version}。请刷新页面加载最新程序；` +
+              '不要删除数据库或降级，回退前端不能打开已升级的库。',
+          ),
+        )
+        return
+      }
       reject(error)
       return
     }
@@ -141,14 +247,43 @@ export function openDatabase(
         closeLateConnection()
         return
       }
+      const db = request.result
+      // 其它标签页升级时先关闭本页旧连接，避免把对方挡住；UI 订阅后提示刷新。
+      db.onversionchange = (event) => {
+        const info: DatabaseVersionChangeInfo = {
+          oldVersion: db.version,
+          newVersion: event.newVersion ?? null,
+        }
+        try {
+          db.close()
+        } catch {
+          // 连接可能已关闭。
+        }
+        notifyDatabaseVersionChange(info)
+      }
       settled = true
-      resolve(request.result)
+      resolve(db)
     }
     request.onerror = () => {
-      settleError(request.error ?? new Error('无法打开项目数据库'))
+      const error = request.error
+      if (databaseErrorCode(error) === 'database_too_new') {
+        settleError(
+          new DatabaseVersionError(
+            `本地数据库版本高于当前页面请求的 v${version}。请刷新页面加载最新程序；` +
+              '不要删除数据库或降级，回退前端不能打开已升级的库。',
+          ),
+        )
+        return
+      }
+      settleError(error ?? new Error('无法打开项目数据库'))
     }
     request.onblocked = () => {
-      settleError(new Error('项目数据库被其它页面占用'))
+      settleError(
+        new DatabaseBlockedError(
+          '项目数据库正被其它标签页占用，本次升级没有完成。' +
+            '请关闭或刷新其它标签页后重试；阻塞解除后升级仍会继续，稍后重新打开即可。',
+        ),
+      )
     }
   })
 }

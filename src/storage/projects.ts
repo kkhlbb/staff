@@ -9,12 +9,15 @@ import {
 import { validateChain, type ValidationError } from '../domain/validation'
 import { draftToChain, type CellErrors, type WorkspaceDraft } from '../workspace/draft'
 import {
+  BINDING_STORE_NAME,
   DRAFT_STORE_NAME,
+  EVENT_STORE_NAME,
   IMPORT_SNAPSHOT_STORE_NAME,
   PROJECT_STORE_NAME,
   SOURCE_BLOB_STORE_NAME,
   SOURCE_DOCUMENT_STORE_NAME,
   SOURCE_REVISION_STORE_NAME,
+  databaseErrorCode,
   errorName,
   requestResult,
   transactionDone,
@@ -129,6 +132,12 @@ function failure(
 
 function storageFailure(error: unknown, message: string): StorageFailure {
   const detail = error instanceof Error ? error.message : String(error)
+  // 数据库版本过新 / 被其它标签页阻塞要保留专用错误码，页面才能显示“刷新”
+  // 或“关闭其它标签页”的具体指引，而不是笼统的存储失败。
+  const databaseCode = databaseErrorCode(error)
+  if (databaseCode !== undefined) {
+    return failure(databaseCode, detail)
+  }
   return failure('storage_failure', `${message}：${detail}`)
 }
 
@@ -800,13 +809,13 @@ export async function updateProject(
 }
 
 /**
- * 项目被删除后，来源记录（文档 / 版本 / Blob 记录）不级联删除：revision 是
- * 不可变的历史资料，Blob 字节也保留。但它们的 projectId 必须整体挪到一个
- * 退役作用域，否则重建同 ID 项目会看到上一个身份的来源，旧 revision 还会
- * 占新项目的额度。
+ * 项目被删除后，来源记录（文档 / 版本 / Blob 记录 / 绑定 / 事件）不级联删除：
+ * revision 是不可变的历史资料，Blob 字节也保留。但它们的 projectId 必须整体
+ * 挪到一个退役作用域，否则重建同 ID 项目会看到上一个身份的来源，旧 revision
+ * 还会占新项目的额度。
  *
- * 只改三张表的 projectId 作用域键，不改 sha256 / byteSize / blob / createdAt；
- * 旧记录仍可按 id / blobKey 读回，只是不再属于任何现存项目。
+ * 只改各表的作用域键 projectId，不改 sha256 / byteSize / blob / rectPdf /
+ * createdAt；旧记录仍可按 id / blobKey 读回，只是不再属于任何现存项目。
  */
 function retiredSourceScopeId(projectId: string): string {
   return `${projectId}::retired::${newProjectId()}`
@@ -840,6 +849,22 @@ async function retireSourceScope(
   for (const blob of blobs) {
     blobStore.put({ ...blob, projectId: retiredId })
   }
+
+  const bindingStore = transaction.objectStore(BINDING_STORE_NAME)
+  const bindings = (await requestResult(
+    bindingStore.index('projectId').getAll(projectId),
+  )) as { id: string; projectId: string }[]
+  for (const binding of bindings) {
+    bindingStore.put({ ...binding, projectId: retiredId })
+  }
+
+  const eventStore = transaction.objectStore(EVENT_STORE_NAME)
+  const events = (await requestResult(
+    eventStore.index('projectId').getAll(projectId),
+  )) as { id: string; projectId: string }[]
+  for (const event of events) {
+    eventStore.put({ ...event, projectId: retiredId })
+  }
 }
 
 export async function deleteProject(id: string): Promise<StorageResult<boolean>> {
@@ -853,6 +878,8 @@ export async function deleteProject(id: string): Promise<StorageResult<boolean>>
           SOURCE_DOCUMENT_STORE_NAME,
           SOURCE_REVISION_STORE_NAME,
           SOURCE_BLOB_STORE_NAME,
+          BINDING_STORE_NAME,
+          EVENT_STORE_NAME,
         ],
         'readwrite',
       )

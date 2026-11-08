@@ -10,6 +10,7 @@
  * - 密码保护、损坏、超限、容量不足都返回明确错误，不伪装成功。
  */
 import {
+  EVENT_STORE_NAME,
   PROJECT_STORE_NAME,
   SOURCE_BLOB_STORE_NAME,
   SOURCE_DOCUMENT_STORE_NAME,
@@ -19,6 +20,7 @@ import {
   transactionDone,
   withDatabase,
 } from '../storage/db'
+import { addChangeEvent, changeEventId } from '../history/events'
 import { sha256Hex } from './hash'
 import {
   DEFAULT_SOURCE_LIMITS,
@@ -328,6 +330,7 @@ export async function importSourceRevision(
           SOURCE_DOCUMENT_STORE_NAME,
           SOURCE_REVISION_STORE_NAME,
           SOURCE_BLOB_STORE_NAME,
+          EVENT_STORE_NAME,
         ],
         'readwrite',
       )
@@ -396,6 +399,19 @@ export async function importSourceRevision(
         } else {
           await requestResult(documentStore.put(document))
         }
+
+        // 事件与 revision / Blob / 最新指针同事务：任一步失败一起回滚。
+        await requestResult(
+          addChangeEvent(transaction, {
+            id: changeEventId('source_import', revisionId),
+            projectId,
+            type: 'source_import',
+            createdAt,
+            documentId,
+            revisionId,
+            message: `导入 ${fileName}（${inspection.pageCount} 页）`,
+          }),
+        )
 
         await done
         return {

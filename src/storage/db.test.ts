@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment node
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Project } from '../domain/types'
@@ -6,7 +6,9 @@ import { parseMm } from '../domain/units'
 import { deleteProjectDatabase } from '../test/projectDb'
 import type { StoredDraft } from './projects'
 import {
+  BINDING_STORE_NAME,
   DRAFT_STORE_NAME,
+  EVENT_STORE_NAME,
   IMPORT_SNAPSHOT_STORE_NAME,
   MAPPING_TEMPLATE_STORE_NAME,
   PROJECT_DB_NAME,
@@ -15,13 +17,17 @@ import {
   SOURCE_BLOB_STORE_NAME,
   SOURCE_DOCUMENT_STORE_NAME,
   SOURCE_REVISION_STORE_NAME,
+  databaseErrorCode,
   openDatabase,
   requestResult,
+  subscribeDatabaseVersionChange,
 } from './db'
 import { getDraft, getProject, listProjects } from './projects'
 
 const ALL_STORES = [
+  BINDING_STORE_NAME,
   DRAFT_STORE_NAME,
+  EVENT_STORE_NAME,
   IMPORT_SNAPSHOT_STORE_NAME,
   MAPPING_TEMPLATE_STORE_NAME,
   PROJECT_STORE_NAME,
@@ -208,10 +214,10 @@ describe('数据库迁移：v1 数据在升级后保持不变', () => {
     expect(raw.project).toEqual(sampleProject)
     expect(raw.draft).toEqual(sampleDraft)
 
-    // 再由当前代码（v4）打开同一个库：只会补缺失 store，不重建、不清空。
+    // 再由当前代码（v5）打开同一个库：只会补缺失 store，不重建、不清空。
     const db = await openDatabase()
     expect(db.version).toBe(PROJECT_DB_VERSION)
-    expect(db.version).toBe(4)
+    expect(db.version).toBe(5)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(
       ALL_STORES.slice().sort(),
     )
@@ -314,8 +320,8 @@ async function recordOpenCalls<T>(
   }
 }
 
-describe('数据库迁移：真实老用户从 v1 直接打开 v4', () => {
-  it('v1 库由当前代码一次性升级到 v4：同一次升级建出新 store，旧数据逐字段不变', async () => {
+describe('数据库迁移：真实老用户从 v1 直接打开 v5', () => {
+  it('v1 库由当前代码一次性升级到 v5：同一次升级建出新 store，旧数据逐字段不变', async () => {
     await createV1Database()
 
     // 前提：库确实是 version=1，只有老用户就有的两个 store。
@@ -325,14 +331,14 @@ describe('数据库迁移：真实老用户从 v1 直接打开 v4', () => {
       [DRAFT_STORE_NAME, PROJECT_STORE_NAME].slice().sort(),
     )
 
-    // 当前代码（PROJECT_DB_VERSION=4）一次性打开：oldVersion=1、newVersion=4。
+    // 当前代码（PROJECT_DB_VERSION=5）一次性打开：oldVersion=1、newVersion=5。
     const { value: db, calls } = await recordOpenCalls(() => openDatabase())
 
-    expect(calls.map((call) => call.version)).toEqual([4])
-    expect(calls[0].upgrades).toEqual([{ oldVersion: 1, newVersion: 4 }])
+    expect(calls.map((call) => call.version)).toEqual([5])
+    expect(calls[0].upgrades).toEqual([{ oldVersion: 1, newVersion: 5 }])
 
     expect(db.version).toBe(PROJECT_DB_VERSION)
-    expect(db.version).toBe(4)
+    expect(db.version).toBe(5)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(
       ALL_STORES.slice().sort(),
     )
@@ -345,6 +351,8 @@ describe('数据库迁移：真实老用户从 v1 直接打开 v4', () => {
         SOURCE_DOCUMENT_STORE_NAME,
         SOURCE_REVISION_STORE_NAME,
         SOURCE_BLOB_STORE_NAME,
+        BINDING_STORE_NAME,
+        EVENT_STORE_NAME,
       ],
       'readonly',
     )
@@ -355,6 +363,8 @@ describe('数据库迁移：真实老用户从 v1 直接打开 v4', () => {
     expect(await countOf(SOURCE_DOCUMENT_STORE_NAME)).toBe(0)
     expect(await countOf(SOURCE_REVISION_STORE_NAME)).toBe(0)
     expect(await countOf(SOURCE_BLOB_STORE_NAME)).toBe(0)
+    expect(await countOf(BINDING_STORE_NAME)).toBe(0)
+    expect(await countOf(EVENT_STORE_NAME)).toBe(0)
     expect(
       newStoreTransaction
         .objectStore(IMPORT_SNAPSHOT_STORE_NAME)
@@ -375,6 +385,19 @@ describe('数据库迁移：真实老用户从 v1 直接打开 v4', () => {
         .objectStore(SOURCE_BLOB_STORE_NAME)
         .indexNames.contains('projectId'),
     ).toBe(true)
+    const bindingStore = newStoreTransaction.objectStore(BINDING_STORE_NAME)
+    expect(bindingStore.keyPath).toBe('id')
+    expect(Array.from(bindingStore.indexNames).sort()).toEqual([
+      'projectId',
+      'revisionId',
+      'termId',
+    ])
+    const eventStore = newStoreTransaction.objectStore(EVENT_STORE_NAME)
+    expect(eventStore.keyPath).toBe('id')
+    expect(Array.from(eventStore.indexNames).sort()).toEqual([
+      'createdAt',
+      'projectId',
+    ])
 
     // 老数据在升级后的同一条连接里逐字段比对（toEqual 是全字段深比较）。
     const raw = await readRawFromConnection(db)
@@ -421,7 +444,7 @@ describe('数据库迁移：真实老用户从 v1 直接打开 v4', () => {
     if (projects.ok) {
       expect(projects.value).toEqual([sampleProject])
     }
-    expect((await readDatabaseMeta()).version).toBe(4)
+    expect((await readDatabaseMeta()).version).toBe(5)
   })
 })
 
@@ -529,8 +552,8 @@ function readOldStoresFromConnection(db: IDBDatabase): Promise<OldStoreData> {
   })
 }
 
-describe('数据库迁移：V2.0 的真实 v3 库升级到 v4', () => {
-  it('四类旧数据逐字段不变，只新增来源 store 与索引，新表为空', async () => {
+describe('数据库迁移：V2.0 的真实 v3 库升级到 v5', () => {
+  it('四类旧数据逐字段不变，只新增来源/绑定 store 与索引，新表为空', async () => {
     await createV3Database()
 
     const before = await readDatabaseMeta()
@@ -545,8 +568,8 @@ describe('数据库迁移：V2.0 的真实 v3 库升级到 v4', () => {
     )
 
     const { value: db, calls } = await recordOpenCalls(() => openDatabase())
-    expect(calls.map((call) => call.version)).toEqual([4])
-    expect(calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 4 }])
+    expect(calls.map((call) => call.version)).toEqual([5])
+    expect(calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 5 }])
     expect(db.version).toBe(PROJECT_DB_VERSION)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(
       ALL_STORES.slice().sort(),
@@ -564,6 +587,8 @@ describe('数据库迁移：V2.0 的真实 v3 库升级到 v4', () => {
         SOURCE_DOCUMENT_STORE_NAME,
         SOURCE_REVISION_STORE_NAME,
         SOURCE_BLOB_STORE_NAME,
+        BINDING_STORE_NAME,
+        EVENT_STORE_NAME,
       ],
       'readonly',
     )
@@ -581,6 +606,12 @@ describe('数据库迁移：V2.0 的真实 v3 库升级到 v4', () => {
       await requestResult(
         sourceTransaction.objectStore(SOURCE_BLOB_STORE_NAME).count(),
       ),
+    ).toBe(0)
+    expect(
+      await requestResult(sourceTransaction.objectStore(BINDING_STORE_NAME).count()),
+    ).toBe(0)
+    expect(
+      await requestResult(sourceTransaction.objectStore(EVENT_STORE_NAME).count()),
     ).toBe(0)
     expect(
       sourceTransaction
@@ -602,40 +633,359 @@ describe('数据库迁移：V2.0 的真实 v3 库升级到 v4', () => {
     ).toBe(true)
     db.close()
 
-    expect((await readDatabaseMeta()).version).toBe(4)
+    expect((await readDatabaseMeta()).version).toBe(5)
   })
 
-  it('已升级到 v4 的库重复打开不会再次触发升级', async () => {
+  it('已升级到 v5 的库重复打开不会再次触发升级', async () => {
     await createV3Database()
 
     const first = await recordOpenCalls(() => openDatabase())
-    expect(first.calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 4 }])
+    expect(first.calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 5 }])
     first.value.close()
 
     const second = await recordOpenCalls(() => openDatabase())
-    expect(second.calls.map((call) => call.version)).toEqual([4])
+    expect(second.calls.map((call) => call.version)).toEqual([5])
     expect(second.calls[0].upgrades).toEqual([])
-    expect(second.value.version).toBe(4)
+    expect(second.value.version).toBe(5)
     second.value.close()
   })
 })
 
-describe('数据库打开被 blocked 时的连接处理', () => {
-  it('blocked 明确拒绝；阻塞解除后升级完成的连接会被关闭，不阻塞后续删除', async () => {
-    // 当前版本先建库，并保留一条连接作为“其它页面”占住升级。
+const sampleSourceDocument = {
+  id: 'doc-v4',
+  projectId: sampleProject.id,
+  title: 'V4 图纸.pdf',
+  latestRevisionId: 'rev-v4',
+}
+
+const sampleSourceRevision = {
+  id: 'rev-v4',
+  projectId: sampleProject.id,
+  documentId: sampleSourceDocument.id,
+  fileName: 'V4 图纸.pdf',
+  sha256: 'a'.repeat(64),
+  byteSize: 5,
+  pageCount: 2,
+  createdAt: '2026-11-07T00:00:00.000Z',
+  blobKey: 'blob-v4',
+}
+
+/** 建立一个真正的 version=4 数据库（V2.1 第一组实际发布版本）。 */
+function createV4Database(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(PROJECT_DB_NAME, 4)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      db.createObjectStore(PROJECT_STORE_NAME, { keyPath: 'id' })
+      db.createObjectStore(DRAFT_STORE_NAME, { keyPath: 'projectId' })
+      db.createObjectStore(MAPPING_TEMPLATE_STORE_NAME, { keyPath: 'id' })
+      const snapshots = db.createObjectStore(IMPORT_SNAPSHOT_STORE_NAME, {
+        keyPath: 'id',
+      })
+      snapshots.createIndex('projectId', 'projectId')
+      const documents = db.createObjectStore(SOURCE_DOCUMENT_STORE_NAME, {
+        keyPath: 'id',
+      })
+      documents.createIndex('projectId', 'projectId')
+      const revisions = db.createObjectStore(SOURCE_REVISION_STORE_NAME, {
+        keyPath: 'id',
+      })
+      revisions.createIndex('projectId', 'projectId')
+      revisions.createIndex('documentId', 'documentId')
+      const blobs = db.createObjectStore(SOURCE_BLOB_STORE_NAME, {
+        keyPath: 'blobKey',
+      })
+      blobs.createIndex('projectId', 'projectId')
+    }
+    request.onerror = () => reject(request.error ?? new Error('open v4 failed'))
+    request.onsuccess = () => {
+      const db = request.result
+      const transaction = db.transaction(
+        [
+          PROJECT_STORE_NAME,
+          DRAFT_STORE_NAME,
+          MAPPING_TEMPLATE_STORE_NAME,
+          IMPORT_SNAPSHOT_STORE_NAME,
+          SOURCE_DOCUMENT_STORE_NAME,
+          SOURCE_REVISION_STORE_NAME,
+          SOURCE_BLOB_STORE_NAME,
+        ],
+        'readwrite',
+      )
+      transaction.objectStore(PROJECT_STORE_NAME).put(sampleProject)
+      transaction.objectStore(DRAFT_STORE_NAME).put(sampleDraft)
+      transaction
+        .objectStore(MAPPING_TEMPLATE_STORE_NAME)
+        .put(sampleTemplate)
+      transaction
+        .objectStore(IMPORT_SNAPSHOT_STORE_NAME)
+        .put(sampleImportSnapshot)
+      transaction.objectStore(SOURCE_DOCUMENT_STORE_NAME).put(sampleSourceDocument)
+      transaction.objectStore(SOURCE_REVISION_STORE_NAME).put(sampleSourceRevision)
+      transaction.objectStore(SOURCE_BLOB_STORE_NAME).put({
+        blobKey: 'blob-v4',
+        projectId: sampleProject.id,
+        sha256: sampleSourceRevision.sha256,
+        byteSize: 5,
+        blob: new Blob([new Uint8Array([37, 80, 68, 70, 45])]),
+      })
+      transaction.oncomplete = () => {
+        db.close()
+        resolve()
+      }
+      transaction.onerror = () =>
+        reject(transaction.error ?? new Error('seed v4 failed'))
+      transaction.onabort = () =>
+        reject(transaction.error ?? new Error('seed v4 aborted'))
+    }
+  })
+}
+
+describe('数据库迁移：V2.1 第一组的真实 v4 库升级到 v5', () => {
+  it('项目/草稿/模板/快照/来源记录与 Blob 字节逐字段不变，只增补 bindings / events', async () => {
+    const v4BlobBytes = [37, 80, 68, 70, 45]
+    await createV4Database()
+    const before = await readDatabaseMeta()
+    expect(before.version).toBe(4)
+    expect(before.stores).not.toContain(BINDING_STORE_NAME)
+    expect(before.stores).not.toContain(EVENT_STORE_NAME)
+    // 升级前先按 v4 读出全部数据，作为“逐字段不变”的基线。
+    const beforeDb = await openDatabase({ version: 4 })
+    const beforeData = await readV4Stores(beforeDb)
+    const beforeBlobBytes = await readBlobBytes(beforeDb, 'blob-v4')
+    expect(beforeBlobBytes).toEqual(v4BlobBytes)
+    beforeDb.close()
+
+    const { value: db, calls } = await recordOpenCalls(() => openDatabase())
+    expect(calls.map((call) => call.version)).toEqual([5])
+    expect(calls[0].upgrades).toEqual([{ oldVersion: 4, newVersion: 5 }])
+    expect(db.version).toBe(PROJECT_DB_VERSION)
+    expect(Array.from(db.objectStoreNames).sort()).toEqual(ALL_STORES.slice().sort())
+
+    const afterData = await readV4Stores(db)
+    const afterBlobBytes = await readBlobBytes(db, 'blob-v4')
+
+    // 逐字段深比较：项目、草稿、映射模板、替换前快照、来源文档、来源版本。
+    expect(afterData.project).toEqual(beforeData.project)
+    expect(afterData.project).toEqual(sampleProject)
+    expect(afterData.draft).toEqual(beforeData.draft)
+    expect(afterData.draft).toEqual(sampleDraft)
+    expect(afterData.template).toEqual(sampleTemplate)
+    expect(afterData.snapshot).toEqual(sampleImportSnapshot)
+    expect(afterData.document).toEqual(sampleSourceDocument)
+    expect(afterData.revision).toEqual(sampleSourceRevision)
+    // Blob 的字节内容与升级前完全一致，而不只是“结构还在”。
+    expect(afterBlobBytes).toEqual(beforeBlobBytes)
+    expect(afterBlobBytes).toEqual(v4BlobBytes)
+    expect(afterData.blob).toMatchObject({
+      blobKey: 'blob-v4',
+      projectId: sampleProject.id,
+      sha256: sampleSourceRevision.sha256,
+      byteSize: 5,
+    })
+
+    // 新 store 只建结构，不写入任何占位记录。
+    const newStores = db.transaction(
+      [BINDING_STORE_NAME, EVENT_STORE_NAME],
+      'readonly',
+    )
+    expect(
+      await requestResult(newStores.objectStore(BINDING_STORE_NAME).count()),
+    ).toBe(0)
+    expect(
+      await requestResult(newStores.objectStore(EVENT_STORE_NAME).count()),
+    ).toBe(0)
+    const bindingStore = newStores.objectStore(BINDING_STORE_NAME)
+    expect(bindingStore.keyPath).toBe('id')
+    expect(Array.from(bindingStore.indexNames).sort()).toEqual([
+      'projectId',
+      'revisionId',
+      'termId',
+    ])
+    const eventStore = newStores.objectStore(EVENT_STORE_NAME)
+    expect(eventStore.keyPath).toBe('id')
+    expect(Array.from(eventStore.indexNames).sort()).toEqual([
+      'createdAt',
+      'projectId',
+    ])
+    db.close()
+
+    expect((await readDatabaseMeta()).version).toBe(5)
+  })
+})
+
+interface V4StoreData {
+  project: unknown
+  draft: unknown
+  template: unknown
+  snapshot: unknown
+  document: unknown
+  revision: unknown
+  blob: unknown
+}
+
+/** 用同一条连接读出 v4/v5 共有的六类记录与 Blob 记录。 */
+function readV4Stores(db: IDBDatabase): Promise<V4StoreData> {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(
+      [
+        PROJECT_STORE_NAME,
+        DRAFT_STORE_NAME,
+        MAPPING_TEMPLATE_STORE_NAME,
+        IMPORT_SNAPSHOT_STORE_NAME,
+        SOURCE_DOCUMENT_STORE_NAME,
+        SOURCE_REVISION_STORE_NAME,
+        SOURCE_BLOB_STORE_NAME,
+      ],
+      'readonly',
+    )
+    const project = transaction
+      .objectStore(PROJECT_STORE_NAME)
+      .get(sampleProject.id)
+    const draft = transaction.objectStore(DRAFT_STORE_NAME).get(sampleProject.id)
+    const template = transaction
+      .objectStore(MAPPING_TEMPLATE_STORE_NAME)
+      .get(sampleTemplate.id)
+    const snapshot = transaction
+      .objectStore(IMPORT_SNAPSHOT_STORE_NAME)
+      .get(sampleImportSnapshot.id)
+    const document = transaction
+      .objectStore(SOURCE_DOCUMENT_STORE_NAME)
+      .get('doc-v4')
+    const revision = transaction
+      .objectStore(SOURCE_REVISION_STORE_NAME)
+      .get('rev-v4')
+    const blob = transaction.objectStore(SOURCE_BLOB_STORE_NAME).get('blob-v4')
+    transaction.oncomplete = () => {
+      resolve({
+        project: project.result,
+        draft: draft.result,
+        template: template.result,
+        snapshot: snapshot.result,
+        document: document.result,
+        revision: revision.result,
+        blob: blob.result,
+      })
+    }
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error('读取 v4 数据失败'))
+    transaction.onabort = () =>
+      reject(transaction.error ?? new Error('读取 v4 数据已取消'))
+  })
+}
+
+/** 直接读取 Blob 字节；切到 node 环境后 fake-indexeddb 会保留真正的 Blob。 */
+function readBlobBytes(db: IDBDatabase, blobKey: string): Promise<number[]> {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(SOURCE_BLOB_STORE_NAME, 'readonly')
+    const request = transaction.objectStore(SOURCE_BLOB_STORE_NAME).get(blobKey)
+    request.onsuccess = () => {
+      const record = request.result as { blob?: Blob } | undefined
+      if (record?.blob === undefined) {
+        reject(new Error('Blob 记录不存在'))
+        return
+      }
+      void record.blob
+        .arrayBuffer()
+        .then((buffer) => resolve(Array.from(new Uint8Array(buffer))))
+        .catch(reject)
+    }
+    request.onerror = () => reject(request.error ?? new Error('读取 Blob 失败'))
+  })
+}
+
+describe('数据库版本与阻塞', () => {
+  it('库升到 v5 后，指定 version=4 的旧前端打开得到明确的 VersionError 提示', async () => {
+    const current = await openDatabase()
+    expect(current.version).toBe(5)
+    current.close()
+
+    let rejection: unknown
+    try {
+      await openDatabase({ version: 4 })
+    } catch (error) {
+      rejection = error
+    }
+    expect(rejection).toBeDefined()
+    expect(databaseErrorCode(rejection)).toBe('database_too_new')
+    const message = rejection instanceof Error ? rejection.message : ''
+    expect(message).toContain('v4')
+    expect(message).toContain('刷新页面')
+    // 明确禁止删库降级这一错误处置。
+    expect(message).toContain('不要删除数据库或降级')
+  })
+
+  it('其它标签页升级时，本页收到 versionchange 后自动关闭旧连接并通知 UI', async () => {
     const holder = await openDatabase()
-    expect(holder.version).toBe(PROJECT_DB_VERSION)
+    const seen: { oldVersion: number; newVersion: number | null }[] = []
+    const unsubscribe = subscribeDatabaseVersionChange((info) => {
+      seen.push(info)
+    })
 
     try {
-      const blocked = openDatabase({ version: PROJECT_DB_VERSION + 1 })
-      await expect(blocked).rejects.toThrow('占用')
+      // 新页面升级；旧连接若不自关会 blocked。实现应自动关闭并 resolve。
+      const upgraded = await openDatabase({ version: PROJECT_DB_VERSION + 1 })
+      expect(upgraded.version).toBe(PROJECT_DB_VERSION + 1)
+      upgraded.close()
     } finally {
-      holder.close()
+      unsubscribe()
     }
 
-    // 阻塞解除后，被拒绝的打开请求仍会完成升级并触发 onsuccess。
-    // 正确的实现会立刻关闭这条没人接收的连接；泄漏则 deleteDatabase 会被它挡住。
+    expect(seen).toEqual([
+      { oldVersion: PROJECT_DB_VERSION, newVersion: PROJECT_DB_VERSION + 1 },
+    ])
+    // holder 已由 versionchange 处理器关闭；再关闭一次是幂等的。
+    holder.close()
+
+    const deleted = await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase(PROJECT_DB_NAME)
+      request.onsuccess = () => resolve()
+      request.onerror = () => reject(request.error ?? new Error('删除失败'))
+      request.onblocked = () => reject(new Error('versionchange 未关闭旧连接'))
+    })
+    expect(deleted).toBeUndefined()
+  })
+
+  it('blocked 明确报失败；旧页面关闭后升级仍完成，迟到连接被关闭且数据完好', async () => {
+    // 先建立当前版本的库，后续原始连接只“占住”它，不触发升级。
+    const setup = await openDatabase()
+    setup.close()
+
+    // 用原始 IDB 连接模拟“旧版本客户端”：它没有 versionchange 处理器，
+    // 不会主动关闭，因此新页面升级会先收到 blocked。
+    const holder = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(PROJECT_DB_NAME, PROJECT_DB_VERSION)
+      request.onupgradeneeded = () => reject(new Error('不应创建新库'))
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error ?? new Error('打开旧连接失败'))
+    })
+
+    const blocked = openDatabase({ version: PROJECT_DB_VERSION + 1 })
+    let blockedError: unknown
+    try {
+      await blocked
+    } catch (error) {
+      blockedError = error
+    }
+    expect(blockedError).toBeDefined()
+    expect(databaseErrorCode(blockedError)).toBe('database_blocked')
+    const blockedMessage =
+      blockedError instanceof Error ? blockedError.message : ''
+    expect(blockedMessage).toContain('关闭或刷新其它标签页')
+    expect(blockedMessage).toContain('升级仍会继续')
+
+    // 旧页面关闭后，之前报 blocked 的请求仍会完成升级；实现必须关闭这条
+    // 没人接收的迟到连接，否则 deleteDatabase 会再次被 blocked。
+    holder.close()
     await new Promise((resolve) => setTimeout(resolve, 100))
+
+    const upgraded = await openDatabase({ version: PROJECT_DB_VERSION + 1 })
+    expect(upgraded.version).toBe(PROJECT_DB_VERSION + 1)
+    expect(Array.from(upgraded.objectStoreNames).sort()).toEqual(
+      ALL_STORES.slice().sort(),
+    )
+    upgraded.close()
+
     const deleted = await new Promise<void>((resolve, reject) => {
       const request = indexedDB.deleteDatabase(PROJECT_DB_NAME)
       request.onsuccess = () => resolve()

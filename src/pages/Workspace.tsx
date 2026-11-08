@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChainDiagram } from '../components/ChainDiagram'
 import { ChainExpression } from '../components/ChainExpression'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -6,8 +6,11 @@ import { DimensionTable } from '../components/DimensionTable'
 import { ImportWizard } from '../components/ImportWizard'
 import { ResultPanel } from '../components/ResultPanel'
 import { ScenarioCompare } from '../components/ScenarioCompare'
+import { SourcePanel } from '../components/SourcePanel'
 import type { ChainDefinition, Project } from '../domain/types'
 import type { CommitImportSuccess } from '../import/commit'
+import { countBindingsByTerm, type SourceBinding } from '../sources/bindings'
+import { subscribeDatabaseVersionChange } from '../storage/db'
 import { getProject, listProjects } from '../storage/projects'
 import { resolveReportEligibility } from '../workspace/status'
 import {
@@ -97,6 +100,23 @@ function WorkspaceEditor({
   const [baselineError, setBaselineError] = useState<string | null>(null)
   const [tableImportOpen, setTableImportOpen] = useState(false)
   const [tableImportMessage, setTableImportMessage] = useState<string | null>(null)
+  const [sourceBindings, setSourceBindings] = useState<SourceBinding[]>([])
+  const sourceBindingCounts = countBindingsByTerm(sourceBindings)
+  const [databaseNotice, setDatabaseNotice] = useState<string | null>(null)
+
+  // 其它标签页升级/删除数据库时，本页旧连接已被关闭；明确提示刷新，
+  // 不要让用户继续在断开的状态下输入。
+  useEffect(
+    () =>
+      subscribeDatabaseVersionChange((info) => {
+        setDatabaseNotice(
+          info.newVersion === null
+            ? '本地数据库已被其它标签页删除，本页已断开连接。请刷新页面；未保存的输入可能丢失。'
+            : `本地数据库已被其它标签页升级到 v${info.newVersion}，本页已断开旧连接。请刷新页面加载最新程序后再继续操作。`,
+        )
+      }),
+    [],
+  )
 
   // 当前草稿无效时由 hook 保留上一次有效链；结果卡和示意图都只读取这一份数据。
   // 但目标字段本身无效时不能把上次有效链的 target 继续喂给结果卡，
@@ -233,6 +253,15 @@ function WorkspaceEditor({
         </div>
       </header>
 
+      {databaseNotice !== null ? (
+        <div className="workspace__save-error" role="alert">
+          <div>
+            <h2 className="workspace__error-title">本地数据库版本已变化</h2>
+            <p>{databaseNotice}</p>
+          </div>
+        </div>
+      ) : null}
+
       {!reportEligibility.eligible && reportEligibility.message !== null ? (
         <p
           id="workspace-print-reason"
@@ -288,6 +317,7 @@ function WorkspaceEditor({
             stale={stale}
             selectedTermId={selectedTermId}
             onSelect={setSelectedTermId}
+            sourceBindingCounts={sourceBindingCounts}
           />
         </div>
 
@@ -312,6 +342,13 @@ function WorkspaceEditor({
           />
         </div>
       </div>
+
+      <SourcePanel
+        projectId={project.id}
+        terms={draft.terms}
+        selectedTermId={selectedTermId}
+        onBindingsChange={setSourceBindings}
+      />
 
       <section
         className="workspace__baseline"
@@ -495,6 +532,59 @@ export function Workspace({
               <p>接下来：返回项目列表，重新打开或新建一个项目。</p>
             </div>
             <div className="workspace__load-error-actions">
+              <button type="button" onClick={backToList}>
+                返回项目列表
+              </button>
+            </div>
+          </section>
+        </main>
+      )
+    }
+
+    if (bootstrap.error.code === 'database_too_new') {
+      return (
+        <main className="workspace">
+          <section className="workspace__load-error" role="alert">
+            <div>
+              <h1 className="workspace__error-title">页面程序版本过旧</h1>
+              <p>
+                发生了什么：{bootstrap.error.message}。本地数据库已经由更新的页面
+                升级，当前页面仍在运行旧代码，因此无法打开它。
+              </p>
+              <p>
+                接下来：刷新页面加载最新程序，然后重新打开项目。不要删除浏览器数据
+                或尝试降级数据库；仅回退前端代码不能打开已升级的库。
+              </p>
+            </div>
+            <div className="workspace__load-error-actions">
+              <button type="button" onClick={() => window.location.reload()}>
+                刷新页面
+              </button>
+              <button type="button" onClick={backToList}>
+                返回项目列表
+              </button>
+            </div>
+          </section>
+        </main>
+      )
+    }
+
+    if (bootstrap.error.code === 'database_blocked') {
+      return (
+        <main className="workspace">
+          <section className="workspace__load-error" role="alert">
+            <div>
+              <h1 className="workspace__error-title">数据库正被其它页面占用</h1>
+              <p>发生了什么：{bootstrap.error.message}。</p>
+              <p>
+                接下来：关闭或刷新仍在运行旧版本程序的其它标签页，然后点“重试”。
+                升级完成前不要继续在旧页面输入。
+              </p>
+            </div>
+            <div className="workspace__load-error-actions">
+              <button type="button" onClick={bootstrap.retry}>
+                重试
+              </button>
               <button type="button" onClick={backToList}>
                 返回项目列表
               </button>

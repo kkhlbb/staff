@@ -25,6 +25,8 @@ export interface DimensionTableProps {
   selectedTermId?: string | null
   /** 点击行或行首选择按钮时回传组成环 id；不传时不显示选择控件。 */
   onSelect?: (termId: string) => void
+  /** termId → 来源绑定数量；不传时不显示来源标记。 */
+  sourceBindingCounts?: Record<string, number>
 }
 
 type EditableField =
@@ -124,6 +126,7 @@ export function DimensionTable({
   stale = false,
   selectedTermId = null,
   onSelect,
+  sourceBindingCounts,
 }: DimensionTableProps) {
   // useId 生成不含空白的唯一前缀，避免多个表格的错误文案 id 冲突。
   const tableId = useId().replace(/[^A-Za-z0-9_-]/g, '')
@@ -347,6 +350,20 @@ export function DimensionTable({
                       updateText(term.id, 'sourceNote', value)
                     }
                   />
+                  {sourceBindingCounts === undefined ? null : (
+                    <span
+                      className={
+                        (sourceBindingCounts[term.id] ?? 0) > 0
+                          ? 'dimension-table__source-badge dimension-table__source-badge--bound'
+                          : 'dimension-table__source-badge'
+                      }
+                      data-testid={`source-badge-${term.id}`}
+                    >
+                      {(sourceBindingCounts[term.id] ?? 0) > 0
+                        ? `已绑定 ${sourceBindingCounts[term.id]} 处来源`
+                        : '无来源绑定'}
+                    </span>
+                  )}
                 </td>
                 <td>
                   <div className="dimension-table__actions">
