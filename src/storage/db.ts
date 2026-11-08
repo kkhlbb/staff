@@ -7,27 +7,42 @@
  *
  * 替换导入需要“操作前快照”（规格 §4.2）：importSnapshots 保存被替换前的
  * 完整工作方案，且与 projects / drafts 在同一事务写入。该 store 与 V2.2 的
- * AnalysisSnapshot（snapshots）不是同一概念。数据库版本因此升到 3；
- * 升级逻辑始终只创建缺失 store，不重建、不清空已有数据。
+ * AnalysisSnapshot（snapshots）不是同一概念。数据库版本因此升到 3。
+ *
+ * V2.1 第一组新增本地 PDF 来源底座：sourceDocuments / sourceRevisions /
+ * sourceBlobs。版本升到 4；升级逻辑始终只创建缺失 store 和索引，不重建、
+ * 不清空已有数据。bindings / events 等绑定与事件 store 在实现对应功能时再
+ * 追加，不在本组提前建空表。
  */
 export const PROJECT_DB_NAME = 'shaft-tolerance-chain'
-export const PROJECT_DB_VERSION = 3
+export const PROJECT_DB_VERSION = 4
 
 export const PROJECT_STORE_NAME = 'projects'
 export const DRAFT_STORE_NAME = 'drafts'
 export const MAPPING_TEMPLATE_STORE_NAME = 'mappingTemplates'
 export const IMPORT_SNAPSHOT_STORE_NAME = 'importSnapshots'
+export const SOURCE_DOCUMENT_STORE_NAME = 'sourceDocuments'
+export const SOURCE_REVISION_STORE_NAME = 'sourceRevisions'
+export const SOURCE_BLOB_STORE_NAME = 'sourceBlobs'
 
 interface StoreDefinition {
   name: string
   keyPath: string
+  indexes: string[]
 }
 
 const STORE_DEFINITIONS: StoreDefinition[] = [
-  { name: PROJECT_STORE_NAME, keyPath: 'id' },
-  { name: DRAFT_STORE_NAME, keyPath: 'projectId' },
-  { name: MAPPING_TEMPLATE_STORE_NAME, keyPath: 'id' },
-  { name: IMPORT_SNAPSHOT_STORE_NAME, keyPath: 'id' },
+  { name: PROJECT_STORE_NAME, keyPath: 'id', indexes: [] },
+  { name: DRAFT_STORE_NAME, keyPath: 'projectId', indexes: [] },
+  { name: MAPPING_TEMPLATE_STORE_NAME, keyPath: 'id', indexes: [] },
+  { name: IMPORT_SNAPSHOT_STORE_NAME, keyPath: 'id', indexes: ['projectId'] },
+  { name: SOURCE_DOCUMENT_STORE_NAME, keyPath: 'id', indexes: ['projectId'] },
+  {
+    name: SOURCE_REVISION_STORE_NAME,
+    keyPath: 'id',
+    indexes: ['projectId', 'documentId'],
+  },
+  { name: SOURCE_BLOB_STORE_NAME, keyPath: 'blobKey', indexes: ['projectId'] },
 ]
 
 export function requestResult<T>(request: IDBRequest<T>): Promise<T> {
@@ -68,17 +83,21 @@ export function openDatabase(): Promise<IDBDatabase> {
     request.onupgradeneeded = () => {
       const db = request.result
       for (const definition of STORE_DEFINITIONS) {
+        let store: IDBObjectStore
         if (!db.objectStoreNames.contains(definition.name)) {
-          const store = db.createObjectStore(definition.name, {
+          store = db.createObjectStore(definition.name, {
             keyPath: definition.keyPath,
           })
-          if (definition.name === IMPORT_SNAPSHOT_STORE_NAME) {
-            store.createIndex('projectId', 'projectId')
+        } else {
+          const existing = request.transaction?.objectStore(definition.name)
+          if (existing === undefined) {
+            continue
           }
-        } else if (definition.name === IMPORT_SNAPSHOT_STORE_NAME) {
-          const store = request.transaction?.objectStore(definition.name)
-          if (store !== undefined && !store.indexNames.contains('projectId')) {
-            store.createIndex('projectId', 'projectId')
+          store = existing
+        }
+        for (const indexName of definition.indexes) {
+          if (!store.indexNames.contains(indexName)) {
+            store.createIndex(indexName, indexName)
           }
         }
       }

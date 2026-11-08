@@ -12,10 +12,23 @@ import {
   PROJECT_DB_NAME,
   PROJECT_DB_VERSION,
   PROJECT_STORE_NAME,
+  SOURCE_BLOB_STORE_NAME,
+  SOURCE_DOCUMENT_STORE_NAME,
+  SOURCE_REVISION_STORE_NAME,
   openDatabase,
   requestResult,
 } from './db'
 import { getDraft, getProject, listProjects } from './projects'
+
+const ALL_STORES = [
+  DRAFT_STORE_NAME,
+  IMPORT_SNAPSHOT_STORE_NAME,
+  MAPPING_TEMPLATE_STORE_NAME,
+  PROJECT_STORE_NAME,
+  SOURCE_BLOB_STORE_NAME,
+  SOURCE_DOCUMENT_STORE_NAME,
+  SOURCE_REVISION_STORE_NAME,
+]
 
 const sampleProject: Project = {
   schemaVersion: 1,
@@ -188,24 +201,19 @@ function readV2Raw(): Promise<{ project: unknown; draft: unknown }> {
 }
 
 describe('数据库迁移：v1 数据在升级后保持不变', () => {
-  it('有数据的 v1 库升级到 v2 后 projects / drafts 完全不变', async () => {
+  it('有数据的 v1 库升级到当前版本后 projects / drafts 完全不变', async () => {
     await createV1Database()
 
     const raw = await readV2Raw()
     expect(raw.project).toEqual(sampleProject)
     expect(raw.draft).toEqual(sampleDraft)
 
-    // 再由当前代码（v3）打开同一个库：只会补缺失 store，不重建、不清空。
+    // 再由当前代码（v4）打开同一个库：只会补缺失 store，不重建、不清空。
     const db = await openDatabase()
     expect(db.version).toBe(PROJECT_DB_VERSION)
-    expect(db.version).toBeGreaterThanOrEqual(3)
+    expect(db.version).toBe(4)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(
-      [
-        DRAFT_STORE_NAME,
-        IMPORT_SNAPSHOT_STORE_NAME,
-        MAPPING_TEMPLATE_STORE_NAME,
-        PROJECT_STORE_NAME,
-      ].sort(),
+      ALL_STORES.slice().sort(),
     )
     db.close()
 
@@ -306,8 +314,8 @@ async function recordOpenCalls<T>(
   }
 }
 
-describe('数据库迁移：真实老用户从 v1 直接打开 v3', () => {
-  it('v1 库由当前代码一次性升级到 v3：同一次升级建出两个新 store，旧数据逐字段不变', async () => {
+describe('数据库迁移：真实老用户从 v1 直接打开 v4', () => {
+  it('v1 库由当前代码一次性升级到 v4：同一次升级建出新 store，旧数据逐字段不变', async () => {
     await createV1Database()
 
     // 前提：库确实是 version=1，只有老用户就有的两个 store。
@@ -317,39 +325,54 @@ describe('数据库迁移：真实老用户从 v1 直接打开 v3', () => {
       [DRAFT_STORE_NAME, PROJECT_STORE_NAME].slice().sort(),
     )
 
-    // 当前代码（PROJECT_DB_VERSION=3）一次性打开：oldVersion=1、newVersion=3。
+    // 当前代码（PROJECT_DB_VERSION=4）一次性打开：oldVersion=1、newVersion=4。
     const { value: db, calls } = await recordOpenCalls(() => openDatabase())
 
-    expect(calls.map((call) => call.version)).toEqual([3])
-    expect(calls[0].upgrades).toEqual([{ oldVersion: 1, newVersion: 3 }])
+    expect(calls.map((call) => call.version)).toEqual([4])
+    expect(calls[0].upgrades).toEqual([{ oldVersion: 1, newVersion: 4 }])
 
     expect(db.version).toBe(PROJECT_DB_VERSION)
-    expect(db.version).toBe(3)
+    expect(db.version).toBe(4)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(
-      [
-        DRAFT_STORE_NAME,
-        IMPORT_SNAPSHOT_STORE_NAME,
-        MAPPING_TEMPLATE_STORE_NAME,
-        PROJECT_STORE_NAME,
-      ].sort(),
+      ALL_STORES.slice().sort(),
     )
 
     // 升级没有往新表里写任何东西，也没有建出重复的旧表。
     const newStoreTransaction = db.transaction(
-      [MAPPING_TEMPLATE_STORE_NAME, IMPORT_SNAPSHOT_STORE_NAME],
+      [
+        MAPPING_TEMPLATE_STORE_NAME,
+        IMPORT_SNAPSHOT_STORE_NAME,
+        SOURCE_DOCUMENT_STORE_NAME,
+        SOURCE_REVISION_STORE_NAME,
+        SOURCE_BLOB_STORE_NAME,
+      ],
       'readonly',
     )
-    const templateCount = newStoreTransaction
-      .objectStore(MAPPING_TEMPLATE_STORE_NAME)
-      .count()
-    const snapshotCount = newStoreTransaction
-      .objectStore(IMPORT_SNAPSHOT_STORE_NAME)
-      .count()
-    expect(await requestResult(templateCount)).toBe(0)
-    expect(await requestResult(snapshotCount)).toBe(0)
+    const countOf = (name: string) =>
+      requestResult(newStoreTransaction.objectStore(name).count())
+    expect(await countOf(MAPPING_TEMPLATE_STORE_NAME)).toBe(0)
+    expect(await countOf(IMPORT_SNAPSHOT_STORE_NAME)).toBe(0)
+    expect(await countOf(SOURCE_DOCUMENT_STORE_NAME)).toBe(0)
+    expect(await countOf(SOURCE_REVISION_STORE_NAME)).toBe(0)
+    expect(await countOf(SOURCE_BLOB_STORE_NAME)).toBe(0)
     expect(
       newStoreTransaction
         .objectStore(IMPORT_SNAPSHOT_STORE_NAME)
+        .indexNames.contains('projectId'),
+    ).toBe(true)
+    expect(
+      newStoreTransaction
+        .objectStore(SOURCE_DOCUMENT_STORE_NAME)
+        .indexNames.contains('projectId'),
+    ).toBe(true)
+    expect(
+      newStoreTransaction
+        .objectStore(SOURCE_REVISION_STORE_NAME)
+        .indexNames.contains('documentId'),
+    ).toBe(true)
+    expect(
+      newStoreTransaction
+        .objectStore(SOURCE_BLOB_STORE_NAME)
         .indexNames.contains('projectId'),
     ).toBe(true)
 
@@ -398,6 +421,201 @@ describe('数据库迁移：真实老用户从 v1 直接打开 v3', () => {
     if (projects.ok) {
       expect(projects.value).toEqual([sampleProject])
     }
-    expect((await readDatabaseMeta()).version).toBe(3)
+    expect((await readDatabaseMeta()).version).toBe(4)
+  })
+})
+
+const sampleTemplate = {
+  id: 'template-1',
+  name: '默认映射',
+  mapping: { symbol: '代号', nominal: '基本尺寸' },
+}
+
+const sampleImportSnapshot = {
+  id: 'snapshot-1',
+  projectId: sampleProject.id,
+  createdAt: '2026-01-03T00:00:00.000Z',
+  kind: 'replace-before-import',
+  definition: sampleProject.working,
+}
+
+/** 建立一个真正的 version=3 数据库（V2.0 实际发布版本），并写入四类旧数据。 */
+function createV3Database(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(PROJECT_DB_NAME, 3)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      db.createObjectStore(PROJECT_STORE_NAME, { keyPath: 'id' })
+      db.createObjectStore(DRAFT_STORE_NAME, { keyPath: 'projectId' })
+      db.createObjectStore(MAPPING_TEMPLATE_STORE_NAME, { keyPath: 'id' })
+      const snapshots = db.createObjectStore(IMPORT_SNAPSHOT_STORE_NAME, {
+        keyPath: 'id',
+      })
+      snapshots.createIndex('projectId', 'projectId')
+    }
+    request.onerror = () => reject(request.error ?? new Error('open v3 failed'))
+    request.onsuccess = () => {
+      const db = request.result
+      const transaction = db.transaction(
+        [
+          PROJECT_STORE_NAME,
+          DRAFT_STORE_NAME,
+          MAPPING_TEMPLATE_STORE_NAME,
+          IMPORT_SNAPSHOT_STORE_NAME,
+        ],
+        'readwrite',
+      )
+      transaction.objectStore(PROJECT_STORE_NAME).put(sampleProject)
+      transaction.objectStore(DRAFT_STORE_NAME).put(sampleDraft)
+      transaction
+        .objectStore(MAPPING_TEMPLATE_STORE_NAME)
+        .put(sampleTemplate)
+      transaction
+        .objectStore(IMPORT_SNAPSHOT_STORE_NAME)
+        .put(sampleImportSnapshot)
+      transaction.oncomplete = () => {
+        db.close()
+        resolve()
+      }
+      transaction.onerror = () =>
+        reject(transaction.error ?? new Error('seed v3 failed'))
+      transaction.onabort = () =>
+        reject(transaction.error ?? new Error('seed v3 aborted'))
+    }
+  })
+}
+
+interface OldStoreData {
+  project: unknown
+  draft: unknown
+  template: unknown
+  snapshot: unknown
+}
+
+/** 从连接里按原始记录读取四类旧数据，不经过任何解析层。 */
+function readOldStoresFromConnection(db: IDBDatabase): Promise<OldStoreData> {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(
+      [
+        PROJECT_STORE_NAME,
+        DRAFT_STORE_NAME,
+        MAPPING_TEMPLATE_STORE_NAME,
+        IMPORT_SNAPSHOT_STORE_NAME,
+      ],
+      'readonly',
+    )
+    const project = transaction
+      .objectStore(PROJECT_STORE_NAME)
+      .get(sampleProject.id)
+    const draft = transaction.objectStore(DRAFT_STORE_NAME).get(sampleProject.id)
+    const template = transaction
+      .objectStore(MAPPING_TEMPLATE_STORE_NAME)
+      .get(sampleTemplate.id)
+    const snapshot = transaction
+      .objectStore(IMPORT_SNAPSHOT_STORE_NAME)
+      .get(sampleImportSnapshot.id)
+    transaction.oncomplete = () => {
+      resolve({
+        project: project.result,
+        draft: draft.result,
+        template: template.result,
+        snapshot: snapshot.result,
+      })
+    }
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error('read old stores failed'))
+    transaction.onabort = () =>
+      reject(transaction.error ?? new Error('read old stores aborted'))
+  })
+}
+
+describe('数据库迁移：V2.0 的真实 v3 库升级到 v4', () => {
+  it('四类旧数据逐字段不变，只新增来源 store 与索引，新表为空', async () => {
+    await createV3Database()
+
+    const before = await readDatabaseMeta()
+    expect(before.version).toBe(3)
+    expect(before.stores.slice().sort()).toEqual(
+      [
+        DRAFT_STORE_NAME,
+        IMPORT_SNAPSHOT_STORE_NAME,
+        MAPPING_TEMPLATE_STORE_NAME,
+        PROJECT_STORE_NAME,
+      ].sort(),
+    )
+
+    const { value: db, calls } = await recordOpenCalls(() => openDatabase())
+    expect(calls.map((call) => call.version)).toEqual([4])
+    expect(calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 4 }])
+    expect(db.version).toBe(PROJECT_DB_VERSION)
+    expect(Array.from(db.objectStoreNames).sort()).toEqual(
+      ALL_STORES.slice().sort(),
+    )
+
+    const oldData = await readOldStoresFromConnection(db)
+    expect(oldData.project).toEqual(sampleProject)
+    expect(oldData.draft).toEqual(sampleDraft)
+    expect(oldData.template).toEqual(sampleTemplate)
+    expect(oldData.snapshot).toEqual(sampleImportSnapshot)
+
+    // 新 store 只建结构，不写入任何占位记录。
+    const sourceTransaction = db.transaction(
+      [
+        SOURCE_DOCUMENT_STORE_NAME,
+        SOURCE_REVISION_STORE_NAME,
+        SOURCE_BLOB_STORE_NAME,
+      ],
+      'readonly',
+    )
+    expect(
+      await requestResult(
+        sourceTransaction.objectStore(SOURCE_DOCUMENT_STORE_NAME).count(),
+      ),
+    ).toBe(0)
+    expect(
+      await requestResult(
+        sourceTransaction.objectStore(SOURCE_REVISION_STORE_NAME).count(),
+      ),
+    ).toBe(0)
+    expect(
+      await requestResult(
+        sourceTransaction.objectStore(SOURCE_BLOB_STORE_NAME).count(),
+      ),
+    ).toBe(0)
+    expect(
+      sourceTransaction
+        .objectStore(SOURCE_DOCUMENT_STORE_NAME)
+        .indexNames.contains('projectId'),
+    ).toBe(true)
+    expect(
+      sourceTransaction
+        .objectStore(SOURCE_REVISION_STORE_NAME)
+        .indexNames.contains('projectId') &&
+        sourceTransaction
+          .objectStore(SOURCE_REVISION_STORE_NAME)
+          .indexNames.contains('documentId'),
+    ).toBe(true)
+    expect(
+      sourceTransaction
+        .objectStore(SOURCE_BLOB_STORE_NAME)
+        .indexNames.contains('projectId'),
+    ).toBe(true)
+    db.close()
+
+    expect((await readDatabaseMeta()).version).toBe(4)
+  })
+
+  it('已升级到 v4 的库重复打开不会再次触发升级', async () => {
+    await createV3Database()
+
+    const first = await recordOpenCalls(() => openDatabase())
+    expect(first.calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 4 }])
+    first.value.close()
+
+    const second = await recordOpenCalls(() => openDatabase())
+    expect(second.calls.map((call) => call.version)).toEqual([4])
+    expect(second.calls[0].upgrades).toEqual([])
+    expect(second.value.version).toBe(4)
+    second.value.close()
   })
 })
