@@ -13,6 +13,7 @@ import {
   PROJECT_DB_VERSION,
   PROJECT_STORE_NAME,
   openDatabase,
+  requestResult,
 } from './db'
 import { getDraft, getProject, listProjects } from './projects'
 
@@ -221,5 +222,182 @@ describe('数据库迁移：v1 数据在升级后保持不变', () => {
     if (projects.ok) {
       expect(projects.value).toEqual([sampleProject])
     }
+  })
+})
+
+interface DatabaseMeta {
+  version: number
+  stores: string[]
+}
+
+/** 不带版本打开已存在的库，只读出当前版本与 store 列表；只有库不存在时才会触发升级。 */
+function readDatabaseMeta(): Promise<DatabaseMeta> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(PROJECT_DB_NAME)
+    request.onupgradeneeded = () => {
+      reject(new Error('数据库不存在：v1 建库步骤没有生效'))
+    }
+    request.onerror = () => reject(request.error ?? new Error('读取库信息失败'))
+    request.onsuccess = () => {
+      const db = request.result
+      resolve({ version: db.version, stores: Array.from(db.objectStoreNames) })
+      db.close()
+    }
+  })
+}
+
+/** 从已打开的连接里按原始记录读出 projects / drafts（不经过任何解析层）。 */
+function readRawFromConnection(
+  db: IDBDatabase,
+): Promise<{ project: unknown; draft: unknown }> {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(
+      [PROJECT_STORE_NAME, DRAFT_STORE_NAME],
+      'readonly',
+    )
+    const projectRequest = transaction
+      .objectStore(PROJECT_STORE_NAME)
+      .get(sampleProject.id)
+    const draftRequest = transaction
+      .objectStore(DRAFT_STORE_NAME)
+      .get(sampleProject.id)
+    transaction.oncomplete = () => {
+      resolve({ project: projectRequest.result, draft: draftRequest.result })
+    }
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error('read raw failed'))
+    transaction.onabort = () =>
+      reject(transaction.error ?? new Error('read raw aborted'))
+  })
+}
+
+interface OpenCall {
+  version: number | undefined
+  upgrades: { oldVersion: number; newVersion: number | null }[]
+}
+
+/**
+ * 记录被包裹期间每次 indexedDB.open 请求的版本号，以及真实 upgradeneeded
+ * 事件上的 oldVersion / newVersion，用来确认升级是一次完成还是分几次。
+ */
+async function recordOpenCalls<T>(
+  run: () => Promise<T>,
+): Promise<{ value: T; calls: OpenCall[] }> {
+  const originalOpen = indexedDB.open
+  const calls: OpenCall[] = []
+  const patchedOpen: IDBFactory['open'] = (name: string, version?: number) => {
+    const call: OpenCall = { version, upgrades: [] }
+    calls.push(call)
+    const request = originalOpen.call(indexedDB, name, version)
+    request.addEventListener('upgradeneeded', (event) => {
+      const change = event as IDBVersionChangeEvent
+      call.upgrades.push({
+        oldVersion: change.oldVersion,
+        newVersion: change.newVersion,
+      })
+    })
+    return request
+  }
+  indexedDB.open = patchedOpen
+  try {
+    return { value: await run(), calls }
+  } finally {
+    indexedDB.open = originalOpen
+  }
+}
+
+describe('数据库迁移：真实老用户从 v1 直接打开 v3', () => {
+  it('v1 库由当前代码一次性升级到 v3：同一次升级建出两个新 store，旧数据逐字段不变', async () => {
+    await createV1Database()
+
+    // 前提：库确实是 version=1，只有老用户就有的两个 store。
+    const before = await readDatabaseMeta()
+    expect(before.version).toBe(1)
+    expect(before.stores.slice().sort()).toEqual(
+      [DRAFT_STORE_NAME, PROJECT_STORE_NAME].slice().sort(),
+    )
+
+    // 当前代码（PROJECT_DB_VERSION=3）一次性打开：oldVersion=1、newVersion=3。
+    const { value: db, calls } = await recordOpenCalls(() => openDatabase())
+
+    expect(calls.map((call) => call.version)).toEqual([3])
+    expect(calls[0].upgrades).toEqual([{ oldVersion: 1, newVersion: 3 }])
+
+    expect(db.version).toBe(PROJECT_DB_VERSION)
+    expect(db.version).toBe(3)
+    expect(Array.from(db.objectStoreNames).sort()).toEqual(
+      [
+        DRAFT_STORE_NAME,
+        IMPORT_SNAPSHOT_STORE_NAME,
+        MAPPING_TEMPLATE_STORE_NAME,
+        PROJECT_STORE_NAME,
+      ].sort(),
+    )
+
+    // 升级没有往新表里写任何东西，也没有建出重复的旧表。
+    const newStoreTransaction = db.transaction(
+      [MAPPING_TEMPLATE_STORE_NAME, IMPORT_SNAPSHOT_STORE_NAME],
+      'readonly',
+    )
+    const templateCount = newStoreTransaction
+      .objectStore(MAPPING_TEMPLATE_STORE_NAME)
+      .count()
+    const snapshotCount = newStoreTransaction
+      .objectStore(IMPORT_SNAPSHOT_STORE_NAME)
+      .count()
+    expect(await requestResult(templateCount)).toBe(0)
+    expect(await requestResult(snapshotCount)).toBe(0)
+    expect(
+      newStoreTransaction
+        .objectStore(IMPORT_SNAPSHOT_STORE_NAME)
+        .indexNames.contains('projectId'),
+    ).toBe(true)
+
+    // 老数据在升级后的同一条连接里逐字段比对（toEqual 是全字段深比较）。
+    const raw = await readRawFromConnection(db)
+    expect(raw.project).toEqual(sampleProject)
+    expect(raw.draft).toEqual(sampleDraft)
+
+    const stored = raw.project as Project
+    expect(stored.working).toEqual(sampleProject.working)
+    expect(
+      stored.working.terms.map((term) => [
+        term.id,
+        term.symbol,
+        term.nominalQ,
+        term.lowerDeviationQ,
+        term.upperDeviationQ,
+        term.sign,
+      ]),
+    ).toEqual([
+      ['t-h', 'H', parseMm('100'), parseMm('0'), parseMm('0.1'), 1],
+      ['t-b', 'B', parseMm('99.9'), parseMm('-0.05'), parseMm('0'), -1],
+    ])
+    expect(stored.working.target).toEqual({
+      minQ: parseMm('0.1'),
+      maxQ: parseMm('0.2'),
+    })
+    expect(stored.working.assumptions).toBe('V1 假设')
+    expect(stored.working.relationConfirmed).toBe(true)
+    // working 未被改写：项目时间戳仍是老用户写入的值。
+    expect(stored.updatedAt).toBe('2026-01-02T00:00:00.000Z')
+    expect(stored.baseline).toEqual(sampleProject.baseline)
+    db.close()
+
+    // 再用公开 API 走一遍，确认读取路径同样拿到原值。
+    expect(await getProject(sampleProject.id)).toEqual({
+      ok: true,
+      value: sampleProject,
+    })
+    expect(await getDraft(sampleProject.id)).toEqual({
+      ok: true,
+      value: sampleDraft,
+    })
+    const projects = await listProjects()
+    expect(projects.ok).toBe(true)
+    if (projects.ok) {
+      expect(projects.value).toEqual([sampleProject])
+    }
+    expect((await readDatabaseMeta()).version).toBe(3)
   })
 })
