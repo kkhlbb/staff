@@ -2,52 +2,43 @@ import { useCallback, useEffect, useId, useState } from 'react'
 import { ChainExpression } from '../components/ChainExpression'
 import { ContributionTable } from '../components/ContributionTable'
 import { ScenarioCompare } from '../components/ScenarioCompare'
-import { calculateChain } from '../domain/calculate'
-import type {
-  ChainDefinition,
-  ChainResult,
-  DimensionTerm,
-  Project,
-  Q,
-} from '../domain/types'
+import type { ChainDefinition, DimensionTerm, Q } from '../domain/types'
 import { formatMm } from '../domain/units'
-import { validateChain } from '../domain/validation'
-import { getDraft, getProject } from '../storage/projects'
-import { chainToDraft, draftToChain } from '../workspace/draft'
-import { isRelationConfirmed } from '../workspace/relation'
 import {
-  resolveReportEligibility,
-  type ReportEligibility,
-} from '../workspace/status'
+  getAnalysisSnapshot,
+  type AnalysisSnapshot,
+  type SnapshotBindingEntry,
+} from '../history/snapshots'
+import {
+  REVIEW_RULE_LABEL,
+  REVIEW_SEVERITY_LABEL,
+  REVIEW_STATUS_LABEL,
+  type ReviewFinding,
+  type ReviewStatus,
+} from '../review/rules'
 import './PrintReport.css'
 
 export interface PrintReportProps {
   projectId: string
+  snapshotId: string
   /** 返回工作台；未提供时回退到 location.hash 路由。 */
   onBackToWorkspace?: (projectId: string) => void
+  /** 返回快照列表；未提供时回退到 location.hash 路由。 */
+  onBackToSnapshots?: (projectId: string) => void
   /** 返回项目列表；未提供时回退到 location.hash 路由。 */
   onBackToList?: () => void
 }
 
-interface ReportLoaded {
-  status: 'loaded'
-  project: Project
-  chain: ChainDefinition | null
-  result: ChainResult | null
-  eligibility: ReportEligibility
-  baseline: ChainDefinition | null
-  reportTime: string
-}
-
-type ReportErrorKind = 'not_found' | 'storage'
-
 type ReportState =
   | { status: 'loading' }
-  | { status: 'error'; kind: ReportErrorKind; message: string }
-  | ReportLoaded
+  | { status: 'error'; kind: 'not_found' | 'storage'; message: string }
+  | { status: 'loaded'; snapshot: AnalysisSnapshot }
 
 const NEGATIVE_CLEARANCE_NOTE =
   '封闭环允许为负值，负间隙的物理意义由用户定义；系统不推断其代表过盈、预紧或其他装配状态。'
+
+const SNAPSHOT_ONLY_NOTE =
+  '本报告只读取创建时冻结的分析快照，不读取工作台实时数据；快照创建后的输入、来源或确认变化不会改变本报告。'
 
 function formatNullableMm(value: Q | null, signed = false): string {
   return value === null ? '—' : formatMm(value, { signed })
@@ -72,9 +63,28 @@ function formatSavedAt(savedAt: string): string {
   return Number.isNaN(date.getTime()) ? savedAt : date.toLocaleString('zh-CN')
 }
 
+function formatTime(value: string): string {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN')
+}
+
+function formatCoordinate(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2)
+}
+
+function formatRect(entry: SnapshotBindingEntry): string {
+  const [minX, minY, maxX, maxY] = entry.rectPdf
+  return `[${formatCoordinate(minX)}, ${formatCoordinate(minY)}] – [${formatCoordinate(maxX)}, ${formatCoordinate(maxY)}]`
+}
+
+function formatPageBox(entry: SnapshotBindingEntry): string {
+  const [x0, y0, x1, y1] = entry.pageBoxPdf
+  return `[${formatCoordinate(x0)}, ${formatCoordinate(y0)}, ${formatCoordinate(x1)}, ${formatCoordinate(y1)}]`
+}
+
 /**
  * 名义值代入只按组成环顺序和方向拼接已经由 formatMm 格式化的输入值；
- * 等式右端直接使用 calculateChain 的 nominalQ，不在这里另写求和公式。
+ * 等式右端直接使用冻结的 result.nominalQ，不在这里另写求和公式。
  */
 function formatNominalSubstitution(
   terms: readonly DimensionTerm[],
@@ -91,118 +101,101 @@ function formatNominalSubstitution(
   return `C = ${body} = ${formatMm(nominalQ)}`
 }
 
-async function loadReport(projectId: string): Promise<ReportState> {
-  const [loadedProject, loadedDraft] = await Promise.all([
-    getProject(projectId),
-    getDraft(projectId),
-  ])
+function relationFinding(snapshot: AnalysisSnapshot): ReviewFinding | undefined {
+  return snapshot.review.findings.find(
+    (finding) => finding.ruleId === 'RELATION_CONFIRMED',
+  )
+}
 
-  if (!loadedProject.ok) {
-    return {
-      status: 'error',
-      kind: 'storage',
-      message: `无法读取项目：${loadedProject.error.message}`,
-    }
+function relationLabel(finding: ReviewFinding | undefined): string {
+  if (finding === undefined) {
+    return '未记录'
   }
-  if (loadedProject.value === null) {
-    return {
-      status: 'error',
-      kind: 'not_found',
-      message: `项目不存在：${projectId}`,
-    }
+  if (finding.status === 'passed') {
+    return '已确认（用户自述核对尺寸关系与作用方向）'
   }
-  if (!loadedDraft.ok) {
-    return {
-      status: 'error',
-      kind: 'storage',
-      message: `无法读取输入草稿：${loadedDraft.error.message}`,
-    }
+  return REVIEW_STATUS_LABEL[finding.status]
+}
+
+function ReviewStatusBadge({ status }: { status: ReviewStatus }) {
+  return (
+    <span className={`print-report__status print-report__status--${status}`}>
+      {REVIEW_STATUS_LABEL[status]}
+    </span>
+  )
+}
+
+interface PendingListProps {
+  findings: readonly ReviewFinding[]
+}
+
+function PendingList({ findings }: PendingListProps) {
+  if (findings.length === 0) {
+    return <p>没有待办项。</p>
   }
-
-  const project = loadedProject.value
-  const draft = loadedDraft.value?.draft ?? null
-  const effectiveDraft = draft ?? chainToDraft(project.working)
-  const conversion = draftToChain(effectiveDraft)
-  const reportTime = new Date().toLocaleString('zh-CN')
-
-  // 无效草稿优先按“当前输入无效”拒绝，不能退回项目里最后一次有效方案出报告。
-  if (!conversion.ok) {
-    return {
-      status: 'loaded',
-      project,
-      chain: null,
-      result: null,
-      eligibility: resolveReportEligibility({
-        result: null,
-        // 草稿无效时没有可核对的当前链，不能算已确认。
-        relationConfirmed: false,
-        stale: true,
-      }),
-      baseline: null,
-      reportTime,
-    }
-  }
-
-  const chain = conversion.chain
-  const result = calculateChain(chain)
-  const eligibility = resolveReportEligibility({
-    result,
-    relationConfirmed: isRelationConfirmed(chain, {
-      relationRevision: Math.max(project.relationRevision, effectiveDraft.relationRevision),
-      relationReview: project.relationReview,
-    }),
-    stale: false,
-  })
-
-  // 基线由存储层保证经过校验；这里再校验一次，避免损坏的内存快照进入报告。
-  const baseline =
-    project.baseline !== null && validateChain(project.baseline.definition).ok
-      ? project.baseline.definition
-      : null
-
-  return {
-    status: 'loaded',
-    project,
-    chain,
-    result,
-    eligibility,
-    baseline,
-    reportTime,
-  }
+  return (
+    <table className="print-report__table print-report__review-table">
+      <thead>
+        <tr>
+          <th scope="col">规则</th>
+          <th scope="col">对象</th>
+          <th scope="col">状态</th>
+          <th scope="col">严重程度</th>
+          <th scope="col">依据</th>
+          <th scope="col">处理动作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {findings.map((finding) => (
+          <tr
+            key={`${finding.ruleId}:${finding.subject.kind}:${finding.subject.id}`}
+            data-testid={`pending-${finding.ruleId}-${finding.subject.id}`}
+          >
+            <th scope="row">
+              {REVIEW_RULE_LABEL[finding.ruleId]}
+              <span className="print-report__rule-id">{finding.ruleId}</span>
+            </th>
+            <td>{finding.subject.label}</td>
+            <td>
+              <ReviewStatusBadge status={finding.status} />
+            </td>
+            <td>{REVIEW_SEVERITY_LABEL[finding.severity]}</td>
+            <td>{finding.basis}</td>
+            <td>{finding.action ?? '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
 }
 
 interface ReportDocumentProps {
-  project: Project
-  chain: ChainDefinition
-  result: ChainResult
-  statusLabel: string
-  baseline: ChainDefinition | null
-  reportTime: string
+  snapshot: AnalysisSnapshot
 }
 
 /**
- * 已通过“有效 + 已确认”门槛后的报告正文。
- *
- * 所有工程数值只来自 calculateChain 的 result、ContributionTable 内的
- * contributionRatios 以及 ScenarioCompare 内的 compareChains；本组件只负责
- * 选择标签、拼接用户输入和调用 formatMm。负间隙说明按文档第 91 行原样给出。
+ * 报告正文：所有工程数值只来自快照内冻结的 definition / result /
+ * review / sourceManifest；ContributionTable 与 ScenarioCompare 只做展示，
+ * 不重新读取工作台，也不另写公式。
  */
-function ReportDocument({
-  project,
-  chain,
-  result,
-  statusLabel,
-  baseline,
-  reportTime,
-}: ReportDocumentProps) {
+function ReportDocument({ snapshot }: ReportDocumentProps) {
   const baseId = useId()
   const titleId = `${baseId}-title`
   const methodId = `${baseId}-method`
   const inputId = `${baseId}-input`
   const expressionId = `${baseId}-expression`
   const resultId = `${baseId}-result`
+  const sourceId = `${baseId}-source`
+  const reviewId = `${baseId}-review`
   const baselineId = `${baseId}-baseline`
   const notesId = `${baseId}-notes`
+
+  const { definition: chain, result, review } = snapshot
+  const relation = relationFinding(snapshot)
+  const reviewIncomplete = review.pending.length > 0
+  const statusLabel = reviewIncomplete
+    ? `${review.calculation.label}（审查未完成，见待办）`
+    : review.calculation.label
 
   return (
     <article
@@ -213,27 +206,65 @@ function ReportDocument({
       <header className="print-report__header">
         <p className="print-report__eyebrow">轴系轴向公差链分析报告</p>
         <h1 id={titleId} className="print-report__title">
-          {project.name}
+          {snapshot.projectName}
         </h1>
         <dl className="print-report__meta">
           <div>
             <dt>项目名称</dt>
-            <dd>{project.name}</dd>
+            <dd>{snapshot.projectName}</dd>
           </div>
           <div>
             <dt>项目 ID</dt>
-            <dd className="print-report__mono">{project.id}</dd>
+            <dd className="print-report__mono">{snapshot.projectId}</dd>
           </div>
           <div>
-            <dt>报告时间</dt>
-            <dd>{reportTime}</dd>
+            <dt>分析快照 ID</dt>
+            <dd className="print-report__mono" data-testid="report-snapshot-id">
+              {snapshot.id}
+            </dd>
+          </div>
+          <div>
+            <dt>快照创建时间</dt>
+            <dd>{formatTime(snapshot.createdAt)}</dd>
           </div>
           <div>
             <dt>计算引擎版本</dt>
-            <dd className="print-report__mono">{project.engineVersion}</dd>
+            <dd className="print-report__mono">{snapshot.engineVersion}</dd>
+          </div>
+          <div>
+            <dt>审查规则版本</dt>
+            <dd className="print-report__mono">{snapshot.reviewRulesVersion}</dd>
+          </div>
+          <div>
+            <dt>审查状态（创建时冻结）</dt>
+            <dd data-testid="report-review-state">
+              {reviewIncomplete
+                ? `审查未完成（${review.pending.length} 项待办）`
+                : '审查完成'}
+            </dd>
+          </div>
+          <div>
+            <dt>计算状态（创建时冻结）</dt>
+            <dd data-testid="report-calculation-state">
+              {review.calculation.label}
+            </dd>
           </div>
         </dl>
       </header>
+
+      {reviewIncomplete ? (
+        <section
+          className="print-report__incomplete"
+          role="note"
+          data-testid="report-incomplete-banner"
+        >
+          <h2>审查未完成：本报告是带待办报告</h2>
+          <p>
+            创建快照时仍有 {review.pending.length} 项待办，详见“审查结果与未完成项”。
+            本报告不能被标为“已完成复核报告”，也不能作为证据完整性结论。
+          </p>
+        </section>
+      ) : null}
 
       <section className="print-report__section" aria-labelledby={methodId}>
         <h2 id={methodId}>分析方法与适用范围</h2>
@@ -255,13 +286,16 @@ function ReportDocument({
           </div>
           <div>
             <dt>关系确认状态</dt>
-            <dd>已确认（用户已核对尺寸关系与作用方向）</dd>
+            <dd data-testid="report-relation-state">{relationLabel(relation)}</dd>
           </div>
         </dl>
+        {relation !== undefined ? (
+          <p className="print-report__basis">依据：{relation.basis}</p>
+        ) : null}
       </section>
 
       <section className="print-report__section" aria-labelledby={inputId}>
-        <h2 id={inputId}>完整输入</h2>
+        <h2 id={inputId}>完整输入（快照冻结）</h2>
         <table className="print-report__table" aria-label="报告输入表">
           <thead>
             <tr>
@@ -357,7 +391,7 @@ function ReportDocument({
             <dd>{formatTarget(chain.target)}</dd>
           </div>
           <div data-testid="report-result-status">
-            <dt>判定</dt>
+            <dt>判定（计算结论）</dt>
             <dd>{statusLabel}</dd>
           </div>
           <div data-testid="report-result-lower-margin">
@@ -369,20 +403,136 @@ function ReportDocument({
             <dd>{formatNullableMm(result.upperMarginQ, true)}</dd>
           </div>
         </dl>
+        <p className="print-report__basis">
+          判定来自冻结的计算结果；审查完成度单独显示，两者不互相替代。
+        </p>
       </section>
 
       <section className="print-report__section" aria-label="公差贡献">
         <ContributionTable result={result} terms={chain.terms} />
       </section>
 
-      {baseline !== null && project.baseline !== null ? (
+      <section className="print-report__section" aria-labelledby={sourceId}>
+        <h2 id={sourceId}>来源清单（快照冻结）</h2>
+        {snapshot.sourceManifest.bindings.length === 0 ? (
+          <p className="print-report__basis" data-testid="report-no-bindings">
+            未建立任何来源绑定：来源审查为“未检查”，证据不完整；这不会改变计算结果。
+          </p>
+        ) : (
+          <>
+            {snapshot.sourceManifest.unboundTermIds.length > 0 ? (
+              <p className="print-report__basis">
+                以下组成环没有来源绑定，来源审查为未检查：
+                {snapshot.sourceManifest.unboundTermIds.join('、')}。
+              </p>
+            ) : null}
+            <table className="print-report__table" aria-label="来源清单">
+              <thead>
+                <tr>
+                  <th scope="col">组成环</th>
+                  <th scope="col">文档 / 文件</th>
+                  <th scope="col">版本 ID</th>
+                  <th scope="col">页</th>
+                  <th scope="col">区域（PDF 坐标）</th>
+                  <th scope="col">可读</th>
+                  <th scope="col">版本状态</th>
+                  <th scope="col">数值核对</th>
+                  <th scope="col">历史来源理由</th>
+                </tr>
+              </thead>
+              <tbody>
+                {snapshot.sourceManifest.bindings.map((entry) => (
+                  <tr
+                    key={entry.bindingId}
+                    data-testid={`report-source-${entry.bindingId}`}
+                  >
+                    <th scope="row">
+                      {entry.termLabel ?? entry.termId}
+                      <span className="print-report__rule-id">
+                        环修订 {entry.termRevision ?? '—'}
+                      </span>
+                    </th>
+                    <td>
+                      {entry.documentTitle ?? entry.documentId}
+                      <span className="print-report__rule-id">
+                        {entry.fileName ?? '文件记录缺失'}
+                      </span>
+                    </td>
+                    <td className="print-report__mono print-report__small">
+                      {entry.revisionId}
+                      {entry.revisionSha256 !== null ? (
+                        <>
+                          <br />
+                          SHA-256 {entry.revisionSha256.slice(0, 16)}…
+                        </>
+                      ) : null}
+                    </td>
+                    <td>第 {entry.page} 页</td>
+                    <td>
+                      {formatRect(entry)}
+                      <span className="print-report__rule-id">
+                        页面 {formatPageBox(entry)}
+                      </span>
+                    </td>
+                    <td>
+                      <ReviewStatusBadge status={entry.status.available} />
+                    </td>
+                    <td>
+                      <ReviewStatusBadge status={entry.status.current} />
+                    </td>
+                    <td>
+                      <ReviewStatusBadge status={entry.status.valueReviewed} />
+                    </td>
+                    <td>
+                      {entry.historicalAcceptance === null ? (
+                        '—'
+                      ) : (
+                        <>
+                          理由：{entry.historicalAcceptance.reason}
+                          <br />
+                          范围：{entry.historicalAcceptance.scope}
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </section>
+
+      <section className="print-report__section" aria-labelledby={reviewId}>
+        <h2 id={reviewId}>审查结果与未完成项（快照冻结）</h2>
+        <dl className="print-report__review-summary">
+          {(
+            ['passed', 'failed', 'unchecked', 'needs-human', 'not-applicable'] as const
+          ).map((status) => (
+            <div key={status}>
+              <dt>{REVIEW_STATUS_LABEL[status]}</dt>
+              <dd>{review.byStatus[status]}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="print-report__basis">
+          审查完成：{reviewIncomplete ? `否，共 ${review.pending.length} 项待办` : '是'}。
+          规则版本 {snapshot.reviewRulesVersion}；所有规则结果均来自统一审查模块。
+        </p>
+        <h3>未完成项</h3>
+        <PendingList findings={review.pending} />
+      </section>
+
+      {snapshot.baseline !== null ? (
         <section className="print-report__section" aria-labelledby={baselineId}>
-          <h2 id={baselineId}>基线对比</h2>
+          <h2 id={baselineId}>基线对比（快照冻结）</h2>
           <p className="print-report__baseline-note">
-            基线保存于 {formatSavedAt(project.baseline.savedAt)}
+            基线保存于 {formatSavedAt(snapshot.baseline.savedAt)}
             。以下前后值、变化量和判定均来自 compareChains。
           </p>
-          <ScenarioCompare baseline={baseline} working={chain} />
+          <ScenarioCompare
+            baseline={snapshot.baseline.definition}
+            working={chain}
+          />
         </section>
       ) : null}
 
@@ -398,11 +548,8 @@ function ReportDocument({
             <dd>{formatOptionalText(chain.assumptions)}</dd>
           </div>
           <div>
-            <dt>关系确认</dt>
-            <dd>
-              用户已勾选“已核对尺寸关系与作用方向”。本报告只反映该确认状态，
-              不代替真实装配核对。
-            </dd>
+            <dt>快照边界</dt>
+            <dd>{SNAPSHOT_ONLY_NOTE}</dd>
           </div>
           <div>
             <dt>待确认事项</dt>
@@ -422,19 +569,23 @@ function ReportDocument({
       </section>
 
       <footer className="print-report__footer">
-        轴系轴向公差链分析与修改追踪工具 · 报告由用户已确认的本地数据生成
+        轴系轴向公差链分析与修改追踪工具 · 报告由不可变分析快照生成（快照 ID：
+        <span className="print-report__mono">{snapshot.id}</span>）
       </footer>
     </article>
   )
 }
 
 /**
- * 独立打印报告页：从 IndexedDB 读取项目与当前草稿，用共享的 status.ts
- * 判定是否已确认且有效，只有满足门槛才渲染正文和打印按钮。
+ * 独立打印报告页：只按 snapshotId 读取不可变分析快照，不读取项目实时数据、
+ * 草稿或来源状态。报告门槛从“有效且关系已确认”改为“快照存在”；
+ * 审查是否完成由快照内冻结的状态显示，不再阻止打印。
  */
 export function PrintReport({
   projectId,
+  snapshotId,
   onBackToWorkspace,
+  onBackToSnapshots,
   onBackToList,
 }: PrintReportProps) {
   const [state, setState] = useState<ReportState>({ status: 'loading' })
@@ -442,29 +593,52 @@ export function PrintReport({
 
   useEffect(() => {
     let cancelled = false
-
-    loadReport(projectId)
+    getAnalysisSnapshot(snapshotId)
       .then((loaded) => {
-        if (!cancelled) {
-          setState(loaded)
+        if (cancelled) {
+          return
         }
+        if (!loaded.ok) {
+          setState({
+            status: 'error',
+            kind: 'storage',
+            message: loaded.error.message,
+          })
+          return
+        }
+        if (loaded.value === null) {
+          setState({
+            status: 'error',
+            kind: 'not_found',
+            message: `分析快照不存在：${snapshotId}`,
+          })
+          return
+        }
+        if (loaded.value.projectId !== projectId) {
+          setState({
+            status: 'error',
+            kind: 'not_found',
+            message: '该分析快照不属于此项目。',
+          })
+          return
+        }
+        setState({ status: 'loaded', snapshot: loaded.value })
       })
       .catch((error: unknown) => {
         if (!cancelled) {
           setState({
             status: 'error',
             kind: 'storage',
-            message: `无法加载打印报告：${
+            message: `无法加载分析快照：${
               error instanceof Error ? error.message : String(error)
             }`,
           })
         }
       })
-
     return () => {
       cancelled = true
     }
-  }, [projectId, reloadToken])
+  }, [projectId, snapshotId, reloadToken])
 
   const retry = useCallback((): void => {
     setState({ status: 'loading' })
@@ -479,6 +653,14 @@ export function PrintReport({
     window.location.hash = `#/projects/${encodeURIComponent(projectId)}`
   }
 
+  const backToSnapshots = (): void => {
+    if (onBackToSnapshots !== undefined) {
+      onBackToSnapshots(projectId)
+      return
+    }
+    window.location.hash = `#/projects/${encodeURIComponent(projectId)}/snapshots`
+  }
+
   const backToList = (): void => {
     if (onBackToList !== undefined) {
       onBackToList()
@@ -491,7 +673,7 @@ export function PrintReport({
     return (
       <main className="print-report">
         <p className="print-report__loading" role="status">
-          正在加载打印报告…
+          正在加载分析快照…
         </p>
       </main>
     )
@@ -502,17 +684,17 @@ export function PrintReport({
     return (
       <main className="print-report">
         <section className="print-report__blocked" role="alert">
-          <h1>{notFound ? '项目不存在' : '本地存储不可用'}</h1>
+          <h1>{notFound ? '分析快照不存在' : '本地存储不可用'}</h1>
           <p>
             发生了什么：{state.message}
             {notFound
-              ? '。该项目可能已被删除，或报告链接中的项目 ID 不正确。'
+              ? '。快照可能已被删除（删除项目会同时删除其快照），或报告链接不正确。'
               : '。浏览器无法打开本地数据库，报告数据可能没有读取成功。'}
           </p>
           <p>
             接下来：
             {notFound
-              ? '返回项目列表，重新选择或新建项目后再生成报告。'
+              ? '返回快照列表重新选择，或回到工作台创建新的分析快照。'
               : '先点“重试”重新读取；如果仍然失败，请返回项目列表。'}
           </p>
           <div className="print-report__error-actions">
@@ -523,6 +705,9 @@ export function PrintReport({
             )}
             <button type="button" onClick={backToList}>
               返回项目列表
+            </button>
+            <button type="button" onClick={backToSnapshots}>
+              返回快照列表
             </button>
             {notFound ? null : (
               <button type="button" onClick={backToWorkspace}>
@@ -535,51 +720,14 @@ export function PrintReport({
     )
   }
 
-  const { project, chain, result, baseline, reportTime, eligibility } = state
-  const reportable =
-    eligibility.eligible && chain !== null && result !== null
-
-  if (!reportable) {
-    return (
-      <main className="print-report">
-        <section
-          className="print-report__blocked"
-          role="alert"
-          data-testid="report-blocked"
-        >
-          <h1>无法生成打印报告</h1>
-          <p>
-            发生了什么：
-            {eligibility.message ??
-              '当前方案不满足“已确认且有效”的出报告条件。'}
-          </p>
-          <p>
-            接下来：返回工作台修正输入并重新核对尺寸关系，或返回项目列表。
-            报告只包含已确认且有效的工程数据。
-          </p>
-          <p className="print-report__blocked-project">项目：{project.name}</p>
-          <div className="print-report__error-actions">
-            <button type="button" onClick={backToWorkspace}>
-              返回工作台
-            </button>
-            <button type="button" onClick={backToList}>
-              返回项目列表
-            </button>
-          </div>
-        </section>
-      </main>
-    )
-  }
-
   return (
     <main className="print-report">
       <div className="print-report__toolbar">
-        <button
-          type="button"
-          className="print-report__back"
-          onClick={backToWorkspace}
-        >
+        <button type="button" className="print-report__back" onClick={backToWorkspace}>
           返回工作台
+        </button>
+        <button type="button" className="print-report__back" onClick={backToSnapshots}>
+          返回快照列表
         </button>
         <button
           type="button"
@@ -591,18 +739,11 @@ export function PrintReport({
           打印报告
         </button>
         <span className="print-report__toolbar-hint">
-          使用浏览器“打印 / 另存为 PDF”输出 A4 报告。
+          使用浏览器“打印 / 另存为 PDF”输出 A4 报告；内容来自不可变快照。
         </span>
       </div>
 
-      <ReportDocument
-        project={project}
-        chain={chain}
-        result={result}
-        statusLabel={eligibility.status.label}
-        baseline={baseline}
-        reportTime={reportTime}
-      />
+      <ReportDocument snapshot={state.snapshot} />
     </main>
   )
 }

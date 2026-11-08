@@ -13,13 +13,13 @@ import {
   type SourcePanelState,
 } from '../components/SourcePanel'
 import type { ChainDefinition, Project } from '../domain/types'
+import { createAnalysisSnapshot } from '../history/snapshots'
 import type { CommitImportSuccess } from '../import/commit'
 import { countBindingsByTerm, type SourceBinding } from '../sources/bindings'
 import { evaluateReviewChecklist, type ReviewFinding } from '../review/rules'
 import { useDatabaseStaleVersion } from '../storage/databaseStale'
 import { subscribeDatabaseVersionChange } from '../storage/db'
 import { getProject, listProjects, loadProjectSources } from '../storage/projects'
-import { resolveReportEligibility } from '../workspace/status'
 import {
   downloadProjectBackup,
   usePersistedWorkspace,
@@ -38,8 +38,10 @@ export interface WorkspaceProps {
   projectId?: string
   /** 返回项目列表；未提供时回退到 location.hash 路由。 */
   onBackToList?: () => void
-  /** 打开打印报告；未提供时回退到 location.hash 路由。 */
-  onOpenReport?: (projectId: string) => void
+  /** 打开某份快照的报告；未提供时回退到 location.hash 路由。 */
+  onOpenReport?: (projectId: string, snapshotId: string) => void
+  /** 打开分析快照列表；未提供时回退到 location.hash 路由。 */
+  onOpenSnapshots?: (projectId: string) => void
   /** 仅测试或特殊场景注入保存实现；默认写入 IndexedDB。 */
   saveDraft?: SaveDraftFn
 }
@@ -86,7 +88,8 @@ interface WorkspaceEditorProps {
   /** 本地 V1 升级提示；未迁移为 null。 */
   migrationNotice: string | null
   onBackToList: () => void
-  onOpenReport?: (projectId: string) => void
+  onOpenReport?: (projectId: string, snapshotId: string) => void
+  onOpenSnapshots?: (projectId: string) => void
   saveDraft?: SaveDraftFn
 }
 
@@ -103,6 +106,7 @@ function WorkspaceEditor({
   migrationNotice,
   onBackToList,
   onOpenReport,
+  onOpenSnapshots,
   saveDraft,
 }: WorkspaceEditorProps) {
   const {
@@ -123,6 +127,7 @@ function WorkspaceEditor({
     baseline,
     saveBaseline,
     restoreBaseline,
+    relationState,
   } = usePersistedWorkspace(project, initialDraft, {
     initialValidChain,
     saveDraft,
@@ -135,6 +140,10 @@ function WorkspaceEditor({
   const [baselineError, setBaselineError] = useState<string | null>(null)
   const [tableImportOpen, setTableImportOpen] = useState(false)
   const [tableImportMessage, setTableImportMessage] = useState<string | null>(null)
+  const [snapshotBusy, setSnapshotBusy] = useState(false)
+  const [snapshotMessage, setSnapshotMessage] = useState<string | null>(null)
+  const [snapshotError, setSnapshotError] = useState<string | null>(null)
+  const [pendingSnapshotAction, setPendingSnapshotAction] = useState(false)
   const [sourceBindings, setSourceBindings] = useState<SourceBinding[]>([])
   const sourceBindingCounts = countBindingsByTerm(sourceBindings)
   /**
@@ -258,12 +267,11 @@ function WorkspaceEditor({
   const targetInvalid = hasTargetInputError(cellErrors)
   const target = targetInvalid ? null : (displayChain?.target ?? null)
 
-  // 打印报告与结果卡共用同一份“有效 + 已确认”门槛；入口禁用时显示具体原因。
-  const reportEligibility = resolveReportEligibility({
-    result,
-    relationConfirmed,
-    stale,
-  })
+  // 报告不再直接读工作台实时数据：只有通过校验的输入才能冻结成快照。
+  // 审查未完成也允许创建（规格 §6.1 允许带待办的报告），但必须在报告里标明。
+  const snapshotBlockReason = reviewSummary.canCreateReport
+    ? null
+    : '当前输入未通过校验，不能创建分析快照。请修正输入后再试。'
 
   /**
    * 表格导入已在 commitImport 内通过 saveDraft 原子写入 projects.working 与草稿；
@@ -277,15 +285,54 @@ function WorkspaceEditor({
     )
   }
 
-  const handleOpenReport = (): void => {
-    if (!reportEligibility.eligible) {
+  const performCreateSnapshot = async (): Promise<void> => {
+    setPendingSnapshotAction(false)
+    setSnapshotBusy(true)
+    setSnapshotMessage(null)
+    setSnapshotError(null)
+    const created = await createAnalysisSnapshot({
+      project,
+      draft,
+      relationState,
+      baseline,
+    })
+    setSnapshotBusy(false)
+    if (!created.ok) {
+      setSnapshotError(created.error.message)
       return
     }
+    setSnapshotMessage(
+      `已创建分析快照 ${created.value.id.slice(0, 8)}…；审查状态：${
+        created.value.status === 'complete'
+          ? '完成'
+          : `未完成（${created.value.pendingCount} 项待办）`
+      }。报告内容已冻结。`,
+    )
     if (onOpenReport !== undefined) {
-      onOpenReport(project.id)
+      onOpenReport(project.id, created.value.id)
       return
     }
-    window.location.hash = `#/project/${encodeURIComponent(project.id)}/report`
+    window.location.hash = `#/projects/${encodeURIComponent(project.id)}/reports/${encodeURIComponent(created.value.id)}`
+  }
+
+  const handleCreateSnapshot = (): void => {
+    if (!reviewSummary.canCreateReport || snapshotBusy) {
+      return
+    }
+    // 审查未完成时先让用户明确知道报告会带待办，不能事后误以为是复核报告。
+    if (!reviewSummary.reviewComplete) {
+      setPendingSnapshotAction(true)
+      return
+    }
+    void performCreateSnapshot()
+  }
+
+  const handleOpenSnapshots = (): void => {
+    if (onOpenSnapshots !== undefined) {
+      onOpenSnapshots(project.id)
+      return
+    }
+    window.location.hash = `#/projects/${encodeURIComponent(project.id)}/snapshots`
   }
 
   const performSaveBaseline = async (): Promise<void> => {
@@ -359,14 +406,21 @@ function WorkspaceEditor({
           <button
             type="button"
             className="workspace__print-button"
-            onClick={handleOpenReport}
-            disabled={!reportEligibility.eligible}
+            onClick={handleCreateSnapshot}
+            disabled={snapshotBlockReason !== null || snapshotBusy}
             aria-describedby={
-              reportEligibility.eligible ? undefined : 'workspace-print-reason'
+              snapshotBlockReason === null ? undefined : 'workspace-print-reason'
             }
-            title={reportEligibility.message ?? undefined}
+            title={snapshotBlockReason ?? '把当前输入、结果与审查状态冻结为不可变快照'}
           >
-            打印报告
+            {snapshotBusy ? '创建中…' : '创建分析快照'}
+          </button>
+          <button
+            type="button"
+            className="workspace__nav-button"
+            onClick={handleOpenSnapshots}
+          >
+            分析快照
           </button>
           <button
             type="button"
@@ -416,13 +470,25 @@ function WorkspaceEditor({
         </div>
       ) : null}
 
-      {!reportEligibility.eligible && reportEligibility.message !== null ? (
+      {snapshotBlockReason !== null ? (
         <p
           id="workspace-print-reason"
           className="workspace__print-reason"
           role="status"
         >
-          {reportEligibility.message}
+          {snapshotBlockReason}
+        </p>
+      ) : null}
+
+      {snapshotMessage !== null ? (
+        <p className="workspace__table-import-message" role="status">
+          {snapshotMessage}
+        </p>
+      ) : null}
+
+      {snapshotError !== null ? (
+        <p className="workspace__baseline-error" role="alert">
+          {snapshotError}
         </p>
       ) : null}
 
@@ -583,6 +649,27 @@ function WorkspaceEditor({
         ) : null}
       </section>
 
+      {pendingSnapshotAction ? (
+        <ConfirmDialog
+          title="审查未完成，仍创建快照？"
+          message={
+            <>
+              <p>
+                当前有 {reviewSummary.pending.length} 项待办（例如来源未核对或尺寸关系未确认）。
+                创建快照后，报告会明确标注“审查未完成”，并列出全部待办，
+                不会被标成已完成复核报告。
+              </p>
+              <p>快照内容创建后不可修改；工作数据再变化时，它只会被标记为历史。</p>
+            </>
+          }
+          confirmLabel="创建带待办快照"
+          onConfirm={() => {
+            void performCreateSnapshot()
+          }}
+          onCancel={() => setPendingSnapshotAction(false)}
+        />
+      ) : null}
+
       {pendingBaselineAction === 'overwrite' ? (
         <ConfirmDialog
           title="覆盖基线？"
@@ -627,6 +714,7 @@ export function Workspace({
   projectId,
   onBackToList,
   onOpenReport,
+  onOpenSnapshots,
   saveDraft,
 }: WorkspaceProps = {}) {
   const bootstrap = useWorkspaceBootstrap(projectId)
@@ -823,6 +911,7 @@ export function Workspace({
       migrationNotice={bootstrap.migrationNotice}
       onBackToList={backToList}
       onOpenReport={onOpenReport}
+      onOpenSnapshots={onOpenSnapshots}
       saveDraft={saveDraft}
     />
   )

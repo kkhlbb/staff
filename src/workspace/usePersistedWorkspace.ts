@@ -213,6 +213,11 @@ export interface UsePersistedWorkspaceResult extends UseWorkspaceResult {
   /** 导出项目 JSON（含来源元数据与绑定，但不含附件）；返回来源版本数，失败为 null。 */
   exportBackup: () => Promise<number | null>
   /**
+   * 当前关系修订号与确认凭据。快照创建必须冻结这一份派生状态，
+   * 不能只读可能落后于界面的 project 记录。
+   */
+  relationState: RelationState
+  /**
    * 唯一的确认命令：写入或清除关系确认凭据。
    * 确认状态本身不写入草稿布尔，判定始终由 relation.ts 派生。
    */
@@ -604,5 +609,6 @@ export function usePersistedWorkspace(
     retrySave,
     exportBackup,
     setRelationConfirmed,
+    relationState,
   }
 }

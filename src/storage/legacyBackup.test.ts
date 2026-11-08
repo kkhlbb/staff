@@ -583,7 +583,7 @@ describe('blocked 晚升级：带真实项目、草稿与 Blob 的库前后对�
         before.close()
       }
     })()
-    expect(beforeVersion).toBe(6)
+    expect(beforeVersion).toBe(7)
     expect(beforeSnapshot.blobs[0]).toEqual(Array.from(bytes))
 
     // 旧客户端：没有 versionchange 处理器，占住连接不释放。
@@ -612,7 +612,7 @@ describe('blocked 晚升级：带真实项目、草稿与 Blob 的库前后对�
     // blocked 期间数据不变；用占住连接的旧客户端本身读取（此时不要再开新连接，
     // 否则会排在未完成的升级请求之后）。
     {
-      expect(holder.version).toBe(6)
+      expect(holder.version).toBe(7)
       const transaction = holder.transaction(
         [PROJECT_STORE_NAME, 'drafts', 'sourceDocuments', 'sourceRevisions', 'sourceBlobs'],
         'readonly',
@@ -645,7 +645,7 @@ describe('blocked 晚升级：带真实项目、草稿与 Blob 的库前后对�
     holder.close()
     await new Promise((resolve) => setTimeout(resolve, 150))
     const upgraded = await openDatabase({ version: beforeVersion + 1 })
-    expect(upgraded.version).toBe(7)
+    expect(upgraded.version).toBe(beforeVersion + 1)
     try {
       expect(Array.from(upgraded.objectStoreNames)).toEqual(
         expect.arrayContaining([

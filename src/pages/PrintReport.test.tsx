@@ -7,9 +7,21 @@ import App from '../App'
 import { ENGINE_VERSION } from '../domain/calculate'
 import type { ChainDefinition, DimensionTerm, Project } from '../domain/types'
 import { parseMm } from '../domain/units'
-import { createProject, saveDraft } from '../storage/projects'
+import {
+  createAnalysisSnapshot,
+  type AnalysisSnapshot,
+} from '../history/snapshots'
+import { REVIEW_RULES_VERSION } from '../review/rules'
+import {
+  createSourceBinding,
+  reviewSourceBinding,
+} from '../sources/bindings'
+import { importSourceRevision } from '../sources/revisions'
 import { createRelationReview } from '../workspace/relation'
+import { updateProject } from '../storage/projects'
+import { createProject } from '../storage/projects'
 import { deleteProjectDatabase } from '../test/projectDb'
+import { buildSyntheticPdf } from '../test/pdfFixtures'
 import { chainToDraft } from '../workspace/draft'
 import { PrintReport } from './PrintReport'
 
@@ -129,13 +141,70 @@ async function createCaseAProject(
     baseline,
     relationRevision,
     relationReview: relationConfirmed
-      ? createRelationReview(working, relationRevision, '2026-01-01T00:00:00.000Z')
+      ? createRelationReview(
+          working,
+          relationRevision,
+          '2026-01-01T00:00:00.000Z',
+        )
       : null,
   })
   if (!created.ok) {
     throw new Error(`创建测试项目失败：${created.error.message}`)
   }
   return created.value
+}
+
+async function snapshotProject(
+  project: Project,
+  options: { baseline?: Project['baseline'] } = {},
+): Promise<AnalysisSnapshot> {
+  const created = await createAnalysisSnapshot({
+    project,
+    draft: chainToDraft(project.working),
+    relationState: {
+      relationRevision: project.relationRevision,
+      relationReview: project.relationReview,
+    },
+    baseline: options.baseline ?? project.baseline,
+    now: '2026-11-08T10:00:00.000Z',
+  })
+  if (!created.ok) {
+    throw new Error(`创建快照失败：${created.error.message}`)
+  }
+  return created.value
+}
+
+/** 给每个组成环建立同一 PDF 版本的绑定并记录核对，使审查真正完成。 */
+async function bindAndReviewAllTerms(project: Project): Promise<void> {
+  const pdf = buildSyntheticPdf({ pageCount: 2 })
+  const imported = await importSourceRevision({
+    projectId: project.id,
+    fileName: 'case-a.pdf',
+    bytes: pdf,
+  })
+  if (!imported.ok) {
+    throw new Error(imported.error.message)
+  }
+  for (const term of project.working.terms) {
+    const binding = await createSourceBinding({
+      projectId: project.id,
+      termId: term.id,
+      revisionId: imported.value.revision.id,
+      page: 1,
+      rectPdf: [20, 20, 200, 60],
+      pageBoxPdf: [0, 0, 600, 800],
+      note: `${term.symbol} 来源区域`,
+    })
+    if (!binding.ok) {
+      throw new Error(binding.error.message)
+    }
+    const reviewed = await reviewSourceBinding(binding.value.id, {
+      termRevision: term.termRevision,
+    })
+    if (!reviewed.ok) {
+      throw new Error(reviewed.error.message)
+    }
+  }
 }
 
 function resultText(testId: string): string {
@@ -153,8 +222,8 @@ function rowCells(row: HTMLElement): string[] {
   )
 }
 
-describe('PrintReport：已确认且有效的案例 A 报告', () => {
-  it('逐项显示项目、全部输入、表达式、计算结果、贡献、负间隙说明与基线对比', async () => {
+describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
+  it('逐项显示快照、输入、公式、结果、贡献、来源清单、审查待办与基线对比', async () => {
     const printSpy = vi
       .spyOn(window, 'print')
       .mockImplementation(() => undefined)
@@ -162,33 +231,39 @@ describe('PrintReport：已确认且有效的案例 A 报告', () => {
       savedAt: '2026-11-04T08:00:00.000Z',
       definition: makeCaseB(),
     })
+    const snapshot = await snapshotProject(project)
     const user = userEvent.setup()
 
-    render(<PrintReport projectId={project.id} />)
+    render(
+      <PrintReport projectId={project.id} snapshotId={snapshot.id} />,
+    )
 
     const report = await screen.findByTestId('print-report')
 
-    // 1. 项目名称、报告时间、项目 ID、计算引擎版本。
+    // 1. 项目、快照 ID/时间、计算引擎与规则版本。
     expect(
       within(report).getByRole('heading', {
         level: 1,
         name: '案例 A 打印报告',
       }),
     ).toBeInTheDocument()
-    expect(within(report).getByText('报告时间')).toBeInTheDocument()
     expect(within(report).getByText(project.id)).toBeInTheDocument()
     expect(within(report).getByText(ENGINE_VERSION)).toBeInTheDocument()
+    expect(within(report).getByText(REVIEW_RULES_VERSION)).toBeInTheDocument()
+    expect(
+      within(report).getByTestId('report-snapshot-id'),
+    ).toHaveTextContent(snapshot.id)
+    expect(within(report).getByText('快照创建时间')).toBeInTheDocument()
 
     // 2. 分析方法、单位、适用范围与关系确认状态。
     expect(within(report).getByText('一维极值法（线性尺寸链）')).toBeInTheDocument()
     expect(within(report).getByText(/1 q = 0.0001 mm/)).toBeInTheDocument()
     expect(within(report).getByText(/不验证真实装配拓扑/)).toBeInTheDocument()
-    expect(within(report).getByText(/关系确认状态/)).toBeInTheDocument()
     expect(
-      within(report).getByText('已确认（用户已核对尺寸关系与作用方向）'),
-    ).toBeInTheDocument()
+      within(report).getByTestId('report-relation-state'),
+    ).toHaveTextContent('已确认（用户自述核对尺寸关系与作用方向）')
 
-    // 3. 全部输入字段、目标区间、假设与来源备注。
+    // 3. 全部输入字段、目标区间、假设与来源备注来自冻结定义。
     const inputTable = within(report).getByRole('table', {
       name: '报告输入表',
     })
@@ -219,8 +294,6 @@ describe('PrintReport：已确认且有效的案例 A 报告', () => {
       '-1（减小封闭环）',
       '轴承样本 B1',
     ])
-    expect(within(inputTable).getByRole('rowheader', { name: 'S' })).toBeInTheDocument()
-    expect(within(inputTable).getByRole('rowheader', { name: 'B2' })).toBeInTheDocument()
     expect(
       within(report).getAllByText('0.1000 ~ 0.3000').length,
     ).toBeGreaterThan(0)
@@ -246,7 +319,10 @@ describe('PrintReport：已确认且有效的案例 A 报告', () => {
     expect(resultText('report-result-upper-deviation')).toBe('+0.1900')
     expect(resultText('report-result-tolerance')).toBe('0.2400')
     expect(resultText('report-result-target')).toBe('0.1000 ~ 0.3000')
-    expect(resultText('report-result-status')).toBe('不满足')
+    // 没有来源绑定：计算结论仍是“不满足”，但审查未完成要单独标明。
+    expect(resultText('report-result-status')).toBe(
+      '计算不满足（审查未完成，见待办）',
+    )
     expect(resultText('report-result-lower-margin')).toBe('+0.0500')
     expect(resultText('report-result-upper-margin')).toBe('-0.0900')
 
@@ -264,14 +340,26 @@ describe('PrintReport：已确认且有效的案例 A 报告', () => {
       ['B2', '0.0200', '8.3%'],
     ])
 
-    // 7. 负间隙说明按文档第 91 行由用户定义物理意义。
+    // 7. 负间隙说明、来源清单与审查待办。
     expect(within(report).getByTestId('report-negative-clearance')).toHaveTextContent(
       '封闭环允许为负值，负间隙的物理意义由用户定义',
     )
-
-    // 8. 有基线时的对比项。
+    expect(within(report).getByTestId('report-no-bindings')).toHaveTextContent(
+      '未建立任何来源绑定',
+    )
     expect(
-      within(report).getByRole('heading', { name: '基线对比' }),
+      within(report).getByTestId('report-incomplete-banner'),
+    ).toHaveTextContent('审查未完成：本报告是带待办报告')
+    expect(within(report).getByTestId('report-review-state')).toHaveTextContent(
+      '审查未完成',
+    )
+    expect(
+      within(report).getAllByTestId(/^pending-/).length,
+    ).toBeGreaterThan(0)
+
+    // 8. 有基线时的对比项来自冻结快照。
+    expect(
+      within(report).getByRole('heading', { name: '基线对比（快照冻结）' }),
     ).toBeInTheDocument()
     expect(within(report).getByTestId('compare-min')).toHaveTextContent('0.1800')
     expect(within(report).getByTestId('compare-min')).toHaveTextContent('0.1500')
@@ -282,97 +370,130 @@ describe('PrintReport：已确认且有效的案例 A 报告', () => {
     await user.click(screen.getByRole('button', { name: '打印报告' }))
     expect(printSpy).toHaveBeenCalledTimes(1)
   })
+
+  it('快照创建后修改工作数据，报告仍只显示冻结内容', async () => {
+    const project = await createCaseAProject(true)
+    const snapshot = await snapshotProject(project)
+
+    const changed = await updateProject(project.id, {
+      name: '已改名的工作项目',
+      working: makeCaseB(),
+    })
+    expect(changed.ok).toBe(true)
+
+    render(
+      <PrintReport projectId={project.id} snapshotId={snapshot.id} />,
+    )
+    const report = await screen.findByTestId('print-report')
+
+    // 快照里的项目名与数值不变；实时项目已改名、数值已收紧。
+    expect(
+      within(report).getByRole('heading', { level: 1, name: '案例 A 打印报告' }),
+    ).toBeInTheDocument()
+    expect(resultText('report-result-min')).toBe('0.1500')
+    expect(resultText('report-result-max')).toBe('0.3900')
+    expect(within(report).queryByText('已改名的工作项目')).toBeNull()
+    expect(
+      within(report).getByTestId('report-snapshot-id'),
+    ).toHaveTextContent(snapshot.id)
+  })
 })
 
-describe('PrintReport：报告门槛', () => {
-  it('关系未确认时显示原因，不渲染报告内容和打印按钮', async () => {
-    const project = await createCaseAProject(false)
+describe('PrintReport：审查完成与错误状态', () => {
+  it('全部来源已绑定并核对后，报告标为审查完成，不显示带待办横幅', async () => {
+    const project = await createCaseAProject(true)
+    await bindAndReviewAllTerms(project)
+    const snapshot = await snapshotProject(project)
+    expect(snapshot.status).toBe('complete')
 
-    render(<PrintReport projectId={project.id} />)
+    render(
+      <PrintReport projectId={project.id} snapshotId={snapshot.id} />,
+    )
+    const report = await screen.findByTestId('print-report')
 
-    const blocked = await screen.findByTestId('report-blocked')
-    expect(blocked).toHaveTextContent('尺寸关系与作用方向尚未确认')
-    expect(blocked).toHaveTextContent('不能打印报告')
-    expect(screen.queryByTestId('print-report')).toBeNull()
-    expect(
-      screen.queryByRole('button', { name: '打印报告' }),
-    ).toBeNull()
-    expect(screen.queryByText('C₀ 封闭环基本尺寸')).toBeNull()
+    expect(within(report).getByTestId('report-review-state')).toHaveTextContent(
+      '审查完成',
+    )
+    expect(within(report).queryByTestId('report-incomplete-banner')).toBeNull()
+    expect(resultText('report-result-status')).toBe('计算不满足')
+
+    // 来源清单冻结每个绑定的版本、页、区域与三项状态。
+    const sourceTable = within(report).getByRole('table', { name: '来源清单' })
+    const sourceRows = within(sourceTable).getAllByRole('row').slice(1)
+    expect(sourceRows).toHaveLength(4)
+    expect(sourceRows[0]).toHaveTextContent('H')
+    expect(sourceRows[0]).toHaveTextContent('case-a.pdf')
+    expect(sourceRows[0]).toHaveTextContent('第 1 页')
+    expect(sourceRows[0]).toHaveTextContent('[20, 20] – [200, 60]')
+    expect(sourceRows[0]).toHaveTextContent('通过')
   })
 
-  it('草稿无效时即使项目里保留已确认的有效方案，也不能出报告', async () => {
+  it('快照不存在时说明原因并可返回快照列表', async () => {
     const project = await createCaseAProject(true)
-    const invalidDraft = chainToDraft(makeCaseA())
-    invalidDraft.terms[0] = {
-      ...invalidDraft.terms[0],
-      upper: '-0.0100',
-    }
-    const saved = await saveDraft(project.id, invalidDraft)
-    expect(saved.ok).toBe(true)
-    if (saved.ok) {
-      expect(saved.value.modelUpdated).toBe(false)
-    }
-
-    const onBackToWorkspace = vi.fn()
-    const onBackToList = vi.fn()
+    const onBackToSnapshots = vi.fn()
     const user = userEvent.setup()
+
     render(
       <PrintReport
         projectId={project.id}
-        onBackToWorkspace={onBackToWorkspace}
-        onBackToList={onBackToList}
+        snapshotId="snapshot-missing"
+        onBackToSnapshots={onBackToSnapshots}
       />,
     )
 
-    const blocked = await screen.findByTestId('report-blocked')
-    expect(blocked).toHaveTextContent('当前输入未通过校验')
-    expect(blocked).toHaveTextContent('发生了什么')
-    expect(blocked).toHaveTextContent('接下来')
-    expect(screen.queryByTestId('print-report')).toBeNull()
-    expect(
-      screen.queryByRole('button', { name: '打印报告' }),
-    ).toBeNull()
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('分析快照不存在：snapshot-missing')
+    expect(alert).toHaveTextContent('可能已被删除')
 
     await user.click(
-      screen.getByRole('button', { name: '返回工作台' }),
+      within(alert).getByRole('button', { name: '返回快照列表' }),
     )
-    expect(onBackToWorkspace).toHaveBeenCalledWith(project.id)
-
-    await user.click(
-      screen.getByRole('button', { name: '返回项目列表' }),
-    )
-    expect(onBackToList).toHaveBeenCalledTimes(1)
+    expect(onBackToSnapshots).toHaveBeenCalledWith(project.id)
   })
 
-  it('项目不存在时说明原因并可返回项目列表', async () => {
-    const onBackToList = vi.fn()
-    const user = userEvent.setup()
+  it('快照不属于该项目时拒绝渲染', async () => {
+    const project = await createCaseAProject(true)
+    const snapshot = await snapshotProject(project)
+
     render(
-      <PrintReport projectId="missing-report-project" onBackToList={onBackToList} />,
+      <PrintReport projectId="another-project" snapshotId={snapshot.id} />,
     )
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('项目不存在：missing-report-project')
-    expect(alert).toHaveTextContent('可能已被删除')
-    expect(alert).toHaveTextContent('接下来')
-
-    await user.click(
-      within(alert).getByRole('button', { name: '返回项目列表' }),
-    )
-    expect(onBackToList).toHaveBeenCalledTimes(1)
+    expect(alert).toHaveTextContent('该分析快照不属于此项目')
+    expect(screen.queryByTestId('print-report')).toBeNull()
   })
 })
 
 describe('PrintReport：路由', () => {
-  it('通过 #/project/<id>/report 独立打开打印视图', async () => {
+  it('通过 #/projects/<id>/reports/<snapshotId> 独立打开快照报告', async () => {
     const project = await createCaseAProject(true)
-    window.location.hash = `#/project/${encodeURIComponent(project.id)}/report`
+    const snapshot = await snapshotProject(project)
+    window.location.hash = `#/projects/${encodeURIComponent(project.id)}/reports/${encodeURIComponent(snapshot.id)}`
 
     render(<App />)
 
     expect(await screen.findByTestId('print-report')).toBeInTheDocument()
     expect(
+      screen.getByTestId('report-snapshot-id'),
+    ).toHaveTextContent(snapshot.id)
+    expect(
       screen.getByRole('button', { name: '返回工作台' }),
     ).toBeInTheDocument()
+  })
+
+  it('旧 #/project/<id>/report 链接转到快照列表并明确说明行为变更', async () => {
+    const project = await createCaseAProject(true)
+    window.location.hash = `#/project/${encodeURIComponent(project.id)}/report`
+
+    render(<App />)
+
+    expect(
+      await screen.findByRole('heading', { name: '分析快照' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/报告入口已改为“分析快照”/),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('print-report')).toBeNull()
   })
 })

@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@zip.js/zip.js": "2.24.0",
     "papaparse": "5.7.0",
     "pdfjs-dist": "6.5.438",
     "react": "^19.3.1",

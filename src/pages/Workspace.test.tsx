@@ -270,7 +270,7 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     expect(resultValue('result-status')).toBe('不满足')
     expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
     expect(
-      screen.getByRole('button', { name: '打印报告' }),
+      screen.getByRole('button', { name: '创建分析快照' }),
     ).not.toBeDisabled()
 
     // 目标下限大于上限：当前草稿无效，chain 为 null。
@@ -293,9 +293,9 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     expect(screen.queryByTestId('target-range')).toBeNull()
     expect(screen.queryByTestId('target-zero-marker')).toBeNull()
     expect(screen.getByTestId('chart-target-invalid')).toHaveTextContent('—')
-    // 不给出“满足/不满足”的正式判定，打印入口禁用。
+    // 不给出“满足/不满足”的正式判定，快照入口禁用。
     expect(resultValue('result-status')).toBe('待确认（预览）')
-    expect(screen.getByRole('button', { name: '打印报告' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '创建分析快照' })).toBeDisabled()
 
     // 贡献表也沿用上次有效结果，而不是当前无效草稿。
     const contributionTable = screen.getByRole('table', {
@@ -306,7 +306,7 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     expect(contributionTable).toHaveTextContent('0.1000')
   })
 
-  it('F-02 改回合法目标后允许区间、裕量与判定恢复，打印入口重新可用', async () => {
+  it('F-02 改回合法目标后允许区间、裕量与判定恢复，快照入口重新可用', async () => {
     const user = userEvent.setup()
     await renderWorkspace()
 
@@ -330,7 +330,7 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     expect(resultValue('result-status')).toBe('不满足')
     expect(screen.getByTestId('target-range')).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: '打印报告' }),
+      screen.getByRole('button', { name: '创建分析快照' }),
     ).not.toBeDisabled()
   })
 

@@ -18,6 +18,7 @@ import {
   IMPORT_SNAPSHOT_STORE_NAME,
   MIGRATION_BACKUP_STORE_NAME,
   PROJECT_STORE_NAME,
+  SNAPSHOT_STORE_NAME,
   SOURCE_BLOB_STORE_NAME,
   SOURCE_DOCUMENT_STORE_NAME,
   SOURCE_REVISION_STORE_NAME,
@@ -1948,6 +1949,7 @@ export async function deleteProject(id: string): Promise<StorageResult<boolean>>
           SOURCE_BLOB_STORE_NAME,
           BINDING_STORE_NAME,
           EVENT_STORE_NAME,
+          SNAPSHOT_STORE_NAME,
         ],
         'readwrite',
       )
@@ -1969,6 +1971,14 @@ export async function deleteProject(id: string): Promise<StorageResult<boolean>>
           for (const snapshot of snapshots) {
             snapshotStore.delete(snapshot.id)
           }
+        }
+        // 分析快照是项目作用域的历史记录；项目删除后不能在列表里留下孤儿报告。
+        const analysisSnapshotStore = transaction.objectStore(SNAPSHOT_STORE_NAME)
+        const analysisSnapshots = (await requestResult(
+          analysisSnapshotStore.index('projectId').getAll(id),
+        )) as { id: string }[]
+        for (const snapshot of analysisSnapshots) {
+          analysisSnapshotStore.delete(snapshot.id)
         }
         await done
         return { ok: true, value: existing !== undefined }

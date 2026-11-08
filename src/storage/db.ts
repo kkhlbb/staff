@@ -24,11 +24,15 @@
  * 回滚。数据库版本升到 6。数据库版本（6）与项目 JSON schemaVersion（2）
  * 是两回事，不能混用。
  *
- * 升级只增补缺失的 store / index，绝不重建或清空。库一旦升到 v6，指定更低
+ * V2.2 C 组新增 snapshots（不可变 AnalysisSnapshot）：报告只从快照生成，
+ * 快照写入使用 add()（重复 ID 直接失败），不提供原地更新。库版本升到 7；
+ * 与既有的 importSnapshots（替换导入前的操作快照）不是同一概念。
+ *
+ * 升级只增补缺失的 store / index，绝不重建或清空。库一旦升到 v7，指定更低
  * 版本的旧前端打开会得到 VersionError；部署回滚不能只回退前端，更不能删库降级。
  */
 export const PROJECT_DB_NAME = 'shaft-tolerance-chain'
-export const PROJECT_DB_VERSION = 6
+export const PROJECT_DB_VERSION = 7
 
 export const PROJECT_STORE_NAME = 'projects'
 export const DRAFT_STORE_NAME = 'drafts'
@@ -40,6 +44,7 @@ export const SOURCE_BLOB_STORE_NAME = 'sourceBlobs'
 export const BINDING_STORE_NAME = 'bindings'
 export const EVENT_STORE_NAME = 'events'
 export const MIGRATION_BACKUP_STORE_NAME = 'migrationBackups'
+export const SNAPSHOT_STORE_NAME = 'snapshots'
 
 interface StoreDefinition {
   name: string
@@ -73,6 +78,11 @@ const STORE_DEFINITIONS: StoreDefinition[] = [
     name: MIGRATION_BACKUP_STORE_NAME,
     keyPath: 'id',
     indexes: ['projectId'],
+  },
+  {
+    name: SNAPSHOT_STORE_NAME,
+    keyPath: 'id',
+    indexes: ['projectId', 'createdAt'],
   },
 ]
 

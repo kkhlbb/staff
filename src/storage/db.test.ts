@@ -14,6 +14,7 @@ import {
   PROJECT_DB_NAME,
   PROJECT_DB_VERSION,
   PROJECT_STORE_NAME,
+  SNAPSHOT_STORE_NAME,
   SOURCE_BLOB_STORE_NAME,
   SOURCE_DOCUMENT_STORE_NAME,
   SOURCE_REVISION_STORE_NAME,
@@ -32,6 +33,7 @@ const ALL_STORES = [
   MAPPING_TEMPLATE_STORE_NAME,
   MIGRATION_BACKUP_STORE_NAME,
   PROJECT_STORE_NAME,
+  SNAPSHOT_STORE_NAME,
   SOURCE_BLOB_STORE_NAME,
   SOURCE_DOCUMENT_STORE_NAME,
   SOURCE_REVISION_STORE_NAME,
@@ -215,10 +217,10 @@ describe('数据库迁移：v1 项目首次升级', () => {
     expect(raw.project).toEqual(sampleProject)
     expect(raw.draft).toEqual(sampleDraft)
 
-    // 当前代码（v6）打开同一个库：只补缺失 store，不重建、不清空。
+    // 当前代码（v7）打开同一个库：只补缺失 store，不重建、不清空。
     const db = await openDatabase()
     expect(db.version).toBe(PROJECT_DB_VERSION)
-    expect(db.version).toBe(6)
+    expect(db.version).toBe(7)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(
       ALL_STORES.slice().sort(),
     )
@@ -395,7 +397,7 @@ async function recordOpenCalls<T>(
 }
 
 describe('数据库迁移：真实老用户从 v1 直接打开 v5', () => {
-  it('v1 库由当前代码一次性升级到 v6：同一次升级建出新 store，旧数据逐字段不变', async () => {
+  it('v1 库由当前代码一次性升级到 v7：同一次升级建出新 store，旧数据逐字段不变', async () => {
     await createV1Database()
 
     // 前提：库确实是 version=1，只有老用户就有的两个 store。
@@ -405,14 +407,14 @@ describe('数据库迁移：真实老用户从 v1 直接打开 v5', () => {
       [DRAFT_STORE_NAME, PROJECT_STORE_NAME].slice().sort(),
     )
 
-    // 当前代码（PROJECT_DB_VERSION=6）一次性打开：oldVersion=1、newVersion=6。
+    // 当前代码（PROJECT_DB_VERSION=7）一次性打开：oldVersion=1、newVersion=7。
     const { value: db, calls } = await recordOpenCalls(() => openDatabase())
 
-    expect(calls.map((call) => call.version)).toEqual([6])
-    expect(calls[0].upgrades).toEqual([{ oldVersion: 1, newVersion: 6 }])
+    expect(calls.map((call) => call.version)).toEqual([7])
+    expect(calls[0].upgrades).toEqual([{ oldVersion: 1, newVersion: 7 }])
 
     expect(db.version).toBe(PROJECT_DB_VERSION)
-    expect(db.version).toBe(6)
+    expect(db.version).toBe(7)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(
       ALL_STORES.slice().sort(),
     )
@@ -529,7 +531,7 @@ describe('数据库迁移：真实老用户从 v1 直接打开 v5', () => {
     if (projects.ok) {
       expect(projects.value.map((project) => project.id)).toEqual([sampleProject.id])
     }
-    expect((await readDatabaseMeta()).version).toBe(6)
+    expect((await readDatabaseMeta()).version).toBe(7)
   })
 })
 
@@ -637,7 +639,7 @@ function readOldStoresFromConnection(db: IDBDatabase): Promise<OldStoreData> {
   })
 }
 
-describe('数据库迁移：V2.0 的真实 v3 库升级到 v6', () => {
+describe('数据库迁移：V2.0 的真实 v3 库升级到 v7', () => {
   it('四类旧数据逐字段不变，只新增来源/绑定 store 与索引，新表为空', async () => {
     await createV3Database()
 
@@ -653,8 +655,8 @@ describe('数据库迁移：V2.0 的真实 v3 库升级到 v6', () => {
     )
 
     const { value: db, calls } = await recordOpenCalls(() => openDatabase())
-    expect(calls.map((call) => call.version)).toEqual([6])
-    expect(calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 6 }])
+    expect(calls.map((call) => call.version)).toEqual([7])
+    expect(calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 7 }])
     expect(db.version).toBe(PROJECT_DB_VERSION)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(
       ALL_STORES.slice().sort(),
@@ -718,20 +720,20 @@ describe('数据库迁移：V2.0 的真实 v3 库升级到 v6', () => {
     ).toBe(true)
     db.close()
 
-    expect((await readDatabaseMeta()).version).toBe(6)
+    expect((await readDatabaseMeta()).version).toBe(7)
   })
 
-  it('已升级到 v6 的库重复打开不会再次触发升级', async () => {
+  it('已升级到 v7 的库重复打开不会再次触发升级', async () => {
     await createV3Database()
 
     const first = await recordOpenCalls(() => openDatabase())
-    expect(first.calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 6 }])
+    expect(first.calls[0].upgrades).toEqual([{ oldVersion: 3, newVersion: 7 }])
     first.value.close()
 
     const second = await recordOpenCalls(() => openDatabase())
-    expect(second.calls.map((call) => call.version)).toEqual([6])
+    expect(second.calls.map((call) => call.version)).toEqual([7])
     expect(second.calls[0].upgrades).toEqual([])
-    expect(second.value.version).toBe(6)
+    expect(second.value.version).toBe(7)
     second.value.close()
   })
 })
@@ -826,7 +828,7 @@ function createV4Database(): Promise<void> {
   })
 }
 
-describe('数据库迁移：V2.1 第一组的真实 v4 库升级到 v6', () => {
+describe('数据库迁移：V2.1 第一组的真实 v4 库升级到 v7', () => {
   it('项目/草稿/模板/快照/来源记录与 Blob 字节逐字段不变，只增补 bindings / events / migrationBackups', async () => {
     const v4BlobBytes = [37, 80, 68, 70, 45]
     await createV4Database()
@@ -842,8 +844,8 @@ describe('数据库迁移：V2.1 第一组的真实 v4 库升级到 v6', () => {
     beforeDb.close()
 
     const { value: db, calls } = await recordOpenCalls(() => openDatabase())
-    expect(calls.map((call) => call.version)).toEqual([6])
-    expect(calls[0].upgrades).toEqual([{ oldVersion: 4, newVersion: 6 }])
+    expect(calls.map((call) => call.version)).toEqual([7])
+    expect(calls[0].upgrades).toEqual([{ oldVersion: 4, newVersion: 7 }])
     expect(db.version).toBe(PROJECT_DB_VERSION)
     expect(Array.from(db.objectStoreNames).sort()).toEqual(ALL_STORES.slice().sort())
 
@@ -895,7 +897,7 @@ describe('数据库迁移：V2.1 第一组的真实 v4 库升级到 v6', () => {
     ])
     db.close()
 
-    expect((await readDatabaseMeta()).version).toBe(6)
+    expect((await readDatabaseMeta()).version).toBe(7)
   })
 })
 
@@ -982,7 +984,7 @@ function readBlobBytes(db: IDBDatabase, blobKey: string): Promise<number[]> {
 describe('数据库版本与阻塞', () => {
   it('库升到 v5 后，指定 version=4 的旧前端打开得到明确的 VersionError 提示', async () => {
     const current = await openDatabase()
-    expect(current.version).toBe(6)
+    expect(current.version).toBe(7)
     current.close()
 
     let rejection: unknown

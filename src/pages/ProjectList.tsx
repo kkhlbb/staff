@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
+import {
+  MAPPING_TEMPLATES_EXCLUDED_NOTE,
+  createProjectBundle,
+} from '../backup/projectBundle'
+import { inspectBackup, restoreBackup, type BackupInspection } from '../backup/restore'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ImportWizard } from '../components/ImportWizard'
 import type { Project } from '../domain/types'
@@ -137,6 +142,38 @@ function readFileText(file: File): Promise<string> {
   })
 }
 
+function readFileBytes(file: File): Promise<Uint8Array> {
+  return new Promise<Uint8Array>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (reader.result instanceof ArrayBuffer) {
+        resolve(new Uint8Array(reader.result))
+        return
+      }
+      reject(new Error('读取备份文件失败：未得到二进制内容'))
+    }
+    reader.onerror = () => {
+      reject(reader.error ?? new Error('读取备份文件失败'))
+    }
+    reader.readAsArrayBuffer(file)
+  })
+}
+
+function downloadBinaryFile(fileName: string, bytes: Uint8Array): void {
+  if (typeof URL.createObjectURL !== 'function') {
+    return
+  }
+  const blob = new Blob([new Uint8Array(bytes)], { type: 'application/zip' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = fileName
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
+
 interface ProjectListSnapshot {
   /** 可能含尚未迁移的 V1 原始记录（migrate:false 读取）。 */
   projects: Project[]
@@ -217,8 +254,16 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
   const [legacyNotice, setLegacyNotice] = useState<string | null>(null)
   const [legacyError, setLegacyError] = useState<string | null>(null)
   const [legacyBusy, setLegacyBusy] = useState(false)
+  const [backupBusy, setBackupBusy] = useState(false)
+  const [backupError, setBackupError] = useState<UiError | null>(null)
+  const [pendingRestore, setPendingRestore] = useState<{
+    fileName: string
+    bytes: Uint8Array
+    inspection: BackupInspection
+  } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const legacyRestoreInputRef = useRef<HTMLInputElement>(null)
+  const backupRestoreInputRef = useRef<HTMLInputElement>(null)
 
   const openProject = useCallback(
     (projectId: string) => {
@@ -287,6 +332,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
     setBusy(true)
     setActionError(null)
     setImportError(null)
+    setBackupError(null)
     setNotice(null)
     try {
       await action()
@@ -483,9 +529,102 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
     })
   }
 
+  /** 完整备份：读取全部业务 store，生成 .cunlian.zip 并交给浏览器下载。 */
+  const handleExportBundle = (): void => {
+    void (async () => {
+      setBackupBusy(true)
+      setBackupError(null)
+      setNotice(null)
+      const bundle = await createProjectBundle()
+      setBackupBusy(false)
+      if (!bundle.ok) {
+        setBackupError({
+          message: bundle.error.message,
+          reasons: bundle.error.detail === undefined ? [] : [bundle.error.detail],
+        })
+        return
+      }
+      downloadBinaryFile(bundle.value.fileName, bundle.value.bytes)
+      setNotice(
+        `已导出完整备份「${bundle.value.fileName}」：${bundle.value.manifest.counts.projects} 个项目、` +
+          `${bundle.value.manifest.counts.revisions} 个来源版本、` +
+          `${bundle.value.manifest.counts.snapshots} 份分析快照。` +
+          MAPPING_TEMPLATES_EXCLUDED_NOTE,
+      )
+    })()
+  }
+
+  const handleRestoreFileChange = (event: ChangeEvent<HTMLInputElement>): void => {
+    const file = event.target.files?.[0]
+    // 允许用户连续选择同一个文件再次校验。
+    event.target.value = ''
+    if (file === undefined) {
+      return
+    }
+    void (async () => {
+      setBackupBusy(true)
+      setBackupError(null)
+      setNotice(null)
+      try {
+        const bytes = await readFileBytes(file)
+        const inspected = await inspectBackup(bytes)
+        setBackupBusy(false)
+        if (!inspected.ok) {
+          setBackupError({
+            message: inspected.error.message,
+            reasons:
+              inspected.error.detail === undefined ? [] : [inspected.error.detail],
+          })
+          return
+        }
+        setPendingRestore({
+          fileName: file.name,
+          bytes,
+          inspection: inspected.value,
+        })
+      } catch (error) {
+        setBackupBusy(false)
+        setBackupError(unexpectedError(error))
+      }
+    })()
+  }
+
+  const handleConfirmRestore = (): void => {
+    const pending = pendingRestore
+    setPendingRestore(null)
+    if (pending === null) {
+      return
+    }
+    void (async () => {
+      setBackupBusy(true)
+      setBackupError(null)
+      setNotice(null)
+      const restored = await restoreBackup(pending.bytes)
+      setBackupBusy(false)
+      if (!restored.ok) {
+        setBackupError({
+          message: restored.error.message,
+          reasons:
+            restored.error.detail === undefined ? [] : [restored.error.detail],
+        })
+        return
+      }
+      await refresh()
+      setNotice(
+        `已从「${pending.fileName}」恢复 ${restored.value.projects.length} 个项目：` +
+          `${restored.value.projects
+            .slice(0, 3)
+            .map((project) => `「${project.name}」`)
+            .join('、')}${restored.value.projects.length > 3 ? ' 等' : ''}。` +
+          '数值、来源文件哈希、绑定坐标与历史已恢复；人工确认已清除，需要重新核对。' +
+          '全局映射模板未包含在备份中。',
+      )
+    })()
+  }
+
   const legacyProjects = projects.filter(isLegacyProjectRecord)
   const activeProjects = projects.filter((project) => !isLegacyProjectRecord(project))
-  const errors = [listError, actionError, importError].filter(
+  const errors = [listError, actionError, importError, backupError].filter(
     (error): error is UiError => error !== null,
   )
 
@@ -532,6 +671,29 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
           aria-label="导入 JSON 文件"
           onChange={handleFileChange}
           disabled={busy || editingDisabled}
+        />
+        <button
+          type="button"
+          onClick={handleExportBundle}
+          disabled={busy || backupBusy || editingDisabled}
+        >
+          {backupBusy ? '处理中…' : '导出完整备份'}
+        </button>
+        <button
+          type="button"
+          onClick={() => backupRestoreInputRef.current?.click()}
+          disabled={busy || backupBusy || editingDisabled}
+        >
+          从完整备份恢复
+        </button>
+        <input
+          ref={backupRestoreInputRef}
+          className="project-list__file-input"
+          type="file"
+          accept=".zip,application/zip"
+          aria-label="导入完整备份文件"
+          onChange={handleRestoreFileChange}
+          disabled={busy || backupBusy || editingDisabled}
         />
         <label className="project-list__demo-label" htmlFor="demo-case-select">
           演示案例
@@ -727,6 +889,13 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
               请检查浏览器存储后再试。现有项目不会被覆盖或删除。
             </p>
           ) : null}
+          {backupError !== null ? (
+            <p className="project-list__error-next">
+              发生了什么：本次完整备份操作未完成；恢复失败时数据库未写入任何数据。
+              接下来：请按上面的原因检查 ZIP 文件或先确认目标数据库为空，再重试。
+              现有项目不会被部分覆盖。
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -817,6 +986,33 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
           confirmLabel="确认删除"
           onConfirm={handleConfirmDelete}
           onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
+
+      {pendingRestore !== null ? (
+        <ConfirmDialog
+          title="从完整备份恢复？"
+          message={
+            <>
+              <p>
+                文件「{pendingRestore.fileName}」包含{' '}
+                {pendingRestore.inspection.counts.projects} 个项目、{' '}
+                {pendingRestore.inspection.counts.revisions} 个来源版本、{' '}
+                {pendingRestore.inspection.counts.snapshots} 份分析快照。
+              </p>
+              <p>
+                恢复只允许写入空数据库；如果当前已有任何项目或历史记录，会整体拒绝。
+                恢复会保留数值、来源文件哈希、绑定坐标、历史与草稿，但会清除人工确认
+                （关系确认、来源数值核对与历史来源接受），需要重新核对。
+              </p>
+              <p>
+                完整备份不包含全局映射模板，恢复后需要重新建立或导入模板。
+              </p>
+            </>
+          }
+          confirmLabel="确认恢复到空库"
+          onConfirm={handleConfirmRestore}
+          onCancel={() => setPendingRestore(null)}
         />
       ) : null}
 
