@@ -13,8 +13,13 @@
 /** [x1, y1, x2, y2]；两点是对角点，顺序不保证，使用前一律 normalize。 */
 export type PdfRect = readonly [number, number, number, number]
 export type PdfPoint = readonly [number, number]
-/** 页面未旋转时的 PDF 尺寸 [width, height]。 */
-export type PdfPageSize = readonly [number, number]
+/**
+ * 页面未旋转时的边界框 [x0, y0, x1, y1]，通常直接取 pdfjs 的 page.view。
+ *
+ * 不能假定原点为 [0, 0]：PDF 的 MediaBox 可以带非零甚至负的原点，页面内的
+ * 合法坐标区间是 x0..x1 / y0..y1，而不是 0..width / 0..height。
+ */
+export type PdfPageBox = readonly [number, number, number, number]
 
 /** 浮点往返与页边贴边判断的容差（PDF 点，远小于 1 CSS 像素）。 */
 export const PDF_COORD_EPSILON = 1e-6
@@ -119,20 +124,48 @@ export function validatePageNumber(
 }
 
 /**
+ * 把 page.view 之类的输入规范化为页面边界框并校验有效性；无效返回 null。
+ * 允许 x0 > x1 的反向边界框（PDF 规范不保证顺序），统一成 min/max。
+ */
+export function normalizePdfPageBox(
+  box: readonly number[],
+): PdfPageBox | null {
+  if (box.length !== 4 || !box.every((value) => Number.isFinite(value))) {
+    return null
+  }
+  const [x0, y0, x1, y1] = box
+  const minX = Math.min(x0, x1)
+  const minY = Math.min(y0, y1)
+  const maxX = Math.max(x0, x1)
+  const maxY = Math.max(y0, y1)
+  if (
+    maxX - minX <= PDF_COORD_EPSILON ||
+    maxY - minY <= PDF_COORD_EPSILON
+  ) {
+    return null
+  }
+  return [minX, minY, maxX, maxY]
+}
+
+/**
  * 校验 PDF 空间矩形：坐标有限、面积大于 0、不越出页面边界。
- * 输入角点顺序任意；反向角点会先规范化再判断。
+ *
+ * `pageBoxPdf` 是页面边界框 [x0, y0, x1, y1]（直接来自 page.view），
+ * 不是 [width, height]；非零原点页面（如 [100 200 700 1000]）也按真实
+ * 区间判断。输入角点顺序任意；反向角点会先规范化再判断。
  */
 export function validatePdfRect(
   rect: PdfRect,
-  pageSizePdf: PdfPageSize,
+  pageBoxPdf: PdfPageBox,
 ): string | null {
   if (rect.length !== 4 || !rect.every((value) => Number.isFinite(value))) {
     return '矩形坐标必须是 4 个有限数值'
   }
-  const [width, height] = pageSizePdf
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+  const pageBox = normalizePdfPageBox(pageBoxPdf)
+  if (pageBox === null) {
     return '页面尺寸无效'
   }
+  const [pageX0, pageY0, pageX1, pageY1] = pageBox
 
   const [minX, minY, maxX, maxY] = normalizePdfRect(rect)
   if (
@@ -142,10 +175,10 @@ export function validatePdfRect(
     return '矩形面积必须大于 0'
   }
   if (
-    minX < -PDF_COORD_EPSILON ||
-    minY < -PDF_COORD_EPSILON ||
-    maxX > width + PDF_COORD_EPSILON ||
-    maxY > height + PDF_COORD_EPSILON
+    minX < pageX0 - PDF_COORD_EPSILON ||
+    minY < pageY0 - PDF_COORD_EPSILON ||
+    maxX > pageX1 + PDF_COORD_EPSILON ||
+    maxY > pageY1 + PDF_COORD_EPSILON
   ) {
     return '矩形超出页面边界'
   }

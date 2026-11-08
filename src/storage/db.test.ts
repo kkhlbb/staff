@@ -619,3 +619,30 @@ describe('数据库迁移：V2.0 的真实 v3 库升级到 v4', () => {
     second.value.close()
   })
 })
+
+describe('数据库打开被 blocked 时的连接处理', () => {
+  it('blocked 明确拒绝；阻塞解除后升级完成的连接会被关闭，不阻塞后续删除', async () => {
+    // 当前版本先建库，并保留一条连接作为“其它页面”占住升级。
+    const holder = await openDatabase()
+    expect(holder.version).toBe(PROJECT_DB_VERSION)
+
+    try {
+      const blocked = openDatabase({ version: PROJECT_DB_VERSION + 1 })
+      await expect(blocked).rejects.toThrow('占用')
+    } finally {
+      holder.close()
+    }
+
+    // 阻塞解除后，被拒绝的打开请求仍会完成升级并触发 onsuccess。
+    // 正确的实现会立刻关闭这条没人接收的连接；泄漏则 deleteDatabase 会被它挡住。
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    const deleted = await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase(PROJECT_DB_NAME)
+      request.onsuccess = () => resolve()
+      request.onerror = () => reject(request.error ?? new Error('删除失败'))
+      request.onblocked = () =>
+        reject(new Error('打开请求泄漏了连接：deleteDatabase 被 blocked'))
+    })
+    expect(deleted).toBeUndefined()
+  })
+})

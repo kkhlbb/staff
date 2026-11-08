@@ -15,9 +15,17 @@ import {
   transactionDone,
   withDatabase,
 } from '../storage/db'
-import { createProject } from '../storage/projects'
+import {
+  createProject,
+  deleteProject,
+  exportProject,
+  importProject,
+} from '../storage/projects'
 import { deleteProjectDatabase } from '../test/projectDb'
-import { buildSyntheticPdf } from '../test/pdfFixtures'
+import {
+  buildPdfWithBrokenSecondPage,
+  buildSyntheticPdf,
+} from '../test/pdfFixtures'
 import { sha256Hex } from './hash'
 import {
   DEFAULT_SOURCE_LIMITS,
@@ -590,5 +598,244 @@ describe('拒绝与失败路径', () => {
       expect(result.error.code).toBe('project_not_found')
     }
     expect(await countStore(SOURCE_DOCUMENT_STORE_NAME)).toBe(0)
+  })
+})
+
+describe('输入快照：异步期间调用方改动缓冲区', () => {
+  it('解析完成后清空原缓冲区：哈希、页数与落库 Blob 都取自同一份快照', async () => {
+    const projectId = await createTestProject()
+    const original = buildSyntheticPdf({ pageCount: 2, variant: 'A' })
+    const tampered = buildSyntheticPdf({ pageCount: 2, variant: 'B' })
+    expect(tampered.byteLength).toBe(original.byteLength)
+    const expectedHash = await sha256Hex(original)
+    const mutable = original.slice()
+
+    const result = await importSourceRevision(
+      { projectId, fileName: '图纸.pdf', bytes: mutable },
+      {
+        newId: idSequence(['rev-1', 'doc-1', 'blob-1']),
+        estimateCapacity: unsupportedCapacity,
+        inspectPdf: async (bytes) => {
+          const inspection = await inspectPdfBytes(bytes)
+          // 解析已经基于调用方的缓冲区完成；此时把它改成另一份内容。
+          mutable.set(tampered)
+          return inspection
+        },
+      },
+    )
+
+    expect(result.ok, result.ok ? '' : result.error.message).toBe(true)
+    if (!result.ok) {
+      throw new Error(result.error.message)
+    }
+    expect(result.value.revision.pageCount).toBe(2)
+    expect(result.value.revision.sha256).toBe(expectedHash)
+    expect(result.value.revision.byteSize).toBe(original.byteLength)
+
+    const stored = await readSourceBlobBytes('blob-1')
+    expect(stored.ok, stored.ok ? '' : stored.error.message).toBe(true)
+    if (stored.ok && stored.value !== null) {
+      expect(Array.from(stored.value)).toEqual(Array.from(original))
+      // 核心不变量：落库 Blob 实算哈希 == revision.sha256。
+      expect(await sha256Hex(stored.value)).toBe(result.value.revision.sha256)
+    }
+  })
+
+  it('估算容量期间改动原缓冲区：哈希仍与落库 Blob 一致（审查复现路径）', async () => {
+    const projectId = await createTestProject()
+    const original = buildSyntheticPdf({ pageCount: 2, variant: 'A' })
+    const tampered = buildSyntheticPdf({ pageCount: 2, variant: 'B' })
+    expect(tampered.byteLength).toBe(original.byteLength)
+    const expectedHash = await sha256Hex(original)
+    const mutable = original.slice()
+
+    const result = await importSourceRevision(
+      { projectId, fileName: '图纸.pdf', bytes: mutable },
+      {
+        newId: idSequence(['rev-1', 'doc-1', 'blob-1']),
+        // 旧实现此时已经算完哈希，但还没构造 Blob；改动缓冲区会造成
+        // “sha256 是 A、落库 Blob 是 B”。
+        estimateCapacity: async () => {
+          mutable.set(tampered)
+          return unsupportedCapacity()
+        },
+      },
+    )
+
+    expect(result.ok, result.ok ? '' : result.error.message).toBe(true)
+    if (!result.ok) {
+      throw new Error(result.error.message)
+    }
+    expect(result.value.revision.sha256).toBe(expectedHash)
+    expect(result.value.revision.byteSize).toBe(original.byteLength)
+
+    const stored = await readSourceBlobBytes('blob-1')
+    expect(stored.ok, stored.ok ? '' : stored.error.message).toBe(true)
+    if (stored.ok && stored.value !== null) {
+      expect(Array.from(stored.value)).toEqual(Array.from(original))
+      expect(await sha256Hex(stored.value)).toBe(result.value.revision.sha256)
+    }
+  })
+})
+
+describe('项目 ID 与项目身份', () => {
+  it('项目 ID 首尾空格原样保留：只借 trim 判空，不改变标识符', async () => {
+    const created = await createProject({ name: '空格 ID 项目', working: sampleChain })
+    expect(created.ok, created.ok ? '' : created.error.message).toBe(true)
+    if (!created.ok) {
+      throw new Error(created.error.message)
+    }
+    const exported = await exportProject(created.value.id)
+    expect(exported.ok, exported.ok ? '' : exported.error.message).toBe(true)
+    if (!exported.ok) {
+      throw new Error(exported.error.message)
+    }
+
+    const paddedId = '  spaced-project-id  '
+    const json = JSON.parse(exported.value) as Record<string, unknown>
+    json.id = paddedId
+    const imported = await importProject(JSON.stringify(json))
+    expect(imported.ok, imported.ok ? '' : imported.error.message).toBe(true)
+    if (!imported.ok) {
+      throw new Error(imported.error.message)
+    }
+    // 导入阶段本身也不能 trim 掉首尾空格。
+    expect(imported.value.project.id).toBe(paddedId)
+
+    const bytes = buildSyntheticPdf({ pageCount: 2 })
+    const result = await importSourceRevision(
+      { projectId: paddedId, fileName: '图纸.pdf', bytes },
+      {
+        newId: idSequence(['rev-1', 'doc-1', 'blob-1']),
+        estimateCapacity: unsupportedCapacity,
+      },
+    )
+    expect(result.ok, result.ok ? '' : result.error.message).toBe(true)
+    if (!result.ok) {
+      throw new Error(result.error.message)
+    }
+    expect(result.value.revision.projectId).toBe(paddedId)
+    expect(result.value.document.projectId).toBe(paddedId)
+
+    const documents = await listSourceDocuments(paddedId)
+    expect(documents.ok).toBe(true)
+    if (documents.ok) {
+      expect(documents.value).toHaveLength(1)
+    }
+
+    // trim 之后是另一个标识符：查不到原项目，更不能把来源写到那里。
+    const trimmed = await importSourceRevision(
+      { projectId: 'spaced-project-id', fileName: '图纸.pdf', bytes },
+      { estimateCapacity: unsupportedCapacity },
+    )
+    expect(trimmed.ok).toBe(false)
+    if (!trimmed.ok) {
+      expect(trimmed.error.code).toBe('project_not_found')
+    }
+    expect(await countStore(SOURCE_DOCUMENT_STORE_NAME)).toBe(1)
+  })
+
+  it('删除项目把来源挪到退役作用域：重建同 ID 不继承旧来源与旧额度，Blob 不删', async () => {
+    const projectId = await createTestProject()
+    const bytesA = buildSyntheticPdf({ pageCount: 2, variant: 'A' })
+    const first = await importSourceRevision(
+      { projectId, fileName: '旧图纸.pdf', bytes: bytesA },
+      {
+        newId: idSequence(['rev-1', 'doc-1', 'blob-1']),
+        estimateCapacity: unsupportedCapacity,
+      },
+    )
+    expect(first.ok, first.ok ? '' : first.error.message).toBe(true)
+    if (!first.ok) {
+      throw new Error(first.error.message)
+    }
+
+    const exported = await exportProject(projectId)
+    expect(exported.ok, exported.ok ? '' : exported.error.message).toBe(true)
+    if (!exported.ok) {
+      throw new Error(exported.error.message)
+    }
+
+    const beforeDelete = await storeCounts()
+    expect(await deleteProject(projectId)).toEqual({ ok: true, value: true })
+
+    // 旧来源不再属于任何现存项目；三表记录与 Blob 字节都没删。
+    const documentsAfterDelete = await listSourceDocuments(projectId)
+    expect(documentsAfterDelete).toEqual({ ok: true, value: [] })
+    const revisionsAfterDelete = await listSourceRevisions(projectId)
+    expect(revisionsAfterDelete).toEqual({ ok: true, value: [] })
+    expect((await storeCounts()).documents).toBe(beforeDelete.documents)
+    expect((await storeCounts()).revisions).toBe(beforeDelete.revisions)
+    expect((await storeCounts()).blobs).toBe(beforeDelete.blobs)
+
+    const oldBlob = await readSourceBlobBytes('blob-1')
+    expect(oldBlob.ok).toBe(true)
+    if (oldBlob.ok && oldBlob.value !== null) {
+      expect(Array.from(oldBlob.value)).toEqual(Array.from(bytesA))
+    }
+    const oldRevision = await getSourceRevision('rev-1')
+    expect(oldRevision.ok).toBe(true)
+    if (oldRevision.ok && oldRevision.value !== null) {
+      expect(oldRevision.value.projectId.startsWith(`${projectId}::retired::`)).toBe(
+        true,
+      )
+      // 内容字段保持不变。
+      expect(oldRevision.value.sha256).toBe(first.value.revision.sha256)
+      expect(oldRevision.value.byteSize).toBe(bytesA.byteLength)
+    }
+
+    // 用删除前的导出重建同 ID 项目：这是新的项目身份。
+    const reimported = await importProject(exported.value)
+    expect(reimported.ok, reimported.ok ? '' : reimported.error.message).toBe(true)
+    if (!reimported.ok) {
+      throw new Error(reimported.error.message)
+    }
+    expect(reimported.value.project.id).toBe(projectId)
+    expect(reimported.value.idChanged).toBe(false)
+    expect(await listSourceDocuments(projectId)).toEqual({ ok: true, value: [] })
+    expect(await listSourceRevisions(projectId)).toEqual({ ok: true, value: [] })
+
+    // 旧 revision 的字节数不再占新项目额度：这个上限只容得下本次导入。
+    const bytesB = buildSyntheticPdf({ pageCount: 2, variant: 'B' })
+    const tightLimits = {
+      ...DEFAULT_SOURCE_LIMITS,
+      maxProjectBytes: bytesB.byteLength + 16,
+    }
+    const second = await importSourceRevision(
+      { projectId, fileName: '新图纸.pdf', bytes: bytesB },
+      {
+        newId: idSequence(['rev-2', 'doc-2', 'blob-2']),
+        estimateCapacity: unsupportedCapacity,
+        limits: tightLimits,
+      },
+    )
+    expect(second.ok, second.ok ? '' : second.error.message).toBe(true)
+    expect(await countStore(SOURCE_DOCUMENT_STORE_NAME)).toBe(2)
+    expect(await countStore(SOURCE_REVISION_STORE_NAME)).toBe(2)
+    expect(await countStore(SOURCE_BLOB_STORE_NAME)).toBe(2)
+  })
+})
+
+describe('逐页可解析校验', () => {
+  it('两页 PDF 第二页引用损坏：numPages 仍为 2 也必须拒绝，零写入', async () => {
+    const projectId = await createTestProject()
+    const corrupt = buildPdfWithBrokenSecondPage()
+
+    // 佐证漏洞前提：只读页数（受页数上限短路，不做逐页校验）得到 2。
+    const pageCountOnly = await inspectPdfBytes(corrupt, undefined, { maxPages: 1 })
+    expect(pageCountOnly.pageCount).toBe(2)
+
+    const before = await storeCounts()
+    const result = await importSourceRevision(
+      { projectId, fileName: '第二页损坏.pdf', bytes: corrupt },
+      { estimateCapacity: unsupportedCapacity },
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('invalid_pdf')
+      expect(result.error.message).toContain('第 2 页')
+      expect(result.error.message).toContain('kid reference')
+    }
+    expect(await storeCounts()).toEqual(before)
   })
 })

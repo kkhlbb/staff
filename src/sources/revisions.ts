@@ -190,16 +190,25 @@ export function sumRevisionBytes(revisions: SourceRevision[]): number {
  *
  * 解析、哈希和容量检查都不在写事务内；写事务只做最终一致性检查与写入。
  * 若事务失败，document.latestRevisionId 保持原值，旧 revision / Blob 不受影响。
+ *
+ * 调用方传入的 `bytes` 可变：进入第一个 await 之前先复制成私有快照，之后的
+ * 解析、哈希、限额判断和落库 Blob 全部基于同一份快照，因此 sha256 一定对应
+ * 实际写入的 Blob 内容，不会出现“哈希是旧内容、Blob 是新内容”。
  */
 export async function importSourceRevision(
   input: ImportSourceRevisionInput,
   context: SourceImportContext = {},
 ): Promise<SourceResult<SourceImportValue>> {
   const limits = context.limits ?? DEFAULT_SOURCE_LIMITS
-  const projectId = input.projectId.trim()
+  // 只用 trim 判断空值；项目 ID 本身必须原样保留（JSON 允许带首尾空格，
+  // trim 后既查不到原项目，还可能命中另一个项目）。
+  const projectId = input.projectId
   const fileName = input.fileName.trim()
+  // 其余输入也在第一个 await 之前固定，避免异步期间被调用方改动。
+  const requestedDocumentId = input.documentId
+  const requestedTitle = input.title
 
-  if (projectId === '') {
+  if (projectId.trim() === '') {
     return failure('invalid_input', '缺少项目 ID，无法保存来源文件')
   }
   if (fileName === '') {
@@ -217,10 +226,17 @@ export async function importSourceRevision(
     )
   }
 
-  const inspect = context.inspectPdf ?? ((bytes: Uint8Array) => inspectPdfBytes(bytes))
+  // 上面的长度检查全部同步完成，调用方无法在这期间改动缓冲区；复制之后就与
+  // 调用方彻底解耦。
+  const bytesSnapshot = new Uint8Array(input.bytes)
+
+  const inspect =
+    context.inspectPdf ??
+    ((bytes: Uint8Array) =>
+      inspectPdfBytes(bytes, undefined, { maxPages: limits.maxPages }))
   let inspection: PdfInspectResult
   try {
-    inspection = await inspect(input.bytes)
+    inspection = await inspect(bytesSnapshot)
   } catch (error) {
     const mapped = toSourceError(error)
     return failure(mapped.code, mapped.message)
@@ -239,7 +255,7 @@ export async function importSourceRevision(
   const hash = context.hashBytes ?? sha256Hex
   let sha256: string
   try {
-    sha256 = await hash(input.bytes)
+    sha256 = await hash(bytesSnapshot)
   } catch (error) {
     return failure(
       'hash_failed',
@@ -265,12 +281,12 @@ export async function importSourceRevision(
   if (
     storageCapacity.supported &&
     storageCapacity.availableBytes !== null &&
-    storageCapacity.availableBytes < input.bytes.byteLength
+    storageCapacity.availableBytes < bytesSnapshot.byteLength
   ) {
     return failure(
       'insufficient_storage',
       `可用空间不足：需要 ${formatMiB(
-        input.bytes.byteLength,
+        bytesSnapshot.byteLength,
       )}，估算可用 ${formatMiB(storageCapacity.availableBytes)}`,
     )
   }
@@ -278,10 +294,10 @@ export async function importSourceRevision(
   const now = context.now ?? nowIso
   const newId = context.newId ?? randomId
   const revisionId = newId()
-  const documentId = input.documentId ?? newId()
+  const documentId = requestedDocumentId ?? newId()
   const blobKey = newId()
   const createdAt = now()
-  const byteSize = input.bytes.byteLength
+  const byteSize = bytesSnapshot.byteLength
 
   const revision: SourceRevision = {
     id: revisionId,
@@ -295,13 +311,13 @@ export async function importSourceRevision(
     blobKey,
   }
 
-  const blobBytes = new Uint8Array(input.bytes)
+  const blobBytes = bytesSnapshot
   const blobRecord: SourceBlobRecord = {
     blobKey,
     projectId,
     sha256,
     byteSize,
-    blob: new Blob([blobBytes.buffer]),
+    blob: new Blob([blobBytes]),
   }
 
   try {
@@ -330,17 +346,17 @@ export async function importSourceRevision(
         let document: SourceDocument
         let isNewDocument = false
 
-        if (input.documentId === undefined) {
+        if (requestedDocumentId === undefined) {
           document = {
             id: documentId,
             projectId,
-            title: input.title?.trim() || fileName,
+            title: requestedTitle?.trim() || fileName,
             latestRevisionId: revisionId,
           }
           isNewDocument = true
         } else {
           const existing = (await requestResult(
-            documentStore.get(input.documentId),
+            documentStore.get(requestedDocumentId),
           )) as SourceDocument | undefined
           if (existing === undefined || existing.projectId !== projectId) {
             abortQuietly(transaction)

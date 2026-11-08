@@ -70,11 +70,45 @@ export function transactionDone(transaction: IDBTransaction): Promise<void> {
   })
 }
 
-export function openDatabase(): Promise<IDBDatabase> {
+export interface OpenDatabaseOptions {
+  /** 仅供测试注入；默认使用 PROJECT_DB_NAME。 */
+  name?: string
+  /** 仅供测试注入；默认使用 PROJECT_DB_VERSION。 */
+  version?: number
+}
+
+export function openDatabase(
+  options: OpenDatabaseOptions = {},
+): Promise<IDBDatabase> {
+  const name = options.name ?? PROJECT_DB_NAME
+  const version = options.version ?? PROJECT_DB_VERSION
   return new Promise<IDBDatabase>((resolve, reject) => {
     let request: IDBOpenDBRequest
+    let settled = false
+
+    /**
+     * 打开请求被 blocked 后，阻塞解除时升级仍会完成并触发 onsuccess。
+     * 此时必须立刻关闭这条没人接收的连接，否则它会一直占着数据库版本，
+     * 之后的升级或 deleteDatabase 都会被它 blocked。
+     */
+    const closeLateConnection = () => {
+      try {
+        request.result.close()
+      } catch {
+        // 请求未成功（result 不可用）或连接已关闭：无需处理。
+      }
+    }
+    const settleError = (error: unknown) => {
+      if (settled) {
+        closeLateConnection()
+        return
+      }
+      settled = true
+      reject(error)
+    }
+
     try {
-      request = indexedDB.open(PROJECT_DB_NAME, PROJECT_DB_VERSION)
+      request = indexedDB.open(name, version)
     } catch (error) {
       reject(error)
       return
@@ -103,13 +137,18 @@ export function openDatabase(): Promise<IDBDatabase> {
       }
     }
     request.onsuccess = () => {
+      if (settled) {
+        closeLateConnection()
+        return
+      }
+      settled = true
       resolve(request.result)
     }
     request.onerror = () => {
-      reject(request.error ?? new Error('无法打开项目数据库'))
+      settleError(request.error ?? new Error('无法打开项目数据库'))
     }
     request.onblocked = () => {
-      reject(new Error('项目数据库被其它页面占用'))
+      settleError(new Error('项目数据库被其它页面占用'))
     }
   })
 }

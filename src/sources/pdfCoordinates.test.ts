@@ -3,6 +3,7 @@ import { getDocument } from 'pdfjs-dist'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { buildSyntheticPdf } from '../test/pdfFixtures'
 import {
+  normalizePdfPageBox,
   normalizePdfRect,
   pdfPointToViewportPoint,
   pdfRectToViewportRect,
@@ -150,21 +151,91 @@ describe('页码与矩形边界校验', () => {
   })
 
   it('越界、零面积、非有限数值拒绝；反向角点与贴边矩形接受', () => {
-    const pageSize = [PAGE_WIDTH, PAGE_HEIGHT] as const
-    expect(validatePdfRect([50, 60, 250, 460], pageSize)).toBeNull()
-    expect(validatePdfRect([250, 460, 50, 60], pageSize)).toBeNull()
-    expect(validatePdfRect([0, 0, PAGE_WIDTH, PAGE_HEIGHT], pageSize)).toBeNull()
-    expect(validatePdfRect([0, 0, PAGE_WIDTH + 0.01, PAGE_HEIGHT], pageSize)).toBe(
+    const pageBox = [0, 0, PAGE_WIDTH, PAGE_HEIGHT] as const
+    expect(validatePdfRect([50, 60, 250, 460], pageBox)).toBeNull()
+    expect(validatePdfRect([250, 460, 50, 60], pageBox)).toBeNull()
+    expect(validatePdfRect([0, 0, PAGE_WIDTH, PAGE_HEIGHT], pageBox)).toBeNull()
+    expect(validatePdfRect([0, 0, PAGE_WIDTH + 0.01, PAGE_HEIGHT], pageBox)).toBe(
       '矩形超出页面边界',
     )
-    expect(validatePdfRect([-0.01, 0, 10, 10], pageSize)).toBe('矩形超出页面边界')
-    expect(validatePdfRect([10, 10, 10, 20], pageSize)).toBe('矩形面积必须大于 0')
-    expect(validatePdfRect([10, 10, 20, 10], pageSize)).toBe('矩形面积必须大于 0')
-    expect(validatePdfRect([10, 10, Number.NaN, 20], pageSize)).toContain(
+    expect(validatePdfRect([-0.01, 0, 10, 10], pageBox)).toBe('矩形超出页面边界')
+    expect(validatePdfRect([10, 10, 10, 20], pageBox)).toBe('矩形面积必须大于 0')
+    expect(validatePdfRect([10, 10, 20, 10], pageBox)).toBe('矩形面积必须大于 0')
+    expect(validatePdfRect([10, 10, Number.NaN, 20], pageBox)).toContain(
       '有限数值',
     )
-    expect(validatePdfRect([10, 10, 20, Number.POSITIVE_INFINITY], pageSize)).toContain(
+    expect(validatePdfRect([10, 10, 20, Number.POSITIVE_INFINITY], pageBox)).toContain(
       '有限数值',
     )
+  })
+
+  it('非零原点页面按 page.view 四元组判断，不能假定原点为 [0,0]', () => {
+    // 审查复现：page.view = [100,200,700,1000]，这个框在页面内合法。
+    const pageBox = [100, 200, 700, 1000] as const
+    expect(validatePdfRect([650, 900, 690, 990], pageBox)).toBeNull()
+    expect(validatePdfRect([690, 990, 650, 900], pageBox)).toBeNull()
+    // 贴住真实四边仍然合法。
+    expect(validatePdfRect([100, 200, 110, 210], pageBox)).toBeNull()
+    expect(validatePdfRect([690, 990, 700, 1000], pageBox)).toBeNull()
+    // 越出真实边界（不是 0..width / 0..height）一律拒绝。
+    expect(validatePdfRect([99.9, 900, 690, 990], pageBox)).toBe('矩形超出页面边界')
+    expect(validatePdfRect([650, 199.9, 690, 990], pageBox)).toBe('矩形超出页面边界')
+    expect(validatePdfRect([650, 900, 700.1, 990], pageBox)).toBe('矩形超出页面边界')
+    expect(validatePdfRect([650, 900, 690, 1000.1], pageBox)).toBe('矩形超出页面边界')
+    // 恰好 [0,0] 原点的框在非零原点页面上是越界的（否则说明仍在用 width/height）。
+    expect(validatePdfRect([0, 0, 10, 10], pageBox)).toBe('矩形超出页面边界')
+    // 页面框本身无效。
+    expect(validatePdfRect([650, 900, 690, 990], [700, 200, 700, 1000])).toBe(
+      '页面尺寸无效',
+    )
+    expect(
+      validatePdfRect([650, 900, 690, 990], [100, 200, Number.NaN, 1000]),
+    ).toBe('页面尺寸无效')
+  })
+
+  it('normalizePdfPageBox 接受反向边界框，拒绝零宽高与非有限值', () => {
+    expect(normalizePdfPageBox([100, 200, 700, 1000])).toEqual([100, 200, 700, 1000])
+    expect(normalizePdfPageBox([700, 1000, 100, 200])).toEqual([100, 200, 700, 1000])
+    expect(normalizePdfPageBox([0, 0, 700, 1000])).toEqual([0, 0, 700, 1000])
+    expect(normalizePdfPageBox([100, 200, 100, 1000])).toBeNull()
+    expect(normalizePdfPageBox([100, 200, 700, 200])).toBeNull()
+    expect(normalizePdfPageBox([100, 200, 700])).toBeNull()
+    expect(normalizePdfPageBox([100, 200, 700, Number.POSITIVE_INFINITY])).toBeNull()
+  })
+})
+
+describe('非零原点页面的真实 pdfjs viewport', () => {
+  it('page.view 原样返回四元组，页面内合法框可往返且通过边界校验', async () => {
+    const task = getDocument({
+      data: buildSyntheticPdf({ mediaBox: [100, 200, 700, 1000] }),
+    })
+    try {
+      const document = await task.promise
+      const page = await document.getPage(1)
+      expect(page.view).toEqual([100, 200, 700, 1000])
+
+      const pageBox = normalizePdfPageBox(page.view)
+      expect(pageBox).not.toBeNull()
+      if (pageBox === null) {
+        throw new Error('page.view 未被接受为有效页面框')
+      }
+
+      const viewport = page.getViewport({ scale: 1, rotation: 0 })
+      // page.view 的左下角 (100,200) 对应 viewport 左下角 (0, 800)。
+      expectPointClose(viewport.convertToViewportPoint(100, 200), [0, 800])
+      expect(viewport.width).toBe(600)
+      expect(viewport.height).toBe(800)
+
+      const rectPdf: PdfRect = [650, 900, 690, 990]
+      expect(validatePdfRect(rectPdf, pageBox)).toBeNull()
+      const viewRect = pdfRectToViewportRect(viewport, rectPdf)
+      const back = viewportRectToPdfRect(viewport, viewRect)
+      back.forEach((value, index) => {
+        expect(value).toBeCloseTo(rectPdf[index], 9)
+      })
+      expect(validatePdfRect(back as PdfRect, pageBox)).toBeNull()
+    } finally {
+      await task.destroy()
+    }
   })
 })
