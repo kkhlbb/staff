@@ -13,13 +13,15 @@ import {
   listProjects,
   saveDraft,
   updateProject,
+  type ImportSnapshot,
   type StorageResult,
 } from '../storage/projects'
 import { deleteProjectDatabase } from '../test/projectDb'
 import { chainToDraft } from '../workspace/draft'
 import {
   IMPORT_SNAPSHOT_STORE_NAME,
-  PROJECT_STORE_NAME,
+  openDatabase,
+  transactionDone,
 } from '../storage/db'
 import {
   commitImport,
@@ -149,23 +151,34 @@ async function seedFullChain(): Promise<Project> {
   )
 }
 
-/** 让生产存储层的 add 写请求在指定 store 上失败（替换快照与新建项目都用 add）。 */
-function failAddOnStore(storeName: string): () => void {
-  const originalAdd = IDBObjectStore.prototype.add
+/**
+ * 固定 UUID v4 随机源，用来构造可预期的快照主键。
+ *
+ * 只固定“随机数”，不替换任何存储函数或 IDBObjectStore.add：写入仍然走生产
+ * saveDraft / createProject，失败也来自 IndexedDB 自己的主键约束
+ * （add 触发 ConstraintError 请求错误，事务按规范 abort）。
+ */
+const PINNED_UUID = '11111111-1111-4111-8111-111111111111'
+
+function pinRandomUuid(): () => void {
   const spy = vi
-    .spyOn(IDBObjectStore.prototype, 'add')
-    .mockImplementation(function (
-      this: IDBObjectStore,
-      value: unknown,
-      key?: IDBValidKey,
-    ) {
-      if (this.name === storeName) {
-        throw new DOMException('模拟 IndexedDB 写请求失败', 'DataError')
-      }
-      return originalAdd.call(this, value as never, key)
-    })
+    .spyOn(globalThis.crypto, 'randomUUID')
+    .mockReturnValue(PINNED_UUID)
   return () => {
     spy.mockRestore()
+  }
+}
+
+/** 直接写入一条已有历史快照作为前置数据，不经过被测写入路径。 */
+async function seedImportSnapshot(snapshot: ImportSnapshot): Promise<void> {
+  const db = await openDatabase()
+  try {
+    const transaction = db.transaction(IMPORT_SNAPSHOT_STORE_NAME, 'readwrite')
+    const done = transactionDone(transaction)
+    transaction.objectStore(IMPORT_SNAPSHOT_STORE_NAME).add(snapshot)
+    await done
+  } finally {
+    db.close()
   }
 }
 
@@ -370,7 +383,7 @@ describe('commitImport：阻止冲突且原项目不变', () => {
     expect(stored?.baseline).toEqual(before.baseline)
   })
 
-  it('真实事务写入失败时 projects、drafts、基线、快照全部不变', async () => {
+  it('替换时快照写入触发真实主键约束冲突：projects（含基线）、drafts 与已有快照逐字段不变', async () => {
     const project = await seedCaseA()
     expectOk(
       await updateProject(project.id, {
@@ -383,15 +396,47 @@ describe('commitImport：阻止冲突且原项目不变', () => {
     const baseDraft = chainToDraft(project.working)
     expectOk(await saveDraft(project.id, baseDraft))
 
+    // 对照组：同样固定 UUID，只要没有同 ID 的历史快照，替换就正常成功；
+    // 说明下面的失败来自主键冲突，而不是“固定随机数”本身。
+    const control = await seedCaseA()
+    const restoreControlUuid = pinRandomUuid()
+    let controlCommit: Awaited<ReturnType<typeof commitImport>>
+    try {
+      controlCommit = await commitImport({
+        mode: 'replace',
+        projectId: control.id,
+        baseDraft: chainToDraft(control.working),
+        terms: [extraTerm(40, 'C'), extraTerm(41, 'D')],
+      })
+    } finally {
+      restoreControlUuid()
+    }
+    expect(controlCommit.ok).toBe(true)
+
+    // 预置一条历史快照；固定随机 UUID 后，本次替换要写的快照 ID 与它相同，
+    // add 因此触发 importSnapshots 的主键约束（真实 IDBRequest ConstraintError）。
+    const existingSnapshot: ImportSnapshot = {
+      id: `import-snapshot-${project.id}-${PINNED_UUID}`,
+      projectId: project.id,
+      createdAt: '2026-11-08T00:00:00.000Z',
+      kind: 'replace-before-import',
+      definition: { ...chainA(), assumptions: '已有历史快照' },
+    }
+    await seedImportSnapshot(existingSnapshot)
+
     const beforeProject = expectOk(await getProject(project.id))
+    const beforeProjects = expectOk(await listProjects())
     const beforeDraft = expectOk(await getDraft(project.id))
     const beforeDrafts = expectOk(await listDrafts())
+    const beforeSnapshots = expectOk(await listImportSnapshots(project.id))
+    expect(beforeProject?.baseline).not.toBeNull()
+    expect(beforeSnapshots).toHaveLength(1)
 
-    const restoreAdd = failAddOnStore(IMPORT_SNAPSHOT_STORE_NAME)
+    const restoreUuid = pinRandomUuid()
     let committed: Awaited<ReturnType<typeof commitImport>>
     try {
-      // 走生产 saveDraft：projects / drafts 已排队写入，快照 add 抛 DataError 后
-      // saveDraft 显式 abort，三者必须一起回滚。
+      // 生产 saveDraft 先排队 drafts.put，再 add 新快照；主键冲突让 add 的请求
+      // 失败、事务 abort，已排队的 projects / drafts 写入必须一起回滚。
       committed = await commitImport({
         mode: 'replace',
         projectId: project.id,
@@ -399,36 +444,162 @@ describe('commitImport：阻止冲突且原项目不变', () => {
         terms: [extraTerm(50, 'Y'), extraTerm(51, 'Z')],
       })
     } finally {
-      restoreAdd()
+      restoreUuid()
     }
 
     expect(committed.ok).toBe(false)
     if (!committed.ok) {
       expect(committed.error.message).toContain('原项目未改变')
+      expect(committed.error.message).toContain('保存草稿失败')
+      // 失败来自存储层事务（不是计划校验）：saveDraft 已排队 drafts.put 与快照 add。
+      expect(committed.error.code).toBe('storage_failure')
     }
-    expect(expectOk(await getProject(project.id))).toEqual(beforeProject)
-    expect(expectOk(await getDraft(project.id))).toEqual(beforeDraft)
+
+    // 逐字段深比较：项目（含 baseline 与 updatedAt）、草稿、快照全部原样。
+    const afterProject = expectOk(await getProject(project.id))
+    expect(afterProject).toEqual(beforeProject)
+    expect(afterProject?.working).toEqual(beforeProject?.working)
+    expect(afterProject?.baseline).toEqual(beforeProject?.baseline)
+    expect(afterProject?.updatedAt).toBe(beforeProject?.updatedAt)
+    expect(afterProject?.working.terms.map((term) => term.symbol)).toEqual([
+      'H',
+      'B1',
+      'S',
+      'B2',
+    ])
+    expect(expectOk(await listProjects())).toEqual(beforeProjects)
+    const afterDraft = expectOk(await getDraft(project.id))
+    expect(afterDraft).toEqual(beforeDraft)
+    // 若 drafts.put 已提交，savedAt 会被改成本次写入时间；这里必须还是旧值。
+    expect(afterDraft?.savedAt).toBe(beforeDraft?.savedAt)
     expect(expectOk(await listDrafts())).toEqual(beforeDrafts)
-    expect(expectOk(await listImportSnapshots(project.id))).toEqual([])
+
+    const afterSnapshots = expectOk(await listImportSnapshots(project.id))
+    expect(afterSnapshots).toEqual(beforeSnapshots)
+    expect(afterSnapshots).toHaveLength(1)
+    expect(afterSnapshots[0].id).toBe(existingSnapshot.id)
+    expect(afterSnapshots[0].createdAt).toBe(existingSnapshot.createdAt)
+    // 失败的新快照没有残留：定义仍是旧 working，不含导入的 Y / Z。
+    expect(afterSnapshots[0].definition.terms.map((term) => term.symbol)).toEqual([
+      'H',
+      'B1',
+      'S',
+      'B2',
+    ])
   })
 
-  it('新建项目的事务失败不留下项目、草稿或快照', async () => {
-    const restoreAdd = failAddOnStore(PROJECT_STORE_NAME)
+  it('新建项目遇到持续的真实主键冲突时放弃，且不留下项目、草稿或快照', async () => {
+    const restoreUuid = pinRandomUuid()
     let committed: Awaited<ReturnType<typeof commitImport>>
+    let beforeProjects: Project[]
     try {
-      // 走生产 createProject：projects 的 add 请求失败，不能留下项目或草稿。
+      // 先占住这个 ID（走生产 createProject）；随后新建会反复撞上同一条主键，
+      // 8 次真实 ConstraintError 后按生产逻辑放弃。
+      const occupant = expectOk(
+        await createProject({ name: '占位项目', working: chainA() }),
+      )
+      expect(occupant.id).toBe(PINNED_UUID)
+      beforeProjects = expectOk(await listProjects())
       committed = await commitImport({
         mode: 'new',
         baseDraft: null,
         terms: [extraTerm(60, 'A'), extraTerm(61, 'B')],
       })
     } finally {
-      restoreAdd()
+      restoreUuid()
     }
 
     expect(committed.ok).toBe(false)
-    expect(expectOk(await listProjects())).toEqual([])
+    if (!committed.ok) {
+      expect(committed.error.message).toContain('创建项目失败')
+      expect(committed.error.message).toContain('无法生成唯一的项目 ID')
+    }
+    expect(expectOk(await listProjects())).toEqual(beforeProjects)
+    expect(expectOk(await listProjects())).toHaveLength(1)
     expect(expectOk(await listDrafts())).toEqual([])
     expect(expectOk(await listImportSnapshots())).toEqual([])
+  })
+
+  it('连续两次替换：旧快照原样保留，新快照追加，互不覆盖', async () => {
+    const project = await seedCaseA()
+    expectOk(
+      await updateProject(project.id, {
+        baseline: {
+          savedAt: new Date().toISOString(),
+          definition: { ...chainA(), assumptions: '已有基线' },
+        },
+      }),
+    )
+    const original = expectOk(await getProject(project.id))
+    expect(original).not.toBeNull()
+    if (original === null) {
+      return
+    }
+
+    const first = await commitImport({
+      mode: 'replace',
+      projectId: project.id,
+      baseDraft: chainToDraft(project.working),
+      terms: [extraTerm(70, 'M'), extraTerm(71, 'N')],
+    })
+    expect(first.ok).toBe(true)
+    if (!first.ok) {
+      return
+    }
+    const afterFirst = expectOk(await getProject(project.id))
+    expect(afterFirst).not.toBeNull()
+    if (afterFirst === null) {
+      return
+    }
+    const firstSnapshot = first.value.importSnapshot
+    expect(firstSnapshot).not.toBeNull()
+    const firstSnapshotId = firstSnapshot?.id
+    expect(expectOk(await listImportSnapshots(project.id))).toHaveLength(1)
+
+    const second = await commitImport({
+      mode: 'replace',
+      projectId: project.id,
+      baseDraft: chainToDraft(afterFirst.working),
+      terms: [extraTerm(72, 'P'), extraTerm(73, 'Q'), extraTerm(74, 'R')],
+    })
+    expect(second.ok).toBe(true)
+    if (!second.ok) {
+      return
+    }
+    const secondSnapshot = second.value.importSnapshot
+    expect(secondSnapshot).not.toBeNull()
+    if (secondSnapshot == null) {
+      return
+    }
+
+    const snapshots = expectOk(await listImportSnapshots(project.id))
+    expect(snapshots).toHaveLength(2)
+    // 旧快照逐字段不变（仍是第一次替换前的 working，4 个组成环）。
+    const retained = snapshots.find((snapshot) => snapshot.id === firstSnapshotId)
+    expect(retained).toEqual(firstSnapshot)
+    expect(retained?.definition).toEqual(original.working)
+    expect(retained?.definition.terms.map((term) => term.symbol)).toEqual([
+      'H',
+      'B1',
+      'S',
+      'B2',
+    ])
+    // 新快照记录的是第二次替换前的 working（2 个组成环），且 ID 与旧快照不同。
+    const added = snapshots.find((snapshot) => snapshot.id === secondSnapshot.id)
+    expect(added).toEqual(secondSnapshot)
+    expect(added?.definition).toEqual(afterFirst.working)
+    expect(added?.definition.terms.map((term) => term.symbol)).toEqual(['M', 'N'])
+    expect(new Set(snapshots.map((snapshot) => snapshot.id)).size).toBe(2)
+
+    const finalProject = expectOk(await getProject(project.id))
+    expect(finalProject?.working).toEqual(second.value.chain)
+    expect(finalProject?.working.terms.map((term) => term.symbol)).toEqual([
+      'P',
+      'Q',
+      'R',
+    ])
+    // 两次替换都不碰已有基线。
+    expect(finalProject?.baseline).toEqual(original.baseline)
+    expect(finalProject?.baseline).not.toBeNull()
   })
 })
