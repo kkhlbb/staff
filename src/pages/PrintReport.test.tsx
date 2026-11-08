@@ -23,7 +23,14 @@ import { createProject } from '../storage/projects'
 import { deleteProjectDatabase } from '../test/projectDb'
 import { buildSyntheticPdf } from '../test/pdfFixtures'
 import { chainToDraft } from '../workspace/draft'
+import {
+  SNAPSHOT_STORE_NAME,
+  requestResult,
+  transactionDone,
+  withDatabase,
+} from '../storage/db'
 import { PrintReport } from './PrintReport'
+import { snapshotShortId } from '../history/snapshotId'
 
 beforeEach(async () => {
   window.location.hash = ''
@@ -366,6 +373,14 @@ describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
     expect(within(report).getByTestId('compare-max')).toHaveTextContent('0.2900')
     expect(within(report).getByTestId('compare-max')).toHaveTextContent('0.3900')
 
+    // 每页页脚：页码 / 总页数 + 快照短 ID。@page 规则由打印分页生成。
+    const pageRule = screen.getByTestId('report-page-rule')
+    expect(pageRule).toHaveTextContent('counter(page)')
+    expect(pageRule).toHaveTextContent('counter(pages)')
+    expect(pageRule).toHaveTextContent('第 ')
+    expect(pageRule).toHaveTextContent('页 / 共 ')
+    expect(pageRule).toHaveTextContent(`快照 ${snapshotShortId(snapshot.id)}`)
+
     // 独立打印视图用浏览器打印。
     await user.click(screen.getByRole('button', { name: '打印报告' }))
     expect(printSpy).toHaveBeenCalledTimes(1)
@@ -396,6 +411,67 @@ describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
     expect(
       within(report).getByTestId('report-snapshot-id'),
     ).toHaveTextContent(snapshot.id)
+  })
+
+  it('基线对比只读取快照冻结的 Diff，不按当前引擎重算', async () => {
+    const project = await createCaseAProject(true, {
+      savedAt: '2026-11-04T08:00:00.000Z',
+      definition: makeCaseB(),
+    })
+    const snapshot = await snapshotProject(project)
+
+    // 直接改写快照里的冻结对比值，模拟“记录被篡改/来自旧引擎”的情况。
+    // 如果报告仍调用 compareChains，页面上会重新出现 0.1800，而不是这个哨兵值。
+    await withDatabase(async (db) => {
+      const transaction = db.transaction(SNAPSHOT_STORE_NAME, 'readwrite')
+      const done = transactionDone(transaction)
+      const store = transaction.objectStore(SNAPSHOT_STORE_NAME)
+      const record = (await requestResult(store.get(snapshot.id))) as {
+        comparison: { diff: { minQ: { before: number } } }
+      }
+      record.comparison.diff.minQ.before = 999999
+      store.put(record)
+      await done
+    })
+
+    render(
+      <PrintReport projectId={project.id} snapshotId={snapshot.id} />,
+    )
+    const report = await screen.findByTestId('print-report')
+    const minRow = within(report).getByTestId('compare-min')
+    expect(minRow).toHaveTextContent('99.9999')
+    expect(minRow).not.toHaveTextContent('0.1800')
+  })
+
+  it('旧版快照没有冻结对比结果时不补算，只显示不可用说明', async () => {
+    const project = await createCaseAProject(true, {
+      savedAt: '2026-11-04T08:00:00.000Z',
+      definition: makeCaseB(),
+    })
+    const snapshot = await snapshotProject(project)
+
+    await withDatabase(async (db) => {
+      const transaction = db.transaction(SNAPSHOT_STORE_NAME, 'readwrite')
+      const done = transactionDone(transaction)
+      const store = transaction.objectStore(SNAPSHOT_STORE_NAME)
+      const record = (await requestResult(store.get(snapshot.id))) as Record<
+        string,
+        unknown
+      >
+      delete record.comparison
+      store.put(record)
+      await done
+    })
+
+    render(
+      <PrintReport projectId={project.id} snapshotId={snapshot.id} />,
+    )
+    const report = await screen.findByTestId('print-report')
+    expect(
+      within(report).getByTestId('report-comparison-missing'),
+    ).toHaveTextContent('不补算')
+    expect(within(report).queryByTestId('scenario-compare')).toBeNull()
+    expect(within(report).queryByTestId('compare-min')).toBeNull()
   })
 })
 

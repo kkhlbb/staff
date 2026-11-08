@@ -265,12 +265,26 @@ export async function readZipEntries(
 
     return { ok: true, value: contents }
   } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    // zip.js 会在读取中央目录时直接拒绝某些条目名（目录遍历、绝对路径、
+    // 反斜杠等）并抛出 "Unsafe filename"。这不是“文件损坏”，应按不安全
+    // 路径返回，测试和 UI 才能区分具体原因。
+    if (/unsafe filename/i.test(detail)) {
+      return {
+        ok: false,
+        error: {
+          code: 'unsafe_path',
+          message: 'ZIP 包含库层拒绝的不安全条目名（目录遍历或绝对路径变体）。',
+          detail,
+        },
+      }
+    }
     return {
       ok: false,
       error: {
         code: 'invalid_zip',
         message: '无法读取 ZIP：文件损坏、不是 ZIP，或结构存在歧义。',
-        detail: error instanceof Error ? error.message : String(error),
+        detail,
       },
     }
   } finally {

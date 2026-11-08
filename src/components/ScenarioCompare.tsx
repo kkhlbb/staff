@@ -10,10 +10,15 @@ import { formatMm } from '../domain/units'
 import './ScenarioCompare.css'
 
 export interface ScenarioCompareProps {
-  /** 不可变基线快照。 */
+  /** 不可变基线定义；报告与工作台都传入，用于显示代号。 */
   baseline: ChainDefinition
   /** 当前通过校验的工作方案。 */
   working: ChainDefinition
+  /**
+   * 已冻结的对比结果。报告必须传入，组件因此不再调用 compareChains；
+   * 工作台实时对比不传，仍按当前输入即时计算。
+   */
+  diff?: Diff
 }
 
 const TERM_FIELD_LABEL: Record<TermFieldChange['field'], string> = {
@@ -102,10 +107,11 @@ function DeltaRow({ label, testId, delta }: DeltaRowProps) {
  * 所有差异、前后值和变化量都只读取 compareChains 的 Diff；组件只负责
  * 选择标签和调用 formatMm 等格式化函数，不重新计算任何尺寸或差值。
  */
-export function ScenarioCompare({ baseline, working }: ScenarioCompareProps) {
+export function ScenarioCompare({ baseline, working, diff: frozenDiff }: ScenarioCompareProps) {
   const diff = useMemo(
-    () => compareChains(baseline, working),
-    [baseline, working],
+    // 有冻结结果时只读冻结值，绝不重算；没有时用于工作台实时对比。
+    () => frozenDiff ?? compareChains(baseline, working),
+    [frozenDiff, baseline, working],
   )
 
   // 字段变化行以用户熟悉的代号展示；termId 只是内部标识。

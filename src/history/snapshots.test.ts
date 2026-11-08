@@ -2,6 +2,7 @@
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { calculateChain } from '../domain/calculate'
+import { compareChains } from '../domain/compare'
 import type { ChainDefinition, DimensionTerm, Project } from '../domain/types'
 import { parseMm } from '../domain/units'
 import {
@@ -73,13 +74,18 @@ function caseA(): ChainDefinition {
 }
 
 async function createProjectWith(
-  options: { confirmed?: boolean; name?: string } = {},
+  options: {
+    confirmed?: boolean
+    name?: string
+    baseline?: Project['baseline']
+  } = {},
 ): Promise<Project> {
   const working = caseA()
   const relationRevision = 1
   const created = await createProject({
     name: options.name ?? '快照测试项目',
     working,
+    baseline: options.baseline ?? null,
     relationRevision,
     relationReview:
       options.confirmed === false
@@ -98,7 +104,11 @@ async function createProjectWith(
 
 async function makeSnapshot(
   project: Project,
-  options: { id?: string; now?: string } = {},
+  options: {
+    id?: string
+    now?: string
+    beforeFinalWrite?: () => Promise<void>
+  } = {},
 ) {
   return createAnalysisSnapshot({
     project,
@@ -110,6 +120,7 @@ async function makeSnapshot(
     baseline: project.baseline,
     id: options.id,
     now: options.now,
+    beforeFinalWrite: options.beforeFinalWrite,
   })
 }
 
@@ -163,6 +174,74 @@ describe('AnalysisSnapshot：创建时冻结', () => {
       snapshot.definition.terms.push(term('x', 'X', '1.0000', '0.0000', '0.0000', 1))
     }).toThrow()
     expect(project.working.terms).toHaveLength(4)
+  })
+
+  it('创建时冻结基线结果与完整对比；报告不需要再调用 compareChains', async () => {
+    const baseline: Project['baseline'] = {
+      savedAt: '2026-11-01T00:00:00.000Z',
+      definition: caseA(),
+    }
+    const project = await createProjectWith({ baseline })
+    const created = await makeSnapshot(project, {
+      now: '2026-11-08T10:30:00.000Z',
+    })
+    expect(created.ok).toBe(true)
+    if (!created.ok) {
+      return
+    }
+    const snapshot = created.value
+    if (baseline === null) {
+      throw new Error('测试基线不应为空')
+    }
+
+    expect(snapshot.comparison).not.toBeNull()
+    expect(snapshot.comparison?.baselineResult).toEqual(
+      calculateChain(baseline.definition),
+    )
+    expect(snapshot.comparison?.diff).toEqual(
+      compareChains(baseline.definition, project.working),
+    )
+    // 冻结对象同样不可原地修改。
+    expect(Object.isFrozen(snapshot.comparison)).toBe(true)
+    expect(Object.isFrozen(snapshot.comparison?.diff)).toBe(true)
+    expect(Object.isFrozen(snapshot.comparison?.diff.minQ)).toBe(true)
+  })
+
+  it('最终写事务前项目被删除时拒绝创建，不留孤儿快照和创建事件', async () => {
+    const project = await createProjectWith()
+    const created = await makeSnapshot(project, {
+      id: 'snapshot-raced',
+      beforeFinalWrite: async () => {
+        const deleted = await deleteProject(project.id)
+        expect(deleted.ok).toBe(true)
+        expect(deleted.ok && deleted.value).toBe(true)
+      },
+    })
+
+    expect(created.ok).toBe(false)
+    if (!created.ok) {
+      expect(created.error.code).toBe('project_not_found')
+      expect(created.error.message).toContain('项目已被删除')
+    }
+
+    await withDatabase(async (db) => {
+      const transaction = db.transaction(
+        [SNAPSHOT_STORE_NAME, EVENT_STORE_NAME],
+        'readonly',
+      )
+      const done = transactionDone(transaction)
+      const snapshots = (await requestResult(
+        transaction.objectStore(SNAPSHOT_STORE_NAME).getAll(),
+      )) as { id: string }[]
+      const events = (await requestResult(
+        transaction.objectStore(EVENT_STORE_NAME).getAll(),
+      )) as { type: string }[]
+      await done
+      expect(snapshots).toHaveLength(0)
+      expect(
+        events.some((event) => event.type === 'analysis_snapshot_created'),
+      ).toBe(false)
+    })
   })
 
   it('非法草稿拒绝创建，不写入快照', async () => {

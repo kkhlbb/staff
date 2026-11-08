@@ -392,7 +392,8 @@
 
 @page {
   size: A4;
-  margin: 14mm 12mm;
+  /* 底部留出 18mm，给 @bottom-center 的“第 N 页 / 共 M 页 · 快照短 ID”。 */
+  margin: 14mm 12mm 18mm;
 }
 
 @media print {

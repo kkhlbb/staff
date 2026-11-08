@@ -20,8 +20,10 @@ import {
 } from '../sources/revisions'
 import {
   createProject,
+  exportProject,
   getDraft,
   getProject,
+  importProject,
   listImportSnapshots,
   saveDraft,
 } from '../storage/projects'
@@ -383,6 +385,36 @@ describe('完整备份：生成', () => {
     expect(files.size).toBe(manifest.entries.length + 1)
   })
 
+  it('解压总量按最终 ZIP 全部条目累计，临近上限时不会导出成功、恢复失败', async () => {
+    await seedFullProject()
+    const full = await createProjectBundle({
+      now: '2026-11-08T12:00:00.000Z',
+    })
+    expect(full.ok).toBe(true)
+    if (!full.ok) {
+      return
+    }
+    // payload 恰好等于上限：旧实现只累计 payload，会通过；修复后 manifest.json
+    // 也计入最终 ZIP 总量，必须拒绝。
+    const payloadBytes = full.value.manifest.totalUncompressedBytes
+    const tooTight = await createProjectBundle({
+      now: '2026-11-08T12:00:00.000Z',
+      maxUncompressedBytes: payloadBytes,
+    })
+    expect(tooTight.ok).toBe(false)
+    if (!tooTight.ok) {
+      expect(tooTight.error.code).toBe('too_large')
+      expect(tooTight.error.detail).toContain('manifest.json')
+    }
+
+    // 留出 manifest 的空间后可以正常导出，证明拒绝原因确实只是口径差异。
+    const enough = await createProjectBundle({
+      now: '2026-11-08T12:00:00.000Z',
+      maxUncompressedBytes: payloadBytes + 64 * 1024,
+    })
+    expect(enough.ok).toBe(true)
+  })
+
   it('空库或存在未迁移旧版项目时拒绝生成，不产出不可恢复的包', async () => {
     const empty = await createProjectBundle()
     expect(empty.ok).toBe(false)
@@ -547,20 +579,109 @@ describe('完整备份：空库恢复', () => {
       const done = transactionDone(transaction)
       const rows = (await requestResult(
         transaction.objectStore(EVENT_STORE_NAME).getAll(),
-      )) as { type: string }[]
+      )) as { type: string; id: string }[]
       await done
       return rows
     })
-    const beforeEvents = before[EVENT_STORE_NAME] as { type: string }[]
+    const beforeEvents = before[EVENT_STORE_NAME] as { type: string; id: string }[]
     expect(events.length).toBe(beforeEvents.length + 1)
     expect(events.some((event) => event.type === 'project_restored_from_bundle')).toBe(
       true,
     )
-    // 原有事件逐条仍在（恢复新增事件之外完全一致）。
-    const restoredIds = new Set(
-      events.filter((event) => event.type !== 'project_restored_from_bundle'),
+    // 原有事件逐条深比较（排除恢复新增事件），不只比数量。
+    const restoredOriginals = events
+      .filter((event) => event.type !== 'project_restored_from_bundle')
+      .sort((left, right) => left.id.localeCompare(right.id))
+    const expectedOriginals = [...beforeEvents].sort((left, right) =>
+      left.id.localeCompare(right.id),
     )
-    expect(restoredIds.size).toBe(beforeEvents.length)
+    expect(restoredOriginals).toEqual(expectedOriginals)
+  })
+
+  it('JSON 导入产生的合法缺附件项目可以完整备份，并在空库恢复为附件不可用', async () => {
+    const seed = await seedFullProject()
+    const exported = await exportProject(seed.project.id)
+    expect(exported.ok).toBe(true)
+    if (!exported.ok) {
+      return
+    }
+    const imported = await importProject(exported.value)
+    expect(imported.ok).toBe(true)
+    if (!imported.ok) {
+      return
+    }
+    expect(imported.value.sources?.attachmentsMissing).toBe(true)
+    const importedProject = imported.value.project
+    const importedRevisions = await listSourceRevisions(importedProject.id)
+    expect(importedRevisions.ok).toBe(true)
+    if (!importedRevisions.ok) {
+      return
+    }
+    expect(importedRevisions.value.length).toBeGreaterThan(0)
+
+    const bundle = await makeBundle()
+    const importedBlobKeys = new Set(
+      importedRevisions.value.map((revision) => revision.blobKey),
+    )
+    const declared = bundle.manifest.missingAttachments.filter((item) =>
+      importedBlobKeys.has(item.blobKey),
+    )
+    expect(declared).toHaveLength(importedRevisions.value.length)
+    expect(bundle.manifest.counts.revisions).toBe(4)
+    expect(bundle.manifest.counts.blobs).toBe(2)
+
+    const read = await readZipEntries(bundle.bytes)
+    expect(read.ok).toBe(true)
+    if (!read.ok) {
+      return
+    }
+    for (const revision of importedRevisions.value) {
+      expect(read.value.has(`sourceFiles/${revision.blobKey}.bin`)).toBe(false)
+      expect(read.value.has(`sourceBlobs/${revision.blobKey}.json`)).toBe(false)
+    }
+
+    await deleteProjectDatabase()
+    const restored = await restoreBackup(bundle.bytes, {
+      now: '2026-11-08T13:30:00.000Z',
+    })
+    expect(restored.ok).toBe(true)
+    if (!restored.ok) {
+      return
+    }
+
+    const restoredRevisions = await listSourceRevisions(importedProject.id)
+    expect(restoredRevisions.ok).toBe(true)
+    if (!restoredRevisions.ok) {
+      return
+    }
+    expect(restoredRevisions.value).toHaveLength(importedRevisions.value.length)
+    for (const revision of restoredRevisions.value) {
+      // 恢复接受“附件缺失”，但绝不伪造 Blob：读取结果仍为 null。
+      const bytes = await readSourceBlobBytes(revision.blobKey)
+      expect(bytes.ok).toBe(true)
+      if (bytes.ok) {
+        expect(bytes.value).toBeNull()
+      }
+    }
+  })
+
+  it('写入中途失败时整体回滚，所有 store 保持空库', async () => {
+    await seedFullProject()
+    const bundle = await makeBundle()
+    await deleteProjectDatabase()
+    const before = await dumpStores()
+
+    const restored = await restoreBackup(bundle.bytes, {
+      afterPartialWrite: () => {
+        throw new Error('模拟写入中途失败')
+      },
+    })
+    expect(restored.ok).toBe(false)
+    if (!restored.ok) {
+      expect(restored.error.code).toBe('write_failed')
+      expect(restored.error.detail).toContain('模拟写入中途失败')
+    }
+    expect(await dumpStores()).toEqual(before)
   })
 
   it('目标库非空时拒绝恢复，所有 store 前后一致', async () => {
@@ -577,26 +698,61 @@ describe('完整备份：空库恢复', () => {
   })
 })
 
-describe('完整备份：恶意 ZIP 真实夹具', () => {
-  it('路径穿越、重复条目、超条目、超解压量、哈希不符、缺引用全部拒绝且零写入', async () => {
-    const cases: { name: string; codes: string[] }[] = [
-      { name: 'malicious-traversal.cunlian.zip', codes: ['unsafe_path', 'invalid_zip'] },
+describe('完整备份：恶意与坏结构 ZIP 真实夹具', () => {
+  it('每个路径穿越变体、结构坏包与引用错误都按具体错误码拒绝且零写入', async () => {
+    const cases: { name: string; code: string }[] = [
+      {
+        name: 'malicious-traversal-relative.cunlian.zip',
+        code: 'unsafe_path',
+      },
+      {
+        name: 'malicious-traversal-absolute.cunlian.zip',
+        code: 'unsafe_path',
+      },
+      {
+        name: 'malicious-traversal-backslash.cunlian.zip',
+        code: 'unsafe_path',
+      },
+      {
+        name: 'malicious-traversal-encoded.cunlian.zip',
+        code: 'unsafe_path',
+      },
       {
         name: 'malicious-duplicate-entry.cunlian.zip',
-        codes: ['duplicate_entry', 'invalid_zip'],
+        code: 'duplicate_entry',
       },
       {
         name: 'malicious-too-many-entries.cunlian.zip',
-        codes: ['too_many_entries'],
+        code: 'too_many_entries',
       },
-      { name: 'malicious-too-large.cunlian.zip', codes: ['too_large'] },
+      { name: 'malicious-too-large.cunlian.zip', code: 'too_large' },
       {
         name: 'malicious-hash-mismatch.cunlian.zip',
-        codes: ['hash_mismatch'],
+        code: 'hash_mismatch',
       },
       {
         name: 'malicious-missing-reference.cunlian.zip',
-        codes: ['missing_reference'],
+        code: 'missing_reference',
+      },
+      {
+        name: 'invalid-cross-project-blob.cunlian.zip',
+        code: 'missing_reference',
+      },
+      {
+        name: 'invalid-snapshot-review.cunlian.zip',
+        code: 'invalid_record',
+      },
+      {
+        name: 'invalid-snapshot-binding.cunlian.zip',
+        code: 'invalid_record',
+      },
+      {
+        name: 'invalid-snapshot-documents.cunlian.zip',
+        code: 'invalid_record',
+      },
+      {
+        name: 'invalid-snapshot-inconsistent.cunlian.zip',
+        code: 'invalid_record',
       },
     ]
 
@@ -605,9 +761,21 @@ describe('完整备份：恶意 ZIP 真实夹具', () => {
       const result = await restoreBackup(fixture(testCase.name))
       expect(result.ok, testCase.name).toBe(false)
       if (!result.ok) {
-        expect(testCase.codes, testCase.name).toContain(result.error.code)
+        expect(result.error.code, testCase.name).toBe(testCase.code)
       }
       expect(await dumpStores(), `${testCase.name} 零写入`).toEqual(before)
+    }
+  })
+
+  it('拒绝跨项目 Blob 引用，按 missing_reference 说明项目作用域', async () => {
+    const result = await restoreBackup(
+      fixture('invalid-cross-project-blob.cunlian.zip'),
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('missing_reference')
+      expect(result.error.message).toContain('项目作用域不一致')
+      expect(result.error.message).toContain('跨项目')
     }
   })
 

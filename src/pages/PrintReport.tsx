@@ -16,6 +16,7 @@ import {
   type ReviewFinding,
   type ReviewStatus,
 } from '../review/rules'
+import { snapshotShortId } from '../history/snapshotId'
 import './PrintReport.css'
 
 export interface PrintReportProps {
@@ -196,9 +197,15 @@ function ReportDocument({ snapshot }: ReportDocumentProps) {
   const statusLabel = reviewIncomplete
     ? `${review.calculation.label}（审查未完成，见待办）`
     : review.calculation.label
+  const shortId = snapshotShortId(snapshot.id)
+  // 每页页脚：页码 / 总页数 + 快照短 ID。@page 页边距盒由浏览器分页时生成，
+  // 因此不能用普通 DOM 元素代替；短 ID 已过滤为字母数字，避免 CSS 注入。
+  const pageRule = `@page { @bottom-center { content: "第 " counter(page) " 页 / 共 " counter(pages) " 页 · 快照 ${shortId}"; font-size: 8pt; color: #555; } }`
 
   return (
-    <article
+    <>
+      <style data-testid="report-page-rule">{pageRule}</style>
+      <article
       className="print-report__document"
       data-testid="print-report"
       aria-labelledby={titleId}
@@ -527,12 +534,20 @@ function ReportDocument({ snapshot }: ReportDocumentProps) {
           <h2 id={baselineId}>基线对比（快照冻结）</h2>
           <p className="print-report__baseline-note">
             基线保存于 {formatSavedAt(snapshot.baseline.savedAt)}
-            。以下前后值、变化量和判定均来自 compareChains。
+            。以下前后值、变化量和判定均来自创建快照时冻结的对比结果。
           </p>
-          <ScenarioCompare
-            baseline={snapshot.baseline.definition}
-            working={chain}
-          />
+          {snapshot.comparison === null || snapshot.comparison === undefined ? (
+            <p className="print-report__basis" data-testid="report-comparison-missing">
+              该快照创建时未冻结基线对比结果（旧版快照）。按不可变契约，本报告
+              不补算、不调用当前引擎重算基线；请以冻结的输入与主结果为准。
+            </p>
+          ) : (
+            <ScenarioCompare
+              baseline={snapshot.baseline.definition}
+              working={chain}
+              diff={snapshot.comparison.diff}
+            />
+          )}
         </section>
       ) : null}
 
@@ -572,7 +587,8 @@ function ReportDocument({ snapshot }: ReportDocumentProps) {
         轴系轴向公差链分析与修改追踪工具 · 报告由不可变分析快照生成（快照 ID：
         <span className="print-report__mono">{snapshot.id}</span>）
       </footer>
-    </article>
+      </article>
+    </>
   )
 }
 

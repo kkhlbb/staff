@@ -17,8 +17,10 @@
 import { z } from 'zod'
 import { PROJECT_SCHEMA_VERSION, type ChainDefinition, type Project } from '../domain/types'
 import { validateChain } from '../domain/validation'
+import { draftToChain, type WorkspaceDraft } from '../workspace/draft'
 import type { AnalysisSnapshot } from '../history/snapshots'
 import type { ChangeEvent } from '../history/events'
+import { REVIEW_SEVERITY_LABEL, type ReviewFinding } from '../review/rules'
 import type { SourceBinding } from '../sources/bindings'
 import type {
   SourceDocument,
@@ -169,6 +171,16 @@ const manifestSchema = z.object({
   projects: z.array(
     z.object({ id: isoString, name: z.string(), updatedAt: isoString }),
   ),
+  // 旧版完整备份没有该字段；缺省视为“没有声明缺失附件”。
+  missingAttachments: z
+    .array(
+      z.object({
+        revisionId: z.string().min(1),
+        documentId: z.string().min(1),
+        blobKey: z.string().min(1),
+      }),
+    )
+    .default([]),
   excludes: z.object({
     mappingTemplates: z.object({
       included: z.literal(false),
@@ -307,47 +319,203 @@ const resultSchema = z.object({
   ),
 })
 
-const reviewSummarySchema = z
-  .object({
-    rulesVersion: z.string().min(1),
-    findings: z.array(z.unknown()),
-    pending: z.array(z.unknown()),
-    byStatus: z.record(z.string(), z.number()),
-    canCreateReport: z.boolean(),
-    hasAnyBinding: z.boolean(),
-    reviewComplete: z.boolean(),
-  })
-  .passthrough()
+const reviewStatusSchema = z.enum([
+  'passed',
+  'failed',
+  'unchecked',
+  'needs-human',
+  'not-applicable',
+])
+const reviewRuleIdSchema = z.enum([
+  'INPUT_VALID',
+  'SOURCE_PRESENT',
+  'SOURCE_AVAILABLE',
+  'SOURCE_CURRENT',
+  'SOURCE_VALUE_REVIEWED',
+  'RELATION_CONFIRMED',
+  'CALC_VALID',
+  'TARGET_WITHIN',
+])
+const reviewScopeSchema = z.enum(['chain', 'term', 'binding'])
+const reviewSeveritySchema = z.enum(['blocking', 'warning', 'info'])
 
-const snapshotSchema = z
-  .object({
-    id: z.string().min(1),
-    projectId: z.string().min(1),
-    projectName: z.string(),
-    createdAt: isoString,
-    engineVersion: z.string().min(1),
-    reviewRulesVersion: z.string().min(1),
-    inputFingerprint: z.string().min(1),
-    definition: z.unknown(),
-    draft: draftSchema,
-    result: resultSchema,
-    review: reviewSummarySchema,
-    sourceManifest: z
-      .object({
-        bindings: z.array(z.unknown()),
-        documents: z.array(z.unknown()),
-        revisions: z.array(z.unknown()),
-        unboundTermIds: z.array(z.string()),
-        availability: z.enum(['complete', 'partial']),
-      })
-      .passthrough(),
-    baseline: z
-      .object({ savedAt: isoString, definition: z.unknown() })
-      .nullable(),
-    status: z.enum(['complete', 'pending']),
-    pendingCount: z.number().int().nonnegative(),
-  })
-  .passthrough()
+const reviewTargetSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('chain') }),
+  z.object({ kind: z.literal('relation') }),
+  z.object({ kind: z.literal('target') }),
+  z.object({
+    kind: z.literal('term'),
+    termId: z.string().min(1),
+    field: z
+      .enum(['nominal', 'lower', 'upper', 'symbol', 'name', 'sourceNote'])
+      .optional(),
+  }),
+  z.object({
+    kind: z.literal('binding'),
+    bindingId: z.string().min(1),
+    termId: z.string().min(1),
+    documentId: z.string().min(1),
+    revisionId: z.string().min(1),
+    page: z.number().int().positive(),
+  }),
+])
+
+const reviewSubjectSchema = z.object({
+  kind: z.enum(['chain', 'term', 'binding', 'target']),
+  id: z.string().min(1),
+  label: z.string(),
+  termId: z.string().min(1).optional(),
+  bindingId: z.string().min(1).optional(),
+  documentId: z.string().min(1).optional(),
+  revisionId: z.string().min(1).optional(),
+  page: z.number().int().positive().optional(),
+})
+
+const reviewFindingSchema = z.object({
+  ruleId: reviewRuleIdSchema,
+  ruleVersion: z.string().min(1),
+  scope: reviewScopeSchema,
+  subject: reviewSubjectSchema,
+  status: reviewStatusSchema,
+  basis: z.string(),
+  action: z.string().nullable(),
+  severity: reviewSeveritySchema,
+  needsAction: z.boolean(),
+  target: reviewTargetSchema,
+})
+
+const calculationOutcomeSchema = z.object({
+  status: z.enum(['within', 'outside', 'no-target', 'no-result']),
+  label: z.string().min(1),
+  satisfied: z.boolean().nullable(),
+})
+
+const reviewGroupSchema = z.object({
+  severity: reviewSeveritySchema,
+  label: z.string().min(1),
+  findings: z.array(reviewFindingSchema),
+})
+
+const reviewSummarySchema = z.object({
+  rulesVersion: z.string().min(1),
+  findings: z.array(reviewFindingSchema),
+  calculation: calculationOutcomeSchema,
+  reviewComplete: z.boolean(),
+  pending: z.array(reviewFindingSchema),
+  canCreateReport: z.boolean(),
+  hasAnyBinding: z.boolean(),
+  byStatus: z.object({
+    passed: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    unchecked: z.number().int().nonnegative(),
+    'needs-human': z.number().int().nonnegative(),
+    'not-applicable': z.number().int().nonnegative(),
+  }),
+  groups: z.array(reviewGroupSchema),
+})
+
+const deltaSchema = z.object({
+  before: z.number().nullable(),
+  after: z.number().nullable(),
+  delta: z.number().nullable(),
+})
+
+const termFieldChangeSchema = z.discriminatedUnion('field', [
+  z.object({
+    termId: z.string().min(1),
+    field: z.enum(['symbol', 'name', 'sourceNote']),
+    before: z.string(),
+    after: z.string(),
+  }),
+  z.object({
+    termId: z.string().min(1),
+    field: z.enum(['nominalQ', 'lowerDeviationQ', 'upperDeviationQ']),
+    before: z.number(),
+    after: z.number(),
+  }),
+  z.object({
+    termId: z.string().min(1),
+    field: z.literal('sign'),
+    before: z.union([z.literal(1), z.literal(-1)]),
+    after: z.union([z.literal(1), z.literal(-1)]),
+  }),
+])
+
+const diffSchema = z.object({
+  addedTermIds: z.array(z.string().min(1)),
+  removedTermIds: z.array(z.string().min(1)),
+  orderChanged: z.boolean(),
+  termChanges: z.array(termFieldChangeSchema),
+  targetChanged: z.boolean(),
+  minQ: deltaSchema,
+  maxQ: deltaSchema,
+  toleranceQ: deltaSchema,
+  lowerMarginQ: deltaSchema,
+  upperMarginQ: deltaSchema,
+  statusBefore: z.enum(['within', 'outside', 'no-target']),
+  statusAfter: z.enum(['within', 'outside', 'no-target']),
+})
+
+const snapshotComparisonSchema = z.object({
+  baselineResult: resultSchema,
+  diff: diffSchema,
+})
+
+const snapshotBindingStatusSchema = z.object({
+  available: reviewStatusSchema,
+  current: reviewStatusSchema,
+  valueReviewed: reviewStatusSchema,
+})
+
+const snapshotBindingEntrySchema = z.object({
+  bindingId: z.string().min(1),
+  termId: z.string().min(1),
+  termLabel: z.string().nullable(),
+  termRevision: z.number().int().positive().nullable(),
+  documentId: z.string().min(1),
+  documentTitle: z.string().nullable(),
+  revisionId: z.string().min(1),
+  fileName: z.string().nullable(),
+  revisionSha256: sha256Schema.nullable(),
+  revisionByteSize: z.number().int().nonnegative().nullable(),
+  revisionPageCount: z.number().int().positive().nullable(),
+  page: z.number().int().positive(),
+  rectPdf: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+  pageBoxPdf: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+  note: z.string(),
+  reviewedTermRevision: z.number().int().positive().nullable(),
+  reviewedAt: isoString.nullable(),
+  historicalAcceptance: historicalAcceptanceSchema.nullable(),
+  blobAvailable: z.boolean(),
+  status: snapshotBindingStatusSchema,
+})
+
+const snapshotSchema = z.object({
+  id: z.string().min(1),
+  projectId: z.string().min(1),
+  projectName: z.string(),
+  createdAt: isoString,
+  engineVersion: z.string().min(1),
+  reviewRulesVersion: z.string().min(1),
+  inputFingerprint: z.string().min(1),
+  definition: z.unknown(),
+  draft: draftSchema,
+  result: resultSchema,
+  review: reviewSummarySchema,
+  sourceManifest: z.object({
+    bindings: z.array(snapshotBindingEntrySchema),
+    documents: z.array(documentSchema),
+    revisions: z.array(revisionSchema),
+    unboundTermIds: z.array(z.string().min(1)),
+    availability: z.enum(['complete', 'partial']),
+  }),
+  baseline: z
+    .object({ savedAt: isoString, definition: z.unknown() })
+    .nullable(),
+  comparison: snapshotComparisonSchema.nullable(),
+  status: z.enum(['complete', 'pending']),
+  pendingCount: z.number().int().nonnegative(),
+})
 
 const importSnapshotSchema = z.object({
   id: z.string().min(1),
@@ -405,6 +573,452 @@ function validateChainOrThrow(value: unknown, path: string): ChainDefinition {
     )
   }
   return validation.value
+}
+
+function sameJson(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
+function sameDocument(left: SourceDocument, right: SourceDocument): boolean {
+  return (
+    left.id === right.id &&
+    left.projectId === right.projectId &&
+    left.title === right.title &&
+    left.latestRevisionId === right.latestRevisionId
+  )
+}
+
+function sameRevision(left: SourceRevision, right: SourceRevision): boolean {
+  return (
+    left.id === right.id &&
+    left.projectId === right.projectId &&
+    left.documentId === right.documentId &&
+    left.fileName === right.fileName &&
+    left.sha256 === right.sha256 &&
+    left.byteSize === right.byteSize &&
+    left.pageCount === right.pageCount &&
+    left.createdAt === right.createdAt &&
+    left.blobKey === right.blobKey
+  )
+}
+
+function sameChain(left: ChainDefinition, right: ChainDefinition): boolean {
+  if (left.assumptions !== right.assumptions) {
+    return false
+  }
+  if (!sameJson(left.target, right.target)) {
+    return false
+  }
+  if (left.terms.length !== right.terms.length) {
+    return false
+  }
+  return left.terms.every((term, index) => {
+    const other = right.terms[index]
+    return (
+      term.id === other.id &&
+      term.symbol === other.symbol &&
+      term.name === other.name &&
+      term.nominalQ === other.nominalQ &&
+      term.lowerDeviationQ === other.lowerDeviationQ &&
+      term.upperDeviationQ === other.upperDeviationQ &&
+      term.sign === other.sign &&
+      term.sourceNote === other.sourceNote &&
+      term.termRevision === other.termRevision
+    )
+  })
+}
+
+const RULE_SCOPES: Record<string, 'chain' | 'term' | 'binding'> = {
+  INPUT_VALID: 'chain',
+  CALC_VALID: 'chain',
+  RELATION_CONFIRMED: 'chain',
+  TARGET_WITHIN: 'chain',
+  SOURCE_PRESENT: 'term',
+  SOURCE_AVAILABLE: 'binding',
+  SOURCE_CURRENT: 'binding',
+  SOURCE_VALUE_REVIEWED: 'binding',
+}
+
+function findingKey(finding: ReviewFinding): string {
+  return [
+    finding.ruleId,
+    finding.scope,
+    finding.subject.kind,
+    finding.subject.id,
+    finding.status,
+    finding.severity,
+    finding.needsAction ? 'needs-action' : 'done',
+  ].join('|')
+}
+
+const REVIEW_SEVERITIES = ['blocking', 'warning', 'info'] as const
+
+function validateResultRecord(
+  definition: ChainDefinition,
+  result: AnalysisSnapshot['result'],
+  snapshotId: string,
+): string | null {
+  const prefix = `分析快照 ${snapshotId} 的结果`
+  if (result.minQ > result.maxQ) {
+    return `${prefix}最小值大于最大值`
+  }
+  if (result.toleranceQ !== result.maxQ - result.minQ) {
+    return `${prefix}公差与区间不一致`
+  }
+  if (result.lowerDeviationQ !== result.minQ - result.nominalQ) {
+    return `${prefix}下偏差与基本尺寸不一致`
+  }
+  if (result.upperDeviationQ !== result.maxQ - result.nominalQ) {
+    return `${prefix}上偏差与基本尺寸不一致`
+  }
+  const termIds = definition.terms.map((term) => term.id)
+  if (!sameJson(result.contributions.map((item) => item.termId), termIds)) {
+    return `${prefix}的贡献项与组成环不一致`
+  }
+  if (definition.target === null) {
+    if (result.status !== 'no-target') {
+      return `${prefix}没有目标却记录了目标判定`
+    }
+    if (result.lowerMarginQ !== null || result.upperMarginQ !== null) {
+      return `${prefix}没有目标却有裕量`
+    }
+  } else {
+    if (result.status === 'no-target') {
+      return `${prefix}有目标却标为未判定`
+    }
+    if (
+      result.lowerMarginQ !== result.minQ - definition.target.minQ ||
+      result.upperMarginQ !== definition.target.maxQ - result.maxQ
+    ) {
+      return `${prefix}的裕量与目标区间不一致`
+    }
+  }
+  return null
+}
+
+function validateReviewRecord(snapshot: AnalysisSnapshot): string | null {
+  const review = snapshot.review
+  const prefix = `分析快照 ${snapshot.id} 的审查结果`
+  if (review.rulesVersion !== snapshot.reviewRulesVersion) {
+    return `${prefix}规则版本与快照记录不一致`
+  }
+  if (review.canCreateReport !== true) {
+    return `${prefix}必须记录为可创建报告（快照本身已有有效计算）`
+  }
+  if (review.hasAnyBinding !== (snapshot.sourceManifest.bindings.length > 0)) {
+    return `${prefix}的 hasAnyBinding 与来源清单不一致`
+  }
+  if (snapshot.pendingCount !== review.pending.length) {
+    return `${prefix}的 pendingCount 与待办数量不一致`
+  }
+  if (snapshot.status !== (review.reviewComplete ? 'complete' : 'pending')) {
+    return `${prefix}的冻结状态与 reviewComplete 不一致`
+  }
+  if (review.reviewComplete !== (review.pending.length === 0)) {
+    return `${prefix}的 reviewComplete 与待办数量不一致`
+  }
+
+  const counted: Record<string, number> = {
+    passed: 0,
+    failed: 0,
+    unchecked: 0,
+    'needs-human': 0,
+    'not-applicable': 0,
+  }
+  for (const finding of review.findings) {
+    counted[finding.status] += 1
+    if (finding.ruleVersion !== review.rulesVersion) {
+      return `${prefix}中 ${finding.ruleId} 的规则版本不一致`
+    }
+    const expectedScope = RULE_SCOPES[finding.ruleId]
+    if (expectedScope === undefined || finding.scope !== expectedScope) {
+      return `${prefix}中 ${finding.ruleId} 的作用域无效`
+    }
+    if (finding.status === 'passed' && finding.needsAction) {
+      return `${prefix}中 ${finding.ruleId} 已通过却要求人工动作`
+    }
+    const subject = finding.subject
+    if (finding.scope === 'chain') {
+      if (subject.kind !== 'chain' || subject.id !== 'chain') {
+        return `${prefix}中 ${finding.ruleId} 的链级对象无效`
+      }
+      if (
+        finding.target.kind !== 'chain' &&
+        finding.target.kind !== 'relation' &&
+        finding.target.kind !== 'target'
+      ) {
+        return `${prefix}中 ${finding.ruleId} 的定位目标无效`
+      }
+    } else if (finding.scope === 'term') {
+      if (
+        subject.kind !== 'term' ||
+        subject.termId === undefined ||
+        subject.id !== subject.termId ||
+        finding.target.kind !== 'term' ||
+        finding.target.termId !== subject.termId
+      ) {
+        return `${prefix}中 ${finding.ruleId} 的组成环对象无效`
+      }
+    } else {
+      if (
+        subject.kind !== 'binding' ||
+        subject.bindingId === undefined ||
+        subject.id !== subject.bindingId ||
+        subject.termId === undefined ||
+        subject.documentId === undefined ||
+        subject.revisionId === undefined ||
+        subject.page === undefined
+      ) {
+        return `${prefix}中 ${finding.ruleId} 的绑定对象无效`
+      }
+      if (
+        finding.target.kind !== 'binding' ||
+        finding.target.bindingId !== subject.bindingId ||
+        finding.target.termId !== subject.termId ||
+        finding.target.documentId !== subject.documentId ||
+        finding.target.revisionId !== subject.revisionId ||
+        finding.target.page !== subject.page
+      ) {
+        return `${prefix}中 ${finding.ruleId} 的定位目标与绑定对象不一致`
+      }
+    }
+  }
+  if (!sameJson(counted, review.byStatus)) {
+    return `${prefix}的 byStatus 与实际结果不一致`
+  }
+
+  const expectedPending = review.findings
+    .filter((finding) => finding.needsAction)
+    .map(findingKey)
+    .sort()
+  const actualPending = review.pending.map(findingKey).sort()
+  if (!sameJson(actualPending, expectedPending)) {
+    return `${prefix}的 pending 与 needsAction 结果不一致`
+  }
+
+  const expectedGroups = REVIEW_SEVERITIES.map((severity) => ({
+    severity,
+    label: REVIEW_SEVERITY_LABEL[severity],
+    findings: review.pending.filter((finding) => finding.severity === severity),
+  })).filter((group) => group.findings.length > 0)
+  if (review.groups.length !== expectedGroups.length) {
+    return `${prefix}的 groups 与 pending 不一致`
+  }
+  for (let index = 0; index < expectedGroups.length; index += 1) {
+    const expected = expectedGroups[index]
+    const actual = review.groups[index]
+    if (
+      actual.severity !== expected.severity ||
+      actual.label !== expected.label ||
+      !sameJson(
+        actual.findings.map(findingKey),
+        expected.findings.map(findingKey),
+      )
+    ) {
+      return `${prefix}的 groups 与 pending 不一致`
+    }
+  }
+
+  const expectedSatisfied =
+    snapshot.result.status === 'within'
+      ? true
+      : snapshot.result.status === 'outside'
+        ? false
+        : null
+  if (
+    review.calculation.status !== snapshot.result.status ||
+    review.calculation.satisfied !== expectedSatisfied
+  ) {
+    return `${prefix}的计算结论与冻结结果不一致`
+  }
+  return null
+}
+
+function validateSourceManifestRecord(
+  snapshot: AnalysisSnapshot,
+  backupDocuments: ReadonlyMap<string, SourceDocument>,
+  backupRevisions: ReadonlyMap<string, SourceRevision>,
+  backupBlobKeys: ReadonlySet<string>,
+): string | null {
+  const prefix = `分析快照 ${snapshot.id} 的来源清单`
+  const manifest = snapshot.sourceManifest
+  const documentById = new Map<string, SourceDocument>()
+  for (const document of manifest.documents) {
+    if (documentById.has(document.id)) {
+      return `${prefix}包含重复的来源文档 ${document.id}`
+    }
+    if (document.projectId !== snapshot.projectId) {
+      return `${prefix}的来源文档 ${document.id} 属于其它项目`
+    }
+    if (!backupDocuments.has(document.id)) {
+      return `${prefix}的来源文档 ${document.id} 在备份中不存在`
+    }
+    documentById.set(document.id, document)
+  }
+  const revisionById = new Map<string, SourceRevision>()
+  for (const revision of manifest.revisions) {
+    if (revisionById.has(revision.id)) {
+      return `${prefix}包含重复的来源版本 ${revision.id}`
+    }
+    if (revision.projectId !== snapshot.projectId) {
+      return `${prefix}的来源版本 ${revision.id} 属于其它项目`
+    }
+    const document = documentById.get(revision.documentId)
+    if (document === undefined) {
+      return `${prefix}的来源版本 ${revision.id} 的文档不存在`
+    }
+    const backupRevision = backupRevisions.get(revision.id)
+    if (backupRevision === undefined || !sameRevision(revision, backupRevision)) {
+      return `${prefix}的来源版本 ${revision.id} 与备份记录不一致`
+    }
+    const backupDocument = backupDocuments.get(document.id)
+    if (backupDocument === undefined || !sameDocument(document, backupDocument)) {
+      return `${prefix}的来源文档 ${document.id} 与备份记录不一致`
+    }
+    revisionById.set(revision.id, revision)
+  }
+  for (const document of manifest.documents) {
+    if (!revisionById.has(document.latestRevisionId)) {
+      return `${prefix}的来源文档 ${document.id} 最新版本不在清单内`
+    }
+  }
+
+  const termById = new Map(snapshot.definition.terms.map((term) => [term.id, term]))
+  const bindingIds = new Set<string>()
+  for (const entry of manifest.bindings) {
+    if (bindingIds.has(entry.bindingId)) {
+      return `${prefix}包含重复的绑定 ${entry.bindingId}`
+    }
+    bindingIds.add(entry.bindingId)
+    const revision = revisionById.get(entry.revisionId)
+    const document = documentById.get(entry.documentId)
+    if (revision === undefined) {
+      return `${prefix}的绑定 ${entry.bindingId} 引用的版本不在清单内`
+    }
+    if (document === undefined) {
+      return `${prefix}的绑定 ${entry.bindingId} 引用的文档不在清单内`
+    }
+    if (
+      revision.documentId !== document.id ||
+      entry.fileName !== revision.fileName ||
+      entry.revisionSha256 !== revision.sha256 ||
+      entry.revisionByteSize !== revision.byteSize ||
+      entry.revisionPageCount !== revision.pageCount ||
+      entry.documentTitle !== document.title
+    ) {
+      return `${prefix}的绑定 ${entry.bindingId} 与版本/文档元数据不一致`
+    }
+    if (entry.page > revision.pageCount) {
+      return `${prefix}的绑定 ${entry.bindingId} 页码超出页数`
+    }
+    if (entry.blobAvailable && !backupBlobKeys.has(revision.blobKey)) {
+      return `${prefix}的绑定 ${entry.bindingId} 声称附件可用，但备份中没有该附件`
+    }
+    const term = termById.get(entry.termId)
+    if (term === undefined) {
+      if (entry.termLabel !== null || entry.termRevision !== null) {
+        return `${prefix}的绑定 ${entry.bindingId} 指向已删除组成环却保留了环信息`
+      }
+    } else {
+      const label =
+        term.symbol.trim() !== ''
+          ? term.symbol.trim()
+          : term.name.trim() !== ''
+            ? term.name.trim()
+            : term.id
+      if (entry.termLabel !== label || entry.termRevision !== term.termRevision) {
+        return `${prefix}的绑定 ${entry.bindingId} 的环信息与冻结定义不一致`
+      }
+    }
+  }
+
+  const expectedUnbound = snapshot.definition.terms
+    .filter(
+      (term) => !manifest.bindings.some((entry) => entry.termId === term.id),
+    )
+    .map((term) => term.id)
+  if (!sameJson(manifest.unboundTermIds, expectedUnbound)) {
+    return `${prefix}的未绑定组成环与实际绑定不一致`
+  }
+  const expectedAvailability =
+    manifest.bindings.length > 0 &&
+    manifest.bindings.some((entry) => !entry.blobAvailable)
+      ? 'partial'
+      : 'complete'
+  if (manifest.availability !== expectedAvailability) {
+    return `${prefix}的附件可用性与绑定状态不一致`
+  }
+  return null
+}
+
+function validateComparisonRecord(snapshot: AnalysisSnapshot): string | null {
+  const comparison = snapshot.comparison
+  if ((snapshot.baseline === null) !== (comparison === null || comparison === undefined)) {
+    return `分析快照 ${snapshot.id} 的基线与冻结对比结果不一致`
+  }
+  if (snapshot.baseline === null || comparison === null || comparison === undefined) {
+    return null
+  }
+  const { baselineResult, diff } = comparison
+  const prefix = `分析快照 ${snapshot.id} 的冻结基线对比`
+  if (
+    baselineResult.minQ !== diff.minQ.before ||
+    baselineResult.maxQ !== diff.maxQ.before ||
+    baselineResult.toleranceQ !== diff.toleranceQ.before ||
+    baselineResult.lowerMarginQ !== diff.lowerMarginQ.before ||
+    baselineResult.upperMarginQ !== diff.upperMarginQ.before ||
+    baselineResult.status !== diff.statusBefore
+  ) {
+    return `${prefix}的基线结果与前后值不一致`
+  }
+  if (
+    snapshot.result.minQ !== diff.minQ.after ||
+    snapshot.result.maxQ !== diff.maxQ.after ||
+    snapshot.result.toleranceQ !== diff.toleranceQ.after ||
+    snapshot.result.lowerMarginQ !== diff.lowerMarginQ.after ||
+    snapshot.result.upperMarginQ !== diff.upperMarginQ.after ||
+    snapshot.result.status !== diff.statusAfter
+  ) {
+    return `${prefix}的工作结果与前后值不一致`
+  }
+  return null
+}
+
+function validateSnapshotDeep(
+  snapshot: AnalysisSnapshot,
+  backupDocuments: ReadonlyMap<string, SourceDocument>,
+  backupRevisions: ReadonlyMap<string, SourceRevision>,
+  backupBlobKeys: ReadonlySet<string>,
+): string | null {
+  const conversion = draftToChain(snapshot.draft as WorkspaceDraft)
+  if (!conversion.ok) {
+    return `分析快照 ${snapshot.id} 的草稿无法转换为尺寸链`
+  }
+  if (!sameChain(conversion.chain, snapshot.definition)) {
+    return `分析快照 ${snapshot.id} 的草稿与冻结定义不一致`
+  }
+  const resultIssue = validateResultRecord(
+    snapshot.definition,
+    snapshot.result,
+    snapshot.id,
+  )
+  if (resultIssue !== null) {
+    return resultIssue
+  }
+  const reviewIssue = validateReviewRecord(snapshot)
+  if (reviewIssue !== null) {
+    return reviewIssue
+  }
+  const manifestIssue = validateSourceManifestRecord(
+    snapshot,
+    backupDocuments,
+    backupRevisions,
+    backupBlobKeys,
+  )
+  if (manifestIssue !== null) {
+    return manifestIssue
+  }
+  return validateComparisonRecord(snapshot)
 }
 
 function decodeIdFromPath(path: string, prefix: string, extension: string): string {
@@ -697,6 +1311,23 @@ async function parseBackup(bytes: Uint8Array): Promise<RestoreResult<ParsedBacku
     )
   }
 
+  // 结构校验通过不等于业务记录可写库：快照的 review / result / sourceManifest /
+  // comparison 还要做领域一致性检查，坏包在打开写事务之前拒绝。
+  const backupDocuments = new Map(parsed.documents.map((item) => [item.id, item]))
+  const backupRevisions = new Map(parsed.revisions.map((item) => [item.id, item]))
+  const backupBlobKeys = new Set(parsed.blobs.map((item) => item.blobKey))
+  for (const snapshot of parsed.snapshots) {
+    const issue = validateSnapshotDeep(
+      snapshot,
+      backupDocuments,
+      backupRevisions,
+      backupBlobKeys,
+    )
+    if (issue !== null) {
+      return failure('invalid_record', issue)
+    }
+  }
+
   // 每个附件字节文件都必须有对应元数据；不允许携带 manifest 未解释的二进制。
   const blobKeys = new Set(parsed.blobs.map((blob) => blob.blobKey))
   for (const path of files.keys()) {
@@ -758,6 +1389,27 @@ function validateReferences(backup: ParsedBackup): string | null {
   const revisionById = new Map(backup.revisions.map((item) => [item.id, item]))
   const blobByKey = new Map(backup.blobs.map((item) => [item.blobKey, item]))
 
+  const missingByRevision = new Map<string, { blobKey: string; documentId: string }>()
+  for (const missing of backup.manifest.missingAttachments) {
+    const revision = revisionById.get(missing.revisionId)
+    if (revision === undefined) {
+      return `manifest 声明的缺失附件版本不存在：${missing.revisionId}`
+    }
+    if (
+      revision.blobKey !== missing.blobKey ||
+      revision.documentId !== missing.documentId
+    ) {
+      return `manifest 声明的缺失附件 ${missing.revisionId} 与版本记录不一致`
+    }
+    if (missingByRevision.has(missing.revisionId)) {
+      return `manifest 重复声明缺失附件：${missing.revisionId}`
+    }
+    if (blobByKey.has(missing.blobKey)) {
+      return `manifest 声明附件缺失，但备份中存在附件：${missing.blobKey}`
+    }
+    missingByRevision.set(missing.revisionId, missing)
+  }
+
   for (const draft of backup.drafts) {
     if (!projectIds.has(draft.projectId)) {
       return `草稿引用的项目不存在：${draft.projectId}`
@@ -786,8 +1438,20 @@ function validateReferences(backup: ParsedBackup): string | null {
       return `来源版本 ${revision.id} 与文档 ${document.id} 的项目作用域不一致`
     }
     const blob = blobByKey.get(revision.blobKey)
+    const missing = missingByRevision.has(revision.id)
     if (blob === undefined) {
-      return `来源版本 ${revision.id} 的附件不存在：${revision.blobKey}`
+      // 合法缺附件：只有 manifest 明确声明、且 revision 元数据一致时才接受。
+      // 恢复后该版本保持“附件不可用”，绝不伪造 Blob。
+      if (!missing) {
+        return `来源版本 ${revision.id} 的附件不存在，且 manifest 未声明缺失：${revision.blobKey}`
+      }
+      continue
+    }
+    if (missing) {
+      return `来源版本 ${revision.id} 在 manifest 中声明附件缺失，但备份中存在附件`
+    }
+    if (blob.projectId !== revision.projectId) {
+      return `来源版本 ${revision.id} 与附件 ${revision.blobKey} 的项目作用域不一致（拒绝跨项目附件引用）`
     }
     if (blob.sha256 !== revision.sha256 || blob.byteSize !== revision.byteSize) {
       return `来源版本 ${revision.id} 与附件 ${revision.blobKey} 的哈希或大小不一致`
@@ -889,7 +1553,11 @@ const RESTORE_STORES = [
  */
 export async function restoreBackup(
   bytes: Uint8Array,
-  options: { now?: string } = {},
+  options: {
+    now?: string
+    /** 仅测试注入：在写入若干 store 后、提交前调用；抛错用于验证整体回滚。 */
+    afterPartialWrite?: () => void
+  } = {},
 ): Promise<RestoreResult<RestoreSummary>> {
   const parsed = await parseBackup(bytes)
   if (!parsed.ok) {
@@ -946,6 +1614,9 @@ export async function restoreBackup(
             }),
           })
         }
+        // 仅测试注入：此处项目、草稿、文档、版本、Blob 已排入事务，但绑定、
+        // 事件、快照与恢复事件尚未写入；抛错应让整个事务回滚。
+        options.afterPartialWrite?.()
         for (const binding of backup.bindings) {
           transaction.objectStore(BINDING_STORE_NAME).add({
             ...binding,

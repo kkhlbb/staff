@@ -91,7 +91,12 @@ const counts = (overrides = {}) => ({
   ...overrides,
 })
 
-async function manifestFor(entries, projectList, countOverrides) {
+async function manifestFor(
+  entries,
+  projectList,
+  countOverrides,
+  missingAttachments = [],
+) {
   const metas = []
   let total = 0
   for (const [path, bytes] of entries) {
@@ -111,6 +116,7 @@ async function manifestFor(entries, projectList, countOverrides) {
     app: { databaseVersion: 7, projectSchemaVersion: 2 },
     counts: counts(countOverrides),
     projects: projectList,
+    missingAttachments,
     excludes: {
       mappingTemplates: { included: false, count: 0, note: NOTE },
     },
@@ -310,14 +316,21 @@ const projectSummary = [
   ])
 }
 
-// 4. 路径穿越变体（相对、绝对、反斜杠、编码穿越）。
-rawZip('malicious-traversal.cunlian.zip', [
-  { name: 'manifest.json', data: json({ format: 'cunlian-backup' }) },
-  { name: '../evil.txt', data: encoder.encode('evil') },
-  { name: '/tmp/evil.txt', data: encoder.encode('evil') },
-  { name: '..\\evil.txt', data: encoder.encode('evil') },
-  { name: 'projects/%2e%2e/evil.json', data: encoder.encode('evil') },
-])
+// 4. 路径穿越变体：每个变体独立成包，避免首个条目被拒绝后短路，后面的
+//    变体从未被真正执行。反斜杠用字符码拼出，避免源码转义歧义。
+const backslash = String.fromCharCode(92)
+const traversalVariants = [
+  ['malicious-traversal-relative.cunlian.zip', '../evil.txt'],
+  ['malicious-traversal-absolute.cunlian.zip', '/tmp/evil.txt'],
+  ['malicious-traversal-backslash.cunlian.zip', `..${backslash}evil.txt`],
+  ['malicious-traversal-encoded.cunlian.zip', 'projects/%2e%2e/evil.json'],
+]
+for (const [fileName, evilName] of traversalVariants) {
+  rawZip(fileName, [
+    { name: 'manifest.json', data: json({ format: 'cunlian-backup' }) },
+    { name: evilName, data: encoder.encode('evil') },
+  ])
+}
 
 // 5. 重复条目：同一个 manifest.json 出现两次，内容不同。
 rawZip('malicious-duplicate-entry.cunlian.zip', [
@@ -340,6 +353,194 @@ rawZip('malicious-duplicate-entry.cunlian.zip', [
   await writeZip('malicious-too-large.cunlian.zip', [
     ['sourceFiles/big.bin', big],
   ])
+}
+
+// 8. 跨项目附件引用：revision 属于 fixture-project，但 Blob 元数据属于
+//    fixture-other-project。恢复必须拒绝，而不是把别的项目附件接到本版本上。
+{
+  const otherProject = {
+    ...project,
+    id: 'fixture-other-project',
+    name: '另一个夹具项目',
+  }
+  const blobBytes = encoder.encode('%PDF-1.4 cross project')
+  const blobSha = await sha256(blobBytes)
+  const document = {
+    id: 'doc-cross',
+    projectId: project.id,
+    title: '跨项目附件夹具',
+    latestRevisionId: 'rev-cross',
+  }
+  const revision = {
+    id: 'rev-cross',
+    projectId: project.id,
+    documentId: document.id,
+    fileName: 'cross.pdf',
+    sha256: blobSha,
+    byteSize: blobBytes.byteLength,
+    pageCount: 1,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    blobKey: 'blob-cross',
+  }
+  const blobMeta = {
+    blobKey: revision.blobKey,
+    projectId: otherProject.id,
+    sha256: blobSha,
+    byteSize: blobBytes.byteLength,
+  }
+  const files = [
+    projectEntry,
+    ['projects/fixture-other-project.json', json(otherProject)],
+    ['sourceDocuments/doc-cross.json', json(document)],
+    ['sourceRevisions/rev-cross.json', json(revision)],
+    ['sourceBlobs/blob-cross.json', json(blobMeta)],
+    ['sourceFiles/blob-cross.bin', blobBytes],
+  ]
+  const manifest = await manifestFor(
+    files,
+    [...projectSummary, { id: otherProject.id, name: otherProject.name, updatedAt: otherProject.updatedAt }],
+    { projects: 2, documents: 1, revisions: 1, blobs: 1 },
+  )
+  await writeZip('invalid-cross-project-blob.cunlian.zip', [
+    ['manifest.json', json(manifest)],
+    ...files,
+  ])
+}
+
+// 9. 快照结构坏包：完整结构与必要一致性校验必须在写库前拒绝。
+{
+  const definition = chain
+  const result = {
+    nominalQ: 800000,
+    minQ: 800000,
+    maxQ: 1001200,
+    lowerDeviationQ: 0,
+    upperDeviationQ: 1200,
+    toleranceQ: 1200,
+    status: 'no-target',
+    lowerMarginQ: null,
+    upperMarginQ: null,
+    contributions: [
+      { termId: 'h', toleranceQ: 1000 },
+      { termId: 'b1', toleranceQ: 200 },
+    ],
+  }
+  const draft = {
+    terms: [
+      {
+        id: 'h',
+        symbol: 'H',
+        name: '机架',
+        nominal: '100.0000',
+        lower: '0.0000',
+        upper: '0.1000',
+        sign: 1,
+        sourceNote: '',
+        termRevision: 1,
+      },
+      {
+        id: 'b1',
+        symbol: 'B1',
+        name: '轴承 1',
+        nominal: '20.0000',
+        lower: '-0.0200',
+        upper: '0.0000',
+        sign: -1,
+        sourceNote: '',
+        termRevision: 1,
+      },
+    ],
+    targetMin: '',
+    targetMax: '',
+    assumptions: '',
+    relationRevision: 0,
+  }
+  const finding = {
+    ruleId: 'INPUT_VALID',
+    ruleVersion: '1.0.0',
+    scope: 'chain',
+    subject: { kind: 'chain', id: 'chain', label: '当前尺寸链' },
+    status: 'passed',
+    basis: '夹具输入通过校验。',
+    action: null,
+    severity: 'blocking',
+    needsAction: false,
+    target: { kind: 'chain' },
+  }
+  const baseSnapshot = {
+    id: 'snapshot-fixture',
+    projectId: project.id,
+    projectName: project.name,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    engineVersion: 'fixture-engine',
+    reviewRulesVersion: '1.0.0',
+    inputFingerprint: 'fixture-fingerprint',
+    definition,
+    draft,
+    result,
+    review: {
+      rulesVersion: '1.0.0',
+      findings: [finding],
+      calculation: { status: 'no-target', label: '未设置目标，未判定', satisfied: null },
+      reviewComplete: true,
+      pending: [],
+      canCreateReport: true,
+      hasAnyBinding: false,
+      byStatus: {
+        passed: 1,
+        failed: 0,
+        unchecked: 0,
+        'needs-human': 0,
+        'not-applicable': 0,
+      },
+      groups: [],
+    },
+    sourceManifest: {
+      bindings: [],
+      documents: [],
+      revisions: [],
+      unboundTermIds: ['h', 'b1'],
+      availability: 'complete',
+    },
+    baseline: null,
+    comparison: null,
+    status: 'complete',
+    pendingCount: 0,
+  }
+
+  const writeSnapshotFixture = async (fileName, mutate) => {
+    const snapshot = structuredClone(baseSnapshot)
+    mutate(snapshot)
+    const files = [
+      projectEntry,
+      ['snapshots/snapshot-fixture.json', json(snapshot)],
+    ]
+    const manifest = await manifestFor(files, projectSummary, {
+      projects: 1,
+      snapshots: 1,
+    })
+    await writeZip(fileName, [['manifest.json', json(manifest)], ...files])
+  }
+
+  // review 缺 calculation；findings/pending 元素必须按领域类型完整校验。
+  await writeSnapshotFixture('invalid-snapshot-review.cunlian.zip', (snapshot) => {
+    delete snapshot.review.calculation
+    snapshot.review.findings = [{ ruleId: 'INPUT_VALID' }]
+    snapshot.review.pending = [{ arbitrary: true }]
+  })
+  // sourceManifest.bindings 元素不完整。
+  await writeSnapshotFixture('invalid-snapshot-binding.cunlian.zip', (snapshot) => {
+    snapshot.sourceManifest.bindings = [{ bindingId: 123 }]
+  })
+  // sourceManifest.documents / revisions 元素不完整。
+  await writeSnapshotFixture('invalid-snapshot-documents.cunlian.zip', (snapshot) => {
+    snapshot.sourceManifest.documents = [{ id: 42 }]
+    snapshot.sourceManifest.revisions = [{ id: 'rev-x' }]
+  })
+  // 结构完整但内部不一致：byStatus 与实际 findings 不符，必须按一致性拒绝。
+  await writeSnapshotFixture('invalid-snapshot-inconsistent.cunlian.zip', (snapshot) => {
+    snapshot.review.byStatus.passed = 99
+  })
 }
 
 console.log(`fixtures written to ${outDir}`)

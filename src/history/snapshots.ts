@@ -12,6 +12,7 @@
  *   快照与报告共用同一套规则，不在本模块另写判定。
  */
 import { calculateChain, ENGINE_VERSION } from '../domain/calculate'
+import { compareChains, type Diff } from '../domain/compare'
 import type { ChainDefinition, ChainResult, Project } from '../domain/types'
 import { addChangeEvent, changeEventId } from '../history/events'
 import {
@@ -98,6 +99,20 @@ export interface SnapshotSourceManifest {
   availability: 'complete' | 'partial'
 }
 
+/**
+ * 创建快照时冻结的基线对比结果。
+ *
+ * 不可变契约要求报告只展示、不计算：基线侧结果与 compareChains 的完整 Diff
+ * 都在创建时冻结，报告不再调用 compareChains。这样引擎升级后，旧报告的主结果
+ * 与基线对比仍然来自同一版引擎，页面上的 engineVersion 不会说谎。
+ */
+export interface SnapshotComparison {
+  /** 基线定义在创建时由同一版引擎计算出的结果。 */
+  baselineResult: ChainResult
+  /** 基线 → 工作方案的完整差异（含前后值、变化量与判定）。 */
+  diff: Diff
+}
+
 export interface AnalysisSnapshot {
   id: string
   projectId: string
@@ -117,6 +132,8 @@ export interface AnalysisSnapshot {
   review: ReviewSummary
   sourceManifest: SnapshotSourceManifest
   baseline: Project['baseline']
+  /** 基线对比的冻结结果；没有基线时为 null。旧版快照可能没有该字段。 */
+  comparison?: SnapshotComparison | null
   /** 创建时冻结的审查状态；pending 表示报告带待办，不能标为已完成复核。 */
   status: SnapshotReviewState
   pendingCount: number
@@ -162,6 +179,11 @@ export interface CreateSnapshotInput {
   /** 仅测试注入。 */
   now?: string
   id?: string
+  /**
+   * 仅测试注入：在最终写事务开始前调用，用于复现“检查项目存在之后、
+   * 写入快照之前项目被删除”的竞态。生产调用不传。
+   */
+  beforeFinalWrite?: () => Promise<void>
 }
 
 function failure(
@@ -500,6 +522,21 @@ export async function createAnalysisSnapshot(
         sources: state.sources,
       })
 
+      // 基线对比与基线侧结果都在这里冻结，报告只读不重算。compareChains 与
+      // calculateChain 同属当前引擎版本；快照里的 engineVersion 因此对两侧都成立。
+      const comparison: SnapshotComparison | null =
+        baseline === null
+          ? null
+          : {
+              baselineResult: calculateChain(baseline.definition),
+              diff: compareChains(baseline.definition, chain),
+            }
+
+      // 仅测试注入：给竞态用例一个确定的“删除发生在检查之后、写入之前”窗口。
+      if (input.beforeFinalWrite !== undefined) {
+        await input.beforeFinalWrite()
+      }
+
       const snapshot: AnalysisSnapshot = deepFreezeSnapshot({
         id: input.id ?? randomId(),
         projectId: input.project.id,
@@ -514,17 +551,31 @@ export async function createAnalysisSnapshot(
         review,
         sourceManifest: buildSourceManifest(input.draft, review, state.sources),
         baseline,
+        comparison,
         status: review.reviewComplete ? 'complete' : 'pending',
         pendingCount: review.pending.length,
       })
 
       const transaction = db.transaction(
-        [SNAPSHOT_STORE_NAME, EVENT_STORE_NAME],
+        [SNAPSHOT_STORE_NAME, EVENT_STORE_NAME, PROJECT_STORE_NAME],
         'readwrite',
       )
       const done = transactionDone(transaction)
       let addRequest: IDBRequest<IDBValidKey> | null = null
       try {
+        // 最终事务纳入 projects store 并在事务内复查：若项目在读取状态之后被
+        // 删除，这里必须失败，不能留下孤儿快照和创建事件。IndexedDB 会让包含
+        // 同一 store 的读写事务串行化，因此该复查与 deleteProject 不会交错。
+        const projectNow = (await requestResult(
+          transaction.objectStore(PROJECT_STORE_NAME).get(input.project.id),
+        )) as Project | undefined
+        if (projectNow === undefined) {
+          await done
+          return failure(
+            'project_not_found',
+            '项目已被删除，未创建分析快照，也没有写入创建事件。',
+          )
+        }
         const snapshotStore = transaction.objectStore(SNAPSHOT_STORE_NAME)
         // 先查再 add：add 的 ConstraintError 会让事务 abort 并丢失具体错误名，
         // 这里显式返回“不可覆盖”，add 本身仍作为并发下的最后防线。

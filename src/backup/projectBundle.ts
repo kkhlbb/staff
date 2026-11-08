@@ -74,6 +74,18 @@ export interface BackupEntryMeta {
   byteSize: number
 }
 
+/**
+ * 合法但缺少附件字节的来源版本（例如从项目 JSON 导入后尚未重新导入 PDF）。
+ *
+ * 导出时不伪造附件，也不删除 revision；manifest 逐条声明缺失，恢复时原样
+ * 保留 revision 元数据并让附件保持“不可用”。
+ */
+export interface MissingAttachment {
+  revisionId: string
+  documentId: string
+  blobKey: string
+}
+
 export interface BackupManifest {
   format: typeof BACKUP_FORMAT
   formatVersion: typeof BACKUP_FORMAT_VERSION
@@ -96,6 +108,8 @@ export interface BackupManifest {
     migrationBackups: number
   }
   projects: { id: string; name: string; updatedAt: string }[]
+  /** 声明哪些 revision 的附件不在包内；这些记录恢复后附件不可用。 */
+  missingAttachments: MissingAttachment[]
   excludes: {
     mappingTemplates: {
       included: false
@@ -254,6 +268,11 @@ async function readAllStores(): Promise<StoreSnapshot> {
 export interface CreateBundleOptions {
   /** 仅测试注入固定时间。 */
   now?: string
+  /**
+   * 仅测试注入的最终 ZIP 解压总量上限（默认 150 MiB）。用于验证导出与恢复
+   * 使用同一口径：manifest.json 本身也计入总量。
+   */
+  maxUncompressedBytes?: number
 }
 
 /**
@@ -343,12 +362,17 @@ export async function createProjectBundle(
       })
     }
 
-    if (totalUncompressedBytes > MAX_BACKUP_UNCOMPRESSED_BYTES) {
-      return failure(
-        'too_large',
-        `备份解压后总大小 ${totalUncompressedBytes} 字节超过 150 MiB 上限；请先清理不用的来源版本。`,
-      )
-    }
+    // 合法缺附件：revision 保留，但没有对应 Blob 记录/字节。逐条写入 manifest，
+    // 恢复时据此接受；绝不伪造空附件，也不删除 revision。
+    const blobKeys = new Set(stores.blobs.map((blob) => blob.blobKey))
+    const missingAttachments: MissingAttachment[] = stores.revisions
+      .filter((revision) => !blobKeys.has(revision.blobKey))
+      .map((revision) => ({
+        revisionId: revision.id,
+        documentId: revision.documentId,
+        blobKey: revision.blobKey,
+      }))
+      .sort((left, right) => left.revisionId.localeCompare(right.revisionId))
 
     const manifest: BackupManifest = {
       format: BACKUP_FORMAT,
@@ -356,7 +380,8 @@ export async function createProjectBundle(
       createdAt,
       note:
         '本文件是寸链完整备份：包含项目、草稿、来源附件、版本、绑定、历史事件与分析快照；' +
-        '来源文件按原始字节保存，SHA-256 仅用于一致性检查，不代表文件真实性或工程批准。',
+        '来源文件按原始字节保存，SHA-256 仅用于一致性检查，不代表文件真实性或工程批准。' +
+        '缺少附件字节的来源版本在 missingAttachments 中逐条声明，恢复后附件保持不可用。',
       app: {
         databaseVersion: PROJECT_DB_VERSION,
         projectSchemaVersion: PROJECT_SCHEMA_VERSION,
@@ -380,6 +405,7 @@ export async function createProjectBundle(
           name: project.name,
           updatedAt: project.updatedAt,
         })),
+      missingAttachments,
       excludes: {
         mappingTemplates: {
           included: false,
@@ -391,10 +417,24 @@ export async function createProjectBundle(
       totalUncompressedBytes,
     }
 
-    const zipEntries = [
-      { path: MANIFEST_PATH, bytes: jsonBytes(manifest) },
-      ...files,
-    ]
+    const manifestBytes = jsonBytes(manifest)
+    const zipEntries = [{ path: MANIFEST_PATH, bytes: manifestBytes }, ...files]
+    // 与恢复端 zip.ts 使用同一口径：manifest.json 也是 ZIP 条目，必须计入
+    // 解压总量。否则临近上限时会导出成功、恢复失败。
+    const finalZipTotal = zipEntries.reduce(
+      (total, entry) => total + entry.bytes.byteLength,
+      0,
+    )
+    const maxUncompressedBytes =
+      options.maxUncompressedBytes ?? MAX_BACKUP_UNCOMPRESSED_BYTES
+    if (finalZipTotal > maxUncompressedBytes) {
+      return failure(
+        'too_large',
+        `备份 ZIP 解压后总大小 ${finalZipTotal} 字节超过 ${maxUncompressedBytes} 字节上限；请先清理不用的来源版本。`,
+        `含 manifest.json ${manifestBytes.byteLength} 字节`,
+      )
+    }
+
     const written = await writeZipEntries(zipEntries)
     if (!written.ok) {
       return { ok: false, error: mapZipError(written.error) }
