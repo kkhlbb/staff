@@ -104,12 +104,17 @@ function isLegacyProjectRecord(project: Project): boolean {
 }
 
 function toUiError(error: StorageError): UiError {
-  const reasons = error.details
-    .map((detail) => detail.message)
-    .filter((message) => message.trim() !== '')
+  // 存储层常把同一句话同时放在 message 与 details 里；界面不要重复显示。
+  const reasons = Array.from(
+    new Set(
+      error.details
+        .map((detail) => detail.message)
+        .filter((message) => message.trim() !== '' && message !== error.message),
+    ),
+  )
   return {
     message: error.message,
-    reasons: reasons.length > 0 ? reasons : [error.message],
+    reasons,
   }
 }
 

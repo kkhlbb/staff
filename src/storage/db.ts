@@ -106,7 +106,12 @@ export interface OpenDatabaseOptions {
   name?: string
   /** 仅供测试注入；默认使用 PROJECT_DB_VERSION。 */
   version?: number
+  /** 打开请求长时间没有任何事件时的兜底超时；默认 15 秒。 */
+  timeoutMs?: number
 }
+
+/** 浏览器未派发 blocked 时的兜底：超过该时间仍无 success/error 就按“被占用”提示。 */
+export const OPEN_DATABASE_TIMEOUT_MS = 15_000
 
 export type DatabaseErrorCode = 'database_too_new' | 'database_blocked'
 
@@ -191,9 +196,18 @@ export function openDatabase(
 ): Promise<IDBDatabase> {
   const name = options.name ?? PROJECT_DB_NAME
   const version = options.version ?? PROJECT_DB_VERSION
+  const timeoutMs = options.timeoutMs ?? OPEN_DATABASE_TIMEOUT_MS
   return new Promise<IDBDatabase>((resolve, reject) => {
     let request: IDBOpenDBRequest
     let settled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const clearTimer = (): void => {
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
+      }
+    }
 
     /**
      * 打开请求被 blocked 后，阻塞解除时升级仍会完成并触发 onsuccess。
@@ -208,6 +222,7 @@ export function openDatabase(
       }
     }
     const settleError = (error: unknown) => {
+      clearTimer()
       if (settled) {
         closeLateConnection()
         return
@@ -232,6 +247,17 @@ export function openDatabase(
       return
     }
 
+    // Chrome 在部分 blocked 场景不会派发 onblocked（实测：旧连接无 versionchange
+    // 处理器时，打开请求一直挂起）。没有这个兜底，界面会永远停在“正在加载”。
+    timer = setTimeout(() => {
+      settleError(
+        new DatabaseBlockedError(
+          '打开本地数据库长时间没有完成，通常是被其它标签页的旧连接挡住。' +
+            '请关闭或刷新其它标签页后重试；升级完成前不要继续在旧页面输入。',
+        ),
+      )
+    }, timeoutMs)
+
     request.onupgradeneeded = () => {
       const db = request.result
       for (const definition of STORE_DEFINITIONS) {
@@ -255,6 +281,7 @@ export function openDatabase(
       }
     }
     request.onsuccess = () => {
+      clearTimer()
       if (settled) {
         closeLateConnection()
         return

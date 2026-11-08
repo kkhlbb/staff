@@ -1,6 +1,6 @@
 // @vitest-environment node
 import 'fake-indexeddb/auto'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { V1Project } from './migrateV1'
 import { parseMm } from '../domain/units'
 import { deleteProjectDatabase } from '../test/projectDb'
@@ -1079,5 +1079,39 @@ describe('数据库版本与阻塞', () => {
         reject(new Error('打开请求泄漏了连接：deleteDatabase 被 blocked'))
     })
     expect(deleted).toBeUndefined()
+  })
+
+  it('浏览器不派发 blocked 时，超时兜底给出占用提示并关闭迟到连接', async () => {
+    let closed = false
+    const fakeRequest = {
+      result: {
+        close: () => {
+          closed = true
+        },
+      },
+      onupgradeneeded: null,
+      onsuccess: null,
+      onerror: null,
+      onblocked: null,
+    } as unknown as IDBOpenDBRequest
+    const spy = vi
+      .spyOn(indexedDB, 'open')
+      .mockImplementation(() => fakeRequest)
+
+    try {
+      const error = await openDatabase({ timeoutMs: 25 }).catch(
+        (failure: unknown) => failure,
+      )
+      expect(databaseErrorCode(error)).toBe('database_blocked')
+      const message = error instanceof Error ? error.message : ''
+      expect(message).toContain('长时间没有完成')
+      expect(message).toContain('关闭或刷新其它标签页')
+
+      // 迟到的成功连接必须关闭，避免之后 deleteDatabase 被它 blocked。
+      ;(fakeRequest as unknown as { onsuccess: () => void }).onsuccess()
+      expect(closed).toBe(true)
+    } finally {
+      spy.mockRestore()
+    }
   })
 })
