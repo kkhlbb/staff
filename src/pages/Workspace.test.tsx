@@ -4,14 +4,18 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChainDefinition, Project } from '../domain/types'
+import { parseMm } from '../domain/units'
 import type {
   SaveDraftResult,
   StorageResult,
 } from '../storage/projects'
 import {
   createEmptyProject,
+  createProject,
   saveDraft as persistDraft,
 } from '../storage/projects'
+import { importSourceRevision } from '../sources/revisions'
+import { buildSyntheticPdf } from '../test/pdfFixtures'
 import { deleteProjectDatabase } from '../test/projectDb'
 import { PROJECT_STORE_NAME, transactionDone, withDatabase } from '../storage/db'
 import type { WorkspaceDraft } from '../workspace/draft'
@@ -76,6 +80,24 @@ const CASE_A_TERMS: TermInput[] = [
     sign: -1,
   },
 ]
+
+function caseAChain(): ChainDefinition {
+  return {
+    terms: CASE_A_TERMS.map((term) => ({
+      id: term.symbol.toLowerCase(),
+      symbol: term.symbol,
+      name: term.name,
+      nominalQ: parseMm(term.nominal),
+      lowerDeviationQ: parseMm(term.lower),
+      upperDeviationQ: parseMm(term.upper),
+      sign: term.sign,
+      sourceNote: '',
+      termRevision: 1,
+    })),
+    target: { minQ: parseMm('0.1000'), maxQ: parseMm('0.3000') },
+    assumptions: '',
+  }
+}
 
 function resultValue(testId: string): string {
   const cell = screen.getByTestId(testId).querySelector('dd')
@@ -447,6 +469,79 @@ describe('Workspace：按 projectId 打开与返回列表', () => {
     await screen.findByRole('button', { name: '增加行' })
     expect(openCount).toBeGreaterThan(1)
   })
+
+  it('引导失败后的应急导出仍收集来源元数据，提示里写明来源版本数与不含附件', async () => {
+    const created = await createProject({ name: '应急导出项目', working: caseAChain() })
+    expect(created.ok).toBe(true)
+    if (!created.ok) {
+      throw new Error(created.error.message)
+    }
+    const imported = await importSourceRevision(
+      {
+        projectId: created.value.id,
+        fileName: '应急图.pdf',
+        bytes: buildSyntheticPdf({ pageCount: 1, variant: 'A' }),
+      },
+      {
+        estimateCapacity: async () => ({
+          supported: false,
+          usageBytes: null,
+          quotaBytes: null,
+          availableBytes: null,
+          note: '',
+        }),
+      },
+    )
+    expect(imported.ok, imported.ok ? '' : imported.error.message).toBe(true)
+
+    const originalOpen = indexedDB.open.bind(indexedDB)
+    let openCount = 0
+    vi.spyOn(IDBFactory.prototype, 'open').mockImplementation((name, version) => {
+      openCount += 1
+      if (openCount === 1) {
+        throw new Error('模拟引导打开失败')
+      }
+      return originalOpen(name, version)
+    })
+
+    const user = userEvent.setup()
+    render(<Workspace projectId={created.value.id} />)
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('本地存储不可用')
+
+    await user.click(within(alert).getByRole('button', { name: '导出 JSON 备份' }))
+    // 必须等提示真的出现：来源元数据没有被静默丢掉。
+    const notice = await screen.findByText(/含 1 个来源版本的元数据与绑定坐标/)
+    expect(notice).toBeInTheDocument()
+    expect(notice).toHaveTextContent('不含来源附件')
+  })
+
+  it('来源元数据也读不到时明确说明是降级备份，不把空来源当作普通备份', async () => {
+    const created = await createProject({ name: '降级导出项目', working: caseAChain() })
+    expect(created.ok).toBe(true)
+    if (!created.ok) {
+      throw new Error(created.error.message)
+    }
+
+    const originalOpen = indexedDB.open.bind(indexedDB)
+    let openCount = 0
+    vi.spyOn(IDBFactory.prototype, 'open').mockImplementation((name, version) => {
+      openCount += 1
+      // 1：引导失败；2：应急导出重新读取项目成功；3：读取来源元数据失败。
+      if (openCount === 1 || openCount === 3) {
+        throw new Error('模拟打开失败')
+      }
+      return originalOpen(name, version)
+    })
+
+    const user = userEvent.setup()
+    render(<Workspace projectId={created.value.id} />)
+    const alert = await screen.findByRole('alert')
+
+    await user.click(within(alert).getByRole('button', { name: '导出 JSON 备份' }))
+    const notice = await screen.findByText(/已导出降级备份/)
+    expect(notice).toHaveTextContent('不含来源记录、绑定坐标与附件')
+  })
 })
 
 describe('Workspace：自动保存与刷新恢复', () => {
@@ -536,8 +631,9 @@ describe('Workspace：自动保存与刷新恢复', () => {
     expect(screen.queryByText('已保存')).toBeNull()
     expect(screen.getByText(/本地存储不可用，草稿可能没有保存/)).toBeInTheDocument()
     expect(screen.getByText(/请立即导出 JSON 备份/)).toBeInTheDocument()
+    expect(screen.getByText(/备份不含来源附件/)).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: '导出 JSON 备份' }),
+      screen.getByRole('button', { name: /导出 JSON 备份（不含来源附件）/ }),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '重试' })).toBeInTheDocument()
     expect(screen.getByText(/模拟 IndexedDB 写入失败/)).toBeInTheDocument()
@@ -916,11 +1012,12 @@ describe('Workspace：保存失败时的备份导出', () => {
       await screen.findByText('保存失败', undefined, { timeout: 3000 })
 
       expect(
-        screen.getByText(/备份不含未通过校验的修改/),
+        screen.getByText(/不含未通过校验的修改/),
       ).toBeInTheDocument()
 
-      await user.click(screen.getByRole('button', { name: '导出 JSON 备份' }))
-      expect(backupMock.blobs).toHaveLength(1)
+      await user.click(screen.getByRole('button', { name: /导出 JSON 备份/ }))
+      await screen.findByText(/已导出项目 JSON。数据备份不含来源附件/)
+      await waitFor(() => expect(backupMock.blobs).toHaveLength(1))
       const validBackup = JSON.parse(
         await readBlobText(backupMock.blobs[0]),
       ) as { working: ChainDefinition }
@@ -935,8 +1032,11 @@ describe('Workspace：保存失败时的备份导出', () => {
         target: { value: '' },
       })
       await screen.findByText('保存失败', undefined, { timeout: 3000 })
-      await user.click(screen.getByRole('button', { name: '导出 JSON 备份' }))
-      expect(backupMock.blobs).toHaveLength(2)
+      await user.click(screen.getByRole('button', { name: /导出 JSON 备份/ }))
+      await waitFor(() => expect(backupMock.blobs).toHaveLength(2))
+      expect(
+        screen.getByText(/已导出项目 JSON。数据备份不含来源附件/),
+      ).toBeInTheDocument()
       const fallbackBackup = JSON.parse(
         await readBlobText(backupMock.blobs[1]),
       ) as { working: ChainDefinition }

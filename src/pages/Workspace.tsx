@@ -11,7 +11,7 @@ import type { ChainDefinition, Project } from '../domain/types'
 import type { CommitImportSuccess } from '../import/commit'
 import { countBindingsByTerm, type SourceBinding } from '../sources/bindings'
 import { subscribeDatabaseVersionChange } from '../storage/db'
-import { getProject, listProjects } from '../storage/projects'
+import { getProject, listProjects, loadProjectSources } from '../storage/projects'
 import { resolveReportEligibility } from '../workspace/status'
 import {
   downloadProjectBackup,
@@ -41,6 +41,13 @@ const SAVE_STATUS_LABEL: Record<SaveStatus, string> = {
   saving: '保存中',
   saved: '已保存',
   failed: '保存失败',
+}
+
+/** 导出的统一提示：始终说明不含来源附件，避免“普通备份”被误读。 */
+function exportNoticeFor(revisionCount: number): string {
+  return revisionCount > 0
+    ? `已导出项目 JSON。数据备份不含来源附件：${revisionCount} 个来源版本只保留元数据与绑定坐标，附件需另行保留。`
+    : '已导出项目 JSON。数据备份不含来源附件。'
 }
 
 function formatBaselineTime(savedAt: string): string {
@@ -114,6 +121,20 @@ function WorkspaceEditor({
   const [databaseNotice, setDatabaseNotice] = useState<string | null>(null)
   const [migrationNoticeDismissed, setMigrationNoticeDismissed] = useState(false)
   const [exportNotice, setExportNotice] = useState<string | null>(null)
+
+  /**
+   * 顶部“导出 JSON”和保存失败提示里的“导出 JSON 备份”共用同一条路径：
+   * 导出完成后必须给出可见提示，且提示里明确不含来源附件。
+   */
+  const handleExportBackup = (): void => {
+    void exportBackup().then((revisionCount) => {
+      if (revisionCount === null) {
+        setExportNotice('导出失败：无法读取项目来源元数据，未生成 JSON 文件。')
+        return
+      }
+      setExportNotice(exportNoticeFor(revisionCount))
+    })
+  }
 
   // 其它标签页升级/删除数据库时，本页旧连接已被关闭；明确提示刷新，
   // 不要让用户继续在断开的状态下输入。
@@ -256,19 +277,7 @@ function WorkspaceEditor({
           <button
             type="button"
             className="workspace__export-button"
-            onClick={() => {
-              void exportBackup().then((revisionCount) => {
-                if (revisionCount === null) {
-                  setExportNotice('导出失败：无法读取项目来源元数据，未生成 JSON 文件。')
-                  return
-                }
-                setExportNotice(
-                  revisionCount > 0
-                    ? `已导出项目 JSON。数据备份不含来源附件：${revisionCount} 个来源版本只保留元数据与绑定坐标，附件需另行保留。`
-                    : '已导出项目 JSON。数据备份不含来源附件。',
-                )
-              })
-            }}
+            onClick={handleExportBackup}
           >
             导出 JSON
           </button>
@@ -336,12 +345,12 @@ function WorkspaceEditor({
               再点“重试”重新保存当前草稿。
             </p>
             <p className="workspace__backup-note">
-              备份不含未通过校验的修改。
+              备份不含来源附件（只保留来源元数据与绑定坐标），也不含未通过校验的修改。
             </p>
           </div>
           <div className="workspace__save-error-actions">
-            <button type="button" onClick={exportBackup}>
-              导出 JSON 备份
+            <button type="button" onClick={handleExportBackup}>
+              导出 JSON 备份（不含来源附件）
             </button>
             <button type="button" onClick={() => void retrySave()}>
               重试
@@ -543,9 +552,25 @@ export function Workspace({
       return
     }
 
+    // 先尝试收集来源元数据（不是附件）：这样应急备份和普通导出保持同一契约。
+    const sources = await loadProjectSources(project.id)
+    if (sources.ok) {
+      downloadProjectBackup(project, sources.value)
+      const revisionCount = sources.value.revisions.length
+      setBootstrapExportMessage(
+        revisionCount > 0
+          ? `已导出项目 JSON 备份：含 ${revisionCount} 个来源版本的元数据与绑定坐标，不含来源附件；当前页面中尚未保存的输入不在备份内。`
+          : '已导出项目 JSON 备份：其中不含来源附件；当前页面中尚未保存的输入不在备份内。',
+      )
+      return
+    }
+
+    // 读不到来源元数据时仍然导出工程数据，但明确告知这是降级备份，
+    // 不能静默输出空 sources 还叫“普通备份”。
     downloadProjectBackup(project)
     setBootstrapExportMessage(
-      '已导出可读取的项目 JSON 备份；当前页面中尚未保存的输入不在备份内。',
+      '已导出降级备份：读取来源元数据失败，文件为普通项目备份，不含来源记录、绑定坐标与附件；' +
+        '当前页面中尚未保存的输入不在备份内。',
     )
   }
 
