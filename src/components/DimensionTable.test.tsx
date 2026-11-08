@@ -462,3 +462,22 @@ describe('DimensionTable：受控边界', () => {
     ).toBeInTheDocument()
   })
 })
+
+describe('DimensionTable：来源待复核提示', () => {
+  it('来源徽标同时显示绑定数与待复核数', () => {
+    render(
+      <DimensionTable
+        draft={caseADraft()}
+        dispatch={() => undefined}
+        chain={null}
+        cellErrors={{}}
+        stale={false}
+        sourceBindingCounts={{ H: 1 }}
+        sourceReviewPendingCounts={{ H: 1 }}
+      />,
+    )
+    expect(screen.getByTestId('source-badge-H')).toHaveTextContent(
+      '已绑定 1 处来源 · 1 处待复核',
+    )
+  })
+})

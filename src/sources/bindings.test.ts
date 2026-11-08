@@ -22,7 +22,10 @@ import {
   getSourceBinding,
   listSourceBindings,
   listSourceBindingsForTerm,
+  rebindSourceBinding,
   removeSourceBinding,
+  reviewSourceBinding,
+  updateSourceBindingRegion,
   validateBindingRegion,
   type CreateSourceBindingInput,
 } from './bindings'
@@ -303,6 +306,8 @@ describe('来源绑定：不复制数值、不改项目', () => {
         'projectId',
         'rectPdf',
         'revisionId',
+        'reviewedAt',
+        'reviewedTermRevision',
         'termId',
       ].sort(),
     )
@@ -527,5 +532,175 @@ describe('删除项目：bindings / events 与来源同事务退役', () => {
         Array.from(buildSyntheticPdf({ pageCount: 2, variant: 'A' })),
       )
     }
+  })
+})
+
+describe('来源核对凭据与失效契约', () => {
+  async function eventTypes(): Promise<string[]> {
+    return withDatabase(async (db) => {
+      const transaction = db.transaction(EVENT_STORE_NAME, 'readonly')
+      const done = transactionDone(transaction)
+      const events = (await requestResult(
+        transaction.objectStore(EVENT_STORE_NAME).getAll(),
+      )) as { type: string }[]
+      await done
+      return events.map((event) => event.type)
+    })
+  }
+
+  async function createReviewedBinding(): Promise<{
+    projectId: string
+    revision: SourceRevision
+    bindingId: string
+  }> {
+    const projectId = await createTestProject()
+    const revision = await importRevision(projectId, 'A')
+    const created = await createSourceBinding(
+      bindingInput(projectId, revision.id),
+      { newId: () => 'bind-review', now: () => '2026-11-08T05:00:00.000Z' },
+    )
+    expect(created.ok, created.ok ? '' : created.error.message).toBe(true)
+    if (!created.ok) {
+      throw new Error(created.error.message)
+    }
+    const reviewed = await reviewSourceBinding(created.value.id, { termRevision: 1 })
+    expect(reviewed.ok, reviewed.ok ? '' : reviewed.error.message).toBe(true)
+    return { projectId, revision, bindingId: created.value.id }
+  }
+
+  it('新建绑定未核对；显式核对后记录环修订号与时间', async () => {
+    const projectId = await createTestProject()
+    const revision = await importRevision(projectId, 'A')
+    const created = await createSourceBinding(
+      bindingInput(projectId, revision.id),
+      { newId: () => 'bind-review', now: () => '2026-11-08T05:00:00.000Z' },
+    )
+    expect(created.ok, created.ok ? '' : created.error.message).toBe(true)
+    if (!created.ok) {
+      throw new Error(created.error.message)
+    }
+    const fresh = await getSourceBinding('bind-review')
+    expect(fresh.ok && fresh.value?.reviewedTermRevision).toBeNull()
+    expect(fresh.ok && fresh.value?.reviewedAt).toBeNull()
+
+    const reviewed = await reviewSourceBinding(
+      'bind-review',
+      { termRevision: 1 },
+      { now: () => '2026-11-08T06:00:00.000Z' },
+    )
+    expect(reviewed.ok, reviewed.ok ? '' : reviewed.error.message).toBe(true)
+    if (reviewed.ok) {
+      expect(reviewed.value.reviewedTermRevision).toBe(1)
+      expect(reviewed.value.reviewedAt).toBe('2026-11-08T06:00:00.000Z')
+      expect(reviewed.value.revisionId).toBe(revision.id)
+    }
+    expect(await eventTypes()).toContain('source_binding_reviewed')
+    expect((await getProject(projectId)).ok).toBe(true)
+  })
+
+  it('改绑定区域 → 只清该绑定的核对，其他绑定与数值不变', async () => {
+    const projectId = await createTestProject()
+    const revision = await importRevision(projectId, 'A')
+    const first = await createSourceBinding(bindingInput(projectId, revision.id), {
+      newId: () => 'bind-1',
+    })
+    const second = await createSourceBinding(
+      bindingInput(projectId, revision.id, { termId: 't-b', rectPdf: RECT_B }),
+      { newId: () => 'bind-2' },
+    )
+    expect(first.ok && second.ok).toBe(true)
+
+    for (const id of ['bind-1', 'bind-2']) {
+      const reviewed = await reviewSourceBinding(id, { termRevision: 1 })
+      expect(reviewed.ok).toBe(true)
+    }
+    const beforeProject = await getProject(projectId)
+
+    const changed = await updateSourceBindingRegion('bind-1', {
+      rectPdf: [60, 70, 260, 470],
+    })
+    expect(changed.ok, changed.ok ? '' : changed.error.message).toBe(true)
+    if (changed.ok) {
+      expect(changed.value.reviewedTermRevision).toBeNull()
+      expect(changed.value.reviewedAt).toBeNull()
+      expect(changed.value.rectPdf).toEqual([60, 70, 260, 470])
+      expect(changed.value.page).toBe(2)
+    }
+
+    const other = await getSourceBinding('bind-2')
+    expect(other.ok && other.value?.reviewedTermRevision).toBe(1)
+    // 只改绑定，不改工作方案数值。
+    expect(await getProject(projectId)).toEqual(beforeProject)
+    expect(await eventTypes()).toContain('source_binding_region_changed')
+  })
+
+  it('只改备注不清核对；改页码清核对', async () => {
+    const { bindingId } = await createReviewedBinding()
+    const noteOnly = await updateSourceBindingRegion(bindingId, { note: '补充说明' })
+    expect(noteOnly.ok).toBe(true)
+    if (noteOnly.ok) {
+      expect(noteOnly.value.reviewedTermRevision).toBe(1)
+      expect(noteOnly.value.note).toBe('补充说明')
+    }
+
+    const pageChanged = await updateSourceBindingRegion(bindingId, { page: 1 })
+    expect(pageChanged.ok).toBe(true)
+    if (pageChanged.ok) {
+      expect(pageChanged.value.page).toBe(1)
+      expect(pageChanged.value.reviewedTermRevision).toBeNull()
+    }
+  })
+
+  it('换关联来源 → 该绑定核对失效、documentId 更新，其他绑定不变', async () => {
+    const projectId = await createTestProject()
+    const firstRevision = await importRevision(projectId, 'A')
+    const secondRevision = await importRevision(
+      projectId,
+      'B',
+      '同一名称.pdf',
+      firstRevision.documentId,
+    )
+    const created = await createSourceBinding(
+      bindingInput(projectId, firstRevision.id, { note: '旧版' }),
+      { newId: () => 'bind-rebind' },
+    )
+    expect(created.ok).toBe(true)
+    const other = await createSourceBinding(
+      bindingInput(projectId, firstRevision.id, { termId: 't-b', rectPdf: RECT_B }),
+      { newId: () => 'bind-other' },
+    )
+    expect(other.ok).toBe(true)
+    for (const id of ['bind-rebind', 'bind-other']) {
+      expect((await reviewSourceBinding(id, { termRevision: 1 })).ok).toBe(true)
+    }
+
+    const rebound = await rebindSourceBinding('bind-rebind', {
+      revisionId: secondRevision.id,
+      page: 1,
+      rectPdf: [10, 20, 110, 120],
+      pageBoxPdf: PAGE_BOX,
+      note: '新版',
+    })
+    expect(rebound.ok, rebound.ok ? '' : rebound.error.message).toBe(true)
+    if (rebound.ok) {
+      expect(rebound.value.revisionId).toBe(secondRevision.id)
+      expect(rebound.value.documentId).toBe(secondRevision.documentId)
+      expect(rebound.value.reviewedTermRevision).toBeNull()
+      expect(rebound.value.rectPdf).toEqual([10, 20, 110, 120])
+      expect(rebound.value.note).toBe('新版')
+    }
+    const untouched = await getSourceBinding('bind-other')
+    expect(untouched.ok && untouched.value?.reviewedTermRevision).toBe(1)
+    expect(untouched.ok && untouched.value?.revisionId).toBe(firstRevision.id)
+    expect(await eventTypes()).toContain('source_binding_rebound')
+  })
+
+  it('核对不存在的绑定返回明确错误，不写任何记录', async () => {
+    const result = await reviewSourceBinding('missing', { termRevision: 1 })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('binding_not_found')
+    }
+    expect(await bindingCount()).toBe(0)
   })
 })

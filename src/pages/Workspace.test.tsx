@@ -13,6 +13,7 @@ import {
   saveDraft as persistDraft,
 } from '../storage/projects'
 import { deleteProjectDatabase } from '../test/projectDb'
+import { PROJECT_STORE_NAME, transactionDone, withDatabase } from '../storage/db'
 import type { WorkspaceDraft } from '../workspace/draft'
 import { Workspace } from './Workspace'
 
@@ -1009,5 +1010,102 @@ describe('Workspace：document hidden 立即保存', () => {
     await waitFor(() => {
       expect(screen.getByText('已保存')).toBeInTheDocument()
     })
+  })
+})
+
+describe('Workspace：本地 V1 项目升级提示', () => {
+  it('迁移后明确提示旧确认已清除、需要重新确认，并保留输入', async () => {
+    await withDatabase(async (db) => {
+      const transaction = db.transaction(PROJECT_STORE_NAME, 'readwrite')
+      const done = transactionDone(transaction)
+      transaction.objectStore(PROJECT_STORE_NAME).put({
+        schemaVersion: 1,
+        engineVersion: 'v1-engine',
+        id: 'legacy-ui',
+        name: '旧版本项目',
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-02T00:00:00.000Z',
+        working: {
+          terms: [
+            {
+              id: 't-h',
+              symbol: 'H',
+              name: '孔',
+              nominalQ: 1_000_000,
+              lowerDeviationQ: 0,
+              upperDeviationQ: 1_000,
+              sign: 1,
+              sourceNote: '',
+            },
+            {
+              id: 't-b',
+              symbol: 'B',
+              name: '轴',
+              nominalQ: 999_000,
+              lowerDeviationQ: -500,
+              upperDeviationQ: 0,
+              sign: -1,
+              sourceNote: '',
+            },
+          ],
+          target: null,
+          assumptions: '',
+          relationConfirmed: true,
+        },
+        baseline: null,
+      })
+      await done
+    })
+
+    render(<Workspace projectId="legacy-ui" />)
+    await screen.findByRole('button', { name: '增加行' })
+
+    expect(
+      await screen.findByText(/旧的人工确认没有版本凭据，已清除/),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/项目、基线与未通过的草稿输入均已保留/)).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'H 基本尺寸' })).toHaveValue('100.0000')
+    expect(confirmationCheckbox()).not.toBeChecked()
+    expect(resultValue('result-status')).toBe('待确认（预览）')
+  })
+})
+
+describe('Workspace：改后改回不恢复关系确认', () => {
+  it('数值改后改回、非法中间草稿后改回，刷新仍不恢复确认', async () => {
+    const user = userEvent.setup()
+    const first = render(<Workspace />)
+    await screen.findByRole('button', { name: '增加行' })
+
+    await buildCaseA(user)
+    await user.click(confirmationCheckbox())
+    await waitForSaveSettled()
+    expect(confirmationCheckbox()).toBeChecked()
+    expect(resultValue('result-status')).toBe('不满足')
+
+    const upper = screen.getByRole('textbox', { name: 'H 上偏差' })
+    fireEvent.change(upper, { target: { value: '0.0300' } })
+    expect(confirmationCheckbox()).not.toBeChecked()
+
+    // 改回原值：数值指纹恢复，但修订号已经递增，旧确认不能复活。
+    fireEvent.change(upper, { target: { value: '0.1000' } })
+    expect(resultValue('result-status')).toBe('待确认（预览）')
+    expect(confirmationCheckbox()).not.toBeChecked()
+
+    // 非法中间值再改回，同样不恢复。
+    fireEvent.change(upper, { target: { value: '-0.0100' } })
+    expect(screen.getByText('输入有误，显示的是上次有效结果')).toBeInTheDocument()
+    fireEvent.change(upper, { target: { value: '0.1000' } })
+    expect(screen.queryByText('输入有误，显示的是上次有效结果')).toBeNull()
+    expect(resultValue('result-status')).toBe('待确认（预览）')
+    expect(confirmationCheckbox()).not.toBeChecked()
+
+    await waitForAutoSave()
+    first.unmount()
+
+    render(<Workspace />)
+    await screen.findByRole('button', { name: '增加行' })
+    expect(screen.getByRole('textbox', { name: 'H 上偏差' })).toHaveValue('0.1000')
+    expect(confirmationCheckbox()).not.toBeChecked()
+    expect(resultValue('result-status')).toBe('待确认（预览）')
   })
 })

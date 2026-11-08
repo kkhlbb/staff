@@ -108,6 +108,9 @@ function WorkspaceEditor({
   const [tableImportMessage, setTableImportMessage] = useState<string | null>(null)
   const [sourceBindings, setSourceBindings] = useState<SourceBinding[]>([])
   const sourceBindingCounts = countBindingsByTerm(sourceBindings)
+  const [sourceReviewPendingCounts, setSourceReviewPendingCounts] = useState<
+    Record<string, number>
+  >({})
   const [databaseNotice, setDatabaseNotice] = useState<string | null>(null)
   const [migrationNoticeDismissed, setMigrationNoticeDismissed] = useState(false)
   const [exportNotice, setExportNotice] = useState<string | null>(null)
@@ -358,6 +361,7 @@ function WorkspaceEditor({
             selectedTermId={selectedTermId}
             onSelect={setSelectedTermId}
             sourceBindingCounts={sourceBindingCounts}
+            sourceReviewPendingCounts={sourceReviewPendingCounts}
           />
         </div>
 
@@ -393,6 +397,7 @@ function WorkspaceEditor({
         terms={draft.terms}
         selectedTermId={selectedTermId}
         onBindingsChange={setSourceBindings}
+        onReviewSummaryChange={setSourceReviewPendingCounts}
       />
 
       <section

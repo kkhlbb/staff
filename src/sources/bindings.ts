@@ -46,6 +46,13 @@ export interface SourceBinding {
   pageBoxPdf: PdfPageBox
   note: string
   createdAt: string
+  /**
+   * 核对时该组成环的 termRevision；null 表示尚未核对。
+   * 当前环的 termRevision 与它不一致即“数值已变，待重新核对”。
+   */
+  reviewedTermRevision: number | null
+  /** 核对时间 ISO 8601；未核对为 null。 */
+  reviewedAt: string | null
 }
 
 export interface CreateSourceBindingInput {
@@ -63,6 +70,7 @@ export type BindingErrorCode =
   | 'invalid_region'
   | 'page_out_of_range'
   | 'revision_not_found'
+  | 'binding_not_found'
   | 'storage_failure'
 
 export interface BindingError {
@@ -204,6 +212,9 @@ export async function createSourceBinding(
           pageBoxPdf: [pageBox[0], pageBox[1], pageBox[2], pageBox[3]],
           note,
           createdAt: now(),
+          // 新建绑定尚未经过用户对照当前数值的显式核对。
+          reviewedTermRevision: null,
+          reviewedAt: null,
         }
 
         await requestResult(transaction.objectStore(BINDING_STORE_NAME).add(binding))
@@ -365,6 +376,321 @@ export async function removeSourceBinding(
     return failure(
       'storage_failure',
       '解除来源绑定失败，绑定记录未改变',
+      error instanceof Error ? error.message : String(error),
+    )
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* 核对凭据与失效                                                             */
+/* -------------------------------------------------------------------------- */
+
+export interface ReviewSourceBindingInput {
+  /** 用户核对时看到的该环修订号。 */
+  termRevision: number
+  reviewedAt?: string
+}
+
+/**
+ * 记录一次显式核对：把当前组成环的 termRevision 写入绑定。
+ *
+ * 只写绑定记录与事件，不修改数值、区域或来源版本。之后任何数值/方向变化
+ * 都会让 termRevision 递增，使这条凭据自动失效（派生判定，不写回绑定）。
+ */
+export async function reviewSourceBinding(
+  id: string,
+  input: ReviewSourceBindingInput,
+  context: CreateSourceBindingContext = {},
+): Promise<BindingResult<SourceBinding>> {
+  if (!Number.isSafeInteger(input.termRevision) || input.termRevision < 1) {
+    return failure('invalid_input', '核对修订号必须是大于等于 1 的整数')
+  }
+  const now = context.now ?? (() => new Date().toISOString())
+  const reviewedAt = input.reviewedAt ?? now()
+
+  try {
+    return await withDatabase(async (db) => {
+      const transaction = db.transaction(
+        [BINDING_STORE_NAME, EVENT_STORE_NAME],
+        'readwrite',
+      )
+      const done = transactionDone(transaction)
+      try {
+        const store = transaction.objectStore(BINDING_STORE_NAME)
+        const existing = (await requestResult(store.get(id))) as
+          | SourceBinding
+          | undefined
+        if (existing === undefined) {
+          await done
+          return failure('binding_not_found', '来源绑定不存在，未记录核对')
+        }
+
+        const updated: SourceBinding = {
+          ...existing,
+          reviewedTermRevision: input.termRevision,
+          reviewedAt,
+        }
+        store.put(updated)
+        await requestResult(
+          addChangeEvent(transaction, {
+            id: changeEventId('source_binding_reviewed', `${id}:${reviewedAt}`),
+            projectId: existing.projectId,
+            type: 'source_binding_reviewed',
+            createdAt: reviewedAt,
+            documentId: existing.documentId,
+            revisionId: existing.revisionId,
+            bindingId: existing.id,
+            termId: existing.termId,
+            message: `已核对来源区域与组成环修订 ${input.termRevision}`,
+          }),
+        )
+        await done
+        return { ok: true as const, value: updated }
+      } catch (error) {
+        try {
+          transaction.abort()
+        } catch {
+          // 事务可能已结束，保留原始错误。
+        }
+        await done.catch(() => undefined)
+        throw error
+      }
+    })
+  } catch (error) {
+    return failure(
+      'storage_failure',
+      '记录来源核对失败，绑定未改变',
+      error instanceof Error ? error.message : String(error),
+    )
+  }
+}
+
+export interface UpdateSourceBindingRegionInput {
+  page?: number
+  rectPdf?: PdfRect
+  pageBoxPdf?: PdfPageBox
+  note?: string
+}
+
+/**
+ * 修改绑定的区域/页码/备注。
+ *
+ * 区域或页码实际变化时清除该绑定的核对凭据（不自动恢复）；只改备注时保留。
+ * 数值与组成环不受影响，其他绑定也不受影响。
+ */
+export async function updateSourceBindingRegion(
+  id: string,
+  input: UpdateSourceBindingRegionInput,
+  context: CreateSourceBindingContext = {},
+): Promise<BindingResult<SourceBinding>> {
+  const now = context.now ?? (() => new Date().toISOString())
+
+  try {
+    return await withDatabase(async (db) => {
+      const transaction = db.transaction(
+        [BINDING_STORE_NAME, SOURCE_REVISION_STORE_NAME, EVENT_STORE_NAME],
+        'readwrite',
+      )
+      const done = transactionDone(transaction)
+      try {
+        const store = transaction.objectStore(BINDING_STORE_NAME)
+        const existing = (await requestResult(store.get(id))) as
+          | SourceBinding
+          | undefined
+        if (existing === undefined) {
+          await done
+          return failure('binding_not_found', '来源绑定不存在，未修改区域')
+        }
+
+        const page = input.page ?? existing.page
+        if (!Number.isInteger(page) || page < 1) {
+          await done.catch(() => undefined)
+          return failure('invalid_input', '页码必须是大于等于 1 的整数')
+        }
+        const revision = (await requestResult(
+          transaction.objectStore(SOURCE_REVISION_STORE_NAME).get(existing.revisionId),
+        )) as SourceRevision | undefined
+        if (revision === undefined || revision.projectId !== existing.projectId) {
+          await done.catch(() => undefined)
+          return failure('revision_not_found', '绑定引用的来源版本不存在，未修改区域')
+        }
+        if (page > revision.pageCount) {
+          await done.catch(() => undefined)
+          return failure('page_out_of_range', `页码超出范围：该版本共 ${revision.pageCount} 页`)
+        }
+
+        const rectPdf = input.rectPdf === undefined ? existing.rectPdf : normalizePdfRect(input.rectPdf)
+        const pageBoxPdf =
+          input.pageBoxPdf === undefined ? existing.pageBoxPdf : input.pageBoxPdf
+        if (input.rectPdf !== undefined || input.pageBoxPdf !== undefined) {
+          const regionError = validateBindingRegion(pageBoxPdf, rectPdf)
+          if (regionError !== null) {
+            await done.catch(() => undefined)
+            return failure('invalid_region', regionError)
+          }
+        }
+        const note = input.note === undefined ? existing.note : input.note.trim()
+
+        const geometryChanged =
+          page !== existing.page ||
+          rectPdf.some((value, index) => value !== existing.rectPdf[index]) ||
+          pageBoxPdf.some((value, index) => value !== existing.pageBoxPdf[index])
+
+        const updated: SourceBinding = {
+          ...existing,
+          page,
+          rectPdf,
+          pageBoxPdf,
+          note,
+          // 改区域/页码 → 该绑定核对失效，其他绑定不受影响；改备注不清核对。
+          reviewedTermRevision: geometryChanged ? null : existing.reviewedTermRevision,
+          reviewedAt: geometryChanged ? null : existing.reviewedAt,
+        }
+        store.put(updated)
+        if (geometryChanged) {
+          await requestResult(
+            addChangeEvent(transaction, {
+              id: changeEventId('source_binding_region_changed', `${id}:${now()}`),
+              projectId: existing.projectId,
+              type: 'source_binding_region_changed',
+              createdAt: now(),
+              documentId: existing.documentId,
+              revisionId: existing.revisionId,
+              bindingId: existing.id,
+              termId: existing.termId,
+              message: '绑定区域已修改；该绑定的来源核对已失效，需要重新核对。',
+            }),
+          )
+        }
+        await done
+        return { ok: true as const, value: updated }
+      } catch (error) {
+        try {
+          transaction.abort()
+        } catch {
+          // 事务可能已结束，保留原始错误。
+        }
+        await done.catch(() => undefined)
+        throw error
+      }
+    })
+  } catch (error) {
+    return failure(
+      'storage_failure',
+      '修改绑定区域失败，绑定未改变',
+      error instanceof Error ? error.message : String(error),
+    )
+  }
+}
+
+export interface RebindSourceBindingInput {
+  revisionId: string
+  page: number
+  rectPdf: PdfRect
+  pageBoxPdf: PdfPageBox
+  note?: string
+}
+
+/**
+ * 换关联来源：把绑定指向另一个 revision / 区域。
+ *
+ * 只改绑定引用与几何，不改组成环数值；该绑定的核对凭据清除，其他绑定不变。
+ */
+export async function rebindSourceBinding(
+  id: string,
+  input: RebindSourceBindingInput,
+  context: CreateSourceBindingContext = {},
+): Promise<BindingResult<SourceBinding>> {
+  const revisionId = input.revisionId.trim()
+  if (revisionId === '') {
+    return failure('invalid_input', '缺少来源版本 ID，无法更换绑定')
+  }
+  if (!Number.isInteger(input.page) || input.page < 1) {
+    return failure('invalid_input', '页码必须是大于等于 1 的整数')
+  }
+  const regionError = validateBindingRegion(input.pageBoxPdf, input.rectPdf)
+  if (regionError !== null) {
+    return failure('invalid_region', regionError)
+  }
+  const pageBox = normalizePdfPageBox(input.pageBoxPdf)
+  if (pageBox === null) {
+    return failure('invalid_region', '页面边界无效')
+  }
+  const now = context.now ?? (() => new Date().toISOString())
+
+  try {
+    return await withDatabase(async (db) => {
+      const transaction = db.transaction(
+        [BINDING_STORE_NAME, SOURCE_REVISION_STORE_NAME, EVENT_STORE_NAME],
+        'readwrite',
+      )
+      const done = transactionDone(transaction)
+      try {
+        const store = transaction.objectStore(BINDING_STORE_NAME)
+        const existing = (await requestResult(store.get(id))) as
+          | SourceBinding
+          | undefined
+        if (existing === undefined) {
+          await done
+          return failure('binding_not_found', '来源绑定不存在，未更换来源')
+        }
+        const revision = (await requestResult(
+          transaction.objectStore(SOURCE_REVISION_STORE_NAME).get(revisionId),
+        )) as SourceRevision | undefined
+        if (revision === undefined || revision.projectId !== existing.projectId) {
+          await done.catch(() => undefined)
+          return failure('revision_not_found', '来源版本不存在，未更换绑定')
+        }
+        if (input.page > revision.pageCount) {
+          await done.catch(() => undefined)
+          return failure(
+            'page_out_of_range',
+            `页码超出范围：该版本共 ${revision.pageCount} 页`,
+          )
+        }
+
+        const updated: SourceBinding = {
+          ...existing,
+          revisionId,
+          documentId: revision.documentId,
+          page: input.page,
+          rectPdf: normalizePdfRect(input.rectPdf),
+          pageBoxPdf: [pageBox[0], pageBox[1], pageBox[2], pageBox[3]],
+          note: input.note === undefined ? existing.note : input.note.trim(),
+          // 换关联来源 → 该绑定核对失效。
+          reviewedTermRevision: null,
+          reviewedAt: null,
+        }
+        store.put(updated)
+        await requestResult(
+          addChangeEvent(transaction, {
+            id: changeEventId('source_binding_rebound', `${id}:${now()}`),
+            projectId: existing.projectId,
+            type: 'source_binding_rebound',
+            createdAt: now(),
+            documentId: revision.documentId,
+            revisionId,
+            bindingId: existing.id,
+            termId: existing.termId,
+            message: '绑定已更换关联来源；该绑定的来源核对已失效，需要重新核对。',
+          }),
+        )
+        await done
+        return { ok: true as const, value: updated }
+      } catch (error) {
+        try {
+          transaction.abort()
+        } catch {
+          // 事务可能已结束，保留原始错误。
+        }
+        await done.catch(() => undefined)
+        throw error
+      }
+    })
+  } catch (error) {
+    return failure(
+      'storage_failure',
+      '更换绑定来源失败，绑定未改变',
       error instanceof Error ? error.message : String(error),
     )
   }

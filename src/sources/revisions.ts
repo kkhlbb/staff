@@ -482,6 +482,34 @@ export async function listSourceDocuments(
   }
 }
 
+/**
+ * 列出项目实际持有 Blob 字节的 blobKey。
+ *
+ * 只用于来源核对状态：从 JSON 恢复的 revision 只有元数据、没有 Blob，
+ * 不能因为它“引用了某个 blobKey”就当成附件可用。
+ */
+export async function listSourceBlobKeys(
+  projectId: string,
+): Promise<SourceResult<string[]>> {
+  try {
+    const keys = await withDatabase(async (db) => {
+      const transaction = db.transaction(SOURCE_BLOB_STORE_NAME, 'readonly')
+      const done = transactionDone(transaction)
+      const value = await requestResult(
+        transaction
+          .objectStore(SOURCE_BLOB_STORE_NAME)
+          .index('projectId')
+          .getAllKeys(projectId),
+      )
+      await done
+      return value
+    })
+    return { ok: true, value: keys.map((key) => String(key)) }
+  } catch (error) {
+    return storageFailure(error, '读取来源附件索引失败')
+  }
+}
+
 export async function getSourceRevision(
   id: string,
 ): Promise<SourceResult<SourceRevision | null>> {

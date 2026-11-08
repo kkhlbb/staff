@@ -5,8 +5,16 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { ChainDefinition } from '../domain/types'
 import { parseMm } from '../domain/units'
-import { listSourceBindings } from '../sources/bindings'
-import { listSourceDocuments, listSourceRevisions } from '../sources/revisions'
+import {
+  createSourceBinding,
+  listSourceBindings,
+  reviewSourceBinding,
+} from '../sources/bindings'
+import {
+  importSourceRevision,
+  listSourceDocuments,
+  listSourceRevisions,
+} from '../sources/revisions'
 import { createProject } from '../storage/projects'
 import { deleteProjectDatabase } from '../test/projectDb'
 import { buildSyntheticPdf } from '../test/pdfFixtures'
@@ -284,5 +292,154 @@ describe('SourcePanel：导入、框选、刷新后打开确切 revision', () =>
     expect(revisions.ok && revisions.value).toEqual([])
     const documents = await listSourceDocuments(projectId)
     expect(documents.ok && documents.value).toEqual([])
+  })
+})
+
+describe('SourcePanel：来源核对凭据状态', () => {
+  it('新建绑定显示未核对；显式核对后显示已核对，改代号保留、改数值失效', async () => {
+    const projectId = await createTestProject()
+    const imported = await importSourceRevision(
+      { projectId, fileName: '图纸.pdf', bytes: bytesA },
+      { estimateCapacity: async () => ({ supported: false, usageBytes: null, quotaBytes: null, availableBytes: null, note: '' }) },
+    )
+    expect(imported.ok, imported.ok ? '' : imported.error.message).toBe(true)
+    if (!imported.ok) {
+      return
+    }
+    const binding = await createSourceBinding(
+      {
+        projectId,
+        termId: 't-h',
+        revisionId: imported.value.revision.id,
+        page: 1,
+        rectPdf: [10, 20, 110, 120],
+        pageBoxPdf: [0, 0, 600, 800],
+        note: 'H 尺寸',
+      },
+      { newId: () => 'bind-review' },
+    )
+    expect(binding.ok, binding.ok ? '' : binding.error.message).toBe(true)
+
+    const { rerender } = render(
+      <SourcePanel
+        projectId={projectId}
+        terms={terms}
+        selectedTermId="t-h"
+        loadBytes={loadBytes}
+        renderPage={renderPageForTest}
+      />,
+    )
+
+    const badge = await screen.findByTestId('binding-review-bind-review')
+    expect(badge).toHaveTextContent('未核对')
+
+    fireEvent.click(screen.getByRole('button', { name: '标记已核对' }))
+    await waitFor(() => {
+      expect(screen.getByTestId('binding-review-bind-review')).toHaveTextContent('已核对')
+    })
+
+    // 改代号不清来源数值核对（termRevision 不变）。
+    rerender(
+      <SourcePanel
+        projectId={projectId}
+        terms={[{ ...terms[0], symbol: 'H2' }, terms[1]]}
+        selectedTermId="t-h"
+        loadBytes={loadBytes}
+        renderPage={renderPageForTest}
+      />,
+    )
+    await waitFor(() => {
+      expect(screen.getByTestId('binding-review-bind-review')).toHaveTextContent('已核对')
+    })
+
+    // 数值变化提升 termRevision → 该绑定失效，其他环不受影响。
+    rerender(
+      <SourcePanel
+        projectId={projectId}
+        terms={[{ ...terms[0], symbol: 'H2', termRevision: 2 }, terms[1]]}
+        selectedTermId="t-h"
+        loadBytes={loadBytes}
+        renderPage={renderPageForTest}
+      />,
+    )
+    await waitFor(() => {
+      expect(screen.getByTestId('binding-review-bind-review')).toHaveTextContent(
+        '数值已变，待重新核对',
+      )
+    })
+  })
+
+  it('同文档导入新版 PDF 后，旧绑定显示待版本复核，不自动迁移区域', async () => {
+    const projectId = await createTestProject()
+    const first = await importSourceRevision(
+      { projectId, fileName: '图纸.pdf', bytes: bytesA },
+      {
+        estimateCapacity: async () => ({
+          supported: false,
+          usageBytes: null,
+          quotaBytes: null,
+          availableBytes: null,
+          note: '',
+        }),
+      },
+    )
+    expect(first.ok).toBe(true)
+    if (!first.ok) {
+      return
+    }
+    const binding = await createSourceBinding(
+      {
+        projectId,
+        termId: 't-h',
+        revisionId: first.value.revision.id,
+        page: 1,
+        rectPdf: [10, 20, 110, 120],
+        pageBoxPdf: [0, 0, 600, 800],
+        note: '旧版框选',
+      },
+      { newId: () => 'bind-version' },
+    )
+    expect(binding.ok).toBe(true)
+    await reviewSourceBinding('bind-version', { termRevision: 1 })
+
+    const second = await importSourceRevision(
+      {
+        projectId,
+        documentId: first.value.document.id,
+        fileName: '图纸.pdf',
+        bytes: bytesB,
+      },
+      {
+        estimateCapacity: async () => ({
+          supported: false,
+          usageBytes: null,
+          quotaBytes: null,
+          availableBytes: null,
+          note: '',
+        }),
+      },
+    )
+    expect(second.ok, second.ok ? '' : second.error.message).toBe(true)
+
+    render(
+      <SourcePanel
+        projectId={projectId}
+        terms={terms}
+        selectedTermId="t-h"
+        loadBytes={loadBytes}
+        renderPage={renderPageForTest}
+      />,
+    )
+    const badge = await screen.findByTestId('binding-review-bind-version')
+    expect(badge).toHaveTextContent('待版本复核')
+
+    // 旧绑定仍指向原 revision、页码和区域，没有被自动迁移。
+    const stored = await listSourceBindings(projectId)
+    expect(stored.ok).toBe(true)
+    if (stored.ok) {
+      expect(stored.value[0].revisionId).toBe(first.value.revision.id)
+      expect(stored.value[0].page).toBe(1)
+      expect(stored.value[0].rectPdf).toEqual([10, 20, 110, 120])
+    }
   })
 })

@@ -27,6 +27,8 @@ export interface DimensionTableProps {
   onSelect?: (termId: string) => void
   /** termId → 来源绑定数量；不传时不显示来源标记。 */
   sourceBindingCounts?: Record<string, number>
+  /** termId → 需要重新核对的绑定数量；与 sourceBindingCounts 一起显示。 */
+  sourceReviewPendingCounts?: Record<string, number>
 }
 
 type EditableField =
@@ -128,6 +130,7 @@ export function DimensionTable({
   selectedTermId = null,
   onSelect,
   sourceBindingCounts,
+  sourceReviewPendingCounts,
 }: DimensionTableProps) {
   // useId 生成不含空白的唯一前缀，避免多个表格的错误文案 id 冲突。
   const tableId = useId().replace(/[^A-Za-z0-9_-]/g, '')
@@ -363,6 +366,9 @@ export function DimensionTable({
                       {(sourceBindingCounts[term.id] ?? 0) > 0
                         ? `已绑定 ${sourceBindingCounts[term.id]} 处来源`
                         : '无来源绑定'}
+                      {(sourceReviewPendingCounts?.[term.id] ?? 0) > 0
+                        ? ` · ${sourceReviewPendingCounts?.[term.id]} 处待复核`
+                        : ''}
                     </span>
                   )}
                 </td>

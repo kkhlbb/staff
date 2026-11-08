@@ -620,6 +620,18 @@ function parseSourceMetadata(
       createdAt !== null &&
       validGeometry
     ) {
+      // 核对凭据必须成对且合法；不完整的凭据不采用，避免把旧文件里的
+      // 残余字段当成有效核对。
+      const reviewedTermRevision =
+        typeof item.reviewedTermRevision === 'number' &&
+        Number.isSafeInteger(item.reviewedTermRevision) &&
+        item.reviewedTermRevision >= 1
+          ? item.reviewedTermRevision
+          : null
+      const reviewedAt =
+        reviewedTermRevision !== null && isValidIsoDateTime(item.reviewedAt)
+          ? item.reviewedAt
+          : null
       bindings.push({
         id,
         projectId: '',
@@ -631,6 +643,8 @@ function parseSourceMetadata(
         pageBoxPdf: pageBoxPdf as unknown as SourceBinding['pageBoxPdf'],
         note,
         createdAt,
+        reviewedTermRevision: reviewedAt === null ? null : reviewedTermRevision,
+        reviewedAt,
       })
     }
   }
@@ -1671,8 +1685,8 @@ export async function saveDraft(
     return await withDatabase(async (db) => {
       const withSnapshot = options.snapshotBefore === 'replace'
       const storeNames = withSnapshot
-        ? [PROJECT_STORE_NAME, DRAFT_STORE_NAME, IMPORT_SNAPSHOT_STORE_NAME]
-        : [PROJECT_STORE_NAME, DRAFT_STORE_NAME]
+        ? [PROJECT_STORE_NAME, DRAFT_STORE_NAME, IMPORT_SNAPSHOT_STORE_NAME, EVENT_STORE_NAME]
+        : [PROJECT_STORE_NAME, DRAFT_STORE_NAME, EVENT_STORE_NAME]
       const transaction = db.transaction(storeNames, 'readwrite')
       const done = transactionDone(transaction)
       try {
@@ -1719,6 +1733,28 @@ export async function saveDraft(
             : existing.relationReview
 
         if (conversion.ok) {
+          // 代号变化记录名称变更事件：来源数值核对保留（termRevision 不变），
+          // 但关系确认已因 relationRevision 递增而失效。事件与草稿同事务。
+          const previousSymbols = new Map(
+            existing.working.terms.map((term) => [term.id, term.symbol]),
+          )
+          for (const term of conversion.chain.terms) {
+            const before = previousSymbols.get(term.id)
+            if (before === undefined || before === term.symbol) {
+              continue
+            }
+            transaction.objectStore(EVENT_STORE_NAME).put({
+              id: `term_symbol_changed:${projectId}:${term.id}:${draft.relationRevision}`,
+              projectId,
+              type: 'term_symbol_changed',
+              createdAt: savedAt,
+              termId: term.id,
+              before,
+              after: term.symbol,
+              message: `组成环代号由「${before}」改为「${term.symbol}」；来源数值核对保留，关系确认需要重新核对。`,
+            })
+          }
+
           project = {
             ...existing,
             working: conversion.chain,

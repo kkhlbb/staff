@@ -19,6 +19,12 @@ import {
 } from '../sources/revisions'
 import { buildSyntheticPdf } from '../test/pdfFixtures'
 import {
+  EVENT_STORE_NAME,
+  requestResult,
+  transactionDone,
+  withDatabase,
+} from './db'
+import {
   MAX_CHAIN_TERMS,
   MAX_IMPORT_BYTES,
   PROJECT_DB_NAME,
@@ -802,5 +808,62 @@ describe('V2 项目 JSON：来源元数据与绑定往返，附件不包含', ()
     expect(documents[0].id).not.toBe(source.value.document.id)
     expect(documents[0].latestRevisionId).toBe(revisions[0].id)
     expect(revisions[0].documentId).toBe(documents[0].id)
+  })
+})
+
+describe('改代号：记录名称变化但不清来源数值核对', () => {
+  it('代号变化写事件，termRevision 不变（来源核对保留）', async () => {
+    const project = expectOk(
+      await createProject({ name: '代号变化', working: chainA() }),
+    )
+    const draft = draftFromChain(chainA())
+    draft.terms[0] = { ...draft.terms[0], symbol: 'H2' }
+    draft.relationRevision = 1
+
+    const saved = expectOk(await saveDraft(project.id, draft))
+    expect(saved.modelUpdated).toBe(true)
+    expect(saved.project.working.terms[0].symbol).toBe('H2')
+    // 改代号不提升环修订号：来源数值核对凭据仍然对应当前数值。
+    expect(saved.project.working.terms[0].termRevision).toBe(1)
+    // 关系确认已失效（relationRevision 递增、没有凭据）。
+    expect(saved.project.relationReview).toBeNull()
+
+    const events = await withDatabase(async (db) => {
+      const transaction = db.transaction(EVENT_STORE_NAME, 'readonly')
+      const done = transactionDone(transaction)
+      const value = await requestResult(
+        transaction.objectStore(EVENT_STORE_NAME).getAll(),
+      )
+      await done
+      return value as {
+        type: string
+        termId?: string
+        before?: string
+        after?: string
+      }[]
+    })
+    const symbolEvent = events.find((event) => event.type === 'term_symbol_changed')
+    expect(symbolEvent).toBeDefined()
+    expect(symbolEvent?.termId).toBe('a-h')
+    expect(symbolEvent?.before).toBe('H')
+    expect(symbolEvent?.after).toBe('H2')
+
+    // 改名称/备注不写代号事件。
+    const renamed = draftFromChain(saved.project.working)
+    renamed.terms[0] = { ...renamed.terms[0], name: '机架改名', sourceNote: '新备注' }
+    renamed.relationRevision = 2
+    expectOk(await saveDraft(project.id, renamed))
+    const eventsAfter = await withDatabase(async (db) => {
+      const transaction = db.transaction(EVENT_STORE_NAME, 'readonly')
+      const done = transactionDone(transaction)
+      const value = await requestResult(
+        transaction.objectStore(EVENT_STORE_NAME).getAll(),
+      )
+      await done
+      return value as { type: string }[]
+    })
+    expect(
+      eventsAfter.filter((event) => event.type === 'term_symbol_changed'),
+    ).toHaveLength(1)
   })
 })

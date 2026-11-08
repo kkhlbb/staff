@@ -14,6 +14,9 @@ export type ChangeEventType =
   | 'source_import'
   | 'source_binding_added'
   | 'source_binding_removed'
+  | 'source_binding_reviewed'
+  | 'source_binding_region_changed'
+  | 'source_binding_rebound'
   | 'project_sources_retired'
   | 'project_imported'
   | 'schema_migrated_v1_to_v2'
@@ -29,6 +32,9 @@ export interface ChangeEvent {
   revisionId?: string
   bindingId?: string
   termId?: string
+  /** 文本字段变化时的前后值（例如组成环代号）；不复制工程数值。 */
+  before?: string
+  after?: string
   /** 面向人的简短说明；不包含数值结论。 */
   message?: string
 }

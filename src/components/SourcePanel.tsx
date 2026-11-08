@@ -5,14 +5,17 @@
  * 数据全部来自 IndexedDB 的 sourceDocuments / sourceRevisions / sourceBlobs /
  * bindings。没有 PDF 的项目这一栏保持空状态，不影响计算与导出。
  */
-import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import {
   createSourceBinding,
   listSourceBindings,
+  reviewSourceBinding,
   type SourceBinding,
 } from '../sources/bindings'
+import { resolveBindingReview, type BindingReview } from '../sources/review'
 import {
   importSourceRevision,
+  listSourceBlobKeys,
   listSourceDocuments,
   listSourceRevisions,
 } from '../sources/revisions'
@@ -24,8 +27,10 @@ export interface SourcePanelProps {
   projectId: string
   terms: readonly TermDraft[]
   selectedTermId: string | null
-  /** 绑定列表变化时通知工作台，用于在组成环表显示“无来源绑定 / 已绑定 N 处”。 */
+  /** 绑定列表变化时通知工作台，用于在组成表显示“无来源绑定 / 已绑定 N 处”。 */
   onBindingsChange?: (bindings: SourceBinding[]) => void
+  /** 每个组成环需要处理的绑定数量，用于表格徽标提示待复核。 */
+  onReviewSummaryChange?: (counts: Record<string, number>) => void
   /** 测试注入：读取 revision 字节；默认从 sourceBlobs 读取。 */
   loadBytes?: LoadRevisionBytes
   /** 测试注入：绘制页面；默认使用项目内 pdfjs-dist。 */
@@ -49,6 +54,7 @@ export function SourcePanel({
   terms,
   selectedTermId,
   onBindingsChange,
+  onReviewSummaryChange,
   loadBytes,
   renderPage,
 }: SourcePanelProps) {
@@ -56,6 +62,9 @@ export function SourcePanel({
   const [documents, setDocuments] = useState<SourceDocument[]>([])
   const [revisions, setRevisions] = useState<SourceRevision[]>([])
   const [bindings, setBindings] = useState<SourceBinding[]>([])
+  const [availableBlobKeys, setAvailableBlobKeys] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
@@ -79,11 +88,13 @@ export function SourcePanel({
     const load = async (): Promise<void> => {
       setLoading(true)
       setLoadError(null)
-      const [loadedDocuments, loadedRevisions, loadedBindings] = await Promise.all([
-        listSourceDocuments(projectId),
-        listSourceRevisions(projectId),
-        listSourceBindings(projectId),
-      ])
+      const [loadedDocuments, loadedRevisions, loadedBindings, loadedBlobKeys] =
+        await Promise.all([
+          listSourceDocuments(projectId),
+          listSourceRevisions(projectId),
+          listSourceBindings(projectId),
+          listSourceBlobKeys(projectId),
+        ])
       if (cancelled) {
         return
       }
@@ -102,6 +113,11 @@ export function SourcePanel({
         setLoading(false)
         return
       }
+      if (!loadedBlobKeys.ok) {
+        setLoadError(loadedBlobKeys.error.message)
+        setLoading(false)
+        return
+      }
 
       const nextDocuments = loadedDocuments.value.slice().sort((left, right) =>
         left.title.localeCompare(right.title, 'zh-CN') || left.id.localeCompare(right.id),
@@ -113,6 +129,7 @@ export function SourcePanel({
       setDocuments(nextDocuments)
       setRevisions(nextRevisions)
       setBindings(loadedBindings.value)
+      setAvailableBlobKeys(new Set(loadedBlobKeys.value))
       setLoading(false)
     }
     void load()
@@ -169,6 +186,67 @@ export function SourcePanel({
     selectedTermId === null
       ? []
       : bindings.filter((binding) => binding.termId === selectedTermId)
+
+  const termsById = useMemo(
+    () => new Map(terms.map((term) => [term.id, term])),
+    [terms],
+  )
+  const documentsById = useMemo(
+    () => new Map(documents.map((document) => [document.id, document])),
+    [documents],
+  )
+  const revisionsById = useMemo(
+    () => new Map(revisions.map((revision) => [revision.id, revision])),
+    [revisions],
+  )
+
+  /**
+   * 每个绑定的核对状态都在这里派生：环修订号、文档最新版本、附件是否真的
+   * 在本机。绑定记录本身只保存核对凭据，不保存“有效/失效”布尔。
+   */
+  const reviewByBinding = useMemo(() => {
+    const map: Record<string, BindingReview> = {}
+    for (const binding of bindings) {
+      const term = termsById.get(binding.termId)
+      const document = documentsById.get(binding.documentId)
+      const revision = revisionsById.get(binding.revisionId)
+      map[binding.id] = resolveBindingReview({
+        binding,
+        termRevision: term?.termRevision,
+        latestRevisionId: document?.latestRevisionId,
+        attachmentAvailable:
+          revision !== undefined && availableBlobKeys.has(revision.blobKey),
+      })
+    }
+    return map
+  }, [availableBlobKeys, bindings, documentsById, revisionsById, termsById])
+
+  useEffect(() => {
+    if (onReviewSummaryChange === undefined) {
+      return
+    }
+    const counts: Record<string, number> = {}
+    for (const binding of bindings) {
+      if (reviewByBinding[binding.id]?.needsReview === true) {
+        counts[binding.termId] = (counts[binding.termId] ?? 0) + 1
+      }
+    }
+    onReviewSummaryChange(counts)
+  }, [bindings, onReviewSummaryChange, reviewByBinding])
+
+  const handleReviewBinding = async (
+    binding: SourceBinding,
+    term: TermDraft,
+  ): Promise<void> => {
+    const result = await reviewSourceBinding(binding.id, {
+      termRevision: term.termRevision,
+    })
+    if (!result.ok) {
+      setLoadError(result.error.message)
+      return
+    }
+    reload()
+  }
 
   const handleImport = async (
     event: ChangeEvent<HTMLInputElement>,
@@ -430,6 +508,8 @@ export function SourcePanel({
                 const revision = revisions.find(
                   (candidate) => candidate.id === binding.revisionId,
                 )
+                const review = reviewByBinding[binding.id]
+                const term = termsById.get(binding.termId)
                 return (
                   <li key={binding.id} className="source-panel__binding">
                     <button
@@ -440,6 +520,24 @@ export function SourcePanel({
                       第 {binding.page} 页 · {binding.note.trim() === '' ? '无备注' : binding.note}
                       {revision === undefined ? '' : ` · ${revision.fileName}`}
                     </button>
+                    {review === undefined ? null : (
+                      <span
+                        className={`source-panel__review source-panel__review--${review.kind}`}
+                        data-testid={`binding-review-${binding.id}`}
+                      >
+                        {review.label}
+                      </span>
+                    )}
+                    {term !== undefined &&
+                    (review?.kind === 'unreviewed' || review?.kind === 'stale-term') ? (
+                      <button
+                        type="button"
+                        className="source-panel__binding-review"
+                        onClick={() => void handleReviewBinding(binding, term)}
+                      >
+                        标记已核对
+                      </button>
+                    ) : null}
                     <span className="source-panel__binding-meta">
                       版本 {binding.revisionId.slice(0, 8)}… · 区域{' '}
                       {binding.rectPdf.map((value) => value.toFixed(1)).join(', ')} PDF 点
