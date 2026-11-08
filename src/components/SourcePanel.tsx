@@ -9,7 +9,9 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import {
   createSourceBinding,
   listSourceBindings,
+  rebindSourceBinding,
   reviewSourceBinding,
+  updateSourceBindingRegion,
   type SourceBinding,
 } from '../sources/bindings'
 import { resolveBindingReview, type BindingReview } from '../sources/review'
@@ -78,6 +80,16 @@ export function SourcePanel({
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importMessage, setImportMessage] = useState<string | null>(null)
+
+  /**
+   * 已有绑定的编辑模式：重框（只改区域/页码）或换关联来源（改 revision + 区域）。
+   * 保存仍走 PdfViewer 的框选流程，只是把结果交给 update/rebind 而不是新建绑定。
+   */
+  const [editMode, setEditMode] = useState<
+    { kind: 'region' | 'source'; bindingId: string; termId: string } | null
+  >(null)
+  const [editMessage, setEditMessage] = useState<string | null>(null)
+  const [editError, setEditError] = useState<string | null>(null)
 
   const reload = (): void => {
     setReloadToken((token) => token + 1)
@@ -305,6 +317,33 @@ export function SourcePanel({
     if (activeRevision === null) {
       return { ok: false, message: '请先打开一个确切的 PDF 版本' }
     }
+    if (editMode !== null) {
+      const saved =
+        editMode.kind === 'region'
+          ? await updateSourceBindingRegion(editMode.bindingId, {
+              page: input.page,
+              rectPdf: input.rectPdf,
+              pageBoxPdf: input.pageBoxPdf,
+              note: input.note,
+            })
+          : await rebindSourceBinding(editMode.bindingId, {
+              revisionId: activeRevision.id,
+              page: input.page,
+              rectPdf: input.rectPdf,
+              pageBoxPdf: input.pageBoxPdf,
+              note: input.note,
+            })
+      if (!saved.ok) {
+        setEditError(saved.error.message)
+        return { ok: false, message: saved.error.message }
+      }
+      setEditError(null)
+      // 成功提示由 PdfViewer 用 saveSuccessMessage 显示，避免同一句话出现两次。
+      setEditMessage(null)
+      setEditMode(null)
+      reload()
+      return { ok: true }
+    }
     const saved = await createSourceBinding({
       projectId,
       termId: selectedTermId,
@@ -324,6 +363,24 @@ export function SourcePanel({
   const openBinding = (binding: SourceBinding): void => {
     setActiveRevisionId(binding.revisionId)
     setPage(binding.page)
+  }
+
+  /** 接管已有绑定：查看器里下一次框选/保存会更新这条绑定，而不是新增。 */
+  const startEditBinding = (
+    binding: SourceBinding,
+    kind: 'region' | 'source',
+  ): void => {
+    setEditError(null)
+    setEditMessage(null)
+    setEditMode({ kind, bindingId: binding.id, termId: binding.termId })
+    setActiveRevisionId(binding.revisionId)
+    setPage(binding.page)
+  }
+
+  const cancelEditBinding = (): void => {
+    setEditMode(null)
+    setEditError(null)
+    setEditMessage('已取消编辑；绑定区域、页码与核对状态均未改变。')
   }
 
   const revisionsOf = (documentId: string): SourceRevision[] =>
@@ -394,6 +451,30 @@ export function SourcePanel({
             重新读取
           </button>
         </div>
+      ) : null}
+
+      {editMode !== null ? (
+        <div className="source-panel__edit" role="status" data-testid="binding-edit-mode">
+          <p>
+            {editMode.kind === 'region'
+              ? '正在重框一条已有绑定：在下方页面重新框选区域，然后点“保存重框区域”。'
+              : '正在更换关联来源：在左侧选择目标版本并切换到目标页，框选区域后点“保存更换来源”。'}
+            保存只清空这一条绑定的来源核对，不改组成环数值，也不影响其他绑定。
+          </p>
+          <button type="button" onClick={cancelEditBinding}>
+            取消编辑
+          </button>
+        </div>
+      ) : null}
+      {editMessage !== null ? (
+        <p className="source-panel__message" role="status">
+          {editMessage}
+        </p>
+      ) : null}
+      {editError !== null ? (
+        <p className="source-panel__error" role="alert">
+          编辑绑定失败：{editError}。现有绑定与数值未改变。
+        </p>
       ) : null}
 
       <div className="source-panel__grid">
@@ -484,6 +565,16 @@ export function SourcePanel({
               onZoomChange={setZoom}
               onRotationChange={setRotation}
               onSaveBinding={handleSaveBinding}
+              {...(editMode === null
+                ? {}
+                : {
+                    saveButtonLabel:
+                      editMode.kind === 'region' ? '保存重框区域' : '保存更换来源',
+                    saveSuccessMessage:
+                      editMode.kind === 'region'
+                        ? '已重框；只清空该绑定的来源核对，数值与其他绑定未改变。'
+                        : '已更换关联来源；只清空该绑定的来源核对，数值与其他绑定未改变。',
+                  })}
               {...(loadBytes === undefined ? {} : { loadBytes })}
               {...(renderPage === undefined ? {} : { renderPage })}
             />
@@ -538,6 +629,24 @@ export function SourcePanel({
                         标记已核对
                       </button>
                     ) : null}
+                    <div className="source-panel__binding-actions">
+                      <button
+                        type="button"
+                        data-testid={`binding-reframe-${binding.id}`}
+                        onClick={() => startEditBinding(binding, 'region')}
+                        disabled={editMode !== null}
+                      >
+                        重框
+                      </button>
+                      <button
+                        type="button"
+                        data-testid={`binding-rebind-${binding.id}`}
+                        onClick={() => startEditBinding(binding, 'source')}
+                        disabled={editMode !== null}
+                      >
+                        换关联来源
+                      </button>
+                    </div>
                     <span className="source-panel__binding-meta">
                       版本 {binding.revisionId.slice(0, 8)}… · 区域{' '}
                       {binding.rectPdf.map((value) => value.toFixed(1)).join(', ')} PDF 点

@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { ChainDefinition } from '../domain/types'
 import { calculateChain } from '../domain/calculate'
 import { formatMm, parseMm } from '../domain/units'
-import { exportProject, createProject } from '../storage/projects'
+import { exportProject, createProject, getDraft, getProject } from '../storage/projects'
 import { createRelationReview } from '../workspace/relation'
+import { createSourceBinding, reviewSourceBinding } from '../sources/bindings'
+import { importSourceRevision } from '../sources/revisions'
+import { buildSyntheticPdf } from '../test/pdfFixtures'
 import { deleteProjectDatabase } from '../test/projectDb'
 import { Workspace } from './Workspace'
 
@@ -128,5 +131,115 @@ describe('Workspace：没有 PDF 来源的项目', () => {
       '无来源绑定',
     )
     expect(container.textContent).not.toContain('来源审查通过')
+  })
+})
+
+describe('Workspace 真实贯通：来源核对随数值修订失效', () => {
+  it('改值→核对失效；改回原值/非法中间态都不恢复；防抖落库且刷新后仍失效', async () => {
+    const created = await createProject({
+      name: '来源贯通项目',
+      working: chain,
+      relationRevision: 1,
+      relationReview: createRelationReview(chain, 1, '2026-01-01T00:00:00.000Z'),
+    })
+    expect(created.ok).toBe(true)
+    if (!created.ok) {
+      throw new Error(created.error.message)
+    }
+    const projectId = created.value.id
+
+    const imported = await importSourceRevision(
+      { projectId, fileName: '贯通图.pdf', bytes: buildSyntheticPdf({ pageCount: 2, variant: 'A' }) },
+      {
+        estimateCapacity: async () => ({
+          supported: false,
+          usageBytes: null,
+          quotaBytes: null,
+          availableBytes: null,
+          note: '',
+        }),
+      },
+    )
+    expect(imported.ok, imported.ok ? '' : imported.error.message).toBe(true)
+    if (!imported.ok) {
+      return
+    }
+    const binding = await createSourceBinding(
+      {
+        projectId,
+        termId: 't-h',
+        revisionId: imported.value.revision.id,
+        page: 1,
+        rectPdf: [10, 20, 110, 120],
+        pageBoxPdf: [0, 0, 600, 800],
+        note: 'H 尺寸',
+      },
+      { newId: () => 'bind-workspace' },
+    )
+    expect(binding.ok).toBe(true)
+    const reviewed = await reviewSourceBinding('bind-workspace', { termRevision: 1 })
+    expect(reviewed.ok).toBe(true)
+
+    const first = render(<Workspace projectId={projectId} />)
+    await screen.findByRole('button', { name: '增加行' })
+    // 初始：已绑定且已核对，没有待复核。
+    await waitFor(() =>
+      expect(screen.getByTestId('source-badge-t-h')).toHaveTextContent(
+        '已绑定 1 处来源',
+      ),
+    )
+    expect(screen.getByTestId('source-badge-t-h')).not.toHaveTextContent('待复核')
+
+    // 改数值：只递增该环 termRevision，来源核对立即失效（不等防抖）。
+    const upper = screen.getByRole('textbox', { name: 'H 上偏差' })
+    fireEvent.change(upper, { target: { value: '0.0300' } })
+    await waitFor(() =>
+      expect(screen.getByTestId('source-badge-t-h')).toHaveTextContent('1 处待复核'),
+    )
+
+    // 改回原值：指纹恢复但修订号单调，核对不恢复。
+    fireEvent.change(upper, { target: { value: '0.1000' } })
+    expect(screen.getByTestId('source-badge-t-h')).toHaveTextContent('1 处待复核')
+
+    // 非法中间态：空尺寸 → 待修正；再改回，仍待复核。
+    const nominal = screen.getByRole('textbox', { name: 'H 基本尺寸' })
+    fireEvent.change(nominal, { target: { value: '' } })
+    expect(screen.getByText('输入有误，显示的是上次有效结果')).toBeInTheDocument()
+    expect(screen.getByTestId('source-badge-t-h')).toHaveTextContent('1 处待复核')
+    fireEvent.change(nominal, { target: { value: '100.0000' } })
+    expect(screen.queryByText('输入有误，显示的是上次有效结果')).toBeNull()
+    expect(screen.getByTestId('source-badge-t-h')).toHaveTextContent('1 处待复核')
+
+    // 等防抖真正落库（保存中 → 已保存），再直接检查持久化状态。
+    await screen.findByText('保存中')
+    await screen.findByText('已保存', undefined, { timeout: 3000 })
+    const savedProject = await getProject(projectId)
+    expect(savedProject.ok).toBe(true)
+    if (savedProject.ok && savedProject.value !== null) {
+      const term = savedProject.value.working.terms.find((item) => item.id === 't-h')
+      // 每次数值/空值编辑都会递增修订号；关键是不可回到初始的 1。
+      expect(term?.termRevision).toBeGreaterThan(1)
+      expect(term?.upperDeviationQ).toBe(parseMm('0.1'))
+      // 旧凭据可以留在记录里，但修订号已前移，判定必须为“未确认”，改回不恢复。
+      expect(savedProject.value.relationReview?.relationRevision ?? 0).toBeLessThan(
+        savedProject.value.relationRevision,
+      )
+    }
+    const savedDraft = await getDraft(projectId)
+    expect(savedDraft.ok).toBe(true)
+    if (savedDraft.ok && savedDraft.value !== null) {
+      expect(
+        savedDraft.value.draft.terms.find((item) => item.id === 't-h')?.upper,
+      ).toBe('0.1000')
+    }
+
+    // 刷新（卸载重挂）：输入恢复，待复核仍是 1 处，不因数值回到原值而恢复。
+    first.unmount()
+    render(<Workspace projectId={projectId} />)
+    await screen.findByRole('button', { name: '增加行' })
+    expect(screen.getByRole('textbox', { name: 'H 上偏差' })).toHaveValue('0.1000')
+    await waitFor(() =>
+      expect(screen.getByTestId('source-badge-t-h')).toHaveTextContent('1 处待复核'),
+    )
   })
 })

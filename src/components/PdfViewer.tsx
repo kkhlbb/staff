@@ -77,6 +77,10 @@ export interface PdfViewerProps {
   onZoomChange: (zoom: number) => void
   onRotationChange: (rotation: number) => void
   onSaveBinding: (input: SaveBindingInput) => Promise<SaveBindingOutcome>
+  /** 编辑已有绑定时的按钮文案；默认“保存来源绑定”。 */
+  saveButtonLabel?: string
+  /** 编辑已有绑定时的成功提示；默认说明数值仍以组成环输入为准。 */
+  saveSuccessMessage?: string
   /** 测试或特殊环境注入字节读取；默认从 IndexedDB sourceBlobs 读取。 */
   loadBytes?: LoadRevisionBytes
   /** 测试注入：打开 PDF；默认使用项目内 pdfjs-dist。 */
@@ -125,6 +129,8 @@ export function PdfViewer({
   onZoomChange,
   onRotationChange,
   onSaveBinding,
+  saveButtonLabel,
+  saveSuccessMessage,
   loadBytes,
   openPdf,
   renderPage,
@@ -390,7 +396,10 @@ export function PdfViewer({
     }
     setDraftRect(null)
     setNote('')
-    setSaveMessage('已保存来源绑定；数值仍以组成环输入为准，绑定不会自动提取数值。')
+    setSaveMessage(
+      saveSuccessMessage ??
+        '已保存来源绑定；数值仍以组成环输入为准，绑定不会自动提取数值。',
+    )
   }
 
   return (
@@ -525,7 +534,7 @@ export function PdfViewer({
                 draftRect === null
               }
             >
-              {saving ? '保存中…' : '保存来源绑定'}
+              {saving ? '保存中…' : (saveButtonLabel ?? '保存来源绑定')}
             </button>
           </div>
           {selectedTermId === null ? (

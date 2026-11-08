@@ -15,7 +15,7 @@ import {
   listSourceDocuments,
   listSourceRevisions,
 } from '../sources/revisions'
-import { createProject } from '../storage/projects'
+import { createProject, getProject } from '../storage/projects'
 import { deleteProjectDatabase } from '../test/projectDb'
 import { buildSyntheticPdf } from '../test/pdfFixtures'
 import type { TermDraft } from '../workspace/draft'
@@ -440,6 +440,226 @@ describe('SourcePanel：来源核对凭据状态', () => {
       expect(stored.value[0].revisionId).toBe(first.value.revision.id)
       expect(stored.value[0].page).toBe(1)
       expect(stored.value[0].rectPdf).toEqual([10, 20, 110, 120])
+    }
+  })
+})
+
+describe('SourcePanel：接通“重框”与“换关联来源”界面入口', () => {
+  const surfaceBox = {
+    left: 0,
+    top: 0,
+    width: 600,
+    height: 800,
+    right: 600,
+    bottom: 800,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  } as DOMRect
+
+  function drawRect(
+    surface: HTMLElement,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+  ): void {
+    surface.getBoundingClientRect = () => surfaceBox
+    fireEvent.mouseDown(surface, { button: 0, clientX: from.x, clientY: from.y })
+    fireEvent.mouseUp(window, { clientX: to.x, clientY: to.y })
+  }
+
+  async function setupTwoReviewedBindings(): Promise<{
+    projectId: string
+    revisionA: { id: string }
+    revisionB: { id: string }
+    beforeProject: unknown
+  }> {
+    const projectId = await createTestProject()
+    const importedA = await importSourceRevision(
+      { projectId, fileName: '装配图.pdf', bytes: bytesA },
+      {
+        estimateCapacity: async () => ({
+          supported: false,
+          usageBytes: null,
+          quotaBytes: null,
+          availableBytes: null,
+          note: '',
+        }),
+      },
+    )
+    expect(importedA.ok).toBe(true)
+    if (!importedA.ok) {
+      throw new Error(importedA.error.message)
+    }
+    const revisionA = importedA.value.revision
+    const importedB = await importSourceRevision(
+      {
+        projectId,
+        fileName: '装配图-新版.pdf',
+        bytes: bytesB,
+      },
+      {
+        estimateCapacity: async () => ({
+          supported: false,
+          usageBytes: null,
+          quotaBytes: null,
+          availableBytes: null,
+          note: '',
+        }),
+      },
+    )
+    expect(importedB.ok).toBe(true)
+    if (!importedB.ok) {
+      throw new Error(importedB.error.message)
+    }
+
+    const first = await createSourceBinding(
+      {
+        projectId,
+        termId: 't-h',
+        revisionId: revisionA.id,
+        page: 1,
+        rectPdf: [10, 20, 110, 120],
+        pageBoxPdf: [0, 0, 600, 800],
+        note: 'H 尺寸框一',
+      },
+      { newId: () => 'bind-one' },
+    )
+    const second = await createSourceBinding(
+      {
+        projectId,
+        termId: 't-h',
+        revisionId: revisionA.id,
+        page: 1,
+        rectPdf: [200, 200, 300, 300],
+        pageBoxPdf: [0, 0, 600, 800],
+        note: 'H 尺寸框二',
+      },
+      { newId: () => 'bind-two' },
+    )
+    expect(first.ok && second.ok).toBe(true)
+    for (const id of ['bind-one', 'bind-two']) {
+      const reviewed = await reviewSourceBinding(id, { termRevision: 1 })
+      expect(reviewed.ok).toBe(true)
+    }
+    const project = await getProject(projectId)
+    expect(project.ok).toBe(true)
+    return {
+      projectId,
+      revisionA,
+      revisionB: importedB.value.revision,
+      beforeProject: project.ok ? project.value?.working : null,
+    }
+  }
+
+  it('重框只清该绑定的核对与区域，数值和其他绑定不变；等待成功提示出现后才断言', async () => {
+    const { projectId, beforeProject } = await setupTwoReviewedBindings()
+    render(
+      <SourcePanel
+        projectId={projectId}
+        terms={terms}
+        selectedTermId="t-h"
+        loadBytes={loadBytes}
+        renderPage={renderPageForTest}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(screen.getAllByText('已核对').length).toBe(2),
+    )
+
+    fireEvent.click(screen.getByTestId('binding-reframe-bind-one'))
+    const editBar = await screen.findByTestId('binding-edit-mode')
+    expect(editBar).toHaveTextContent('正在重框一条已有绑定')
+    expect(editBar).toHaveTextContent('不改组成环数值，也不影响其他绑定')
+
+    const surface = await screen.findByTestId('pdf-surface')
+    drawRect(surface, { x: 40, y: 60 }, { x: 260, y: 380 })
+    fireEvent.change(screen.getByLabelText('来源备注'), {
+      target: { value: 'H 重框后' },
+    })
+    const save = await screen.findByRole('button', { name: '保存重框区域' })
+    await waitFor(() => expect(save).toBeEnabled())
+    fireEvent.click(save)
+
+    // 先等存储层完成、提示实际出现，再断言数据。
+    await screen.findByText(/已重框；只清空该绑定的来源核对/)
+    await waitFor(() => expect(screen.queryByTestId('binding-edit-mode')).toBeNull())
+
+    const bindings = await listSourceBindings(projectId)
+    expect(bindings.ok).toBe(true)
+    if (!bindings.ok) {
+      throw new Error(bindings.error.message)
+    }
+    const one = bindings.value.find((binding) => binding.id === 'bind-one')
+    const two = bindings.value.find((binding) => binding.id === 'bind-two')
+    expect(one?.note).toBe('H 重框后')
+    expect(one?.reviewedTermRevision).toBeNull()
+    expect(one?.reviewedAt).toBeNull()
+    expect(one?.rectPdf).not.toEqual([10, 20, 110, 120])
+    expect((one?.rectPdf[2] ?? 0) - (one?.rectPdf[0] ?? 0)).toBeGreaterThan(200)
+    expect(two?.reviewedTermRevision).toBe(1)
+    expect(two?.note).toBe('H 尺寸框二')
+
+    const project = await getProject(projectId)
+    expect(project.ok).toBe(true)
+    if (project.ok) {
+      // 组成环数值与方向没有被绑定编辑改动。
+      expect(project.value?.working).toEqual(beforeProject)
+    }
+  })
+
+  it('换关联来源更新 revisionId 并只清该绑定核对；数值不变', async () => {
+    const { projectId, revisionB, beforeProject } = await setupTwoReviewedBindings()
+    render(
+      <SourcePanel
+        projectId={projectId}
+        terms={terms}
+        selectedTermId="t-h"
+        loadBytes={loadBytes}
+        renderPage={renderPageForTest}
+      />,
+    )
+    await waitFor(() => expect(screen.getAllByText('已核对').length).toBe(2))
+
+    fireEvent.click(screen.getByTestId('binding-rebind-bind-two'))
+    const editBar = await screen.findByTestId('binding-edit-mode')
+    expect(editBar).toHaveTextContent('正在更换关联来源')
+
+    // 在左侧选择目标版本（第二个文档的版本 = 最后一项）。
+    const revisionButtons = Array.from(
+      document.querySelectorAll<HTMLElement>('.source-panel__revision'),
+    )
+    expect(revisionButtons.length).toBe(2)
+    const targetRevisionButton = revisionButtons.find((button) =>
+      button.textContent?.includes('装配图-新版.pdf'),
+    )
+    expect(targetRevisionButton).toBeDefined()
+    fireEvent.click(targetRevisionButton as HTMLElement)
+    const surface = await screen.findByTestId('pdf-surface')
+    drawRect(surface, { x: 30, y: 30 }, { x: 230, y: 330 })
+    const save = await screen.findByRole('button', { name: '保存更换来源' })
+    await waitFor(() => expect(save).toBeEnabled())
+    fireEvent.click(save)
+
+    await screen.findByText(/已更换关联来源；只清空该绑定的来源核对/)
+    await waitFor(() => expect(screen.queryByTestId('binding-edit-mode')).toBeNull())
+
+    const bindings = await listSourceBindings(projectId)
+    expect(bindings.ok).toBe(true)
+    if (!bindings.ok) {
+      throw new Error(bindings.error.message)
+    }
+    const one = bindings.value.find((binding) => binding.id === 'bind-one')
+    const two = bindings.value.find((binding) => binding.id === 'bind-two')
+    expect(two?.revisionId).toBe(revisionB.id)
+    expect(two?.reviewedTermRevision).toBeNull()
+    expect(one?.revisionId).not.toBe(revisionB.id)
+    expect(one?.reviewedTermRevision).toBe(1)
+
+    const project = await getProject(projectId)
+    expect(project.ok).toBe(true)
+    if (project.ok) {
+      expect(project.value?.working).toEqual(beforeProject)
     }
   })
 })
