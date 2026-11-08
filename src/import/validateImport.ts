@@ -217,22 +217,22 @@ export function validateImport(
       }
     }
 
-    const rawSign = readEdited(
-      edits,
-      sourceRow.rowNumber,
-      'sign',
-      rawValues.sign,
-    )
+    const editedSign = edits[importCellKey(sourceRow.rowNumber, 'sign')]
+    const rawSign = editedSign === undefined ? rawValues.sign : editedSign
     const signToken = rawSign.trim()
     let sign: 1 | -1 | undefined
     if (signToken === '') {
       values.sign = ''
       addError('sign', '方向不能为空，必须明确为 +1 或 -1')
-    } else if (signToken === '1' || signToken === '-1') {
-      // 预览中的方向选择框直接写入 1 / -1。
+    } else if (
+      editedSign !== undefined &&
+      (signToken === '1' || signToken === '-1')
+    ) {
+      // 只有预览里的用户编辑值才允许直接采用 ±1；原文必须走已确认映射。
       sign = signToken === '1' ? 1 : -1
       values.sign = signToken
     } else {
+      // 原文方向（包括字面 '1' / '-1'）一律以用户在向导中确认的映射为准。
       const mapped = mapping.directionValues[signToken]
       if (mapped === undefined) {
         values.sign = signToken
@@ -295,15 +295,15 @@ export function validateImport(
 
   if (rows.length === 0) {
     globalErrors.push('没有可导入的数据行')
-  } else if (rows.length < 2) {
-    globalErrors.push('至少需要 2 个组成环才能形成有效尺寸链')
   }
   if (rows.length > MAX_IMPORT_TERMS) {
     globalErrors.push(
       `组成环最多 ${MAX_IMPORT_TERMS} 项，当前为 ${rows.length} 项`,
     )
   }
-  if (validTerms.length !== rows.length && validTerms.length < 2) {
+  // 导入行数不等于最终链数量：单行追加到已有合法链是允许的，
+  // 最终 2–20 项由 commit 的 draftToChain / validateChain 校验。
+  if (validTerms.length !== rows.length) {
     // 保持提示明确：不要因为少量错误行而误以为可以只导入“有效的那几行”。
     globalErrors.push('存在未解决的错误行，不能只导入其余有效行')
   }

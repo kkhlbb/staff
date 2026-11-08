@@ -6,8 +6,8 @@ import {
   parseTableText,
 } from './parseTable'
 
-function parseOk(text: string) {
-  const result = parseTableText(text)
+function parseOk(text: string, delimiter?: ',' | '\t') {
+  const result = parseTableText(text, delimiter)
   if (!result.ok) {
     throw new Error(`expected parse ok, got ${result.error.code}: ${result.error.message}`)
   }
@@ -65,6 +65,38 @@ describe('parseTableText：CSV / TSV 解析', () => {
     expect(detectDelimiter('"a,b"\tc\n1\t2')).toBe('\t')
     expect(detectDelimiter('"a\tb",c\n1,2')).toBe(',')
     expect(detectDelimiter('single-column\n1')).toBeNull()
+  })
+
+  it('无表头 TSV 首行备注含多个逗号时仍按制表符解析', () => {
+    // 首行是数据：3 个字段由 2 个制表符分隔，备注里却有 4 个逗号。
+    // 分隔符判定不能比较数量，否则会误判为 CSV。
+    const tsv = ['H\t100\t备注 a,b,c,d', 'B1\t20\t备注 e,f'].join('\n')
+
+    expect(detectDelimiter(tsv)).toBe('\t')
+    const table = parseOk(tsv)
+    expect(table.delimiter).toBe('\t')
+    expect(table.rows[0].cells).toEqual(['H', '100', '备注 a,b,c,d'])
+    expect(table.rows[1].cells).toEqual(['B1', '20', '备注 e,f'])
+  })
+
+  it('可显式指定分隔符，覆盖自动判定', () => {
+    const table = parseOk('a,b\tc\nd,e\tf', ',')
+    expect(table.delimiter).toBe(',')
+    expect(table.rows[0].cells).toEqual(['a', 'b\tc'])
+  })
+
+  it('引号内换行后，后续记录仍使用原文物理起始行号', () => {
+    const csv = [
+      '代号,名称,备注',
+      'H,机架,"第一行',
+      '第二行"',
+      'B1,轴承,普通',
+    ].join('\n')
+
+    const table = parseOk(csv)
+    expect(table.rows.map((row) => row.rowNumber)).toEqual([1, 2, 4])
+    expect(table.rows[1].cells[2]).toBe('第一行\n第二行')
+    expect(table.rows[2].rowNumber).toBe(4)
   })
 
   it('拒绝超过 1 MB 的原文', () => {

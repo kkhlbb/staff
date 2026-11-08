@@ -211,6 +211,76 @@ describe('validateImport：错误必须定位到具体单元格', () => {
   })
 })
 
+describe('validateImport：方向以用户确认映射为准', () => {
+  it("原文方向为 '1' 但确认映射为 -1 时必须按 -1 导入", () => {
+    const table = tableOf(
+      ['代号\t基本尺寸\t下偏差\t上偏差\t方向', 'L\t10.0000\t0.0000\t0.1000\t1'].join(
+        '\n',
+      ),
+    )
+    const mapping: ColumnMapping = {
+      ...mappingFor(table),
+      directionValues: { '1': -1 },
+    }
+    const result = validateImport(table, mapping)
+
+    expect(result.cellErrors).toEqual({})
+    expect(result.validTerms).toHaveLength(1)
+    expect(result.validTerms[0].sign).toBe(-1)
+    expect(result.rows[0].values.sign).toBe('-1')
+  })
+
+  it('预览中的用户编辑值可以直接覆盖已确认映射', () => {
+    const table = tableOf(
+      ['代号\t基本尺寸\t下偏差\t上偏差\t方向', 'L\t10.0000\t0.0000\t0.1000\t1'].join(
+        '\n',
+      ),
+    )
+    const mapping: ColumnMapping = {
+      ...mappingFor(table),
+      directionValues: { '1': -1 },
+    }
+    const result = validateImport(table, mapping, {
+      [importCellKey(2, 'sign')]: '1',
+    })
+
+    expect(result.cellErrors).toEqual({})
+    expect(result.validTerms[0].sign).toBe(1)
+    expect(result.rows[0].values.sign).toBe('1')
+  })
+})
+
+describe('validateImport：单行导入与原文行号定位', () => {
+  it('单行数据不再被“至少 2 行”的全局错误拦住', () => {
+    const table = tableOf(
+      ['代号\t基本尺寸\t下偏差\t上偏差\t方向', 'L\t10.0000\t0.0000\t0.1000\t+1'].join(
+        '\n',
+      ),
+    )
+    const result = validateImport(table, mappingFor(table))
+
+    expect(result.rows).toHaveLength(1)
+    expect(result.validTerms).toHaveLength(1)
+    expect(result.globalErrors).toEqual([])
+  })
+
+  it('多行来源备注之后的非法数值定位到原文物理行号', () => {
+    const table = tableOf(
+      [
+        '代号,名称,基本尺寸,下偏差,上偏差,方向,来源备注',
+        'H,机架,100.0000,0.0000,0.1000,+1,"第一行',
+        '第二行"',
+        'B1,轴承,20.0000,abc,0.0000,-1,备注',
+      ].join('\n'),
+    )
+    const result = validateImport(table, mappingFor(table))
+
+    // 第 2 条记录跨原文第 2–3 行，因此下一条记录从第 4 行开始。
+    expect(result.cellErrors[importCellKey(4, 'lower')]).toContain('格式不正确')
+    expect(result.cellErrors[importCellKey(3, 'lower')]).toBeUndefined()
+  })
+})
+
 describe('validateImport：显式常量与极限尺寸提示', () => {
   it('仅在用户显式选择后用常量 0 补齐缺失偏差', () => {
     const table = tableOf(

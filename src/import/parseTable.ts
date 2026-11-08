@@ -10,7 +10,10 @@ export const MAX_IMPORT_TERMS = 20
 export type TableDelimiter = ',' | '\t'
 
 export interface TableRow {
-  /** 数据在原文中的行号（从 1 开始，只用于定位）。 */
+  /**
+   * 记录在原文中的物理起始行号（从 1 开始，只用于定位）。
+   * 引号内换行会让后续记录跨越多行，因此不能直接用 CSV 记录序号。
+   */
   rowNumber: number
   cells: string[]
 }
@@ -45,6 +48,8 @@ function isBlankRow(cells: string[]): boolean {
  *
  * 只统计引号外的制表符和逗号，因此 `"备注,含逗号"` 不会被误判为 CSV。
  * 同时出现时制表符优先：从 Excel 复制的数据通常是 TSV，单元格里可能带逗号。
+ * 只要引号外出现制表符就按 TSV 处理，不能再用逗号数量“压过”制表符，
+ * 否则无表头 TSV 的首行备注含多个逗号时会被误判成 CSV。
  */
 export function detectDelimiter(text: string): TableDelimiter | null {
   let quoted = false
@@ -74,10 +79,51 @@ export function detectDelimiter(text: string): TableDelimiter | null {
     }
   }
 
-  if (tabs === 0 && commas === 0) {
-    return null
+  if (tabs > 0) {
+    return '\t'
   }
-  return tabs >= commas ? '\t' : ','
+  return commas > 0 ? ',' : null
+}
+
+/**
+ * 计算每个 CSV 记录在原文中的物理起始行号。
+ *
+ * 引号内的换行属于单元格内容，不产生新记录；引号外每个换行（CRLF 算一次）
+ * 之后开始下一条记录。返回数组与 Papa Parse 返回的记录一一对应，包括末尾
+ * 换行产生的合成空记录（调用方之后再按原逻辑丢弃）。
+ */
+function recordStartLines(text: string): number[] {
+  const starts: number[] = [1]
+  let line = 1
+  let quoted = false
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]
+    if (char === '"') {
+      if (quoted && text[index + 1] === '"') {
+        index += 1
+      } else {
+        quoted = !quoted
+      }
+      continue
+    }
+    if (char === '\n' || char === '\r') {
+      if (char === '\r' && text[index + 1] === '\n') {
+        index += 1
+      }
+      // 引号内的换行也是原文物理行，只是不开始新记录。
+      line += 1
+      if (!quoted) {
+        starts.push(line)
+      }
+      continue
+    }
+    if (quoted) {
+      continue
+    }
+  }
+
+  return starts
 }
 
 /**
@@ -86,7 +132,10 @@ export function detectDelimiter(text: string): TableDelimiter | null {
  * 使用 Papa Parse 处理 RFC 4180 风格的引号、转义引号和引号内换行；
  * dynamicTyping 关闭，所有单元格保持原文，数值转换只由领域层的 tryParseMm 完成。
  */
-export function parseTableText(input: string): ParseTableResult {
+export function parseTableText(
+  input: string,
+  delimiterOverride?: TableDelimiter,
+): ParseTableResult {
   // 规范是「原文 ≤ 1 MB」，因此按未去 BOM 的原始输入计算字节数；BOM 也算原文的一部分。
   const byteLength = new TextEncoder().encode(input).byteLength
   if (byteLength > MAX_IMPORT_BYTES) {
@@ -100,7 +149,7 @@ export function parseTableText(input: string): ParseTableResult {
     return parseFailure('empty_input', '请粘贴表格文本或选择 CSV/TSV 文件')
   }
 
-  const delimiter = detectDelimiter(text)
+  const delimiter = delimiterOverride ?? detectDelimiter(text)
   if (delimiter === null) {
     return parseFailure(
       'missing_delimiter',
@@ -133,8 +182,10 @@ export function parseTableText(input: string): ParseTableResult {
 
   // Papaparse 会为末尾换行额外生成一个空行；它不是用户输入的空白行。
   // 但如果文件末尾有多余空行（例如连续两个换行），除这一个合成行外仍计入 blankRows。
+  // rowNumber 取物理起始行号：引号内换行会让记录序号与原文行号分离。
+  const startLines = recordStartLines(text)
   const parsedRows = parsed.data.map((cells, index) => ({
-    rowNumber: index + 1,
+    rowNumber: startLines[index] ?? index + 1,
     cells,
   }))
   if (
