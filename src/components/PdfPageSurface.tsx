@@ -25,7 +25,11 @@ export interface PdfPageHighlight {
 }
 
 export interface PdfPageSurfaceProps {
-  viewport: RenderViewport
+  /**
+   * 当前页 viewport。null 表示页面正在切换/绘制：保留 canvas 节点供下一次
+   * 绘制使用，但整层隐藏且不可框选；绝不沿用上一页的 viewport。
+   */
+  viewport: RenderViewport | null
   canvasRef: RefObject<HTMLCanvasElement | null>
   highlights?: readonly PdfPageHighlight[]
   draftRectPdf?: PdfRect | null
@@ -72,6 +76,9 @@ export function PdfPageSurface({
   /** 客户区坐标 → viewport CSS 坐标；CSS 尺寸与 canvas 内部像素无关。 */
   const viewportPointFromEvent = useCallback(
     (event: Pick<MouseEvent, 'clientX' | 'clientY'>): PdfPoint | null => {
+      if (viewport === null) {
+        return null
+      }
       const stage = stageRef.current
       if (stage === null) {
         return null
@@ -92,7 +99,12 @@ export function PdfPageSurface({
   )
 
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>): void => {
-    if (disabled || onDraftChange === undefined || event.button !== 0) {
+    if (
+      disabled ||
+      viewport === null ||
+      onDraftChange === undefined ||
+      event.button !== 0
+    ) {
       return
     }
     const point = viewportPointFromEvent(event)
@@ -154,49 +166,59 @@ export function PdfPageSurface({
     <div
       ref={stageRef}
       className={dragging ? 'pdf-surface pdf-surface--dragging' : 'pdf-surface'}
-      style={{ width: viewport.width, height: viewport.height }}
-      data-testid="pdf-surface"
+      style={
+        viewport === null
+          ? { display: 'none' }
+          : { width: viewport.width, height: viewport.height }
+      }
+      data-testid={viewport === null ? undefined : 'pdf-surface'}
       onMouseDown={handleMouseDown}
       role="presentation"
     >
       <canvas
         ref={canvasRef}
         className="pdf-surface__canvas"
-        style={{ width: viewport.width, height: viewport.height }}
+        style={
+          viewport === null
+            ? undefined
+            : { width: viewport.width, height: viewport.height }
+        }
         role="img"
         aria-label={ariaLabel}
       />
-      <div className="pdf-surface__overlay" aria-hidden={highlights.length === 0}>
-        {highlights.map((highlight) => {
-          const style = toStyle(viewport, highlight.rectPdf)
-          return (
+      {viewport === null ? null : (
+        <div className="pdf-surface__overlay" aria-hidden={highlights.length === 0}>
+          {highlights.map((highlight) => {
+            const style = toStyle(viewport, highlight.rectPdf)
+            return (
+              <div
+                key={highlight.id}
+                className={
+                  highlight.active
+                    ? 'pdf-highlight pdf-highlight--active'
+                    : 'pdf-highlight'
+                }
+                data-binding-id={highlight.id}
+                data-rect-left={style.left}
+                data-rect-top={style.top}
+                data-rect-width={style.width}
+                data-rect-height={style.height}
+                style={style}
+                title={highlight.label}
+              >
+                <span className="pdf-highlight__label">{highlight.label}</span>
+              </div>
+            )
+          })}
+          {draftRectPdf === null ? null : (
             <div
-              key={highlight.id}
-              className={
-                highlight.active
-                  ? 'pdf-highlight pdf-highlight--active'
-                  : 'pdf-highlight'
-              }
-              data-binding-id={highlight.id}
-              data-rect-left={style.left}
-              data-rect-top={style.top}
-              data-rect-width={style.width}
-              data-rect-height={style.height}
-              style={style}
-              title={highlight.label}
-            >
-              <span className="pdf-highlight__label">{highlight.label}</span>
-            </div>
-          )
-        })}
-        {draftRectPdf === null ? null : (
-          <div
-            className="pdf-highlight pdf-highlight--draft"
-            data-testid="pdf-draft-rect"
-            style={toStyle(viewport, draftRectPdf)}
-          />
-        )}
-      </div>
+              className="pdf-highlight pdf-highlight--draft"
+              data-testid="pdf-draft-rect"
+              style={toStyle(viewport, draftRectPdf)}
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }

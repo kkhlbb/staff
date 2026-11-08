@@ -11,6 +11,7 @@ import { createProject } from '../storage/projects'
 import { deleteProjectDatabase } from '../test/projectDb'
 import { buildSyntheticPdf } from '../test/pdfFixtures'
 import type { TermDraft } from '../workspace/draft'
+import type { RenderPdfPage } from './PdfViewer'
 import { SourcePanel } from './SourcePanel'
 
 const terms: TermDraft[] = [
@@ -78,6 +79,18 @@ const bytesByHash = new Map<string, Uint8Array>([
 const loadBytes = async (revision: { sha256: string }) =>
   bytesByHash.get(revision.sha256) ?? null
 
+/**
+ * jsdom 没有 canvas 2D 上下文；这里只补齐 PdfViewer 的绘制 seam，让“绘制完成”
+ * 这一状态可达。像素内容不是本文件要验证的对象，几何/坐标另有专门用例。
+ */
+const renderPageForTest: RenderPdfPage = (_page, canvas, viewport) => {
+  canvas.width = Math.max(1, Math.floor(viewport.width))
+  canvas.height = Math.max(1, Math.floor(viewport.height))
+  canvas.style.width = `${viewport.width}px`
+  canvas.style.height = `${viewport.height}px`
+  return { promise: Promise.resolve(), cancel: () => undefined }
+}
+
 async function createTestProject(): Promise<string> {
   const created = await createProject({ name: '来源面板测试', working: chain })
   expect(created.ok).toBe(true)
@@ -117,6 +130,7 @@ describe('SourcePanel：导入、框选、刷新后打开确切 revision', () =>
         terms={terms}
         selectedTermId="t-h"
         loadBytes={loadBytes}
+        renderPage={renderPageForTest}
       />,
     )
     await screen.findByText(/还没有导入 PDF/)
@@ -217,6 +231,7 @@ describe('SourcePanel：导入、框选、刷新后打开确切 revision', () =>
         terms={terms}
         selectedTermId="t-h"
         loadBytes={loadBytes}
+        renderPage={renderPageForTest}
       />,
     )
 

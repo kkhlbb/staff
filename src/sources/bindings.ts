@@ -128,8 +128,10 @@ export function countBindingsByTerm(
 /**
  * 保存一条来源绑定。
  *
- * 校验、revision 查询和写入在同一个 readwrite 事务内完成，任何一步失败都
- * 不会留下半条绑定；已有绑定不受影响。
+ * 纯几何校验在打开事务之前完成：非法页码/矩形/页面边界直接拒绝，零写入，
+ * 不需要为一次只读校验开事务。revision 查询与绑定/事件写入在同一个 readwrite
+ * 事务内完成，revision 不存在或页码越界时显式 abort，不留半条绑定；已有绑定
+ * 不受影响。
  */
 export async function createSourceBinding(
   input: CreateSourceBindingInput,

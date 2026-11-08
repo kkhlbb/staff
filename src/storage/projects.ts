@@ -905,6 +905,14 @@ export async function deleteProject(id: string): Promise<StorageResult<boolean>>
         await done
         return { ok: true, value: existing !== undefined }
       } catch (error) {
+        // 同步异常（例如 retireSourceScope 里某个 put 抛错）不会自动结束事务；
+        // 必须显式取消，否则已排队的来源退役写入仍可能提交，留下“删除失败但
+        // 部分来源已退役”的半成品。与 bindings.ts 的写入路径保持一致。
+        try {
+          transaction.abort()
+        } catch {
+          // 事务可能已经 error/abort，忽略二次取消异常。
+        }
         await done.catch(() => undefined)
         throw error
       }

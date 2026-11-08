@@ -19,6 +19,7 @@ import {
   openPdfForRendering,
   renderPageToCanvas,
   type OpenedPdf,
+  type PdfRenderPageLike,
   type PdfRenderTaskLike,
   type RenderViewport,
 } from '../sources/render'
@@ -42,6 +43,29 @@ export interface SaveBindingOutcome {
   message?: string
 }
 
+/**
+ * 一页“已经画完”的身份与几何。只有它和当前 revision/page/zoom/rotation
+ * 完全一致时，页面才允许框选，保存也只使用这里的 pageBoxPdf。
+ */
+interface RenderedSurface {
+  /** `${revisionId}::${page}::${zoom}::${rotation}`；与当前请求不一致即不可交互。 */
+  key: string
+  revisionId: string
+  page: number
+  zoom: number
+  rotation: number
+  viewport: RenderViewport
+  pageBoxPdf: PdfPageBox
+}
+
+/** 测试注入：把 PDF 页绘制到 canvas；默认使用项目内 pdfjs-dist。 */
+export type RenderPdfPage = (
+  page: PdfRenderPageLike,
+  canvas: HTMLCanvasElement,
+  viewport: RenderViewport,
+  outputScale?: number,
+) => PdfRenderTaskLike
+
 export interface PdfViewerProps {
   revision: SourceRevision
   bindings: readonly SourceBinding[]
@@ -57,6 +81,8 @@ export interface PdfViewerProps {
   loadBytes?: LoadRevisionBytes
   /** 测试注入：打开 PDF；默认使用项目内 pdfjs-dist。 */
   openPdf?: (bytes: Uint8Array) => Promise<OpenedPdf>
+  /** 测试注入：绘制页面；默认使用项目内 pdfjs-dist。 */
+  renderPage?: RenderPdfPage
 }
 
 async function defaultLoadBytes(
@@ -101,34 +127,39 @@ export function PdfViewer({
   onSaveBinding,
   loadBytes,
   openPdf,
+  renderPage,
 }: PdfViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [opened, setOpened] = useState<OpenedPdf | null>(null)
   const [documentPageCount, setDocumentPageCount] = useState(revision.pageCount)
-  const [viewport, setViewport] = useState<RenderViewport | null>(null)
-  const [pageBoxPdf, setPageBoxPdf] = useState<PdfPageBox | null>(null)
+  /**
+   * 最近一次真正画完的页面。只有 key 与当前 requestKey 完全一致时才会交给
+   * 页面层、用于框选与保存；切页/缩放/旋转后旧 surface 立即失配且不可达。
+   */
+  const [surface, setSurface] = useState<RenderedSurface | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [renderError, setRenderError] = useState<string | null>(null)
+  const [renderError, setRenderError] = useState<{
+    key: string
+    message: string
+  } | null>(null)
   const [draftRect, setDraftRect] = useState<PdfRect | null>(null)
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
-  // 打开附件时需要在“ready”首帧就拿到 viewport，否则 canvas 尚未挂载，
-  // 渲染任务会找不到画布。这里用 ref 读取当前页码/缩放/旋转，不把打开
-  // 附件与每次缩放绑定到同一个 effect。
-  const viewParamsRef = useRef({ page, zoom, rotation })
-  useEffect(() => {
-    viewParamsRef.current = { page, zoom, rotation }
-  }, [page, zoom, rotation])
-
   // 测试注入的 openPdf 可能是内联函数；用 ref 保存，避免每次渲染重开附件。
   const openPdfRef = useRef(openPdf)
   useEffect(() => {
     openPdfRef.current = openPdf
   }, [openPdf])
+
+  // 测试注入的 renderPage 同理；默认用项目内 pdfjs-dist 绘制。
+  const renderPageRef = useRef(renderPage)
+  useEffect(() => {
+    renderPageRef.current = renderPage
+  }, [renderPage])
 
   // 切换附件 / 页码时清掉未保存的框选，避免把上一页区域误存到新页。
   useEffect(() => {
@@ -158,7 +189,8 @@ export function PdfViewer({
       setStatus('loading')
       setLoadError(null)
       setOpened(null)
-      setViewport(null)
+      setSurface(null)
+      setRenderError(null)
 
       const loader = loadBytes ?? defaultLoadBytes
       let bytes: Uint8Array | null
@@ -186,23 +218,8 @@ export function PdfViewer({
           await result.destroy()
           return
         }
-        const params = viewParamsRef.current
-        const firstPage = await result.document.getPage(params.page)
-        if (cancelled) {
-          await result.destroy()
-          return
-        }
-        const firstViewport = firstPage.getViewport({
-          scale: params.zoom,
-          rotation: params.rotation,
-        })
-        const pageBox = normalizePdfPageBox(firstPage.view)
-        if (pageBox === null) {
-          await result.destroy()
-          throw new PdfInspectError('invalid_pdf', '页面边界框无效，无法框选来源区域')
-        }
-        setViewport(firstViewport)
-        setPageBoxPdf(pageBox)
+        // 不预先 setSurface：当前页由下面的渲染 effect 负责。只有 getPage、
+        // viewport/page.view 与 canvas 绘制都成功后，才发布可交互的 surface。
         setDocumentPageCount(result.document.numPages)
         setOpened(result)
         setStatus('ready')
@@ -230,6 +247,13 @@ export function PdfViewer({
     }
   }, [opened])
 
+  const pageCount = Math.min(documentPageCount, revision.pageCount)
+  const clampedPage = Math.min(Math.max(page, 1), Math.max(pageCount, 1))
+  const requestKey = `${revision.id}::${clampedPage}::${zoom}::${rotation}`
+
+  // 页面渲染 effect：只有这一页真正画完，才发布与 requestKey 绑定的 surface。
+  // 切页/缩放/旋转开始后，旧 surface 的 key 与当前 requestKey 不一致，因此旧
+  // viewport 不会传给页面、旧 pageBoxPdf 也不会用于校验或保存。
   useEffect(() => {
     if (opened === null) {
       return
@@ -239,31 +263,60 @@ export function PdfViewer({
 
     const render = async (): Promise<void> => {
       try {
-        const pdfPage = await opened.document.getPage(page)
+        const pdfPage = await opened.document.getPage(clampedPage)
         if (cancelled) {
           return
         }
         const nextViewport = pdfPage.getViewport({ scale: zoom, rotation })
         const pageBox = normalizePdfPageBox(pdfPage.view)
         if (pageBox === null) {
-          setRenderError('页面边界框无效，无法框选来源区域')
+          if (!cancelled) {
+            setSurface(null)
+            setRenderError({
+              key: requestKey,
+              message: '页面边界框无效，无法框选来源区域',
+            })
+          }
           return
         }
-        setViewport(nextViewport)
-        setPageBoxPdf(pageBox)
-        setRenderError(null)
 
         const canvas = canvasRef.current
         if (canvas === null) {
+          if (!cancelled) {
+            setSurface(null)
+            setRenderError({
+              key: requestKey,
+              message: '页面画布尚未挂载，暂时不能框选。',
+            })
+          }
           return
         }
         const outputScale =
           typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
-        task = renderPageToCanvas(pdfPage, canvas, nextViewport, outputScale)
+        const draw = renderPageRef.current ?? renderPageToCanvas
+        task = draw(pdfPage, canvas, nextViewport, outputScale)
         await task.promise
+        if (cancelled) {
+          return
+        }
+        // 像素绘制完成，才发布与本次 page/zoom/rotation 完全绑定的 surface。
+        setSurface({
+          key: requestKey,
+          revisionId: revision.id,
+          page: clampedPage,
+          zoom,
+          rotation,
+          viewport: nextViewport,
+          pageBoxPdf: pageBox,
+        })
+        setRenderError(null)
       } catch (error) {
         if (!cancelled && !isRenderingCancelled(error)) {
-          setRenderError(`PDF 页面渲染失败：${errorMessage(error)}`)
+          setSurface(null)
+          setRenderError({
+            key: requestKey,
+            message: `PDF 页面渲染失败：${errorMessage(error)}`,
+          })
         }
       }
     }
@@ -273,10 +326,20 @@ export function PdfViewer({
       cancelled = true
       task?.cancel()
     }
-  }, [opened, page, zoom, rotation])
+  }, [opened, clampedPage, requestKey, zoom, rotation, revision.id])
 
-  const pageCount = Math.min(documentPageCount, revision.pageCount)
-  const clampedPage = Math.min(Math.max(page, 1), Math.max(pageCount, 1))
+  // 身份 + 绘制状态必须同时匹配；key 不一致时旧 viewport/pageBoxPdf 不可达。
+  const surfaceReady =
+    surface !== null &&
+    surface.key === requestKey &&
+    surface.revisionId === revision.id &&
+    surface.page === clampedPage &&
+    surface.zoom === zoom &&
+    surface.rotation === rotation
+  const activeRenderError =
+    renderError !== null && renderError.key === requestKey
+      ? renderError.message
+      : null
 
   const highlights: PdfPageHighlight[] = bindings
     .filter(
@@ -293,6 +356,10 @@ export function PdfViewer({
   const handleSave = async (): Promise<void> => {
     setSaveError(null)
     setSaveMessage(null)
+    if (!surfaceReady || surface === null) {
+      setSaveError('页面正在切换或尚未绘制完成，恢复前不能保存来源绑定。')
+      return
+    }
     if (selectedTermId === null) {
       setSaveError('先在组成环表中选中一行，再保存来源绑定。')
       return
@@ -301,12 +368,9 @@ export function PdfViewer({
       setSaveError('请先在页面上框选一块区域。')
       return
     }
-    if (pageBoxPdf === null) {
-      setSaveError('页面边界尚未加载完成，暂时不能保存。')
-      return
-    }
-    // 越界/空区域在这里再次拒绝，不依赖存储层兜底。
-    const regionError = validatePdfRect(draftRect, pageBoxPdf)
+    // 越界/空区域在这里再次拒绝，不依赖存储层兜底。边界只能取自已经画完、
+    // 且与当前页身份一致的 surface，不能用切页前的旧 pageBoxPdf。
+    const regionError = validatePdfRect(draftRect, surface.pageBoxPdf)
     if (regionError !== null) {
       setSaveError(`不能保存：${regionError}`)
       return
@@ -314,9 +378,9 @@ export function PdfViewer({
 
     setSaving(true)
     const outcome = await onSaveBinding({
-      page: clampedPage,
+      page: surface.page,
       rectPdf: draftRect,
-      pageBoxPdf,
+      pageBoxPdf: surface.pageBoxPdf,
       note,
     })
     setSaving(false)
@@ -411,23 +475,32 @@ export function PdfViewer({
           {loadError}
         </p>
       ) : null}
-      {renderError !== null ? (
+      {activeRenderError !== null ? (
         <p className="pdf-viewer__error" role="alert">
-          {renderError}
+          {activeRenderError}
         </p>
       ) : null}
 
-      {status === 'ready' && viewport !== null ? (
+      {status === 'ready' && opened !== null ? (
         <div className="pdf-viewer__stage">
           <PdfPageSurface
-            viewport={viewport}
+            viewport={surfaceReady && surface !== null ? surface.viewport : null}
             canvasRef={canvasRef}
-            highlights={highlights}
-            draftRectPdf={draftRect}
+            highlights={surfaceReady ? highlights : []}
+            draftRectPdf={surfaceReady ? draftRect : null}
             onDraftChange={(rect) => setDraftRect(rect)}
             ariaLabel={`${revision.fileName} 第 ${clampedPage} 页`}
-            disabled={selectedTermId === null}
+            disabled={!surfaceReady || selectedTermId === null}
           />
+          {!surfaceReady && activeRenderError === null ? (
+            <p
+              className="pdf-viewer__status"
+              role="status"
+              data-testid="pdf-switching"
+            >
+              正在渲染第 {clampedPage} 页；完成前不能框选或保存。
+            </p>
+          ) : null}
           <p className="pdf-viewer__hint">
             在页面上按住鼠标拖动框选区域。高亮使用 PDF 坐标保存，缩放或旋转后仍指向同一块内容。
           </p>
@@ -446,7 +519,10 @@ export function PdfViewer({
               type="button"
               onClick={() => void handleSave()}
               disabled={
-                saving || selectedTermId === null || draftRect === null
+                saving ||
+                !surfaceReady ||
+                selectedTermId === null ||
+                draftRect === null
               }
             >
               {saving ? '保存中…' : '保存来源绑定'}

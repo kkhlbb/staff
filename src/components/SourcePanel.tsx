@@ -18,7 +18,7 @@ import {
 } from '../sources/revisions'
 import type { SourceDocument, SourceRevision } from '../sources/types'
 import type { TermDraft } from '../workspace/draft'
-import { PdfViewer, type LoadRevisionBytes, type SaveBindingInput } from './PdfViewer'
+import { PdfViewer, type LoadRevisionBytes, type RenderPdfPage, type SaveBindingInput } from './PdfViewer'
 
 export interface SourcePanelProps {
   projectId: string
@@ -28,6 +28,8 @@ export interface SourcePanelProps {
   onBindingsChange?: (bindings: SourceBinding[]) => void
   /** 测试注入：读取 revision 字节；默认从 sourceBlobs 读取。 */
   loadBytes?: LoadRevisionBytes
+  /** 测试注入：绘制页面；默认使用项目内 pdfjs-dist。 */
+  renderPage?: RenderPdfPage
 }
 
 function formatDateTime(value: string): string {
@@ -48,6 +50,7 @@ export function SourcePanel({
   selectedTermId,
   onBindingsChange,
   loadBytes,
+  renderPage,
 }: SourcePanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [documents, setDocuments] = useState<SourceDocument[]>([])
@@ -404,6 +407,7 @@ export function SourcePanel({
               onRotationChange={setRotation}
               onSaveBinding={handleSaveBinding}
               {...(loadBytes === undefined ? {} : { loadBytes })}
+              {...(renderPage === undefined ? {} : { renderPage })}
             />
           )}
         </div>
