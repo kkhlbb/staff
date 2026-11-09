@@ -112,7 +112,7 @@ describe('encodeProjectFile / decodeProjectFile 往返', () => {
     const manifest = decoded.value.manifest
     expect(manifest.format).toBe('cunlian-project')
     expect(manifest.formatVersion).toBe(2)
-    expect(manifest.project.projectSchemaVersion).toBe(4)
+    expect(manifest.project.projectSchemaVersion).toBe(5)
     expect(manifest.project.dimensionChainSchemaVersion).toBe(2)
     expect(manifest.project.id).toBe(SAMPLE_PROJECT_ID)
     expect(manifest.counts.documents).toBe(1)
@@ -186,7 +186,7 @@ describe('版本与清单拒绝', () => {
     const bytes = await rebuildArchive(await encodeSample(), (parts) => {
       patchJson(parts, 'manifest.json', (manifest) => {
         const project = manifest.project as Record<string, unknown>
-        project.projectSchemaVersion = 5
+        project.projectSchemaVersion = 6
       })
     })
     const decoded = await decodeProjectFile(bytes)

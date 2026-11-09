@@ -124,10 +124,17 @@ const title = await evaluate('document.title')
 check('窗口标题为 寸链', title === '寸链', `got=${title}`)
 
 const bodyText = await evaluate('document.body.innerText')
-check('渲染出桌面壳内容', String(bodyText).includes('桌面壳'), `got=${String(bodyText).slice(0, 80)}`)
+check('渲染出桌面壳内容', String(bodyText).includes('打开项目，继续设计'), `got=${String(bodyText).slice(0, 80)}`)
 
 const apiKeys = await evaluate('Object.keys(window.cunlian).sort()')
-const expectedKeys = ['onEditorFlush', 'onMenuAction', 'requestClose', 'respondEditorFlush']
+const expectedKeys = [
+  'newProject', 'openProject', 'stageDraft', 'saveProject', 'saveProjectAs',
+  'listRecent', 'relinkRecent', 'listRecovery', 'restoreRecovery', 'reattachSession',
+  'readAttachment', 'revealProject', 'requestClose', 'inspectV2', 'commitV2',
+  'onMenuAction', 'onEditorFlush', 'respondEditorFlush',
+  'pickModel', 'readModel', 'commitModel', 'releaseModel', 'linkModel',
+  'updateSpacerDrawing', 'exportDrawingPdf', 'exportDrawingSvg',
+].sort()
 check(
   'window.cunlian 只暴露具体函数',
   JSON.stringify(apiKeys) === JSON.stringify(expectedKeys),

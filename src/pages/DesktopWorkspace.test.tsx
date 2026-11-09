@@ -7,6 +7,9 @@ import { createSampleSnapshot } from '../project-file/__fixtures__/sampleProject
 import { createModelSnapshot, sampleStlTriangle, MODEL_PART_ID, MODEL_REVISION_ID } from '../project-file/__fixtures__/modelProjectFile'
 import { toSnapshotDto } from '../project-file/codec'
 import { DesktopWorkspace } from './DesktopWorkspace'
+import { buildSpacerDrawing } from '../drawing/spacerDrawing'
+import { parseSpacerParameters } from '../parts/spacerParameters'
+import type { ProjectFileDrawingRecord } from '../project-file/types'
 
 // 3D 场景在 jsdom 里没有 WebGL2：用伪场景模块替换，只验证接线与命令调用。
 const scene = vi.hoisted(() => ({
@@ -67,9 +70,11 @@ let menu: (payload: MenuActionPayload) => void
 let flush: (payload: EditorFlushRequest) => void
 let opened: ProjectOpenValue
 let api: CunlianApi
+let drawingSnapshot: ProjectOpenValue['snapshot'] | null = null
 const failure = { ok: false as const, error: { code: 'NO_SPACE' as const, message: '磁盘空间不足' } }
 beforeEach(async () => {
   opened = { sessionId: 'session-1', editSeq: 0, snapshot: await createSampleSnapshot(), path: null, fingerprint: null, warnings: [] }
+  drawingSnapshot = null
   api = {
     newProject: vi.fn(async () => ({ ok: true as const, value: opened })),
     openProject: vi.fn(async () => ({ ok: true as const, value: opened })),
@@ -95,6 +100,58 @@ beforeEach(async () => {
     commitModel: vi.fn(async () => ({ ok: false as const, error: { code: 'STALE_EDIT' as const, message: '无候选' } })),
     releaseModel: vi.fn(async () => ({ ok: true as const, value: { released: false } })),
     linkModel: vi.fn(async () => ({ ok: false as const, error: { code: 'MISSING_REFERENCE' as const, message: '无模型' } })),
+    // C 新增：用同一生成器构造权威返回，验证预览/参数接线。
+    updateSpacerDrawing: vi.fn<CunlianApi['updateSpacerDrawing']>(async request => {
+      const parsed = parseSpacerParameters(request.inputs)
+      if (!parsed.ok) {
+        return { ok: false as const, error: { code: 'INVALID_PARAMETER' as const, message: parsed.message, detail: `${parsed.field}/${parsed.reason}` } }
+      }
+      const base = drawingSnapshot ?? opened.snapshot
+      try {
+        const drawing = buildSpacerDrawing({
+          projectId: base.project.id,
+          revisionId: base.project.currentRevisionId,
+          drawingId: `drawing:${base.project.id}:spacer`,
+          parameters: parsed.parameters,
+          scale: request.scale,
+          frameFields: request.frameFields,
+        })
+        const record: ProjectFileDrawingRecord = {
+          drawingId: drawing.drawingId,
+          drawingDataVersion: 1,
+          templateId: drawing.templateId,
+          templateVersion: drawing.templateVersion,
+          partId: drawing.partId,
+          revisionId: drawing.revisionId,
+          parameterIds: drawing.parameterSnapshot.map(item => item.parameterId),
+          paper: drawing.paper,
+          scale: drawing.scale,
+          frameFields: request.frameFields,
+          status: 'pending-review-draft',
+          dataFingerprint: drawing.fingerprint,
+        }
+        const snapshot: ProjectOpenValue['snapshot'] = {
+          ...base,
+          project: { ...base.project, parameters: parsed.parameters.map(item => ({ ...item })), drawings: [record] },
+        }
+        drawingSnapshot = snapshot
+        return {
+          ok: true as const,
+          value: {
+            acceptedSeq: request.baseEditSeq + 1,
+            drawingId: record.drawingId,
+            drawingFingerprint: drawing.fingerprint,
+            drawingData: drawing,
+            snapshot,
+            recovery: 'pending' as const,
+          },
+        }
+      } catch (error) {
+        return { ok: false as const, error: { code: 'DRAWING_OVERFLOW' as const, message: error instanceof Error ? error.message : String(error) } }
+      }
+    }),
+    exportDrawingPdf: vi.fn(async () => ({ ok: false as const, error: { code: 'CANCELLED' as const, message: '取消' } })),
+    exportDrawingSvg: vi.fn(async () => ({ ok: false as const, error: { code: 'CANCELLED' as const, message: '取消' } })),
   }
   vi.stubGlobal('cunlian', api)
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
@@ -585,5 +642,80 @@ describe('B2 模型导入与外形资料来源', () => {
     // 同一版本内再转视角不会重建场景（手动视角仍只在本次会话保留）。
     act(() => (replaced as unknown as { onViewChange: (view: unknown) => void }).onViewChange({ position: [80, 60, 120], target: [50, 50, 0], zoom: 1 }))
     expect(modelScene.options).toHaveLength(2)
+  })
+})
+
+describe('C-03 工程图预览与参数联动', () => {
+  it('生成图纸后预览来自权威 DrawingData；点击标注定位参数', async () => {
+    await openExample()
+    fireEvent.click(screen.getByRole('button', { name: '生成图纸' }))
+    await waitFor(() => expect(api.updateSpacerDrawing).toHaveBeenCalledTimes(1))
+    expect(api.updateSpacerDrawing).toHaveBeenCalledWith({
+      sessionId: 'session-1',
+      baseEditSeq: 0,
+      partId: 'builtin:shaft-demo:spacer',
+      inputs: { innerDiameter: '20.00', outerDiameter: '32.00', length: '12.00' },
+      scale: { numerator: 1, denominator: 1 },
+      frameFields: expect.objectContaining({ partName: '隔套' }),
+    })
+    const canvas = await waitFor(() => {
+      const found = document.querySelector('[data-drawing-fingerprint]')
+      if (found === null) throw new Error('no canvas')
+      return found as HTMLElement
+    })
+    expect(canvas.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.00')
+    expect(canvas.querySelector('[data-annotation-id="ann.outer-diameter"] text')?.textContent).toBe('⌀32.00')
+
+    const annotation = canvas.querySelector('[data-annotation-id="ann.length"]')
+    expect(annotation).not.toBeNull()
+    fireEvent.click(annotation as Element)
+    expect(await screen.findByRole('heading', { name: /属性 · 标注 · 12.00/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '长度 · 图纸参数' })).toBeInTheDocument()
+    expect(screen.getByText(/q = 120000 · 输入 2 位小数/)).toBeInTheDocument()
+  })
+
+  it('12.1000 与 12.10 显示随元数据变化，几何/参数 q 不变；非法输入保留旧图', async () => {
+    await openExample()
+    fireEvent.click(screen.getByRole('button', { name: '生成图纸' }))
+    await waitFor(() => expect(document.querySelector('[data-drawing-fingerprint]')).not.toBeNull())
+    const lengthInput = screen.getByLabelText('长度输入')
+    fireEvent.change(lengthInput, { target: { value: '12.1000' } })
+    fireEvent.click(screen.getByRole('button', { name: '应用参数与比例' }))
+    await waitFor(() => {
+      expect(document.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.1000')
+    })
+    fireEvent.change(lengthInput, { target: { value: '12.10' } })
+    fireEvent.click(screen.getByRole('button', { name: '应用参数与比例' }))
+    await waitFor(() => {
+      expect(document.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.10')
+    })
+    // 预览的参数元数据来自同一份快照：q 不变，只有有效位不同。
+    expect(screen.getByText('121000 q · 2 位')).toBeInTheDocument()
+
+    const before = document.querySelector('[data-drawing-fingerprint]')?.getAttribute('data-drawing-fingerprint')
+    fireEvent.change(screen.getByLabelText('内径输入'), { target: { value: '40.00' } })
+    fireEvent.click(screen.getByRole('button', { name: '应用参数与比例' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/外径必须大于内径/)
+    expect(document.querySelector('[data-drawing-fingerprint]')?.getAttribute('data-drawing-fingerprint')).toBe(before)
+    expect(document.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.10')
+  })
+
+  it('纸面比例只改视图尺寸；画布缩放不触发数据更新', async () => {
+    await openExample()
+    fireEvent.click(screen.getByRole('button', { name: '生成图纸' }))
+    await waitFor(() => expect(document.querySelector('[data-drawing-fingerprint]')).not.toBeNull())
+    const callsBefore = vi.mocked(api.updateSpacerDrawing).mock.calls.length
+    fireEvent.change(screen.getByLabelText('纸面比例'), { target: { value: '1:2' } })
+    fireEvent.click(screen.getByRole('button', { name: '应用参数与比例' }))
+    await waitFor(() => expect(vi.mocked(api.updateSpacerDrawing).mock.calls.length).toBe(callsBefore + 1))
+    const last = vi.mocked(api.updateSpacerDrawing).mock.calls.at(-1)?.[0]
+    expect(last?.scale).toEqual({ numerator: 1, denominator: 2 })
+    await waitFor(() => {
+      expect(document.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.00')
+    })
+    const zoomCalls = vi.mocked(api.updateSpacerDrawing).mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: '50%' }))
+    fireEvent.click(screen.getByRole('button', { name: '150%' }))
+    expect(vi.mocked(api.updateSpacerDrawing).mock.calls.length).toBe(zoomCalls)
   })
 })

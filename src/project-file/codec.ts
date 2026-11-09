@@ -14,6 +14,7 @@ import { sha256Hex } from '../sources/hash'
 import {
   ATTACHMENT_EXTENSION,
   ATTACHMENT_PATH_PREFIX,
+  B2_PROJECT_FILE_SCHEMA_VERSION,
   DIMENSION_CHAIN_SCHEMA_VERSION,
   LEGACY_PROJECT_FILE_FORMAT_VERSION,
   LEGACY_PROJECT_FILE_SCHEMA_VERSION,
@@ -340,23 +341,25 @@ export async function decodeProjectFile(
       `formatVersion=${String(rawVersion)}`,
     )
   }
-  const expectedProjectSchema =
+  const expectedProjectSchemas =
     rawVersion === LEGACY_PROJECT_FILE_FORMAT_VERSION
-      ? LEGACY_PROJECT_FILE_SCHEMA_VERSION
-      : PROJECT_FILE_SCHEMA_VERSION
+      ? [LEGACY_PROJECT_FILE_SCHEMA_VERSION]
+      : [B2_PROJECT_FILE_SCHEMA_VERSION, PROJECT_FILE_SCHEMA_VERSION]
   const rawProject = rawRecord.project
   if (typeof rawProject === 'object' && rawProject !== null) {
     const projectRecord = rawProject as Record<string, unknown>
     if (
       projectRecord.projectSchemaVersion !== undefined &&
-      projectRecord.projectSchemaVersion !== expectedProjectSchema
+      !expectedProjectSchemas.includes(
+        projectRecord.projectSchemaVersion as (typeof expectedProjectSchemas)[number],
+      )
     ) {
       return fail(
         'UNSUPPORTED_VERSION',
         '项目 schema 版本与文件格式版本不匹配',
         `formatVersion=${String(rawVersion)}，projectSchemaVersion=${String(
           projectRecord.projectSchemaVersion,
-        )}，应为 ${expectedProjectSchema}`,
+        )}，应为 ${expectedProjectSchemas.join(' 或 ')}`,
       )
     }
   }

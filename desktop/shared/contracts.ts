@@ -38,6 +38,10 @@ export const IPC_CHANNELS = {
   modelCommit: 'model:commit',
   modelRelease: 'model:release',
   modelLink: 'model:link',
+  /** C：隔套参数 + 图纸草稿（原子事务）与矢量导出。 */
+  drawingUpdateSpacer: 'drawing:update-spacer',
+  drawingExportPdf: 'drawing:export-pdf',
+  drawingExportSvg: 'drawing:export-svg',
 } as const
 
 export type IpcChannelName = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
@@ -124,6 +128,16 @@ export type CommonErrorCode =
   | 'STL_INVALID_FORMAT'
   | 'STL_GEOMETRY_MISMATCH'
   | 'STL_RENDER_PREPARE_FAILED'
+  /** C：隔套图纸与矢量导出。 */
+  | 'INVALID_PARAMETER'
+  | 'DRAWING_NOT_FOUND'
+  | 'STALE_DRAWING'
+  | 'DRAWING_OVERFLOW'
+  | 'INVALID_DRAWING'
+  | 'FONT_UNAVAILABLE'
+  | 'PRINT_TIMEOUT'
+  | 'PDF_EXPORT_FAILED'
+  | 'SVG_EXPORT_FAILED'
 
 export type IpcErrorCode =
   | ContainerErrorCode
@@ -344,6 +358,64 @@ export interface ModelLinkValue {
 }
 
 /**
+ * C：隔套图纸。
+ *
+ * 请求只带十进制字符串与登记比例；main 重新解析 q、重建 DrawingData 并原子
+ * 接纳参数与图纸引用。renderer 不能传路径、SVG/bitmap、打印选项或图元数组。
+ */
+export interface SpacerDrawingInputs {
+  innerDiameter: string
+  outerDiameter: string
+  length: string
+}
+
+export interface SpacerFrameFieldsRequest {
+  partName: string
+  drawingNumber: string
+  version: string
+  material: string
+  tolerance: string
+  surface: string
+  drafter: string
+  date: string
+}
+
+export interface DrawingUpdateRequest {
+  sessionId: string
+  baseEditSeq: number
+  partId: string
+  inputs: SpacerDrawingInputs
+  scale: { numerator: number; denominator: number }
+  frameFields: SpacerFrameFieldsRequest
+}
+
+export interface DrawingUpdateValue {
+  acceptedSeq: number
+  drawingId: string
+  drawingFingerprint: string
+  /** main 重建的权威 DrawingData（纯数据）；预览只用它。 */
+  drawingData: import('../../src/drawing/types').DrawingData
+  snapshot: SnapshotDto
+  recovery: RecoveryWriteState
+  warning?: string
+}
+
+export interface DrawingExportRequest {
+  sessionId: string
+  baseEditSeq: number
+  drawingId: string
+  drawingFingerprint: string
+}
+
+export interface DrawingExportValue {
+  fileName: string
+  byteSize: number
+  sha256: string
+  drawingId: string
+  drawingFingerprint: string
+}
+
+/**
  * preload 暴露到 `window.cunlian` 的 API。
  *
  * 只列具体函数；A-02/A-03/A-04 扩展项目会话方法时同步扩展本接口，并由主进程
@@ -450,6 +522,20 @@ export interface CunlianApi {
     }
     expectedCurrentModelRevisionId: string | null
   }): Promise<IpcResult<ModelLinkValue>>
+
+  /* ---- C：隔套图纸（新增，旧函数不变） ------------------------------- */
+  /** 解析三参数、重建图纸并原子更新；失败不改变任何一项。 */
+  updateSpacerDrawing(
+    request: DrawingUpdateRequest,
+  ): Promise<IpcResult<DrawingUpdateValue>>
+  /** 用 main 权威 DrawingData 走 printToPDF；renderer 不传路径/选项/位图。 */
+  exportDrawingPdf(
+    request: DrawingExportRequest,
+  ): Promise<IpcResult<DrawingExportValue>>
+  /** 用同一权威 DrawingData 序列化 SVG；同一冻结指纹。 */
+  exportDrawingSvg(
+    request: DrawingExportRequest,
+  ): Promise<IpcResult<DrawingExportValue>>
 }
 
 /** 应用与 IPC 协议的稳定标识，测试与契约文档共用。 */

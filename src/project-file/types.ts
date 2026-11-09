@@ -21,9 +21,17 @@ import {
 } from '../backup/zip'
 
 export const PROJECT_FILE_FORMAT = 'cunlian-project'
-/** B2 起写出的格式版本：formatVersion=2，project.schemaVersion=4。 */
+/** B2 起写出的格式版本：formatVersion=2，project.schemaVersion=4/5。 */
 export const PROJECT_FILE_FORMAT_VERSION = 2
-export const PROJECT_FILE_SCHEMA_VERSION = 4
+/**
+ * 当前写端项目 schema（V3-C-03 起为 5）：
+ * - 5：三参数（q/有效位/来源备注）与图纸快照引用可持久化；
+ * - 4：B2 模型版本与可视关联，parameters/drawings 必须为空（仍可读）；
+ * - 3：B1 及更早（仍可读）。
+ * `formatVersion` 保持 2：容器布局未变，只扩展 project.json 的 schema 与版本配对。
+ */
+export const PROJECT_FILE_SCHEMA_VERSION = 5
+export const B2_PROJECT_FILE_SCHEMA_VERSION = 4
 /** 仍然可读的 B1 及更早格式（读时兼容，首次保存显式升级）。 */
 export const LEGACY_PROJECT_FILE_FORMAT_VERSION = 1
 export const LEGACY_PROJECT_FILE_SCHEMA_VERSION = 3
@@ -92,8 +100,8 @@ export interface ProjectFileWriter {
 export interface ProjectFileManifestProject {
   id: string
   name: string
-  /** 旧文件为 3，B2 写 4；读取时按伴随的 formatVersion 校验。 */
-  projectSchemaVersion: 3 | 4
+  /** 旧文件为 3，B2 为 4，C 写 5；读取时按伴随的 formatVersion 校验配对。 */
+  projectSchemaVersion: 3 | 4 | 5
   dimensionChainSchemaVersion: typeof DIMENSION_CHAIN_SCHEMA_VERSION
   currentRevisionId: string
 }
@@ -244,6 +252,63 @@ export interface ProjectFileVisualReferenceLink {
 
 export type ProjectFileDimensionLink = ProjectFileVisualReferenceLink
 
+/* ------------------------------------------------------------------ */
+/* C：隔套三参数与图纸快照引用                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * `project.parameters[]`：隔套三参数。数值真值 valueQ 与显示元数据
+ * inputDecimals 分开；sourceNote 只存用户备注，不推导。
+ *
+ * 这只描述参数记录，不改变 V2 尺寸链；C 参数也不自动同步链 S。
+ */
+export interface ProjectFileSpacerParameter {
+  parameterId: string
+  partId: string
+  key: 'innerDiameter' | 'outerDiameter' | 'length'
+  valueQ: number
+  inputDecimals: number
+  reviewStatus: 'draft' | 'pending' | 'confirmed'
+  sourceNote?: string
+}
+
+/**
+ * `project.drawings[]`：图纸快照**引用**，不是整份图元数组。
+ *
+ * 图元由参数 + 模板确定性重建；dataFingerprint 用于重建后校验一致。
+ * 不嵌入截图、base64 PDF 或整份 DrawingData。
+ */
+export interface ProjectFileDrawingRecord {
+  drawingId: string
+  drawingDataVersion: 1
+  templateId: 'spacer-a4-landscape'
+  templateVersion: number
+  partId: string
+  /** 生成基准（不因草稿编辑被提升为已复核）。 */
+  revisionId: string
+  parameterIds: string[]
+  paper: {
+    format: 'A4'
+    orientation: 'landscape'
+    widthMm: 297
+    heightMm: 210
+  }
+  scale: { numerator: number; denominator: number }
+  frameFields: {
+    partName: string
+    drawingNumber: string
+    version: string
+    material: string
+    tolerance: string
+    surface: string
+    drafter: string
+    date: string
+  }
+  status: 'pending-review-draft'
+  /** 由参数 + 模板重建出的 DrawingData 内容哈希。 */
+  dataFingerprint: string
+}
+
 /**
  * `project/project.json`：单个活动项目。
  *
@@ -254,6 +319,8 @@ export type ProjectFileDimensionLink = ProjectFileVisualReferenceLink
  * B2：schemaVersion=4，parts/modelRevisions/dimensionLinks 使用严格类型；
  * parameters/drawings 仍必须为空数组。sourceFormatVersion 记录本记录最初
  * 从哪种文件格式读入（1=B1 及更早，2=B2），用于“首次保存显式升级”。
+ *
+ * C：schemaVersion=5，parameters/drawings 使用严格类型（三参数 + 图纸引用）。
  */
 export interface ProjectFileProject {
   id: string
@@ -270,9 +337,19 @@ export interface ProjectFileProject {
   baseline: Project['baseline']
   sourceFormatVersion: 1 | 2
   parts: ProjectFilePart[]
-  parameters: unknown[]
+  parameters: ProjectFileSpacerParameter[]
   modelRevisions: ProjectFileModelRevision[]
   dimensionLinks: ProjectFileDimensionLink[]
+  drawings: ProjectFileDrawingRecord[]
+}
+
+/** B2 的 schema4 记录：模型/关联有严格类型，parameters/drawings 必须为空。 */
+export type ProjectFileProjectV2 = Omit<
+  ProjectFileProject,
+  'schemaVersion' | 'parameters' | 'drawings'
+> & {
+  schemaVersion: typeof B2_PROJECT_FILE_SCHEMA_VERSION
+  parameters: unknown[]
   drawings: unknown[]
 }
 
@@ -302,10 +379,10 @@ export interface ProjectFileRevision {
   createdAt: string
   reason: string
   /**
-   * 旧归档快照保留 schema3 原样（不可变历史）；新快照为 schema4。
+   * 旧归档快照保留原 schema（3/4）原样（不可变历史）；新快照为当前 schema 5。
    * 读取按版本化联合解析，保存时不会把旧历史改写成新内容。
    */
-  project: ProjectFileProject | ProjectFileProjectV1
+  project: ProjectFileProject | ProjectFileProjectV2 | ProjectFileProjectV1
 }
 
 /** `sources/blobs.json` 的元数据；字节在 attachments/ 下。 */

@@ -302,6 +302,16 @@ export class DesktopSessionAdapter {
     this.emit()
   }
 
+  /** C：drawing:update-spacer 已由 main 原子提交；与模型一样只重同步权威状态。 */
+  async applyDrawingMutation(value: {
+    acceptedSeq: number
+    snapshot: SnapshotDto
+    recovery: RecoveryWriteState | 'none'
+    warning?: string
+  }): Promise<void> {
+    return this.applyModelMutation(value)
+  }
+
   private scheduleStage(): void {
     if (this.stageTimer !== null) {
       clearTimeout(this.stageTimer)

@@ -87,6 +87,9 @@ export function useDesktopSession() {
     applyModelMutation: async (value: Parameters<DesktopSessionAdapter['applyModelMutation']>[0]) => {
       await adapter.current?.applyModelMutation(value)
     },
+    applyDrawingMutation: async (value: Parameters<DesktopSessionAdapter['applyDrawingMutation']>[0]) => {
+      await adapter.current?.applyDrawingMutation(value)
+    },
     edit: (action: WorkspaceAction) => {
       const current = adapter.current?.getState().snapshot
       if (!current || locked.current) return

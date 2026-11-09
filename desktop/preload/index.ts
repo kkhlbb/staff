@@ -17,6 +17,8 @@ import {
   type ModelLinkValue,
   type ModelPickValue,
   type ModelReadValue,
+  type DrawingExportValue,
+  type DrawingUpdateValue,
   type ProjectOpenValue,
   type ProjectRevealValue,
   type ProjectSaveValue,
@@ -143,6 +145,18 @@ const api: CunlianApi = {
     >,
   linkModel: (request) =>
     ipcRenderer.invoke(IPC_CHANNELS.modelLink, request) as Promise<IpcResult<ModelLinkValue>>,
+  updateSpacerDrawing: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.drawingUpdateSpacer, request) as Promise<
+      IpcResult<DrawingUpdateValue>
+    >,
+  exportDrawingPdf: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.drawingExportPdf, request) as Promise<
+      IpcResult<DrawingExportValue>
+    >,
+  exportDrawingSvg: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.drawingExportSvg, request) as Promise<
+      IpcResult<DrawingExportValue>
+    >,
 }
 
 contextBridge.exposeInMainWorld('cunlian', api)

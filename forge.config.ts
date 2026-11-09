@@ -28,6 +28,10 @@ const config: ForgeConfig = {
           name: 'main_window',
           config: 'vite.renderer.config.ts',
         },
+        {
+          name: 'drawing_print',
+          config: 'vite.print.config.ts',
+        },
       ],
     }),
   ],

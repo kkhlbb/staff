@@ -9,6 +9,7 @@ import {
   webContents,
 } from 'electron'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { promises as fsp } from 'node:fs'
 import { z } from 'zod'
 import {
@@ -40,6 +41,12 @@ import { RecoveryStore } from './recovery'
 import { registerProjectChannels } from './channels'
 import { registerModelChannels } from './modelChannels'
 import { createModelFileIo } from './modelIo'
+import { registerDrawingChannels } from './drawingChannels'
+import { DrawingExportStore, type DrawingExportKind } from './drawingExportStore'
+import { printDrawingToPdf } from './drawingPdf'
+import { resolvePrintFontPath } from './printAssets'
+import { renderDrawingSvg } from '../../src/drawing/renderDrawingSvg'
+import type { DrawingData } from '../../src/drawing/types'
 import { SessionController, runCloseGate, type GateChoice } from './sessionController'
 import { SenderGuard } from './senderGuard'
 import { createMainWindow, type MainWindowHandle } from './window'
@@ -293,6 +300,91 @@ async function pickModelFileFor(windowId: number): Promise<string | null> {
   return picked.filePaths[0] ?? null
 }
 
+/** C：导出对话框只允许对应后缀；路径只来自系统对话框。 */
+async function pickDrawingExportPath(
+  windowId: number,
+  kind: DrawingExportKind,
+  suggestedName: string,
+): Promise<string | null> {
+  const owner = BrowserWindow.fromId(windowId) ?? BrowserWindow.getFocusedWindow()
+  const options = {
+    title: kind === 'pdf' ? '导出图纸 PDF' : '导出图纸 SVG',
+    defaultPath: path.join(app.getPath('documents'), suggestedName),
+    filters:
+      kind === 'pdf'
+        ? [{ name: 'PDF 图纸', extensions: ['pdf'] }]
+        : [{ name: 'SVG 矢量图纸', extensions: ['svg'] }],
+  }
+  const saved =
+    owner === null
+      ? await dialog.showSaveDialog(options)
+      : await dialog.showSaveDialog(owner, options)
+  if (saved.canceled || saved.filePath === undefined) {
+    return null
+  }
+  return saved.filePath
+}
+
+async function confirmDrawingOverwrite(windowId: number, targetPath: string): Promise<boolean> {
+  const owner = BrowserWindow.fromId(windowId) ?? BrowserWindow.getFocusedWindow()
+  const options = {
+    type: 'warning' as const,
+    message: '目标文件已存在',
+    detail: `${path.basename(targetPath)} 将被替换。提交前会再次核对磁盘指纹，原文件在替换前不会被截断。`,
+    buttons: ['替换', '取消'],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  }
+  const choice =
+    owner === null ? await dialog.showMessageBox(options) : await dialog.showMessageBox(owner, options)
+  return choice.response === 0
+}
+
+/** 字体从打包资源读取并转 data URL；打印页与网络完全隔离。 */
+async function bundledPrintFonts(): Promise<{ family: string; dataUrl: string }[]> {
+  const assets = [
+    { family: 'Noto Sans SC Cunlian', file: 'NotoSansSC-Cunlian-subset.woff2' },
+    { family: 'Noto Sans Math Cunlian', file: 'NotoSansMath-Cunlian-symbols.woff2' },
+  ]
+  return Promise.all(
+    assets.map(async (asset) => {
+      const resolved = await resolvePrintFontPath(app.getAppPath(), asset.file)
+      if (resolved === null) {
+        throw new IpcFailure(
+          'FONT_UNAVAILABLE',
+          '随包字体缺失，已拒绝导出',
+          asset.file,
+        )
+      }
+      const bytes = await fsp.readFile(resolved)
+      return {
+        family: asset.family,
+        dataUrl: `data:font/woff2;base64,${Buffer.from(bytes).toString('base64')}`,
+      }
+    }),
+  )
+}
+
+function drawingPrintEntryUrl(): string {
+  const devServer = process.env.DRAWING_PRINT_VITE_DEV_SERVER_URL
+  if (devServer !== undefined && devServer !== '') {
+    return new URL('index.print.html', devServer).toString()
+  }
+  const name = process.env.DRAWING_PRINT_VITE_NAME ?? 'drawing_print'
+  return pathToFileURL(path.join(__dirname, `../renderer/${name}/index.print.html`)).toString()
+}
+
+async function printDrawingPdf(data: DrawingData): Promise<Uint8Array> {
+  return printDrawingToPdf({
+    svg: renderDrawingSvg(data),
+    fonts: await bundledPrintFonts(),
+    drawingId: data.drawingId,
+    fingerprint: data.fingerprint,
+    printEntryUrl: drawingPrintEntryUrl(),
+  })
+}
+
 function installIpcHandlers(): void {
   const ipc: IpcMainLike = ipcMain
   const deps = { guard, log: logStage }
@@ -346,6 +438,18 @@ function installIpcHandlers(): void {
     recovery,
     pickModelPath: pickModelFileFor,
     io: createModelFileIo(),
+    log: logStage,
+  })
+
+  registerDrawingChannels(ipc, {
+    guard,
+    controller,
+    projectService,
+    recovery,
+    exportStore: new DrawingExportStore(),
+    pickExportPath: pickDrawingExportPath,
+    confirmOverwrite: confirmDrawingOverwrite,
+    printPdf: printDrawingPdf,
     log: logStage,
   })
 

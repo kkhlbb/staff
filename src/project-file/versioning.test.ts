@@ -22,8 +22,8 @@ describe('B2-02 读时兼容 B1 文件（formatVersion 1 / schema 3）', () => {
 
     expect(manifest.formatVersion).toBe(1)
     expect(manifest.project.projectSchemaVersion).toBe(3)
-    // 工作形状适配为 schema4，但记录来源格式供首次保存升级。
-    expect(snapshot.project.schemaVersion).toBe(4)
+    // 工作形状适配为当前 schema5，但记录来源格式供首次保存升级。
+    expect(snapshot.project.schemaVersion).toBe(5)
     expect(snapshot.project.sourceFormatVersion).toBe(1)
     expect(snapshot.project.parts).toEqual([])
     expect(snapshot.project.modelRevisions).toEqual([])
@@ -44,7 +44,7 @@ describe('B2-02 读时兼容 B1 文件（formatVersion 1 / schema 3）', () => {
     expect(decoded.value.entryPaths).toContain('attachments/blob-1.bin')
   })
 
-  it('B1 文件重新编码为 v2/schema4：旧历史仍为 schema3，数值与 PDF 不变', async () => {
+  it('B1 文件重新编码为 v2/schema5：旧历史仍为 schema3，数值与 PDF 不变', async () => {
     const decoded = await decodeProjectFile(await readB1())
     expect(decoded.ok).toBe(true)
     if (!decoded.ok) return
@@ -52,7 +52,7 @@ describe('B2-02 读时兼容 B1 文件（formatVersion 1 / schema 3）', () => {
     expect(encoded.ok).toBe(true)
     if (!encoded.ok) return
     expect(encoded.value.manifest.formatVersion).toBe(2)
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(4)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(5)
     expect(encoded.value.manifest.counts.models).toBe(0)
 
     const again = await decodeProjectFile(encoded.value.bytes)
@@ -86,7 +86,7 @@ describe('B2-02 读时兼容 B1 文件（formatVersion 1 / schema 3）', () => {
   })
 })
 
-describe('B2-02 v2/schema4 模型与去重', () => {
+describe('B2-02 v2/schema5 模型与去重', () => {
   it('模型版本往返：部件、版本、可视关联、字节均可读', async () => {
     const { snapshot } = await createModelSnapshot()
     const encoded = await encodeProjectFile(snapshot)

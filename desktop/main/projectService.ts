@@ -13,7 +13,11 @@ import { randomUUID } from 'node:crypto'
 import { decodeProjectFile, encodeProjectFile, toSnapshotDto } from '../../src/project-file/codec'
 import { assembleSnapshot } from '../../src/project-file/validation'
 import { upgradeSnapshotToV2 } from '../../src/project-file/upgrade'
-import type { ProjectFileSnapshot } from '../../src/project-file/types'
+import type {
+  ProjectFileDrawingRecord,
+  ProjectFileSnapshot,
+  ProjectFileSpacerParameter,
+} from '../../src/project-file/types'
 import type { IpcErrorCode, IpcErrorPayload, IpcResult } from '../shared/contracts'
 import { FileStore, type SaveError } from './fileStore'
 
@@ -233,6 +237,9 @@ export class ProjectService {
       parts: authoritative.project.parts,
       modelRevisions: authoritative.project.modelRevisions,
       dimensionLinks: authoritative.project.dimensionLinks,
+      // C 的三参数与图纸引用同样只能经 drawing:update-spacer 事务改动，
+      // stageDraft 不能伪造参数、图纸指纹或复核状态。
+      parameters: authoritative.project.parameters,
       drawings: authoritative.project.drawings,
     }
     const assembled = assembleSnapshot({
@@ -264,6 +271,50 @@ export class ProjectService {
     session.snapshot = assembled.value
     session.acceptedSeq = editSeq
     return { ok: true, value: { acceptedSeq: editSeq } }
+  }
+
+  /**
+   * C：原子接纳隔套参数与图纸引用。
+   *
+   * 两项在同一个 main 事务里替换，失败不改任何一项；`baseEditSeq` 必须等于
+   * 当前 acceptedSeq，成功后序号 +1。调用方（drawing:update-spacer）负责先用
+   * 同一 DrawingData 生成器重建并校验指纹。
+   */
+  applySpacerDrawing(
+    sessionId: string,
+    baseEditSeq: number,
+    parameters: ProjectFileSpacerParameter[],
+    drawing: ProjectFileDrawingRecord,
+  ): IpcResult<{ acceptedSeq: number }> {
+    const session = this.sessions.get(sessionId)
+    if (session === undefined) {
+      return ipcFailure('STALE_SESSION', '会话已失效，请重新打开项目')
+    }
+    if (!Number.isSafeInteger(baseEditSeq) || baseEditSeq < 0) {
+      return ipcFailure('INVALID_REQUEST', 'baseEditSeq 必须是非负安全整数')
+    }
+    if (baseEditSeq !== session.acceptedSeq) {
+      return ipcFailure(
+        'STALE_EDIT',
+        '图纸编辑序号已过期，请基于最新状态重试',
+        `acceptedSeq=${session.acceptedSeq}, baseEditSeq=${baseEditSeq}`,
+      )
+    }
+    if (drawing.partId !== parameters[0]?.partId) {
+      return ipcFailure('INVALID_DRAWING', '图纸与参数不属于同一部件')
+    }
+    const nextSeq = baseEditSeq + 1
+    // 先构造完整的新快照再一次性赋值；中途没有可观察的半更新状态。
+    session.snapshot = {
+      ...session.snapshot,
+      project: {
+        ...session.snapshot.project,
+        parameters,
+        drawings: [drawing],
+      },
+    }
+    session.acceptedSeq = nextSeq
+    return { ok: true, value: { acceptedSeq: nextSeq } }
   }
 
   /** 读取磁盘指纹（不创建会话）；供 dirty gate 的另存覆盖确认与 relink 使用。 */

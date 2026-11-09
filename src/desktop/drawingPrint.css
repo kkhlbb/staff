@@ -1,0 +1,28 @@
+/* 专用打印入口：A4 横向、零边距；图框内边距全部由 DrawingData 表达。 */
+@page {
+  size: A4 landscape;
+  margin: 0;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 297mm;
+  height: 210mm;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+#root {
+  width: 297mm;
+  height: 210mm;
+  margin: 0;
+  padding: 0;
+}
+
+#root > svg {
+  display: block;
+  width: 297mm;
+  height: 210mm;
+}

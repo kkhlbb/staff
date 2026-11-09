@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { useDesktopSession } from '../workspace/useDesktopSession'
 import { useBuiltinAssemblyView } from '../workspace/useBuiltinAssemblyView'
 import { useImportedModel } from '../workspace/useImportedModel'
@@ -11,6 +11,13 @@ import { DesktopChainView, DesktopSourceView, DesktopHistoryView } from '../comp
 import { ThreeViewport } from '../components/ThreeViewport'
 import { ModelViewport } from '../components/ModelViewport'
 import { DEMO_PARTS, demoPart, isBuiltinPartId, partPropertyRows } from '../parts/shaftDemo'
+import { SpacerDrawingPanel } from '../components/SpacerDrawingPanel'
+import { rebuildDrawingFromProject } from '../drawing/rebuildDrawing'
+import { dimensionText, resolveDimension } from '../drawing/formatDimension'
+import { formatParameterValue } from '../drawing/formatDimension'
+import {
+  SPACER_PARAMETER_LABELS,
+} from '../drawing/types'
 import type { ProjectFileVisualReferenceLink } from '../project-file/types'
 import './Workspace.css'
 import './DesktopWorkspace.css'
@@ -50,6 +57,11 @@ export function DesktopWorkspace() {
   const session = useDesktopSession()
   const snapshot = session.state?.snapshot
   const project = snapshot?.project
+  const drawingRebuilt = useMemo(
+    () => (project ? rebuildDrawingFromProject(project) : null),
+    [project],
+  )
+  const drawingData = drawingRebuilt?.ok ? drawingRebuilt.data : null
   const sessionId = session.state?.sessionId ?? null
   const [tab, setTab] = useState(0)
   // 选择归属当前会话：换会话即派生为 null，不靠 effect 清理（也不会串场）。
@@ -130,7 +142,45 @@ export function DesktopWorkspace() {
       }),
       ...(demo.active ? DEMO_PARTS.map(part => ({ id: part.id, label: part.name, properties: partPropertyRows(part.id, demo.explodeT) })) : []),
     ],
-    工程图: [],
+    工程图: [
+      ...(project?.drawings ?? []).map(record => ({
+        id: `drawing:${record.drawingId}`,
+        label: `隔套工程图 · ${record.scale.numerator}:${record.scale.denominator}`,
+        properties: [
+          ['状态', '待复核草稿（未复核、未批准）'],
+          ['模板', `${record.templateId} v${record.templateVersion}`],
+          ['纸张', 'A4 横向 297×210 mm'],
+          ['比例', `${record.scale.numerator}:${record.scale.denominator}`],
+          ['图纸指纹', record.dataFingerprint],
+          ['参数引用', record.parameterIds.join('、')],
+        ] as [string, string][],
+      })),
+      ...(drawingData?.parameterSnapshot ?? []).map(parameter => ({
+        id: `param:${parameter.parameterId}`,
+        label: `${SPACER_PARAMETER_LABELS[parameter.key]} · ${formatParameterValue(parameter.valueQ, parameter.inputDecimals) ?? '数据不一致'}`,
+        properties: [
+          ['q', String(parameter.valueQ)],
+          ['输入小数位', String(parameter.inputDecimals)],
+          ['显示', formatParameterValue(parameter.valueQ, parameter.inputDecimals) ?? '数据不一致'],
+          ['来源备注', parameter.sourceNote ?? '无'],
+          ['绑定标注', drawingData?.annotations.filter(item => item.parameterId === parameter.parameterId).map(item => item.kind === 'diameter' ? '直径' : '长度').join('、') || '无'],
+        ] as [string, string][],
+      })),
+      ...(drawingData?.annotations ?? []).map(annotation => {
+        const resolved = resolveDimension(annotation.parameterId, drawingData!.parameterSnapshot)
+        const text = resolved.ok ? dimensionText(resolved.value, annotation.kind) : '解析失败'
+        return {
+          id: `annotation:${annotation.annotationId}`,
+          label: `标注 · ${text}`,
+          properties: [
+            ['类型', annotation.kind === 'diameter' ? '直径' : '长度'],
+            ['绑定参数', annotation.parameterId],
+            ['显示值', text],
+            ['视图', annotation.viewId],
+          ] as [string, string][],
+        }
+      }),
+    ],
     尺寸链: project ? [{ id: 'chain', label: '当前尺寸链', properties: [['组成环', String(project.dimensionChain.terms.length)], ['计算预览', calculation]] }, ...project.dimensionChain.terms.map(term => ({ id: `term:${term.id}`, label: `${term.symbol} · ${term.name}`, properties: [['基本尺寸', `${formatMm(term.nominalQ)} mm`], ['下偏差', `${formatMm(term.lowerDeviationQ)} mm`], ['上偏差', `${formatMm(term.upperDeviationQ)} mm`], ['方向', term.sign === 1 ? '增环' : '减环'], ['来源备注', term.sourceNote || '无']] as [string, string][] }))] : [],
     来源资料: snapshot?.documents.map(doc => { const rev = snapshot.revisions.find(rev => rev.id === doc.latestRevisionId); return { id: `source:${doc.id}`, label: doc.title, properties: [['当前版本', doc.latestRevisionId], ['文件名', rev?.fileName ?? '缺失版本'], ['页数', String(rev?.pageCount ?? '未知')], ['附件状态', snapshot.missingAttachments.some(item => item.documentId === doc.id) ? '声明缺失' : '有元数据，未读取附件']] } }) ?? [],
     版本历史: snapshot?.fileRevisions.map(rev => ({ id: `rev:${rev.revisionId}`, label: `Rev ${rev.revisionId}`, properties: [['创建时间', rev.createdAt], ['原因', rev.reason], ['父版本', rev.parentId ?? '无'], ['项目 schema', String(rev.project.schemaVersion)]] })) ?? [],
@@ -138,6 +188,12 @@ export function DesktopWorkspace() {
   const selected = Object.values(entries).flat().find(item => item.id === selection)
   const selectedPart = isBuiltinPartId(selection) && demo.active ? demoPart(selection) : null
   const selectedModelPart = modelParts.find(part => part.partId === selection) ?? null
+  const selectedParameterId = selection?.startsWith('param:') ? selection.slice('param:'.length) : null
+  const selectedAnnotationId = selection?.startsWith('annotation:') ? selection.slice('annotation:'.length) : null
+  const annotationParameterId = selectedAnnotationId === null
+    ? null
+    : drawingData?.annotations.find(item => item.annotationId === selectedAnnotationId)?.parameterId ?? null
+  const activeParameterId = selectedParameterId ?? annotationParameterId
   const selectedTermId = selection?.startsWith('term:') ? selection.slice('term:'.length) : null
   const termLinks = selectedTermId && project ? project.dimensionLinks.filter(link => link.termId === selectedTermId) : []
   const linkTargetName = (link: ProjectFileVisualReferenceLink): string =>
@@ -182,10 +238,8 @@ export function DesktopWorkspace() {
         <button disabled title="C 批次未实现">预览变更</button>
         <button ref={exportRef} aria-expanded={exportOpen} aria-controls="desktop-export" onClick={() => setExportOpen(!exportOpen)}>导出 PDF ▾</button>
         {exportOpen && <div id="desktop-export" className="desktop-workspace__export">
-          <strong>无图纸，无法导出</strong>
-          <button disabled>导出图纸 PDF · C 批次未实现</button>
-          <button disabled>导出 SVG · C 批次未实现</button>
-          <p>不是读取既有来源 PDF。</p>
+          <strong>图纸导出在“工程图”页</strong>
+          <p>SVG 与 PDF 都由同一份图纸数据生成；导出文件不会自动回灌为项目附件。</p>
         </div>}
       </div>
     </div>
@@ -250,7 +304,16 @@ export function DesktopWorkspace() {
           {tabs.map((name, index) => <button key={name} ref={node => { tabRefs.current[index] = node }} role="tab" id={`desktop-tab-${index}`} aria-controls={`desktop-panel-${index}`} aria-selected={tab === index} tabIndex={tab === index ? 0 : -1} onKeyDown={tabKey} onClick={() => setTab(index)}>{name}</button>)}
         </div>
         {tabs.map((name, index) => <div key={name} role="tabpanel" id={`desktop-panel-${index}`} aria-labelledby={`desktop-tab-${index}`} tabIndex={0} hidden={tab !== index} className="desktop-workspace__canvas">
-          {index === 0 && <><div className="desktop-workspace__placeholder"><span className="desktop-workspace__pending">○ 本批次未实现</span><h2>尚无工程图</h2><p>C 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。</p><p>当前选择：{selected?.label ?? '未选择对象'}</p><button disabled>生成 SVG 图纸</button></div><div className="desktop-workspace__view-status">工程图占位 · 未载入内容 · 不代表已复核</div></>}
+          {index === 0 && <SpacerDrawingPanel
+            sessionId={sessionId}
+            acceptedSeq={session.state?.acceptedSeq ?? 0}
+            project={project}
+            selectedParameterId={activeParameterId}
+            selectedAnnotationId={selectedAnnotationId}
+            onSelectParameter={parameterId => setSelection(parameterId === null ? null : `param:${parameterId}`)}
+            onSelectAnnotation={annotationId => setSelection(`annotation:${annotationId}`)}
+            applySnapshot={session.applyDrawingMutation}
+          />}
           {index === 1 && (model.revisionId !== null ? (
             model.geometry
               ? <ModelViewport
@@ -292,7 +355,8 @@ export function DesktopWorkspace() {
         {selectedPart && <section className="desktop-workspace__part-note" aria-label="示例部件只读说明">
           <p className="desktop-workspace__pending">未关联尺寸链 · 示例几何（B1 只读）</p>
           <button type="button" disabled>编辑参数（C 批次）</button>
-          <p>隔套参数化编辑与图纸标注归 C 批次；本批次只读显示内径/外径/长度，3D 变换不写入项目文件。</p>
+          {selection === 'builtin:shaft-demo:spacer' && <button type="button" onClick={() => setTab(0)}>在工程图页编辑隔套参数</button>}
+          <p>隔套三参数编辑与图纸标注在“工程图”页；示例 3D 几何仍是固定示意，不随参数变化（参数联动属于 D 批次）。</p>
         </section>}
         {selectedModelPart && <section className="desktop-workspace__part-note" aria-label="导入模型只读说明">
           <p className="desktop-workspace__pending">整体网格 · 外形资料来源；不改变尺寸链数值、不自动同步</p>
@@ -325,12 +389,30 @@ export function DesktopWorkspace() {
           {!model.partId && <p>先导入或打开含模型的部件后才能建立关联。</p>}
           <p className="desktop-workspace__pending">参数联动（改尺寸→改模型）属于 D 批次，不在本关联内。</p>
         </section>}
+        {activeParameterId && drawingData && (() => {
+          const parameter = drawingData.parameterSnapshot.find(item => item.parameterId === activeParameterId)
+          if (!parameter) return <section className="desktop-workspace__part-note"><p>该参数不在当前图纸快照中。</p></section>
+          const bound = drawingData.annotations.filter(item => item.parameterId === parameter.parameterId)
+          return <section className="desktop-workspace__part-note" aria-label="图纸参数详情">
+            <h3>{SPACER_PARAMETER_LABELS[parameter.key]} · 图纸参数</h3>
+            <p>q = {parameter.valueQ} · 输入 {parameter.inputDecimals} 位小数</p>
+            <p>显示：<strong>{formatParameterValue(parameter.valueQ, parameter.inputDecimals) ?? '数据不一致'}</strong>（标注数字来自此参数，不读几何/像素）</p>
+            <p>来源备注：{parameter.sourceNote ?? '无'}</p>
+            <button type="button" onClick={() => setTab(0)}>定位参数输入</button>
+            <h3>绑定标注</h3>
+            {bound.length === 0 && <p>无绑定标注。</p>}
+            {bound.map(annotation => <button key={annotation.annotationId} type="button" onClick={() => setSelection(`annotation:${annotation.annotationId}`)}>
+              定位标注 · {annotation.kind === 'diameter' ? '直径' : '长度'} · {annotation.annotationId}
+            </button>)}
+            <p className="desktop-workspace__pending">修改参数只生成图纸草稿，不改尺寸链 S，也不提升复核状态。</p>
+          </section>
+        })()}
         <p className="desktop-workspace__pending">○ 尚无审查结论</p>
       </aside>
     </div>
     {reviewOpen && <Splitter label="复核区高度" value={reviewHeight} min={160} max={280} horizontal reverse onChange={setReviewHeight} />}
     <section className={`desktop-workspace__review${reviewOpen ? ' desktop-workspace__review--open' : ''}`} aria-label="复核与变更">
-      <button className="desktop-workspace__review-toggle" aria-expanded={reviewOpen} aria-controls="desktop-review-content" onClick={() => setReviewOpen(!reviewOpen)}>{reviewOpen ? '▾' : '▸'} 复核与变更 <span>计算 {calculation} · 来源 {sourceState} · 图纸 未生成（C 批次）</span></button>
+      <button className="desktop-workspace__review-toggle" aria-expanded={reviewOpen} aria-controls="desktop-review-content" onClick={() => setReviewOpen(!reviewOpen)}>{reviewOpen ? '▾' : '▸'} 复核与变更 <span>计算 {calculation} · 来源 {sourceState} · 图纸 {project.drawings.length > 0 ? '待复核草稿' : '未生成'}</span></button>
       <div id="desktop-review-content" hidden={!reviewOpen} className="desktop-workspace__review-groups">
         <section><h3>变更</h3><p>尚无变更预览。C 批次未实现。</p></section>
         <section><h3>校核</h3><p>{calculation}</p>{result && <p>极限范围 {formatMm(result.minQ)} 至 {formatMm(result.maxQ)} mm</p>}{parsed && !parsed.ok && Object.entries(parsed.cellErrors).map(([field, message]) => <p key={field}>{field}：{message}</p>)}</section>

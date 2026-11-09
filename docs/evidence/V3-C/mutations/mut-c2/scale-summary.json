@@ -1,0 +1,97 @@
+[
+  {
+    "scale": "2:1",
+    "fingerprint": "9e586b19fca62da30deee7706a5d8d6ec08f7a0c479d26ed828b0e8375b96fbd",
+    "fits": true,
+    "annotations": [
+      {
+        "id": "ann.length",
+        "parameterId": "param:spacer:length"
+      },
+      {
+        "id": "ann.inner-diameter",
+        "parameterId": "param:spacer:inner-diameter"
+      },
+      {
+        "id": "ann.outer-diameter",
+        "parameterId": "param:spacer:outer-diameter"
+      }
+    ]
+  },
+  {
+    "scale": "1:1",
+    "fingerprint": "2d5afb682bb0cdd8d06f65b00e0728baf444b6738813b4180c880fe9f1e490d8",
+    "fits": true,
+    "annotations": [
+      {
+        "id": "ann.length",
+        "parameterId": "param:spacer:length"
+      },
+      {
+        "id": "ann.inner-diameter",
+        "parameterId": "param:spacer:inner-diameter"
+      },
+      {
+        "id": "ann.outer-diameter",
+        "parameterId": "param:spacer:outer-diameter"
+      }
+    ]
+  },
+  {
+    "scale": "1:2",
+    "fingerprint": "8067b9178d0d33aaacae63e323046ed948761a06e98ae4d87228ebec53bae1d9",
+    "fits": true,
+    "annotations": [
+      {
+        "id": "ann.length",
+        "parameterId": "param:spacer:length"
+      },
+      {
+        "id": "ann.inner-diameter",
+        "parameterId": "param:spacer:inner-diameter"
+      },
+      {
+        "id": "ann.outer-diameter",
+        "parameterId": "param:spacer:outer-diameter"
+      }
+    ]
+  },
+  {
+    "scale": "1:5",
+    "fingerprint": "7b06a862cde1fbacd1e584ba0ead6546151d58e338ab0c932990df795013d883",
+    "fits": true,
+    "annotations": [
+      {
+        "id": "ann.length",
+        "parameterId": "param:spacer:length"
+      },
+      {
+        "id": "ann.inner-diameter",
+        "parameterId": "param:spacer:inner-diameter"
+      },
+      {
+        "id": "ann.outer-diameter",
+        "parameterId": "param:spacer:outer-diameter"
+      }
+    ]
+  },
+  {
+    "scale": "1:10",
+    "fingerprint": "b164fde65e6a53227c413aad1fb9eb91b0445991c8f7bbbbe5b8333ff2b860df",
+    "fits": true,
+    "annotations": [
+      {
+        "id": "ann.length",
+        "parameterId": "param:spacer:length"
+      },
+      {
+        "id": "ann.inner-diameter",
+        "parameterId": "param:spacer:inner-diameter"
+      },
+      {
+        "id": "ann.outer-diameter",
+        "parameterId": "param:spacer:outer-diameter"
+      }
+    ]
+  }
+]

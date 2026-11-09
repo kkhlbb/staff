@@ -1,0 +1,206 @@
+{
+  "path": "docs/evidence/V3-C/spacer-a4-1to1.pdf",
+  "page_count": 1,
+  "page_rect_pt": [
+    841.9199829101562,
+    594.9599609375
+  ],
+  "media_box": [
+    0.0,
+    0.0,
+    841.9199829101562,
+    594.9599609375
+  ],
+  "crop_box": [
+    0.0,
+    0.0,
+    841.9199829101562,
+    594.9599609375
+  ],
+  "rotation": 0,
+  "text": "寸链 · 待复核草稿\n零件名\n隔套\n图号\n待补充\n版本\n草稿 rev-evidence-c\n材料\n待补充\n公差/配合\n待补充\n表面要求\n待补充\n制图人/日期\n待补充 / 待补充\n比例/单位\n1:1 · mm\n纸张/投影\nA4 横向 · 第三角\n技术要求 / 缺项\n1. 本图为待复核草稿：未复核、未批准。\n2. 未注公差、配合与表面要求：待补充。\n3. 材料、图号、制图人/日期：待补充。\n4. 不声明符合 GB/ISO 等制图标准。\n5. 单位 mm；比例只作用于视图几何。\n待复核草稿 · 未复核、未批准\n第三角投影：右端视图置于主视图右侧\n12.00\n⌀20.00\n⌀32.00\n",
+  "fonts": [
+    [
+      5,
+      "ttf",
+      "Type0",
+      "AAAAAA+NotoSansSC-Cunlian",
+      "F5",
+      "Identity-H",
+      0
+    ],
+    [
+      7,
+      "ttf",
+      "Type0",
+      "BAAAAA+NotoSansMath-Regular",
+      "F7",
+      "Identity-H",
+      0
+    ]
+  ],
+  "drawings": 37,
+  "images": 0,
+  "text_dict_spans": [
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "寸链 · 待复核草稿"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "零件名"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "隔套"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "图号"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "待补充"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "版本"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "草稿 rev-evidence-c"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "材料"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "待补充"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "公差/配合"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "待补充"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "表面要求"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "待补充"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "制图人/日期"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "待补充 / 待补充"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "比例/单位"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "1:1 · mm"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "纸张/投影"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "A4 横向 · 第三角"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 9.067,
+      "text": "技术要求 / 缺项"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "1. 本图为待复核草稿：未复核、未批准。"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "2. 未注公差、配合与表面要求：待补充。"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "3. 材料、图号、制图人/日期：待补充。"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "4. 不声明符合 GB/ISO 等制图标准。"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 8.497,
+      "text": "5. 单位 mm；比例只作用于视图几何。"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 11.332,
+      "text": "待复核草稿 · 未复核、未批准"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 9.915,
+      "text": "第三角投影：右端视图置于主视图右侧"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 9.915,
+      "text": "12.00"
+    },
+    {
+      "font": "NotoSansMath-Regular",
+      "size": 9.915,
+      "text": "⌀"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 9.915,
+      "text": "20.00"
+    },
+    {
+      "font": "NotoSansMath-Regular",
+      "size": 9.915,
+      "text": "⌀"
+    },
+    {
+      "font": "NotoSansSC-Cunlian",
+      "size": 9.915,
+      "text": "32.00"
+    }
+  ]
+}

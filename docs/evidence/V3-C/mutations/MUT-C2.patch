@@ -1,0 +1,18 @@
+--- a/desktop/main/drawingPdf.ts
++++ b/desktop/main/drawingPdf.ts
+@@ -95,6 +95,16 @@
+   try {
+     await win.loadURL(options.printEntryUrl)
++    // MUT-C2：故意改成截图（capturePage）+ 整页 image，用于证明测试/PDF 校验能抓住。
++    win.showInactive()
++    await new Promise((resolve) => setTimeout(resolve, 300))
++    const shot = await win.webContents.capturePage()
++    const png = shot.toPNG().toString('base64')
++    await win.webContents.executeJavaScript(
++      `document.body.innerHTML='<img style="width:297mm;height:210mm" src="data:image/png;base64,${png}">'`,
++      true,
++    )
++    return new Uint8Array(await win.webContents.printToPDF(PRINT_PDF_OPTIONS))
+     const payload = escapeForScript(
+       JSON.stringify({
+         svg: options.svg,

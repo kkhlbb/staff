@@ -29,16 +29,26 @@ const LEGACY_FUNCTIONS = [
   'respondEditorFlush',
 ] as const
 
-const ADDED_FUNCTIONS = ['pickModel', 'readModel', 'commitModel', 'releaseModel', 'linkModel'] as const
+const ADDED_FUNCTIONS = [
+  'pickModel',
+  'readModel',
+  'commitModel',
+  'releaseModel',
+  'linkModel',
+  // C：图纸更新与两种矢量导出（仍只增不改旧函数）。
+  'updateSpacerDrawing',
+  'exportDrawingPdf',
+  'exportDrawingSvg',
+] as const
 
-describe('B2 preload 契约', () => {
+describe('B2/C preload 契约', () => {
   const source = readFileSync(PRELOAD, 'utf8')
 
-  it('原有 18 个函数仍在 api 对象中，且只新增 5 个模型函数', () => {
+  it('原有 18 个函数仍在 api 对象中，B2/C 只允许新增具体函数', () => {
     for (const name of [...LEGACY_FUNCTIONS, ...ADDED_FUNCTIONS]) {
       expect(source).toContain(`\n  ${name}:`)
     }
-    // 除上述 23 个具体函数外，不得暴露通用 invoke/send/on 转义口。
+    // 除上述具体函数外，不得暴露通用 invoke/send/on 转义口。
     const apiBlock = source.slice(source.indexOf('const api: CunlianApi = {'), source.indexOf('contextBridge.exposeInMainWorld'))
     const keys = [...apiBlock.matchAll(/^ {2}([A-Za-z][A-Za-z0-9]*):/gm)].map((match) => match[1])
     expect(keys.sort()).toEqual([...LEGACY_FUNCTIONS, ...ADDED_FUNCTIONS].sort())

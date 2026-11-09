@@ -20,6 +20,7 @@ import {
 import {
   ATTACHMENT_EXTENSION,
   ATTACHMENT_PATH_PREFIX,
+  B2_PROJECT_FILE_SCHEMA_VERSION,
   DIMENSION_CHAIN_SCHEMA_VERSION,
   LEGACY_PROJECT_FILE_SCHEMA_VERSION,
   PROJECT_FILE_FORMAT,
@@ -38,11 +39,15 @@ import {
   type ProjectFileMissingAttachment,
   type ProjectFileProject,
   type ProjectFileProjectV1,
+  type ProjectFileProjectV2,
   type ProjectFileResult,
   type ProjectFileRevision,
   type ProjectFileSnapshot,
 } from './types'
 import { PROJECT_ASSETS_MAX_BYTES, sumUniqueBlobBytes } from '../parts/stlLimits'
+import { buildSpacerDrawing, DrawingBuildError } from '../drawing/spacerDrawing'
+import { SPACER_PART_ID } from '../drawing/types'
+import { validateSpacerParameterSnapshot } from '../parts/spacerParameters'
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/
 
@@ -201,13 +206,95 @@ const projectV1Schema = z
 const projectV2Schema = z
   .object({
     ...projectCommonShape,
-    schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
+    schemaVersion: z.literal(B2_PROJECT_FILE_SCHEMA_VERSION),
     sourceFormatVersion: z.union([z.literal(1), z.literal(2)]),
     parts: z.array(partSchema),
     parameters: z.array(z.unknown()).max(0),
     modelRevisions: z.array(modelRevisionSchema),
     dimensionLinks: z.array(visualReferenceSchema),
     drawings: z.array(z.unknown()).max(0),
+  })
+  .strict()
+
+/** C：schema5 的隔套参数；q 为正安全整数，有效位 0..4。 */
+const spacerParameterSchema = z
+  .object({
+    parameterId: idSchema,
+    partId: idSchema,
+    key: z.enum(['innerDiameter', 'outerDiameter', 'length']),
+    valueQ: z.number().int().positive(),
+    inputDecimals: z.number().int().min(0).max(4),
+    reviewStatus: z.enum(['draft', 'pending', 'confirmed']),
+    sourceNote: z.string().max(2000).optional(),
+  })
+  .strict()
+
+const drawingFrameFieldsSchema = z
+  .object({
+    partName: z.string().max(200),
+    drawingNumber: z.string().max(200),
+    version: z.string().max(200),
+    drawingDate: z.string().max(200).optional(),
+    material: z.string().max(200),
+    tolerance: z.string().max(200),
+    surface: z.string().max(200),
+    drafter: z.string().max(200),
+    date: z.string().max(200),
+  })
+  .strict()
+
+/** C：schema5 的图纸快照引用；不存整份图元数组。 */
+const drawingRecordSchema = z
+  .object({
+    drawingId: idSchema,
+    drawingDataVersion: z.literal(1),
+    templateId: z.literal('spacer-a4-landscape'),
+    templateVersion: z.number().int().positive(),
+    partId: idSchema,
+    revisionId: idSchema,
+    parameterIds: z.array(idSchema).length(3),
+    paper: z
+      .object({
+        format: z.literal('A4'),
+        orientation: z.literal('landscape'),
+        widthMm: z.literal(297),
+        heightMm: z.literal(210),
+      })
+      .strict(),
+    scale: z
+      .object({
+        numerator: z.number().int().positive(),
+        denominator: z.number().int().positive(),
+      })
+      .strict()
+      .refine(
+        (scale) =>
+          [
+            '2:1',
+            '1:1',
+            '1:2',
+            '1:5',
+            '1:10',
+          ].includes(`${scale.numerator}:${scale.denominator}`),
+        { message: '比例不在 C 首版登记集合内' },
+      ),
+    frameFields: drawingFrameFieldsSchema,
+    status: z.literal('pending-review-draft'),
+    dataFingerprint: sha256Schema,
+  })
+  .strict()
+
+/** C：schema5，三参数与图纸引用使用严格类型。 */
+const projectV3Schema = z
+  .object({
+    ...projectCommonShape,
+    schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
+    sourceFormatVersion: z.union([z.literal(1), z.literal(2)]),
+    parts: z.array(partSchema),
+    parameters: z.array(spacerParameterSchema).max(3),
+    modelRevisions: z.array(modelRevisionSchema),
+    dimensionLinks: z.array(visualReferenceSchema),
+    drawings: z.array(drawingRecordSchema).max(1),
   })
   .strict()
 
@@ -453,7 +540,11 @@ const manifestProjectV2Schema = z
   .object({
     id: idSchema,
     name: z.string().min(1).max(200),
-    projectSchemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
+    // formatVersion 2 既可能来自 B2（schema4），也可能是 C 写出的 schema5。
+    projectSchemaVersion: z.union([
+      z.literal(B2_PROJECT_FILE_SCHEMA_VERSION),
+      z.literal(PROJECT_FILE_SCHEMA_VERSION),
+    ]),
     dimensionChainSchemaVersion: z.literal(DIMENSION_CHAIN_SCHEMA_VERSION),
     currentRevisionId: idSchema,
   })
@@ -506,7 +597,8 @@ export function parseManifest(
 
 export type VersionedProject =
   | { version: 1; project: ProjectFileProjectV1 }
-  | { version: 2; project: ProjectFileProject }
+  | { version: 2; project: ProjectFileProjectV2 }
+  | { version: 3; project: ProjectFileProject }
 
 /** 校验工作链与基线链；两个 schema 版本共用。 */
 function validateProjectChains(
@@ -540,7 +632,8 @@ function validateProjectChains(
 /**
  * 按 schemaVersion 分支解析项目记录：
  * - 3（B1 及更早）：原版严格规则，五个预留数组必须为空；
- * - 4（B2）：严格模型/版本/关联类型；
+ * - 4（B2）：严格模型/版本/关联类型，参数与图纸必须为空；
+ * - 5（C）：三参数与图纸快照引用严格类型；
  * - 其他：UNSUPPORTED_VERSION，不 strip、不默认。
  */
 export function parseProjectVersioned(input: unknown): ProjectFileResult<VersionedProject> {
@@ -555,7 +648,7 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
     if (!chains.ok) return chains
     return ok({ version: 1, project: parsed.data as ProjectFileProjectV1 })
   }
-  if (version === PROJECT_FILE_SCHEMA_VERSION) {
+  if (version === B2_PROJECT_FILE_SCHEMA_VERSION) {
     const parsed = projectV2Schema.safeParse(input)
     if (!parsed.success) {
       return fail('INVALID_RECORD', 'project.json 结构不合法（schema 4）', describeZodError(parsed.error))
@@ -564,6 +657,22 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
     if (!chains.ok) return chains
     return ok({
       version: 2,
+      project: {
+        ...(parsed.data as unknown as ProjectFileProjectV2),
+        dimensionChain: chains.value.dimensionChain,
+        baseline: chains.value.baseline,
+      },
+    })
+  }
+  if (version === PROJECT_FILE_SCHEMA_VERSION) {
+    const parsed = projectV3Schema.safeParse(input)
+    if (!parsed.success) {
+      return fail('INVALID_RECORD', 'project.json 结构不合法（schema 5）', describeZodError(parsed.error))
+    }
+    const chains = validateProjectChains(parsed.data)
+    if (!chains.ok) return chains
+    return ok({
+      version: 3,
       project: {
         ...(parsed.data as unknown as ProjectFileProject),
         dimensionChain: chains.value.dimensionChain,
@@ -579,7 +688,7 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
 }
 
 /**
- * 读时兼容：把 schema3 记录适配成 B2 工作形状（内存中，不改磁盘）。
+ * 读时兼容：把 schema3 记录适配成当前工作形状（内存中，不改磁盘）。
  * 不制造模型，也不凭空确认任何关系；sourceFormatVersion=1 供首次保存升级使用。
  */
 export function adaptProjectV1(project: ProjectFileProjectV1): ProjectFileProject {
@@ -595,13 +704,25 @@ export function adaptProjectV1(project: ProjectFileProjectV1): ProjectFileProjec
   }
 }
 
-/** 严格解析 project/project.json（接受 schema3/4，统一返回 B2 工作形状）。 */
+/** schema4 → 当前工作形状：数组本就必须为空，只提升版本号，来源格式保持 2。 */
+export function adaptProjectV2(project: ProjectFileProjectV2): ProjectFileProject {
+  return {
+    ...project,
+    schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
+    parameters: [],
+    drawings: [],
+  }
+}
+
+/** 严格解析 project/project.json（接受 schema3/4/5，统一返回当前工作形状）。 */
 export function parseProject(
   input: unknown,
 ): ProjectFileResult<ProjectFileProject> {
   const parsed = parseProjectVersioned(input)
   if (!parsed.ok) return parsed
-  return ok(parsed.value.version === 1 ? adaptProjectV1(parsed.value.project) : parsed.value.project)
+  if (parsed.value.version === 1) return ok(adaptProjectV1(parsed.value.project))
+  if (parsed.value.version === 2) return ok(adaptProjectV2(parsed.value.project))
+  return ok(parsed.value.project)
 }
 
 export function parseDraft(
@@ -1108,6 +1229,91 @@ export function validateSnapshotReferences(
           `${model.partId} != ${link.target.partId}`,
         )
       }
+    }
+  }
+
+  // ---- C：隔套参数与图纸快照引用 --------------------------------------
+  const parameterIds = new Set<string>()
+  const parameterKeys = new Set<string>()
+  for (const parameter of snapshot.project.parameters) {
+    if (parameterIds.has(parameter.parameterId)) {
+      return fail('INVALID_RECORD', `隔套参数 ID 重复：${parameter.parameterId}`)
+    }
+    if (parameterKeys.has(parameter.key)) {
+      return fail('INVALID_RECORD', `隔套参数键重复：${parameter.key}`)
+    }
+    parameterIds.add(parameter.parameterId)
+    parameterKeys.add(parameter.key)
+    if (parameter.partId !== SPACER_PART_ID) {
+      return fail('MISSING_REFERENCE', `隔套参数引用了不支持的部件：${parameter.partId}`)
+    }
+  }
+  let validatedParameters: ReturnType<typeof validateSpacerParameterSnapshot> | null = null
+  if (snapshot.project.parameters.length > 0) {
+    validatedParameters = validateSpacerParameterSnapshot(snapshot.project.parameters)
+    if (!validatedParameters.ok) {
+      return fail('INVALID_RECORD', `隔套参数不合法：${validatedParameters.message}`)
+    }
+  }
+  const fileRevisionIds = new Set(snapshot.fileRevisions.map((item) => item.revisionId))
+  const drawingIds = new Set<string>()
+  for (const drawing of snapshot.project.drawings) {
+    if (drawingIds.has(drawing.drawingId)) {
+      return fail('INVALID_RECORD', `图纸 ID 重复：${drawing.drawingId}`)
+    }
+    drawingIds.add(drawing.drawingId)
+    if (drawing.partId !== SPACER_PART_ID) {
+      return fail('MISSING_REFERENCE', `图纸引用了不支持的部件：${drawing.partId}`)
+    }
+    if (!fileRevisionIds.has(drawing.revisionId)) {
+      return fail('MISSING_REFERENCE', `图纸 ${drawing.drawingId} 的生成基准版本不存在`, drawing.revisionId)
+    }
+    if (validatedParameters === null || !validatedParameters.ok) {
+      return fail('MISSING_REFERENCE', `图纸 ${drawing.drawingId} 缺少隔套参数`)
+    }
+    const referenced = new Set(drawing.parameterIds)
+    if (referenced.size !== drawing.parameterIds.length) {
+      return fail('INVALID_RECORD', `图纸 ${drawing.drawingId} 的参数引用重复`)
+    }
+    for (const parameter of validatedParameters.parameters) {
+      if (!referenced.has(parameter.parameterId)) {
+        return fail(
+          'MISSING_REFERENCE',
+          `图纸 ${drawing.drawingId} 缺少参数引用`,
+          parameter.parameterId,
+        )
+      }
+    }
+    if (referenced.size !== validatedParameters.parameters.length) {
+      return fail('MISSING_REFERENCE', `图纸 ${drawing.drawingId} 引用了多余的参数`)
+    }
+    // 不信任保存的指纹：用参数 + 模板 + 图框确定性重建后比对。
+    let rebuilt
+    try {
+      rebuilt = buildSpacerDrawing({
+        projectId: snapshot.project.id,
+        revisionId: drawing.revisionId,
+        drawingId: drawing.drawingId,
+        parameters: validatedParameters.parameters,
+        scale: drawing.scale,
+        frameFields: drawing.frameFields,
+      })
+    } catch (error) {
+      if (error instanceof DrawingBuildError) {
+        return fail(
+          'INVALID_RECORD',
+          `图纸 ${drawing.drawingId} 无法按保存的参数重建：${error.message}`,
+          error.detail,
+        )
+      }
+      throw error
+    }
+    if (rebuilt.fingerprint !== drawing.dataFingerprint) {
+      return fail(
+        'INVALID_RECORD',
+        `图纸 ${drawing.drawingId} 的重建指纹与保存的 dataFingerprint 不一致`,
+        `saved=${drawing.dataFingerprint}, rebuilt=${rebuilt.fingerprint}`,
+      )
     }
   }
 
