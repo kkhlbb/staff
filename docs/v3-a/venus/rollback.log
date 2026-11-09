@@ -1,0 +1,373 @@
+
+> staff@2.0.0 test
+> vitest run src/pages/DesktopWorkspace.test.tsx
+
+
+ RUN  v5.1.0 /Users/aston/DSH/wt/venus-v3-a4
+
+stderr | src/pages/DesktopWorkspace.test.tsx
+Warning: Please use the `legacy` build in Node.js environments.
+
+ ❯ src/pages/DesktopWorkspace.test.tsx (5 tests | 1 failed) 121ms
+   ❯ 桌面工作台骨架 (5)
+     × 通过独立入口显示真实空状态，不冒充工程已保存或复核 62ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/DesktopWorkspace.test.tsx > 桌面工作台骨架 > 通过独立入口显示真实空状态，不冒充工程已保存或复核
+TestingLibraryElementError: Unable to find an accessible element with the role "main" and name "寸链桌面工作台"
+
+Here are the accessible roles:
+
+  main:
+
+  Name "":
+  [36m<main[39m
+    [33mclass[39m=[32m"project-list"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"project-list__header"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "项目列表":
+  [36m<h1[39m
+    [33mclass[39m=[32m"project-list__title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"project-list__subtitle"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "新建":
+  [36m<button[39m
+    [33mclass[39m=[32m"project-list__create"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "从表格导入":
+  [36m<button[39m
+    [33mclass[39m=[32m"project-list__table-import"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "导入 JSON":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "导出完整备份":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "从完整备份恢复":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "打开演示案例":
+  [36m<button[39m
+    [33mclass[39m=[32m"project-list__demo-open"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "导入迁移前原始备份":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "演示案例":
+  [36m<select[39m
+    [33mclass[39m=[32m"project-list__demo-select"[39m
+    [33mid[39m=[32m"demo-case-select"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "演示案例 A：不满足目标的轴向间隙":
+  [36m<option[39m
+    [33mvalue[39m=[32m"A"[39m
+  [36m/>[39m
+
+  Name "演示案例 B：修改后的满足方案":
+  [36m<option[39m
+    [33mvalue[39m=[32m"B"[39m
+  [36m/>[39m
+
+  Name "演示案例 C：负间隙和边界":
+  [36m<option[39m
+    [33mvalue[39m=[32m"C"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  note:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"project-list__demo-note"[39m
+    [33mrole[39m=[32m"note"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  group:
+
+  Name "":
+  [36m<details[39m
+    [33mclass[39m=[32m"project-list__migration-help"[39m
+    [33mdata-testid[39m=[32m"legacy-migration-help"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  [36m<ol />[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li />[39m
+
+  --------------------------------------------------
+  strong:
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  --------------------------------------------------
+  status:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"project-list__loading"[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"project-list"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"project-list__header"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"project-list__title"[39m
+          [36m>[39m
+            [0m项目列表[0m
+          [36m</h1>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"project-list__subtitle"[39m
+          [36m>[39m
+            [0m项目资料只保存在本机浏览器。打开项目进行分析，或通过 JSON 文件备份和迁移。[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"project-list__toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"project-list__create"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m新建[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"project-list__table-import"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m从表格导入[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m导入 JSON[0m
+        [36m</button>[39m
+        [36m<input[39m
+          [33maccept[39m=[32m".json,application/json"[39m
+          [33maria-label[39m=[32m"导入 JSON 文件"[39m
+          [33mclass[39m=[32m"project-list__file-input"[39m
+          [33mtype[39m=[32m"file"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m导出完整备份[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m从完整备份恢复[0m
+        [36m</button>[39m
+        [36m<input[39m
+          [33maccept[39m=[32m".zip,application/zip"[39m
+          [33maria-label[39m=[32m"导入完整备份文件"[39m
+          [33mclass[39m=[32m"project-list__file-input"[39m
+          [33mtype[39m=[32m"file"[39m
+        [36m/>[39m
+        [36m<label[39m
+          [33mclass[39m=[32m"project-list__demo-label"[39m
+          [33mfor[39m=[32m"demo-case-select"[39m
+        [36m>[39m
+          [0m演示案例[0m
+        [36m</label>[39m
+        [36m<select[39m
+          [33mclass[39m=[32m"project-list__demo-select"[39m
+          [33mid[39m=[32m"demo-case-select"[39m
+        [36m>[39m
+          [36m<option[39m
+            [33mvalue[39m=[32m"A"[39m
+          [36m>[39m
+            [0m演示案例 A：不满足目标的轴向间隙[0m
+          [36m</option>[39m
+          [36m<option[39m
+            [33mvalue[39m=[32m"B"[39m
+          [36m>[39m
+            [0m演示案例 B：修改后的满足方案[0m
+          [36m</option>[39m
+          [36m<option[39m
+            [33mvalue[39m=[32m"C"[39m
+          [36m>[39m
+            [0m演示案例 C：负间隙和边界[0m
+          [36m</option>[39m
+        [36m</select>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"project-list__demo-open"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m打开演示案例[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"project-list__demo-note"[39m
+        [33mrole[39m=[32m"note"[39m
+      [36m>[39m
+        [0m该案例只是用于验证尺寸关系的简化模型，不代表任意实际轴承装配结构均适用。用户需要确认真实装配中的接触面、定位关系和作用方向。[0m
+      [36m</p>[39m
+      [36m<details[39m
+        [33mclass[39m=[32m"project-list__migration-help"[39m
+        [33mdata-testid[39m=[32m"legacy-migration-help"[39m
+      [36m>[39m
+        [36m<summary>[39m
+          [0m迁移与恢复步骤[0m
+        [36m</summary>[39m
+        [36m<ol>[39m
+          [36m<li>[39m
+            [36m<strong>[39m
+              [0m迁移前：[0m
+            [36m</strong>[39m
+            [0m在上面的“旧版项目”提示里点“导出迁移前原始备份”， 文件会下载到本机（含全部 V1 项目与草稿原始记录，不含 PDF 附件）。[0m
+          [36m</li>[39m
+          [36m<li>[39m
+            [36m<strong>[39m
+              [0m迁移：[0m
+            [36m</strong>[39m
+            [0m点“开始迁移”。整批迁移在同一个数据库事务内完成； 任一步失败都会整体回滚，原始 V1 记录仍在，可重试，不会留下半迁移项目。[0m
+          [36m</li>[39m
+          [36m<li>[39m
+            [36m<strong>[39m
+              [0m恢复：[0m
+            [36m</strong>[39m
+            [0m点下面的“导入迁移前原始备份”并选择该文件。 恢复会把原始记录重新导入为[0m
+            [36m<strong>[39m
+              [0m新项目（新 ID）[0m
+            [36m</strong>[39m
+            [0m，保留数值、基线与草稿输入； 不覆盖现有项目，也不会把数据库降级。恢复后需要重新确认关系。[0m
+          [36m</li>[39m
+          [36m<li>[39m
+            [36m<strong>[39m
+              [0m版本提示：[0m
+            [36m</strong>[39m
+            [0m若页面提示“本地数据库版本高于当前页面”，刷新到最新页面； 不要删除浏览器数据或降级数据库，仅回退前端打不开已升级的库。[0m
+          [36m</li>[39m
+        [36m</ol>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"project-list__migration-actions"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m导入迁移前原始备份[0m
+          [36m</button>[39m
+          [36m<input[39m
+            [33maccept[39m=[32m".json,application/json"[39m
+            [33maria-label[39m=[32m"迁移前原始备份文件"[39m
+            [33mclass[39m=[32m"project-list__file-input"[39m
+            [33mtype[39m=[32m"file"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</details>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"project-list__loading"[39m
+        [33mrole[39m=[32m"status"[39m
+      [36m>[39m
+        [0m正在加载项目…[0m
+      [36m</p>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/pages/DesktopWorkspace.test.tsx:14:19
+     12|     window.location.hash = '#/desktop'
+     13|     render(<App />)
+     14|     expect(screen.getByRole('main', { name: '寸链桌面工作台' })).toBeInTheDoc…
+       |                   ^
+     15|     expect(screen.getByText('Rev —')).toBeInTheDocument()
+     16|     expect(screen.getByText('○ 尚无保存记录')).toBeInTheDocument()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  02:02:59
+   Duration  504ms (environment 40%, tests 28%, import 16%, transform 9%, setup 7%)
+

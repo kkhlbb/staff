@@ -4,6 +4,7 @@ import { PrintReport } from './pages/PrintReport'
 import { ProjectList } from './pages/ProjectList'
 import { SnapshotList } from './pages/SnapshotList'
 import { Workspace } from './pages/Workspace'
+import { DesktopWorkspace } from './pages/DesktopWorkspace'
 
 type Route =
   | { page: 'projects' }
@@ -174,6 +175,9 @@ function App() {
     content = <ProjectList onOpenProject={openProject} />
   }
 
+  if (window.location.hash === '#/desktop' || (window.cunlian && !window.location.hash)) {
+    return <DesktopWorkspace />
+  }
   return <DatabaseVersionGuard>{content}</DatabaseVersionGuard>
 }
 
