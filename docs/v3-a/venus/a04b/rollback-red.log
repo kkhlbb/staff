@@ -1,0 +1,5036 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/wt/dsh-v3-A
+
+ ❯ src/pages/DesktopWorkspace.test.tsx (8 tests | 7 failed) 2183ms
+   ❯ A-04b 会话接线 (8)
+     × 启动页列出最近/恢复，失效项只重新定位，Rev 不伪造 1023ms
+     × 打开内置示例，树/属性/复核来自快照，布局与页签保留 72ms
+     × 菜单 save/saveAs/open/close 真实转交，屏障回复当前会话；失败不更换 UI 快照 22ms
+     × 恢复为未保存副本 1009ms
+     × 新建与迁移菜单有可操作表单，取消不改会话，迁移成功接入主进程结果 17ms
+     × 保存失败保留当前项目，之后仍可另存；取消打开不替换会话 31ms
+     × 没有桥时明确说明限制，不捏造文件成功 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/DesktopWorkspace.test.tsx > A-04b 会话接线 > 启动页列出最近/恢复，失效项只重新定位，Rev 不伪造
+TestingLibraryElementError: Unable to find an element with the text: 有尚未保存的恢复草稿. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33maria-label[39m=[32m"寸链桌面工作台"[39m
+      [33mclass[39m=[32m"desktop-workspace"[39m
+      [33mstyle[39m=[32m"--tree-width: 232px; --properties-width: 312px; --review-height: 200px;"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"desktop-workspace__titlebar"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0m寸链 · 未打开项目[0m
+        [36m</h1>[39m
+        [36m<span>[39m
+          [0mRev —[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__pending"[39m
+        [36m>[39m
+          [0m○ 尚无保存记录[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__batch"[39m
+        [36m>[39m
+          [0mV3 · A 批次骨架[0m
+        [36m</span>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"项目操作"[39m
+        [33mclass[39m=[32m"desktop-workspace__toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+O"[39m
+        [36m>[39m
+          [0m打开项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+S"[39m
+        [36m>[39m
+          [0m保存[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-describedby[39m=[32m"desktop-import-reason"[39m
+          [33mdisabled[39m=[32m""[39m
+        [36m>[39m
+          [0m导入资料[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-note"[39m
+          [33mid[39m=[32m"desktop-import-reason"[39m
+        [36m>[39m
+          [0m资料导入本批次未实现[0m
+        [36m</span>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-end"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtitle[39m=[32m"C 批次未实现"[39m
+          [36m>[39m
+            [0m预览变更[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"desktop-export"[39m
+            [33maria-expanded[39m=[32m"false"[39m
+          [36m>[39m
+            [0m导出 PDF ▾[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__notice"[39m
+        [33mrole[39m=[32m"status"[39m
+      [36m>[39m
+        [0m未打开项目；当前为桌面工作台骨架，不含演示工程数据。[0m
+      [36m</div>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"工作区布局"[39m
+        [33mclass[39m=[32m"desktop-workspace__layout-tools"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-tree"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m项目树[0m
+        [36m</button>[39m
+        [36m<span>[39m
+          [0m选择对象后查看属性[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-properties"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m属性栏[0m
+        [36m</button>[39m
+      [36m</nav>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__body"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"项目树"[39m
+          [33mclass[39m=[32m"desktop-workspace__tree"[39m
+          [33mid[39m=[32m"desktop-tree"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m项目树[0m
+          [36m</h2>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m零件[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m零件[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m工程图[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m工程图[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m尺寸链[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m来源资料[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m来源资料[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m版本历史[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m版本历史[0m
+            [36m</button>[39m
+          [36m</details>[39m
+        [36m</aside>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"项目树宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"280"[39m
+          [33maria-valuemin[39m=[32m"180"[39m
+          [33maria-valuenow[39m=[32m"232"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"中央工作区"[39m
+          [33mclass[39m=[32m"desktop-workspace__center"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"工作视图"[39m
+            [33mclass[39m=[32m"desktop-workspace__tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-0"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"desktop-tab-0"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+            [36m>[39m
+              [0m工程图[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m3D[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-2"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-2"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-3"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-3"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-0"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mid[39m=[32m"desktop-panel-0"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无工程图[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mC 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m生成 SVG 图纸[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m工程图[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-1"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无 3D 模型[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mB1/B2 批次未实现：装配、爆炸视图与 STL 读取。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m载入 3D 模型[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m3D[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-2"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-2"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无来源 PDF[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：读取既有来源 PDF。当前契约未提供 sourceRead。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m读取既有来源 PDF[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-3"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-3"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无尺寸链[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：桌面尺寸链编辑接入。计算仍由既有领域层负责。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m编辑尺寸链[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"属性栏宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"340"[39m
+          [33maria-valuemin[39m=[32m"240"[39m
+          [33maria-valuenow[39m=[32m"312"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"属性栏"[39m
+          [33mclass[39m=[32m"desktop-workspace__properties"[39m
+          [33mid[39m=[32m"desktop-properties"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m属性 · [0m
+            [0m未选择[0m
+          [36m</h2>[39m
+          [36m<p>[39m
+            [0m在项目树中选择一个类别，查看其载入状态。[0m
+          [36m</p>[39m
+          [36m<dl>[39m
+            [36m<dt>[39m
+              [0m当前对象[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未选择对象[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m项目版本[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未载入[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m来源核对[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m尚无可核对来源[0m
+            [36m</dd>[39m
+          [36m</dl>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"desktop-workspace__pending"[39m
+          [36m>[39m
+            [0m○ 尚无审查结论[0m
+          [36m</p>[39m
+        [36m</aside>[39m
+      [36m</div>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"复核与变更"[39m
+        [33mclass[39m=[32m"desktop-workspace__review"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-review-content"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33mclass[39m=[32m"desktop-workspace__review-toggle"[39m
+        [36m>[39m
+          [0m▸[0m
+          [0m 复核与变更 [0m
+          [36m<span>[39m
+            [0m计算 未运行 · 来源 未载入 · 图纸 未生成[0m
+          [36m</span>[39m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__review-groups"[39m
+          [33mhidden[39m=[32m""[39m
+          [33mid[39m=[32m"desktop-review-content"[39m
+        [36m>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m变更[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚无变更预览。C 批次未实现。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m校核[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚未运行计算，不代表满足或审查通过。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m待办[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m项目打开与保存接口待接通；尚无工程复核清单。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33maria-label[39m=[32m"寸链桌面工作台"[39m
+      [33mclass[39m=[32m"desktop-workspace"[39m
+      [33mstyle[39m=[32m"--tree-width: 232px; --properties-width: 312px; --review-height: 200px;"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"desktop-workspace__titlebar"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0m寸链 · 未打开项目[0m
+        [36m</h1>[39m
+        [36m<span>[39m
+          [0mRev —[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__pending"[39m
+        [36m>[39m
+          [0m○ 尚无保存记录[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__batch"[39m
+        [36m>[39m
+          [0mV3 · A 批次骨架[0m
+        [36m</span>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"项目操作"[39m
+        [33mclass[39m=[32m"desktop-workspace__toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+O"[39m
+        [36m>[39m
+          [0m打开项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+S"[39m
+        [36m>[39m
+          [0m保存[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-describedby[39m=[32m"desktop-import-reason"[39m
+          [33mdisabled[39m=[32m""[39m
+        [36m>[39m
+          [0m导入资料[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-note"[39m
+          [33mid[39m=[32m"desktop-import-reason"[39m
+        [36m>[39m
+          [0m资料导入本批次未实现[0m
+        [36m</span>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-end"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtitle[39m=[32m"C 批次未实现"[39m
+          [36m>[39m
+            [0m预览变更[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"desktop-export"[39m
+            [33maria-expanded[39m=[32m"false"[39m
+          [36m>[39m
+            [0m导出 PDF ▾[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__notice"[39m
+        [33mrole[39m=[32m"status"[39m
+      [36m>[39m
+        [0m未打开项目；当前为桌面工作台骨架，不含演示工程数据。[0m
+      [36m</div>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"工作区布局"[39m
+        [33mclass[39m=[32m"desktop-workspace__layout-tools"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-tree"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m项目树[0m
+        [36m</button>[39m
+        [36m<span>[39m
+          [0m选择对象后查看属性[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-properties"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m属性栏[0m
+        [36m</button>[39m
+      [36m</nav>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__body"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"项目树"[39m
+          [33mclass[39m=[32m"desktop-workspace__tree"[39m
+          [33mid[39m=[32m"desktop-tree"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m项目树[0m
+          [36m</h2>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m零件[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m零件[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m工程图[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m工程图[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m尺寸链[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m来源资料[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m来源资料[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m版本历史[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m版本历史[0m
+            [36m</button>[39m
+          [36m</details>[39m
+        [36m</aside>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"项目树宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"280"[39m
+          [33maria-valuemin[39m=[32m"180"[39m
+          [33maria-valuenow[39m=[32m"232"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"中央工作区"[39m
+          [33mclass[39m=[32m"desktop-workspace__center"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"工作视图"[39m
+            [33mclass[39m=[32m"desktop-workspace__tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-0"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"desktop-tab-0"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+            [36m>[39m
+              [0m工程图[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m3D[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-2"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-2"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-3"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-3"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-0"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mid[39m=[32m"desktop-panel-0"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无工程图[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mC 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m生成 SVG 图纸[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m工程图[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-1"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无 3D 模型[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mB1/B2 批次未实现：装配、爆炸视图与 STL 读取。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m载入 3D 模型[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m3D[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-2"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-2"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无来源 PDF[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：读取既有来源 PDF。当前契约未提供 sourceRead。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m读取既有来源 PDF[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-3"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-3"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无尺寸链[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：桌面尺寸链编辑接入。计算仍由既有领域层负责。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m编辑尺寸链[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"属性栏宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"340"[39m
+          [33maria-valuemin[39m=[32m"240"[39m
+          [33maria-valuenow[39m=[32m"312"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"属性栏"[39m
+          [33mclass[39m=[32m"desktop-workspace__properties"[39m
+          [33mid[39m=[32m"desktop-properties"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m属性 · [0m
+            [0m未选择[0m
+          [36m</h2>[39m
+          [36m<p>[39m
+            [0m在项目树中选择一个类别，查看其载入状态。[0m
+          [36m</p>[39m
+          [36m<dl>[39m
+            [36m<dt>[39m
+              [0m当前对象[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未选择对象[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m项目版本[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未载入[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m来源核对[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m尚无可核对来源[0m
+            [36m</dd>[39m
+          [36m</dl>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"desktop-workspace__pending"[39m
+          [36m>[39m
+            [0m○ 尚无审查结论[0m
+          [36m</p>[39m
+        [36m</aside>[39m
+      [36m</div>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"复核与变更"[39m
+        [33mclass[39m=[32m"desktop-workspace__review"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-review-content"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33mclass[39m=[32m"desktop-workspace__review-toggle"[39m
+        [36m>[39m
+          [0m▸[0m
+          [0m 复核与变更 [0m
+          [36m<span>[39m
+            [0m计算 未运行 · 来源 未载入 · 图纸 未生成[0m
+          [36m</span>[39m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__review-groups"[39m
+          [33mhidden[39m=[32m""[39m
+          [33mid[39m=[32m"desktop-review-content"[39m
+        [36m>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m变更[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚无变更预览。C 批次未实现。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m校核[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚未运行计算，不代表满足或审查通过。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m待办[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m项目打开与保存接口待接通；尚无工程复核清单。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/pages/DesktopWorkspace.test.tsx:48:18
+     46|   it('启动页列出最近/恢复，失效项只重新定位，Rev 不伪造', async () => {
+     47|     render(<DesktopWorkspace />)
+     48|     await screen.findByText('有尚未保存的恢复草稿')
+       |                  ^
+     49|     expect(screen.getByText(/Rev 未提供/)).toBeInTheDocument()
+     50|     fireEvent.click(screen.getByRole('button', { name: '重新定位' }))
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  src/pages/DesktopWorkspace.test.tsx > A-04b 会话接线 > 打开内置示例，树/属性/复核来自快照，布局与页签保留
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name `/打开内置示例/`
+
+Here are the accessible roles:
+
+  main:
+
+  Name "寸链桌面工作台":
+  [36m<main[39m
+    [33maria-label[39m=[32m"寸链桌面工作台"[39m
+    [33mclass[39m=[32m"desktop-workspace"[39m
+    [33mstyle[39m=[32m"--tree-width: 232px; --properties-width: 312px; --review-height: 200px;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"desktop-workspace__titlebar"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "寸链 · 未打开项目":
+  [36m<h1 />[39m
+
+  Name "项目树":
+  [36m<h2 />[39m
+
+  Name "尚无工程图":
+  [36m<h2 />[39m
+
+  Name "属性 · 未选择":
+  [36m<h2 />[39m
+
+  --------------------------------------------------
+  toolbar:
+
+  Name "项目操作":
+  [36m<div[39m
+    [33maria-label[39m=[32m"项目操作"[39m
+    [33mclass[39m=[32m"desktop-workspace__toolbar"[39m
+    [33mrole[39m=[32m"toolbar"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "打开项目":
+  [36m<button[39m
+    [33maria-keyshortcuts[39m=[32m"Meta+O"[39m
+  [36m/>[39m
+
+  Name "保存":
+  [36m<button[39m
+    [33maria-keyshortcuts[39m=[32m"Meta+S"[39m
+  [36m/>[39m
+
+  Name "导入资料":
+  [36m<button[39m
+    [33maria-describedby[39m=[32m"desktop-import-reason"[39m
+    [33mdisabled[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "预览变更":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtitle[39m=[32m"C 批次未实现"[39m
+  [36m/>[39m
+
+  Name "导出 PDF ▾":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-export"[39m
+    [33maria-expanded[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "收起项目树":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-tree"[39m
+    [33maria-expanded[39m=[32m"true"[39m
+  [36m/>[39m
+
+  Name "收起属性栏":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-properties"[39m
+    [33maria-expanded[39m=[32m"true"[39m
+  [36m/>[39m
+
+  Name "未载入零件":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "未载入工程图":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "未载入尺寸链":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "未载入来源资料":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "未载入版本历史":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "生成 SVG 图纸":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "▸ 复核与变更 计算 未运行 · 来源 未载入 · 图纸 未生成":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-review-content"[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33mclass[39m=[32m"desktop-workspace__review-toggle"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  status:
+
+  Name "":
+  [36m<div[39m
+    [33mclass[39m=[32m"desktop-workspace__notice"[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "工作区布局":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"工作区布局"[39m
+    [33mclass[39m=[32m"desktop-workspace__layout-tools"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  complementary:
+
+  Name "项目树":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"项目树"[39m
+    [33mclass[39m=[32m"desktop-workspace__tree"[39m
+    [33mid[39m=[32m"desktop-tree"[39m
+  [36m/>[39m
+
+  Name "属性栏":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"属性栏"[39m
+    [33mclass[39m=[32m"desktop-workspace__properties"[39m
+    [33mid[39m=[32m"desktop-properties"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  group:
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  separator:
+
+  Name "项目树宽度":
+  [36m<div[39m
+    [33maria-label[39m=[32m"项目树宽度"[39m
+    [33maria-orientation[39m=[32m"vertical"[39m
+    [33maria-valuemax[39m=[32m"280"[39m
+    [33maria-valuemin[39m=[32m"180"[39m
+    [33maria-valuenow[39m=[32m"232"[39m
+    [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+    [33mrole[39m=[32m"separator"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  Name "属性栏宽度":
+  [36m<div[39m
+    [33maria-label[39m=[32m"属性栏宽度"[39m
+    [33maria-orientation[39m=[32m"vertical"[39m
+    [33maria-valuemax[39m=[32m"340"[39m
+    [33maria-valuemin[39m=[32m"240"[39m
+    [33maria-valuenow[39m=[32m"312"[39m
+    [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+    [33mrole[39m=[32m"separator"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "中央工作区":
+  [36m<section[39m
+    [33maria-label[39m=[32m"中央工作区"[39m
+    [33mclass[39m=[32m"desktop-workspace__center"[39m
+  [36m/>[39m
+
+  Name "复核与变更":
+  [36m<section[39m
+    [33maria-label[39m=[32m"复核与变更"[39m
+    [33mclass[39m=[32m"desktop-workspace__review"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tablist:
+
+  Name "工作视图":
+  [36m<div[39m
+    [33maria-label[39m=[32m"工作视图"[39m
+    [33mclass[39m=[32m"desktop-workspace__tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "工程图":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-panel-0"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"desktop-tab-0"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  Name "3D":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-panel-1"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"desktop-tab-1"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  Name "来源 PDF":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-panel-2"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"desktop-tab-2"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  Name "尺寸链":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-panel-3"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"desktop-tab-3"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tabpanel:
+
+  Name "工程图":
+  [36m<div[39m
+    [33maria-labelledby[39m=[32m"desktop-tab-0"[39m
+    [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+    [33mid[39m=[32m"desktop-panel-0"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"desktop-workspace__pending"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  term:
+
+  Name "":
+  [36m<dt />[39m
+
+  Name "":
+  [36m<dt />[39m
+
+  Name "":
+  [36m<dt />[39m
+
+  --------------------------------------------------
+  definition:
+
+  Name "":
+  [36m<dd />[39m
+
+  Name "":
+  [36m<dd />[39m
+
+  Name "":
+  [36m<dd />[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33maria-label[39m=[32m"寸链桌面工作台"[39m
+      [33mclass[39m=[32m"desktop-workspace"[39m
+      [33mstyle[39m=[32m"--tree-width: 232px; --properties-width: 312px; --review-height: 200px;"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"desktop-workspace__titlebar"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0m寸链 · 未打开项目[0m
+        [36m</h1>[39m
+        [36m<span>[39m
+          [0mRev —[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__pending"[39m
+        [36m>[39m
+          [0m○ 尚无保存记录[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__batch"[39m
+        [36m>[39m
+          [0mV3 · A 批次骨架[0m
+        [36m</span>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"项目操作"[39m
+        [33mclass[39m=[32m"desktop-workspace__toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+O"[39m
+        [36m>[39m
+          [0m打开项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+S"[39m
+        [36m>[39m
+          [0m保存[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-describedby[39m=[32m"desktop-import-reason"[39m
+          [33mdisabled[39m=[32m""[39m
+        [36m>[39m
+          [0m导入资料[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-note"[39m
+          [33mid[39m=[32m"desktop-import-reason"[39m
+        [36m>[39m
+          [0m资料导入本批次未实现[0m
+        [36m</span>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-end"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtitle[39m=[32m"C 批次未实现"[39m
+          [36m>[39m
+            [0m预览变更[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"desktop-export"[39m
+            [33maria-expanded[39m=[32m"false"[39m
+          [36m>[39m
+            [0m导出 PDF ▾[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__notice"[39m
+        [33mrole[39m=[32m"status"[39m
+      [36m>[39m
+        [0m未打开项目；当前为桌面工作台骨架，不含演示工程数据。[0m
+      [36m</div>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"工作区布局"[39m
+        [33mclass[39m=[32m"desktop-workspace__layout-tools"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-tree"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m项目树[0m
+        [36m</button>[39m
+        [36m<span>[39m
+          [0m选择对象后查看属性[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-properties"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m属性栏[0m
+        [36m</button>[39m
+      [36m</nav>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__body"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"项目树"[39m
+          [33mclass[39m=[32m"desktop-workspace__tree"[39m
+          [33mid[39m=[32m"desktop-tree"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m项目树[0m
+          [36m</h2>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m零件[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m零件[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m工程图[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m工程图[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m尺寸链[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m来源资料[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m来源资料[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m版本历史[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m版本历史[0m
+            [36m</button>[39m
+          [36m</details>[39m
+        [36m</aside>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"项目树宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"280"[39m
+          [33maria-valuemin[39m=[32m"180"[39m
+          [33maria-valuenow[39m=[32m"232"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"中央工作区"[39m
+          [33mclass[39m=[32m"desktop-workspace__center"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"工作视图"[39m
+            [33mclass[39m=[32m"desktop-workspace__tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-0"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"desktop-tab-0"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+            [36m>[39m
+              [0m工程图[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m3D[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-2"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-2"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-3"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-3"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-0"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mid[39m=[32m"desktop-panel-0"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无工程图[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mC 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m生成 SVG 图纸[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m工程图[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-1"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无 3D 模型[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mB1/B2 批次未实现：装配、爆炸视图与 STL 读取。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m载入 3D 模型[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m3D[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-2"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-2"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无来源 PDF[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：读取既有来源 PDF。当前契约未提供 sourceRead。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m读取既有来源 PDF[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-3"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-3"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无尺寸链[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：桌面尺寸链编辑接入。计算仍由既有领域层负责。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m编辑尺寸链[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"属性栏宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"340"[39m
+          [33maria-valuemin[39m=[32m"240"[39m
+          [33maria-valuenow[39m=[32m"312"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"属性栏"[39m
+          [33mclass[39m=[32m"desktop-workspace__properties"[39m
+          [33mid[39m=[32m"desktop-properties"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m属性 · [0m
+            [0m未选择[0m
+          [36m</h2>[39m
+          [36m<p>[39m
+            [0m在项目树中选择一个类别，查看其载入状态。[0m
+          [36m</p>[39m
+          [36m<dl>[39m
+            [36m<dt>[39m
+              [0m当前对象[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未选择对象[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m项目版本[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未载入[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m来源核对[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m尚无可核对来源[0m
+            [36m</dd>[39m
+          [36m</dl>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"desktop-workspace__pending"[39m
+          [36m>[39m
+            [0m○ 尚无审查结论[0m
+          [36m</p>[39m
+        [36m</aside>[39m
+      [36m</div>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"复核与变更"[39m
+        [33mclass[39m=[32m"desktop-workspace__review"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-review-content"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33mclass[39m=[32m"desktop-workspace__review-toggle"[39m
+        [36m>[39m
+          [0m▸[0m
+          [0m 复核与变更 [0m
+          [36m<span>[39m
+            [0m计算 未运行 · 来源 未载入 · 图纸 未生成[0m
+          [36m</span>[39m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__review-groups"[39m
+          [33mhidden[39m=[32m""[39m
+          [33mid[39m=[32m"desktop-review-content"[39m
+        [36m>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m变更[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚无变更预览。C 批次未实现。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m校核[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚未运行计算，不代表满足或审查通过。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m待办[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m项目打开与保存接口待接通；尚无工程复核清单。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ openExample src/pages/DesktopWorkspace.test.tsx:40:26
+     38| async function openExample() {
+     39|   render(<DesktopWorkspace />)
+     40|   fireEvent.click(screen.getByRole('button', { name: /打开内置示例/ }))
+       |                          ^
+     41|   await screen.findByRole('main', { name: '寸链桌面工作台' })
+     42|   await waitFor(() => expect(screen.getByRole('button', { name: '保存' }…
+ ❯ src/pages/DesktopWorkspace.test.tsx:55:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  src/pages/DesktopWorkspace.test.tsx > A-04b 会话接线 > 菜单 save/saveAs/open/close 真实转交，屏障回复当前会话；失败不更换 UI 快照
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name `/打开内置示例/`
+
+Here are the accessible roles:
+
+  main:
+
+  Name "寸链桌面工作台":
+  [36m<main[39m
+    [33maria-label[39m=[32m"寸链桌面工作台"[39m
+    [33mclass[39m=[32m"desktop-workspace"[39m
+    [33mstyle[39m=[32m"--tree-width: 232px; --properties-width: 312px; --review-height: 200px;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"desktop-workspace__titlebar"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "寸链 · 未打开项目":
+  [36m<h1 />[39m
+
+  Name "项目树":
+  [36m<h2 />[39m
+
+  Name "尚无工程图":
+  [36m<h2 />[39m
+
+  Name "属性 · 未选择":
+  [36m<h2 />[39m
+
+  --------------------------------------------------
+  toolbar:
+
+  Name "项目操作":
+  [36m<div[39m
+    [33maria-label[39m=[32m"项目操作"[39m
+    [33mclass[39m=[32m"desktop-workspace__toolbar"[39m
+    [33mrole[39m=[32m"toolbar"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "打开项目":
+  [36m<button[39m
+    [33maria-keyshortcuts[39m=[32m"Meta+O"[39m
+  [36m/>[39m
+
+  Name "保存":
+  [36m<button[39m
+    [33maria-keyshortcuts[39m=[32m"Meta+S"[39m
+  [36m/>[39m
+
+  Name "导入资料":
+  [36m<button[39m
+    [33maria-describedby[39m=[32m"desktop-import-reason"[39m
+    [33mdisabled[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "预览变更":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtitle[39m=[32m"C 批次未实现"[39m
+  [36m/>[39m
+
+  Name "导出 PDF ▾":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-export"[39m
+    [33maria-expanded[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "收起项目树":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-tree"[39m
+    [33maria-expanded[39m=[32m"true"[39m
+  [36m/>[39m
+
+  Name "收起属性栏":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-properties"[39m
+    [33maria-expanded[39m=[32m"true"[39m
+  [36m/>[39m
+
+  Name "未载入零件":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "未载入工程图":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "未载入尺寸链":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "未载入来源资料":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "未载入版本历史":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "生成 SVG 图纸":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "▸ 复核与变更 计算 未运行 · 来源 未载入 · 图纸 未生成":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-review-content"[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33mclass[39m=[32m"desktop-workspace__review-toggle"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  status:
+
+  Name "":
+  [36m<div[39m
+    [33mclass[39m=[32m"desktop-workspace__notice"[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "工作区布局":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"工作区布局"[39m
+    [33mclass[39m=[32m"desktop-workspace__layout-tools"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  complementary:
+
+  Name "项目树":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"项目树"[39m
+    [33mclass[39m=[32m"desktop-workspace__tree"[39m
+    [33mid[39m=[32m"desktop-tree"[39m
+  [36m/>[39m
+
+  Name "属性栏":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"属性栏"[39m
+    [33mclass[39m=[32m"desktop-workspace__properties"[39m
+    [33mid[39m=[32m"desktop-properties"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  group:
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  separator:
+
+  Name "项目树宽度":
+  [36m<div[39m
+    [33maria-label[39m=[32m"项目树宽度"[39m
+    [33maria-orientation[39m=[32m"vertical"[39m
+    [33maria-valuemax[39m=[32m"280"[39m
+    [33maria-valuemin[39m=[32m"180"[39m
+    [33maria-valuenow[39m=[32m"232"[39m
+    [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+    [33mrole[39m=[32m"separator"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  Name "属性栏宽度":
+  [36m<div[39m
+    [33maria-label[39m=[32m"属性栏宽度"[39m
+    [33maria-orientation[39m=[32m"vertical"[39m
+    [33maria-valuemax[39m=[32m"340"[39m
+    [33maria-valuemin[39m=[32m"240"[39m
+    [33maria-valuenow[39m=[32m"312"[39m
+    [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+    [33mrole[39m=[32m"separator"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "中央工作区":
+  [36m<section[39m
+    [33maria-label[39m=[32m"中央工作区"[39m
+    [33mclass[39m=[32m"desktop-workspace__center"[39m
+  [36m/>[39m
+
+  Name "复核与变更":
+  [36m<section[39m
+    [33maria-label[39m=[32m"复核与变更"[39m
+    [33mclass[39m=[32m"desktop-workspace__review"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tablist:
+
+  Name "工作视图":
+  [36m<div[39m
+    [33maria-label[39m=[32m"工作视图"[39m
+    [33mclass[39m=[32m"desktop-workspace__tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "工程图":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-panel-0"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"desktop-tab-0"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  Name "3D":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-panel-1"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"desktop-tab-1"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  Name "来源 PDF":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-panel-2"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"desktop-tab-2"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  Name "尺寸链":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-panel-3"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"desktop-tab-3"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tabpanel:
+
+  Name "工程图":
+  [36m<div[39m
+    [33maria-labelledby[39m=[32m"desktop-tab-0"[39m
+    [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+    [33mid[39m=[32m"desktop-panel-0"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"desktop-workspace__pending"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  term:
+
+  Name "":
+  [36m<dt />[39m
+
+  Name "":
+  [36m<dt />[39m
+
+  Name "":
+  [36m<dt />[39m
+
+  --------------------------------------------------
+  definition:
+
+  Name "":
+  [36m<dd />[39m
+
+  Name "":
+  [36m<dd />[39m
+
+  Name "":
+  [36m<dd />[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33maria-label[39m=[32m"寸链桌面工作台"[39m
+      [33mclass[39m=[32m"desktop-workspace"[39m
+      [33mstyle[39m=[32m"--tree-width: 232px; --properties-width: 312px; --review-height: 200px;"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"desktop-workspace__titlebar"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0m寸链 · 未打开项目[0m
+        [36m</h1>[39m
+        [36m<span>[39m
+          [0mRev —[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__pending"[39m
+        [36m>[39m
+          [0m○ 尚无保存记录[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__batch"[39m
+        [36m>[39m
+          [0mV3 · A 批次骨架[0m
+        [36m</span>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"项目操作"[39m
+        [33mclass[39m=[32m"desktop-workspace__toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+O"[39m
+        [36m>[39m
+          [0m打开项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+S"[39m
+        [36m>[39m
+          [0m保存[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-describedby[39m=[32m"desktop-import-reason"[39m
+          [33mdisabled[39m=[32m""[39m
+        [36m>[39m
+          [0m导入资料[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-note"[39m
+          [33mid[39m=[32m"desktop-import-reason"[39m
+        [36m>[39m
+          [0m资料导入本批次未实现[0m
+        [36m</span>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-end"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtitle[39m=[32m"C 批次未实现"[39m
+          [36m>[39m
+            [0m预览变更[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"desktop-export"[39m
+            [33maria-expanded[39m=[32m"false"[39m
+          [36m>[39m
+            [0m导出 PDF ▾[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__notice"[39m
+        [33mrole[39m=[32m"status"[39m
+      [36m>[39m
+        [0m未打开项目；当前为桌面工作台骨架，不含演示工程数据。[0m
+      [36m</div>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"工作区布局"[39m
+        [33mclass[39m=[32m"desktop-workspace__layout-tools"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-tree"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m项目树[0m
+        [36m</button>[39m
+        [36m<span>[39m
+          [0m选择对象后查看属性[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-properties"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m属性栏[0m
+        [36m</button>[39m
+      [36m</nav>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__body"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"项目树"[39m
+          [33mclass[39m=[32m"desktop-workspace__tree"[39m
+          [33mid[39m=[32m"desktop-tree"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m项目树[0m
+          [36m</h2>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m零件[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m零件[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m工程图[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m工程图[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m尺寸链[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m来源资料[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m来源资料[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m版本历史[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m版本历史[0m
+            [36m</button>[39m
+          [36m</details>[39m
+        [36m</aside>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"项目树宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"280"[39m
+          [33maria-valuemin[39m=[32m"180"[39m
+          [33maria-valuenow[39m=[32m"232"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"中央工作区"[39m
+          [33mclass[39m=[32m"desktop-workspace__center"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"工作视图"[39m
+            [33mclass[39m=[32m"desktop-workspace__tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-0"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"desktop-tab-0"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+            [36m>[39m
+              [0m工程图[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m3D[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-2"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-2"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-3"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-3"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-0"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mid[39m=[32m"desktop-panel-0"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无工程图[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mC 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m生成 SVG 图纸[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m工程图[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-1"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无 3D 模型[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mB1/B2 批次未实现：装配、爆炸视图与 STL 读取。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m载入 3D 模型[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m3D[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-2"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-2"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无来源 PDF[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：读取既有来源 PDF。当前契约未提供 sourceRead。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m读取既有来源 PDF[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-3"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-3"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无尺寸链[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：桌面尺寸链编辑接入。计算仍由既有领域层负责。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m编辑尺寸链[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"属性栏宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"340"[39m
+          [33maria-valuemin[39m=[32m"240"[39m
+          [33maria-valuenow[39m=[32m"312"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"属性栏"[39m
+          [33mclass[39m=[32m"desktop-workspace__properties"[39m
+          [33mid[39m=[32m"desktop-properties"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m属性 · [0m
+            [0m未选择[0m
+          [36m</h2>[39m
+          [36m<p>[39m
+            [0m在项目树中选择一个类别，查看其载入状态。[0m
+          [36m</p>[39m
+          [36m<dl>[39m
+            [36m<dt>[39m
+              [0m当前对象[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未选择对象[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m项目版本[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未载入[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m来源核对[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m尚无可核对来源[0m
+            [36m</dd>[39m
+          [36m</dl>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"desktop-workspace__pending"[39m
+          [36m>[39m
+            [0m○ 尚无审查结论[0m
+          [36m</p>[39m
+        [36m</aside>[39m
+      [36m</div>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"复核与变更"[39m
+        [33mclass[39m=[32m"desktop-workspace__review"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-review-content"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33mclass[39m=[32m"desktop-workspace__review-toggle"[39m
+        [36m>[39m
+          [0m▸[0m
+          [0m 复核与变更 [0m
+          [36m<span>[39m
+            [0m计算 未运行 · 来源 未载入 · 图纸 未生成[0m
+          [36m</span>[39m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__review-groups"[39m
+          [33mhidden[39m=[32m""[39m
+          [33mid[39m=[32m"desktop-review-content"[39m
+        [36m>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m变更[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚无变更预览。C 批次未实现。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m校核[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚未运行计算，不代表满足或审查通过。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m待办[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m项目打开与保存接口待接通；尚无工程复核清单。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ openExample src/pages/DesktopWorkspace.test.tsx:40:26
+     38| async function openExample() {
+     39|   render(<DesktopWorkspace />)
+     40|   fireEvent.click(screen.getByRole('button', { name: /打开内置示例/ }))
+       |                          ^
+     41|   await screen.findByRole('main', { name: '寸链桌面工作台' })
+     42|   await waitFor(() => expect(screen.getByRole('button', { name: '保存' }…
+ ❯ src/pages/DesktopWorkspace.test.tsx:73:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  src/pages/DesktopWorkspace.test.tsx > A-04b 会话接线 > 恢复为未保存副本
+TestingLibraryElementError: Unable to find role="button" and name "恢复为未保存副本"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33maria-label[39m=[32m"寸链桌面工作台"[39m
+      [33mclass[39m=[32m"desktop-workspace"[39m
+      [33mstyle[39m=[32m"--tree-width: 232px; --properties-width: 312px; --review-height: 200px;"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"desktop-workspace__titlebar"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0m寸链 · 未打开项目[0m
+        [36m</h1>[39m
+        [36m<span>[39m
+          [0mRev —[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__pending"[39m
+        [36m>[39m
+          [0m○ 尚无保存记录[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__batch"[39m
+        [36m>[39m
+          [0mV3 · A 批次骨架[0m
+        [36m</span>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"项目操作"[39m
+        [33mclass[39m=[32m"desktop-workspace__toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+O"[39m
+        [36m>[39m
+          [0m打开项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+S"[39m
+        [36m>[39m
+          [0m保存[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-describedby[39m=[32m"desktop-import-reason"[39m
+          [33mdisabled[39m=[32m""[39m
+        [36m>[39m
+          [0m导入资料[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-note"[39m
+          [33mid[39m=[32m"desktop-import-reason"[39m
+        [36m>[39m
+          [0m资料导入本批次未实现[0m
+        [36m</span>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-end"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtitle[39m=[32m"C 批次未实现"[39m
+          [36m>[39m
+            [0m预览变更[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"desktop-export"[39m
+            [33maria-expanded[39m=[32m"false"[39m
+          [36m>[39m
+            [0m导出 PDF ▾[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__notice"[39m
+        [33mrole[39m=[32m"status"[39m
+      [36m>[39m
+        [0m未打开项目；当前为桌面工作台骨架，不含演示工程数据。[0m
+      [36m</div>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"工作区布局"[39m
+        [33mclass[39m=[32m"desktop-workspace__layout-tools"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-tree"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m项目树[0m
+        [36m</button>[39m
+        [36m<span>[39m
+          [0m选择对象后查看属性[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-properties"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m属性栏[0m
+        [36m</button>[39m
+      [36m</nav>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__body"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"项目树"[39m
+          [33mclass[39m=[32m"desktop-workspace__tree"[39m
+          [33mid[39m=[32m"desktop-tree"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m项目树[0m
+          [36m</h2>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m零件[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m零件[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m工程图[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m工程图[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m尺寸链[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m来源资料[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m来源资料[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m版本历史[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m版本历史[0m
+            [36m</button>[39m
+          [36m</details>[39m
+        [36m</aside>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"项目树宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"280"[39m
+          [33maria-valuemin[39m=[32m"180"[39m
+          [33maria-valuenow[39m=[32m"232"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"中央工作区"[39m
+          [33mclass[39m=[32m"desktop-workspace__center"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"工作视图"[39m
+            [33mclass[39m=[32m"desktop-workspace__tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-0"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"desktop-tab-0"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+            [36m>[39m
+              [0m工程图[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m3D[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-2"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-2"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-3"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-3"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-0"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mid[39m=[32m"desktop-panel-0"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无工程图[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mC 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m生成 SVG 图纸[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m工程图[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-1"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无 3D 模型[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mB1/B2 批次未实现：装配、爆炸视图与 STL 读取。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m载入 3D 模型[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m3D[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-2"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-2"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无来源 PDF[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：读取既有来源 PDF。当前契约未提供 sourceRead。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m读取既有来源 PDF[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-3"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-3"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无尺寸链[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：桌面尺寸链编辑接入。计算仍由既有领域层负责。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m编辑尺寸链[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"属性栏宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"340"[39m
+          [33maria-valuemin[39m=[32m"240"[39m
+          [33maria-valuenow[39m=[32m"312"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"属性栏"[39m
+          [33mclass[39m=[32m"desktop-workspace__properties"[39m
+          [33mid[39m=[32m"desktop-properties"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m属性 · [0m
+            [0m未选择[0m
+          [36m</h2>[39m
+          [36m<p>[39m
+            [0m在项目树中选择一个类别，查看其载入状态。[0m
+          [36m</p>[39m
+          [36m<dl>[39m
+            [36m<dt>[39m
+              [0m当前对象[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未选择对象[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m项目版本[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未载入[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m来源核对[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m尚无可核对来源[0m
+            [36m</dd>[39m
+          [36m</dl>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"desktop-workspace__pending"[39m
+          [36m>[39m
+            [0m○ 尚无审查结论[0m
+          [36m</p>[39m
+        [36m</aside>[39m
+      [36m</div>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"复核与变更"[39m
+        [33mclass[39m=[32m"desktop-workspace__review"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-review-content"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33mclass[39m=[32m"desktop-workspace__review-toggle"[39m
+        [36m>[39m
+          [0m▸[0m
+          [0m 复核与变更 [0m
+          [36m<span>[39m
+            [0m计算 未运行 · 来源 未载入 · 图纸 未生成[0m
+          [36m</span>[39m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__review-groups"[39m
+          [33mhidden[39m=[32m""[39m
+          [33mid[39m=[32m"desktop-review-content"[39m
+        [36m>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m变更[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚无变更预览。C 批次未实现。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m校核[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚未运行计算，不代表满足或审查通过。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m待办[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m项目打开与保存接口待接通；尚无工程复核清单。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33maria-label[39m=[32m"寸链桌面工作台"[39m
+      [33mclass[39m=[32m"desktop-workspace"[39m
+      [33mstyle[39m=[32m"--tree-width: 232px; --properties-width: 312px; --review-height: 200px;"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"desktop-workspace__titlebar"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0m寸链 · 未打开项目[0m
+        [36m</h1>[39m
+        [36m<span>[39m
+          [0mRev —[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__pending"[39m
+        [36m>[39m
+          [0m○ 尚无保存记录[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__batch"[39m
+        [36m>[39m
+          [0mV3 · A 批次骨架[0m
+        [36m</span>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"项目操作"[39m
+        [33mclass[39m=[32m"desktop-workspace__toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+O"[39m
+        [36m>[39m
+          [0m打开项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+S"[39m
+        [36m>[39m
+          [0m保存[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-describedby[39m=[32m"desktop-import-reason"[39m
+          [33mdisabled[39m=[32m""[39m
+        [36m>[39m
+          [0m导入资料[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-note"[39m
+          [33mid[39m=[32m"desktop-import-reason"[39m
+        [36m>[39m
+          [0m资料导入本批次未实现[0m
+        [36m</span>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-end"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtitle[39m=[32m"C 批次未实现"[39m
+          [36m>[39m
+            [0m预览变更[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"desktop-export"[39m
+            [33maria-expanded[39m=[32m"false"[39m
+          [36m>[39m
+            [0m导出 PDF ▾[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__notice"[39m
+        [33mrole[39m=[32m"status"[39m
+      [36m>[39m
+        [0m未打开项目；当前为桌面工作台骨架，不含演示工程数据。[0m
+      [36m</div>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"工作区布局"[39m
+        [33mclass[39m=[32m"desktop-workspace__layout-tools"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-tree"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m项目树[0m
+        [36m</button>[39m
+        [36m<span>[39m
+          [0m选择对象后查看属性[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-properties"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m属性栏[0m
+        [36m</button>[39m
+      [36m</nav>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__body"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"项目树"[39m
+          [33mclass[39m=[32m"desktop-workspace__tree"[39m
+          [33mid[39m=[32m"desktop-tree"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m项目树[0m
+          [36m</h2>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m零件[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m零件[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m工程图[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m工程图[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m尺寸链[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m来源资料[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m来源资料[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m版本历史[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m版本历史[0m
+            [36m</button>[39m
+          [36m</details>[39m
+        [36m</aside>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"项目树宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"280"[39m
+          [33maria-valuemin[39m=[32m"180"[39m
+          [33maria-valuenow[39m=[32m"232"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"中央工作区"[39m
+          [33mclass[39m=[32m"desktop-workspace__center"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"工作视图"[39m
+            [33mclass[39m=[32m"desktop-workspace__tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-0"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"desktop-tab-0"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+            [36m>[39m
+              [0m工程图[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m3D[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-2"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-2"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-3"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-3"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-0"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mid[39m=[32m"desktop-panel-0"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无工程图[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mC 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m生成 SVG 图纸[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m工程图[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-1"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无 3D 模型[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mB1/B2 批次未实现：装配、爆炸视图与 STL 读取。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m载入 3D 模型[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m3D[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-2"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-2"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无来源 PDF[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：读取既有来源 PDF。当前契约未提供 sourceRead。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m读取既有来源 PDF[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-3"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-3"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无尺寸链[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：桌面尺寸链编辑接入。计算仍由既有领域层负责。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m编辑尺寸链[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"属性栏宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"340"[39m
+          [33maria-valuemin[39m=[32m"240"[39m
+          [33maria-valuenow[39m=[32m"312"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"属性栏"[39m
+          [33mclass[39m=[32m"desktop-workspace__properties"[39m
+          [33mid[39m=[32m"desktop-properties"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m属性 · [0m
+            [0m未选择[0m
+          [36m</h2>[39m
+          [36m<p>[39m
+            [0m在项目树中选择一个类别，查看其载入状态。[0m
+          [36m</p>[39m
+          [36m<dl>[39m
+            [36m<dt>[39m
+              [0m当前对象[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未选择对象[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m项目版本[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未载入[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m来源核对[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m尚无可核对来源[0m
+            [36m</dd>[39m
+          [36m</dl>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"desktop-workspace__pending"[39m
+          [36m>[39m
+            [0m○ 尚无审查结论[0m
+          [36m</p>[39m
+        [36m</aside>[39m
+      [36m</div>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"复核与变更"[39m
+        [33mclass[39m=[32m"desktop-workspace__review"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-review-content"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33mclass[39m=[32m"desktop-workspace__review-toggle"[39m
+        [36m>[39m
+          [0m▸[0m
+          [0m 复核与变更 [0m
+          [36m<span>[39m
+            [0m计算 未运行 · 来源 未载入 · 图纸 未生成[0m
+          [36m</span>[39m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__review-groups"[39m
+          [33mhidden[39m=[32m""[39m
+          [33mid[39m=[32m"desktop-review-content"[39m
+        [36m>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m变更[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚无变更预览。C 批次未实现。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m校核[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚未运行计算，不代表满足或审查通过。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m待办[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m项目打开与保存接口待接通；尚无工程复核清单。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/pages/DesktopWorkspace.test.tsx:92:34
+     90|   it('恢复为未保存副本', async () => {
+     91|     render(<DesktopWorkspace />)
+     92|     fireEvent.click(await screen.findByRole('button', { name: '恢复为未保存副…
+       |                                  ^
+     93|     await screen.findByText('未保存草稿')
+     94|     expect(api.restoreRecovery).toHaveBeenCalledWith({ recoveryId: 'dr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  src/pages/DesktopWorkspace.test.tsx > A-04b 会话接线 > 新建与迁移菜单有可操作表单，取消不改会话，迁移成功接入主进程结果
+TestingLibraryElementError: Unable to find a label with the text of: 项目名称
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33maria-label[39m=[32m"寸链桌面工作台"[39m
+      [33mclass[39m=[32m"desktop-workspace"[39m
+      [33mstyle[39m=[32m"--tree-width: 232px; --properties-width: 312px; --review-height: 200px;"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"desktop-workspace__titlebar"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0m寸链 · 未打开项目[0m
+        [36m</h1>[39m
+        [36m<span>[39m
+          [0mRev —[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__pending"[39m
+        [36m>[39m
+          [0m○ 尚无保存记录[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__batch"[39m
+        [36m>[39m
+          [0mV3 · A 批次骨架[0m
+        [36m</span>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"项目操作"[39m
+        [33mclass[39m=[32m"desktop-workspace__toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+O"[39m
+        [36m>[39m
+          [0m打开项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+S"[39m
+        [36m>[39m
+          [0m保存[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-describedby[39m=[32m"desktop-import-reason"[39m
+          [33mdisabled[39m=[32m""[39m
+        [36m>[39m
+          [0m导入资料[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-note"[39m
+          [33mid[39m=[32m"desktop-import-reason"[39m
+        [36m>[39m
+          [0m资料导入本批次未实现[0m
+        [36m</span>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-end"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtitle[39m=[32m"C 批次未实现"[39m
+          [36m>[39m
+            [0m预览变更[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"desktop-export"[39m
+            [33maria-expanded[39m=[32m"false"[39m
+          [36m>[39m
+            [0m导出 PDF ▾[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__notice"[39m
+        [33mrole[39m=[32m"status"[39m
+      [36m>[39m
+        [0m新建项目未接通：当前工作台尚无项目会话，现有 window.cunlian 契约未提供对应项目操作。[0m
+      [36m</div>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"工作区布局"[39m
+        [33mclass[39m=[32m"desktop-workspace__layout-tools"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-tree"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m项目树[0m
+        [36m</button>[39m
+        [36m<span>[39m
+          [0m选择对象后查看属性[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-properties"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m属性栏[0m
+        [36m</button>[39m
+      [36m</nav>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__body"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"项目树"[39m
+          [33mclass[39m=[32m"desktop-workspace__tree"[39m
+          [33mid[39m=[32m"desktop-tree"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m项目树[0m
+          [36m</h2>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m零件[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m零件[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m工程图[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m工程图[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m尺寸链[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m来源资料[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m来源资料[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m版本历史[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m版本历史[0m
+            [36m</button>[39m
+          [36m</details>[39m
+        [36m</aside>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"项目树宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"280"[39m
+          [33maria-valuemin[39m=[32m"180"[39m
+          [33maria-valuenow[39m=[32m"232"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"中央工作区"[39m
+          [33mclass[39m=[32m"desktop-workspace__center"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"工作视图"[39m
+            [33mclass[39m=[32m"desktop-workspace__tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-0"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"desktop-tab-0"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+            [36m>[39m
+              [0m工程图[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m3D[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-2"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-2"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-3"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-3"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-0"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mid[39m=[32m"desktop-panel-0"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无工程图[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mC 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m生成 SVG 图纸[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m工程图[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-1"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无 3D 模型[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mB1/B2 批次未实现：装配、爆炸视图与 STL 读取。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m载入 3D 模型[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m3D[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-2"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-2"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无来源 PDF[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：读取既有来源 PDF。当前契约未提供 sourceRead。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m读取既有来源 PDF[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-3"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-3"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无尺寸链[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：桌面尺寸链编辑接入。计算仍由既有领域层负责。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m编辑尺寸链[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"属性栏宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"340"[39m
+          [33maria-valuemin[39m=[32m"240"[39m
+          [33maria-valuenow[39m=[32m"312"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"属性栏"[39m
+          [33mclass[39m=[32m"desktop-workspace__properties"[39m
+          [33mid[39m=[32m"desktop-properties"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m属性 · [0m
+            [0m未选择[0m
+          [36m</h2>[39m
+          [36m<p>[39m
+            [0m在项目树中选择一个类别，查看其载入状态。[0m
+          [36m</p>[39m
+          [36m<dl>[39m
+            [36m<dt>[39m
+              [0m当前对象[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未选择对象[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m项目版本[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未载入[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m来源核对[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m尚无可核对来源[0m
+            [36m</dd>[39m
+          [36m</dl>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"desktop-workspace__pending"[39m
+          [36m>[39m
+            [0m○ 尚无审查结论[0m
+          [36m</p>[39m
+        [36m</aside>[39m
+      [36m</div>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"复核与变更"[39m
+        [33mclass[39m=[32m"desktop-workspace__review"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-review-content"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33mclass[39m=[32m"desktop-workspace__review-toggle"[39m
+        [36m>[39m
+          [0m▸[0m
+          [0m 复核与变更 [0m
+          [36m<span>[39m
+            [0m计算 未运行 · 来源 未载入 · 图纸 未生成[0m
+          [36m</span>[39m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__review-groups"[39m
+          [33mhidden[39m=[32m""[39m
+          [33mid[39m=[32m"desktop-review-content"[39m
+        [36m>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m变更[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚无变更预览。C 批次未实现。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m校核[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚未运行计算，不代表满足或审查通过。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m待办[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m项目打开与保存接口待接通；尚无工程复核清单。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getAllByLabelText node_modules/@testing-library/dom/dist/queries/label-text.js:111:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/pages/DesktopWorkspace.test.tsx:99:29
+     97|     render(<DesktopWorkspace />)
+     98|     act(() => menu({ action: 'new' }))
+     99|     fireEvent.change(screen.getByLabelText('项目名称'), { target: { value:…
+       |                             ^
+    100|     fireEvent.click(screen.getByRole('button', { name: '新建' }))
+    101|     await screen.findByText('未保存草稿')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  src/pages/DesktopWorkspace.test.tsx > A-04b 会话接线 > 保存失败保留当前项目，之后仍可另存；取消打开不替换会话
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name `/打开内置示例/`
+
+Here are the accessible roles:
+
+  main:
+
+  Name "寸链桌面工作台":
+  [36m<main[39m
+    [33maria-label[39m=[32m"寸链桌面工作台"[39m
+    [33mclass[39m=[32m"desktop-workspace"[39m
+    [33mstyle[39m=[32m"--tree-width: 232px; --properties-width: 312px; --review-height: 200px;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"desktop-workspace__titlebar"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "寸链 · 未打开项目":
+  [36m<h1 />[39m
+
+  Name "项目树":
+  [36m<h2 />[39m
+
+  Name "尚无工程图":
+  [36m<h2 />[39m
+
+  Name "属性 · 未选择":
+  [36m<h2 />[39m
+
+  --------------------------------------------------
+  toolbar:
+
+  Name "项目操作":
+  [36m<div[39m
+    [33maria-label[39m=[32m"项目操作"[39m
+    [33mclass[39m=[32m"desktop-workspace__toolbar"[39m
+    [33mrole[39m=[32m"toolbar"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "打开项目":
+  [36m<button[39m
+    [33maria-keyshortcuts[39m=[32m"Meta+O"[39m
+  [36m/>[39m
+
+  Name "保存":
+  [36m<button[39m
+    [33maria-keyshortcuts[39m=[32m"Meta+S"[39m
+  [36m/>[39m
+
+  Name "导入资料":
+  [36m<button[39m
+    [33maria-describedby[39m=[32m"desktop-import-reason"[39m
+    [33mdisabled[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "预览变更":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtitle[39m=[32m"C 批次未实现"[39m
+  [36m/>[39m
+
+  Name "导出 PDF ▾":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-export"[39m
+    [33maria-expanded[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "收起项目树":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-tree"[39m
+    [33maria-expanded[39m=[32m"true"[39m
+  [36m/>[39m
+
+  Name "收起属性栏":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-properties"[39m
+    [33maria-expanded[39m=[32m"true"[39m
+  [36m/>[39m
+
+  Name "未载入零件":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "未载入工程图":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "未载入尺寸链":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "未载入来源资料":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "未载入版本历史":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+  [36m/>[39m
+
+  Name "生成 SVG 图纸":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "▸ 复核与变更 计算 未运行 · 来源 未载入 · 图纸 未生成":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-review-content"[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33mclass[39m=[32m"desktop-workspace__review-toggle"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  status:
+
+  Name "":
+  [36m<div[39m
+    [33mclass[39m=[32m"desktop-workspace__notice"[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "工作区布局":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"工作区布局"[39m
+    [33mclass[39m=[32m"desktop-workspace__layout-tools"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  complementary:
+
+  Name "项目树":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"项目树"[39m
+    [33mclass[39m=[32m"desktop-workspace__tree"[39m
+    [33mid[39m=[32m"desktop-tree"[39m
+  [36m/>[39m
+
+  Name "属性栏":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"属性栏"[39m
+    [33mclass[39m=[32m"desktop-workspace__properties"[39m
+    [33mid[39m=[32m"desktop-properties"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  group:
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<details[39m
+    [33mopen[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  separator:
+
+  Name "项目树宽度":
+  [36m<div[39m
+    [33maria-label[39m=[32m"项目树宽度"[39m
+    [33maria-orientation[39m=[32m"vertical"[39m
+    [33maria-valuemax[39m=[32m"280"[39m
+    [33maria-valuemin[39m=[32m"180"[39m
+    [33maria-valuenow[39m=[32m"232"[39m
+    [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+    [33mrole[39m=[32m"separator"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  Name "属性栏宽度":
+  [36m<div[39m
+    [33maria-label[39m=[32m"属性栏宽度"[39m
+    [33maria-orientation[39m=[32m"vertical"[39m
+    [33maria-valuemax[39m=[32m"340"[39m
+    [33maria-valuemin[39m=[32m"240"[39m
+    [33maria-valuenow[39m=[32m"312"[39m
+    [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+    [33mrole[39m=[32m"separator"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "中央工作区":
+  [36m<section[39m
+    [33maria-label[39m=[32m"中央工作区"[39m
+    [33mclass[39m=[32m"desktop-workspace__center"[39m
+  [36m/>[39m
+
+  Name "复核与变更":
+  [36m<section[39m
+    [33maria-label[39m=[32m"复核与变更"[39m
+    [33mclass[39m=[32m"desktop-workspace__review"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tablist:
+
+  Name "工作视图":
+  [36m<div[39m
+    [33maria-label[39m=[32m"工作视图"[39m
+    [33mclass[39m=[32m"desktop-workspace__tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "工程图":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-panel-0"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"desktop-tab-0"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  Name "3D":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-panel-1"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"desktop-tab-1"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  Name "来源 PDF":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-panel-2"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"desktop-tab-2"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  Name "尺寸链":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"desktop-panel-3"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"desktop-tab-3"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tabpanel:
+
+  Name "工程图":
+  [36m<div[39m
+    [33maria-labelledby[39m=[32m"desktop-tab-0"[39m
+    [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+    [33mid[39m=[32m"desktop-panel-0"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"desktop-workspace__pending"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  term:
+
+  Name "":
+  [36m<dt />[39m
+
+  Name "":
+  [36m<dt />[39m
+
+  Name "":
+  [36m<dt />[39m
+
+  --------------------------------------------------
+  definition:
+
+  Name "":
+  [36m<dd />[39m
+
+  Name "":
+  [36m<dd />[39m
+
+  Name "":
+  [36m<dd />[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33maria-label[39m=[32m"寸链桌面工作台"[39m
+      [33mclass[39m=[32m"desktop-workspace"[39m
+      [33mstyle[39m=[32m"--tree-width: 232px; --properties-width: 312px; --review-height: 200px;"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"desktop-workspace__titlebar"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0m寸链 · 未打开项目[0m
+        [36m</h1>[39m
+        [36m<span>[39m
+          [0mRev —[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__pending"[39m
+        [36m>[39m
+          [0m○ 尚无保存记录[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__batch"[39m
+        [36m>[39m
+          [0mV3 · A 批次骨架[0m
+        [36m</span>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"项目操作"[39m
+        [33mclass[39m=[32m"desktop-workspace__toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+O"[39m
+        [36m>[39m
+          [0m打开项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-keyshortcuts[39m=[32m"Meta+S"[39m
+        [36m>[39m
+          [0m保存[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-describedby[39m=[32m"desktop-import-reason"[39m
+          [33mdisabled[39m=[32m""[39m
+        [36m>[39m
+          [0m导入资料[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-note"[39m
+          [33mid[39m=[32m"desktop-import-reason"[39m
+        [36m>[39m
+          [0m资料导入本批次未实现[0m
+        [36m</span>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__toolbar-end"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtitle[39m=[32m"C 批次未实现"[39m
+          [36m>[39m
+            [0m预览变更[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"desktop-export"[39m
+            [33maria-expanded[39m=[32m"false"[39m
+          [36m>[39m
+            [0m导出 PDF ▾[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__notice"[39m
+        [33mrole[39m=[32m"status"[39m
+      [36m>[39m
+        [0m未打开项目；当前为桌面工作台骨架，不含演示工程数据。[0m
+      [36m</div>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"工作区布局"[39m
+        [33mclass[39m=[32m"desktop-workspace__layout-tools"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-tree"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m项目树[0m
+        [36m</button>[39m
+        [36m<span>[39m
+          [0m选择对象后查看属性[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-properties"[39m
+          [33maria-expanded[39m=[32m"true"[39m
+        [36m>[39m
+          [0m收起[0m
+          [0m属性栏[0m
+        [36m</button>[39m
+      [36m</nav>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"desktop-workspace__body"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"项目树"[39m
+          [33mclass[39m=[32m"desktop-workspace__tree"[39m
+          [33mid[39m=[32m"desktop-tree"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m项目树[0m
+          [36m</h2>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m零件[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m零件[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m工程图[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m工程图[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m尺寸链[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m来源资料[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m来源资料[0m
+            [36m</button>[39m
+          [36m</details>[39m
+          [36m<details[39m
+            [33mopen[39m=[32m""[39m
+          [36m>[39m
+            [36m<summary>[39m
+              [0m版本历史[0m
+            [36m</summary>[39m
+            [36m<button[39m
+              [33maria-pressed[39m=[32m"false"[39m
+            [36m>[39m
+              [0m未载入[0m
+              [0m版本历史[0m
+            [36m</button>[39m
+          [36m</details>[39m
+        [36m</aside>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"项目树宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"280"[39m
+          [33maria-valuemin[39m=[32m"180"[39m
+          [33maria-valuenow[39m=[32m"232"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"中央工作区"[39m
+          [33mclass[39m=[32m"desktop-workspace__center"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"工作视图"[39m
+            [33mclass[39m=[32m"desktop-workspace__tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-0"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"desktop-tab-0"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+            [36m>[39m
+              [0m工程图[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m3D[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-2"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-2"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"desktop-panel-3"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"desktop-tab-3"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-0"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mid[39m=[32m"desktop-panel-0"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无工程图[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mC 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m生成 SVG 图纸[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m工程图[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-1"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无 3D 模型[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0mB1/B2 批次未实现：装配、爆炸视图与 STL 读取。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m载入 3D 模型[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m3D[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-2"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-2"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无来源 PDF[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：读取既有来源 PDF。当前契约未提供 sourceRead。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m读取既有来源 PDF[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m来源 PDF[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"desktop-tab-3"[39m
+            [33mclass[39m=[32m"desktop-workspace__canvas"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"desktop-panel-3"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+            [33mtabindex[39m=[32m"0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__placeholder"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"desktop-workspace__pending"[39m
+              [36m>[39m
+                [0m○ 本批次未实现[0m
+              [36m</span>[39m
+              [36m<h2>[39m
+                [0m尚无尺寸链[0m
+              [36m</h2>[39m
+              [36m<p>[39m
+                [0m本批次未实现：桌面尺寸链编辑接入。计算仍由既有领域层负责。[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0m当前选择：[0m
+                [0m未选择对象[0m
+              [36m</p>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+              [36m>[39m
+                [0m编辑尺寸链[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"desktop-workspace__view-status"[39m
+            [36m>[39m
+              [0m尺寸链[0m
+              [0m占位 · 未载入内容 · 不代表已复核[0m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"属性栏宽度"[39m
+          [33maria-orientation[39m=[32m"vertical"[39m
+          [33maria-valuemax[39m=[32m"340"[39m
+          [33maria-valuemin[39m=[32m"240"[39m
+          [33maria-valuenow[39m=[32m"312"[39m
+          [33mclass[39m=[32m"desktop-workspace__splitter"[39m
+          [33mrole[39m=[32m"separator"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m/>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"属性栏"[39m
+          [33mclass[39m=[32m"desktop-workspace__properties"[39m
+          [33mid[39m=[32m"desktop-properties"[39m
+        [36m>[39m
+          [36m<h2>[39m
+            [0m属性 · [0m
+            [0m未选择[0m
+          [36m</h2>[39m
+          [36m<p>[39m
+            [0m在项目树中选择一个类别，查看其载入状态。[0m
+          [36m</p>[39m
+          [36m<dl>[39m
+            [36m<dt>[39m
+              [0m当前对象[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未选择对象[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m项目版本[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m未载入[0m
+            [36m</dd>[39m
+            [36m<dt>[39m
+              [0m来源核对[0m
+            [36m</dt>[39m
+            [36m<dd>[39m
+              [0m尚无可核对来源[0m
+            [36m</dd>[39m
+          [36m</dl>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"desktop-workspace__pending"[39m
+          [36m>[39m
+            [0m○ 尚无审查结论[0m
+          [36m</p>[39m
+        [36m</aside>[39m
+      [36m</div>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"复核与变更"[39m
+        [33mclass[39m=[32m"desktop-workspace__review"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"desktop-review-content"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33mclass[39m=[32m"desktop-workspace__review-toggle"[39m
+        [36m>[39m
+          [0m▸[0m
+          [0m 复核与变更 [0m
+          [36m<span>[39m
+            [0m计算 未运行 · 来源 未载入 · 图纸 未生成[0m
+          [36m</span>[39m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"desktop-workspace__review-groups"[39m
+          [33mhidden[39m=[32m""[39m
+          [33mid[39m=[32m"desktop-review-content"[39m
+        [36m>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m变更[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚无变更预览。C 批次未实现。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m校核[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m尚未运行计算，不代表满足或审查通过。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section>[39m
+            [36m<h3>[39m
+              [0m待办[0m
+            [36m</h3>[39m
+            [36m<p>[39m
+              [0m项目打开与保存接口待接通；尚无工程复核清单。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ openExample src/pages/DesktopWorkspace.test.tsx:40:26
+     38| async function openExample() {
+     39|   render(<DesktopWorkspace />)
+     40|   fireEvent.click(screen.getByRole('button', { name: /打开内置示例/ }))
+       |                          ^
+     41|   await screen.findByRole('main', { name: '寸链桌面工作台' })
+     42|   await waitFor(() => expect(screen.getByRole('button', { name: '保存' }…
+ ❯ src/pages/DesktopWorkspace.test.tsx:112:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  src/pages/DesktopWorkspace.test.tsx > A-04b 会话接线 > 没有桥时明确说明限制，不捏造文件成功
+Error: [2mexpect([22m[31melement[39m[2m).toHaveTextContent()[22m
+
+Expected element to have text content:
+[32m  window.cunlian 不可用[39m
+Received:
+[31m  保存未接通：当前工作台尚无项目会话，现有 window.cunlian 契约未提供对应项目操作。[39m
+ ❯ src/pages/DesktopWorkspace.test.tsx:137:40
+    135|     render(<DesktopWorkspace />)
+    136|     fireEvent.keyDown(window, { key: 's', metaKey: true })
+    137|     expect(screen.getByRole('status')).toHaveTextContent('window.cunli…
+       |                                        ^
+    138|   })
+    139| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed | 1 passed (8)
+   Start at  02:43:06
+   Duration  2.47s (tests 91%, environment 7%, setup 1%)
+

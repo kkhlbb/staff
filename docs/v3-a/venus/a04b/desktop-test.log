@@ -1,0 +1,13 @@
+
+> staff@2.0.0 test:desktop
+> vitest run --config vitest.desktop.config.ts
+
+
+ RUN  v5.1.0 /Users/aston/DSH/wt/dsh-v3-A
+
+
+ Test Files  12 passed (12)
+      Tests  92 passed (92)
+   Start at  02:42:54
+   Duration  1.24s (tests 83%, import 12%, transform 4%, worker 1%)
+
