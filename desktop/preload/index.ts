@@ -14,12 +14,14 @@ import {
   type MigrationCommitValue,
   type MigrationInspectValue,
   type ProjectOpenValue,
+  type ProjectRevealValue,
   type ProjectSaveValue,
   type ProjectStageValue,
   type RecentProjectItem,
   type RecentProjectListValue,
   type RecoveryListValue,
   type RequestCloseResult,
+  type SourceReadValue,
 } from '../shared/contracts'
 
 /**
@@ -87,6 +89,16 @@ const api: CunlianApi = {
       IPC_CHANNELS.recoveryRestore,
       request,
     ) as Promise<IpcResult<ProjectOpenValue>>,
+  readAttachment: (request) =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.sourceRead,
+      request,
+    ) as Promise<IpcResult<SourceReadValue>>,
+  revealProject: (request) =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.projectReveal,
+      request,
+    ) as Promise<IpcResult<ProjectRevealValue>>,
   requestClose: () =>
     ipcRenderer.invoke(
       IPC_CHANNELS.windowRequestClose,
