@@ -75,3 +75,17 @@
 6. 删除旧版本入口按决策不做；超限只拒绝并给出当前/新增/上限字节。
 7. `test:desktop:e2e` smoke 未扩展 B2 场景，也未运行 Finder 自动化；`npm run test:desktop` 已跑。
 8. 关联 B2 只实例化 `kind='visual-reference'`；无参数联动，无 STL group→部件映射。
+
+## 9. 追加修复（2026-11-09）：替换模型后相机未按新包围盒 refit
+
+用户端到端验收发现：替换模型后相机沿用上一个模型的位姿，圆盘被过度放大、扳手整块空白，
+点「重置视角」才正常。根因与修复见 `fix-refit/fix-refit-root-cause.md`：
+
+- `useImportedModel` 的相机位姿改为按几何 revision 归属，替换后自动为 `null`；
+- `modelScene` 的首建与「重置视角」统一走同一个 `fitView()`（同一 `defaultModelView` + 同一纵横比口径）。
+
+验证：`fix-refit/logs/refit-red.log`（修复前页面用例失败）→ `refit-green.log`（3 files / 34 tests）；
+全量 `68 files / 717 tests`、desktop `17 files / 127 tests` 通过；重新打包后实测替换圆盘/扳手
+无需手动重置，`after-03-wrench.png` 与 `after-04-wrench-after-reset.png` 字节一致；
+再连续替换 5 次均 `canvasCount=1`、`3D 就绪 · WebGL2`（`canvas-cycle-report.json`）。
+该修复只动相机适配与测试，未改 `src/domain/**`、q、B1 内置示例或 C/D 批次。

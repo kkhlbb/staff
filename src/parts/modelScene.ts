@@ -118,6 +118,11 @@ export function framingDistanceForBounds(
   return distance
 }
 
+/** 画布纵横比（首建与重置视角共用同一口径）；布局尚未就绪时按 1.6 兜底。 */
+export function canvasAspect(canvas: HTMLCanvasElement): number {
+  return canvas.clientWidth > 0 && canvas.clientHeight > 0 ? canvas.clientWidth / canvas.clientHeight : 1.6
+}
+
 export function defaultModelView(bounds: ModelBounds, aspect: number): DemoViewState {
   const direction = new Vector3(0.85, 0.42, 1).normalize()
   const distance = framingDistanceForBounds(bounds, aspect, direction)
@@ -370,8 +375,9 @@ export function createModelScene(options: ModelSceneOptions): ModelSceneHandle {
   observer.observe(canvas)
 
   const incoming = normalizeViewState(options.view)
-  const initialView =
-    incoming ?? defaultModelView(options.bounds, width > 0 && height > 0 ? width / height : 1.6)
+  // 首建与重置视角共用这一个函数：同一包围盒 + 同一纵横比口径 → 同一结果。
+  const fitView = (): DemoViewState => defaultModelView(options.bounds, canvasAspect(canvas))
+  const initialView = incoming ?? fitView()
   camera.position.set(...initialView.position)
   controls.target.set(...initialView.target)
   camera.zoom = initialView.zoom
@@ -405,7 +411,7 @@ export function createModelScene(options: ModelSceneOptions): ModelSceneHandle {
     },
     resetView() {
       if (disposed) return
-      const view = defaultModelView(options.bounds, height > 0 ? width / height : 1.6)
+      const view = fitView()
       camera.position.set(...view.position)
       controls.target.set(...view.target)
       camera.zoom = view.zoom

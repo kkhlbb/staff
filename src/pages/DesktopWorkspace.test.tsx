@@ -37,7 +37,10 @@ vi.mock('../parts/threeScene', () => ({
 }))
 
 // 导入模型的场景同样需要 WebGL2：用伪模块验证接线与命令，不冒充真渲染。
-const modelScene = vi.hoisted(() => ({ handles: [] as Record<string, unknown>[] }))
+const modelScene = vi.hoisted(() => ({
+  handles: [] as Record<string, unknown>[],
+  options: [] as Record<string, unknown>[],
+}))
 vi.mock('../parts/modelScene', () => ({
   createModelScene: (options: Record<string, unknown>) => {
     const handle: Record<string, unknown> = {
@@ -55,6 +58,7 @@ vi.mock('../parts/modelScene', () => ({
       dispose: () => { handle.disposed = true },
     }
     modelScene.handles.push(handle)
+    modelScene.options.push(options)
     return handle
   },
 }))
@@ -95,6 +99,8 @@ beforeEach(async () => {
   vi.stubGlobal('cunlian', api)
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
+  modelScene.handles.length = 0
+  modelScene.options.length = 0
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 async function openExample() {
@@ -501,5 +507,83 @@ describe('B2 模型导入与外形资料来源', () => {
       target: { granularity: 'model', partId: MODEL_PART_ID, modelRevisionId: MODEL_REVISION_ID },
     })
     await waitFor(() => expect(within(section).getByText(/已核对/)).toBeInTheDocument())
+  })
+
+  it('替换尺寸差异极大的模型：按新几何包围盒重新 fit，不沿用旧相机', async () => {
+    // 伪场景模块替换了真实实现，这里取回未打桩的纯几何函数做数字核对。
+    const actual = await vi.importActual<typeof import('../parts/modelScene')>('../parts/modelScene')
+    const { snapshot } = await createModelSnapshot()
+    const dto = toSnapshotDto(snapshot)
+    // 替换后的快照：同一零件指向新不可变版本；新几何由 readModel 返回的 100×100 三角形决定。
+    const dtoB = {
+      ...dto,
+      project: {
+        ...dto.project,
+        parts: dto.project.parts.map(part => ({ ...part, currentModelRevisionId: 'model-2' })),
+        modelRevisions: [
+          ...dto.project.modelRevisions,
+          {
+            ...dto.project.modelRevisions[0],
+            modelRevisionId: 'model-2',
+            parentModelRevisionId: MODEL_REVISION_ID,
+            bounds: { min: [0, 0, 0] as [number, number, number], max: [100, 100, 0] as [number, number, number] },
+          },
+        ],
+      },
+    }
+
+    vi.mocked(api.openProject).mockResolvedValueOnce({ ok: true, value: { ...opened, snapshot: dto } })
+    vi.mocked(api.readModel).mockImplementation(async request =>
+      request.ref.kind === 'candidate'
+        ? { ok: true as const, value: { bytes: sampleStlTriangle(100), sha256: 'b'.repeat(64), fileName: 'wrench-like.stl', byteSize: 134 } }
+        : { ok: true as const, value: { bytes: sampleStlTriangle(1), sha256: 'a'.repeat(64), fileName: 'sleeve.stl', byteSize: 134 } },
+    )
+    vi.mocked(api.pickModel).mockResolvedValueOnce({
+      ok: true,
+      value: { candidateToken: 'tok-2', fileName: 'wrench-like.stl', byteSize: 134, sha256: 'b'.repeat(64) },
+    })
+    vi.mocked(api.commitModel).mockResolvedValueOnce({
+      ok: true,
+      value: { acceptedSeq: 1, modelRevisionId: 'model-2', snapshot: dtoB, recovery: 'written' },
+    })
+
+    render(<DesktopWorkspace />)
+    fireEvent.click(await screen.findByRole('button', { name: /打开项目/ }))
+    await screen.findByRole('main', { name: '寸链桌面工作台' })
+    fireEvent.click(screen.getByRole('tab', { name: '3D' }))
+    await screen.findByText(/导入模型 · sleeve.stl/)
+    await waitFor(() => expect(modelScene.options).toHaveLength(1))
+
+    // 用户在旧模型（1×1×0）上手动转过视角：相机离原点 8.66。
+    const first = modelScene.options[0] as { onViewChange: (view: unknown) => void }
+    act(() => first.onViewChange({ position: [5, 5, 5], target: [0, 0, 0], zoom: 1 }))
+
+    fireEvent.click(screen.getByRole('button', { name: '替换模型…' }))
+    const dialog = await screen.findByRole('dialog', { name: '确认导入模型' })
+    fireEvent.click(within(dialog).getByRole('button', { name: '导入为不可变版本' }))
+
+    await waitFor(() => expect(modelScene.options).toHaveLength(2))
+    const replaced = modelScene.options[1] as {
+      view: unknown
+      bounds: { min: readonly number[]; max: readonly number[] }
+    }
+
+    // 新场景拿到的是新几何包围盒，而不是旧版本的 view；由 modelScene 走首建同一套 fit。
+    expect(replaced.bounds).toEqual({ min: [0, 0, 0], max: [100, 100, 0] })
+    expect(replaced.view).toBeNull()
+
+    // fit 距离与旧 pose 对比：新几何需要 >100 的相机距离，旧 pose 只有 8.66。
+    const fitted = actual.defaultModelView({ min: [0, 0, 0], max: [100, 100, 0] }, 1.6)
+    const fittedDistance = Math.hypot(
+      fitted.position[0] - fitted.target[0],
+      fitted.position[1] - fitted.target[1],
+      fitted.position[2] - fitted.target[2],
+    )
+    expect(fittedDistance).toBeGreaterThan(100)
+    expect(fittedDistance / Math.hypot(5, 5, 5)).toBeGreaterThan(10)
+
+    // 同一版本内再转视角不会重建场景（手动视角仍只在本次会话保留）。
+    act(() => (replaced as unknown as { onViewChange: (view: unknown) => void }).onViewChange({ position: [80, 60, 120], target: [50, 50, 0], zoom: 1 }))
+    expect(modelScene.options).toHaveLength(2)
   })
 })

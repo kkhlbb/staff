@@ -5,6 +5,8 @@
  *   准备与显式确认，不直接上传字节；
  * - 失败（取消/读失败/格式/容量/提交）只记录原因，不改变当前快照与旧几何；
  * - 提交成功后用 main 返回的 acceptedSeq + snapshot 重同步，几何按 revision 缓存；
+ * - 相机位姿属于具体几何版本：view 只在 revisionId 相同时有效，替换模型后自动失效，
+ *   由 modelScene 按新包围盒重新 fit（与重置视角同一套计算）；
  * - 关联动作只表示外形资料来源，提示文案明确“不改变尺寸链数值、不自动同步”。
  */
 /* eslint-disable react-hooks/set-state-in-effect -- 会话/版本切换必须同步清空派生视图状态，避免旧模型串场 */
@@ -101,13 +103,17 @@ export function useImportedModel(options: ImportedModelApi): ImportedModelState 
   const [error, setError] = useState<ModelError | null>(null)
   const [notice, setNotice] = useState('')
   const [pending, setPending] = useState<PendingImport | null>(null)
-  const [view, setViewState] = useState<DemoViewState | null>(null)
+  // 相机位姿记录它所属的几何版本：渲染的几何换成新 revision 时，旧位姿自然失效。
+  const [viewState, setViewState] = useState<{ revisionId: string; view: DemoViewState } | null>(null)
   const sessionRef = useRef<string | null>(sessionId)
 
   const part = snapshot?.project.parts.find((item) => item.currentModelRevisionId !== null) ?? null
   const partId = part?.partId ?? null
   const revisionId = part?.currentModelRevisionId ?? null
   const currentModelRevisionId = part?.currentModelRevisionId ?? null
+  const geometryRevisionId = geometry?.revisionId ?? null
+  // 只有同版本保存的位姿才交给场景；几何一变即为 null，场景走 defaultModelView 重新 fit。
+  const view = viewState !== null && viewState.revisionId === geometryRevisionId ? viewState.view : null
 
   // 会话切换：清空所有模型 UI 状态，避免串场。
   useEffect(() => {
@@ -165,10 +171,16 @@ export function useImportedModel(options: ImportedModelApi): ImportedModelState 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, revisionId])
 
-  const setView = useCallback((value: unknown) => {
-    const next = normalizeViewState(value)
-    if (next !== null) setViewState(next)
-  }, [])
+  const setView = useCallback(
+    (value: unknown) => {
+      const next = normalizeViewState(value)
+      if (next === null) return
+      // 位姿只记在当前实际渲染的几何版本上；旧版本的迟到通知不会冒充新版本视角。
+      if (geometryRevisionId === null) return
+      setViewState({ revisionId: geometryRevisionId, view: next })
+    },
+    [geometryRevisionId],
+  )
 
   const release = useCallback(
     async (token: string): Promise<void> => {
