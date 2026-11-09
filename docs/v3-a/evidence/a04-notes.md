@@ -128,6 +128,7 @@
 
 - 本卡未实现：`source:read`、`project:reveal` 的 handler（任务卡白名单里有，但 A-04 范围
   是会话/保存/最近/恢复；仍无“永远成功”的 stub，调用会被 Electron 拒绝）。
+  后续补充见 `a04c-notes.md`（`agent/dsh-v3-a4c`）：两个通道已实现并接入 preload。
 - 未运行：`npm run test:desktop:e2e` 与 `package:desktop`（需要打包产物；A-04 未做 Electron
   集成验收，留给 A-05/用户授权后的打包验证）。未在真实双显示器/真实磁盘故障下测试；
   失败注入走 FileOps/WorkspaceOps 端口。

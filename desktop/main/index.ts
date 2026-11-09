@@ -5,6 +5,7 @@ import {
   dialog,
   ipcMain,
   session,
+  shell,
   webContents,
 } from 'electron'
 import path from 'node:path'
@@ -309,6 +310,11 @@ function installIpcHandlers(): void {
     pickRelinkPath: () => pickProjectPath('重新定位最近项目'),
     pickSaveTarget: async (session) =>
       pickSaveTargetFor(sanitizeFileName(session.snapshot.project.name)),
+    // handler 已确认路径来自当前会话且为常规文件；这里只调用 Finder 定位，
+    // 不接受任何 shell 命令或 renderer 传入的路径。
+    revealPath: async (targetPath) => {
+      shell.showItemInFolder(targetPath)
+    },
     appVersion: app.getVersion(),
     electronVersion: process.versions.electron ?? 'unknown',
     log: logStage,

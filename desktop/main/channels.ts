@@ -13,16 +13,20 @@ import { z } from 'zod'
 import type {
   IpcErrorCode,
   ProjectOpenValue,
+  ProjectRevealValue,
   ProjectSaveValue,
   ProjectStageValue,
   RecentProjectListValue,
   RecentProjectItem,
   RecoveryListValue,
+  SourceReadValue,
 } from '../shared/contracts'
 import { IPC_CHANNELS } from '../shared/contracts'
 import type { SenderGuard } from './senderGuard'
 import { decodeProjectFile } from '../../src/project-file/codec'
 import type { ProjectFileSnapshot } from '../../src/project-file/types'
+import { sha256Hex } from '../../src/sources/hash'
+import { DEFAULT_SOURCE_LIMITS, formatMiB } from '../../src/sources/limits'
 import { IpcFailure, installChannel, type IpcDeps, type IpcMainLike } from './ipc'
 import { createNewProjectSnapshot } from './newProject'
 import type { ProjectService, ProjectSession } from './projectService'
@@ -65,6 +69,29 @@ export const projectSchemas = {
     .strict(),
   relinkRecent: z.object({ recentId: z.string().min(1).max(120) }).strict(),
   restoreRecovery: z.object({ recoveryId: z.string().min(1).max(120) }).strict(),
+  sourceRead: z
+    .object({
+      sessionId: z.string().min(1).max(200),
+      // revisionId 只是内存聚合里的键，不允许任何路径形态；含分隔符/空字节
+      // 或路径段的输入直接按坏参数拒绝，不会触到文件系统。
+      revisionId: z
+        .string()
+        .min(1)
+        .max(240)
+        .refine(
+          (value: string) =>
+            !value.includes('/') &&
+            !value.includes('\\') &&
+            !value.includes('\u0000') &&
+            value !== '.' &&
+            value !== '..',
+          { message: 'revisionId 不能是路径' },
+        ),
+    })
+    .strict(),
+  revealProject: z
+    .object({ sessionId: z.string().min(1).max(200) })
+    .strict(),
   empty: z.object({}).strict(),
 } as const
 
@@ -80,6 +107,13 @@ export interface ProjectChannelDeps {
   pickRelinkPath: (windowId: number) => Promise<string | null>
   /** 另存对话框；取消返回 null。 */
   pickSaveTarget: (session: ProjectSession) => Promise<string | null>
+  /**
+   * 在系统文件管理器中显示一个项目文件。
+   *
+   * 只在 handler 已确认路径来自当前会话、存在且为常规文件后调用；参数不是
+   * shell 命令，也不接受 renderer 传入的任意路径。
+   */
+  revealPath: (targetPath: string) => Promise<void>
   appVersion: string
   electronVersion: string
   log?: IpcDeps['log']
@@ -133,6 +167,71 @@ async function readProjectOrFail(
     reject(read.error.code, read.error.message, read.error.detail)
   }
   return read.value
+}
+
+/**
+ * source:read 解析出的版本视图。只保留读字节需要的字段；`origin` 用于区分
+ * 当前聚合同历史归档，错误信息不泄露其它项目内容。
+ */
+interface ResolvedSourceRevision {
+  id: string
+  fileName: string
+  sha256: string
+  byteSize: number
+  blobKey: string
+  origin: 'current' | 'legacy-archive'
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+/**
+ * 只在会话内存聚合里按 revision ID 查版本：先查当前来源，再查只读历史归档。
+ * 不接受 renderer 传入的 blobKey/路径；blobKey 只能由这里从版本记录解析。
+ */
+function resolveSourceRevision(
+  snapshot: ProjectFileSnapshot,
+  revisionId: string,
+): ResolvedSourceRevision | null {
+  const current = snapshot.revisions.find((revision) => revision.id === revisionId)
+  if (current !== undefined) {
+    return {
+      id: current.id,
+      fileName: current.fileName,
+      sha256: current.sha256,
+      byteSize: current.byteSize,
+      blobKey: current.blobKey,
+      origin: 'current',
+    }
+  }
+
+  for (const entry of snapshot.legacyArchive?.records ?? []) {
+    const wrapper = asRecord(entry)
+    if (wrapper === null || wrapper.kind !== 'revision') {
+      continue
+    }
+    const record = asRecord(wrapper.record)
+    if (record === null || record.id !== revisionId) {
+      continue
+    }
+    const { fileName, sha256, byteSize, blobKey } = record
+    if (
+      typeof fileName !== 'string' ||
+      typeof sha256 !== 'string' ||
+      typeof byteSize !== 'number' ||
+      !Number.isSafeInteger(byteSize) ||
+      byteSize < 0 ||
+      typeof blobKey !== 'string'
+    ) {
+      // 归档记录不完整时按“附件不可用”处理，不用猜测补齐。
+      return null
+    }
+    return { id: revisionId, fileName, sha256, byteSize, blobKey, origin: 'legacy-archive' }
+  }
+  return null
 }
 
 /** 从 gate 结果里取行动分支；失败统一抛 IpcFailure。 */
@@ -487,6 +586,116 @@ export function registerProjectChannels(ipc: IpcMainLike, deps: ProjectChannelDe
           }
           return controller.toOpenValue(session, warnings)
         })
+      },
+    },
+    ipcDeps,
+  )
+
+  installChannel(
+    ipc,
+    {
+      channel: IPC_CHANNELS.sourceRead,
+      schema: projectSchemas.sourceRead,
+      handle: async ({ sender }, params): Promise<SourceReadValue> => {
+        const windowId = sender.webContentsId
+        const session = requireActive(controller, windowId, params.sessionId)
+        const revision = resolveSourceRevision(session.snapshot, params.revisionId)
+        if (revision === null) {
+          reject(
+            'ATTACHMENT_MISSING',
+            '该来源版本不存在或不属于当前项目及其历史归档',
+            `revisionId=${params.revisionId}`,
+          )
+        }
+
+        // 限额按 main 持有的聚合元数据判定，不信任 renderer 传入的任何大小。
+        const limits = DEFAULT_SOURCE_LIMITS
+        const projectBytes = session.snapshot.revisions.reduce(
+          (total, item) => total + item.byteSize,
+          0,
+        )
+        if (revision.byteSize > limits.maxFileBytes || projectBytes > limits.maxProjectBytes) {
+          reject(
+            'INVALID_REQUEST',
+            `来源附件超过项目限额（单文件 ${formatMiB(
+              limits.maxFileBytes,
+            )}，项目 ${formatMiB(limits.maxProjectBytes)}）`,
+            `revisionBytes=${revision.byteSize}, projectBytes=${projectBytes}`,
+          )
+        }
+
+        const declaredMissing = session.snapshot.missingAttachments.find(
+          (item) => item.revisionId === revision.id && item.blobKey === revision.blobKey,
+        )
+        const attachment = session.snapshot.attachments.find(
+          (item) => item.blobKey === revision.blobKey,
+        )
+        if (attachment === undefined || !(attachment.bytes instanceof Uint8Array)) {
+          reject(
+            'ATTACHMENT_MISSING',
+            declaredMissing === undefined
+              ? revision.origin === 'legacy-archive'
+                ? '历史归档只保留版本记录与哈希，不携带附件字节'
+                : '当前会话没有该来源版本的附件字节'
+              : '该来源版本的附件已声明缺失，未随项目携带',
+            `revisionId=${revision.id}, blobKey=${revision.blobKey}`,
+          )
+        }
+
+        // 复制一份再返回：renderer 修改字节不能影响 main 会话里的原始附件。
+        const bytes = new Uint8Array(attachment.bytes)
+        if (bytes.byteLength > limits.maxFileBytes) {
+          reject(
+            'INVALID_REQUEST',
+            `附件字节超过单文件限额 ${formatMiB(limits.maxFileBytes)}`,
+            `actualBytes=${bytes.byteLength}`,
+          )
+        }
+        const digest = await sha256Hex(bytes)
+        if (digest !== revision.sha256) {
+          reject(
+            'HASH_MISMATCH',
+            '附件字节与版本记录的 SHA-256 不一致，已拒绝返回',
+            `declared=${revision.sha256}, actual=${digest}`,
+          )
+        }
+        return { bytes, sha256: digest, fileName: revision.fileName }
+      },
+    },
+    ipcDeps,
+  )
+
+  installChannel(
+    ipc,
+    {
+      channel: IPC_CHANNELS.projectReveal,
+      schema: projectSchemas.revealProject,
+      handle: async ({ sender }, params): Promise<ProjectRevealValue> => {
+        const windowId = sender.webContentsId
+        const session = requireActive(controller, windowId, params.sessionId)
+        // 路径只能来自 main 会话（打开或保存成功后才会有值）；renderer 没有
+        // 任何参数能指定目标路径或 shell 参数。
+        const targetPath = session.path
+        if (targetPath === null) {
+          reject('NOT_FOUND', '当前项目尚未保存到磁盘，无法在访达中显示')
+        }
+        const kind = await projectService.kindOf(targetPath)
+        if (kind === 'missing') {
+          reject('NOT_FOUND', '项目文件不存在或已移动')
+        }
+        if (kind !== 'file') {
+          reject('NOT_FOUND', '项目路径不是常规文件（不允许符号链接或目录）', kind)
+        }
+        try {
+          await deps.revealPath(targetPath)
+        } catch (error) {
+          reject(
+            'REVEAL_FAILED',
+            '无法在访达中显示项目文件',
+            error instanceof Error ? error.message : String(error),
+          )
+        }
+        return { shown: true }
       },
     },
     ipcDeps,

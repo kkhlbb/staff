@@ -167,6 +167,23 @@ export interface ProjectSaveValue {
   warnings: string[]
 }
 
+/**
+ * 来源附件读取（source:read）。
+ *
+ * 字节由 main 从会话内存聚合解析出的 blobKey 取得；renderer 只能传会话与
+ * revision ID，不能传路径、URL 或 blobKey。Uint8Array 走结构化克隆，不转 base64。
+ */
+export interface SourceReadValue {
+  bytes: Uint8Array
+  sha256: string
+  fileName: string
+}
+
+/** 在系统文件管理器中显示当前会话已落盘的项目文件。 */
+export interface ProjectRevealValue {
+  shown: true
+}
+
 export interface RecentProjectItem {
   recentId: string
   projectId: string
@@ -259,6 +276,13 @@ export interface CunlianApi {
   listRecovery(): Promise<IpcResult<RecoveryListValue>>
   /** 恢复为 path=null 的未保存副本；dirty gate 后原子切换。 */
   restoreRecovery(request: { recoveryId: string }): Promise<IpcResult<ProjectOpenValue>>
+  /** 读取当前会话或其历史归档里某个来源版本的附件字节；不接受路径/blobKey。 */
+  readAttachment(request: {
+    sessionId: string
+    revisionId: string
+  }): Promise<IpcResult<SourceReadValue>>
+  /** 在访达中显示当前会话已落盘的项目文件；路径只能来自 main 会话。 */
+  revealProject(request: { sessionId: string }): Promise<IpcResult<ProjectRevealValue>>
   /** 请求关闭当前窗口；main 先发编辑屏障，超时或保存失败不会关闭。 */
   requestClose(): Promise<IpcResult<RequestCloseResult>>
   /** V2 迁移：只读预检，返回 10 分钟有效的 importToken 与候选项目。 */

@@ -134,6 +134,8 @@ export interface HarnessOptions {
   debounceMs?: number
   openPaths?: (string | null)[]
   relinkPaths?: (string | null)[]
+  /** 注入 reveal 端口失败，用于 REVEAL_FAILED 路径。 */
+  revealError?: Error
   /** 每次三选对话框前调用；用于在保存过程中注入新的 stage。 */
   onAskChoice?: (prompt: GatePrompt, index: number) => void | Promise<void>
 }
@@ -166,6 +168,8 @@ export interface Harness {
   saveTargetCalls: number
   openPathCalls: number
   relinkPathCalls: number
+  /** 每次 reveal 端口被调用时记录的路径，用于断言只传会话正式路径。 */
+  revealCalls: string[]
   /** 打开/另存/relink 对话框的下一次返回值；测试可直接改。 */
   openQueue: (string | null)[]
   relinkQueue: (string | null)[]
@@ -217,6 +221,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
     saveTargetCalls: 0,
     openPathCalls: 0,
     relinkPathCalls: 0,
+    revealCalls: [],
     openQueue,
     relinkQueue,
     saveTargetValue: options.saveTarget ?? null,
@@ -303,6 +308,12 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
     pickSaveTarget: async () => {
       state.saveTargetCalls += 1
       return state.saveTargetValue
+    },
+    revealPath: async (targetPath) => {
+      state.revealCalls.push(targetPath)
+      if (options.revealError !== undefined) {
+        throw options.revealError
+      }
     },
     appVersion: '2.0.0-test',
     electronVersion: '45.2.3-test',
