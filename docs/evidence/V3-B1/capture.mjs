@@ -419,25 +419,15 @@ try {
   report.measurements.retry = retried
   check('重试后恢复且只有一个 canvas（无叠加上下文）', retried.state === 'ready' && retried.canvases === 1, JSON.stringify(retried))
 
-  // 7. 960×640 内容尺寸
+  // 7. 真实窗口缩到 960×640（BrowserWindow 逻辑尺寸；内容区 = 减去标题栏）
   let resizeMethod = 'none'
-  try {
-    const browser = await connect(port, 'browser').catch(() => null)
-    if (!browser) throw new Error('no browser target')
-    const windowInfo = await browser.send('Browser.getWindowForTarget')
-    await browser.send('Browser.setWindowBounds', { windowId: windowInfo.windowId, bounds: { width: 960, height: 640 } })
-    resizeMethod = 'Browser.setWindowBounds'
-    browser.close()
-  } catch (error) {
-    report.notes.push(`Browser.setWindowBounds 不可用：${String(error.message).slice(0, 120)}；改用 Emulation.setDeviceMetricsOverride`)
-    await page.send('Emulation.setDeviceMetricsOverride', { width: 960, height: 640, deviceScaleFactor: 0, mobile: false })
-    resizeMethod = 'Emulation.setDeviceMetricsOverride'
-  }
-  await sleep(900)
-  const small = await page.eval(`(() => {
+  await page.eval(`(() => { window.resizeTo(960, 640); return true })()`)
+  await sleep(1000)
+  let small = await page.eval(`(() => {
     const canvas = document.querySelector('canvas[role="img"]')
     const root = document.querySelector('.three-viewport')
     return {
+      outer: [outerWidth, outerHeight],
       inner: [innerWidth, innerHeight],
       dpr: devicePixelRatio,
       canvasCss: canvas ? [Math.round(canvas.clientWidth), Math.round(canvas.clientHeight)] : null,
@@ -450,11 +440,35 @@ try {
       viewportBottom: Math.round(root.getBoundingClientRect().bottom),
     }
   })()`)
+  if (small.outer[0] === 960 && small.outer[1] === 640) {
+    resizeMethod = 'window.resizeTo → 真实 BrowserWindow 960×640'
+  } else {
+    report.notes.push(`window.resizeTo 未生效（outer=${JSON.stringify(small.outer)}），回退 Emulation.setDeviceMetricsOverride`)
+    await page.send('Emulation.setDeviceMetricsOverride', { width: 960, height: 640, deviceScaleFactor: 0, mobile: false })
+    await sleep(600)
+    resizeMethod = 'Emulation.setDeviceMetricsOverride（仿真，非真实窗口）'
+    small = await page.eval(`(() => {
+      const canvas = document.querySelector('canvas[role="img"]')
+      const root = document.querySelector('.three-viewport')
+      return {
+        outer: [outerWidth, outerHeight], inner: [innerWidth, innerHeight], dpr: devicePixelRatio,
+        canvasCss: canvas ? [Math.round(canvas.clientWidth), Math.round(canvas.clientHeight)] : null,
+        canvasBacking: canvas ? [canvas.width, canvas.height] : null,
+        overflowX: document.documentElement.scrollWidth - innerWidth,
+        toolbarRows: new Set([...root.querySelectorAll('.three-viewport__toolbar button')].map((item) => Math.round(item.getBoundingClientRect().top))).size,
+        toolbarBottom: Math.round(root.querySelector('.three-viewport__toolbar').getBoundingClientRect().bottom),
+        stageTop: Math.round(root.querySelector('.three-viewport__stage').getBoundingClientRect().top),
+        stageBottom: Math.round(root.querySelector('.three-viewport__stage').getBoundingClientRect().bottom),
+        viewportBottom: Math.round(root.getBoundingClientRect().bottom),
+      }
+    })()`)
+  }
+  const smallViewportWidth = small.inner[0]
   report.measurements.smallWindow = { resizeMethod, ...small }
-  check(`960×640 内容尺寸生效（${resizeMethod}）`, small.inner[0] === 960 && small.inner[1] === 640, JSON.stringify(small.inner))
+  check('960×640 真实窗口生效（outer=960×640，内容区 960×608）', small.outer[0] === 960 && small.outer[1] === 640 && small.inner[0] === 960, JSON.stringify({ resizeMethod, outer: small.outer, inner: small.inner }))
   check('960×640 无横向溢出，工具条不覆盖画布', small.overflowX <= 0 && small.toolbarBottom <= small.stageTop + 1 && small.stageBottom <= small.viewportBottom + 1, JSON.stringify({ overflowX: small.overflowX, toolbarBottom: small.toolbarBottom, stageTop: small.stageTop }))
   await page.shot('960-selected.png')
-  const smallPixels = analyzeShot(path.join(outDir, '960-selected.png'), await canvasRect(), 960)
+  const smallPixels = analyzeShot(path.join(outDir, '960-selected.png'), await canvasRect(), smallViewportWidth)
   report.measurements.smallPixels = smallPixels
   check('960×640 截图证明画布仍有模型像素', smallPixels.offBackgroundRatio > 0.02 && smallPixels.distinctColors >= 8, JSON.stringify(smallPixels))
   await page.eval(`(() => {
@@ -464,7 +478,7 @@ try {
   })()`)
   await sleep(600)
   await page.shot('960-exploded-100.png')
-  const smallExplodedPixels = analyzeShot(path.join(outDir, '960-exploded-100.png'), await canvasRect(), 960)
+  const smallExplodedPixels = analyzeShot(path.join(outDir, '960-exploded-100.png'), await canvasRect(), smallViewportWidth)
   report.measurements.smallExplodedPixels = smallExplodedPixels
   check('960×640 爆炸 100% 截图仍有模型像素', smallExplodedPixels.offBackgroundRatio > 0.02, JSON.stringify(smallExplodedPixels))
   await clickText('复位装配')

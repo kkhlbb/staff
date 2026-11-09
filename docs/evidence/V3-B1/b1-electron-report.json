@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-11-09T12:02:24.335Z",
+  "startedAt": "2026-11-09T12:07:30.319Z",
   "appExecutable": "/Users/aston/DSH/wt/dsh-v3-a4c/out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链",
   "platform": "darwin",
   "arch": "arm64",
@@ -38,7 +38,7 @@
     {
       "name": "隔套只读参数来自 q（20/32/12 mm），C 批次编辑按钮禁用",
       "ok": true,
-      "detail": "[\"rev-5ae19569-73cf-4cb0-a260-06ca9fb6bd2a\",\"内置示意部件（只读）\",\"-6.0000 … 6.0000 mm\",\"+0.0 mm（X）\",\"10.0000 mm\",\"16.0000 mm\",\"20.0000 mm\",\"32.0000 mm\",\"12.0000 mm\",\"未关联 · 示例几何（不随尺寸编辑变化）\"]"
+      "detail": "[\"rev-c96dcfc5-139a-4052-ac03-227bdde7f3ba\",\"内置示意部件（只读）\",\"-6.0000 … 6.0000 mm\",\"+0.0 mm（X）\",\"10.0000 mm\",\"16.0000 mm\",\"20.0000 mm\",\"32.0000 mm\",\"12.0000 mm\",\"未关联 · 示例几何（不随尺寸编辑变化）\"]"
     },
     {
       "name": "1440 截图像素证明画布内有模型（非空 canvas）",
@@ -81,9 +81,9 @@
       "detail": "{\"canvases\":1,\"state\":\"ready\"}"
     },
     {
-      "name": "960×640 内容尺寸生效（Emulation.setDeviceMetricsOverride）",
+      "name": "960×640 真实窗口生效（outer=960×640，内容区 960×608）",
       "ok": true,
-      "detail": "[960,640]"
+      "detail": "{\"resizeMethod\":\"window.resizeTo → 真实 BrowserWindow 960×640\",\"outer\":[960,640],\"inner\":[960,608]}"
     },
     {
       "name": "960×640 无横向溢出，工具条不覆盖画布",
@@ -93,17 +93,17 @@
     {
       "name": "960×640 截图证明画布仍有模型像素",
       "ok": true,
-      "detail": "{\"imageSize\":[960,640],\"region\":[238,353,404,230],\"distinctColors\":748,\"offBackgroundRatio\":0.0761}"
+      "detail": "{\"imageSize\":[960,608],\"region\":[238,353,404,198],\"distinctColors\":707,\"offBackgroundRatio\":0.0656}"
     },
     {
       "name": "960×640 爆炸 100% 截图仍有模型像素",
       "ok": true,
-      "detail": "{\"imageSize\":[960,640],\"region\":[238,353,404,230],\"distinctColors\":969,\"offBackgroundRatio\":0.1036}"
+      "detail": "{\"imageSize\":[960,608],\"region\":[238,353,404,198],\"distinctColors\":903,\"offBackgroundRatio\":0.0895}"
     },
     {
       "name": "阻断 HTTP(S) 后重载仍渲染应用（生产 file:// 产物）",
       "ok": true,
-      "detail": "{\"href\":\"file:///Users/aston/DSH/wt/dsh-v3-a4c/out/%E5%AF%B8%E9%93%BE-darwin-arm64/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html\",\"body\":\"寸链 · 轴系示例（B1）· 示意装配\\nRev rev-5ae19569-73cf-4cb0-a260-06ca9fb6bd2a\\n未保存草稿\\nV3 · B1 批次\\n新建项目\\n打开项目\\n保存\\n另存为…\\n导入 V2 备份…\\n关闭窗口\\n导入资料\\n资料导入本批次未实现\\n预览变更\\n导出 PDF ▾\\n当前会话已载入；绑定来源不等于\"}"
+      "detail": "{\"href\":\"file:///Users/aston/DSH/wt/dsh-v3-a4c/out/%E5%AF%B8%E9%93%BE-darwin-arm64/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html\",\"body\":\"寸链 · 轴系示例（B1）· 示意装配\\nRev rev-c96dcfc5-139a-4052-ac03-227bdde7f3ba\\n未保存草稿\\nV3 · B1 批次\\n新建项目\\n打开项目\\n保存\\n另存为…\\n导入 V2 备份…\\n关闭窗口\\n导入资料\\n资料导入本批次未实现\\n预览变更\\n导出 PDF ▾\\n当前会话已载入；绑定来源不等于\"}"
     },
     {
       "name": "阻断远程请求下 3D chunk 仍加载并渲染（无网络兜底）",
@@ -113,7 +113,7 @@
     {
       "name": "重载+重新打开后截图仍有模型像素",
       "ok": true,
-      "detail": "{\"imageSize\":[960,640],\"region\":[238,299,716,284],\"distinctColors\":806,\"offBackgroundRatio\":0.0528}"
+      "detail": "{\"imageSize\":[960,608],\"region\":[238,299,716,252],\"distinctColors\":775,\"offBackgroundRatio\":0.047}"
     },
     {
       "name": "重载后所有资源均为本地 file://（无 HTTP(S) 请求）",
@@ -208,7 +208,7 @@
       "pressed": "true",
       "heading": "属性 · 隔套",
       "props": [
-        "rev-5ae19569-73cf-4cb0-a260-06ca9fb6bd2a",
+        "rev-c96dcfc5-139a-4052-ac03-227bdde7f3ba",
         "内置示意部件（只读）",
         "-6.0000 … 6.0000 mm",
         "+0.0 mm（X）",
@@ -303,60 +303,64 @@
       "state": "ready"
     },
     "smallWindow": {
-      "resizeMethod": "Emulation.setDeviceMetricsOverride",
-      "inner": [
+      "resizeMethod": "window.resizeTo → 真实 BrowserWindow 960×640",
+      "outer": [
         960,
         640
+      ],
+      "inner": [
+        960,
+        608
       ],
       "dpr": 1,
       "canvasCss": [
         404,
-        230
+        198
       ],
       "canvasBacking": [
         404,
-        230
+        198
       ],
       "overflowX": 0,
       "toolbarRows": 2,
       "toolbarBottom": 353,
       "stageTop": 353,
-      "stageBottom": 583,
-      "viewportBottom": 607
+      "stageBottom": 551,
+      "viewportBottom": 575
     },
     "smallPixels": {
       "imageSize": [
         960,
-        640
+        608
       ],
       "region": [
         238,
         353,
         404,
-        230
+        198
       ],
-      "distinctColors": 748,
-      "offBackgroundRatio": 0.0761
+      "distinctColors": 707,
+      "offBackgroundRatio": 0.0656
     },
     "smallExplodedPixels": {
       "imageSize": [
         960,
-        640
+        608
       ],
       "region": [
         238,
         353,
         404,
-        230
+        198
       ],
-      "distinctColors": 969,
-      "offBackgroundRatio": 0.1036
+      "distinctColors": 903,
+      "offBackgroundRatio": 0.0895
     },
     "reloadWithBlockedHttp": {
       "hasStart": false,
       "hasWorkbench": true,
       "href": "file:///Users/aston/DSH/wt/dsh-v3-a4c/out/%E5%AF%B8%E9%93%BE-darwin-arm64/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html",
-      "body": "寸链 · 轴系示例（B1）· 示意装配\nRev rev-5ae19569-73cf-4cb0-a260-06ca9fb6bd2a\n未保存草稿\nV3 · B1 批次\n新建项目\n打开项目\n保存\n另存为…\n导入 V2 备份…\n关闭窗口\n导入资料\n资料导入本批次未实现\n预览变更\n导出 PDF ▾\n当前会话已载入；绑定来源不等于"
+      "body": "寸链 · 轴系示例（B1）· 示意装配\nRev rev-c96dcfc5-139a-4052-ac03-227bdde7f3ba\n未保存草稿\nV3 · B1 批次\n新建项目\n打开项目\n保存\n另存为…\n导入 V2 备份…\n关闭窗口\n导入资料\n资料导入本批次未实现\n预览变更\n导出 PDF ▾\n当前会话已载入；绑定来源不等于"
     },
     "offlineScene": {
       "state": "ready",
@@ -372,16 +376,16 @@
     "offlinePixels": {
       "imageSize": [
         960,
-        640
+        608
       ],
       "region": [
         238,
         299,
         716,
-        284
+        252
       ],
-      "distinctColors": 806,
-      "offBackgroundRatio": 0.0528
+      "distinctColors": 775,
+      "offBackgroundRatio": 0.047
     },
     "resourceUrls": [],
     "remoteTransfers": 0,
@@ -408,9 +412,8 @@
     }
   },
   "notes": [
-    "页内 drawImage 采样（受 preserveDrawingBuffer=false 影响，仅作参考）：{\"distinctColors\":133,\"transparentRatio\":0,\"sample\":[\"245,247,250,255\",\"179,193,210,255\",\"179,192,209,255\",\"177,191,207,255\",\"176,189,206,255\",\"173,187,203,255\"],\"backingStore\":[884,481],\"cssSize\":[884,481]}",
-    "Browser.setWindowBounds 不可用：no browser target；改用 Emulation.setDeviceMetricsOverride"
+    "页内 drawImage 采样（受 preserveDrawingBuffer=false 影响，仅作参考）：{\"distinctColors\":133,\"transparentRatio\":0,\"sample\":[\"245,247,250,255\",\"179,193,210,255\",\"179,192,209,255\",\"177,191,207,255\",\"176,189,206,255\",\"173,187,203,255\"],\"backingStore\":[884,481],\"cssSize\":[884,481]}"
   ],
-  "finishedAt": "2026-11-09T12:02:43.170Z",
+  "finishedAt": "2026-11-09T12:07:47.649Z",
   "result": "PASS"
 }

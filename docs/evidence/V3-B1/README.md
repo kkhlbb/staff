@@ -73,28 +73,29 @@ attributes: antialias=true depth=true preserveDrawingBuffer=false stencil=false
 
 窗口或内容尺寸、canvas 尺寸、DPR 均为实测值（来自 `b1-electron-report.json` 的 `window1440` / `smallWindow`）。
 
-| 截图 | 内容尺寸 | canvas（CSS=backing） | 说明 |
+| 截图 | 窗口 / 内容尺寸 | canvas（CSS=backing） | 说明 |
 |---|---|---|---|
 | `1440-selected-spacer.png` | 窗口 1440×900 / inner 1440×868 | 884×481 | 树选隔套：浅靛蓝 + #3730A3 轮廓，属性栏只读参数 |
 | `1440-exploded-100.png` | 同上 | 884×481 | 爆炸 100%：左右轴承 ±40、挡圈 −76、轴与隔套不动 |
 | `1440-reset-assembly.png` | 同上 | 884×481 | 复位装配：t=0、相机回默认、隔套仍选中 |
 | `3d-degraded.png` | 同上 | —（无 canvas） | 真实 `WEBGL_lose_context` 丢失后局部降级 + 重试，其他标签可用 |
-| `960-selected.png` | 内容 960×640 | 404×230 | 小窗选隔套，工具条 2 行不重叠 |
-| `960-exploded-100.png` | 内容 960×640 | 404×230 | 小窗爆炸 100%，5 件全在画布内 |
-| `960-reset-assembly.png` | 内容 960×640 | 404×230 | 小窗复位装配 |
-| `960-offline-reopened.png` | 内容 960×640 | 716×284 | 阻断 HTTP(S) 重载后重新打开示例 |
+| `960-selected.png` | 窗口 960×640 / inner 960×608 | 404×198 | 小窗选隔套，工具条 2 行不重叠 |
+| `960-exploded-100.png` | 窗口 960×640 / inner 960×608 | 404×198 | 小窗爆炸 100%，5 件全在画布内 |
+| `960-reset-assembly.png` | 窗口 960×640 / inner 960×608 | 404×198 | 小窗复位装配 |
+| `960-offline-reopened.png` | 窗口 960×640 / inner 960×608 | 716×252 | 阻断 HTTP(S) 重载后重新打开示例 |
 
-**960×640 的尺寸取得方式**：`Browser.setWindowBounds` 在该打包产物上不可用（脚本记录了原因），
-改用 CDP `Emulation.setDeviceMetricsOverride` 强制内容视口 960×640。
-它是真实 Electron + 真实 Chromium + 真实 GPU 渲染，但**外层 BrowserWindow 逻辑尺寸仍是 1440×900**，
-不是把真实窗口缩到 960×640。这一点按事实记录，不按“真实小窗”记 PASS。
-真实窗口最小尺寸（960×640，`window.ts` 的 minWidth/minHeight）下的验收请留给 B1-04。
+**960×640 是真实窗口缩放的**：渲染进程调用 `window.resizeTo(960, 640)`，窗口实测
+`outerWidth/outerHeight = 960×640`、`innerWidth/innerHeight = 960×608`（32 px 标题栏），
+与 `desktop/main/window.ts` 的 `minWidth: 960 / minHeight: 640` 一致。
+脚本另外保留了 `Emulation.setDeviceMetricsOverride` 回退路径，本次未触发。
+截图物理尺寸即 960×608，未拉伸伪装。
 
 坏像素证据：截图的 canvas 区域用纯 Node（`node:zlib`）解码后统计颜色多样性，
 1440 选中态 1,114 种颜色 / 8.19% 非背景像素；爆炸态 1,461 / 11.1%；
-960 选中态 748 / 7.61%；960 爆炸态 969 / 10.36%。即画布里确有模型，不是空 canvas。
+960 选中态 707 / 6.56%；960 爆炸态 903 / 8.95%；重载重开 775 / 4.70%。
+即画布里确有模型，不是空 canvas。
 
-## 6. 断言清单（26 项全 PASS）
+## 6. 断言清单（27 项全 PASS）
 
 `b1-electron-report.json` 的 `checks` 数组为原始记录，摘要：
 
@@ -122,14 +123,15 @@ attributes: antialias=true depth=true preserveDrawingBuffer=false stencil=false
    系统网络开关需要额外权限，未擅自改动。
 3. **拖动旋转/平移的“拖动不误选”只在单测覆盖**（4 CSS px 阈值、组合键、多指判定），
    真实指针拖动未在 Electron 中做自动化注入。
-4. **960×640 为内容视口仿真**（见 §5），真实最小窗口尺寸未验。
-5. **DPR=1 路径**：本次显示器未走 2x；`min(dpr,2)` 与降级到 1 的分支只有单测覆盖，
+4. **DPR=1 路径**：本次显示器 `devicePixelRatio=1`，未走 2x；`min(dpr,2)` 与降级到 1 的分支只有单测覆盖，
    真机 2x 表现未测。
+5. **未做 20 次开关/重试的存活实例计数**：单测覆盖了 dispose 幂等与单实例，真实 renderer.info
+   平台期未测（B1-04 项）。
 6. **`npm run test:desktop:e2e` 预先失败，与 B1 无关**：
    `desktop/tests/e2e/smoke.mjs` 仍断言 body 含“桌面壳”、且 `window.cunlian` 只有 4 个键，
    这两条断言早于 A-02/A-04 的 preload 扩展。`git diff ddef951 -- desktop/preload desktop/shared desktop/main desktop/tests/e2e/smoke.mjs`
    为空，本批次未改这些文件；也未顺手改这份冒烟（按分工留给 B1-04）。
-   同一次运行中安全类断言（无通用 IPC 转义口、无远程资源、子框架拿不到桥、关闭屏障）均 PASS。
+   同一次运行中安全类断言（无通用 IPC 逃逸口、无远程资源、子框架拿不到桥、关闭屏障）均 PASS。
 7. **挡圈在装配态几乎被左轴承遮住**（r14 位于 X∈[-29,-27]，紧邻轴承 [-26,-6]）。
    这是任务卡 §3.2 夹具表的给定几何，未擅自改动；爆炸后清晰可见。
 8. 示例持久化按用户拍板只做 renderer 侧车：不新增 IPC、不动 schema；
@@ -138,5 +140,5 @@ attributes: antialias=true depth=true preserveDrawingBuffer=false stencil=false
 ## 8. 文件
 
 - `capture.mjs`：CDP 采集脚本（含纯 Node PNG 解码，用于截图像素断言）
-- `b1-electron-report.json`：26 项检查的原始结果 + 全部尺寸/探针测量值
+- `b1-electron-report.json`：27 项检查的原始结果 + 全部尺寸/探针测量值
 - 8 张 PNG 截图
