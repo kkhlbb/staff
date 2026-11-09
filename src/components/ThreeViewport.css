@@ -1,0 +1,135 @@
+.three-viewport {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg, #f5f7fa);
+}
+.three-viewport__banner {
+  margin: 0;
+  padding: 8px 12px;
+  color: #6b4a12;
+  border-bottom: 1px solid var(--border, #d9e0e9);
+  background: var(--pending-bg, #fff4dd);
+  overflow-wrap: anywhere;
+}
+.three-viewport__banner strong {
+  color: #92400e;
+}
+.three-viewport__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface, #fff);
+  border-bottom: 1px solid var(--border, #d9e0e9);
+}
+.three-viewport__toolbar button {
+  min-height: 32px;
+  min-width: 28px;
+}
+.three-viewport__gap {
+  flex: 0 1 8px;
+}
+.three-viewport__slider {
+  display: flex;
+  flex: 1 1 190px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--muted, #526075);
+}
+.three-viewport__slider-label {
+  white-space: nowrap;
+}
+.three-viewport__group {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.three-viewport__slider input[type='range'] {
+  flex: 1 1 auto;
+  min-width: 72px;
+  width: auto;
+  min-height: 32px;
+}
+.three-viewport__slider output {
+  min-width: 40px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.three-viewport__stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.three-viewport__stage canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+.three-viewport__stage canvas:active {
+  cursor: grabbing;
+}
+.three-viewport__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  margin: 0;
+  color: var(--muted, #526075);
+}
+.three-viewport__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+  color: var(--danger, #a61b1b);
+  background: var(--danger-bg, #fdebec);
+}
+.three-viewport__fallback p {
+  max-width: 46ch;
+  margin: 0;
+  color: #7a2020;
+  overflow-wrap: anywhere;
+}
+.three-viewport__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 6px 12px;
+  color: var(--muted, #526075);
+  border-top: 1px solid var(--border, #d9e0e9);
+  font-variant-numeric: tabular-nums;
+}
+.three-viewport__selection {
+  margin-left: auto;
+  color: var(--text, #172033);
+}
+/* 小窗（960×640 这类最小窗口）：压缩装饰性留白，把高度让给画布；控件仍保持 32px 命中区。 */
+@media (max-height: 760px) {
+  .three-viewport__banner {
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+  .three-viewport__toolbar {
+    gap: 6px;
+    padding: 4px 8px;
+  }
+  .three-viewport__status {
+    padding: 2px 12px;
+  }
+}

@@ -94,7 +94,15 @@ export function useDesktopSession() {
         dimensionChain: parsed.ok ? parsed.chain : current.project.dimensionChain,
       } })
     },
-    create: (name: string, template: 'empty' | 'chain-demo') => run(async session => { const result = report(await session.newProject(name, template)); if (result.ok) setNewOpen(false) }),
+    create: async (name: string, template: 'empty' | 'chain-demo') => {
+      let created: string | null = null
+      await run(async session => {
+        const result = report(await session.newProject(name, template))
+        if (result.ok) { setNewOpen(false); created = result.value.sessionId }
+      })
+      // 返回新会话 ID 供调用方（如轴系示例入口）在成功后接上局部视图。
+      return created
+    },
     openRecent: (item: RecentProjectItem) => run(async session => { report(await (item.missing ? session.relinkRecent(item.recentId) : session.openProject(item.recentId))) }),
     restore: (id: string) => run(async session => { report(await session.restoreRecovery(id)) }),
     inspect: (kind: 'bundle' | 'json') => run(async () => { setPreview(null); const result = report(await window.cunlian!.inspectV2({ kind })); if (result.ok) setPreview(result.value) }),
