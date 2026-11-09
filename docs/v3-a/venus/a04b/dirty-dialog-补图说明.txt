@@ -8,7 +8,7 @@
 
 使用本地 main inspector 初始化 electron，通过 loadURL 打开 index.desktop.html。
 通过 React hook 取现有 DesktopSessionAdapter，newProject 后 edit/flushStage（acceptedSeq=1，dirty=true）。
-只 stub showSaveDialog，固定目标 process.cwd()+'/docs/v3-a/venus/a04b/dirty-dialog-save.cunlian'，本次未选择保存，未产生该文件。
+只 stub showSaveDialog，固定目标 process.cwd()+'/docs/v3-a/venus/a04b/dirty-dialog-save.cunlian'，本次未主动点击保存；但 Esc 后发现该目标文件已生成，窗口数为 0，说明此次清理不能当作“取消”分支成功证据。生成文件移至 scratch 留存，未提交。
 showMessageBox 未赋值、未 stub；main inspector 读取到 Electron 原始实现：
   function showMessageBox(e,t){let n=e&&!(e instanceof b.BaseWindow)?null:e,r=e&&!(e instanceof b.BaseWindow)?e:t;return messageBox(!1,n,r)}
 
