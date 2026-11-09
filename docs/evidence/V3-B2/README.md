@@ -70,7 +70,7 @@
 1. **真实用户 STL 样本**：用户尚未提供，真实文件（含损坏副本）验收阻塞；当前全部为自造合法/截断夹具。
 2. **Electron 实际窗口 GPU/Finder 离线验收未完成**：打包 .app 可执行文件能启动并保持运行（`logs/app-evidence.log` 记录进程与启动时间；首次 9335 调试端口曾返回 `file://…index.desktop.html` page target），但窗口抓取为 0×0、重启用 curl 未取得 target，未取得 3D 画面截图；不声称“真实渲染通过”。
 3. **Web Worker / node worker 未接入**：解析在主线程/渲染线程同步执行，受 10 MiB 与 200k 面上限约束；任务卡 §6 要求的 worker 分线程属于未实现项。
-4. **GPU 资源预提交**：导入前只做 CPU 几何/包围球准备（含 STL_GEOMETRY_RANGE），WebGL 初始化失败发生在提交之后，按全局 3D 降级处理（数据保留、可重试），不是文件错误。
+4. **GPU 资源预提交**：导入前只做 CPU 几何/包围球准备（含 STL_GEOMETRY_RANGE），WebGL 初始化失败发生在提交之后，按全局 3D 降级处理（数据保留、可重试），不是文件错误。→ 2026-11-09 追加修复：替换模型后复用已丢上下文的同一 canvas 会让 `WebGLRenderer` 读 `alpha` 抛错，已改为每次建场新建 canvas，见 `fix-canvas-root-cause.md`。
 5. commit 的条目/解压预算用“附件合计 + 2 MiB JSON 余量”估算，精确检查在编码保存时；两者都会拒绝，但 commit 的估算可能比实际编码更保守。
 6. 删除旧版本入口按决策不做；超限只拒绝并给出当前/新增/上限字节。
 7. `test:desktop:e2e` smoke 未扩展 B2 场景，也未运行 Finder 自动化；`npm run test:desktop` 已跑。

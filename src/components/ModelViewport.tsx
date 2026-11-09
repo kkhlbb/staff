@@ -51,7 +51,7 @@ function describeFailure(error: unknown): Failure {
 
 export function ModelViewport(props: ModelViewportProps) {
   const { geometry, selected, active, sceneLoader = defaultLoader } = props
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<ModelSceneHandle | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [failure, setFailure] = useState<Failure | null>(null)
@@ -73,8 +73,16 @@ export function ModelViewport(props: ModelViewportProps) {
   }), [])
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    const stage = stageRef.current
+    if (!stage) return
+    // 每次建场都用新建的 canvas：dispose(true) 会 loseContext，上下文丢失是终态，
+    // 同一个 canvas 再次 getContext('webgl2') 只会拿回已丢失的旧上下文
+    // （getContextAttributes() === null，three 读 alpha 时抛错）。
+    const canvas = document.createElement('canvas')
+    canvas.setAttribute('role', 'img')
+    canvas.setAttribute('aria-label', '导入模型三维视图：左键拖动旋转，滚轮缩放，右键或 Shift+拖动平移，单击整体选择')
+    canvas.setAttribute('aria-describedby', 'model-viewport-status')
+    stage.insertBefore(canvas, stage.firstChild)
     let cancelled = false
     let handle: ModelSceneHandle | null = null
     setStatus('loading')
@@ -120,6 +128,7 @@ export function ModelViewport(props: ModelViewportProps) {
       const current = handle ?? sceneRef.current
       sceneRef.current = null
       current?.dispose(true)
+      canvas.remove()
     }
     // 几何身份由 revisionId 决定；同一版本内不重建场景。
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -169,21 +178,13 @@ export function ModelViewport(props: ModelViewportProps) {
         <button type="button" disabled={!ready} onClick={() => sceneRef.current?.resetView()}>重置视角</button>
         <button type="button" disabled title="整体网格不支持部件爆炸">爆炸（整体网格不支持）</button>
       </div>
-      <div className="model-viewport__stage">
-        {status === 'error' ? (
+      <div className="model-viewport__stage" ref={stageRef}>
+        {status === 'error' && (
           <div className="model-viewport__fallback" role="alert">
             <strong>3D 暂不可用：{failure?.code ?? 'UNKNOWN'}</strong>
             <p>{failure?.message ?? '未知原因'}。项目数据、属性与其他标签仍可用；可尝试重试。</p>
             <button type="button" onClick={retry}>重试 3D 视图</button>
           </div>
-        ) : (
-          <canvas
-            key={generation}
-            ref={canvasRef}
-            role="img"
-            aria-label="导入模型三维视图：左键拖动旋转，滚轮缩放，右键或 Shift+拖动平移，单击整体选择"
-            aria-describedby="model-viewport-status"
-          />
         )}
         {status === 'loading' && <p className="model-viewport__loading" role="status">正在载入 3D 视图…</p>}
       </div>

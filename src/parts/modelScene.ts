@@ -156,6 +156,16 @@ export function createModelScene(options: ModelSceneOptions): ModelSceneHandle {
   if (!gl) {
     throw new ModelSceneError('WEBGL2_UNAVAILABLE', '当前环境无法创建 WebGL2 上下文')
   }
+  // 上下文丢失是终态：复用调用过 loseContext() 的 canvas 时，getContext 会原样
+  // 返回同一个已丢失的上下文，getContextAttributes() 为 null；three 会在此后
+  // 读取 alpha 时抛 TypeError。这里提前给出可读的错误，不把画布复用当成可用。
+  if (gl.getContextAttributes() === null) {
+    throw new ModelSceneError(
+      'WEBGL2_UNAVAILABLE',
+      '画布 WebGL2 上下文已失效',
+      '该 canvas 的上下文已丢失，需要新建 canvas 后重试',
+    )
+  }
   const debugInfo = gl.getExtension('WEBGL_debug_renderer_info')
   const probe: ModelSceneProbe = {
     webgl: 'webgl2',
