@@ -11,6 +11,8 @@ import {
   type EditorFlushedPayload,
   type IpcResult,
   type MenuActionPayload,
+  type MigrationCommitValue,
+  type MigrationInspectValue,
   type RequestCloseResult,
 } from '../shared/contracts'
 
@@ -39,6 +41,16 @@ const api: CunlianApi = {
       IPC_CHANNELS.windowRequestClose,
       {},
     ) as Promise<IpcResult<RequestCloseResult>>,
+  inspectV2: (request) =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.migrationInspect,
+      request,
+    ) as Promise<IpcResult<MigrationInspectValue>>,
+  commitV2: (request) =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.migrationCommit,
+      request,
+    ) as Promise<IpcResult<MigrationCommitValue>>,
   onMenuAction: (listener) =>
     subscribe<MenuActionPayload>(IPC_EVENTS.menuAction, listener),
   onEditorFlush: (listener) =>

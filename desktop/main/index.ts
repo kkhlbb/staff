@@ -2,11 +2,13 @@ import {
   BrowserWindow,
   Menu,
   app,
+  dialog,
   ipcMain,
   session,
   webContents,
 } from 'electron'
 import path from 'node:path'
+import { promises as fsp } from 'node:fs'
 import { z } from 'zod'
 import {
   DESKTOP_APP_NAME,
@@ -24,6 +26,14 @@ import {
   type IpcMainLike,
 } from './ipc'
 import { buildApplicationMenu } from './menu'
+import {
+  MIGRATION_BUNDLE_MAX_BYTES,
+  MIGRATION_JSON_MAX_BYTES,
+  MigrationService,
+  type MigrationInput,
+  type MigrationKind,
+} from './migrationService'
+import { ProjectService } from './projectService'
 import { SenderGuard } from './senderGuard'
 import { createMainWindow, type MainWindowHandle } from './window'
 
@@ -119,9 +129,130 @@ function sendMenuAction(action: MenuAction): void {
   target.webContents.send(IPC_EVENTS.menuAction, { action })
 }
 
+/** 读取迁移输入：拒绝符号链接/非普通文件，读前按 stat 限制大小，读后再核对。 */
+async function readMigrationInput(kind: MigrationKind): Promise<MigrationInput | null> {
+  const owner = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+  const options = {
+    title: kind === 'bundle' ? '选择 V2 完整备份（.cunlian.zip）' : '选择 V2 项目 JSON',
+    properties: ['openFile' as const],
+    filters:
+      kind === 'bundle'
+        ? [{ name: 'V2 完整备份', extensions: ['zip'] }]
+        : [{ name: '项目 JSON', extensions: ['json'] }],
+  }
+  const picked =
+    owner === undefined
+      ? await dialog.showOpenDialog(options)
+      : await dialog.showOpenDialog(owner, options)
+  if (picked.canceled || picked.filePaths.length === 0) {
+    return null
+  }
+  const sourcePath = picked.filePaths[0]
+  let info: Awaited<ReturnType<typeof fsp.lstat>>
+  try {
+    info = await fsp.lstat(sourcePath)
+  } catch (error) {
+    throw new IpcFailure(
+      'READ_FAILED',
+      '无法访问迁移输入文件',
+      error instanceof Error ? error.message : String(error),
+    )
+  }
+  if (info.isSymbolicLink() || !info.isFile()) {
+    throw new IpcFailure('INVALID_REQUEST', '迁移输入必须是常规文件（不允许符号链接或目录）')
+  }
+  const limit = kind === 'bundle' ? MIGRATION_BUNDLE_MAX_BYTES : MIGRATION_JSON_MAX_BYTES
+  if (info.size > limit) {
+    throw new IpcFailure('TOO_LARGE', '迁移输入超过大小上限', `${info.size} 字节`)
+  }
+  const buffer = await fsp.readFile(sourcePath)
+  if (buffer.byteLength !== info.size || buffer.byteLength > limit) {
+    throw new IpcFailure('READ_FAILED', '读取迁移输入时文件大小发生变化，请重试')
+  }
+  return { path: sourcePath, bytes: new Uint8Array(buffer) }
+}
+
+async function pickMigrationTarget(suggestedName: string): Promise<string | null> {
+  const owner = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+  const options = {
+    title: '迁移为新的 .cunlian 项目文件',
+    defaultPath: path.join(app.getPath('documents'), suggestedName),
+    filters: [{ name: '寸链项目文件', extensions: ['cunlian'] }],
+  }
+  const saved =
+    owner === undefined
+      ? await dialog.showSaveDialog(options)
+      : await dialog.showSaveDialog(owner, options)
+  if (saved.canceled || saved.filePath === undefined) {
+    return null
+  }
+  return saved.filePath
+}
+
 function installIpcHandlers(): void {
   const ipc: IpcMainLike = ipcMain
   const deps = { guard, log: logStage }
+  const projectService = new ProjectService()
+  const migrationService = new MigrationService({
+    projectService,
+    pickInput: readMigrationInput,
+    pickTarget: pickMigrationTarget,
+    dirtyGate: async () => {
+      if (projectService.dirtySessionCount() === 0) {
+        return 'proceed'
+      }
+      const choice = await dialog.showMessageBox({
+        type: 'warning',
+        message: '当前项目有未保存编辑',
+        detail: '迁移会切换到新文件会话。请选择如何处理当前编辑。',
+        buttons: ['保存并迁移', '不保存并迁移', '取消'],
+        defaultId: 2,
+        cancelId: 2,
+        noLink: true,
+      })
+      if (choice.response === 1) {
+        return 'proceed'
+      }
+      if (choice.response === 0) {
+        // A-04 才接入 renderer 保存流程；这里不伪造“已保存”。
+        await dialog.showMessageBox({
+          type: 'info',
+          message: '保存流程尚未接入本批次',
+          detail: '请先保存当前项目，或选择“不保存并迁移”。已取消本次迁移。',
+        })
+      }
+      return 'cancel'
+    },
+    appVersion: app.getVersion(),
+    electronVersion: process.versions.electron ?? 'unknown',
+  })
+
+  installChannel(
+    ipc,
+    {
+      channel: IPC_CHANNELS.migrationInspect,
+      schema: z.object({ kind: z.enum(['bundle', 'json']) }).strict(),
+      handle: async ({ sender }, params) =>
+        migrationService.inspect(sender.webContentsId, params),
+    },
+    deps,
+  )
+
+  installChannel(
+    ipc,
+    {
+      channel: IPC_CHANNELS.migrationCommit,
+      schema: z
+        .object({
+          importToken: z.string().min(1).max(200),
+          projectId: z.string().min(1).max(240),
+        })
+        .strict(),
+      handle: async ({ sender }, params) =>
+        migrationService.commit(sender.webContentsId, params),
+    },
+    deps,
+  )
 
   installChannel(
     ipc,

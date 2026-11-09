@@ -100,6 +100,23 @@ const projectSchema = z
     name: z.string().min(1).max(200),
     currentRevisionId: idSchema,
     dimensionChain: z.unknown(),
+    engineVersion: z.string().min(1),
+    createdAt: z.string().min(1),
+    updatedAt: z.string().min(1),
+    relationRevision: nonNegativeInt,
+    relationReview: z
+      .object({
+        relationRevision: nonNegativeInt,
+        fingerprint: z.string().min(1),
+        confirmedAt: z.string().min(1),
+      })
+      .strict()
+      .nullable(),
+    migration: z.unknown().nullable(),
+    baseline: z
+      .object({ savedAt: z.string().min(1), definition: z.unknown() })
+      .strict()
+      .nullable(),
     parts: z.array(z.unknown()).max(0),
     parameters: z.array(z.unknown()).max(0),
     modelRevisions: z.array(z.unknown()).max(0),
@@ -223,7 +240,7 @@ const fileRevisionSchema = z
     parentId: idSchema.nullable(),
     createdAt: z.string().min(1),
     reason: z.string(),
-    project: projectSchema,
+    project: z.unknown(),
   })
   .strict()
 
@@ -371,10 +388,8 @@ export function parseManifest(
   return ok(parsed.data)
 }
 
-/** 严格解析 project/project.json，并用领域 validateChain 复核尺寸链。 */
-export function parseProject(
-  input: unknown,
-): ProjectFileResult<ProjectFileProject> {
+/** 严格解析 project/project.json，并用领域 validateChain 复核工作链与基线链。 */
+function parseProjectObject(input: unknown): ProjectFileResult<ProjectFileProject> {
   const parsed = projectSchema.safeParse(input)
   if (!parsed.success) {
     return fail('INVALID_RECORD', 'project.json 结构不合法', describeZodError(parsed.error))
@@ -388,7 +403,33 @@ export function parseProject(
       first === undefined ? undefined : `${first.code}: ${first.message}`,
     )
   }
-  return ok({ ...parsed.data, dimensionChain: chain.value })
+  let baseline: ProjectFileProject['baseline'] = null
+  if (parsed.data.baseline !== null) {
+    const baselineChain = validateChain(parsed.data.baseline.definition)
+    if (!baselineChain.ok) {
+      const first = baselineChain.errors[0]
+      return fail(
+        'INVALID_RECORD',
+        'project.json 的基线尺寸链不合法',
+        first === undefined ? undefined : `${first.code}: ${first.message}`,
+      )
+    }
+    baseline = {
+      savedAt: parsed.data.baseline.savedAt,
+      definition: baselineChain.value,
+    }
+  }
+  return ok({
+    ...parsed.data,
+    dimensionChain: chain.value,
+    baseline,
+  } as ProjectFileProject)
+}
+
+export function parseProject(
+  input: unknown,
+): ProjectFileResult<ProjectFileProject> {
+  return parseProjectObject(input)
 }
 
 export function parseDraft(
@@ -436,16 +477,15 @@ export function parseRevisionFile(
   if (!parsed.success) {
     return fail('INVALID_RECORD', '项目文件版本记录结构不合法', describeZodError(parsed.error))
   }
-  const chain = validateChain(parsed.data.project.dimensionChain)
-  if (!chain.ok) {
-    const first = chain.errors[0]
+  const project = parseProjectObject(parsed.data.project)
+  if (!project.ok) {
     return fail(
       'INVALID_RECORD',
-      '项目文件版本内的尺寸链不合法',
-      first === undefined ? undefined : `${first.code}: ${first.message}`,
+      '项目文件版本内的项目记录不合法',
+      project.error.detail ?? project.error.message,
     )
   }
-  return ok({ ...parsed.data, project: { ...parsed.data.project, dimensionChain: chain.value } })
+  return ok({ ...parsed.data, project: project.value })
 }
 
 /* ------------------------------------------------------------------ */
@@ -672,6 +712,9 @@ export function validateSnapshotReferences(
   const documentById = new Map(snapshot.documents.map((item) => [item.id, item]))
   const revisionById = new Map(snapshot.revisions.map((item) => [item.id, item]))
   const blobByKey = new Map(snapshot.blobs.map((item) => [item.blobKey, item]))
+  const missingByRevision = new Map(
+    snapshot.missingAttachments.map((item) => [item.revisionId, item]),
+  )
   const termIds = new Set(snapshot.project.dimensionChain.terms.map((term) => term.id))
 
   for (const document of snapshot.documents) {
@@ -699,7 +742,14 @@ export function validateSnapshotReferences(
     }
     const blob = blobByKey.get(revision.blobKey)
     if (blob === undefined) {
+      // 合法缺附件：必须由 missingAttachments 逐条声明；不能静默当可用。
+      if (missingByRevision.has(revision.id)) {
+        continue
+      }
       return fail('MISSING_REFERENCE', `版本 ${revision.id} 缺少 blob 元数据`, revision.blobKey)
+    }
+    if (missingByRevision.has(revision.id)) {
+      return fail('INVALID_RECORD', `版本 ${revision.id} 既声明缺失又存在 blob 元数据`)
     }
     if (blob.sha256 !== revision.sha256 || blob.byteSize !== revision.byteSize) {
       return fail(
@@ -709,9 +759,6 @@ export function validateSnapshotReferences(
     }
   }
 
-  const missingByRevision = new Map(
-    snapshot.missingAttachments.map((item) => [item.revisionId, item]),
-  )
   const attachmentByKey = new Map(
     snapshot.attachments.map((item) => [item.blobKey, item]),
   )

@@ -12,6 +12,7 @@
  * - A-03：迁移通道参数与返回。
  * - A-04：项目会话、保存、最近项目、恢复草稿通道。
  */
+import type { ProjectFileSnapshot } from '../../src/project-file/types'
 
 /** 批次 A 全部 IPC 通道（与任务卡 §3 表格逐项对应）。 */
 export const IPC_CHANNELS = {
@@ -122,6 +123,29 @@ export interface RequestCloseResult {
   closed: true
 }
 
+/** 迁移预检（A-03）：只读输入、10 分钟 token、候选项目。 */
+export interface MigrationPreviewProject {
+  id: string
+  name: string
+  attachmentCount: number
+  missingItems: number
+}
+
+export interface MigrationInspectValue {
+  importToken: string
+  projects: MigrationPreviewProject[]
+  warnings: string[]
+}
+
+export interface MigrationCommitValue {
+  sessionId: string
+  editSeq: 0
+  snapshot: Omit<ProjectFileSnapshot, 'attachments'>
+  path: string | null
+  fingerprint: string | null
+  warnings: string[]
+}
+
 /**
  * preload 暴露到 `window.cunlian` 的 API。
  *
@@ -131,6 +155,13 @@ export interface RequestCloseResult {
 export interface CunlianApi {
   /** 请求关闭当前窗口；main 先发编辑屏障，超时或保存失败不会关闭。 */
   requestClose(): Promise<IpcResult<RequestCloseResult>>
+  /** V2 迁移：只读预检，返回 10 分钟有效的 importToken 与候选项目。 */
+  inspectV2(request: { kind: 'bundle' | 'json' }): Promise<IpcResult<MigrationInspectValue>>
+  /** V2 迁移：dirty gate → 另存新 .cunlian → 原子提交成功后才返回项目会话。 */
+  commitV2(request: {
+    importToken: string
+    projectId: string
+  }): Promise<IpcResult<MigrationCommitValue>>
   /** 订阅系统菜单动作；返回取消订阅函数。 */
   onMenuAction(listener: (payload: MenuActionPayload) => void): () => void
   /** 订阅编辑屏障请求；返回取消订阅函数。 */

@@ -9,7 +9,7 @@
  * 本模块只描述纯数据形状与常量，不导入 Electron、React 或 IndexedDB；
  * 对 V2 领域类型的引用只用 `import type`（编译后擦除）。
  */
-import type { ChainDefinition, Project } from '../domain/types'
+import type { ChainDefinition, Project, RelationReview, ProjectMigration } from '../domain/types'
 import type { ChangeEvent } from '../history/events'
 import type { AnalysisSnapshot } from '../history/snapshots'
 import type { SourceBinding } from '../sources/bindings'
@@ -46,6 +46,8 @@ export type ContainerErrorCode =
   | 'MISSING_REFERENCE'
   | 'INVALID_RECORD'
   | 'UNSUPPORTED_VERSION'
+  | 'INVALID_JSON'
+  | 'CALCULATION_FAILED'
   | 'EMPTY_BACKUP'
 
 export interface ProjectFileError {
@@ -169,6 +171,10 @@ export interface ProjectFileManifest {
 /**
  * `project/project.json`：单个活动项目。
  *
+ * A-03 起，项目记录中需要跨文件保留的字段（引擎版本、创建/更新时间、关系
+ * 修订号与确认凭据、V1 迁移记录、基线）随 project.json 一起保存；迁移必须
+ * 原样携带这些字段，V3 新建项目使用同一形状（relationReview=null 等）。
+ *
  * A 阶段 parts/parameters/modelRevisions/dimensionLinks/drawings 必须为空数组；
  * 格式先占位，不为未来 3D/图纸伪造内容。
  */
@@ -178,6 +184,13 @@ export interface ProjectFileProject {
   name: string
   currentRevisionId: string
   dimensionChain: ChainDefinition
+  engineVersion: string
+  createdAt: string
+  updatedAt: string
+  relationRevision: number
+  relationReview: RelationReview | null
+  migration: ProjectMigration | null
+  baseline: Project['baseline']
   parts: unknown[]
   parameters: unknown[]
   modelRevisions: unknown[]

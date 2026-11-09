@@ -36,6 +36,7 @@ export type ChangeEventType =
   | 'baseline_restored'
   | 'analysis_snapshot_created'
   | 'project_restored_from_bundle'
+  | 'project_migrated_from_v2'
 
 /** 组成环数值字段的强类型变更；q 为单位 0.0001 mm 的整数。 */
 export type NumericChangeField = 'nominal' | 'lower' | 'upper'

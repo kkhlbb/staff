@@ -89,6 +89,17 @@ export class ProjectService {
     this.queues.delete(sessionId)
   }
 
+  /** dirty gate 用：存在已接受但未成功落盘的编辑即视为有未保存工作。 */
+  dirtySessionCount(): number {
+    let count = 0
+    for (const session of this.sessions.values()) {
+      if (session.acceptedSeq > session.savedSeq) {
+        count += 1
+      }
+    }
+    return count
+  }
+
   /** 打开并完整校验项目文件；失败不创建会话。 */
   async openFile(targetPath: string): Promise<IpcResult<OpenResult>> {
     const read = await this.store.readProjectFile(targetPath)

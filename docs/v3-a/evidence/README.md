@@ -16,6 +16,9 @@
 | `a01-e2e.log` | 打包产物 e2e 9 项 PASS（标题/桌面壳/preload/sender/子框架/关闭屏障） | `npm run test:desktop:e2e` | *01:09:25 | §8 集成回归 |
 | `a01-shell.png` | 桌面壳页面截图 1440×868（SHA-256 `32557c5c…`）；抓图命令未在任何日志中留存，仅能由 mtime 定位到 e2e 之后 | 未留存（`Page.captureScreenshot`，具体调用脚本未保存） | *01:09:30 | §6 A-01 |
 | `a02-notes.md` | A-02 容器契约、原子保存序列、故障矩阵、负向用例 | 手写记录 | *01:17:55 | §6 A-02、§4.1/§4.2 |
+| `a03-notes.md` | A-03 迁移实现、纯校验抽取边界、字段对照表、IPC 契约、未完成项 | 手写记录 | 2026-11-09 01:48 | §5、§6 A-03、§3 |
+| `a03-test.log` | 全量 `npx vitest run`：56 files / 589 tests passed（含迁移 15 例） | `npx vitest run` | 01:51 | §8 回归 |
+| `a03-desktop-test.log` | 桌面主进程测试：7 files / 58 tests passed（含迁移服务 9 例） | `npx vitest run --config vitest.desktop.config.ts` | 01:51 | §8 回归 |
 
 ## 2. 回退实验（任务卡 §8）
 
@@ -23,6 +26,9 @@
 |---|---|---|---|---|
 | `rollback-a01.patch` | A-01 定点变异：生产加载退回开发 URL 策略 | 定点变异后取 diff，具体生成命令未留存（补丁原文见 `rollback/README.md` §1.1） | *01:24:06 | §8「桌面生产离线资源」 |
 | `rollback-a02.patch` | A-02 定点变异：直接写目标路径，无临时文件/自校验/rename | 定点变异后取 diff，具体生成命令未留存（补丁原文见 `rollback/README.md` §2.1） | *01:23:37 | §8「原子保存」 |
+| `rollback-a03.patch` | A-03 定点变异：ZIP 迁移保留当前确认（只退回“清确认”一步，历史转换不动） | 手工记录 diff（见补丁原文） | 2026-11-09 01:47 | §8「迁移确认边界」 |
+| `rollback/a03-red.log` | A-03 红灯：`migration-clears-current-preserves-history` 因当前确认非 null 失败；历史深相等用例仍 passed（`1 failed \| 1 passed`） | `npx vitest run src/project-file/migrateV2.test.ts -t "migration-"`（定点变异后） | 01:47:42 | §8 |
+| `rollback/a03-green-restored.log` | 恢复实现后两条用例均通过（`2 passed`） | 同上（恢复后） | 01:47:47 | §8 |
 | `rollback/a01-red.log` | A-01 红灯：入口 `http://localhost:5173/`、`chrome-error`、body 为空、`OFFLINE_LAUNCH_RESULT=FAIL` | `CUNLIAN_SCREENSHOT=…/a01-offline-red.png node docs/v3-a/evidence/rollback/a01-packaged-offline-launch.mjs`（脚本启动参数见日志） | *01:24:34 | §8 |
 | `rollback/a01-offline-red.png` | 红灯截图，全白错误页 1440×868 | 同上（`Page.captureScreenshot`） | *01:24:34 | §8 |
 | `rollback/a01-green-baseline.log` | 恢复实现前的绿灯基线：`OFFLINE_LAUNCH_RESULT=PASS` | `node docs/v3-a/evidence/rollback/a01-packaged-offline-launch.mjs` | *01:24:01 | §8 |

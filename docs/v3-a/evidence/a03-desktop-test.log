@@ -1,0 +1,9 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/wt/dsh-v3-A
+
+
+ Test Files  7 passed (7)
+      Tests  58 passed (58)
+   Start at  01:51:09
+   Duration  505ms (tests 65%, import 24%, transform 10%, worker 2%)
+
