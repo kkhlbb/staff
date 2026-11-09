@@ -195,6 +195,13 @@ export class DesktopSessionAdapter {
     return result
   }
 
+  /** 迁移成功后接入 main 返回的唯一会话，不另建本地副本。 */
+  async importV2(importToken: string, projectId: string): Promise<IpcResult<ProjectOpenValue>> {
+    const result = await this.api.commitV2({ importToken, projectId })
+    this.applyOpen(result)
+    return result
+  }
+
   async restoreRecovery(recoveryId: string): Promise<IpcResult<ProjectOpenValue>> {
     const result = await this.api.restoreRecovery({ recoveryId })
     this.applyOpen(result)

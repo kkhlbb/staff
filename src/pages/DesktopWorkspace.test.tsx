@@ -1,66 +1,139 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto'
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { CunlianApi, ProjectOpenValue, MenuActionPayload, EditorFlushRequest } from '../../desktop/shared/contracts'
+import { createSampleSnapshot } from '../project-file/__fixtures__/sampleProjectFile'
 import { DesktopWorkspace } from './DesktopWorkspace'
-import App from '../App'
 
-afterEach(() => { cleanup(); window.location.hash = ''; vi.unstubAllGlobals() })
+let menu: (payload: MenuActionPayload) => void
+let flush: (payload: EditorFlushRequest) => void
+let opened: ProjectOpenValue
+let api: CunlianApi
+const failure = { ok: false as const, error: { code: 'NO_SPACE' as const, message: '磁盘空间不足' } }
+beforeEach(async () => {
+  opened = { sessionId: 'session-1', editSeq: 0, snapshot: await createSampleSnapshot(), path: null, fingerprint: null, warnings: [] }
+  api = {
+    newProject: vi.fn(async () => ({ ok: true as const, value: opened })),
+    openProject: vi.fn(async () => ({ ok: true as const, value: opened })),
+    saveProject: vi.fn(async () => ({ ok: true as const, value: { path: '/project.cunlian', fingerprint: 'hash', savedSeq: 0, warnings: [] } })),
+    saveProjectAs: vi.fn(async () => ({ ok: true as const, value: { path: '/copy.cunlian', fingerprint: 'hash-copy', savedSeq: 0, warnings: [] } })),
+    stageDraft: vi.fn<CunlianApi['stageDraft']>(async request => ({ ok: true as const, value: { acceptedSeq: request.editSeq, recovery: 'pending' } })),
+    listRecent: vi.fn(async () => ({ ok: true as const, value: { items: [{ recentId: 'recent-1', projectId: 'project-a', name: '失效项目', path: '/missing.cunlian', missing: true, lastOpenedAt: '2026-11-09T08:00:00Z' }] } })),
+    relinkRecent: vi.fn(async () => ({ ok: false as const, error: { code: 'CANCELLED' as const, message: '取消' } })),
+    listRecovery: vi.fn(async () => ({ ok: true as const, value: { items: [{ recoveryId: 'draft-1', projectId: 'project-a', name: '恢复项目', basePath: null, baseFingerprint: null, savedAt: '2026-11-09T08:00:00Z', editSeq: 1 }] } })),
+    restoreRecovery: vi.fn(async () => ({ ok: true as const, value: opened })),
+    requestClose: vi.fn(async () => ({ ok: false as const, error: { code: 'CANCELLED' as const, message: '取消' } })),
+    inspectV2: vi.fn(async () => ({ ok: true as const, value: { importToken: 'token', projects: [{ id: 'project-a', name: '迁移项目', attachmentCount: 1, missingItems: 0 }], warnings: ['来源仍需复核'] } })),
+    commitV2: vi.fn(async () => ({ ok: true as const, value: { ...opened, path: '/import.cunlian' } })),
+    onMenuAction: vi.fn(listener => { menu = listener; return vi.fn() }),
+    onEditorFlush: vi.fn(listener => { flush = listener; return vi.fn() }),
+    respondEditorFlush: vi.fn(),
+  }
+  vi.stubGlobal('cunlian', api)
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
+})
+afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+async function openExample() {
+  render(<DesktopWorkspace />)
+  fireEvent.click(screen.getByRole('button', { name: /打开内置示例/ }))
+  await screen.findByRole('main', { name: '寸链桌面工作台' })
+  await waitFor(() => expect(screen.getByRole('button', { name: '保存' })).toBeEnabled())
+}
 
-describe('桌面工作台骨架', () => {
-  it('通过独立入口显示真实空状态，不冒充工程已保存或复核', () => {
-    window.location.hash = '#/desktop'
-    render(<App />)
-    expect(screen.getByRole('main', { name: '寸链桌面工作台' })).toBeInTheDocument()
-    expect(screen.getByText('Rev —')).toBeInTheDocument()
-    expect(screen.getByText('○ 尚无保存记录')).toBeInTheDocument()
-    expect(screen.getAllByRole('group')).toHaveLength(5)
-    expect(screen.getByRole('button', { name: '生成 SVG 图纸' })).toBeDisabled()
-  })
-  it('选择保留在切换标签后，标签支持方向键与 Home/End', () => {
+describe('A-04b 会话接线', () => {
+  it('启动页列出最近/恢复，失效项只重新定位，Rev 不伪造', async () => {
     render(<DesktopWorkspace />)
-    fireEvent.click(screen.getByRole('button', { name: '未载入零件' }))
-    expect(screen.getByRole('heading', { name: '属性 · 零件' })).toBeInTheDocument()
-    fireEvent.keyDown(screen.getByRole('tab', { name: '工程图' }), { key: 'ArrowRight' })
-    expect(screen.getByRole('tab', { name: '3D' })).toHaveFocus()
-    expect(screen.getByRole('tabpanel')).toHaveTextContent('B1/B2 批次未实现')
-    expect(screen.getByRole('tabpanel')).toHaveTextContent('当前选择：零件')
-    fireEvent.keyDown(screen.getByRole('tab', { name: '3D' }), { key: 'End' })
+    await screen.findByText('有尚未保存的恢复草稿')
+    expect(screen.getByText(/Rev 未提供/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '重新定位' }))
+    await waitFor(() => expect(api.relinkRecent).toHaveBeenCalledWith({ recentId: 'recent-1' }))
+    expect(api.openProject).not.toHaveBeenCalled()
+  })
+  it('打开内置示例，树/属性/复核来自快照，布局与页签保留', async () => {
+    await openExample()
+    expect(api.newProject).toHaveBeenCalledWith({ name: '尺寸链示例（A）', template: 'chain-demo' })
+    expect(screen.getByText('未保存草稿')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'H · 总长' }))
+    expect(screen.getByRole('heading', { name: '属性 · H · 总长' })).toBeInTheDocument()
+    expect(screen.getByText('52.2000 mm')).toBeInTheDocument()
+    fireEvent.keyDown(screen.getByRole('tab', { name: '工程图' }), { key: 'End' })
     expect(screen.getByRole('tab', { name: '尺寸链' })).toHaveAttribute('aria-selected', 'true')
-  })
-  it('支持侧栏折叠、键盘调整分隔线、展开复核与导出禁用原因', () => {
-    render(<DesktopWorkspace />)
     const splitter = screen.getByRole('separator', { name: '项目树宽度' })
-    fireEvent.keyDown(splitter, { key: 'ArrowRight' })
-    expect(splitter).toHaveAttribute('aria-valuenow', '240')
-    fireEvent.click(screen.getByRole('button', { name: '收起项目树' }))
-    expect(screen.queryByRole('complementary', { name: '项目树' })).not.toBeInTheDocument()
+    fireEvent.keyDown(splitter, { key: 'ArrowRight' }); expect(splitter).toHaveAttribute('aria-valuenow', '240')
     fireEvent.click(screen.getByRole('button', { name: /复核与变更/ }))
-    expect(screen.getByRole('heading', { name: '校核' })).toBeInTheDocument()
-    expect(screen.getByRole('separator', { name: '复核区高度' })).toHaveAttribute('aria-valuenow', '200')
-    fireEvent.click(screen.getByRole('button', { name: '导出 PDF ▾' }))
-    expect(screen.getByRole('button', { name: '导出图纸 PDF · C 批次未实现' })).toBeDisabled()
-    fireEvent.keyDown(window, { key: 'Escape' })
-    expect(screen.queryByText('无图纸，无法导出')).not.toBeInTheDocument()
+    expect(screen.getByText('极限范围 0.1500 至 0.2500 mm')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /复核与变更/ })).toHaveTextContent('图纸 未生成')
+    expect(screen.getByRole('button', { name: '编辑尺寸链' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: opened.snapshot.documents[0].title }))
+    expect(screen.getByText('有元数据，未读取附件')).toBeInTheDocument()
   })
-  it('⌘O / ⌘S / ⇧⌘S 明报契约未接通，而不是成功', () => {
+  it('菜单 save/saveAs/open/close 真实转交，屏障回复当前会话；失败不更换 UI 快照', async () => {
+    await openExample()
+    act(() => menu({ action: 'save' }))
+    await screen.findByText('已保存')
+    expect(api.saveProject).toHaveBeenCalledWith({ sessionId: 'session-1', editSeq: 0, expectedFingerprint: null })
+    act(() => menu({ action: 'saveAs' }))
+    await waitFor(() => expect(api.saveProjectAs).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByRole('button', { name: '保存' })).toBeEnabled())
+    vi.mocked(api.openProject).mockResolvedValueOnce(failure)
+    act(() => menu({ action: 'open' }))
+    await screen.findByText('保存失败，编辑内容仍可继续处理')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(opened.snapshot.project.name)
+    await act(async () => flush({ requestId: 'barrier' }))
+    expect(api.respondEditorFlush).toHaveBeenCalledWith({ requestId: 'barrier', sessionId: 'session-1', editSeq: 0 })
+    act(() => menu({ action: 'close' }))
+    await waitFor(() => expect(api.requestClose).toHaveBeenCalled())
+    expect(screen.getByRole('main', { name: '寸链桌面工作台' })).toBeInTheDocument()
+  })
+  it('恢复为未保存副本', async () => {
     render(<DesktopWorkspace />)
-    for (const [key, shiftKey, label] of [['o', false, '打开项目'], ['s', false, '保存'], ['s', true, '另存为']] as const) {
-      fireEvent.keyDown(window, { key, metaKey: true, shiftKey })
-      expect(screen.getByRole('status')).toHaveTextContent(`${label}未接通`)
-    }
+    fireEvent.click(await screen.findByRole('button', { name: '恢复为未保存副本' }))
+    await screen.findByText('未保存草稿')
+    expect(api.restoreRecovery).toHaveBeenCalledWith({ recoveryId: 'draft-1' })
   })
-  it('接收现有菜单及屏障，卸载时注销，不臆造会话', () => {
-    const unmenu = vi.fn(); const unflush = vi.fn(); const respondEditorFlush = vi.fn()
-    const onMenuAction = vi.fn<(listener: (payload: { action: 'saveAs' }) => void) => () => void>(() => unmenu)
-    const onEditorFlush = vi.fn<(listener: (payload: { requestId: string }) => void) => () => void>(() => unflush)
-    vi.stubGlobal('cunlian', { onMenuAction, onEditorFlush, respondEditorFlush })
+  it('新建与迁移菜单有可操作表单，取消不改会话，迁移成功接入主进程结果', async () => {
+    render(<DesktopWorkspace />)
+    act(() => menu({ action: 'new' }))
+    fireEvent.change(screen.getByLabelText('项目名称'), { target: { value: '新项目' } })
+    fireEvent.click(screen.getByRole('button', { name: '新建' }))
+    await screen.findByText('未保存草稿')
+    expect(api.newProject).toHaveBeenCalledWith({ name: '新项目', template: 'empty' })
+    act(() => menu({ action: 'importV2' }))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: '选择完整备份…' }))
+    await within(dialog).findByText('迁移项目')
+    fireEvent.click(within(dialog).getByRole('button', { name: '导入并另存为…' }))
+    await screen.findByText('已保存')
+    expect(api.commitV2).toHaveBeenCalledWith({ importToken: 'token', projectId: 'project-a' })
+  })
+  it('保存失败保留当前项目，之后仍可另存；取消打开不替换会话', async () => {
+    await openExample()
+    vi.mocked(api.saveProject).mockResolvedValueOnce(failure)
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await screen.findByText('保存失败，编辑内容仍可继续处理')
+    await waitFor(() => expect(screen.getByRole('button', { name: '另存为…' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: '另存为…' }))
+    await screen.findByText('已保存')
+    await waitFor(() => expect(screen.getByRole('button', { name: '打开项目' })).toBeEnabled())
+    vi.mocked(api.openProject).mockResolvedValueOnce({ ok: false, error: { code: 'CANCELLED', message: '取消' } })
+    fireEvent.click(screen.getByRole('button', { name: '打开项目' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '保存' })).toBeEnabled())
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(opened.snapshot.project.name)
+  })
+  it('卸载注销菜单与编辑屏障', () => {
+    const offMenu = vi.fn(); const offFlush = vi.fn()
+    vi.mocked(api.onMenuAction).mockReturnValueOnce(offMenu)
+    vi.mocked(api.onEditorFlush).mockReturnValueOnce(offFlush)
     const { unmount } = render(<DesktopWorkspace />)
-    act(() => { onMenuAction.mock.calls[0]?.[0]?.({ action: 'saveAs' }) })
-    expect(screen.getByRole('status')).toHaveTextContent('另存为未接通')
-    onEditorFlush.mock.calls[0]?.[0]?.({ requestId: 'flush-1' })
-    expect(respondEditorFlush).toHaveBeenCalledWith({ requestId: 'flush-1' })
-    expect(within(screen.getByRole('main')).getByText('Rev —')).toBeInTheDocument()
-    unmount(); expect(unmenu).toHaveBeenCalled(); expect(unflush).toHaveBeenCalled()
+    unmount()
+    expect(offMenu).toHaveBeenCalledOnce(); expect(offFlush).toHaveBeenCalledOnce()
+  })
+  it('没有桥时明确说明限制，不捏造文件成功', () => {
+    vi.stubGlobal('cunlian', undefined)
+    render(<DesktopWorkspace />)
+    fireEvent.keyDown(window, { key: 's', metaKey: true })
+    expect(screen.getByRole('status')).toHaveTextContent('window.cunlian 不可用')
   })
 })
