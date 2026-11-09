@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { connect, sleep } from './cdp.mjs'
 const main = await connect(9244, 'node')
 const page = await connect(9344, 'page')
-const base = process.cwd() + '/evidence/A-04c/'
+const base = process.cwd() + '/docs/v3-a/venus/a04c/'
 const click = text => page.eval(`(() => { const button = [...document.querySelectorAll('button')].find(b => b.textContent === ${JSON.stringify(text)}); if (!button || button.disabled) throw new Error('button unavailable: ${text}'); button.click() })()`)
 const input = (label, value) => page.eval(`(() => { const input = document.querySelector('[aria-label="${label}"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ${JSON.stringify(value)}); input.dispatchEvent(new Event('input', { bubbles: true })) })()`)
 try {

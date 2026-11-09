@@ -30,7 +30,7 @@ try {
   const encoded = await encodeProjectFile(snapshot)
   if (!encoded.ok) throw new Error(JSON.stringify(encoded.error))
   console.log(Object.keys(encoded.value))
-  await writeFile('evidence/A-04c/source-fixture.pdf', bytes)
-  await writeFile('evidence/A-04c/fixture.cunlian', encoded.value.bytes)
+  await writeFile('docs/v3-a/venus/a04c/source-fixture.pdf', bytes)
+  await writeFile('docs/v3-a/venus/a04c/fixture.cunlian', encoded.value.bytes)
   console.log('fixture written: two labelled synthetic PDF pages, existing sample chain and historical snapshot')
 } finally { await server.close() }

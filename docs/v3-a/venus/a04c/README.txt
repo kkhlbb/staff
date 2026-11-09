@@ -28,7 +28,7 @@ A-04c 交付记录
   npm run test:desktop：14 files / 112 tests passed
   npm run build：exit 0；有 Vite >500kB chunk 警告，不是零警告
   npm run package:desktop：exit 0，main/preload/renderer 生产构建与 darwin arm64 包生成完成
-  node evidence/A-04c/verify-ui.mjs：exit 0，真实浏览器断言见 browser.log
+  node docs/v3-a/venus/a04c/verify-ui.mjs（原执行路径 evidence/A-04c/verify-ui.mjs；本次仅迁移证据）：exit 0，真实浏览器断言见 browser.log
   回退实验：保留新测试，四个既有实现文件临时换回 2cbbd23，A-04c 新增六用例全部失败；finally 恢复实现后定向测试 14 passed。见 rollback-red.log / targeted.log；未切分支、未移动 HEAD。
 
 截图（均为真实 Electron renderer，不含原生对话框）
