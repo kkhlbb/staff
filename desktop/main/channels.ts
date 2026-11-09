@@ -607,6 +607,7 @@ export function registerProjectChannels(ipc: IpcMainLike, deps: ProjectChannelDe
         return {
           sessionId: session.sessionId,
           editSeq: session.acceptedSeq,
+          savedSeq: session.savedSeq,
           snapshot: toSnapshotDto(session.snapshot),
           path: session.path,
           fingerprint: session.fingerprint,

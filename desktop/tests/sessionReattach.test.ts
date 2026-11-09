@@ -139,6 +139,7 @@ describe('session:reattach', () => {
     if (!first.ok || hasActiveSession(first.value)) return
     expect(first.value.sessionId).toBe(opened.sessionId)
     expect(first.value.editSeq).toBe(0)
+    expect(first.value.savedSeq).toBe(0)
     expect(first.value.snapshot).toEqual(opened.snapshot)
     expect(first.value.path).toBe(opened.path)
     expect(first.value.fingerprint).toBe(opened.fingerprint)
@@ -152,6 +153,29 @@ describe('session:reattach', () => {
     expect(harness.createdSessionIds).toHaveLength(1)
   })
 
+  it('从未保存过的新会话 savedSeq=0，脏编辑后 reattach 仍为 0 且 isDirty=true', async () => {
+    const harness = await makeHarness({ debounceMs: 60_000 })
+    const created = await harness.invoke<ProjectOpenValue>(IPC_CHANNELS.projectNew, {
+      name: '未保存新项目',
+      template: 'empty',
+    })
+    expect(created.ok).toBe(true)
+    if (!created.ok) return
+    const staged = await stageRename(harness, created.value, 1, '改过但未保存')
+    expect(staged.ok).toBe(true)
+
+    const reattached = await harness.invoke<SessionReattachValue>(IPC_CHANNELS.sessionReattach, {})
+    expect(reattached.ok).toBe(true)
+    if (!reattached.ok || hasActiveSession(reattached.value)) return
+    expect(reattached.value.editSeq).toBe(1)
+    expect(reattached.value.savedSeq).toBe(0)
+    expect(reattached.value.editSeq).toBeGreaterThan(reattached.value.savedSeq)
+
+    const session = harness.controller.sessionFor(1)
+    if (session === null) throw new Error('session missing')
+    expect(harness.controller.isDirty(session)).toBe(true)
+  })
+
   it('脏编辑后 editSeq 与 recovery 反映 main 状态，且 dirty gate 没有被放宽', async () => {
     const harness = await makeHarness({ debounceMs: 60_000, choices: ['cancel'] })
     const opened = await harness.openSample()
@@ -162,6 +186,8 @@ describe('session:reattach', () => {
     expect(reattached.ok).toBe(true)
     if (!reattached.ok || hasActiveSession(reattached.value)) return
     expect(reattached.value.editSeq).toBe(1)
+    expect(reattached.value.savedSeq).toBe(0)
+    expect(reattached.value.editSeq).toBeGreaterThan(reattached.value.savedSeq)
     expect(reattached.value.snapshot.project.name).toBe('重命名后未保存')
     // 防抖窗口内：内存已接受、草稿尚未落盘。
     expect(reattached.value.recovery).toBe('pending')
@@ -202,6 +228,7 @@ describe('session:reattach', () => {
     if (!reattached.ok || hasActiveSession(reattached.value)) return
     expect(reattached.value.sessionId).toBe(opened.sessionId)
     expect(reattached.value.editSeq).toBe(1)
+    expect(reattached.value.savedSeq).toBe(reattached.value.editSeq)
     expect(reattached.value.recovery).toBe('none')
     const session = harness.controller.sessionFor(1)
     if (session === null) throw new Error('session missing')
