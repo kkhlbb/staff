@@ -15,6 +15,7 @@ import type {
   RecentProjectItem,
   RecentProjectListValue,
 } from '../shared/contracts'
+import { decodeProjectFile } from '../../src/project-file/codec'
 import { nodeWorkspaceOps, readJsonIndex, writeJsonIndex, isolateCorruptIndex, type WorkspaceOps } from './workspaceJson'
 
 export const RECENT_PROJECTS_FILE = 'recent-projects.v1.json'
@@ -147,9 +148,39 @@ export class RecentProjectsStore {
     const items: RecentProjectItem[] = []
     for (const record of loaded.value) {
       const missing = await this.isMissing(record.path)
-      items.push({ ...record, missing })
+      // 版本号只从磁盘上当前正式文件读取；路径失效时不尝试猜测。
+      const rev = missing ? null : await this.readCurrentRevision(record.path)
+      items.push({ ...record, missing, rev })
     }
     return { ok: true, value: { items } }
+  }
+
+  /**
+   * 读取项目的当前正式版本标识：`project.currentRevisionId` 对应的
+   * `fileRevisions[].revisionId`。
+   *
+   * 走与打开相同的完整容器解码（哈希、引用与数量校验），只认校验通过的文件。
+   * 读取失败、不是常规文件、容器损坏或 currentRevisionId 对应不到版本记录时
+   * 返回 null：列表不能因为一个坏文件整份失败，也不能拿旧值冒充当前版本。
+   */
+  private async readCurrentRevision(targetPath: string): Promise<string | null> {
+    try {
+      if ((await this.ops.statKind(targetPath)) !== 'file') {
+        return null
+      }
+      const bytes = await this.ops.readFile(targetPath)
+      const decoded = await decodeProjectFile(bytes)
+      if (!decoded.ok) {
+        return null
+      }
+      const currentId = decoded.value.snapshot.project.currentRevisionId
+      const revision = decoded.value.snapshot.fileRevisions.find(
+        (item) => item.revisionId === currentId,
+      )
+      return revision?.revisionId ?? null
+    } catch {
+      return null
+    }
   }
 
   private async isMissing(targetPath: string): Promise<boolean> {
@@ -266,7 +297,16 @@ export class RecentProjectsStore {
       if (!written.ok) {
         return failure('WRITE_FAILED', '最近项目索引写入失败', written.detail)
       }
-      return { ok: true, value: { item: { ...item, missing: false } } }
+      return {
+        ok: true,
+        value: {
+          item: {
+            ...item,
+            missing: false,
+            rev: await this.readCurrentRevision(normalizedPath),
+          },
+        },
+      }
     })
   }
 

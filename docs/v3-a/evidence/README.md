@@ -106,3 +106,21 @@ fresh every time`），拿不到就把缓存 zip 判为 “didn't match checksum
 说明：`a04-desktop-test.log`/`a04-test.log` 末尾没有单独打印 `EXIT=`，但同一条命令在
 shell 中返回 0；typecheck/lint 日志首行记录命令、末行记录 `EXIT=0`。回退实验只改实现
 文件、未改任何测试断言。
+
+## 6. A-04c / A-04d 接口补齐（2026-11-09 02:20–02:56 PST）
+
+实现记录：`a04c-notes.md`（`source:read` / `project:reveal`）与 `a04d-notes.md`
+（`recent:list` 的 rev / `session:reattach`），同一分支 `agent/dsh-v3-a4c`。
+a04c 日志未入本表（见其 notes 内清单）。
+
+| 文件 | 证明内容 | 生成命令 | SHA-256（前 12 位） |
+|---|---|---|---|
+| `a04d-notes.md` | 范围、DTO 语义、已知问题（含 app typecheck 起点失败） | 手写记录 | `f8021c2fb11f` |
+| `a04d-desktop-test.log` | 桌面套件 `14 files / 112 tests passed`（新增 1 文件 / 10 用例） | `npm run test:desktop -- --reporter=verbose` | `89a09a083c88` |
+| `a04d-test.log` | 既有全量 `57 files / 597 tests passed`（本卡未改 `src/**`） | `npm test -- --reporter=dot` | `69449b3993dd` |
+| `a04d-typecheck-desktop.log` | `tsc -p tsconfig.desktop.json --noEmit`，`EXIT=0` | 见日志首行 | `00cc88ef3cf2` |
+| `a04d-typecheck-node.log` | `tsc -p tsconfig.node.json --noEmit`，`EXIT=0` | 见日志首行 | `e28829525127` |
+| `a04d-typecheck-app.log` | `npm run typecheck` 失败：起点已有的 renderer 假值缺成员，另加本卡新方法 | 见日志首行 | `5cbdb47aa410` |
+| `a04d-head-typecheck-app.log` | 起点 `0fad9d0` 干净副本同样失败（缺 `readAttachment/revealProject`） | `git archive 0fad9d0` 后 `tsc -p tsconfig.app.json --noEmit` | `64d4d5d3161c` |
+| `a04d-lint.log` | `npx eslint .`，`EXIT=0` | 见日志首行 | `c004f76ea5d1` |
+
