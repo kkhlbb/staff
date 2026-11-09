@@ -1,21 +1,18 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { useDesktopSession } from '../workspace/useDesktopSession'
+import { useBuiltinAssemblyView } from '../workspace/useBuiltinAssemblyView'
 import { calculateChain } from '../domain/calculate'
 import { formatMm } from '../domain/units'
 import { draftToChain } from '../workspace/draft'
 import { SessionDialogs } from '../components/SessionDialogs'
 import { DesktopChainView, DesktopSourceView, DesktopHistoryView } from '../components/DesktopSessionViews'
+import { ThreeViewport } from '../components/ThreeViewport'
+import { DEMO_PARTS, demoPart, isBuiltinPartId, partPropertyRows } from '../parts/shaftDemo'
 import './Workspace.css'
 import './DesktopWorkspace.css'
 
 const tabs = ['工程图', '3D', '来源 PDF', '尺寸链', '历史报告'] as const
 const groups = ['零件', '工程图', '尺寸链', '来源资料', '版本历史'] as const
-
-const placeholders = [
-  ['尚无工程图', 'C 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。'],
-  ['尚无 3D 模型', 'B1/B2 批次未实现：装配、爆炸视图与 STL 读取。'],
-
-]
 
 /** 只调整布局，不维护工程数据或计算状态。 */
 function Splitter({ label, value, min, max, onChange, horizontal = false, reverse = false }: {
@@ -49,8 +46,13 @@ export function DesktopWorkspace() {
   const session = useDesktopSession()
   const snapshot = session.state?.snapshot
   const project = snapshot?.project
+  const sessionId = session.state?.sessionId ?? null
   const [tab, setTab] = useState(0)
-  const [selection, setSelection] = useState<string | null>(null)
+  // 选择归属当前会话：换会话即派生为 null，不靠 effect 清理（也不会串场）。
+  const [selectionState, setSelectionState] = useState<{ sessionId: string | null; value: string | null }>({ sessionId: null, value: null })
+  const selection = selectionState.sessionId === sessionId ? selectionState.value : null
+  const setSelection = (value: string | null) => setSelectionState({ sessionId, value })
+  const demo = useBuiltinAssemblyView(sessionId)
   const [leftOpen, setLeftOpen] = useState(() => !window.matchMedia?.('(max-width: 600px)').matches)
   const [rightOpen, setRightOpen] = useState(() => !window.matchMedia?.('(max-width: 1100px)').matches)
   const [leftWidth, setLeftWidth] = useState(232)
@@ -70,6 +72,17 @@ export function DesktopWorkspace() {
     return () => { window.removeEventListener('keydown', keydown) }
   }, [exportOpen])
 
+  /**
+   * 启动页轴系示例入口：先建可另存的尺寸链会话，成功后才开启 3D 侧车。
+   * 3D 只在示例开启时挂载（动态 import three）；之后切标签保持挂载、只暂停渲染。
+   */
+  async function openShaftDemo() {
+    const created = await session.create('轴系示例（B1）· 示意装配', 'chain-demo')
+    if (!created) return
+    demo.activate(created)
+    setTab(1)
+  }
+
   function tabKey(event: KeyboardEvent<HTMLButtonElement>) {
     const next = event.key === 'ArrowRight' ? (tab + 1) % tabs.length : event.key === 'ArrowLeft' ? (tab + tabs.length - 1) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null
     if (next !== null) { event.preventDefault(); setTab(next); tabRefs.current[next]?.focus() }
@@ -80,22 +93,25 @@ export function DesktopWorkspace() {
   const calculation = result ? ({ within: '满足目标（非审查结论）', outside: '超出目标', 'no-target': '未设目标' }[result.status]) : '输入无效，未计算'
   const sourceState = snapshot ? `${snapshot.documents.length} 份资料 · ${snapshot.bindings.length} 个绑定 · 未审查附件可读性` : '未载入'
   const entries: Record<string, { id: string; label: string; properties: [string, string][] }[]> = {
-    零件: [], 工程图: [],
+    零件: demo.active ? DEMO_PARTS.map(part => ({ id: part.id, label: part.name, properties: partPropertyRows(part.id) })) : [],
+    工程图: [],
     尺寸链: project ? [{ id: 'chain', label: '当前尺寸链', properties: [['组成环', String(project.dimensionChain.terms.length)], ['计算预览', calculation]] }, ...project.dimensionChain.terms.map(term => ({ id: `term:${term.id}`, label: `${term.symbol} · ${term.name}`, properties: [['基本尺寸', `${formatMm(term.nominalQ)} mm`], ['下偏差', `${formatMm(term.lowerDeviationQ)} mm`], ['上偏差', `${formatMm(term.upperDeviationQ)} mm`], ['方向', term.sign === 1 ? '增环' : '减环'], ['来源备注', term.sourceNote || '无']] as [string, string][] }))] : [],
     来源资料: snapshot?.documents.map(doc => { const rev = snapshot.revisions.find(rev => rev.id === doc.latestRevisionId); return { id: `source:${doc.id}`, label: doc.title, properties: [['当前版本', doc.latestRevisionId], ['文件名', rev?.fileName ?? '缺失版本'], ['页数', String(rev?.pageCount ?? '未知')], ['附件状态', snapshot.missingAttachments.some(item => item.documentId === doc.id) ? '声明缺失' : '有元数据，未读取附件']] } }) ?? [],
     版本历史: snapshot?.fileRevisions.map(rev => ({ id: `rev:${rev.revisionId}`, label: `Rev ${rev.revisionId}`, properties: [['创建时间', rev.createdAt], ['原因', rev.reason], ['父版本', rev.parentId ?? '无']] })) ?? [],
   }
   const selected = Object.values(entries).flat().find(item => item.id === selection)
+  const selectedPart = isBuiltinPartId(selection) && demo.active ? demoPart(selection) : null
   const saveState = session.state?.lastError && ['PERMISSION_DENIED', 'NO_SPACE', 'WRITE_FAILED', 'VERIFY_FAILED', 'RENAME_FAILED', 'EXTERNAL_MODIFIED', 'SAVE_FAILED'].includes(session.state.lastError.code) ? '保存失败，编辑内容仍可继续处理' : !session.state?.path ? '未保存草稿' : session.state.saveStateKnown === false ? '已恢复会话 · 正式保存状态未知' : session.state.dirty ? '有未保存修改' : '已保存'
   const dialogs = <SessionDialogs session={session} />
   if (!project) return <main className="desktop-workspace" aria-label="寸链启动页">
-    <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">V3 · A 批次</span></header>
+    <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">V3 · B1 批次</span></header>
     <section className="desktop-workspace__start">
       <h2>打开项目，继续设计</h2><p>轴系轴向公差链分析</p>
       <div className="desktop-workspace__start-actions">
         <button disabled={session.busy} onClick={() => session.action('new')}>新建项目…</button>
         <button disabled={session.busy} aria-keyshortcuts="Meta+O" onClick={() => session.action('open')}>打开项目…</button>
         <button disabled={session.busy} onClick={() => void session.create('尺寸链示例（A）', 'chain-demo')}>打开内置示例 · 尺寸链示例（A）</button>
+        <button disabled={session.busy} onClick={() => void openShaftDemo()}>打开轴系示例 · 示意装配（B1）</button>
         <button disabled={session.busy} onClick={() => session.action('importV2')}>导入 V2 备份…</button>
       </div>
       {session.recovery.length > 0 && <section className="desktop-workspace__recovery"><h3>有尚未保存的恢复草稿</h3>{session.recovery.map(item => <div key={item.recoveryId}><span>{item.name} · {item.savedAt}</span>{item.error ? <p role="alert">{item.error}</p> : <button disabled={session.busy} onClick={() => void session.restore(item.recoveryId)}>恢复为未保存副本</button>}</div>)}</section>}
@@ -108,7 +124,7 @@ export function DesktopWorkspace() {
   return <main className="desktop-workspace" style={style} aria-label="寸链桌面工作台">
     <header className="desktop-workspace__titlebar">
       <h1>寸链 · {project.name}</h1><span>Rev {project.currentRevisionId}</span><span className="desktop-workspace__pending">{saveState}</span>
-      <span className="desktop-workspace__batch">V3 · A 批次</span>
+      <span className="desktop-workspace__batch">V3 · B1 批次</span>
     </header>
     <div className="desktop-workspace__toolbar" role="toolbar" aria-label="项目操作">
       <button disabled={session.busy} onClick={() => session.action('new')}>新建项目</button>
@@ -141,7 +157,7 @@ export function DesktopWorkspace() {
         <h2>项目树</h2>
         {groups.map(group => <details key={group} open>
           <summary>{group}</summary>
-          {entries[group].length ? entries[group].map(item => <button key={item.id} aria-pressed={selected?.id === item.id} onClick={() => { setSelection(item.id); if (group === '尺寸链') setTab(3); if (group === '版本历史') setTab(4) }}>{item.label}</button>) : <p>{group === '零件' ? '暂无零件 · B1/B2' : group === '工程图' ? '暂无工程图 · C 批次' : `暂无${group}`}</p>}
+          {entries[group].length ? entries[group].map(item => <button key={item.id} aria-pressed={selected?.id === item.id} onClick={() => { setSelection(item.id); if (group === '尺寸链') setTab(3); if (group === '版本历史') setTab(4) }}>{item.label}</button>) : <p>{group === '零件' ? '尚未打开轴系示例 · B1' : group === '工程图' ? '暂无工程图 · C 批次' : `暂无${group}`}</p>}
         </details>)}
       </aside>
       {leftOpen ? <Splitter label="项目树宽度" value={leftWidth} min={180} max={280} onChange={setLeftWidth} /> : <div />}
@@ -150,13 +166,28 @@ export function DesktopWorkspace() {
           {tabs.map((name, index) => <button key={name} ref={node => { tabRefs.current[index] = node }} role="tab" id={`desktop-tab-${index}`} aria-controls={`desktop-panel-${index}`} aria-selected={tab === index} tabIndex={tab === index ? 0 : -1} onKeyDown={tabKey} onClick={() => setTab(index)}>{name}</button>)}
         </div>
         {tabs.map((name, index) => <div key={name} role="tabpanel" id={`desktop-panel-${index}`} aria-labelledby={`desktop-tab-${index}`} tabIndex={0} hidden={tab !== index} className="desktop-workspace__canvas">
-          {index < 2 ? <><div className="desktop-workspace__placeholder"><span className="desktop-workspace__pending">○ 本批次未实现</span><h2>{placeholders[index][0]}</h2><p>{placeholders[index][1]}</p><p>当前选择：{selected?.label ?? '未选择对象'}</p><button disabled>{['生成 SVG 图纸', '载入 3D 模型'][index]}</button></div><div className="desktop-workspace__view-status">{name}占位 · 未载入内容 · 不代表已复核</div></> : tab === index && snapshot && (index === 2 ? <DesktopSourceView key={session.state!.sessionId} snapshot={snapshot} sessionId={session.state!.sessionId!} /> : index === 3 ? <DesktopChainView snapshot={snapshot} edit={session.edit} disabled={session.busy} /> : <DesktopHistoryView snapshot={snapshot} />)}
+          {index === 0 && <><div className="desktop-workspace__placeholder"><span className="desktop-workspace__pending">○ 本批次未实现</span><h2>尚无工程图</h2><p>C 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。</p><p>当前选择：{selected?.label ?? '未选择对象'}</p><button disabled>生成 SVG 图纸</button></div><div className="desktop-workspace__view-status">工程图占位 · 未载入内容 · 不代表已复核</div></>}
+          {index === 1 && (demo.active
+            ? <ThreeViewport selectedPartId={selectedPart?.id ?? null} onSelectPart={partId => setSelection(partId)} explodeT={demo.explodeT} onExplodeTChange={demo.setExplodeT} active={tab === 1} viewState={demo.view} onViewStateChange={demo.setView} />
+            : <div className="desktop-workspace__placeholder">
+              <span className="desktop-workspace__pending">○ 示例视图未开启</span>
+              <h2>尚无 3D 视图</h2>
+              <p>内置轴系示例是只读示意装配：阶梯轴、左轴承、隔套、右轴承、挡圈 5 个部件。STL 导入归 B2，本批次不提供可用入口。</p>
+              <p>示例与当前项目尺寸链未关联，几何固定，不随尺寸编辑变化。项目数据可保存；3D 示例视图状态仅本次会话保留，重新打开应用后需重新打开示例。</p>
+              <button type="button" onClick={() => demo.activate()}>查看内置轴系示例</button>
+            </div>)}
+          {index > 1 && tab === index && snapshot && (index === 2 ? <DesktopSourceView key={session.state!.sessionId} snapshot={snapshot} sessionId={session.state!.sessionId!} /> : index === 3 ? <DesktopChainView snapshot={snapshot} edit={session.edit} disabled={session.busy} /> : <DesktopHistoryView snapshot={snapshot} />)}
         </div>)}
       </section>
       {rightOpen ? <Splitter label="属性栏宽度" value={rightWidth} min={240} max={340} reverse onChange={setRightWidth} /> : <div />}
       <aside id="desktop-properties" className="desktop-workspace__properties" aria-label="属性栏" hidden={!rightOpen}>
         <h2>属性 · {selected?.label ?? '未选择'}</h2><p>选择项目树中的对象查看会话快照。</p>
         <dl><dt>项目版本</dt><dd>{project.currentRevisionId}</dd>{selected?.properties.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl>
+        {selectedPart && <section className="desktop-workspace__part-note" aria-label="示例部件只读说明">
+          <p className="desktop-workspace__pending">未关联尺寸链 · 示例几何（B1 只读）</p>
+          <button type="button" disabled>编辑参数（C 批次）</button>
+          <p>隔套参数化编辑与图纸标注归 C 批次；本批次只读显示内径/外径/长度，3D 变换不写入项目文件。</p>
+        </section>}
         <p className="desktop-workspace__pending">○ 尚无审查结论</p>
       </aside>
     </div>
