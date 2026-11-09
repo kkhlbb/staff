@@ -1,0 +1,11 @@
+PASS 打包应用启动并暴露 page target
+PASS 生产入口为本地 file://
+PASS 加载出本地桌面壳（找不到本地 UI 即失败）
+PASS 页面没有远程资源请求
+PASS 控制台没有远程请求错误
+INFO location=file:///Users/aston/DSH/wt/dsh-v3-A/out/%E5%AF%B8%E9%93%BE-darwin-arm64/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html
+INFO title="寸链"
+INFO body="寸链 · 桌面壳\n\n批次 A-01 只交付桌面壳与受限 IPC；工作台、项目会话和尺寸链示例由后续子卡实现。\n\npreload 桥\nwindow.cunlian 可用：onEditorFlush, onMenuAction, request"
+INFO resourceEntries=0 remote=[]
+INFO consoleErrors=[]
+OFFLINE_LAUNCH_RESULT=PASS

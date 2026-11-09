@@ -65,6 +65,9 @@ $ npm run package:desktop -- --arch=arm64
 PACKAGE_EXIT=0
 ```
 
+> 以上是网络可用条件下的记录。断网/不可达代理条件下**不能**打包成功，
+> 实测与归因见下文“未实现项与已知风险”最后一条。
+
 产物：`out/寸链-darwin-arm64/寸链.app`，实测 `du -sh` = **253M**。
 
 ### 打包产物离线冒烟（真实 Electron）
@@ -84,7 +87,10 @@ E2E_RESULT=PASS
 ```
 
 完整日志：`docs/v3-a/evidence/a01-e2e.log`
-窗口截图：`docs/v3-a/evidence/a01-shell.png`（1440×900，内容为“寸链 · 桌面壳”）
+窗口截图：`docs/v3-a/evidence/a01-shell.png`（内容 1440×868，内容为“寸链 · 桌面壳”；
+这是页面区截图，不含窗口标题栏。该图抓取命令当时未留存，仅以文件 mtime 定位）。
+离线启动与恢复后截图见 `docs/v3-a/evidence/README.md` §4（三张图已用不同窗口尺寸区分，
+SHA-256 不再相同）。
 
 ## 与任务卡的文字偏离（如实登记）
 
@@ -110,3 +116,42 @@ E2E_RESULT=PASS
 - **离线断网 Finder 双击**属 A-MAC-1 正式验收，需 A-05 在真实断网条件执行；本记录只证明
   本地 file:// 加载、无远程资源请求，不冒充 MAC-01 通过。
 - 未签名/未公证：本机产物可启动，不等于另一台 Mac 可交付（任务卡 §10 待用户拍板）。
+
+### 纯离线打包实测（失败，如实登记）
+
+2026-11-09 01:33 PST，在“不可达代理”条件下实测 `npm run package:desktop -- --arch=arm64`
+（未改系统网络设置，用 `ELECTRON_GET_USE_PROXY=true` + `HTTP(S)_PROXY=http://127.0.0.1:9`、
+`NO_PROXY=` 让 HTTP(S) 必然失败）：
+
+```
+✖ Copying files [FAILED: fetch failed]
+✖ Packaging for arm64 on darwin [FAILED: fetch failed]
+✖ Packaging application [FAILED: fetch failed]
+TypeError: fetch failed
+EXIT=1
+```
+
+失败位置固定为 `Packaging application → Copying files`（Electron 二进制/校验文件获取阶段），
+不是 Vite 构建失败。`@electron/get` 的 DEBUG 轨迹（`a01-offline-package-trace.log`）显示：
+
+```
+Checking the cache …/electron-v45.2.3-darwin-arm64.zip → Cache hit
+Downloading https://github.com/electron/electron/releases/download/v45.2.3/SHASUMS256.txt
+Artifact in cache didn't match checksums [TypeError: fetch failed]
+falling back to re-download
+Downloading …/electron-v45.2.3-darwin-arm64.zip → fetch failed
+```
+
+即：**zip 已在 `~/Library/Caches/electron` 命中缓存也不够**。`@electron/get` 5.1.0 的
+`validateArtifact` 对 `SHASUMS256.txt` 固定使用 `cacheMode=Bypass`（源码注释：
+`Never use the cache for loading checksums, load them fresh every time`），拿不到校验文件就把
+缓存 zip 判为不匹配并回退重新下载。空缓存（`HOME` 指向空目录）时则直接 `Cache miss` → 下载 zip 失败。
+
+结论：当前 Forge 8.0.1 + `@electron/get` 5.1.0 组合下**纯离线无法打包**，没有“只预热某个缓存
+就能离线打包”的路径；至少需要一次可访问 GitHub releases 的网络（用于 `SHASUMS256.txt`）。
+若必须离线构建，需要改 Forge/打包器配置（例如 `electronZipDir` 指向本地 zip，或
+`download.unsafelyDisableChecksums`，后者降低校验强度、需用户拍板）——本轮按要求未改代码/配置。
+证据：`docs/v3-a/evidence/a01-offline-package-{warm-cache,trace,empty-cache,empty-cache-trace}.log`。
+
+因此，本分支**不能**记为“断网环境可构建”；交付只能分发已构建的未签名 `.app`，或在有网环境
+重新执行 `npm run package:desktop -- --arch=arm64`。上面的打包成功记录均来自网络可用条件。

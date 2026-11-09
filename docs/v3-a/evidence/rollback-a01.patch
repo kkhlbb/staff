@@ -1,0 +1,25 @@
+diff --git a/desktop/main/window.ts b/desktop/main/window.ts
+index 5fe83ad..cd10ed8 100644
+--- a/desktop/main/window.ts
++++ b/desktop/main/window.ts
+@@ -37,11 +37,15 @@ export interface CreateMainWindowOptions {
+  */
+ export function createMainWindow(options: CreateMainWindowOptions): MainWindowHandle {
+   const rendererIndexPath = resolveRendererIndexPath()
+-  const devServerUrl = normalizeDevServerUrl(
+-    typeof MAIN_WINDOW_VITE_DEV_SERVER_URL === 'string'
+-      ? MAIN_WINDOW_VITE_DEV_SERVER_URL
+-      : undefined,
+-  )
++  // ===== 回退实验定点变异（仅本地实验，不提交）=====
++  // 旧策略：生产包也走开发 URL 加载；没有 Forge 注入地址时回落到经典 5173。
++  const devServerUrl =
++    normalizeDevServerUrl(
++      typeof MAIN_WINDOW_VITE_DEV_SERVER_URL === 'string'
++        ? MAIN_WINDOW_VITE_DEV_SERVER_URL
++        : undefined,
++    ) ?? 'http://localhost:5173/'
++  // ===== 变异结束 =====
+ 
+   const window = new BrowserWindow({
+     width: 1440,

@@ -1,0 +1,15 @@
+PASS 打包应用启动并暴露 page target
+FAIL 生产入口为本地 file:// got=chrome-error://chromewebdata/
+FAIL 加载出本地桌面壳（找不到本地 UI 即失败） body=""
+PASS 页面没有远程资源请求
+FAIL 控制台没有远程请求错误 failures=["net::ERR_PROXY_CONNECTION_FAILED"]
+FAIL 没有 http(s) 文档/资源请求（生产包不得回退开发 URL） remoteRequests=["http://localhost:5173/"]
+INFO location=chrome-error://chromewebdata/
+INFO documentRequest=http://localhost:5173/
+INFO remoteRequests=["http://localhost:5173/"]
+INFO title=""
+INFO body=""
+INFO resourceEntries=0 remote=[]
+INFO consoleErrors=[]
+INFO screenshot=/Users/aston/DSH/wt/dsh-v3-A/docs/v3-a/evidence/rollback/a01-offline-red.png
+OFFLINE_LAUNCH_RESULT=FAIL(生产入口为本地 file://,加载出本地桌面壳（找不到本地 UI 即失败）,控制台没有远程请求错误,没有 http(s) 文档/资源请求（生产包不得回退开发 URL）)
