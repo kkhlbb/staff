@@ -241,6 +241,14 @@ export class RecoveryStore {
     return this.sessions.get(sessionId)?.pending !== null
   }
 
+  /**
+   * 只读当前跟踪的草稿状态，供 session:reattach 报告；不触发写入、不改变
+   * pending 或定时器。main 未跟踪该会话时返回 `none`。
+   */
+  stateOf(sessionId: string): RecoveryWriteState | 'none' {
+    return this.sessions.get(sessionId)?.lastState ?? 'none'
+  }
+
   /** 草稿被正式保存或用户明确放弃后清理；清理失败不否认主操作。 */
   async discard(sessionId: string): Promise<void> {
     const state = this.sessions.get(sessionId)

@@ -19,11 +19,12 @@ import type {
   RecentProjectListValue,
   RecentProjectItem,
   RecoveryListValue,
+  SessionReattachValue,
   SourceReadValue,
 } from '../shared/contracts'
 import { IPC_CHANNELS } from '../shared/contracts'
 import type { SenderGuard } from './senderGuard'
-import { decodeProjectFile } from '../../src/project-file/codec'
+import { decodeProjectFile, toSnapshotDto } from '../../src/project-file/codec'
 import type { ProjectFileSnapshot } from '../../src/project-file/types'
 import { sha256Hex } from '../../src/sources/hash'
 import { DEFAULT_SOURCE_LIMITS, formatMiB } from '../../src/sources/limits'
@@ -586,6 +587,31 @@ export function registerProjectChannels(ipc: IpcMainLike, deps: ProjectChannelDe
           }
           return controller.toOpenValue(session, warnings)
         })
+      },
+    },
+    ipcDeps,
+  )
+
+  installChannel(
+    ipc,
+    {
+      channel: IPC_CHANNELS.sessionReattach,
+      schema: projectSchemas.empty,
+      handle: async ({ sender }): Promise<SessionReattachValue> => {
+        // 只读重新挂接：不跑 gate、不 flush 草稿、不 attach/adopt。
+        // main 内存里没有活动会话时只报告 null，绝不自动新建。
+        const session = controller.sessionFor(sender.webContentsId)
+        if (session === null) {
+          return { session: null }
+        }
+        return {
+          sessionId: session.sessionId,
+          editSeq: session.acceptedSeq,
+          snapshot: toSnapshotDto(session.snapshot),
+          path: session.path,
+          fingerprint: session.fingerprint,
+          recovery: recovery.stateOf(session.sessionId),
+        }
       },
     },
     ipcDeps,

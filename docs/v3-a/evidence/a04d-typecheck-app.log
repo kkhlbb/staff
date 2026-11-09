@@ -1,0 +1,7 @@
+
+> staff@2.0.0 typecheck
+> tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit
+
+src/pages/DesktopWorkspace.test.tsx(16,3): error TS2739: Type '{ newProject: Mock<() => Promise<{ ok: true; value: ProjectOpenValue; }>>; openProject: Mock<() => Promise<{ ok: true; value: ProjectOpenValue; }>>; ... 12 more ...; respondEditorFlush: Mock<...>; }' is missing the following properties from type 'CunlianApi': reattachSession, readAttachment, revealProject
+
+EXIT=2

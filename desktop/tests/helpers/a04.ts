@@ -170,6 +170,8 @@ export interface Harness {
   relinkPathCalls: number
   /** 每次 reveal 端口被调用时记录的路径，用于断言只传会话正式路径。 */
   revealCalls: string[]
+  /** main 实际创建的会话 ID 顺序；用于断言 reattach 未命中不会新建会话。 */
+  createdSessionIds: string[]
   /** 打开/另存/relink 对话框的下一次返回值；测试可直接改。 */
   openQueue: (string | null)[]
   relinkQueue: (string | null)[]
@@ -187,8 +189,13 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
   const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'cunlian-a04-'))
   const workspace = path.join(directory, 'workspace')
   let counter = 0
+  const createdSessionIds: string[] = []
   const projectService = new ProjectService({
-    newSessionId: () => `session-${(counter += 1)}`,
+    newSessionId: () => {
+      const sessionId = `session-${(counter += 1)}`
+      createdSessionIds.push(sessionId)
+      return sessionId
+    },
     store: new FileStore(options.fileOps === undefined ? {} : { ops: options.fileOps }),
   })
   const recovery = new RecoveryStore({
@@ -222,6 +229,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
     openPathCalls: 0,
     relinkPathCalls: 0,
     revealCalls: [],
+    createdSessionIds,
     openQueue,
     relinkQueue,
     saveTargetValue: options.saveTarget ?? null,

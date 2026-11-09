@@ -1,0 +1,5 @@
+> npx tsc -p tsconfig.node.json --noEmit
+> (tsconfig.node.json 不含 src/pages；本卡未改 src/**)
+
+
+EXIT=0

@@ -113,6 +113,34 @@ describe('最近项目索引', () => {
     expect(listed.value.items[0].path).toBe(target)
   })
 
+  it('list 带当前正式版本号；路径失效时为 null 且保留 missing', async () => {
+    const recent = store()
+    const sample = await createSampleSnapshot()
+    const encoded = await encodeProjectFile(sample)
+    if (!encoded.ok) throw new Error('encode failed')
+    const target = path.join(directory, 'versioned.cunlian')
+    await fsp.writeFile(target, encoded.value.bytes)
+    await recent.record({
+      projectId: SAMPLE_PROJECT_ID,
+      name: '隔套间隙演示',
+      path: target,
+      fingerprint: fingerprint('a'),
+    })
+
+    const listed = await recent.list()
+    expect(listed.ok).toBe(true)
+    if (!listed.ok) return
+    expect(listed.value.items[0].missing).toBe(false)
+    expect(listed.value.items[0].rev).toBe(sample.project.currentRevisionId)
+
+    await fsp.unlink(target)
+    const gone = await recent.list()
+    expect(gone.ok).toBe(true)
+    if (!gone.ok) return
+    expect(gone.value.items[0].missing).toBe(true)
+    expect(gone.value.items[0].rev).toBeNull()
+  })
+
   it('索引损坏时报 INDEX_READ_FAILED，写入前把损坏文件隔离', async () => {
     const recent = store()
     const indexFile = path.join(directory, 'recent-projects.v1.json')
@@ -207,6 +235,7 @@ describe('最近项目索引', () => {
       expect(relinked.value.item.path).toBe(moved)
       expect(relinked.value.item.missing).toBe(false)
       expect(relinked.value.item.recentId).toBe(recentId)
+      expect(relinked.value.item.rev).toBe(sample.project.currentRevisionId)
     }
   })
 })

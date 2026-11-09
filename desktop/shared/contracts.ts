@@ -27,6 +27,8 @@ export const IPC_CHANNELS = {
   recentRelink: 'recent:relink',
   recoveryList: 'recovery:list',
   recoveryRestore: 'recovery:restore',
+  /** 渲染器整页重载后重新挂接 main 已有的活动会话（A-04d）。 */
+  sessionReattach: 'session:reattach',
   sourceRead: 'source:read',
   projectReveal: 'project:reveal',
   windowRequestClose: 'window:request-close',
@@ -184,6 +186,33 @@ export interface ProjectRevealValue {
   shown: true
 }
 
+/** 重新挂接时 main 对该会话恢复草稿的只读状态；`none` 表示 main 未跟踪草稿。 */
+export type SessionRecoveryState = RecoveryWriteState | 'none'
+
+/**
+ * `session:reattach` 命中的会话。
+ *
+ * `editSeq` 是 main 已接受的最新编辑序号（不是 renderer 重载后丢失的本地序号）；
+ * 是否 dirty 仍只由 main 用 `acceptedSeq > savedSeq` 判定，本 DTO 不带 dirty 字段，
+ * renderer 也无法用它改写 main 状态。
+ */
+export interface ReattachedSession {
+  sessionId: string
+  editSeq: number
+  snapshot: SnapshotDto
+  path: string | null
+  fingerprint: string | null
+  recovery: SessionRecoveryState
+}
+
+/**
+ * `session:reattach` 的返回值：main 内存里有活动会话时返回会话字段本身
+ * （无外层 `session` 键），没有时返回 `{session:null}`。
+ *
+ * 未命中不会新建会话，也不会触发 dirty gate 或草稿写入。
+ */
+export type SessionReattachValue = ReattachedSession | { session: null }
+
 export interface RecentProjectItem {
   recentId: string
   projectId: string
@@ -192,6 +221,19 @@ export interface RecentProjectItem {
   lastOpenedAt: string
   /** 索引里记录的文件已不存在、不是常规文件或不可读时为 true。 */
   missing: boolean
+  /**
+   * 磁盘上该项目的当前正式版本标识（`project.currentRevisionId` 对应的
+   * `fileRevisions[].revisionId`）。
+   *
+   * 路径失效、文件不可读、容器校验失败或 `currentRevisionId` 对应不到版本记录
+   * 时一律为 null，不猜测、不复用索引里的旧值。
+   *
+   * main 的 `recent:list`/`recent:relink` 总是返回该字段；类型上保留可选仅为
+   * 兼容本卡不得修改的旧 renderer mock（`src/pages/DesktopWorkspace.test.tsx`
+   * 的 listRecent 假值尚未带 rev）。缺少字段不等于“版本未知”，renderer 应把
+   * `undefined` 与 `null` 都按不可用处理。
+   */
+  rev?: string | null
 }
 
 export interface RecentProjectListValue {
@@ -276,6 +318,11 @@ export interface CunlianApi {
   listRecovery(): Promise<IpcResult<RecoveryListValue>>
   /** 恢复为 path=null 的未保存副本；dirty gate 后原子切换。 */
   restoreRecovery(request: { recoveryId: string }): Promise<IpcResult<ProjectOpenValue>>
+  /**
+   * 重新挂接当前窗口在 main 里的活动会话（整页重载后使用）。
+   * 没有活动会话时返回 `{session:null}`；不新建会话、不跑 dirty gate。
+   */
+  reattachSession(): Promise<IpcResult<SessionReattachValue>>
   /** 读取当前会话或其历史归档里某个来源版本的附件字节；不接受路径/blobKey。 */
   readAttachment(request: {
     sessionId: string

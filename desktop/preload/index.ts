@@ -21,6 +21,7 @@ import {
   type RecentProjectListValue,
   type RecoveryListValue,
   type RequestCloseResult,
+  type SessionReattachValue,
   type SourceReadValue,
 } from '../shared/contracts'
 
@@ -89,6 +90,11 @@ const api: CunlianApi = {
       IPC_CHANNELS.recoveryRestore,
       request,
     ) as Promise<IpcResult<ProjectOpenValue>>,
+  reattachSession: () =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.sessionReattach,
+      {},
+    ) as Promise<IpcResult<SessionReattachValue>>,
   readAttachment: (request) =>
     ipcRenderer.invoke(
       IPC_CHANNELS.sourceRead,
