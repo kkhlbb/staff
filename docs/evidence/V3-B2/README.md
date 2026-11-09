@@ -41,7 +41,7 @@
 | `npm run build` | exit 0；modelScene/threeScene 独立 chunk | logs/build.log |
 | `npm run package:desktop` | exit 0；`out/寸链-darwin-arm64/寸链.app`（arm64，255 MB） | logs/package.log |
 
-稳定性说明：全套并发运行曾出现 1 次既有测试偶发失败（`DesktopWorkspace.test.tsx` 的 B1-A07 一次、`Workspace.test.tsx` 的保存导出一次）；对应文件单独运行 5/5 通过，最终全套运行两次通过（一次 709/709、一次 708/709 后复跑 709/709）。不把偶发失败说成稳定通过。
+稳定性说明：全套并发运行曾出现 2 次既有测试偶发失败（`DesktopWorkspace.test.tsx` 的 B1-A07 一次；`Workspace.test.tsx` 的“保存失败时的备份导出”一次）。后台连跑 3 次完整 `npm test` 的记录为：709 通过 → 708 通过/1 失败（失败项即上述 Workspace 备份导出用例）→ 709 通过；两个失败文件单独运行各 5/5 通过，失败与 B2 改动无因果关系（B2 未改该用例涉及的存储/导出路径）。基线（改动前）全套为 674 src + 113 desktop 通过。不把偶发失败说成稳定通过，也不把它冒充成 B2 回归。
 
 ## 5. 老文件（B1 产物）实测
 
