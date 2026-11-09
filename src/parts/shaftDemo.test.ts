@@ -138,6 +138,23 @@ describe('B1 几何夹具 · ID 与单位', () => {
     expect(map.get('关联尺寸链')).toContain('未关联')
     expect(rows.some(([key]) => key.includes('S'))).toBe(false)
   })
+
+  it('爆炸位移：当前值随 t 变化，静态上限单独成行（不再用 0 冒充当前值）', () => {
+    const at = (id: BuiltinPartId, t?: number) => new Map(partPropertyRows(id, t))
+    const fixed = at('builtin:shaft-demo:spacer', 1)
+    expect(fixed.get('爆炸位移（当前）')).toBe('0.0 mm（X）')
+    expect(fixed.get('设计最大位移（上限）')).toBe('0.0 mm（X）（装配基准，不参与爆炸）')
+    expect(at('builtin:shaft-demo:shaft', 1).get('爆炸位移（当前）')).toBe('0.0 mm（X）')
+    expect(at('builtin:shaft-demo:bearing-left', 0).get('爆炸位移（当前）')).toBe('0.0 mm（X）')
+    expect(at('builtin:shaft-demo:bearing-left', 0.5).get('爆炸位移（当前）')).toBe('-12.0 mm（X）')
+    expect(at('builtin:shaft-demo:bearing-left', 1).get('爆炸位移（当前）')).toBe('-24.0 mm（X）')
+    expect(at('builtin:shaft-demo:bearing-left', 1).get('设计最大位移（上限）')).toBe('-24.0 mm（X）')
+    expect(at('builtin:shaft-demo:bearing-right', 1).get('爆炸位移（当前）')).toBe('+24.0 mm（X）')
+    expect(at('builtin:shaft-demo:retaining-ring', 1).get('爆炸位移（当前）')).toBe('-48.0 mm（X）')
+    // t 超界按 clamp 处理，与渲染层一致
+    expect(at('builtin:shaft-demo:bearing-right', 3).get('爆炸位移（当前）')).toBe('+24.0 mm（X）')
+    expect(at('builtin:shaft-demo:bearing-right', -1).get('爆炸位移（当前）')).toBe('0.0 mm（X）')
+  })
 })
 
 describe('B1 相机 pose 与滑条换算', () => {

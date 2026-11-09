@@ -313,6 +313,24 @@ describe('B1 内置轴系示例整合', () => {
     expect(within(tree()).getByRole('button', { name: '隔套' })).toHaveAttribute('aria-pressed', 'true')
   })
 
+  it('B1 属性栏「爆炸位移（当前）」随滑条变化，「设计最大位移（上限）」为静态值', async () => {
+    await openShaftExample()
+    fireEvent.click(within(tree()).getByRole('button', { name: '左轴承' }))
+    const panel = document.getElementById('desktop-properties')!
+    const value = (key: string) => within(panel).getByText(key).nextElementSibling?.textContent
+    expect(value('爆炸位移（当前）')).toBe('0.0 mm（X）')
+    expect(value('设计最大位移（上限）')).toBe('-24.0 mm（X）')
+    fireEvent.change(screen.getByRole('slider', { name: '爆炸程度' }), { target: { value: '100' } })
+    expect(value('爆炸位移（当前）')).toBe('-24.0 mm（X）')
+    fireEvent.change(screen.getByRole('slider', { name: '爆炸程度' }), { target: { value: '50' } })
+    expect(value('爆炸位移（当前）')).toBe('-12.0 mm（X）')
+    fireEvent.click(screen.getByRole('button', { name: '复位装配' }))
+    expect(value('爆炸位移（当前）')).toBe('0.0 mm（X）')
+    fireEvent.click(within(tree()).getByRole('button', { name: '隔套' }))
+    expect(value('爆炸位移（当前）')).toBe('0.0 mm（X）')
+    expect(value('设计最大位移（上限）')).toBe('0.0 mm（X）（装配基准，不参与爆炸）')
+  })
+
   it('B1-A07 标签保持：切走时暂停渲染，切换后选择/爆炸/实例不丢', async () => {
     await openShaftExample()
     fireEvent.click(within(tree()).getByRole('button', { name: '隔套' }))

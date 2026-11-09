@@ -93,7 +93,7 @@ export function DesktopWorkspace() {
   const calculation = result ? ({ within: '满足目标（非审查结论）', outside: '超出目标', 'no-target': '未设目标' }[result.status]) : '输入无效，未计算'
   const sourceState = snapshot ? `${snapshot.documents.length} 份资料 · ${snapshot.bindings.length} 个绑定 · 未审查附件可读性` : '未载入'
   const entries: Record<string, { id: string; label: string; properties: [string, string][] }[]> = {
-    零件: demo.active ? DEMO_PARTS.map(part => ({ id: part.id, label: part.name, properties: partPropertyRows(part.id) })) : [],
+    零件: demo.active ? DEMO_PARTS.map(part => ({ id: part.id, label: part.name, properties: partPropertyRows(part.id, demo.explodeT) })) : [],
     工程图: [],
     尺寸链: project ? [{ id: 'chain', label: '当前尺寸链', properties: [['组成环', String(project.dimensionChain.terms.length)], ['计算预览', calculation]] }, ...project.dimensionChain.terms.map(term => ({ id: `term:${term.id}`, label: `${term.symbol} · ${term.name}`, properties: [['基本尺寸', `${formatMm(term.nominalQ)} mm`], ['下偏差', `${formatMm(term.lowerDeviationQ)} mm`], ['上偏差', `${formatMm(term.upperDeviationQ)} mm`], ['方向', term.sign === 1 ? '增环' : '减环'], ['来源备注', term.sourceNote || '无']] as [string, string][] }))] : [],
     来源资料: snapshot?.documents.map(doc => { const rev = snapshot.revisions.find(rev => rev.id === doc.latestRevisionId); return { id: `source:${doc.id}`, label: doc.title, properties: [['当前版本', doc.latestRevisionId], ['文件名', rev?.fileName ?? '缺失版本'], ['页数', String(rev?.pageCount ?? '未知')], ['附件状态', snapshot.missingAttachments.some(item => item.documentId === doc.id) ? '声明缺失' : '有元数据，未读取附件']] } }) ?? [],

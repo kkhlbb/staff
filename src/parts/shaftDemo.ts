@@ -190,14 +190,27 @@ export function explodeTFromSlider(raw: string | number): number | null {
   return Math.min(1, Math.max(0, value / 100))
 }
 
-/** 只读属性行：属性栏与测试共用同一来源。 */
-export function partPropertyRows(id: BuiltinPartId): [string, string][] {
+/** 带符号 mm 显示；-0 归一成 0.0，避免出现 “-0.0”。 */
+function signedExplodeMm(value: number): string {
+  const normalized = value === 0 ? 0 : value
+  return `${normalized > 0 ? '+' : ''}${normalized.toFixed(1)} mm（X）`
+}
+
+/**
+ * 只读属性行：属性栏与测试共用同一来源。
+ * explodeT 是当前爆炸进度（0–1），缺省按装配态 0 计算；「当前」行随滑条变化，
+ * 「设计最大位移（上限）」是本件的静态设计参数，二者分开，不再用静态值冒充当前值。
+ */
+export function partPropertyRows(id: BuiltinPartId, explodeT = 0): [string, string][] {
   const def = parts[id]
   const [from, to] = def.xRange
+  const t = assertExplodeT(explodeT)
+  const fixed = def.explodeX === 0
   const rows: [string, string][] = [
     ['类型', '内置示意部件（只读）'],
     ['装配 X 区间', `${formatMm(Math.round(from * Q_PER_MM))} … ${formatMm(Math.round(to * Q_PER_MM))} mm`],
-    ['爆炸最大位移', `${def.explodeX >= 0 ? '+' : ''}${def.explodeX.toFixed(1)} mm（X）`],
+    ['爆炸位移（当前）', fixed ? '0.0 mm（X）' : signedExplodeMm(t * def.explodeX)],
+    ['设计最大位移（上限）', `${signedExplodeMm(def.explodeX)}${fixed ? '（装配基准，不参与爆炸）' : ''}`],
   ]
   if (def.shape.kind === 'ring') {
     rows.push(
