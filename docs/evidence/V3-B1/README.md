@@ -67,7 +67,8 @@ attributes: antialias=true depth=true preserveDrawingBuffer=false stencil=false
   `1,266.05 kB / gzip 400.40 kB` → `1,276.78 kB / gzip 404.05 kB`，
   即 **+10.73 kB 原始 / +3.65 kB gzip**。three 不在首屏 chunk 内，只进懒加载 chunk。
 - `out/寸链-darwin-arm64/寸链.app` = 255.2 MiB，`app.asar` = 3,102,555 B。
-  基线 `.app` 大小**未测**：基线 `out/` 已被本轮 `package` 覆盖，未保留副本，不编造增量。
+  基线 `.app` 大小**未测**：本批次开工前该工作树没有 `out/`（首个 `package` 才生成目录），
+  不存在可量的基线打包副本，也不编造增量。
 
 ## 5. 两个尺寸的真实截图
 
