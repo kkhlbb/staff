@@ -263,8 +263,9 @@ export class DesktopSessionAdapter {
       this.resetState({
         ...INITIAL_STATE, status: 'open', sessionId: value.sessionId,
         snapshot: value.snapshot, path: value.path, fingerprint: value.fingerprint,
-        localSeq: value.editSeq, acceptedSeq: value.editSeq,
-        recovery: value.recovery, saveStateKnown: false,
+        localSeq: value.editSeq, acceptedSeq: value.editSeq, savedSeq: value.savedSeq,
+        dirty: value.editSeq > value.savedSeq, saveStateKnown: true,
+        recovery: value.recovery,
       })
     }
     return result

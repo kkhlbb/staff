@@ -150,9 +150,9 @@ describe('A-04c 实质页面', () => {
     expect(await screen.findByText(/Rev rev-real-7/)).toBeInTheDocument()
   })
   it('启动重新挂接 main 会话，沿用序号 stage，重挂接不伪报已保存', async () => {
-    vi.mocked(api.reattachSession).mockResolvedValue({ ok: true, value: { ...opened, editSeq: 7, path: '/p.cunlian', recovery: 'pending' } })
+    vi.mocked(api.reattachSession).mockResolvedValue({ ok: true, value: { ...opened, editSeq: 7, savedSeq: 0, path: '/p.cunlian', recovery: 'pending' } })
     render(<DesktopWorkspace />)
-    await screen.findByText('已恢复会话 · 正式保存状态未知')
+    await screen.findByText('有未保存修改')
     expect(api.newProject).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('tab', { name: '尺寸链' }))
     await waitFor(() => expect(screen.getByLabelText('第 1 行 H 基本尺寸')).toBeEnabled())
