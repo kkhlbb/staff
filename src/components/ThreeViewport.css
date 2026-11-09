@@ -6,21 +6,15 @@
   background: var(--bg, #f5f7fa);
 }
 .three-viewport__banner {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   margin: 0;
   padding: 8px 12px;
-  color: var(--muted, #526075);
+  color: #6b4a12;
   border-bottom: 1px solid var(--border, #d9e0e9);
   background: var(--pending-bg, #fff4dd);
+  overflow-wrap: anywhere;
 }
 .three-viewport__banner strong {
   color: #92400e;
-}
-.three-viewport__banner span {
-  color: #6b4a12;
-  overflow-wrap: anywhere;
 }
 .three-viewport__toolbar {
   display: flex;
@@ -36,16 +30,28 @@
   min-width: 28px;
 }
 .three-viewport__gap {
-  flex: 1 1 8px;
+  flex: 0 1 8px;
 }
 .three-viewport__slider {
   display: flex;
+  flex: 1 1 190px;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   color: var(--muted, #526075);
 }
+.three-viewport__slider-label {
+  white-space: nowrap;
+}
+.three-viewport__group {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
 .three-viewport__slider input[type='range'] {
-  width: clamp(96px, 22vw, 180px);
+  flex: 1 1 auto;
+  min-width: 72px;
+  width: auto;
   min-height: 32px;
 }
 .three-viewport__slider output {
@@ -111,4 +117,19 @@
 .three-viewport__selection {
   margin-left: auto;
   color: var(--text, #172033);
+}
+/* 小窗（960×640 这类最小窗口）：压缩装饰性留白，把高度让给画布；控件仍保持 32px 命中区。 */
+@media (max-height: 760px) {
+  .three-viewport__banner {
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+  .three-viewport__toolbar {
+    gap: 6px;
+    padding: 4px 8px;
+  }
+  .three-viewport__status {
+    padding: 2px 12px;
+  }
 }

@@ -178,14 +178,14 @@ export function ThreeViewport(props: ThreeViewportProps) {
       data-part-count={String(BUILTIN_PART_IDS.length)}
     >
       <p className="three-viewport__banner">
-        <strong>内置轴系示例 · 示意装配</strong>
-        <span>与当前项目尺寸链未关联；几何固定，不随尺寸编辑变化。项目数据可保存，3D 示例视图状态仅本次会话保留，重新打开应用后需重新打开示例。</span>
+        <strong>内置轴系示例 · 示意装配</strong>{' '}
+        与当前项目尺寸链未关联；几何固定，不随尺寸编辑变化。项目数据可保存；3D 视图状态仅本次会话保留，重开应用后需重新打开示例。
       </p>
       <div className="three-viewport__toolbar" role="toolbar" aria-label="3D 视图操作">
         <button type="button" disabled={!ready} onClick={() => props.onExplodeTChange(0)}>装配</button>
         <button type="button" disabled={!ready} onClick={() => props.onExplodeTChange(1)}>爆炸</button>
         <label className="three-viewport__slider">
-          <span>爆炸程度</span>
+          <span className="three-viewport__slider-label">爆炸程度</span>
           <input
             type="range"
             min={0}
@@ -199,11 +199,15 @@ export function ThreeViewport(props: ThreeViewportProps) {
           />
           <output aria-hidden="true">{sliderValue}%</output>
         </label>
-        <span className="three-viewport__gap" />
-        <button type="button" disabled={!ready} onClick={() => sceneRef.current?.zoomBy(1.25)} aria-label="放大">放大</button>
-        <button type="button" disabled={!ready} onClick={() => sceneRef.current?.zoomBy(0.8)} aria-label="缩小">缩小</button>
-        <button type="button" disabled={!ready} onClick={() => sceneRef.current?.resetView()}>重置视角</button>
-        <button type="button" disabled={!ready} onClick={resetAssembly}>复位装配</button>
+        <span className="three-viewport__gap" aria-hidden="true" />
+        <span className="three-viewport__group">
+          <button type="button" disabled={!ready} onClick={() => sceneRef.current?.zoomBy(1.25)} aria-label="放大">放大</button>
+          <button type="button" disabled={!ready} onClick={() => sceneRef.current?.zoomBy(0.8)} aria-label="缩小">缩小</button>
+        </span>
+        <span className="three-viewport__group">
+          <button type="button" disabled={!ready} onClick={() => sceneRef.current?.resetView()}>重置视角</button>
+          <button type="button" disabled={!ready} onClick={resetAssembly}>复位装配</button>
+        </span>
       </div>
       <div className="three-viewport__stage">
         {status === 'error' ? (

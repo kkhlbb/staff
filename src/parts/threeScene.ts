@@ -99,21 +99,44 @@ const NEAR = 0.5
 const FAR = 5000
 const DEG2RAD = Math.PI / 180
 
-/** 完整爆炸包围盒的半对角线：默认 framing 按它适配，保证 100% 不裁切。 */
-function explodedRadius(): number {
-  const [minX, minY, minZ] = EXPLODED_BOUNDS.min
-  const [maxX, maxY, maxZ] = EXPLODED_BOUNDS.max
-  return Math.hypot((maxX - minX) / 2, (maxY - minY) / 2, (maxZ - minZ) / 2)
+/**
+ * 默认 framing：把「完整爆炸包围盒」的 8 个角点都装进视锥，四周至少 10% 留白。
+ *
+ * 用包围盒逐角点求最小距离，而不是包围球：球会多留 30%+ 空白，导致模型在画布上过小。
+ * 仍以 t=1（爆炸 100%）为适配目标，所以拉到 100% 也不会被裁切。
+ */
+export function framingDistanceForAspect(aspect: number, direction: Vector3): number {
+  const safeAspect = Number.isFinite(aspect) && aspect > 0.2 ? aspect : 1
+  const tanV = Math.tan((FOV * DEG2RAD) / 2)
+  const tanH = tanV * safeAspect
+  const margin = 1.1
+  const forward = direction.clone().normalize().negate()
+  const right = new Vector3().crossVectors(forward, new Vector3(0, 1, 0)).normalize()
+  const up = new Vector3().crossVectors(right, forward).normalize()
+  let distance = 1
+  for (const x of [EXPLODED_BOUNDS.min[0], EXPLODED_BOUNDS.max[0]]) {
+    for (const y of [EXPLODED_BOUNDS.min[1], EXPLODED_BOUNDS.max[1]]) {
+      for (const z of [EXPLODED_BOUNDS.min[2], EXPLODED_BOUNDS.max[2]]) {
+        const corner = new Vector3(x, y, z)
+        const u = corner.dot(right)
+        const v = corner.dot(up)
+        const w = corner.dot(forward)
+        // 角点深度 = distance + w；要求 |v| * margin ≤ depth * tanV 且 |u| * margin ≤ depth * tanH。
+        distance = Math.max(
+          distance,
+          (Math.abs(v) * margin) / tanV - w,
+          (Math.abs(u) * margin) / tanH - w,
+        )
+      }
+    }
+  }
+  return distance
 }
 
 /** 默认斜视：能看到端面孔与台阶，而不是正对轴线。 */
 export function defaultViewForAspect(aspect: number): DemoViewState {
-  const safeAspect = Number.isFinite(aspect) && aspect > 0.2 ? aspect : 1
-  const vFov = FOV * DEG2RAD
-  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * safeAspect)
-  const limiting = Math.min(vFov, hFov)
-  const distance = Math.max(1, explodedRadius() / Math.sin(limiting / 2)) * 1.1
   const direction = new Vector3(0.85, 0.42, 1).normalize()
+  const distance = Math.max(1, framingDistanceForAspect(aspect, direction))
   return {
     position: [direction.x * distance, direction.y * distance, direction.z * distance],
     target: [0, 0, 0],
