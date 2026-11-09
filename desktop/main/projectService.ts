@@ -11,6 +11,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import { decodeProjectFile, encodeProjectFile, toSnapshotDto } from '../../src/project-file/codec'
+import { assembleSnapshot } from '../../src/project-file/validation'
 import type { ProjectFileSnapshot } from '../../src/project-file/types'
 import type { IpcErrorCode, IpcErrorPayload, IpcResult } from '../shared/contracts'
 import { FileStore, type SaveError } from './fileStore'
@@ -119,6 +120,18 @@ export class ProjectService {
     if (!decoded.ok) {
       return ipcFailure(decoded.error.code, decoded.error.message, decoded.error.detail)
     }
+    return this.adoptSnapshot(decoded.value.snapshot, targetPath, fingerprint)
+  }
+
+  /**
+   * 用 main 已构造/已校验的内存聚合建立会话（新建项目、恢复草稿）。
+   * 不写磁盘；附件字节继续由 main 持有。
+   */
+  adoptSnapshot(
+    snapshot: ProjectFileSnapshot,
+    targetPath: string | null,
+    fingerprint: string | null,
+  ): IpcResult<OpenResult> {
     const sessionId = this.newSessionId()
     const session: ProjectSession = {
       sessionId,
@@ -126,7 +139,7 @@ export class ProjectService {
       savedSeq: 0,
       path: null,
       fingerprint: null,
-      snapshot: decoded.value.snapshot,
+      snapshot,
     }
     if (targetPath !== null && fingerprint !== null) {
       session.path = targetPath
@@ -176,6 +189,88 @@ export class ProjectService {
     session.snapshot = snapshot
     session.acceptedSeq = editSeq
     return { ok: true, value: { acceptedSeq: editSeq } }
+  }
+
+  /**
+   * 接受 renderer 的非附件 DTO（A-04 IPC 入口）。
+   *
+   * 与 `stage` 的区别：附件字节只取 main 已持有的副本，renderer 不能注入
+   * 新字节或路径；manifestMeta（writer/createdAt/迁移来源）也以 main 为准。
+   * 其余部分走与打开/保存同一套 `assembleSnapshot` 结构、引用与数量校验，
+   * 允许草稿字段是无效数值字符串，但结构必须合法。
+   */
+  stageFromDto(
+    sessionId: string,
+    editSeq: number,
+    dto: Omit<ProjectFileSnapshot, 'attachments'>,
+  ): IpcResult<{ acceptedSeq: number }> {
+    const session = this.sessions.get(sessionId)
+    if (session === undefined) {
+      return ipcFailure('STALE_SESSION', '会话已失效，请重新打开项目')
+    }
+    if (!Number.isSafeInteger(editSeq) || editSeq < 0) {
+      return ipcFailure('INVALID_REQUEST', 'editSeq 必须是非负安全整数')
+    }
+    if (editSeq <= session.acceptedSeq) {
+      return ipcFailure(
+        'STALE_EDIT',
+        '编辑序号未递增，已拒绝',
+        `acceptedSeq=${session.acceptedSeq}, editSeq=${editSeq}`,
+      )
+    }
+    if (typeof dto !== 'object' || dto === null) {
+      return ipcFailure('INVALID_REQUEST', '快照必须是对象')
+    }
+    const assembled = assembleSnapshot({
+      project: dto.project,
+      draft: dto.draft,
+      documents: dto.documents,
+      revisions: dto.revisions,
+      bindings: dto.bindings,
+      blobs: dto.blobs,
+      events: dto.events,
+      analysisSnapshots: dto.analysisSnapshots,
+      importSnapshots: dto.importSnapshots,
+      migrationBackups: dto.migrationBackups,
+      legacyArchive: dto.legacyArchive,
+      fileRevisions: dto.fileRevisions,
+      // 附件字节只能来自 main 已持有的副本。
+      attachments: session.snapshot.attachments,
+      missingAttachments: dto.missingAttachments,
+      snapshotReferences: dto.snapshotReferences,
+      // 写者身份与迁移来源由 main 维护，renderer 不能改写。
+      manifestMeta: session.snapshot.manifestMeta,
+    })
+    if (!assembled.ok) {
+      return ipcFailure(assembled.error.code, assembled.error.message, assembled.error.detail)
+    }
+    if (assembled.value.project.id !== session.snapshot.project.id) {
+      return ipcFailure('INVALID_REQUEST', '提交的聚合属于其它项目')
+    }
+    session.snapshot = assembled.value
+    session.acceptedSeq = editSeq
+    return { ok: true, value: { acceptedSeq: editSeq } }
+  }
+
+  /** 读取磁盘指纹（不创建会话）；供 dirty gate 的另存覆盖确认与 relink 使用。 */
+  async fingerprint(targetPath: string): Promise<string | null> {
+    return this.store.fingerprint(targetPath)
+  }
+
+  /** 只判断目标文件类型（不读内容）。 */
+  async kindOf(targetPath: string): Promise<'missing' | 'file' | 'directory' | 'symlink' | 'other'> {
+    return this.store.kindOf(targetPath)
+  }
+
+  /** 读取项目文件字节与指纹；失败不创建会话。 */
+  async readProjectBytes(
+    targetPath: string,
+  ): Promise<IpcResult<{ bytes: Uint8Array; fingerprint: string }>> {
+    const read = await this.store.readProjectFile(targetPath)
+    if (!read.ok) {
+      return fromSaveError(read.error)
+    }
+    return { ok: true, value: read.value }
   }
 
   /** 保存到会话已有路径；没有路径时必须走 saveAs。 */

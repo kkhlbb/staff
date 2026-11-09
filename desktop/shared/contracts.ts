@@ -123,6 +123,80 @@ export interface RequestCloseResult {
   closed: true
 }
 
+/** 非附件聚合 DTO：renderer 只持这份 JSON，附件字节永远留在 main。 */
+export type SnapshotDto = Omit<ProjectFileSnapshot, 'attachments'>
+
+/**
+ * 草稿落盘状态（A-04）。
+ *
+ * `acceptedSeq` 只表示 main 已在内存接受该编辑；`recovery` 单独表示草稿是否
+ * 已落到 userData 下的恢复文件。两者不能互相冒充：
+ * - written：该编辑已通过临时文件 → 完整校验 → rename 落到恢复目录；
+ * - unchanged：磁盘草稿与本次内容一致，无需重写；
+ * - pending：内存已接受，1 秒防抖写入尚未完成（窗口未持久化）；
+ * - failed：写入失败，warning 给出原因；内存编辑仍然保留。
+ *
+ * 任务卡 §3 原文只列 written/unchanged/failed。A-04 之所以增加 `pending`：
+ * 任务卡同时要求“已接受编辑后防抖 1 秒写”和“必须展示尚未持久化窗口”，
+ * 三值枚举无法诚实表达“内存已接受、草稿还没落盘”，用 unchanged 冒充会
+ * 谎报。该扩展只增语义，不改变任何既有取值。
+ */
+export type RecoveryWriteState = 'written' | 'unchanged' | 'pending' | 'failed'
+
+export interface ProjectOpenValue {
+  sessionId: string
+  editSeq: 0
+  snapshot: SnapshotDto
+  path: string | null
+  fingerprint: string | null
+  warnings: string[]
+}
+
+export interface ProjectStageValue {
+  /** main 已接受的最新编辑序号。 */
+  acceptedSeq: number
+  /** 草稿持久化状态；与 acceptedSeq 分开报告。 */
+  recovery: RecoveryWriteState
+  warning?: string
+}
+
+export interface ProjectSaveValue {
+  path: string
+  fingerprint: string
+  savedSeq: number
+  warnings: string[]
+}
+
+export interface RecentProjectItem {
+  recentId: string
+  projectId: string
+  name: string
+  path: string
+  lastOpenedAt: string
+  /** 索引里记录的文件已不存在、不是常规文件或不可读时为 true。 */
+  missing: boolean
+}
+
+export interface RecentProjectListValue {
+  items: RecentProjectItem[]
+}
+
+export interface RecoveryItem {
+  recoveryId: string
+  projectId: string
+  name: string
+  basePath: string | null
+  baseFingerprint: string | null
+  savedAt: string
+  editSeq: number
+  /** 草稿文件损坏/超限时给出原因，不能当成空项目。 */
+  error?: string
+}
+
+export interface RecoveryListValue {
+  items: RecoveryItem[]
+}
+
 /** 迁移预检（A-03）：只读输入、10 分钟 token、候选项目。 */
 export interface MigrationPreviewProject {
   id: string
@@ -153,6 +227,38 @@ export interface MigrationCommitValue {
  * 注册对应通道。这里不出现 `invoke`/`send`/`on` 这类通用转义口。
  */
 export interface CunlianApi {
+  /** 新建项目（A-04）：dirty gate → main 构造默认聚合 → editSeq 从 0 开始。 */
+  newProject(request: {
+    name: string
+    template: 'empty' | 'chain-demo'
+  }): Promise<IpcResult<ProjectOpenValue>>
+  /** 打开项目：无 recentId 时用 main 对话框；有 ID 只解析本机索引。 */
+  openProject(request?: { recentId?: string }): Promise<IpcResult<ProjectOpenValue>>
+  /** 提交编辑副本；acceptedSeq 与 recovery 分开报告。 */
+  stageDraft(request: {
+    sessionId: string
+    editSeq: number
+    snapshot: SnapshotDto
+  }): Promise<IpcResult<ProjectStageValue>>
+  /** 保存到会话已有路径；没有路径时 main 弹另存对话框。 */
+  saveProject(request: {
+    sessionId: string
+    editSeq: number
+    expectedFingerprint: string | null
+  }): Promise<IpcResult<ProjectSaveValue>>
+  /** 另存为：目标由 main 对话框取得。 */
+  saveProjectAs(request: {
+    sessionId: string
+    editSeq: number
+  }): Promise<IpcResult<ProjectSaveValue>>
+  /** 最近项目索引（≤20 项，路径失效标 missing）。 */
+  listRecent(): Promise<IpcResult<RecentProjectListValue>>
+  /** 只修复索引里的路径，不打开项目、不覆盖当前会话。 */
+  relinkRecent(request: { recentId: string }): Promise<IpcResult<{ item: RecentProjectItem }>>
+  /** 恢复草稿列表；损坏草稿带 error 原因。 */
+  listRecovery(): Promise<IpcResult<RecoveryListValue>>
+  /** 恢复为 path=null 的未保存副本；dirty gate 后原子切换。 */
+  restoreRecovery(request: { recoveryId: string }): Promise<IpcResult<ProjectOpenValue>>
   /** 请求关闭当前窗口；main 先发编辑屏障，超时或保存失败不会关闭。 */
   requestClose(): Promise<IpcResult<RequestCloseResult>>
   /** V2 迁移：只读预检，返回 10 分钟有效的 importToken 与候选项目。 */

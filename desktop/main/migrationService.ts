@@ -23,6 +23,7 @@ import {
   type V2Inspection,
 } from '../../src/project-file/migrateV2'
 import type { ProjectFileError } from '../../src/project-file/types'
+import type { IpcErrorPayload } from '../shared/contracts'
 import type { OpenResult, ProjectService } from './projectService'
 import { FileStore, type SaveError } from './fileStore'
 import { IpcFailure } from './ipc'
@@ -71,8 +72,15 @@ export interface MigrationDeps {
   pickInput: (kind: MigrationKind) => Promise<MigrationInput | null>
   /** 另存对话框；取消返回 null。 */
   pickTarget: (suggestedName: string) => Promise<string | null>
-  /** dirty gate：proceed 才允许迁移；生产实现由 A-04 补“保存/不保存/取消”。 */
-  dirtyGate?: () => Promise<'proceed' | 'cancel'>
+  /** dirty gate：proceed 才允许迁移；生产实现由 A-04 的三选流程提供。 */
+  dirtyGate?: (windowId: number) => Promise<'proceed' | 'cancel'>
+  /**
+   * 需要保留具体保存错误码时使用（保存失败不能伪装成普通取消）。
+   * 提供时优先于 dirtyGate。
+   */
+  dirtyGateDetailed?: (
+    windowId: number,
+  ) => Promise<{ ok: true } | { ok: false; error: IpcErrorPayload }>
   store?: FileStore
   now?: () => number
   newToken?: () => string
@@ -189,8 +197,17 @@ export class MigrationService {
       throw new IpcFailure('INVALID_REQUEST', '所选项目不在本次预检结果中')
     }
 
-    if (this.deps.dirtyGate !== undefined) {
-      const verdict = await this.deps.dirtyGate()
+    if (this.deps.dirtyGateDetailed !== undefined) {
+      const verdict = await this.deps.dirtyGateDetailed(windowId)
+      if (!verdict.ok) {
+        throw new IpcFailure(
+          verdict.error.code,
+          verdict.error.message,
+          verdict.error.detail,
+        )
+      }
+    } else if (this.deps.dirtyGate !== undefined) {
+      const verdict = await this.deps.dirtyGate(windowId)
       if (verdict !== 'proceed') {
         throw new IpcFailure('CANCELLED', '当前项目有未保存编辑，迁移已取消')
       }

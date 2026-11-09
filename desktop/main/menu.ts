@@ -48,7 +48,7 @@ export function buildApplicationMenu(options: ApplicationMenuOptions): Menu {
         { type: 'separator' },
         { label: '导入 V2 备份…', click: send('importV2') },
         { type: 'separator' },
-        { label: '关闭项目', accelerator: 'Command+W', click: send('close') },
+        { label: '关闭窗口', accelerator: 'Command+W', click: send('close') },
       ],
     },
     {

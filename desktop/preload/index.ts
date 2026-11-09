@@ -13,6 +13,12 @@ import {
   type MenuActionPayload,
   type MigrationCommitValue,
   type MigrationInspectValue,
+  type ProjectOpenValue,
+  type ProjectSaveValue,
+  type ProjectStageValue,
+  type RecentProjectItem,
+  type RecentProjectListValue,
+  type RecoveryListValue,
   type RequestCloseResult,
 } from '../shared/contracts'
 
@@ -36,6 +42,51 @@ function subscribe<T>(
 }
 
 const api: CunlianApi = {
+  newProject: (request) =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.projectNew,
+      request,
+    ) as Promise<IpcResult<ProjectOpenValue>>,
+  openProject: (request) =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.projectOpen,
+      request ?? {},
+    ) as Promise<IpcResult<ProjectOpenValue>>,
+  stageDraft: (request) =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.projectStage,
+      request,
+    ) as Promise<IpcResult<ProjectStageValue>>,
+  saveProject: (request) =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.projectSave,
+      request,
+    ) as Promise<IpcResult<ProjectSaveValue>>,
+  saveProjectAs: (request) =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.projectSaveAs,
+      request,
+    ) as Promise<IpcResult<ProjectSaveValue>>,
+  listRecent: () =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.recentList,
+      {},
+    ) as Promise<IpcResult<RecentProjectListValue>>,
+  relinkRecent: (request) =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.recentRelink,
+      request,
+    ) as Promise<IpcResult<{ item: RecentProjectItem }>>,
+  listRecovery: () =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.recoveryList,
+      {},
+    ) as Promise<IpcResult<RecoveryListValue>>,
+  restoreRecovery: (request) =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.recoveryRestore,
+      request,
+    ) as Promise<IpcResult<ProjectOpenValue>>,
   requestClose: () =>
     ipcRenderer.invoke(
       IPC_CHANNELS.windowRequestClose,

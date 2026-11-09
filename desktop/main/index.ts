@@ -34,6 +34,10 @@ import {
   type MigrationKind,
 } from './migrationService'
 import { ProjectService } from './projectService'
+import { RecentProjectsStore } from './recentProjects'
+import { RecoveryStore } from './recovery'
+import { registerProjectChannels } from './channels'
+import { SessionController, runCloseGate, type GateChoice } from './sessionController'
 import { SenderGuard } from './senderGuard'
 import { createMainWindow, type MainWindowHandle } from './window'
 
@@ -41,9 +45,11 @@ import { createMainWindow, type MainWindowHandle } from './window'
 app.setName(DESKTOP_APP_NAME)
 app.setPath('userData', path.join(app.getPath('appData'), DESKTOP_APP_NAME))
 
+const WORKSPACE_ROOT = path.join(app.getPath('userData'), 'workspace')
+
 const guard = new SenderGuard()
 const windows = new Map<number, MainWindowHandle>()
-/** macOS 在 ready 之前可能投递 open-file；先排队，A-04 接项目会话后消费。 */
+/** macOS 在 ready 之前可能投递 open-file；排队后由 openProject 消费。 */
 const pendingOpenFiles: string[] = []
 let allowQuit = false
 let quitInFlight = false
@@ -62,17 +68,9 @@ const closeGuard = new CloseGuard({
   },
 })
 
-/** 关闭/退出前必须完成的编辑屏障。只有拿到 renderer 的 flushed 回复才返回成功。 */
-async function runEditBarrier(window: BrowserWindow): Promise<IpcResult<null>> {
-  const webContentsId = window.webContents.id
-  if (!closeGuard.beginClose(webContentsId)) {
-    return {
-      ok: false,
-      error: { code: 'BUSY', message: '窗口正在关闭或等待编辑内容提交' },
-    }
-  }
-  const outcome = await closeGuard.requestFlush(webContentsId)
-  closeGuard.endClose(webContentsId)
+/** 编辑屏障：只有拿到 renderer 的 flushed 回复才返回成功。 */
+async function flushEditor(window: BrowserWindow): Promise<IpcResult<null>> {
+  const outcome = await closeGuard.requestFlush(window.webContents.id)
   if (!outcome.ok) {
     return { ok: false, error: outcome.error ?? { code: 'SAVE_FAILED', message: '关闭失败' } }
   }
@@ -102,9 +100,9 @@ function createWindow(): MainWindowHandle {
       handle.forceClose = false
       return
     }
-    // 用户点红点 / ⌘W / app.quit 都走同一屏障；未拿到 flushed 就不销毁窗口。
+    // 红点 / ⌘W / app.quit 都走同一个 dirty gate；失败或取消不销毁窗口。
     event.preventDefault()
-    void runEditBarrier(handle.window).then((result) => {
+    void withCloseGate(webContentsId, 'close').then((result) => {
       if (result.ok) {
         closeNow(handle)
       } else {
@@ -189,39 +187,144 @@ async function pickMigrationTarget(suggestedName: string): Promise<string | null
   return saved.filePath
 }
 
+function sanitizeFileName(name: string): string {
+  const cleaned = [...name]
+    .map((character) =>
+      character.charCodeAt(0) < 32 || '/\\:*?"<>|'.includes(character) ? '_' : character,
+    )
+    .join('')
+    .trim()
+  const base = cleaned === '' ? '未命名项目' : cleaned.slice(0, 120)
+  return base.endsWith('.cunlian') ? base : `${base}.cunlian`
+}
+
+async function pickProjectPath(title: string): Promise<string | null> {
+  const owner = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+  const options = {
+    title,
+    properties: ['openFile' as const],
+    filters: [{ name: '寸链项目文件', extensions: ['cunlian'] }],
+  }
+  const picked =
+    owner === undefined
+      ? await dialog.showOpenDialog(options)
+      : await dialog.showOpenDialog(owner, options)
+  if (picked.canceled || picked.filePaths.length === 0) {
+    return null
+  }
+  return picked.filePaths[0]
+}
+
+/** Finder 双击排队的路径只消费一次；其余情况必须走主进程对话框。 */
+async function takePendingOrPick(title: string): Promise<string | null> {
+  const queued = pendingOpenFiles.shift()
+  if (queued !== undefined) {
+    return queued
+  }
+  return pickProjectPath(title)
+}
+
+async function askDirtyChoice(prompt: {
+  projectName: string
+  path: string | null
+  purpose: string
+}): Promise<GateChoice> {
+  const reason =
+    prompt.purpose === 'quit' || prompt.purpose === 'close'
+      ? '退出/关闭前需要处理未保存编辑。'
+      : '切换项目前需要处理未保存编辑。'
+  const owner = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+  const options = {
+    type: 'warning' as const,
+    message: `“${prompt.projectName}”有未保存的编辑`,
+    detail: `${reason}选择“保存”会先写入磁盘；保存失败或取消都不会切换/退出。`,
+    buttons: ['保存', '不保存', '取消'],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  }
+  const choice =
+    owner === undefined
+      ? await dialog.showMessageBox(options)
+      : await dialog.showMessageBox(owner, options)
+  if (choice.response === 0) {
+    return 'save'
+  }
+  if (choice.response === 1) {
+    return 'discard'
+  }
+  return 'cancel'
+}
+
+async function pickSaveTargetFor(suggestedName: string): Promise<string | null> {
+  const owner = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+  const options = {
+    title: '保存寸链项目',
+    defaultPath: path.join(app.getPath('documents'), suggestedName),
+    filters: [{ name: '寸链项目文件', extensions: ['cunlian'] }],
+  }
+  const saved =
+    owner === undefined
+      ? await dialog.showSaveDialog(options)
+      : await dialog.showSaveDialog(owner, options)
+  if (saved.canceled || saved.filePath === undefined) {
+    return null
+  }
+  return saved.filePath
+}
+
 function installIpcHandlers(): void {
   const ipc: IpcMainLike = ipcMain
   const deps = { guard, log: logStage }
   const projectService = new ProjectService()
+  const recovery = new RecoveryStore({ rootDir: WORKSPACE_ROOT })
+  const recent = new RecentProjectsStore({ rootDir: WORKSPACE_ROOT })
+
+  const controller = new SessionController({
+    projectService,
+    recovery,
+    recent,
+    ports: {
+      askChoice: askDirtyChoice,
+      pickSaveTarget: pickSaveTargetFor,
+      flushEditor: async (windowId) => {
+        const handle = windows.get(windowId)
+        if (handle === undefined || handle.window.isDestroyed()) {
+          return { ok: false, error: { code: 'NOT_FOUND', message: '窗口已不存在' } }
+        }
+        return flushEditor(handle.window)
+      },
+      log: (entry) => logStage({ channel: 'session', ...entry }),
+    },
+  })
+  controllerForClose = controller
+
+  registerProjectChannels(ipc, {
+    guard,
+    projectService,
+    recovery,
+    recent,
+    controller,
+    pickOpenPath: () => takePendingOrPick('打开寸链项目'),
+    pickRelinkPath: () => pickProjectPath('重新定位最近项目'),
+    pickSaveTarget: async (session) =>
+      pickSaveTargetFor(sanitizeFileName(session.snapshot.project.name)),
+    appVersion: app.getVersion(),
+    electronVersion: process.versions.electron ?? 'unknown',
+    log: logStage,
+  })
+
   const migrationService = new MigrationService({
     projectService,
     pickInput: readMigrationInput,
     pickTarget: pickMigrationTarget,
-    dirtyGate: async () => {
-      if (projectService.dirtySessionCount() === 0) {
-        return 'proceed'
-      }
-      const choice = await dialog.showMessageBox({
-        type: 'warning',
-        message: '当前项目有未保存编辑',
-        detail: '迁移会切换到新文件会话。请选择如何处理当前编辑。',
-        buttons: ['保存并迁移', '不保存并迁移', '取消'],
-        defaultId: 2,
-        cancelId: 2,
-        noLink: true,
-      })
-      if (choice.response === 1) {
-        return 'proceed'
-      }
-      if (choice.response === 0) {
-        // A-04 才接入 renderer 保存流程；这里不伪造“已保存”。
-        await dialog.showMessageBox({
-          type: 'info',
-          message: '保存流程尚未接入本批次',
-          detail: '请先保存当前项目，或选择“不保存并迁移”。已取消本次迁移。',
-        })
-      }
-      return 'cancel'
+    // 迁移提交前走与打开/新建相同的三选；保存失败或取消都停止迁移。
+    dirtyGateDetailed: async (windowId) => {
+      const result = await controller.withGate(windowId, 'migrate', async () => ({
+        ok: true as const,
+        value: null,
+      }))
+      return result.ok ? { ok: true } : { ok: false, error: result.error }
     },
     appVersion: app.getVersion(),
     electronVersion: process.versions.electron ?? 'unknown',
@@ -248,8 +351,12 @@ function installIpcHandlers(): void {
           projectId: z.string().min(1).max(240),
         })
         .strict(),
-      handle: async ({ sender }, params) =>
-        migrationService.commit(sender.webContentsId, params),
+      handle: async ({ sender }, params) => {
+        const value = await migrationService.commit(sender.webContentsId, params)
+        // 落盘并回读成功后才切换活动会话；迁移失败时旧会话保持不变。
+        await controller.attach(sender.webContentsId, value.sessionId)
+        return value
+      },
     },
     deps,
   )
@@ -266,9 +373,9 @@ function installIpcHandlers(): void {
         if (handle === undefined || handle.window.isDestroyed()) {
           throw new IpcFailure('NOT_FOUND', '窗口已不存在')
         }
-        const barrier = await runEditBarrier(handle.window)
-        if (!barrier.ok) {
-          throw new IpcFailure(barrier.error.code, barrier.error.message, barrier.error.detail)
+        const result = await withCloseGate(sender.webContentsId, 'close')
+        if (!result.ok) {
+          throw new IpcFailure(result.error.code, result.error.message, result.error.detail)
         }
         // 先让 invoke 结果回到 renderer，再销毁窗口；renderer 不能依赖销毁后的响应。
         setImmediate(() => {
@@ -293,6 +400,29 @@ function installIpcHandlers(): void {
         })
         .strict(),
       handle: ({ sender }, payload) => {
+        const session = controller.sessionFor(sender.webContentsId)
+        if (session !== null) {
+          // 屏障回复必须对应活动会话与已接受序号，否则不释放关闭流程。
+          if (
+            payload.sessionId !== undefined &&
+            payload.sessionId !== session.sessionId
+          ) {
+            logStage({
+              channel: IPC_EVENTS.editorFlushed,
+              code: 'STALE_SESSION',
+              detail: '编辑屏障回复的会话与活动会话不一致',
+            })
+            return
+          }
+          if (payload.editSeq !== undefined && payload.editSeq !== session.acceptedSeq) {
+            logStage({
+              channel: IPC_EVENTS.editorFlushed,
+              code: 'STALE_EDIT',
+              detail: `acceptedSeq=${session.acceptedSeq}, flushedSeq=${payload.editSeq}`,
+            })
+            return
+          }
+        }
         const verdict = closeGuard.acceptFlushed(sender.webContentsId, payload)
         if (!verdict.ok) {
           logStage({
@@ -306,6 +436,23 @@ function installIpcHandlers(): void {
     deps,
   )
 }
+
+/**
+ * 关闭流程的单一入口：先 dirty gate（内含编辑屏障），再关闭会话。
+ * 返回 ok 后由调用方决定是否销毁窗口；任何失败都保持窗口与会话。
+ */
+async function withCloseGate(
+  webContentsId: number,
+  purpose: 'close' | 'quit',
+): Promise<IpcResult<null>> {
+  return runCloseGate(controllerForClose, webContentsId, purpose)
+}
+
+/**
+ * 关闭流程需要访问同一个 SessionController 实例；installIpcHandlers 会赋值。
+ * A-01 在 IPC 安装前不会触发关闭流程。
+ */
+let controllerForClose: SessionController = undefined as unknown as SessionController
 
 function applySessionSecurity(): void {
   const defaultSession = session.defaultSession
@@ -332,6 +479,9 @@ function bootstrap(): void {
     const existing = BrowserWindow.getAllWindows()[0]
     if (existing !== undefined) {
       existing.focus()
+      if (!existing.webContents.isLoading()) {
+        existing.webContents.send(IPC_EVENTS.menuAction, { action: 'open' })
+      }
     }
   })
 
@@ -349,30 +499,35 @@ function bootstrap(): void {
       return
     }
     quitInFlight = true
-    void Promise.all(
-      allWindows.map(async (window) => {
-        const barrier = await runEditBarrier(window)
-        if (!barrier.ok) {
+    void (async () => {
+      let allOk = true
+      for (const window of allWindows) {
+        if (window.isDestroyed()) {
+          continue
+        }
+        const id = window.webContents.id
+        // ⌘Q 与红点走同一个 withCloseGate；保存失败/取消时 quit 中止。
+        const result = await withCloseGate(id, 'quit')
+        if (!result.ok) {
+          allOk = false
           logStage({
             channel: IPC_CHANNELS.windowRequestClose,
-            code: barrier.error.code,
-            detail: barrier.error.detail,
+            code: result.error.code,
+            detail: result.error.detail,
           })
-          return false
+          break
         }
-        const handle = windows.get(window.webContents.id)
+        const handle = windows.get(id)
         if (handle !== undefined) {
           closeNow(handle)
         }
-        return true
-      }),
-    ).then((results) => {
+      }
       quitInFlight = false
-      if (results.every((value) => value)) {
+      if (allOk) {
         allowQuit = true
         app.quit()
       }
-    })
+    })()
   })
 
   void app.whenReady().then(() => {
@@ -383,7 +538,13 @@ function bootstrap(): void {
       contents.setWindowOpenHandler(() => ({ action: 'deny' }))
     })
     Menu.setApplicationMenu(buildApplicationMenu({ sendAction: sendMenuAction }))
-    createWindow()
+    const handle = createWindow()
+    handle.window.webContents.once('did-finish-load', () => {
+      // 启动前排队的 Finder 打开请求：由 renderer 走正常 openProject/gate。
+      if (pendingOpenFiles.length > 0) {
+        handle.window.webContents.send(IPC_EVENTS.menuAction, { action: 'open' })
+      }
+    })
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -407,5 +568,5 @@ if (!hasSingleInstanceLock) {
   bootstrap()
 }
 
-// pendingOpenFiles 由 A-04 的会话层消费；A-01 只负责排队，不读取项目内容。
+// pendingOpenFiles 只由 openProject 消费；A-01 不读取项目内容。
 export { pendingOpenFiles }

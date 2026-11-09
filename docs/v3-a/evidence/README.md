@@ -84,3 +84,25 @@ fresh every time`），拿不到就把缓存 zip 判为 “didn't match checksum
 | `a01-shell.png` | 桌面壳页面（历史截图，命令未留存） | 1440×868 | `32557c5c…`（仅此一处使用） |
 | `a01-offline-launch.png` | 打包产物 `open` 启动 + 离线模拟 | 1280×788（outer 1280×820） | `cb5bbeaa…` |
 | `rollback/a01-offline-green.png` | 回退恢复后打包产物离线启动 | 1200×768（outer 1200×800） | `02a2eea4…` |
+
+## 5. A-04 会话与恢复（2026-11-09 02:05–02:08 PST）
+
+实现记录：`a04-notes.md`（分支 `agent/dsh-v3-A`，起点 `40efaee`；界面由 Venus 分支负责，
+本卡只做后端与会话层，未改 `src/workspace/*.tsx` / `src/components/` 样式布局）。
+
+| 文件 | 证明内容 | 生成命令 | SHA-256（前 12 位） |
+|---|---|---|---|
+| `a04-notes.md` | 范围、行为、契约偏离、未实现项 | 手写记录 | `75020f55a00c` |
+| `a04-desktop-test.log` | 桌面套件 `12 files / 92 tests passed`（新增 5 files / 34 tests） | `npx vitest run --config vitest.desktop.config.ts --reporter=verbose` | `2d2ae421ac1b` |
+| `a04-test.log` | 既有全量 `56 files / 589 tests passed`（V2/旧断言未改） | `npx vitest run --reporter=dot` | `bf2dccb03fb2` |
+| `a04-typecheck-desktop.log` | `tsc -p tsconfig.desktop.json --noEmit`，`EXIT=0` | 见日志首行 | `5995c17e3e5b` |
+| `a04-typecheck-app.log` | `tsc -p tsconfig.app.json --noEmit`，`EXIT=0` | 见日志首行 | `3c6cee6ecb7b` |
+| `a04-typecheck-node.log` | `tsc -p tsconfig.node.json --noEmit`，`EXIT=0` | 见日志首行 | `fdd1ecd24d19` |
+| `a04-lint.log` | `npx eslint .`，`EXIT=0` | 见日志首行 | `583dc328efba` |
+| `rollback-a04.patch` | 定点 mutation：`isDirty` 固定返回 false（模拟信任 renderer dirty=false） | `diff -u` 原始/变异文件 | `d8550ed72585` |
+| `rollback/a04-red.log` | 红灯：`6 failed / 86 passed`，失败全部是 dirty gate 用例 | 变异后 `npx vitest run --config vitest.desktop.config.ts --reporter=verbose` | `b6d4b00cfb50` |
+| `rollback/a04-green-restored.log` | 恢复实现后 `12 files / 92 tests passed` | 恢复后同一命令 | `c477b16ff9c0` |
+
+说明：`a04-desktop-test.log`/`a04-test.log` 末尾没有单独打印 `EXIT=`，但同一条命令在
+shell 中返回 0；typecheck/lint 日志首行记录命令、末行记录 `EXIT=0`。回退实验只改实现
+文件、未改任何测试断言。

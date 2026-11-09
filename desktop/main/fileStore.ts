@@ -249,6 +249,11 @@ export class FileStore {
     return sha256Bytes(await this.ops.readFile(targetPath))
   }
 
+  /** 只查文件类型，不读内容；用于把“文件不存在/不是常规文件”映射成 NOT_FOUND。 */
+  async kindOf(targetPath: string): Promise<FileKind> {
+    return this.ops.statKind(targetPath)
+  }
+
   async saveAtomic(options: SaveAtomicOptions): Promise<SaveResult<SaveAtomicValue>> {
     const ops = options.ops ?? this.ops
     const suffix = (options.newSuffix ?? this.newSuffix)()
