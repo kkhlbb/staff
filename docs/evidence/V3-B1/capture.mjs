@@ -13,6 +13,7 @@
  * 用法：node docs/evidence/V3-B1/capture.mjs [appExecutable] [port]
  */
 import { spawn } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { inflateSync } from 'node:zlib'
@@ -123,6 +124,26 @@ const clickText = (text) => page.eval(`(() => {
   button.click()
   return true
 })()`)
+
+/** 读取属性栏 dt/dd 行，用于断言「当前位移/设计上限」文案。 */
+const propertyRows = () => page.eval(`(() => {
+  const rows = [...document.querySelectorAll('#desktop-properties dl > div')]
+  return rows.map((row) => [row.querySelector('dt')?.textContent ?? '', row.querySelector('dd')?.textContent ?? ''])
+})()`)
+
+/** 点击画布空白角落 → 清除部件选择（与产品空白点击清选一致）。 */
+const clickCanvasEmpty = async () => {
+  const rect = await page.eval(`(() => {
+    const canvas = document.querySelector('.three-viewport canvas')
+    const r = canvas.getBoundingClientRect()
+    return { left: r.left, top: r.top }
+  })()`)
+  const x = Math.round(rect.left + 6)
+  const y = Math.round(rect.top + 6)
+  await page.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 })
+  await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: 1 })
+  await sleep(300)
+}
 
 const waitFor = async (expression, label, timeoutMs = 15000) => {
   const deadline = Date.now() + timeoutMs
@@ -361,6 +382,14 @@ try {
   report.measurements.selection = selected
   check('树选中隔套：aria-pressed / 属性 / 当前选择同步', selected.pressed === 'true' && selected.heading === '属性 · 隔套' && selected.selectionText === '当前选择：隔套', JSON.stringify({ pressed: selected.pressed, heading: selected.heading, section: selected.selectionText }))
   check('隔套只读参数来自 q（20/32/12 mm），C 批次编辑按钮禁用', ['20.0000 mm', '32.0000 mm', '12.0000 mm'].every((value) => selected.props.includes(value)) && selected.editDisabled === true, JSON.stringify(selected.props))
+  const selectedRows = await propertyRows()
+  report.measurements.selectedRows = selectedRows
+  check(
+    '装配态属性：「爆炸位移（当前）」为 0，「设计最大位移（上限）」标注装配基准',
+    new Map(selectedRows).get('爆炸位移（当前）') === '0.0 mm（X）'
+      && new Map(selectedRows).get('设计最大位移（上限）') === '0.0 mm（X）（装配基准，不参与爆炸）',
+    JSON.stringify(selectedRows),
+  )
   await page.shot('1440-selected-spacer.png')
   const pixels1440 = analyzeShot(path.join(outDir, '1440-selected-spacer.png'), await canvasRect(), await page.eval('innerWidth'))
   report.measurements.pixels1440 = pixels1440
@@ -381,6 +410,22 @@ try {
   const explodedPixels = analyzeShot(path.join(outDir, '1440-exploded-100.png'), await canvasRect(), await page.eval('innerWidth'))
   report.measurements.pixelsExploded = explodedPixels
   check('爆炸 100% 截图仍有模型像素', explodedPixels.offBackgroundRatio > 0.02 && explodedPixels.distinctColors >= 8, JSON.stringify(explodedPixels))
+  const explodedRows = await propertyRows()
+  report.measurements.explodedRows = explodedRows
+  check('爆炸 100%：隔套当前位移仍为 0（装配基准件如实显示自身状态）', new Map(explodedRows).get('爆炸位移（当前）') === '0.0 mm（X）', JSON.stringify(explodedRows))
+  await clickText('左轴承')
+  await sleep(400)
+  const bearingRows = await propertyRows()
+  report.measurements.explodedBearingRows = bearingRows
+  check(
+    '爆炸 100% 选左轴承：「当前」与「设计上限」均为 −24.0 mm（X）',
+    new Map(bearingRows).get('爆炸位移（当前）') === '-24.0 mm（X）'
+      && new Map(bearingRows).get('设计最大位移（上限）') === '-24.0 mm（X）',
+    JSON.stringify(bearingRows),
+  )
+  await page.shot('1440-exploded-100-bearing-left.png')
+  await clickText('隔套')
+  await sleep(300)
 
   // 5. 复位装配
   await clickText('复位装配')
@@ -481,9 +526,41 @@ try {
   const smallExplodedPixels = analyzeShot(path.join(outDir, '960-exploded-100.png'), await canvasRect(), smallViewportWidth)
   report.measurements.smallExplodedPixels = smallExplodedPixels
   check('960×640 爆炸 100% 截图仍有模型像素', smallExplodedPixels.offBackgroundRatio > 0.02, JSON.stringify(smallExplodedPixels))
+  const smallExplodedRows = await propertyRows()
+  report.measurements.smallExplodedRows = smallExplodedRows
+  check('960 爆炸 100%：隔套当前位移为 0（装配基准件）', new Map(smallExplodedRows).get('爆炸位移（当前）') === '0.0 mm（X）', JSON.stringify(smallExplodedRows))
+  await clickText('左轴承')
+  await sleep(400)
+  const smallBearingRows = await propertyRows()
+  report.measurements.smallExplodedBearingRows = smallBearingRows
+  check(
+    '960 爆炸 100% 选左轴承：「当前」为 −24.0 mm（X）（非零、随滑条变化）',
+    new Map(smallBearingRows).get('爆炸位移（当前）') === '-24.0 mm（X）'
+      && new Map(smallBearingRows).get('设计最大位移（上限）') === '-24.0 mm（X）',
+    JSON.stringify(smallBearingRows),
+  )
+  await page.shot('960-exploded-100-bearing-left.png')
+  await clickText('隔套')
+  await sleep(300)
+  // 复位装配前清空选择：项目树不选中任何部件，再点复位（t=0）
+  await clickCanvasEmpty()
+  const cleared = await page.eval(`(() => ({
+    pressed: [...document.querySelectorAll('#desktop-tree button[aria-pressed="true"]')].map((item) => item.textContent.trim()),
+    heading: document.querySelector('#desktop-properties h2')?.textContent ?? '',
+  }))()`)
+  report.measurements.smallCleared = cleared
+  check('960 复位前清空选择：树无 aria-pressed=true、属性标题为「属性 · 未选择」', cleared.pressed.length === 0 && cleared.heading === '属性 · 未选择', JSON.stringify(cleared))
   await clickText('复位装配')
   await sleep(500)
+  const smallReset = await sceneState()
+  const smallResetHeading = await page.eval(`document.querySelector('#desktop-properties h2')?.textContent ?? ''`)
+  report.measurements.smallReset = { ...smallReset, heading: smallResetHeading }
+  check('960 复位装配：滑条 0%、树仍无选中', smallReset.exploded === 0 && smallResetHeading === '属性 · 未选择', JSON.stringify(report.measurements.smallReset))
   await page.shot('960-reset-assembly.png')
+  const sha256 = (name) => createHash('sha256').update(readFileSync(path.join(outDir, name))).digest('hex')
+  const smallHashes = { selected: sha256('960-selected.png'), resetAssembly: sha256('960-reset-assembly.png') }
+  report.measurements.smallHashes = smallHashes
+  check('960-reset-assembly.png 与 960-selected.png 哈希不同（不是同一份字节）', smallHashes.selected !== smallHashes.resetAssembly, JSON.stringify(smallHashes))
 
   // 8. 离线等价验证：阻断全部 HTTP(S) 请求后整页重载，3D chunk 仍须从本地加载
   // （物理断网需要改动系统网络设置，不在本脚本权限内；此处阻断远程 URL，file:// 不受影响）

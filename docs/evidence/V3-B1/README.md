@@ -55,18 +55,18 @@ attributes: antialias=true depth=true preserveDrawingBuffer=false stencil=false
 
 | 产物 | 原始 | gzip（`gzip -c` 实测） |
 |---|---|---|
-| `threeScene-Jrj_OpgE.js`（**3D 懒加载 chunk**） | 570,448 B | **140,644 B = 137.3 KiB**（Vite 报告 142.31 kB） |
-| `index.desktop-wDTUiK56.js`（首屏入口） | 809,657 B | 243,805 B |
+| `threeScene-C07wB_wD.js`（**3D 懒加载 chunk**） | 570,448 B | **140,645 B = 137.3 KiB**（Vite 报告 142.31 kB） |
+| `index.desktop-Jt8FaHqk.js`（首屏入口） | 809,838 B | 243,903 B |
 | `index-DCXu6T8D.css` | 30,548 B | 5,988 B |
-| `pdf.worker.min-*.mjs`（A 批次既有，仍按需加载） | 1,271,915 B | 379,584 B |
+| `pdf.worker.min-CIqJB0yW.mjs`（A 批次既有，仍按需加载） | 1,271,915 B | 379,584 B |
 
-- 3D chunk 占预算 **46%**（140,644 / 307,200 B），**未超门槛**。
-  两个测量口径都远低于 300 KiB：`gzip -c` 140,644 B、Vite 构建报告 142.31 kB（≈145,725 B），
+- 3D chunk 占预算 **46%**（140,645 / 307,200 B），**未超门槛**。
+  两个测量口径都远低于 300 KiB：`gzip -c` 140,645 B、Vite 构建报告 142.31 kB（≈145,725 B），
   差异来自压缩实现/级别，不影响结论。
 - 首屏增量（同 `npm run build` 的 `dist` 入口，基线为安装 three 前的实测值，取 Vite 报告口径以保持一致）：
-  `1,266.05 kB / gzip 400.40 kB` → `1,276.78 kB / gzip 404.05 kB`，
-  即 **+10.73 kB 原始 / +3.65 kB gzip**。three 不在首屏 chunk 内，只进懒加载 chunk。
-- `out/寸链-darwin-arm64/寸链.app` = 255.2 MiB，`app.asar` = 3,102,555 B。
+  `1,266.05 kB / gzip 400.40 kB` → `1,276.98 kB / gzip 404.16 kB`，
+  即 **+10.93 kB 原始 / +3.76 kB gzip**。three 不在首屏 chunk 内，只进懒加载 chunk。
+- `out/寸链-darwin-arm64/寸链.app` = 255.2 MiB，`app.asar` = 3,102,736 B。
   基线 `.app` 大小**未测**：本批次开工前该工作树没有 `out/`（首个 `package` 才生成目录），
   不存在可量的基线打包副本，也不编造增量。
 
@@ -77,12 +77,14 @@ attributes: antialias=true depth=true preserveDrawingBuffer=false stencil=false
 | 截图 | 窗口 / 内容尺寸 | canvas（CSS=backing） | 说明 |
 |---|---|---|---|
 | `1440-selected-spacer.png` | 窗口 1440×900 / inner 1440×868 | 884×481 | 树选隔套：浅靛蓝 + #3730A3 轮廓，属性栏只读参数 |
-| `1440-exploded-100.png` | 同上 | 884×481 | 爆炸 100%：左右轴承 ±40、挡圈 −76、轴与隔套不动 |
+| `1440-exploded-100.png` | 同上 | 884×481 | 爆炸 100%：左右轴承 ±40、挡圈 −76、轴与隔套不动；隔套选中 |
+| `1440-exploded-100-bearing-left.png` | 同上 | 884×481 | 爆炸 100% 改选左轴承：属性「当前 / 上限」均为 −24.0 mm（X） |
 | `1440-reset-assembly.png` | 同上 | 884×481 | 复位装配：t=0、相机回默认、隔套仍选中 |
 | `3d-degraded.png` | 同上 | —（无 canvas） | 真实 `WEBGL_lose_context` 丢失后局部降级 + 重试，其他标签可用 |
-| `960-selected.png` | 窗口 960×640 / inner 960×608 | 404×198 | 小窗选隔套，工具条 2 行不重叠 |
-| `960-exploded-100.png` | 窗口 960×640 / inner 960×608 | 404×198 | 小窗爆炸 100%，5 件全在画布内 |
-| `960-reset-assembly.png` | 窗口 960×640 / inner 960×608 | 404×198 | 小窗复位装配 |
+| `960-selected.png` | 窗口 960×640 / inner 960×608 | 404×198 | 小窗选隔套（t=0），工具条 2 行不重叠 |
+| `960-exploded-100.png` | 窗口 960×640 / inner 960×608 | 404×198 | 小窗爆炸 100%，5 件全在画布内；隔套选中 |
+| `960-exploded-100-bearing-left.png` | 窗口 960×640 / inner 960×608 | 404×198 | 小窗爆炸 100% 改选左轴承：「当前」−24.0 mm（X）非零 |
+| `960-reset-assembly.png` | 窗口 960×640 / inner 960×608 | 404×198 | 小窗复位装配：**项目树无选中**、`属性 · 未选择`、t=0 |
 | `960-offline-reopened.png` | 窗口 960×640 / inner 960×608 | 716×252 | 阻断 HTTP(S) 重载后重新打开示例 |
 
 **960×640 是真实窗口缩放的**：渲染进程调用 `window.resizeTo(960, 640)`，窗口实测
@@ -96,7 +98,7 @@ attributes: antialias=true depth=true preserveDrawingBuffer=false stencil=false
 960 选中态 707 / 6.56%；960 爆炸态 903 / 8.95%；重载重开 775 / 4.70%。
 即画布里确有模型，不是空 canvas。
 
-## 6. 断言清单（27 项全 PASS）
+## 6. 断言清单（35 项全 PASS）
 
 `b1-electron-report.json` 的 `checks` 数组为原始记录，摘要：
 
@@ -105,7 +107,10 @@ attributes: antialias=true depth=true preserveDrawingBuffer=false stencil=false
 - 3D 就绪：`data-three-state=ready`、`data-part-count=5`、`.three-viewport canvas` 恰好 1 个。
 - 树 → 模型：隔套 `aria-pressed=true`、属性标题 `属性 · 隔套`、状态栏 `当前选择：隔套`、
   属性值 `20.0000 / 32.0000 / 12.0000 mm`（隔套源 q 换算）、「编辑参数（C 批次）」disabled。
+- 属性位移：装配态「当前」为 0；爆炸 100% 隔套标注装配基准；改选左轴承时「当前 / 上限」均为 −24.0 mm（X）。
 - 爆炸/复位：滑条 100 → t=1；复位装配 → t=0 且隔套仍选中。
+- 960 复位：树无 `aria-pressed=true`、属性 `属性 · 未选择`、滑条 0%；
+  且 `960-reset-assembly.png` 与 `960-selected.png` 的 SHA-256 不同。
 - 降级：真实 contextlost → `3D 暂不可用：CONTEXT_LOST`，其他标签仍可切换并渲染；重试后恢复且只有 1 个 canvas。
 - 离线等价：阻断全部 HTTP(S) 后整页重载，应用仍从 `file://` 加载，3D chunk 正常渲染，
   `performance.getEntriesByType('resource')` 全部为 `file:`，无 HTTP(S) 请求。
@@ -135,11 +140,42 @@ attributes: antialias=true depth=true preserveDrawingBuffer=false stencil=false
    同一次运行中安全类断言（无通用 IPC 逃逸口、无远程资源、子框架拿不到桥、关闭屏障）均 PASS。
 7. **挡圈在装配态几乎被左轴承遮住**（r14 位于 X∈[-29,-27]，紧邻轴承 [-26,-6]）。
    这是任务卡 §3.2 夹具表的给定几何，未擅自改动；爆炸后清晰可见。
+   **操作限制：装配态下挡圈主要从项目树选择**（画布拾取容易被左轴承挡住），这是夹具几何的既定结果，
+   不是选择逻辑缺陷。可验证路径：树点「挡圈」→ 属性 `属性 · 挡圈`、`aria-pressed=true`、画布高亮。
 8. 示例持久化按用户拍板只做 renderer 侧车：不新增 IPC、不动 schema；
    应用重启后需重新打开示例（界面已明说）。
 
-## 8. 文件
+## 8. 审查修正 R1（2026-11-09，用户验收后）
+
+### 8.1 `960-reset-assembly.png` 重拍（原先与 `960-selected.png` 同字节）
+
+- 原因：旧脚本在 960 复位时仍选中隔套、t=0，画面状态与 `960-selected.png` 完全一致，于是字节相同
+  （旧值两张均为 `63a3a76326dee9756e9658c5960e77370df8063eec0de78d24b4e0eb57104ddd`）。
+- 改法：`capture.mjs` 在 960 复位前用 CDP `Input.dispatchMouseEvent` 点击画布空白处清除选择，
+  再点「复位装配」；脚本断言树无 `aria-pressed=true`、属性标题 `属性 · 未选择`、滑条 0%，
+  并在脚本内计算两张 960 截图的 SHA-256 断言不同。
+- 独立复核（`shasum -a 256`）：
+  - `960-selected.png`       = `ea42c663746fb1fad7d0d89db63acf8dd2051c1511860963aed9812262f75d34`
+  - `960-reset-assembly.png` = `64782439da3f9d9c3484cf061fc5148b4c1dcc813732d5570de0a53589432ce6`
+  - 两者不同。
+
+### 8.2 属性栏「爆炸最大位移 +0.0 mm（X）」恒为 0
+
+- 原因：`partPropertyRows(id)` 只返回本件静态 `explodeX`，行名却像当前值；滑条变化时不重算，
+  而隔套（及轴）本身设计位移就是 0，所以装配态与 100% 爆炸态都显示 `+0.0`。
+- 改法（同时满足“实时当前值”和“静态上限写清”两条要求）：`partPropertyRows(id, explodeT)` 拆成两行——
+  - 「爆炸位移（当前）」= `clamp(t,0,1) × 本件 explodeX`，随滑条实时变化；
+  - 「设计最大位移（上限）」= 本件静态设计参数，明确标注是上限；
+    轴/隔套不参与爆炸时追加「（装配基准，不参与爆炸）」，不再用 0 冒充动态量。
+- 证据：
+  - `960-exploded-100-bearing-left.png` / `1440-exploded-100-bearing-left.png`：100% 爆炸选左轴承，
+    「当前」与「上限」均为 −24.0 mm（X）；
+  - `960-exploded-100.png` / `1440-exploded-100.png`：隔套选中，当前 0.0 且上限行标注装配基准。
+- 受影响用例：`src/parts/shaftDemo.test.ts` 新增「爆炸位移：当前值随 t 变化，静态上限单独成行」；
+  `src/pages/DesktopWorkspace.test.tsx` 新增「B1 属性栏「爆炸位移（当前）」随滑条变化…」。
+
+## 9. 文件
 
 - `capture.mjs`：CDP 采集脚本（含纯 Node PNG 解码，用于截图像素断言）
-- `b1-electron-report.json`：27 项检查的原始结果 + 全部尺寸/探针测量值
-- 8 张 PNG 截图
+- `b1-electron-report.json`：35 项检查的原始结果 + 全部尺寸/探针测量值
+- 10 张 PNG 截图
