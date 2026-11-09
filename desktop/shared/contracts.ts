@@ -193,12 +193,17 @@ export type SessionRecoveryState = RecoveryWriteState | 'none'
  * `session:reattach` 命中的会话。
  *
  * `editSeq` 是 main 已接受的最新编辑序号（不是 renderer 重载后丢失的本地序号）；
+ * `savedSeq` 是 main 内存里最后成功落盘的编辑序号，从未保存过为 0。
+ * 两者关系：`editSeq > savedSeq` 即 dirty（有已接受但未落盘的编辑），
+ * `editSeq === savedSeq` 即为已保存。该字段只供 renderer 判断「正式保存状态」，
  * 是否 dirty 仍只由 main 用 `acceptedSeq > savedSeq` 判定，本 DTO 不带 dirty 字段，
  * renderer 也无法用它改写 main 状态。
  */
 export interface ReattachedSession {
   sessionId: string
   editSeq: number
+  /** main 内存里最后成功保存的序号；从未保存过为 0。 */
+  savedSeq: number
   snapshot: SnapshotDto
   path: string | null
   fingerprint: string | null
