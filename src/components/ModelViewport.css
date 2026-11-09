@@ -1,0 +1,109 @@
+.model-viewport {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg, #f5f7fa);
+}
+.model-viewport__banner {
+  margin: 0;
+  padding: 8px 12px;
+  color: #1f3a5f;
+  border-bottom: 1px solid var(--border, #d9e0e9);
+  background: #eef4fb;
+  overflow-wrap: anywhere;
+}
+.model-viewport__banner strong {
+  color: #12345c;
+}
+.model-viewport__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface, #fff);
+  border-bottom: 1px solid var(--border, #d9e0e9);
+}
+.model-viewport__toolbar button {
+  min-height: 32px;
+  min-width: 28px;
+}
+.model-viewport__group {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.model-viewport__stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.model-viewport__stage canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+.model-viewport__stage canvas:active {
+  cursor: grabbing;
+}
+.model-viewport__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  margin: 0;
+  color: var(--muted, #526075);
+}
+.model-viewport__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+  color: var(--danger, #a61b1b);
+  background: var(--danger-bg, #fdebec);
+}
+.model-viewport__fallback p {
+  max-width: 46ch;
+  margin: 0;
+  color: #7a2020;
+  overflow-wrap: anywhere;
+}
+.model-viewport__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 6px 12px;
+  color: var(--muted, #526075);
+  border-top: 1px solid var(--border, #d9e0e9);
+  font-variant-numeric: tabular-nums;
+}
+.model-viewport__selection {
+  margin-left: auto;
+  color: var(--text, #172033);
+}
+@media (max-height: 760px) {
+  .model-viewport__banner {
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+  .model-viewport__toolbar {
+    gap: 6px;
+    padding: 4px 8px;
+  }
+  .model-viewport__status {
+    padding: 2px 12px;
+  }
+}

@@ -15,8 +15,11 @@ import {
   ATTACHMENT_EXTENSION,
   ATTACHMENT_PATH_PREFIX,
   DIMENSION_CHAIN_SCHEMA_VERSION,
+  LEGACY_PROJECT_FILE_FORMAT_VERSION,
+  LEGACY_PROJECT_FILE_SCHEMA_VERSION,
   PROJECT_FILE_FORMAT,
   PROJECT_FILE_FORMAT_VERSION,
+  PROJECT_FILE_MAX_ENTRIES,
   PROJECT_FILE_MAX_SOURCE_BYTES,
   PROJECT_FILE_MAX_UNCOMPRESSED_BYTES,
   PROJECT_FILE_PATHS,
@@ -43,6 +46,7 @@ import {
   revisionEntryPath,
   validateAttachmentBytes,
   validateContainerEntries,
+  validateProjectAssetBudget,
   type ActualEntry,
 } from './validation'
 
@@ -113,6 +117,10 @@ export interface EncodeResult {
 export async function encodeProjectFile(
   snapshot: ProjectFileSnapshot,
 ): Promise<ProjectFileResult<EncodeResult>> {
+  const budget = validateProjectAssetBudget(snapshot)
+  if (!budget.ok) {
+    return fail(budget.error.code, budget.error.message, budget.error.detail)
+  }
   const attachments = await validateAttachmentBytes(snapshot, sha256Hex)
   if (!attachments.ok) {
     return fail(attachments.error.code, attachments.error.message, attachments.error.detail)
@@ -135,6 +143,7 @@ export async function encodeProjectFile(
   for (const revision of snapshot.fileRevisions) {
     parts.set(revisionEntryPath(revision.revisionId), jsonBytes(revision))
   }
+  // 同一 blobKey 只写一个 ZIP 条目；模型版本共享字节时不会重复占条目/字节。
   for (const attachment of snapshot.attachments) {
     parts.set(attachmentEntryPath(attachment.blobKey), attachment.bytes)
   }
@@ -241,6 +250,24 @@ export async function encodeProjectFile(
     )
   }
 
+  // 写端在编码前按真实内容复核条目数/解压总量（含 manifest 自身）；
+  // 不把“ZIP 本体受限”当成“解压量完整受限”。
+  const manifestBytes = jsonBytes(manifest)
+  if (parts.size + 1 > PROJECT_FILE_MAX_ENTRIES) {
+    return fail(
+      'TOO_MANY_ENTRIES',
+      `项目文件条目数 ${parts.size + 1} 超过上限 ${PROJECT_FILE_MAX_ENTRIES}`,
+    )
+  }
+  const uncompressedBytes = payloadBytes + manifestBytes.byteLength
+  if (uncompressedBytes > PROJECT_FILE_MAX_UNCOMPRESSED_BYTES) {
+    return fail(
+      'TOO_LARGE',
+      '项目文件解压后总字节超过 150 MiB 上限（含 manifest）',
+      `payload=${payloadBytes}，manifest=${manifestBytes.byteLength}，上限=${PROJECT_FILE_MAX_UNCOMPRESSED_BYTES}`,
+    )
+  }
+
   const zipEntries = [
     ...Array.from(parts, ([path, bytes]) => ({
       path,
@@ -248,7 +275,7 @@ export async function encodeProjectFile(
       // PDF 等已压缩数据不再 deflate，JSON 用小压缩级别；不改变可读性。
       level: path.startsWith(ATTACHMENT_PATH_PREFIX) ? 0 : 6,
     })),
-    { path: PROJECT_FILE_PATHS.manifest, bytes: jsonBytes(manifest), level: 6 },
+    { path: PROJECT_FILE_PATHS.manifest, bytes: manifestBytes, level: 6 },
   ]
 
   const written = await writeZipEntries(zipEntries)
@@ -305,24 +332,31 @@ export async function decodeProjectFile(
       String(rawRecord.format),
     )
   }
-  if (rawRecord.formatVersion !== PROJECT_FILE_FORMAT_VERSION) {
+  const rawVersion = rawRecord.formatVersion
+  if (rawVersion !== LEGACY_PROJECT_FILE_FORMAT_VERSION && rawVersion !== PROJECT_FILE_FORMAT_VERSION) {
     return fail(
       'UNSUPPORTED_VERSION',
       '项目文件格式版本不受支持',
-      `formatVersion=${String(rawRecord.formatVersion)}`,
+      `formatVersion=${String(rawVersion)}`,
     )
   }
+  const expectedProjectSchema =
+    rawVersion === LEGACY_PROJECT_FILE_FORMAT_VERSION
+      ? LEGACY_PROJECT_FILE_SCHEMA_VERSION
+      : PROJECT_FILE_SCHEMA_VERSION
   const rawProject = rawRecord.project
   if (typeof rawProject === 'object' && rawProject !== null) {
     const projectRecord = rawProject as Record<string, unknown>
     if (
       projectRecord.projectSchemaVersion !== undefined &&
-      projectRecord.projectSchemaVersion !== PROJECT_FILE_SCHEMA_VERSION
+      projectRecord.projectSchemaVersion !== expectedProjectSchema
     ) {
       return fail(
         'UNSUPPORTED_VERSION',
-        '项目 schema 版本不受支持',
-        `projectSchemaVersion=${String(projectRecord.projectSchemaVersion)}`,
+        '项目 schema 版本与文件格式版本不匹配',
+        `formatVersion=${String(rawVersion)}，projectSchemaVersion=${String(
+          projectRecord.projectSchemaVersion,
+        )}，应为 ${expectedProjectSchema}`,
       )
     }
   }

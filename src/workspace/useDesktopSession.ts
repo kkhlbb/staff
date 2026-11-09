@@ -84,6 +84,9 @@ export function useDesktopSession() {
   }, [])
   return {
     state, recent, recovery, notice, busy, newOpen, setNewOpen, importOpen, setImportOpen, preview, action,
+    applyModelMutation: async (value: Parameters<DesktopSessionAdapter['applyModelMutation']>[0]) => {
+      await adapter.current?.applyModelMutation(value)
+    },
     edit: (action: WorkspaceAction) => {
       const current = adapter.current?.getState().snapshot
       if (!current || locked.current) return

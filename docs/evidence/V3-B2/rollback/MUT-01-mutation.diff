@@ -1,0 +1,3 @@
+注：MUT-01 修改位于当时未跟踪的新文件 useImportedModel.ts，`git diff` 为空。
+实际应用的单点退化见同目录 MUT-01-mutation.patch（新增 setGeometry(null) 一行），
+红/绿日志为 MUT-01-red.log / MUT-01-restored.log。

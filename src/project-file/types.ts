@@ -21,8 +21,12 @@ import {
 } from '../backup/zip'
 
 export const PROJECT_FILE_FORMAT = 'cunlian-project'
-export const PROJECT_FILE_FORMAT_VERSION = 1
-export const PROJECT_FILE_SCHEMA_VERSION = 3
+/** B2 起写出的格式版本：formatVersion=2，project.schemaVersion=4。 */
+export const PROJECT_FILE_FORMAT_VERSION = 2
+export const PROJECT_FILE_SCHEMA_VERSION = 4
+/** 仍然可读的 B1 及更早格式（读时兼容，首次保存显式升级）。 */
+export const LEGACY_PROJECT_FILE_FORMAT_VERSION = 1
+export const LEGACY_PROJECT_FILE_SCHEMA_VERSION = 3
 export const DIMENSION_CHAIN_SCHEMA_VERSION = 2
 export const PROJECT_FILE_EXTENSION = '.cunlian'
 
@@ -49,6 +53,7 @@ export type ContainerErrorCode =
   | 'INVALID_JSON'
   | 'CALCULATION_FAILED'
   | 'EMPTY_BACKUP'
+  | 'PROJECT_ASSETS_TOO_LARGE'
 
 export interface ProjectFileError {
   code: ContainerErrorCode
@@ -87,7 +92,8 @@ export interface ProjectFileWriter {
 export interface ProjectFileManifestProject {
   id: string
   name: string
-  projectSchemaVersion: typeof PROJECT_FILE_SCHEMA_VERSION
+  /** 旧文件为 3，B2 写 4；读取时按伴随的 formatVersion 校验。 */
+  projectSchemaVersion: 3 | 4
   dimensionChainSchemaVersion: typeof DIMENSION_CHAIN_SCHEMA_VERSION
   currentRevisionId: string
 }
@@ -111,6 +117,7 @@ export type ProjectFileAttachmentKind = 'pdf' | 'model'
 
 export interface ProjectFileAttachmentRef {
   kind: ProjectFileAttachmentKind
+  /** PDF 为 SourceRevision.id，模型为 ModelRevision.modelRevisionId。 */
   revisionId: string
   blobKey: string
   path: string
@@ -152,7 +159,8 @@ export interface ProjectFileExcludes {
 
 export interface ProjectFileManifest {
   format: typeof PROJECT_FILE_FORMAT
-  formatVersion: typeof PROJECT_FILE_FORMAT_VERSION
+  /** 1 = B1 及更早（可读）；2 = B2 当前写端。 */
+  formatVersion: 1 | 2
   createdAt: string
   writer: ProjectFileWriter
   project: ProjectFileManifestProject
@@ -168,6 +176,74 @@ export interface ProjectFileManifest {
   excludes: ProjectFileExcludes
 }
 
+/* ------------------------------------------------------------------ */
+/* B2：模型、版本与可视关联                                             */
+/* ------------------------------------------------------------------ */
+
+export type ProjectFilePartKind = 'imported-mesh' | 'builtin-demo'
+export type ProjectFilePartOrigin = 'stl-import' | 'builtin'
+
+/** project.json `parts[]`：稳定 partId，项目内唯一。 */
+export interface ProjectFilePart {
+  partId: string
+  kind: ProjectFilePartKind
+  name: string
+  /** 当前显示的模型版本；内置示意部件可以为 null。 */
+  currentModelRevisionId: string | null
+  origin: ProjectFilePartOrigin
+}
+
+export interface ProjectFileBounds {
+  min: [number, number, number]
+  max: [number, number, number]
+}
+
+/** project.json `modelRevisions[]`：不可变版本记录，字节在附件里。 */
+export interface ProjectFileModelRevision {
+  modelRevisionId: string
+  partId: string
+  kind: 'stl'
+  /** 首版为 null；替换时指向同 part 的旧版本。 */
+  parentModelRevisionId: string | null
+  createdAt: string
+  reason: string
+  /** 仅用于显示；不参与路径构造。 */
+  fileName: string
+  blobKey: string
+  attachmentSha256: string
+  byteSize: number
+  encoding: 'binary' | 'ascii'
+  triangleCount: number
+  bounds: ProjectFileBounds
+  /** 用户备注，例如“单位：mm（推测）”；不缩放顶点、不改 q。 */
+  unitNote: string
+}
+
+/**
+ * B2 只实例化 `visual-reference`：组成环 ↔ 外形资料来源。
+ * 它不是参数关联：没有 parameterId，不同步 nominal/偏差/方向，也不改变计算结果。
+ */
+export interface ProjectFileVisualReferenceTarget {
+  granularity: 'model' | 'part'
+  partId: string
+  /** 模型粒度必须具体版本；part 粒度也记录确认时的版本（内置部件可为 null）。 */
+  modelRevisionId: string | null
+}
+
+export interface ProjectFileVisualReferenceLink {
+  kind: 'visual-reference'
+  linkId: string
+  termId: string
+  target: ProjectFileVisualReferenceTarget
+  reviewStatus: 'pending' | 'confirmed'
+  reviewedModelRevisionId: string | null
+  reviewedAt: string | null
+  /** 例如 model-replaced：换版后待核对；不是审查结论。 */
+  reason: string
+}
+
+export type ProjectFileDimensionLink = ProjectFileVisualReferenceLink
+
 /**
  * `project/project.json`：单个活动项目。
  *
@@ -175,8 +251,9 @@ export interface ProjectFileManifest {
  * 修订号与确认凭据、V1 迁移记录、基线）随 project.json 一起保存；迁移必须
  * 原样携带这些字段，V3 新建项目使用同一形状（relationReview=null 等）。
  *
- * A 阶段 parts/parameters/modelRevisions/dimensionLinks/drawings 必须为空数组；
- * 格式先占位，不为未来 3D/图纸伪造内容。
+ * B2：schemaVersion=4，parts/modelRevisions/dimensionLinks 使用严格类型；
+ * parameters/drawings 仍必须为空数组。sourceFormatVersion 记录本记录最初
+ * 从哪种文件格式读入（1=B1 及更早，2=B2），用于“首次保存显式升级”。
  */
 export interface ProjectFileProject {
   id: string
@@ -191,6 +268,26 @@ export interface ProjectFileProject {
   relationReview: RelationReview | null
   migration: ProjectMigration | null
   baseline: Project['baseline']
+  sourceFormatVersion: 1 | 2
+  parts: ProjectFilePart[]
+  parameters: unknown[]
+  modelRevisions: ProjectFileModelRevision[]
+  dimensionLinks: ProjectFileDimensionLink[]
+  drawings: unknown[]
+}
+
+/** 旧 schema3 项目记录：数组为空，无 sourceFormatVersion。只用于读时兼容。 */
+export type ProjectFileProjectV1 = Omit<
+  ProjectFileProject,
+  | 'schemaVersion'
+  | 'sourceFormatVersion'
+  | 'parts'
+  | 'parameters'
+  | 'modelRevisions'
+  | 'dimensionLinks'
+  | 'drawings'
+> & {
+  schemaVersion: typeof LEGACY_PROJECT_FILE_SCHEMA_VERSION
   parts: unknown[]
   parameters: unknown[]
   modelRevisions: unknown[]
@@ -198,13 +295,17 @@ export interface ProjectFileProject {
   drawings: unknown[]
 }
 
-/** `revisions/<encoded-id>.json`：A 阶段的项目文件版本基准。 */
+/** `revisions/<encoded-id>.json`：项目文件版本基准。 */
 export interface ProjectFileRevision {
   revisionId: string
   parentId: string | null
   createdAt: string
   reason: string
-  project: ProjectFileProject
+  /**
+   * 旧归档快照保留 schema3 原样（不可变历史）；新快照为 schema4。
+   * 读取按版本化联合解析，保存时不会把旧历史改写成新内容。
+   */
+  project: ProjectFileProject | ProjectFileProjectV1
 }
 
 /** `sources/blobs.json` 的元数据；字节在 attachments/ 下。 */

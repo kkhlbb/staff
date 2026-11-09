@@ -71,7 +71,7 @@ export async function createSampleSnapshot(): Promise<ProjectFileSnapshot> {
   const chain = sampleChain()
   const project = {
     id: SAMPLE_PROJECT_ID,
-    schemaVersion: 3 as const,
+    schemaVersion: 4 as const,
     name: '隔套间隙演示',
     currentRevisionId: 'rev-a1',
     dimensionChain: chain,
@@ -82,6 +82,7 @@ export async function createSampleSnapshot(): Promise<ProjectFileSnapshot> {
     relationReview: null,
     migration: null,
     baseline: null,
+    sourceFormatVersion: 2 as const,
     parts: [],
     parameters: [],
     modelRevisions: [],

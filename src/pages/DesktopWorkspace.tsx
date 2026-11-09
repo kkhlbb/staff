@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { useDesktopSession } from '../workspace/useDesktopSession'
 import { useBuiltinAssemblyView } from '../workspace/useBuiltinAssemblyView'
+import { useImportedModel } from '../workspace/useImportedModel'
+import type { PendingImport } from '../workspace/useImportedModel'
 import { calculateChain } from '../domain/calculate'
 import { formatMm } from '../domain/units'
 import { draftToChain } from '../workspace/draft'
 import { SessionDialogs } from '../components/SessionDialogs'
 import { DesktopChainView, DesktopSourceView, DesktopHistoryView } from '../components/DesktopSessionViews'
 import { ThreeViewport } from '../components/ThreeViewport'
+import { ModelViewport } from '../components/ModelViewport'
 import { DEMO_PARTS, demoPart, isBuiltinPartId, partPropertyRows } from '../parts/shaftDemo'
+import type { ProjectFileVisualReferenceLink } from '../project-file/types'
 import './Workspace.css'
 import './DesktopWorkspace.css'
 
@@ -53,6 +57,17 @@ export function DesktopWorkspace() {
   const selection = selectionState.sessionId === sessionId ? selectionState.value : null
   const setSelection = (value: string | null) => setSelectionState({ sessionId, value })
   const demo = useBuiltinAssemblyView(sessionId)
+  const model = useImportedModel({
+    sessionId,
+    acceptedSeq: session.state?.acceptedSeq ?? 0,
+    snapshot: snapshot ?? null,
+    apply: session.applyModelMutation,
+  })
+  const [linkDialog, setLinkDialog] = useState<
+    | { kind: 'bind'; termId: string; granularity: 'model' | 'part' }
+    | { kind: 'confirm'; link: ProjectFileVisualReferenceLink }
+    | null
+  >(null)
   const [leftOpen, setLeftOpen] = useState(() => !window.matchMedia?.('(max-width: 600px)').matches)
   const [rightOpen, setRightOpen] = useState(() => !window.matchMedia?.('(max-width: 1100px)').matches)
   const [leftWidth, setLeftWidth] = useState(232)
@@ -92,19 +107,45 @@ export function DesktopWorkspace() {
   const result = parsed?.ok ? calculateChain(parsed.chain) : null
   const calculation = result ? ({ within: '满足目标（非审查结论）', outside: '超出目标', 'no-target': '未设目标' }[result.status]) : '输入无效，未计算'
   const sourceState = snapshot ? `${snapshot.documents.length} 份资料 · ${snapshot.bindings.length} 个绑定 · 未审查附件可读性` : '未载入'
+  const modelParts = project?.parts ?? []
+  const currentModelRevision = project?.modelRevisions.find(
+    (item) => item.modelRevisionId === model.revisionId,
+  ) ?? null
   const entries: Record<string, { id: string; label: string; properties: [string, string][] }[]> = {
-    零件: demo.active ? DEMO_PARTS.map(part => ({ id: part.id, label: part.name, properties: partPropertyRows(part.id, demo.explodeT) })) : [],
+    零件: [
+      ...modelParts.map(part => {
+        const rev = project?.modelRevisions.find(item => item.modelRevisionId === part.currentModelRevisionId)
+        return {
+          id: part.partId,
+          label: part.name,
+          properties: [
+            ['类型', part.kind === 'imported-mesh' ? '导入模型（整体网格）' : '内置示意部件（只读）'],
+            ['当前模型版本', part.currentModelRevisionId ?? '无'],
+            ['文件名', rev?.fileName ?? '—'],
+            ['编码 / 面数', rev ? `${rev.encoding === 'binary' ? '二进制' : 'ASCII'} · ${rev.triangleCount.toLocaleString('en-US')} 面` : '—'],
+            ['单位备注', rev?.unitNote ?? '未注明（STL 无标准单位）'],
+            ['关联尺寸链', '仅供外形资料来源；不改变尺寸链数值、不自动同步'],
+          ] as [string, string][],
+        }
+      }),
+      ...(demo.active ? DEMO_PARTS.map(part => ({ id: part.id, label: part.name, properties: partPropertyRows(part.id, demo.explodeT) })) : []),
+    ],
     工程图: [],
     尺寸链: project ? [{ id: 'chain', label: '当前尺寸链', properties: [['组成环', String(project.dimensionChain.terms.length)], ['计算预览', calculation]] }, ...project.dimensionChain.terms.map(term => ({ id: `term:${term.id}`, label: `${term.symbol} · ${term.name}`, properties: [['基本尺寸', `${formatMm(term.nominalQ)} mm`], ['下偏差', `${formatMm(term.lowerDeviationQ)} mm`], ['上偏差', `${formatMm(term.upperDeviationQ)} mm`], ['方向', term.sign === 1 ? '增环' : '减环'], ['来源备注', term.sourceNote || '无']] as [string, string][] }))] : [],
     来源资料: snapshot?.documents.map(doc => { const rev = snapshot.revisions.find(rev => rev.id === doc.latestRevisionId); return { id: `source:${doc.id}`, label: doc.title, properties: [['当前版本', doc.latestRevisionId], ['文件名', rev?.fileName ?? '缺失版本'], ['页数', String(rev?.pageCount ?? '未知')], ['附件状态', snapshot.missingAttachments.some(item => item.documentId === doc.id) ? '声明缺失' : '有元数据，未读取附件']] } }) ?? [],
-    版本历史: snapshot?.fileRevisions.map(rev => ({ id: `rev:${rev.revisionId}`, label: `Rev ${rev.revisionId}`, properties: [['创建时间', rev.createdAt], ['原因', rev.reason], ['父版本', rev.parentId ?? '无']] })) ?? [],
+    版本历史: snapshot?.fileRevisions.map(rev => ({ id: `rev:${rev.revisionId}`, label: `Rev ${rev.revisionId}`, properties: [['创建时间', rev.createdAt], ['原因', rev.reason], ['父版本', rev.parentId ?? '无'], ['项目 schema', String(rev.project.schemaVersion)]] })) ?? [],
   }
   const selected = Object.values(entries).flat().find(item => item.id === selection)
   const selectedPart = isBuiltinPartId(selection) && demo.active ? demoPart(selection) : null
+  const selectedModelPart = modelParts.find(part => part.partId === selection) ?? null
+  const selectedTermId = selection?.startsWith('term:') ? selection.slice('term:'.length) : null
+  const termLinks = selectedTermId && project ? project.dimensionLinks.filter(link => link.termId === selectedTermId) : []
+  const linkTargetName = (link: ProjectFileVisualReferenceLink): string =>
+    project?.parts.find(part => part.partId === link.target.partId)?.name ?? link.target.partId
   const saveState = session.state?.lastError && ['PERMISSION_DENIED', 'NO_SPACE', 'WRITE_FAILED', 'VERIFY_FAILED', 'RENAME_FAILED', 'EXTERNAL_MODIFIED', 'SAVE_FAILED'].includes(session.state.lastError.code) ? '保存失败，编辑内容仍可继续处理' : !session.state?.path ? '未保存草稿' : session.state.saveStateKnown === false ? '已恢复会话 · 正式保存状态未知' : session.state.dirty ? '有未保存修改' : '已保存'
   const dialogs = <SessionDialogs session={session} />
   if (!project) return <main className="desktop-workspace" aria-label="寸链启动页">
-    <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">V3 · B1 批次</span></header>
+    <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">V3 · B2 批次</span></header>
     <section className="desktop-workspace__start">
       <h2>打开项目，继续设计</h2><p>轴系轴向公差链分析</p>
       <div className="desktop-workspace__start-actions">
@@ -124,7 +165,7 @@ export function DesktopWorkspace() {
   return <main className="desktop-workspace" style={style} aria-label="寸链桌面工作台">
     <header className="desktop-workspace__titlebar">
       <h1>寸链 · {project.name}</h1><span>Rev {project.currentRevisionId}</span><span className="desktop-workspace__pending">{saveState}</span>
-      <span className="desktop-workspace__batch">V3 · B1 批次</span>
+      <span className="desktop-workspace__batch">V3 · B2 批次</span>
     </header>
     <div className="desktop-workspace__toolbar" role="toolbar" aria-label="项目操作">
       <button disabled={session.busy} onClick={() => session.action('new')}>新建项目</button>
@@ -134,7 +175,9 @@ export function DesktopWorkspace() {
       <button disabled={session.busy} onClick={() => session.action('importV2')}>导入 V2 备份…</button>
       <button disabled={session.busy} onClick={() => session.action('close')}>关闭窗口</button>
       <button disabled aria-describedby="desktop-import-reason">导入资料</button>
-      <span id="desktop-import-reason" className="desktop-workspace__toolbar-note">资料导入本批次未实现</span>
+      <span id="desktop-import-reason" className="desktop-workspace__toolbar-note">PDF 资料导入本批次未实现</span>
+      <button disabled={model.busy || session.busy} onClick={() => void model.beginImport(false)}>导入模型…</button>
+      {model.partId && <button disabled={model.busy || session.busy} onClick={() => void model.beginImport(true)}>替换模型…</button>}
       <div className="desktop-workspace__toolbar-end">
         <button disabled title="C 批次未实现">预览变更</button>
         <button ref={exportRef} aria-expanded={exportOpen} aria-controls="desktop-export" onClick={() => setExportOpen(!exportOpen)}>导出 PDF ▾</button>
@@ -147,6 +190,47 @@ export function DesktopWorkspace() {
       </div>
     </div>
     <div className="desktop-workspace__notice" role="status">{session.notice || (session.state?.lastError ? `${session.state.lastError.code}：${session.state.lastError.message}` : session.state?.warnings.join('；')) || '当前会话已载入；绑定来源不等于审查通过。'}{session.state?.recoveryWarning && <span>{session.state.recoveryWarning}</span>}</div>
+    {model.error && <div className="desktop-workspace__model-error" role="alert">
+      <strong>模型导入失败：{model.error.code}</strong>
+      <span>{model.error.message}{model.error.detail ? `（${model.error.detail}）` : ''}</span>
+      <span>旧视图、当前版本与关联未改变，项目未写入。</span>
+      <button type="button" onClick={model.clearError}>知道了</button>
+    </div>}
+    {model.pending && <ModelImportDialog
+      pending={model.pending}
+      defaultPartName={
+        (model.pending.replacePartId
+          ? project.parts.find(part => part.partId === model.pending!.replacePartId)?.name
+          : undefined) ?? model.pending.fileName.replace(/\.stl$/i, '')
+      }
+      busy={model.busy}
+      onCancel={() => void model.cancelPending()}
+      onCommit={(partName, unitNote) => void model.commitPending(partName, unitNote)}
+    />}
+    {linkDialog && project && <div className="desktop-workspace__model-dialog" role="dialog" aria-modal="true" aria-label="确认外形资料来源关联">
+      <h2>{linkDialog.kind === 'bind' ? '关联外形资料来源' : '核对新版外形资料来源'}</h2>
+      {linkDialog.kind === 'bind' ? <p>
+        组成环 <strong>{project.dimensionChain.terms.find(term => term.id === linkDialog.termId)?.symbol ?? linkDialog.termId}</strong>
+        {' '}↔ {linkDialog.granularity === 'model' ? '整体模型' : '已登记部件'}「{selectedModelPart?.name ?? modelParts.find(part => part.partId === model.partId)?.name ?? '—'}」
+        {linkDialog.granularity === 'model' && model.revisionId ? `（版本 ${model.revisionId}）` : ''}。
+      </p> : <p>
+        {linkTargetName(linkDialog.link)}：旧版 {linkDialog.link.target.modelRevisionId ?? '无版本'} → 当前新版 {model.revisionId ?? '—'}。
+        确认后只更新外形资料来源定位；不会改尺寸链数值。
+      </p>}
+      <p className="desktop-workspace__pending">该关联只表示外形资料来源：不改变尺寸链数值、不自动同步，也不是 D 批次参数联动。</p>
+      <div className="desktop-workspace__model-dialog-actions">
+        <button type="button" onClick={() => setLinkDialog(null)}>取消</button>
+        <button type="button" className="desktop-workspace__primary" disabled={model.busy || model.partId === null} onClick={() => {
+          const dialog = linkDialog
+          void (async () => {
+            const ok = dialog.kind === 'bind'
+              ? await model.bindLink({ termId: dialog.termId, granularity: dialog.granularity, partId: model.partId!, modelRevisionId: model.revisionId })
+              : await model.confirmLink({ linkId: dialog.link.linkId, termId: dialog.link.termId, partId: dialog.link.target.partId, modelRevisionId: model.revisionId })
+            if (ok) setLinkDialog(null)
+          })()
+        }}>{linkDialog.kind === 'bind' ? '确认关联（不改变数值）' : '确认采用新版'}</button>
+      </div>
+    </div>}
     <nav className="desktop-workspace__layout-tools" aria-label="工作区布局">
       <button aria-expanded={leftOpen} aria-controls="desktop-tree" onClick={() => setLeftOpen(!leftOpen)}>{leftOpen ? '收起' : '展开'}项目树</button>
       <span>选择对象后查看属性</span>
@@ -167,14 +251,36 @@ export function DesktopWorkspace() {
         </div>
         {tabs.map((name, index) => <div key={name} role="tabpanel" id={`desktop-panel-${index}`} aria-labelledby={`desktop-tab-${index}`} tabIndex={0} hidden={tab !== index} className="desktop-workspace__canvas">
           {index === 0 && <><div className="desktop-workspace__placeholder"><span className="desktop-workspace__pending">○ 本批次未实现</span><h2>尚无工程图</h2><p>C 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。</p><p>当前选择：{selected?.label ?? '未选择对象'}</p><button disabled>生成 SVG 图纸</button></div><div className="desktop-workspace__view-status">工程图占位 · 未载入内容 · 不代表已复核</div></>}
-          {index === 1 && (demo.active
+          {index === 1 && (model.revisionId !== null ? (
+            model.geometry
+              ? <ModelViewport
+                  geometry={model.geometry}
+                  selected={selection !== null && selection === model.partId}
+                  onSelect={value => setSelection(value ? model.partId : null)}
+                  active={tab === 1}
+                  view={model.view}
+                  onViewChange={model.setView}
+                />
+              : <div className="desktop-workspace__placeholder">
+                  <span className="desktop-workspace__pending">○ {model.loading ? '正在载入模型' : '模型几何不可用'}</span>
+                  <h2>{currentModelRevision?.fileName ?? '当前模型版本'}</h2>
+                  {model.loading
+                    ? <p>正在读取已保存的模型字节并做严格校验…</p>
+                    : <p>{model.error ? `${model.error.code}：${model.error.message}${model.error.detail ? `（${model.error.detail}）` : ''}` : '当前模型版本没有可显示几何。'}</p>}
+                  <p>旧视图（若有）与项目数据保留；替换会创建新的不可变版本，旧版本可回查。</p>
+                  <button type="button" disabled={model.busy} onClick={() => void model.beginImport(true)}>替换模型…</button>
+                </div>
+          ) : demo.active
             ? <ThreeViewport selectedPartId={selectedPart?.id ?? null} onSelectPart={partId => setSelection(partId)} explodeT={demo.explodeT} onExplodeTChange={demo.setExplodeT} active={tab === 1} viewState={demo.view} onViewStateChange={demo.setView} />
             : <div className="desktop-workspace__placeholder">
-              <span className="desktop-workspace__pending">○ 示例视图未开启</span>
-              <h2>尚无 3D 视图</h2>
-              <p>内置轴系示例是只读示意装配：阶梯轴、左轴承、隔套、右轴承、挡圈 5 个部件。STL 导入归 B2，本批次不提供可用入口。</p>
-              <p>示例与当前项目尺寸链未关联，几何固定，不随尺寸编辑变化。项目数据可保存；3D 示例视图状态仅本次会话保留，重新打开应用后需重新打开示例。</p>
-              <button type="button" onClick={() => demo.activate()}>查看内置轴系示例</button>
+              <span className="desktop-workspace__pending">○ 尚无 3D 视图</span>
+              <h2>导入 STL 或查看内置轴系示例</h2>
+              <p>可导入二进制/ASCII STL（≤10 MiB、≤200,000 面）。导入是整体网格：旋转/缩放/平移只改相机，不提供部件爆炸；单位只作为备注，不缩放顶点、不改 q。</p>
+              <p>内置轴系示例是只读示意装配（5 个部件）；示例与当前项目尺寸链未关联，几何固定，不随尺寸编辑变化。</p>
+              <div className="desktop-workspace__model-dialog-actions">
+                <button type="button" disabled={model.busy} onClick={() => void model.beginImport(false)}>导入 STL 模型…</button>
+                <button type="button" onClick={() => demo.activate()}>查看内置轴系示例</button>
+              </div>
             </div>)}
           {index > 1 && tab === index && snapshot && (index === 2 ? <DesktopSourceView key={session.state!.sessionId} snapshot={snapshot} sessionId={session.state!.sessionId!} /> : index === 3 ? <DesktopChainView snapshot={snapshot} edit={session.edit} disabled={session.busy} /> : <DesktopHistoryView snapshot={snapshot} />)}
         </div>)}
@@ -187,6 +293,37 @@ export function DesktopWorkspace() {
           <p className="desktop-workspace__pending">未关联尺寸链 · 示例几何（B1 只读）</p>
           <button type="button" disabled>编辑参数（C 批次）</button>
           <p>隔套参数化编辑与图纸标注归 C 批次；本批次只读显示内径/外径/长度，3D 变换不写入项目文件。</p>
+        </section>}
+        {selectedModelPart && <section className="desktop-workspace__part-note" aria-label="导入模型只读说明">
+          <p className="desktop-workspace__pending">整体网格 · 外形资料来源；不改变尺寸链数值、不自动同步</p>
+          <button type="button" disabled={model.busy} onClick={() => void model.beginImport(false)}>导入第二个模型…</button>
+          <button type="button" disabled={model.busy || !model.revisionId} onClick={() => void model.beginImport(true)}>替换当前模型…</button>
+          <p>替换会创建新的不可变 ModelRevision，旧版本字节与历史引用保留；受影响的已确认关联转为“待核对”。</p>
+        </section>}
+        {selectedTermId && project && <section className="desktop-workspace__part-note" aria-label="外形资料来源关联">
+          <h3>外形资料来源</h3>
+          {termLinks.length === 0 && <p>尚无关联。关联只表示外形资料来源，不改变尺寸链数值、不自动同步。</p>}
+          {termLinks.map(link => {
+            const targetName = linkTargetName(link)
+            const current = model.revisionId
+            const stale = link.reviewStatus === 'pending' || (link.target.modelRevisionId !== null && link.target.modelRevisionId !== current)
+            return <div key={link.linkId} className="desktop-workspace__link-row">
+              <p>
+                {link.target.granularity === 'model' ? '整体模型' : '已登记部件'}「{targetName}」
+                {link.target.modelRevisionId ? ` · 版本 ${link.target.modelRevisionId}` : ''}
+                {' · '}
+                {link.reviewStatus === 'confirmed' && !stale ? '已核对' : `待核对${link.reason === 'model-replaced' ? '（模型已替换）' : ''}`}
+              </p>
+              {stale && link.reviewStatus === 'pending' && current && <p>旧版 {link.target.modelRevisionId ?? '无'} → 当前新版 {current}</p>}
+              {link.reviewStatus === 'pending' && <button type="button" disabled={model.busy || !current} onClick={() => setLinkDialog({ kind: 'confirm', link })}>核对新版…</button>}
+            </div>
+          })}
+          {model.partId && model.revisionId && <>
+            <button type="button" disabled={model.busy} onClick={() => setLinkDialog({ kind: 'bind', termId: selectedTermId, granularity: 'model' })}>关联整体模型…</button>
+            <button type="button" disabled={model.busy} onClick={() => setLinkDialog({ kind: 'bind', termId: selectedTermId, granularity: 'part' })}>关联部件（记录版本）…</button>
+          </>}
+          {!model.partId && <p>先导入或打开含模型的部件后才能建立关联。</p>}
+          <p className="desktop-workspace__pending">参数联动（改尺寸→改模型）属于 D 批次，不在本关联内。</p>
         </section>}
         <p className="desktop-workspace__pending">○ 尚无审查结论</p>
       </aside>
@@ -202,4 +339,39 @@ export function DesktopWorkspace() {
     </section>
     {dialogs}
   </main>
+}
+
+/** 导入确认：默认值由候选决定；用 key 让同一组件在换候选时重置表单。 */
+function ModelImportDialog(props: {
+  pending: PendingImport
+  defaultPartName: string
+  busy: boolean
+  onCancel: () => void
+  onCommit: (partName: string, unitNote: string) => void
+}) {
+  const { pending } = props
+  return <form
+    key={pending.candidateToken}
+    className="desktop-workspace__model-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-label="确认导入模型"
+    onSubmit={event => {
+      event.preventDefault()
+      const data = new FormData(event.currentTarget)
+      const partName = String(data.get('partName') ?? '').trim()
+      const unitNote = String(data.get('unitNote') ?? '').trim()
+      if (partName !== '') props.onCommit(partName, unitNote)
+    }}
+  >
+    <h2>确认导入模型</h2>
+    <p>{pending.fileName} · {pending.byteSize} 字节 · {pending.geometry.triangleCount.toLocaleString('en-US')} 面 · {pending.geometry.encoding === 'binary' ? '二进制' : 'ASCII'}</p>
+    <label>部件名称<input name="partName" defaultValue={props.defaultPartName} required maxLength={200} /></label>
+    <label>单位备注<input name="unitNote" defaultValue="未注明（STL 无标准单位）" maxLength={200} /></label>
+    <p className="desktop-workspace__pending">单位只是用户备注：STL 无标准单位，不缩放原顶点、不修改 q。外形资料来源关联不改变尺寸链数值、不自动同步。</p>
+    <div className="desktop-workspace__model-dialog-actions">
+      <button type="button" onClick={props.onCancel} disabled={props.busy}>取消（释放候选）</button>
+      <button type="submit" className="desktop-workspace__primary" disabled={props.busy}>导入为不可变版本</button>
+    </div>
+  </form>
 }

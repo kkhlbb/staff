@@ -279,6 +279,29 @@ export class DesktopSessionAdapter {
     return this.api.listRecovery()
   }
 
+  /** 保存失败保留当前项目，之后仍可另存；取消打开不替换会话。 */
+  async applyModelMutation(value: {
+    acceptedSeq: number
+    snapshot: SnapshotDto
+    recovery: RecoveryWriteState | 'none'
+    warning?: string
+  }): Promise<void> {
+    // model:commit/link 已在 main 内完成原子提交；这里只做权威状态重同步，
+    // 不把旧 DTO 回写，也不自行把 pending 关联改成已核对。
+    this.state = {
+      ...this.state,
+      status: 'open',
+      snapshot: value.snapshot,
+      acceptedSeq: value.acceptedSeq,
+      localSeq: Math.max(this.state.localSeq, value.acceptedSeq),
+      dirty: value.acceptedSeq > this.state.savedSeq,
+      recovery: value.recovery,
+      recoveryWarning: value.warning,
+      lastError: undefined,
+    }
+    this.emit()
+  }
+
   private scheduleStage(): void {
     if (this.stageTimer !== null) {
       clearTimeout(this.stageTimer)

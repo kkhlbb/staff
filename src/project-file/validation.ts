@@ -21,8 +21,8 @@ import {
   ATTACHMENT_EXTENSION,
   ATTACHMENT_PATH_PREFIX,
   DIMENSION_CHAIN_SCHEMA_VERSION,
+  LEGACY_PROJECT_FILE_SCHEMA_VERSION,
   PROJECT_FILE_FORMAT,
-  PROJECT_FILE_FORMAT_VERSION,
   PROJECT_FILE_MAX_PATH_LENGTH,
   PROJECT_FILE_PATHS,
   PROJECT_FILE_SCHEMA_VERSION,
@@ -37,10 +37,12 @@ import {
   type ProjectFileManifest,
   type ProjectFileMissingAttachment,
   type ProjectFileProject,
+  type ProjectFileProjectV1,
   type ProjectFileResult,
   type ProjectFileRevision,
   type ProjectFileSnapshot,
 } from './types'
+import { PROJECT_ASSETS_MAX_BYTES, sumUniqueBlobBytes } from '../parts/stlLimits'
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/
 
@@ -93,34 +95,118 @@ const sha256Schema = z.string().regex(SHA256_PATTERN)
 const coords4Schema = z.tuple([z.number(), z.number(), z.number(), z.number()])
 const nonNegativeInt = z.number().int().nonnegative()
 
-const projectSchema = z
+const boundsSchema = z
+  .tuple([z.number(), z.number(), z.number()])
+  .refine((values) => values.every((value) => Number.isFinite(value)), { message: '包围盒必须是有限数值' })
+
+const partSchema = z
   .object({
-    id: idSchema,
-    schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
+    partId: idSchema,
+    kind: z.enum(['imported-mesh', 'builtin-demo']),
     name: z.string().min(1).max(200),
-    currentRevisionId: idSchema,
-    dimensionChain: z.unknown(),
-    engineVersion: z.string().min(1),
+    currentModelRevisionId: idSchema.nullable(),
+    origin: z.enum(['stl-import', 'builtin']),
+  })
+  .strict()
+
+const modelRevisionSchema = z
+  .object({
+    modelRevisionId: idSchema,
+    partId: idSchema,
+    kind: z.literal('stl'),
+    parentModelRevisionId: idSchema.nullable(),
     createdAt: z.string().min(1),
-    updatedAt: z.string().min(1),
-    relationRevision: nonNegativeInt,
-    relationReview: z
+    reason: z.string().max(200),
+    fileName: z.string().min(1).max(400),
+    blobKey: idSchema,
+    attachmentSha256: sha256Schema,
+    byteSize: nonNegativeInt,
+    encoding: z.enum(['binary', 'ascii']),
+    triangleCount: z.number().int().positive(),
+    bounds: z
+      .object({ min: boundsSchema, max: boundsSchema })
+      .strict()
+      .refine(
+        (bounds) =>
+          [0, 1, 2].every((axis) => bounds.min[axis] <= bounds.max[axis]),
+        { message: '包围盒 min 必须不大于 max' },
+      ),
+    unitNote: z.string().max(200),
+  })
+  .strict()
+
+const visualReferenceSchema = z
+  .object({
+    kind: z.literal('visual-reference'),
+    linkId: idSchema,
+    termId: idSchema,
+    target: z
       .object({
-        relationRevision: nonNegativeInt,
-        fingerprint: z.string().min(1),
-        confirmedAt: z.string().min(1),
+        granularity: z.enum(['model', 'part']),
+        partId: idSchema,
+        modelRevisionId: idSchema.nullable(),
       })
-      .strict()
-      .nullable(),
-    migration: z.unknown().nullable(),
-    baseline: z
-      .object({ savedAt: z.string().min(1), definition: z.unknown() })
-      .strict()
-      .nullable(),
+      .strict(),
+    reviewStatus: z.enum(['pending', 'confirmed']),
+    reviewedModelRevisionId: idSchema.nullable(),
+    reviewedAt: z.string().min(1).nullable(),
+    reason: z.string().max(200),
+  })
+  .strict()
+  .refine(
+    (link) =>
+      link.reviewStatus !== 'confirmed' ||
+      (link.reviewedModelRevisionId !== null && link.reviewedAt !== null),
+    { message: '已确认的关联必须带确认版本与时间' },
+  )
+
+const projectCommonShape = {
+  id: idSchema,
+  name: z.string().min(1).max(200),
+  currentRevisionId: idSchema,
+  dimensionChain: z.unknown(),
+  engineVersion: z.string().min(1),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+  relationRevision: nonNegativeInt,
+  relationReview: z
+    .object({
+      relationRevision: nonNegativeInt,
+      fingerprint: z.string().min(1),
+      confirmedAt: z.string().min(1),
+    })
+    .strict()
+    .nullable(),
+  migration: z.unknown().nullable(),
+  baseline: z
+    .object({ savedAt: z.string().min(1), definition: z.unknown() })
+    .strict()
+    .nullable(),
+} as const
+
+/** B1 及更早：schema3，五个预留数组必须为空。 */
+const projectV1Schema = z
+  .object({
+    ...projectCommonShape,
+    schemaVersion: z.literal(LEGACY_PROJECT_FILE_SCHEMA_VERSION),
     parts: z.array(z.unknown()).max(0),
     parameters: z.array(z.unknown()).max(0),
     modelRevisions: z.array(z.unknown()).max(0),
     dimensionLinks: z.array(z.unknown()).max(0),
+    drawings: z.array(z.unknown()).max(0),
+  })
+  .strict()
+
+/** B2：schema4，模型/版本/可视关联使用严格类型；参数与图纸仍必须为空。 */
+const projectV2Schema = z
+  .object({
+    ...projectCommonShape,
+    schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
+    sourceFormatVersion: z.union([z.literal(1), z.literal(2)]),
+    parts: z.array(partSchema),
+    parameters: z.array(z.unknown()).max(0),
+    modelRevisions: z.array(modelRevisionSchema),
+    dimensionLinks: z.array(visualReferenceSchema),
     drawings: z.array(z.unknown()).max(0),
   })
   .strict()
@@ -327,43 +413,73 @@ const entrySchema = z
   })
   .strict()
 
-const manifestSchema = z
+const manifestCommonShape = {
+  format: z.literal(PROJECT_FILE_FORMAT),
+  createdAt: z.string().min(1),
+  writer: z
+    .object({
+      appVersion: z.string().min(1),
+      electronVersion: z.string().min(1),
+      engineVersion: z.string().min(1),
+    })
+    .strict(),
+  entries: z.array(entrySchema),
+  payloadBytes: nonNegativeInt,
+  counts: countsSchema,
+  attachments: z.array(attachmentRefSchema),
+  missingAttachments: z.array(missingAttachmentSchema),
+  snapshotReferences: z.array(snapshotReferenceSchema),
+  migration: migrationSchema.nullable(),
+  excludes: z
+    .object({
+      mappingTemplates: z
+        .object({ included: z.literal(false), note: z.string().min(1) })
+        .strict(),
+    })
+    .strict(),
+} as const
+
+const manifestProjectV1Schema = z
   .object({
-    format: z.literal(PROJECT_FILE_FORMAT),
-    formatVersion: z.literal(PROJECT_FILE_FORMAT_VERSION),
-    createdAt: z.string().min(1),
-    writer: z
-      .object({
-        appVersion: z.string().min(1),
-        electronVersion: z.string().min(1),
-        engineVersion: z.string().min(1),
-      })
-      .strict(),
-    project: z
-      .object({
-        id: idSchema,
-        name: z.string().min(1).max(200),
-        projectSchemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
-        dimensionChainSchemaVersion: z.literal(DIMENSION_CHAIN_SCHEMA_VERSION),
-        currentRevisionId: idSchema,
-      })
-      .strict(),
-    entries: z.array(entrySchema),
-    payloadBytes: nonNegativeInt,
-    counts: countsSchema,
-    attachments: z.array(attachmentRefSchema),
-    missingAttachments: z.array(missingAttachmentSchema),
-    snapshotReferences: z.array(snapshotReferenceSchema),
-    migration: migrationSchema.nullable(),
-    excludes: z
-      .object({
-        mappingTemplates: z
-          .object({ included: z.literal(false), note: z.string().min(1) })
-          .strict(),
-      })
-      .strict(),
+    id: idSchema,
+    name: z.string().min(1).max(200),
+    projectSchemaVersion: z.literal(LEGACY_PROJECT_FILE_SCHEMA_VERSION),
+    dimensionChainSchemaVersion: z.literal(DIMENSION_CHAIN_SCHEMA_VERSION),
+    currentRevisionId: idSchema,
   })
   .strict()
+
+const manifestProjectV2Schema = z
+  .object({
+    id: idSchema,
+    name: z.string().min(1).max(200),
+    projectSchemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
+    dimensionChainSchemaVersion: z.literal(DIMENSION_CHAIN_SCHEMA_VERSION),
+    currentRevisionId: idSchema,
+  })
+  .strict()
+
+const manifestV1Schema = z
+  .object({
+    ...manifestCommonShape,
+    formatVersion: z.literal(1),
+    project: manifestProjectV1Schema,
+  })
+  .strict()
+
+const manifestV2Schema = z
+  .object({
+    ...manifestCommonShape,
+    formatVersion: z.literal(2),
+    project: manifestProjectV2Schema,
+  })
+  .strict()
+
+/** 按 formatVersion 分支解析；未知版本明确拒绝，不 strip/default。 */
+const manifestSchema = z.discriminatedUnion('formatVersion', [
+  manifestV1Schema,
+  manifestV2Schema,
+])
 
 /* ------------------------------------------------------------------ */
 /* 解析                                                                 */
@@ -385,16 +501,18 @@ export function parseManifest(
   if (!parsed.success) {
     return fail('INVALID_MANIFEST', 'manifest 结构或版本不合法', describeZodError(parsed.error))
   }
-  return ok(parsed.data)
+  return ok(parsed.data as ProjectFileManifest)
 }
 
-/** 严格解析 project/project.json，并用领域 validateChain 复核工作链与基线链。 */
-function parseProjectObject(input: unknown): ProjectFileResult<ProjectFileProject> {
-  const parsed = projectSchema.safeParse(input)
-  if (!parsed.success) {
-    return fail('INVALID_RECORD', 'project.json 结构不合法', describeZodError(parsed.error))
-  }
-  const chain = validateChain(parsed.data.dimensionChain)
+export type VersionedProject =
+  | { version: 1; project: ProjectFileProjectV1 }
+  | { version: 2; project: ProjectFileProject }
+
+/** 校验工作链与基线链；两个 schema 版本共用。 */
+function validateProjectChains(
+  data: { dimensionChain: unknown; baseline: { savedAt: string; definition: unknown } | null },
+): ProjectFileResult<{ dimensionChain: ProjectFileProject['dimensionChain']; baseline: ProjectFileProject['baseline'] }> {
+  const chain = validateChain(data.dimensionChain)
   if (!chain.ok) {
     const first = chain.errors[0]
     return fail(
@@ -404,8 +522,8 @@ function parseProjectObject(input: unknown): ProjectFileResult<ProjectFileProjec
     )
   }
   let baseline: ProjectFileProject['baseline'] = null
-  if (parsed.data.baseline !== null) {
-    const baselineChain = validateChain(parsed.data.baseline.definition)
+  if (data.baseline !== null) {
+    const baselineChain = validateChain(data.baseline.definition)
     if (!baselineChain.ok) {
       const first = baselineChain.errors[0]
       return fail(
@@ -414,22 +532,76 @@ function parseProjectObject(input: unknown): ProjectFileResult<ProjectFileProjec
         first === undefined ? undefined : `${first.code}: ${first.message}`,
       )
     }
-    baseline = {
-      savedAt: parsed.data.baseline.savedAt,
-      definition: baselineChain.value,
-    }
+    baseline = { savedAt: data.baseline.savedAt, definition: baselineChain.value }
   }
-  return ok({
-    ...parsed.data,
-    dimensionChain: chain.value,
-    baseline,
-  } as ProjectFileProject)
+  return ok({ dimensionChain: chain.value, baseline })
 }
 
+/**
+ * 按 schemaVersion 分支解析项目记录：
+ * - 3（B1 及更早）：原版严格规则，五个预留数组必须为空；
+ * - 4（B2）：严格模型/版本/关联类型；
+ * - 其他：UNSUPPORTED_VERSION，不 strip、不默认。
+ */
+export function parseProjectVersioned(input: unknown): ProjectFileResult<VersionedProject> {
+  const raw = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : null
+  const version = raw?.schemaVersion
+  if (version === LEGACY_PROJECT_FILE_SCHEMA_VERSION) {
+    const parsed = projectV1Schema.safeParse(input)
+    if (!parsed.success) {
+      return fail('INVALID_RECORD', 'project.json 结构不合法（schema 3）', describeZodError(parsed.error))
+    }
+    const chains = validateProjectChains(parsed.data)
+    if (!chains.ok) return chains
+    return ok({ version: 1, project: parsed.data as ProjectFileProjectV1 })
+  }
+  if (version === PROJECT_FILE_SCHEMA_VERSION) {
+    const parsed = projectV2Schema.safeParse(input)
+    if (!parsed.success) {
+      return fail('INVALID_RECORD', 'project.json 结构不合法（schema 4）', describeZodError(parsed.error))
+    }
+    const chains = validateProjectChains(parsed.data)
+    if (!chains.ok) return chains
+    return ok({
+      version: 2,
+      project: {
+        ...(parsed.data as unknown as ProjectFileProject),
+        dimensionChain: chains.value.dimensionChain,
+        baseline: chains.value.baseline,
+      },
+    })
+  }
+  return fail(
+    'UNSUPPORTED_VERSION',
+    '项目记录 schemaVersion 不受支持',
+    `schemaVersion=${String(version)}`,
+  )
+}
+
+/**
+ * 读时兼容：把 schema3 记录适配成 B2 工作形状（内存中，不改磁盘）。
+ * 不制造模型，也不凭空确认任何关系；sourceFormatVersion=1 供首次保存升级使用。
+ */
+export function adaptProjectV1(project: ProjectFileProjectV1): ProjectFileProject {
+  return {
+    ...project,
+    schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
+    sourceFormatVersion: 1,
+    parts: [],
+    parameters: [],
+    modelRevisions: [],
+    dimensionLinks: [],
+    drawings: [],
+  }
+}
+
+/** 严格解析 project/project.json（接受 schema3/4，统一返回 B2 工作形状）。 */
 export function parseProject(
   input: unknown,
 ): ProjectFileResult<ProjectFileProject> {
-  return parseProjectObject(input)
+  const parsed = parseProjectVersioned(input)
+  if (!parsed.ok) return parsed
+  return ok(parsed.value.version === 1 ? adaptProjectV1(parsed.value.project) : parsed.value.project)
 }
 
 export function parseDraft(
@@ -477,7 +649,8 @@ export function parseRevisionFile(
   if (!parsed.success) {
     return fail('INVALID_RECORD', '项目文件版本记录结构不合法', describeZodError(parsed.error))
   }
-  const project = parseProjectObject(parsed.data.project)
+  // 旧历史快照保留 schema3 原样（不可变）；新快照为 schema4。
+  const project = parseProjectVersioned(parsed.data.project)
   if (!project.ok) {
     return fail(
       'INVALID_RECORD',
@@ -485,7 +658,7 @@ export function parseRevisionFile(
       project.error.detail ?? project.error.message,
     )
   }
-  return ok({ ...parsed.data, project: project.value })
+  return ok({ ...parsed.data, project: project.value.project })
 }
 
 /* ------------------------------------------------------------------ */
@@ -512,19 +685,50 @@ export function computeCounts(snapshot: ProjectFileSnapshot): ProjectFileCounts 
 export function expectedAttachmentRefs(
   snapshot: ProjectFileSnapshot,
 ): ProjectFileAttachmentRef[] {
-  return snapshot.blobs
-    .map((blob) => {
-      const revision = snapshot.revisions.find((item) => item.blobKey === blob.blobKey)
-      return {
-        kind: 'pdf' as const,
-        revisionId: revision?.id ?? '',
+  const refs: ProjectFileAttachmentRef[] = []
+  for (const blob of snapshot.blobs) {
+    const pdfRevisions = snapshot.revisions.filter((item) => item.blobKey === blob.blobKey)
+    const modelRevisions = snapshot.project.modelRevisions.filter(
+      (item) => item.blobKey === blob.blobKey,
+    )
+    for (const revision of pdfRevisions) {
+      refs.push({
+        kind: 'pdf',
+        revisionId: revision.id,
         blobKey: blob.blobKey,
         path: attachmentEntryPath(blob.blobKey),
         sha256: blob.sha256,
         byteSize: blob.byteSize,
-      }
-    })
-    .sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0))
+      })
+    }
+    for (const revision of modelRevisions) {
+      refs.push({
+        kind: 'model',
+        revisionId: revision.modelRevisionId,
+        blobKey: blob.blobKey,
+        path: attachmentEntryPath(blob.blobKey),
+        sha256: blob.sha256,
+        byteSize: blob.byteSize,
+      })
+    }
+    if (pdfRevisions.length === 0 && modelRevisions.length === 0) {
+      // 保存端与打开端共用本函数；没有版本引用的孤立 blob 不应出现，
+      // 仍保留旧行为给出空 revisionId，由引用校验拒绝。
+      refs.push({
+        kind: 'pdf',
+        revisionId: '',
+        blobKey: blob.blobKey,
+        path: attachmentEntryPath(blob.blobKey),
+        sha256: blob.sha256,
+        byteSize: blob.byteSize,
+      })
+    }
+  }
+  return refs.sort((left, right) => {
+    if (left.path !== right.path) return left.path < right.path ? -1 : 1
+    if (left.kind !== right.kind) return left.kind === 'pdf' ? -1 : 1
+    return left.revisionId < right.revisionId ? -1 : left.revisionId > right.revisionId ? 1 : 0
+  })
 }
 
 /** 容器内应有的全部条目（不含 manifest.json）及其角色。 */
@@ -709,6 +913,30 @@ export function validateSnapshotReferences(
     return fail('INVALID_RECORD', `blobKey 重复：${blobKeyDuplicate}`)
   }
 
+  const partDuplicate = duplicateIds(snapshot.project.parts, 'partId')
+  if (partDuplicate !== null) {
+    return fail('INVALID_RECORD', `partId 重复：${partDuplicate}`)
+  }
+  const modelDuplicate = duplicateIds(snapshot.project.modelRevisions, 'modelRevisionId')
+  if (modelDuplicate !== null) {
+    return fail('INVALID_RECORD', `modelRevisionId 重复：${modelDuplicate}`)
+  }
+  const linkDuplicate = duplicateIds(snapshot.project.dimensionLinks, 'linkId')
+  if (linkDuplicate !== null) {
+    return fail('INVALID_RECORD', `维度关联 linkId 重复：${linkDuplicate}`)
+  }
+  // 模型版本与来源版本使用不同命名空间：同一个 ID 不能同时出现在两边。
+  const sourceRevisionIds = new Set(snapshot.revisions.map((item) => item.id))
+  for (const model of snapshot.project.modelRevisions) {
+    if (sourceRevisionIds.has(model.modelRevisionId)) {
+      return fail(
+        'INVALID_RECORD',
+        '模型版本 ID 与来源版本 ID 碰撞',
+        model.modelRevisionId,
+      )
+    }
+  }
+
   const documentById = new Map(snapshot.documents.map((item) => [item.id, item]))
   const revisionById = new Map(snapshot.revisions.map((item) => [item.id, item]))
   const blobByKey = new Map(snapshot.blobs.map((item) => [item.blobKey, item]))
@@ -762,6 +990,127 @@ export function validateSnapshotReferences(
   const attachmentByKey = new Map(
     snapshot.attachments.map((item) => [item.blobKey, item]),
   )
+
+  // ---- B2：部件 / 模型版本 / 字节引用 --------------------------------
+  const partById = new Map(snapshot.project.parts.map((item) => [item.partId, item]))
+  const modelById = new Map(
+    snapshot.project.modelRevisions.map((item) => [item.modelRevisionId, item]),
+  )
+  for (const part of snapshot.project.parts) {
+    if (part.currentModelRevisionId === null) continue
+    const current = modelById.get(part.currentModelRevisionId)
+    if (current === undefined) {
+      return fail(
+        'MISSING_REFERENCE',
+        `部件 ${part.partId} 的当前模型版本不存在`,
+        part.currentModelRevisionId,
+      )
+    }
+    if (current.partId !== part.partId) {
+      return fail(
+        'MISSING_REFERENCE',
+        `部件 ${part.partId} 的当前模型版本属于其它部件`,
+        current.partId,
+      )
+    }
+  }
+  for (const model of snapshot.project.modelRevisions) {
+    if (!partById.has(model.partId)) {
+      return fail('MISSING_REFERENCE', `模型版本 ${model.modelRevisionId} 引用了不存在的部件`, model.partId)
+    }
+    if (model.parentModelRevisionId !== null) {
+      const parent = modelById.get(model.parentModelRevisionId)
+      if (parent === undefined) {
+        return fail(
+          'MISSING_REFERENCE',
+          `模型版本 ${model.modelRevisionId} 的父版本不存在`,
+          model.parentModelRevisionId,
+        )
+      }
+      if (parent.partId !== model.partId) {
+        return fail(
+          'MISSING_REFERENCE',
+          `模型版本 ${model.modelRevisionId} 的父版本属于其它部件`,
+          parent.partId,
+        )
+      }
+    }
+    const blob = blobByKey.get(model.blobKey)
+    if (blob === undefined) {
+      return fail('MISSING_REFERENCE', `模型版本 ${model.modelRevisionId} 缺少 blob 元数据`, model.blobKey)
+    }
+    if (blob.sha256 !== model.attachmentSha256 || blob.byteSize !== model.byteSize) {
+      return fail(
+        'HASH_MISMATCH',
+        `模型版本 ${model.modelRevisionId} 与 blob 元数据的大小/哈希不一致`,
+      )
+    }
+    if (!attachmentByKey.has(model.blobKey)) {
+      return fail(
+        'MISSING_REFERENCE',
+        `模型版本 ${model.modelRevisionId} 的字节缺失（模型版本不允许缺附件声明）`,
+        model.blobKey,
+      )
+    }
+  }
+  // 模型版本父链无环。
+  for (const model of snapshot.project.modelRevisions) {
+    const visited = new Set<string>([model.modelRevisionId])
+    let cursor = model.parentModelRevisionId
+    while (cursor !== null) {
+      if (visited.has(cursor)) {
+        return fail('INVALID_RECORD', `模型版本父链存在环：${model.modelRevisionId}`)
+      }
+      visited.add(cursor)
+      cursor = modelById.get(cursor)?.parentModelRevisionId ?? null
+    }
+  }
+  // 每个 blob 至少要有一个版本引用；不允许无来源的孤立字节。
+  for (const blob of snapshot.blobs) {
+    const referenced =
+      snapshot.revisions.some((item) => item.blobKey === blob.blobKey) ||
+      snapshot.project.modelRevisions.some((item) => item.blobKey === blob.blobKey)
+    if (!referenced) {
+      return fail('MISSING_REFERENCE', 'blob 没有被任何来源或模型版本引用', blob.blobKey)
+    }
+    if (!attachmentByKey.has(blob.blobKey)) {
+      const missing = snapshot.missingAttachments.some((item) => item.blobKey === blob.blobKey)
+      if (!missing) {
+        return fail('MISSING_REFERENCE', 'blob 元数据存在但既无字节也无缺附件声明', blob.blobKey)
+      }
+    }
+  }
+
+  // ---- B2：可视关联（外形资料来源，不是参数联动） ----------------------
+  for (const link of snapshot.project.dimensionLinks) {
+    if (!termIds.has(link.termId)) {
+      return fail('MISSING_REFERENCE', `关联 ${link.linkId} 引用了不存在的组成环`, link.termId)
+    }
+    if (!partById.has(link.target.partId)) {
+      return fail('MISSING_REFERENCE', `关联 ${link.linkId} 引用了不存在的部件`, link.target.partId)
+    }
+    if (link.target.granularity === 'model' && link.target.modelRevisionId === null) {
+      return fail('INVALID_RECORD', `关联 ${link.linkId} 使用模型粒度但没有具体版本`)
+    }
+    for (const [label, revisionId] of [
+      ['目标版本', link.target.modelRevisionId],
+      ['确认版本', link.reviewedModelRevisionId],
+    ] as const) {
+      if (revisionId === null) continue
+      const model = modelById.get(revisionId)
+      if (model === undefined) {
+        return fail('MISSING_REFERENCE', `关联 ${link.linkId} 的${label}不存在`, revisionId)
+      }
+      if (model.partId !== link.target.partId) {
+        return fail(
+          'MISSING_REFERENCE',
+          `关联 ${link.linkId} 的${label}属于其它部件`,
+          `${model.partId} != ${link.target.partId}`,
+        )
+      }
+    }
+  }
+
   for (const missing of snapshot.missingAttachments) {
     const revision = revisionById.get(missing.revisionId)
     if (revision === undefined) {
@@ -1080,30 +1429,63 @@ function sameReferenceSet(
   return true
 }
 
-/** 附件字节哈希核对（打开与保存自校验共用）。 */
+/** 附件字节哈希核对（打开与保存自校验共用）；共享 blob 只核对一次。 */
 export async function validateAttachmentBytes(
   snapshot: ProjectFileSnapshot,
   hash: (bytes: Uint8Array) => Promise<string>,
 ): Promise<ProjectFileResult<void>> {
   const blobByKey = new Map(snapshot.blobs.map((blob) => [blob.blobKey, blob]))
+  const attachmentByKey = new Map<string, ProjectFileAttachmentInput>()
   for (const attachment of snapshot.attachments) {
-    const blob = blobByKey.get(attachment.blobKey)
+    const existing = attachmentByKey.get(attachment.blobKey)
+    if (existing !== undefined && existing.bytes !== attachment.bytes) {
+      return fail('INVALID_RECORD', '同一 blobKey 出现了两份不同字节', attachment.blobKey)
+    }
+    attachmentByKey.set(attachment.blobKey, attachment)
+  }
+  for (const [blobKey, attachment] of attachmentByKey) {
+    const blob = blobByKey.get(blobKey)
     if (blob === undefined) {
-      return fail('MISSING_REFERENCE', '附件缺少 blob 元数据', attachment.blobKey)
+      return fail('MISSING_REFERENCE', '附件缺少 blob 元数据', blobKey)
     }
     if (attachment.bytes.byteLength !== blob.byteSize) {
       return fail(
         'HASH_MISMATCH',
-        `附件大小不一致：${attachment.blobKey}`,
+        `附件大小不一致：${blobKey}`,
         `声明 ${blob.byteSize}，实际 ${attachment.bytes.byteLength}`,
       )
     }
     const digest = await hash(attachment.bytes)
     if (digest !== blob.sha256) {
-      return fail('HASH_MISMATCH', `附件哈希不一致：${attachment.blobKey}`)
+      return fail('HASH_MISMATCH', `附件哈希不一致：${blobKey}`)
     }
   }
   return ok(undefined)
+}
+
+/**
+ * 项目附件额度（B2：PDF + 模型唯一 blob 总字节，100 MiB）。
+ * 打开旧文件不在这里拒绝（旧内容按原规则展示）；保存/接纳候选时检查。
+ */
+export function projectAssetBytes(snapshot: ProjectFileSnapshot): number {
+  return sumUniqueBlobBytes(snapshot.blobs)
+}
+
+export function validateProjectAssetBudget(
+  snapshot: ProjectFileSnapshot,
+  addedBytes = 0,
+  maxBytes: number = PROJECT_ASSETS_MAX_BYTES,
+): ProjectFileResult<{ usedBytes: number; addedBytes: number; maxBytes: number }> {
+  const usedBytes = projectAssetBytes(snapshot)
+  const total = usedBytes + addedBytes
+  if (!Number.isSafeInteger(total) || total > maxBytes) {
+    return fail(
+      'PROJECT_ASSETS_TOO_LARGE',
+      `保留附件将超过 ${maxBytes} 字节（100 MiB）附件额度；此次未导入，旧视图和项目未改变`,
+      `当前 ${usedBytes} 字节，新增 ${addedBytes} 字节，上限 ${maxBytes} 字节`,
+    )
+  }
+  return ok({ usedBytes, addedBytes, maxBytes })
 }
 
 /** 从 manifest 声明的条目构造带角色的映射，供 codec 记录审计用。 */

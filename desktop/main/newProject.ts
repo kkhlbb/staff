@@ -105,7 +105,7 @@ export function createNewProjectSnapshot(options: NewProjectOptions): ProjectFil
 
   const project: ProjectFileProject = {
     id: projectId,
-    schemaVersion: 3,
+    schemaVersion: 4,
     name: options.name,
     currentRevisionId: revisionId,
     dimensionChain: chain,
@@ -116,6 +116,7 @@ export function createNewProjectSnapshot(options: NewProjectOptions): ProjectFil
     relationReview: null,
     migration: null,
     baseline: null,
+    sourceFormatVersion: 2,
     parts: [],
     parameters: [],
     modelRevisions: [],

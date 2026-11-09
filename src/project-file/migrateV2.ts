@@ -576,6 +576,8 @@ export async function migrateV2Bundle(
     relationReview: null,
     migration: project.migration,
     baseline: project.baseline,
+    // 迁移产物由 B2 写端生成：本身即格式 2 / schema 4。
+    sourceFormatVersion: 2,
     parts: [],
     parameters: [],
     modelRevisions: [],
@@ -741,6 +743,8 @@ export async function migrateV2Json(
     relationReview: null,
     migration: null,
     baseline: project.baseline,
+    // 迁移产物由 B2 写端生成：本身即格式 2 / schema 4。
+    sourceFormatVersion: 2,
     parts: [],
     parameters: [],
     modelRevisions: [],

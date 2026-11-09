@@ -32,6 +32,12 @@ export const IPC_CHANNELS = {
   sourceRead: 'source:read',
   projectReveal: 'project:reveal',
   windowRequestClose: 'window:request-close',
+  /** B2：STL 模型候选/版本（旧 window.cunlian 只增不改）。 */
+  modelPick: 'model:pick',
+  modelRead: 'model:read',
+  modelCommit: 'model:commit',
+  modelRelease: 'model:release',
+  modelLink: 'model:link',
 } as const
 
 export type IpcChannelName = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
@@ -72,6 +78,7 @@ export type ContainerErrorCode =
   | 'MISSING_REFERENCE'
   | 'INVALID_RECORD'
   | 'EMPTY_BACKUP'
+  | 'PROJECT_ASSETS_TOO_LARGE'
 
 /** 保存错误码（任务卡 §3 “保存码”）。 */
 export type SaveErrorCode =
@@ -104,6 +111,19 @@ export type CommonErrorCode =
   | 'REVEAL_FAILED'
   | 'EDITOR_TIMEOUT'
   | 'INTERNAL'
+  | 'CANDIDATE_EXPIRED'
+  | 'FILE_CHANGED'
+  | 'STL_EMPTY'
+  | 'STL_TOO_LARGE'
+  | 'STL_TOO_MANY_TRIANGLES'
+  | 'STL_BINARY_LENGTH_MISMATCH'
+  | 'STL_INVALID_ASCII'
+  | 'STL_NON_FINITE'
+  | 'STL_DEGENERATE_TRIANGLE'
+  | 'STL_GEOMETRY_RANGE'
+  | 'STL_INVALID_FORMAT'
+  | 'STL_GEOMETRY_MISMATCH'
+  | 'STL_RENDER_PREPARE_FAILED'
 
 export type IpcErrorCode =
   | ContainerErrorCode
@@ -285,6 +305,45 @@ export interface MigrationCommitValue {
 }
 
 /**
+ * B2 模型版本（STL）。
+ * - 候选字节只存在 main 内存，token 绑定窗口/会话且 5 分钟过期；
+ * - commit 由 main 重新解析并计算面数/包围盒，不信任 renderer 传来的几何参数；
+ * - 旧 18 个函数的签名与行为不变，这 5 个是新增。
+ */
+export interface ModelPickValue {
+  candidateToken: string
+  fileName: string
+  byteSize: number
+  sha256: string
+}
+
+export type ModelRevisionRef =
+  | { kind: 'candidate'; token: string }
+  | { kind: 'revision'; modelRevisionId: string }
+
+export interface ModelReadValue {
+  bytes: Uint8Array
+  sha256: string
+  fileName: string
+  byteSize: number
+}
+
+export interface ModelCommitValue {
+  acceptedSeq: number
+  modelRevisionId: string
+  snapshot: SnapshotDto
+  recovery: RecoveryWriteState
+  warning?: string
+}
+
+export interface ModelLinkValue {
+  acceptedSeq: number
+  snapshot: SnapshotDto
+  recovery: RecoveryWriteState
+  warning?: string
+}
+
+/**
  * preload 暴露到 `window.cunlian` 的 API。
  *
  * 只列具体函数；A-02/A-03/A-04 扩展项目会话方法时同步扩展本接口，并由主进程
@@ -350,6 +409,47 @@ export interface CunlianApi {
   onEditorFlush(listener: (payload: EditorFlushRequest) => void): () => void
   /** 回复编辑屏障；main 校验 requestId 与编辑序号后才会放行关闭。 */
   respondEditorFlush(payload: EditorFlushedPayload): void
+
+  /* ---- B2：STL 模型（新增，旧函数不变） ------------------------------ */
+  /** 系统对话框选单个 STL；main 检查常规文件、非符号链接、≤10 MiB。 */
+  pickModel(request: {
+    sessionId: string
+    baseEditSeq: number
+    replacePartId?: string
+  }): Promise<IpcResult<ModelPickValue>>
+  /** 读取候选或当前/历史模型版本字节；不接受路径或 blobKey。 */
+  readModel(request: {
+    sessionId: string
+    ref: ModelRevisionRef
+  }): Promise<IpcResult<ModelReadValue>>
+  /** 原子接纳：main 解析/校验/容量检查后创建新不可变版本。 */
+  commitModel(request: {
+    sessionId: string
+    baseEditSeq: number
+    candidateToken: string
+    expectedCurrentModelRevisionId: string | null
+    partName: string
+    unitNote: string
+  }): Promise<IpcResult<ModelCommitValue>>
+  /** 只释放本窗口本会话的候选；不删除磁盘源文件或项目版本。 */
+  releaseModel(request: {
+    sessionId: string
+    candidateToken: string
+  }): Promise<IpcResult<{ released: boolean }>>
+  /** 创建/确认“外形资料来源”关联；不改变尺寸链数值、不自动同步。 */
+  linkModel(request: {
+    sessionId: string
+    baseEditSeq: number
+    operation: 'bind' | 'confirm-new'
+    linkId?: string
+    termId: string
+    target: {
+      granularity: 'model' | 'part'
+      partId: string
+      modelRevisionId: string | null
+    }
+    expectedCurrentModelRevisionId: string | null
+  }): Promise<IpcResult<ModelLinkValue>>
 }
 
 /** 应用与 IPC 协议的稳定标识，测试与契约文档共用。 */

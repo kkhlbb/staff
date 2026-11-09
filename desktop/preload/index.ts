@@ -13,6 +13,10 @@ import {
   type MenuActionPayload,
   type MigrationCommitValue,
   type MigrationInspectValue,
+  type ModelCommitValue,
+  type ModelLinkValue,
+  type ModelPickValue,
+  type ModelReadValue,
   type ProjectOpenValue,
   type ProjectRevealValue,
   type ProjectSaveValue,
@@ -127,6 +131,18 @@ const api: CunlianApi = {
   respondEditorFlush: (payload: EditorFlushedPayload) => {
     ipcRenderer.send(IPC_EVENTS.editorFlushed, payload)
   },
+  pickModel: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.modelPick, request) as Promise<IpcResult<ModelPickValue>>,
+  readModel: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.modelRead, request) as Promise<IpcResult<ModelReadValue>>,
+  commitModel: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.modelCommit, request) as Promise<IpcResult<ModelCommitValue>>,
+  releaseModel: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.modelRelease, request) as Promise<
+      IpcResult<{ released: boolean }>
+    >,
+  linkModel: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.modelLink, request) as Promise<IpcResult<ModelLinkValue>>,
 }
 
 contextBridge.exposeInMainWorld('cunlian', api)

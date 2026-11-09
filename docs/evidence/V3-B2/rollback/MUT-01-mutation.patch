@@ -1,0 +1,11 @@
+--- a/src/workspace/useImportedModel.ts
++++ b/src/workspace/useImportedModel.ts
+@@ -209,6 +209,8 @@
+         const parsed = parseStl(read.value.bytes)
+         if (!parsed.ok) {
+           await release(picked.value.candidateToken)
++          // MUT-01（回退实验，仅临时）：先清空当前几何，验证测试能否抓到旧视图丢失。
++          setGeometry(null)
+           setError(parsed.error)
+           return
+         }

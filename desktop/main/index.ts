@@ -38,6 +38,8 @@ import { ProjectService } from './projectService'
 import { RecentProjectsStore } from './recentProjects'
 import { RecoveryStore } from './recovery'
 import { registerProjectChannels } from './channels'
+import { registerModelChannels } from './modelChannels'
+import { createModelFileIo } from './modelIo'
 import { SessionController, runCloseGate, type GateChoice } from './sessionController'
 import { SenderGuard } from './senderGuard'
 import { createMainWindow, type MainWindowHandle } from './window'
@@ -274,6 +276,23 @@ async function pickSaveTargetFor(suggestedName: string): Promise<string | null> 
   return saved.filePath
 }
 
+async function pickModelFileFor(windowId: number): Promise<string | null> {
+  const owner = BrowserWindow.fromId(windowId) ?? BrowserWindow.getFocusedWindow()
+  const options = {
+    title: '导入 STL 模型',
+    properties: ['openFile' as const],
+    filters: [{ name: 'STL 模型', extensions: ['stl', 'STL'] }],
+  }
+  const picked =
+    owner === null
+      ? await dialog.showOpenDialog(options)
+      : await dialog.showOpenDialog(owner, options)
+  if (picked.canceled || picked.filePaths.length !== 1) {
+    return null
+  }
+  return picked.filePaths[0] ?? null
+}
+
 function installIpcHandlers(): void {
   const ipc: IpcMainLike = ipcMain
   const deps = { guard, log: logStage }
@@ -317,6 +336,16 @@ function installIpcHandlers(): void {
     },
     appVersion: app.getVersion(),
     electronVersion: process.versions.electron ?? 'unknown',
+    log: logStage,
+  })
+
+  registerModelChannels(ipc, {
+    guard,
+    controller,
+    projectService,
+    recovery,
+    pickModelPath: pickModelFileFor,
+    io: createModelFileIo(),
     log: logStage,
   })
 

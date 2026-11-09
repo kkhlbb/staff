@@ -4,6 +4,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CunlianApi, ProjectOpenValue, MenuActionPayload, EditorFlushRequest } from '../../desktop/shared/contracts'
 import { createSampleSnapshot } from '../project-file/__fixtures__/sampleProjectFile'
+import { createModelSnapshot, sampleStlTriangle, MODEL_PART_ID, MODEL_REVISION_ID } from '../project-file/__fixtures__/modelProjectFile'
+import { toSnapshotDto } from '../project-file/codec'
 import { DesktopWorkspace } from './DesktopWorkspace'
 
 // 3D 场景在 jsdom 里没有 WebGL2：用伪场景模块替换，只验证接线与命令调用。
@@ -34,6 +36,29 @@ vi.mock('../parts/threeScene', () => ({
   },
 }))
 
+// 导入模型的场景同样需要 WebGL2：用伪模块验证接线与命令，不冒充真渲染。
+const modelScene = vi.hoisted(() => ({ handles: [] as Record<string, unknown>[] }))
+vi.mock('../parts/modelScene', () => ({
+  createModelScene: (options: Record<string, unknown>) => {
+    const handle: Record<string, unknown> = {
+      probe: { webgl: 'webgl2', glVersion: 'WebGL 2.0 (Mock)', glRenderer: 'Mock GPU', dpr: 2 },
+      selected: Boolean(options.selected),
+      active: true,
+      disposed: false,
+      frames: 0,
+      setSelected: (value: boolean) => { handle.selected = value },
+      setActive: (value: boolean) => { handle.active = value },
+      resetView: () => undefined,
+      zoomBy: () => undefined,
+      getView: () => ({ position: [0, 0, 0], target: [0, 0, 0], zoom: 1 }),
+      frameCount: () => handle.frames,
+      dispose: () => { handle.disposed = true },
+    }
+    modelScene.handles.push(handle)
+    return handle
+  },
+}))
+
 let menu: (payload: MenuActionPayload) => void
 let flush: (payload: EditorFlushRequest) => void
 let opened: ProjectOpenValue
@@ -60,6 +85,12 @@ beforeEach(async () => {
     onMenuAction: vi.fn(listener => { menu = listener; return vi.fn() }),
     onEditorFlush: vi.fn(listener => { flush = listener; return vi.fn() }),
     respondEditorFlush: vi.fn(),
+    // B2 新增：默认未选择/无模型，既有用例行为不变。
+    pickModel: vi.fn(async () => ({ ok: false as const, error: { code: 'CANCELLED' as const, message: '取消' } })),
+    readModel: vi.fn(async () => ({ ok: false as const, error: { code: 'CANDIDATE_EXPIRED' as const, message: '无候选' } })),
+    commitModel: vi.fn(async () => ({ ok: false as const, error: { code: 'STALE_EDIT' as const, message: '无候选' } })),
+    releaseModel: vi.fn(async () => ({ ok: true as const, value: { released: false } })),
+    linkModel: vi.fn(async () => ({ ok: false as const, error: { code: 'MISSING_REFERENCE' as const, message: '无模型' } })),
   }
   vi.stubGlobal('cunlian', api)
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
@@ -262,11 +293,11 @@ describe('B1 内置轴系示例整合', () => {
     expect(document.querySelector('.three-viewport')!.getAttribute('data-part-count')).toBe('5')
   })
 
-  it('B1-A01 未开启示例：3D 占位只给「查看内置轴系示例」，无可用 STL/出图假入口', async () => {
+  it('B2 占位：3D 未开启时提供 STL 导入与内置示例入口，无出图假入口', async () => {
     await openExample()
     fireEvent.click(screen.getByRole('tab', { name: '3D' }))
     expect(screen.getByRole('button', { name: '查看内置轴系示例' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /STL|导入模型/ })).toBeNull()
+    expect(screen.getByRole('button', { name: '导入 STL 模型…' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: /导出 SVG|导出图纸/ })).toBeNull()
     expect(screen.getByText('尚未打开轴系示例 · B1')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '查看内置轴系示例' }))
@@ -369,5 +400,106 @@ describe('B1 内置轴系示例整合', () => {
     expect(scene.handles.length).toBeGreaterThan(0)
     expect(scene.handles.every(handle => handle.disposed === true)).toBe(true)
     expect(screen.getByRole('heading', { name: '属性 · 未选择' })).toBeInTheDocument()
+  })
+})
+
+describe('B2 模型导入与外形资料来源', () => {
+  const tree = () => screen.getByRole('complementary', { name: '项目树' })
+  const partGroup = () => within(tree()).getByText('零件').closest('details')!
+  it('导入：pick→read→确认→commit；显示文件名/面数，爆炸入口禁用', async () => {
+    const { snapshot } = await createModelSnapshot()
+    const dto = toSnapshotDto(snapshot)
+    const stlBytes = sampleStlTriangle()
+    vi.mocked(api.pickModel).mockResolvedValueOnce({ ok: true, value: { candidateToken: 'tok-1', fileName: 'sleeve.stl', byteSize: stlBytes.byteLength, sha256: 'a'.repeat(64) } })
+    vi.mocked(api.readModel).mockResolvedValueOnce({ ok: true, value: { bytes: stlBytes, sha256: 'a'.repeat(64), fileName: 'sleeve.stl', byteSize: stlBytes.byteLength } })
+    vi.mocked(api.commitModel).mockResolvedValueOnce({ ok: true, value: { acceptedSeq: 1, modelRevisionId: MODEL_REVISION_ID, snapshot: dto, recovery: 'written' } })
+
+    await openExample()
+    fireEvent.click(screen.getByRole('tab', { name: '3D' }))
+    fireEvent.click(screen.getByRole('button', { name: '导入 STL 模型…' }))
+    const dialog = await screen.findByRole('dialog', { name: '确认导入模型' })
+    expect(within(dialog).getByDisplayValue('sleeve')).toBeInTheDocument()
+    fireEvent.change(within(dialog).getByLabelText('部件名称'), { target: { value: '隔套外形' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: '导入为不可变版本' }))
+
+    await waitFor(() => expect(api.commitModel).toHaveBeenCalled())
+    const request = vi.mocked(api.commitModel).mock.calls.at(-1)![0]
+    expect(request.expectedCurrentModelRevisionId).toBeNull()
+    expect(request.partName).toBe('隔套外形')
+    expect(request.unitNote).toBe('未注明（STL 无标准单位）')
+    await screen.findByText(/导入模型 · sleeve.stl/)
+    expect(screen.getByRole('button', { name: '爆炸（整体网格不支持）' })).toBeDisabled()
+    expect(within(partGroup()).getByRole('button', { name: '隔套外形' })).toBeInTheDocument()
+    fireEvent.click(within(partGroup()).getByRole('button', { name: '隔套外形' }))
+    expect(screen.getAllByText(/不改变尺寸链数值、不自动同步/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/1 面/).length).toBeGreaterThan(0)
+  })
+
+  it('解析失败：具体错误、旧模型视图保留、候选被释放、不调用 commit', async () => {
+    const { snapshot } = await createModelSnapshot()
+    const dto = toSnapshotDto(snapshot)
+    const stlBytes = sampleStlTriangle()
+    vi.mocked(api.openProject).mockResolvedValueOnce({ ok: true, value: { ...opened, snapshot: dto } })
+    // 首次按版本读取用于显示；替换候选读取返回坏字节。
+    vi.mocked(api.readModel)
+      .mockResolvedValueOnce({ ok: true, value: { bytes: stlBytes, sha256: 'a'.repeat(64), fileName: 'sleeve.stl', byteSize: stlBytes.byteLength } })
+      .mockResolvedValueOnce({ ok: true, value: { bytes: new TextEncoder().encode('not an stl'), sha256: 'b'.repeat(64), fileName: 'broken.stl', byteSize: 10 } })
+    vi.mocked(api.pickModel).mockResolvedValueOnce({ ok: true, value: { candidateToken: 'tok-bad', fileName: 'broken.stl', byteSize: 10, sha256: 'b'.repeat(64) } })
+    vi.mocked(api.releaseModel).mockResolvedValue({ ok: true, value: { released: true } })
+
+    render(<DesktopWorkspace />)
+    fireEvent.click(await screen.findByRole('button', { name: /打开项目/ }))
+    await screen.findByRole('main', { name: '寸链桌面工作台' })
+    fireEvent.click(screen.getByRole('tab', { name: '3D' }))
+    await screen.findByText(/导入模型 · sleeve.stl/)
+    fireEvent.click(screen.getByRole('button', { name: '替换模型…' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('STL_')
+    expect(alert).toHaveTextContent('旧视图、当前版本与关联未改变')
+    expect(screen.getByText(/导入模型 · sleeve.stl/)).toBeInTheDocument()
+    expect(api.commitModel).not.toHaveBeenCalled()
+    expect(api.releaseModel).toHaveBeenCalledWith({ sessionId: 'session-1', candidateToken: 'tok-bad' })
+  })
+
+  it('关联：确认文案明确不改变数值；确认后显示已核对', async () => {
+    const { snapshot } = await createModelSnapshot()
+    const dto = toSnapshotDto(snapshot)
+    const link = {
+      kind: 'visual-reference' as const,
+      linkId: 'link-ui',
+      termId: 't-s',
+      target: { granularity: 'model' as const, partId: MODEL_PART_ID, modelRevisionId: MODEL_REVISION_ID },
+      reviewStatus: 'confirmed' as const,
+      reviewedModelRevisionId: MODEL_REVISION_ID,
+      reviewedAt: '2026-11-09T10:00:00.000Z',
+      reason: '',
+    }
+    vi.mocked(api.openProject).mockResolvedValueOnce({ ok: true, value: { ...opened, snapshot: dto } })
+    vi.mocked(api.readModel).mockResolvedValue({ ok: true, value: { bytes: sampleStlTriangle(), sha256: 'a'.repeat(64), fileName: 'sleeve.stl', byteSize: 134 } })
+    vi.mocked(api.linkModel).mockResolvedValueOnce({
+      ok: true,
+      value: { acceptedSeq: 1, snapshot: { ...dto, project: { ...dto.project, dimensionLinks: [link] } }, recovery: 'written', warning: '该关联只表示外形资料来源，不改变尺寸链数值、不自动同步。' },
+    })
+
+    render(<DesktopWorkspace />)
+    fireEvent.click(await screen.findByRole('button', { name: /打开项目/ }))
+    await screen.findByRole('main', { name: '寸链桌面工作台' })
+    fireEvent.click(within(tree()).getByRole('button', { name: 'S · 隔套' }))
+    const section = screen.getByRole('region', { name: '外形资料来源关联' })
+    fireEvent.click(within(section).getByRole('button', { name: '关联整体模型…' }))
+    const dialog = await screen.findByRole('dialog', { name: '确认外形资料来源关联' })
+    expect(dialog).toHaveTextContent('不改变尺寸链数值、不自动同步')
+    expect(dialog).toHaveTextContent('不是 D 批次参数联动')
+    fireEvent.click(within(dialog).getByRole('button', { name: '确认关联（不改变数值）' }))
+
+    await waitFor(() => expect(api.linkModel).toHaveBeenCalled())
+    const request = vi.mocked(api.linkModel).mock.calls.at(-1)![0]
+    expect(request).toMatchObject({
+      operation: 'bind',
+      termId: 't-s',
+      target: { granularity: 'model', partId: MODEL_PART_ID, modelRevisionId: MODEL_REVISION_ID },
+    })
+    await waitFor(() => expect(within(section).getByText(/已核对/)).toBeInTheDocument())
   })
 })

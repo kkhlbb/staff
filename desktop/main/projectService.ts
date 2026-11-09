@@ -12,6 +12,7 @@
 import { randomUUID } from 'node:crypto'
 import { decodeProjectFile, encodeProjectFile, toSnapshotDto } from '../../src/project-file/codec'
 import { assembleSnapshot } from '../../src/project-file/validation'
+import { upgradeSnapshotToV2 } from '../../src/project-file/upgrade'
 import type { ProjectFileSnapshot } from '../../src/project-file/types'
 import type { IpcErrorCode, IpcErrorPayload, IpcResult } from '../shared/contracts'
 import { FileStore, type SaveError } from './fileStore'
@@ -221,8 +222,21 @@ export class ProjectService {
     if (typeof dto !== 'object' || dto === null) {
       return ipcFailure('INVALID_REQUEST', '快照必须是对象')
     }
+    // 权威字段由 main 保护：模型/版本/关联/文件版本/当前版本/来源格式
+    // 只能通过 model:commit/link 或 main 的升级流程变更，stageDraft 不能
+    // 伪造模型、篡改旧版本、自行确认 pending，或把已升级的项目退回格式 1。
+    const authoritative = session.snapshot
+    const protectedProject = {
+      ...(dto.project as unknown as Record<string, unknown>),
+      sourceFormatVersion: authoritative.project.sourceFormatVersion,
+      currentRevisionId: authoritative.project.currentRevisionId,
+      parts: authoritative.project.parts,
+      modelRevisions: authoritative.project.modelRevisions,
+      dimensionLinks: authoritative.project.dimensionLinks,
+      drawings: authoritative.project.drawings,
+    }
     const assembled = assembleSnapshot({
-      project: dto.project,
+      project: protectedProject,
       draft: dto.draft,
       documents: dto.documents,
       revisions: dto.revisions,
@@ -233,7 +247,7 @@ export class ProjectService {
       importSnapshots: dto.importSnapshots,
       migrationBackups: dto.migrationBackups,
       legacyArchive: dto.legacyArchive,
-      fileRevisions: dto.fileRevisions,
+      fileRevisions: authoritative.fileRevisions,
       // 附件字节只能来自 main 已持有的副本。
       attachments: session.snapshot.attachments,
       missingAttachments: dto.missingAttachments,
@@ -354,7 +368,11 @@ export class ProjectService {
     request: SaveRequest,
     overwriteFingerprint: string | null,
   ): Promise<IpcResult<SaveValue>> {
-    const encoded = await encodeProjectFile(session.snapshot)
+    // 首次保存旧格式项目：显式升级并在保存成功后写回会话；失败不改变会话。
+    const upgrade = upgradeSnapshotToV2(session.snapshot, {
+      newRevisionId: () => `rev-${randomUUID()}`,
+    })
+    const encoded = await encodeProjectFile(upgrade.snapshot)
     if (!encoded.ok) {
       return ipcFailure(
         encoded.error.code,
@@ -384,6 +402,13 @@ export class ProjectService {
             message: '自校验读到的项目 ID 与当前会话不一致',
           }
         }
+        if (decoded.value.manifest.formatVersion !== 2) {
+          return {
+            ok: false,
+            code: 'INVALID_RECORD',
+            message: '自校验读到的文件格式不是 2',
+          }
+        }
         return { ok: true }
       },
     })
@@ -391,16 +416,21 @@ export class ProjectService {
       return fromSaveError(saved.error)
     }
 
+    session.snapshot = upgrade.snapshot
     session.path = saved.value.path
     session.fingerprint = saved.value.fingerprint
     session.savedSeq = request.editSeq
+    const warnings = [...saved.value.warnings]
+    if (upgrade.upgraded && upgrade.notice !== null) {
+      warnings.push(upgrade.notice)
+    }
     return {
       ok: true,
       value: {
         path: saved.value.path,
         fingerprint: saved.value.fingerprint,
         savedSeq: request.editSeq,
-        warnings: saved.value.warnings,
+        warnings,
       },
     }
   }

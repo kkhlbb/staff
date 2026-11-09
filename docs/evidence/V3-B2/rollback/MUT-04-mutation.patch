@@ -1,0 +1,16 @@
+--- a/src/project-file/codec.ts
++++ b/src/project-file/codec.ts
+@@ -333,8 +333,9 @@
+   const rawVersion = rawRecord.formatVersion
+-  if (rawVersion !== LEGACY_PROJECT_FILE_FORMAT_VERSION && rawVersion !== PROJECT_FILE_FORMAT_VERSION) {
++  // MUT-04（回退实验，仅临时）：只接受 formatVersion=2，B1 老文件将被拒绝。
++  if (rawVersion !== PROJECT_FILE_FORMAT_VERSION) {
+     return fail(
+       'UNSUPPORTED_VERSION',
+       '项目文件格式版本不受支持',
+@@ -341,10 +342,7 @@
+-  const expectedProjectSchema =
+-    rawVersion === LEGACY_PROJECT_FILE_FORMAT_VERSION
+-      ? LEGACY_PROJECT_FILE_SCHEMA_VERSION
+-      : PROJECT_FILE_SCHEMA_VERSION
++  const expectedProjectSchema = PROJECT_FILE_SCHEMA_VERSION

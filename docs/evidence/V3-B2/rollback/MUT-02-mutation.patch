@@ -1,0 +1,15 @@
+--- a/desktop/main/modelChannels.ts
++++ b/desktop/main/modelChannels.ts
+@@ -502,10 +502,10 @@
+         let pendingCount = 0
+         const dimensionLinks = snapshot.project.dimensionLinks.map((link) => {
+           if (link.target.partId !== partId) return link
+-          if (link.reviewStatus !== 'confirmed') return link
+-          pendingCount += 1
+-          return { ...link, reviewStatus: 'pending' as const, reason: 'model-replaced' }
++          // MUT-02（回退实验，仅临时）：替换后保持 confirmed 且不改旧目标。
++          return link
+         })
++        void pendingCount
+ 
+         const next: ProjectFileSnapshot = {

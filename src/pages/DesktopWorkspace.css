@@ -123,3 +123,40 @@
   .desktop-workspace__toolbar-note, .desktop-workspace__layout-tools span { display: none; }
   .desktop-workspace__review-groups { grid-template-columns: 1fr; }
 }
+
+/* V3-B2：模型导入确认、错误态与外形资料来源关联 */
+.desktop-workspace__model-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px;
+  color: #7a2020;
+  background: var(--danger-bg, #fdebec);
+  border-bottom: 1px solid #f3c7c7;
+}
+.desktop-workspace__model-error button { margin-left: auto; }
+.desktop-workspace__model-dialog {
+  position: fixed;
+  z-index: 40;
+  top: 50%;
+  left: 50%;
+  width: min(92vw, 560px);
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #d9e0e9);
+  border-radius: 10px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.28);
+}
+.desktop-workspace__model-dialog h2 { margin: 0; font-size: 1.1rem; }
+.desktop-workspace__model-dialog p { margin: 0; color: var(--muted, #526075); overflow-wrap: anywhere; }
+.desktop-workspace__model-dialog label { display: grid; gap: 4px; color: var(--muted, #526075); }
+.desktop-workspace__model-dialog input { min-height: 32px; padding: 4px 8px; }
+.desktop-workspace__model-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.desktop-workspace__model-dialog .desktop-workspace__primary { background: #1f3a5f; color: #fff; border-color: #1f3a5f; }
+.desktop-workspace__link-row { display: grid; gap: 4px; padding: 6px 0; border-top: 1px dashed var(--border, #d9e0e9); }
+.desktop-workspace__link-row p { margin: 0; }
