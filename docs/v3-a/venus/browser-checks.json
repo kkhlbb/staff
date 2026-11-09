@@ -1,0 +1,83 @@
+[
+  {
+    "name": "960 default",
+    "layout": {
+      "width": 960,
+      "height": 640,
+      "scrollWidth": 960,
+      "scrollHeight": 640,
+      "center": 716
+    }
+  },
+  {
+    "key": "o",
+    "modifiers": 4,
+    "notice": "打开项目未接通：当前工作台尚无项目会话，现有 window.cunlian 契约未提供对应项目操作。"
+  },
+  {
+    "key": "s",
+    "modifiers": 4,
+    "notice": "保存未接通：当前工作台尚无项目会话，现有 window.cunlian 契约未提供对应项目操作。"
+  },
+  {
+    "key": "s",
+    "modifiers": 12,
+    "notice": "另存为未接通：当前工作台尚无项目会话，现有 window.cunlian 契约未提供对应项目操作。"
+  },
+  {
+    "tab": 0,
+    "focus": "打开项目"
+  },
+  {
+    "tab": 1,
+    "focus": "保存"
+  },
+  {
+    "tab": 2,
+    "focus": "导出 PDF ▾"
+  },
+  {
+    "tab": 3,
+    "focus": "收起项目树"
+  },
+  {
+    "tab": 4,
+    "focus": "展开属性栏"
+  },
+  {
+    "name": "960 left collapsed",
+    "layout": {
+      "width": 960,
+      "height": 640,
+      "scrollWidth": 960,
+      "scrollHeight": 640,
+      "center": 948
+    }
+  },
+  {
+    "name": "960 all columns",
+    "layout": {
+      "width": 960,
+      "height": 640,
+      "scrollWidth": 960,
+      "scrollHeight": 640,
+      "center": 404
+    }
+  },
+  {
+    "dragWidth": "256"
+  },
+  {
+    "reviewHeight": 200
+  },
+  {
+    "name": "960 review expanded",
+    "layout": {
+      "width": 960,
+      "height": 640,
+      "scrollWidth": 960,
+      "scrollHeight": 640,
+      "center": 692
+    }
+  }
+]
