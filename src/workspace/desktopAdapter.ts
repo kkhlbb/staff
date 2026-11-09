@@ -36,6 +36,8 @@ export interface DesktopSessionState {
   savedSeq: number
   /** 仅用于展示；真正判定在 main（acceptedSeq > savedSeq）。 */
   dirty: boolean
+  /** reattach 契约未提供 savedSeq，不能声称已保存。 */
+  saveStateKnown?: boolean
   recovery: RecoveryWriteState | 'none'
   recoveryWarning?: string
   snapshot: SnapshotDto | null
@@ -254,6 +256,20 @@ export class DesktopSessionAdapter {
     return this.api.listRecent()
   }
 
+  async reattachSession() {
+    const result = await this.api.reattachSession()
+    if (result.ok && 'sessionId' in result.value) {
+      const value = result.value
+      this.resetState({
+        ...INITIAL_STATE, status: 'open', sessionId: value.sessionId,
+        snapshot: value.snapshot, path: value.path, fingerprint: value.fingerprint,
+        localSeq: value.editSeq, acceptedSeq: value.editSeq,
+        recovery: value.recovery, saveStateKnown: false,
+      })
+    }
+    return result
+  }
+
   async relinkRecent(recentId: string) {
     return this.api.relinkRecent({ recentId })
   }
@@ -349,6 +365,7 @@ export class DesktopSessionAdapter {
       path: result.value.path,
       fingerprint: result.value.fingerprint,
       savedSeq: result.value.savedSeq,
+      saveStateKnown: true,
       dirty: this.state.acceptedSeq > result.value.savedSeq,
       warnings: result.value.warnings,
       lastError: undefined,

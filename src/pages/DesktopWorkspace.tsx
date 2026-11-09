@@ -4,16 +4,17 @@ import { calculateChain } from '../domain/calculate'
 import { formatMm } from '../domain/units'
 import { draftToChain } from '../workspace/draft'
 import { SessionDialogs } from '../components/SessionDialogs'
+import { DesktopChainView, DesktopSourceView, DesktopHistoryView } from '../components/DesktopSessionViews'
+import './Workspace.css'
 import './DesktopWorkspace.css'
 
-const tabs = ['工程图', '3D', '来源 PDF', '尺寸链'] as const
+const tabs = ['工程图', '3D', '来源 PDF', '尺寸链', '历史报告'] as const
 const groups = ['零件', '工程图', '尺寸链', '来源资料', '版本历史'] as const
 
 const placeholders = [
   ['尚无工程图', 'C 批次未实现：SVG 图纸、参数标注与导出图纸 PDF。'],
   ['尚无 3D 模型', 'B1/B2 批次未实现：装配、爆炸视图与 STL 读取。'],
-  ['来源 PDF 预览待接入', 'A-04c：来源 PDF 渲染与定位未实现。'],
-  ['尺寸链编辑待接入', 'A-04c：尺寸链编辑未实现。计算预览来自既有领域层，不代表审查完成。'],
+
 ]
 
 /** 只调整布局，不维护工程数据或计算状态。 */
@@ -50,7 +51,7 @@ export function DesktopWorkspace() {
   const project = snapshot?.project
   const [tab, setTab] = useState(0)
   const [selection, setSelection] = useState<string | null>(null)
-  const [leftOpen, setLeftOpen] = useState(true)
+  const [leftOpen, setLeftOpen] = useState(() => !window.matchMedia?.('(max-width: 600px)').matches)
   const [rightOpen, setRightOpen] = useState(() => !window.matchMedia?.('(max-width: 1100px)').matches)
   const [leftWidth, setLeftWidth] = useState(232)
   const [rightWidth, setRightWidth] = useState(312)
@@ -85,7 +86,7 @@ export function DesktopWorkspace() {
     版本历史: snapshot?.fileRevisions.map(rev => ({ id: `rev:${rev.revisionId}`, label: `Rev ${rev.revisionId}`, properties: [['创建时间', rev.createdAt], ['原因', rev.reason], ['父版本', rev.parentId ?? '无']] })) ?? [],
   }
   const selected = Object.values(entries).flat().find(item => item.id === selection)
-  const saveState = session.state?.lastError && ['PERMISSION_DENIED', 'NO_SPACE', 'WRITE_FAILED', 'VERIFY_FAILED', 'RENAME_FAILED', 'EXTERNAL_MODIFIED', 'SAVE_FAILED'].includes(session.state.lastError.code) ? '保存失败，编辑内容仍可继续处理' : !session.state?.path ? '未保存草稿' : session.state.dirty ? '有未保存修改' : '已保存'
+  const saveState = session.state?.lastError && ['PERMISSION_DENIED', 'NO_SPACE', 'WRITE_FAILED', 'VERIFY_FAILED', 'RENAME_FAILED', 'EXTERNAL_MODIFIED', 'SAVE_FAILED'].includes(session.state.lastError.code) ? '保存失败，编辑内容仍可继续处理' : !session.state?.path ? '未保存草稿' : session.state.saveStateKnown === false ? '已恢复会话 · 正式保存状态未知' : session.state.dirty ? '有未保存修改' : '已保存'
   const dialogs = <SessionDialogs session={session} />
   if (!project) return <main className="desktop-workspace" aria-label="寸链启动页">
     <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">V3 · A 批次</span></header>
@@ -100,7 +101,7 @@ export function DesktopWorkspace() {
       {session.recovery.length > 0 && <section className="desktop-workspace__recovery"><h3>有尚未保存的恢复草稿</h3>{session.recovery.map(item => <div key={item.recoveryId}><span>{item.name} · {item.savedAt}</span>{item.error ? <p role="alert">{item.error}</p> : <button disabled={session.busy} onClick={() => void session.restore(item.recoveryId)}>恢复为未保存副本</button>}</div>)}</section>}
       <h3>最近项目</h3>
       {!session.recent.length && <p>暂无最近项目</p>}
-      <ul className="desktop-workspace__recent">{session.recent.map(item => <li key={item.recentId}><div><strong>{item.name}</strong><p>Rev 未提供 · 上次打开 {item.lastOpenedAt}</p><p>{item.path}</p></div><button disabled={session.busy} onClick={() => void session.openRecent(item)}>{item.missing ? '重新定位' : '打开'}</button></li>)}</ul>
+      <ul className="desktop-workspace__recent">{session.recent.map(item => <li key={item.recentId}><div><strong>{item.name}</strong><p>{item.rev ? `Rev ${item.rev}` : 'Rev 不可用'} · 上次打开 {item.lastOpenedAt}</p><p>{item.path}</p></div><button disabled={session.busy} onClick={() => void session.openRecent(item)}>{item.missing ? '重新定位' : '打开'}</button></li>)}</ul>
       <p role="status">{session.notice || (window.cunlian ? '文件操作由桌面应用处理。' : 'window.cunlian 不可用，请在桌面应用中执行文件操作。')}</p>
     </section>{dialogs}
   </main>
@@ -129,7 +130,7 @@ export function DesktopWorkspace() {
         </div>}
       </div>
     </div>
-    <div className="desktop-workspace__notice" role="status">{session.notice || session.state?.warnings.join('；') || '当前会话已载入；绑定来源不等于审查通过。'}{session.state?.recoveryWarning && <span>{session.state.recoveryWarning}</span>}</div>
+    <div className="desktop-workspace__notice" role="status">{session.notice || (session.state?.lastError ? `${session.state.lastError.code}：${session.state.lastError.message}` : session.state?.warnings.join('；')) || '当前会话已载入；绑定来源不等于审查通过。'}{session.state?.recoveryWarning && <span>{session.state.recoveryWarning}</span>}</div>
     <nav className="desktop-workspace__layout-tools" aria-label="工作区布局">
       <button aria-expanded={leftOpen} aria-controls="desktop-tree" onClick={() => setLeftOpen(!leftOpen)}>{leftOpen ? '收起' : '展开'}项目树</button>
       <span>选择对象后查看属性</span>
@@ -140,7 +141,7 @@ export function DesktopWorkspace() {
         <h2>项目树</h2>
         {groups.map(group => <details key={group} open>
           <summary>{group}</summary>
-          {entries[group].length ? entries[group].map(item => <button key={item.id} aria-pressed={selected?.id === item.id} onClick={() => setSelection(item.id)}>{item.label}</button>) : <p>{group === '零件' ? '暂无零件 · B1/B2' : group === '工程图' ? '暂无工程图 · C 批次' : `暂无${group}`}</p>}
+          {entries[group].length ? entries[group].map(item => <button key={item.id} aria-pressed={selected?.id === item.id} onClick={() => { setSelection(item.id); if (group === '尺寸链') setTab(3); if (group === '版本历史') setTab(4) }}>{item.label}</button>) : <p>{group === '零件' ? '暂无零件 · B1/B2' : group === '工程图' ? '暂无工程图 · C 批次' : `暂无${group}`}</p>}
         </details>)}
       </aside>
       {leftOpen ? <Splitter label="项目树宽度" value={leftWidth} min={180} max={280} onChange={setLeftWidth} /> : <div />}
@@ -149,8 +150,7 @@ export function DesktopWorkspace() {
           {tabs.map((name, index) => <button key={name} ref={node => { tabRefs.current[index] = node }} role="tab" id={`desktop-tab-${index}`} aria-controls={`desktop-panel-${index}`} aria-selected={tab === index} tabIndex={tab === index ? 0 : -1} onKeyDown={tabKey} onClick={() => setTab(index)}>{name}</button>)}
         </div>
         {tabs.map((name, index) => <div key={name} role="tabpanel" id={`desktop-panel-${index}`} aria-labelledby={`desktop-tab-${index}`} tabIndex={0} hidden={tab !== index} className="desktop-workspace__canvas">
-          <div className="desktop-workspace__placeholder"><span className="desktop-workspace__pending">○ 本批次未实现</span><h2>{placeholders[index][0]}</h2><p>{placeholders[index][1]}</p><p>当前选择：{selected?.label ?? '未选择对象'}</p><button disabled>{['生成 SVG 图纸', '载入 3D 模型', '读取既有来源 PDF', '编辑尺寸链'][index]}</button></div>
-          <div className="desktop-workspace__view-status">{name}占位 · 未载入内容 · 不代表已复核</div>
+          {index < 2 ? <><div className="desktop-workspace__placeholder"><span className="desktop-workspace__pending">○ 本批次未实现</span><h2>{placeholders[index][0]}</h2><p>{placeholders[index][1]}</p><p>当前选择：{selected?.label ?? '未选择对象'}</p><button disabled>{['生成 SVG 图纸', '载入 3D 模型'][index]}</button></div><div className="desktop-workspace__view-status">{name}占位 · 未载入内容 · 不代表已复核</div></> : tab === index && snapshot && (index === 2 ? <DesktopSourceView key={session.state!.sessionId} snapshot={snapshot} sessionId={session.state!.sessionId!} /> : index === 3 ? <DesktopChainView snapshot={snapshot} edit={session.edit} disabled={session.busy} /> : <DesktopHistoryView snapshot={snapshot} />)}
         </div>)}
       </section>
       {rightOpen ? <Splitter label="属性栏宽度" value={rightWidth} min={240} max={340} reverse onChange={setRightWidth} /> : <div />}

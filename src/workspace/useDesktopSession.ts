@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import type { IpcResult, MenuAction, MigrationInspectValue, RecentProjectItem, RecoveryItem } from '../../desktop/shared/contracts'
 import { DesktopSessionAdapter, type DesktopSessionState } from './desktopAdapter'
+import { chainToDraft, draftToChain, workspaceReducer, type WorkspaceAction } from './draft'
 
 /** 仅持有适配器发布的会话快照；dirty gate 与文件事务始终由 main 执行。 */
 export function useDesktopSession() {
   const [state, setState] = useState<DesktopSessionState | null>(null)
   const [recent, setRecent] = useState<RecentProjectItem[]>([])
-  // TODO 后端契约：RecentProjectItem 未提供 Rev，启动页只显示“Rev 未提供”。
-  // TODO 后端契约：无 getCurrentSession；渲染器整页重载后不能重新挂接已有会话。
+
   const [recovery, setRecovery] = useState<RecoveryItem[]>([])
   const [notice, setNotice] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState(() => Boolean(window.cunlian))
   const [newOpen, setNewOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [preview, setPreview] = useState<MigrationInspectValue | null>(null)
@@ -59,7 +59,14 @@ export function useDesktopSession() {
         api.respondEditorFlush(current.sessionId ? { requestId, sessionId: current.sessionId, editSeq: current.acceptedSeq } : { requestId })
       })
     })
-    void refresh()
+    locked.current = true
+    void session.reattachSession().then(result => {
+      if (adapter.current === session) report(result)
+    }).catch(error => {
+      if (adapter.current === session) setNotice(`恢复活动会话失败：${String(error)}`)
+    }).finally(() => {
+      if (adapter.current === session) { locked.current = false; setBusy(false); void refresh() }
+    })
     return () => { offMenu(); offFlush(); session.dispose(); adapter.current = null }
     // API 生命周期固定为组件挂载期。
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,6 +84,16 @@ export function useDesktopSession() {
   }, [])
   return {
     state, recent, recovery, notice, busy, newOpen, setNewOpen, importOpen, setImportOpen, preview, action,
+    edit: (action: WorkspaceAction) => {
+      const current = adapter.current?.getState().snapshot
+      if (!current || locked.current) return
+      const draft = workspaceReducer(current.draft ?? { ...chainToDraft(current.project.dimensionChain), relationRevision: current.project.relationRevision }, action)
+      const parsed = draftToChain(draft)
+      adapter.current!.edit({ ...current, draft, project: {
+        ...current.project, relationRevision: draft.relationRevision,
+        dimensionChain: parsed.ok ? parsed.chain : current.project.dimensionChain,
+      } })
+    },
     create: (name: string, template: 'empty' | 'chain-demo') => run(async session => { const result = report(await session.newProject(name, template)); if (result.ok) setNewOpen(false) }),
     openRecent: (item: RecentProjectItem) => run(async session => { report(await (item.missing ? session.relinkRecent(item.recentId) : session.openProject(item.recentId))) }),
     restore: (id: string) => run(async session => { report(await session.restoreRecovery(id)) }),
