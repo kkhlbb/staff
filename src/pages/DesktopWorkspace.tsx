@@ -15,6 +15,11 @@ import { SpacerDrawingPanel } from '../components/SpacerDrawingPanel'
 import { ChangeWorkbench } from '../components/ChangeWorkbench'
 import { RequirementWizard } from '../components/RequirementWizard'
 import { RequirementStatusPanel } from '../components/RequirementStatusPanel'
+import { RequirementRevisionHistory } from '../components/RequirementRevisionHistory'
+import {
+  listRequirementRevisionHistory,
+  resolveRequirementRevisionSource,
+} from '../requirements/history'
 import { rebuildDrawingFromProject } from '../drawing/rebuildDrawing'
 import { dimensionText, resolveDimension } from '../drawing/formatDimension'
 import { formatParameterValue } from '../drawing/formatDimension'
@@ -66,20 +71,27 @@ export function DesktopWorkspace() {
     project?.requirementRevisions.find(
       (item) => item.revisionId === project.activeRequirementRevisionId,
     ) ?? null
-  const requirementSource = activeRequirement === null
+  const requirementHistory = snapshot == null
+    ? []
+    : listRequirementRevisionHistory(snapshot)
+  const requirementSource = activeRequirement === null || snapshot == null
     ? null
-    : {
-        revisionId: activeRequirement.source.revisionId,
-        page: activeRequirement.source.page,
-        rectPdf: activeRequirement.source.rectPdf,
-        pageBoxPdf: activeRequirement.source.pageBoxPdf,
-        label: `条款 ${activeRequirement.revisionId}`,
-      }
-  function locateRequirement(): void {
-    if (requirementSource === null) return
+    : resolveRequirementRevisionSource(snapshot, activeRequirement.revisionId).location
+  function locateRequirementRevision(revisionId: string): void {
+    if (snapshot == null) return
+    const resolved = resolveRequirementRevisionSource(snapshot, revisionId)
+    if (resolved.location === null) {
+      setLocateError(resolved.issue?.message ?? `条款版本 ${revisionId} 无法定位来源。`)
+      return
+    }
     locateNonce.current += 1
-    setLocate({ ...requirementSource, label: `${requirementSource.label}#${locateNonce.current}` })
+    setLocateError(null)
+    setLocate({ ...resolved.location, locateNonce: locateNonce.current })
     setTab(2)
+  }
+  function locateRequirement(): void {
+    if (activeRequirement === null) return
+    locateRequirementRevision(activeRequirement.revisionId)
   }
   const drawingRebuilt = useMemo(
     () => (project ? rebuildDrawingFromProject(project) : null),
@@ -118,6 +130,7 @@ export function DesktopWorkspace() {
   const [reviewOpen, setReviewOpen] = useState(false)
   const [reviewHeight, setReviewHeight] = useState(200)
   const [requirementOpen, setRequirementOpen] = useState(false)
+  const [locateError, setLocateError] = useState<string | null>(null)
   const [locate, setLocate] = useState<import('../components/DesktopSessionViews').RequirementSourceLocation | null>(null)
   const locateNonce = useRef(0)
 
@@ -410,7 +423,7 @@ export function DesktopWorkspace() {
                 <button type="button" onClick={() => demo.activate()}>查看内置轴系示例</button>
               </div>
             </div>)}
-          {index > 1 && tab === index && snapshot && (index === 2 ? <DesktopSourceView key={`${session.state!.sessionId}:${locate?.label ?? 'none'}`} snapshot={snapshot} sessionId={session.state!.sessionId!} requirementSource={requirementSource} locate={locate} onImportVersion={(documentId) => void session.importSource(documentId)} /> : index === 3 ? <DesktopChainView snapshot={snapshot} edit={session.edit} disabled={session.busy} /> : <DesktopHistoryView snapshot={snapshot} />)}
+          {index > 1 && tab === index && snapshot && (index === 2 ? <DesktopSourceView key={`${session.state!.sessionId}:${locate?.locateNonce ?? 'none'}`} snapshot={snapshot} sessionId={session.state!.sessionId!} requirementSource={requirementSource} locate={locate} onImportVersion={(documentId) => void session.importSource(documentId)} /> : index === 3 ? <DesktopChainView snapshot={snapshot} edit={session.edit} disabled={session.busy} /> : <DesktopHistoryView snapshot={snapshot} requirementHistory={requirementHistory} onLocateRequirement={locateRequirementRevision} />)}
         </div>)}
       </section>
       {rightOpen ? <Splitter label="属性栏宽度" value={rightWidth} min={240} max={340} reverse onChange={setRightWidth} /> : <div />}
@@ -492,6 +505,7 @@ export function DesktopWorkspace() {
             <button type="button" disabled={activeRequirement === null} onClick={locateRequirement}>定位任务书</button>
             {snapshot.documents.length === 0 && <button type="button" disabled={session.busy} onClick={() => void session.importSource(null)}>先导入任务书 PDF…</button>}
           </div>
+          {locateError && <p role="alert" data-testid="requirement-locate-error-global">{locateError}</p>}
           {session.change.preview?.requirement?.revision && (
             <RequirementStatusPanel
               requirement={session.change.preview.requirement}
@@ -502,6 +516,11 @@ export function DesktopWorkspace() {
             />
           )}
         </section>
+        <RequirementRevisionHistory
+          items={requirementHistory}
+          onLocate={locateRequirementRevision}
+          locateDisabled={session.busy || snapshot === undefined}
+        />
         <section><h3>待办</h3><p>来源 {sourceState}。尚无桌面审查结论。</p></section>
       </div>
     </section>

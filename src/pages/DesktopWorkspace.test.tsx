@@ -6,8 +6,8 @@ import type { CunlianApi, ProjectOpenValue, MenuActionPayload, EditorFlushReques
 import { createSampleSnapshot } from '../project-file/__fixtures__/sampleProjectFile'
 import { createModelSnapshot, sampleStlTriangle, MODEL_PART_ID, MODEL_REVISION_ID } from '../project-file/__fixtures__/modelProjectFile'
 import { createSpacerSnapshot } from '../project-file/__fixtures__/spacerProjectFile'
-import { createRequirementProject } from '../requirements/__fixtures__/requirementFixture'
-import { toSnapshotDto } from '../project-file/codec'
+import { createRequirementProject, createTwoVersionRequirementProject } from '../requirements/__fixtures__/requirementFixture'
+import { toSnapshotDto, decodeProjectFile, encodeProjectFile } from '../project-file/codec'
 import { DesktopWorkspace } from './DesktopWorkspace'
 import { buildSpacerDrawing } from '../drawing/spacerDrawing'
 import { parseSpacerParameters } from '../parts/spacerParameters'
@@ -1322,5 +1322,100 @@ describe('V3.5 复核区：任务书条款入口', () => {
 
     fireEvent.click(within(dialog).getByRole('button', { name: '取消' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '绑定任务书要求' })).toBeNull())
+  })
+})
+
+describe('V3.5 补缺：历史条款版本定位（复核区入口）', () => {
+  async function openWithRequirementSnapshot(
+    snapshot: Awaited<ReturnType<typeof createTwoVersionRequirementProject>>['snapshot'],
+  ) {
+    opened.snapshot = toSnapshotDto(snapshot) as unknown as ProjectOpenValue['snapshot']
+    await openExample()
+    fireEvent.click(screen.getByRole('button', { name: /复核与变更/ }))
+    return screen.findByLabelText('条款版本历史')
+  }
+
+  it('建第二个版本后，旧版本仍打开自己的 PDF 版本与选区；两版本分别取各自值', async () => {
+    const project = await createTwoVersionRequirementProject()
+    const history = await openWithRequirementSnapshot(project.snapshot)
+
+    fireEvent.click(within(history).getByTestId('locate-revision-requirement-history-reqrev-1'))
+    expect(await screen.findByRole('tab', { name: '来源 PDF' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(screen.getByLabelText('来源版本')).toHaveValue('sr-1')
+    expect(screen.getByLabelText('页码跳转')).toHaveValue(2)
+    let summary = await screen.findByTestId('requirement-locate-summary')
+    expect(summary).toHaveTextContent('reqrev-1')
+    expect(summary).toHaveTextContent('来源 PDF sr-1 第 2 页')
+    expect(summary).toHaveTextContent('[10, 10, 110, 30]')
+
+    fireEvent.click(within(history).getByTestId('locate-revision-requirement-history-reqrev-2'))
+    expect(screen.getByLabelText('来源版本')).toHaveValue('sr-taskbook-2')
+    expect(screen.getByLabelText('页码跳转')).toHaveValue(1)
+    summary = await screen.findByTestId('requirement-locate-summary')
+    expect(summary).toHaveTextContent('reqrev-2')
+    expect(summary).toHaveTextContent('来源 PDF sr-taskbook-2 第 1 页')
+    expect(summary).toHaveTextContent('[20, 40, 220, 80]')
+    // 两个版本不都指向活动版本。
+    expect(within(history).getByTestId('requirement-history-row-reqrev-1')).toHaveTextContent('sr-1')
+    expect(within(history).getByTestId('requirement-history-row-reqrev-2')).toHaveTextContent('sr-taskbook-2')
+
+    // 只读定位：不改活动条款，不触发任何写入。
+    expect(api.confirmRequirement).not.toHaveBeenCalled()
+    expect(api.stageRequirementEdit).not.toHaveBeenCalled()
+    expect(api.applyChange).not.toHaveBeenCalled()
+    expect(api.stageChangeDraft).not.toHaveBeenCalled()
+    expect(api.saveProject).not.toHaveBeenCalled()
+
+    // “历史报告”页也列出旧版本，不再只有活动条款。
+    fireEvent.click(screen.getByRole('tab', { name: '历史报告' }))
+    const historyPage = screen.getByTestId('history-requirement-section')
+    expect(within(historyPage).getByTestId('history-requirement-row-reqrev-1')).toHaveTextContent(
+      'sr-1',
+    )
+  })
+
+  it('关闭重开（项目文件编码/解码往返）后，旧版本仍定位到 sr-1 第 2 页', async () => {
+    const project = await createTwoVersionRequirementProject()
+    const encoded = await encodeProjectFile(project.snapshot)
+    expect(encoded.ok, encoded.ok ? '' : encoded.error.message).toBe(true)
+    if (!encoded.ok) return
+    const decoded = await decodeProjectFile(encoded.value.bytes)
+    expect(decoded.ok, decoded.ok ? '' : decoded.error.message).toBe(true)
+    if (!decoded.ok) return
+
+    const history = await openWithRequirementSnapshot(decoded.value.snapshot)
+    fireEvent.click(within(history).getByTestId('locate-revision-requirement-history-reqrev-1'))
+    expect(screen.getByLabelText('来源版本')).toHaveValue('sr-1')
+    expect(screen.getByLabelText('页码跳转')).toHaveValue(2)
+    const summary = await screen.findByTestId('requirement-locate-summary')
+    expect(summary).toHaveTextContent('reqrev-1')
+    expect(summary).toHaveTextContent('[10, 10, 110, 30]')
+  })
+
+  it('旧版本来源被删时明确说明原因、不打开任何 PDF、不用活动版本顶替', async () => {
+    const project = await createTwoVersionRequirementProject()
+    const missing = {
+      ...project.snapshot,
+      revisions: project.snapshot.revisions.filter((item) => item.id !== 'sr-1'),
+    }
+    const history = await openWithRequirementSnapshot(missing)
+    expect(within(history).getByTestId('requirement-history-row-reqrev-1')).toHaveTextContent(
+      '来源缺失',
+    )
+
+    fireEvent.click(within(history).getByTestId('locate-revision-requirement-history-reqrev-1'))
+    const error = await screen.findByTestId('requirement-locate-error')
+    expect(error).toHaveTextContent('reqrev-1')
+    expect(error).toHaveTextContent('sr-1')
+    expect(error).toHaveTextContent('不在项目文件中')
+    // 没有渲染 PDF 查看器（不会静默打开另一个版本）。
+    expect(document.querySelector('.pdf-viewer')).toBeNull()
+    expect(screen.getByLabelText('来源版本')).not.toHaveValue('sr-taskbook-2')
+    expect(api.readAttachment).not.toHaveBeenCalled()
+    expect(api.confirmRequirement).not.toHaveBeenCalled()
+    expect(api.applyChange).not.toHaveBeenCalled()
   })
 })
