@@ -38,6 +38,7 @@ import {
   findCandidate,
   mergeExtractionDraft,
   rejectCandidate,
+  revokeConfirmation,
   type EditableField,
   type ExtractionCandidate,
   type ExtractionDraft,
@@ -64,6 +65,7 @@ const EXTRACTION_ERROR_CODES: Record<ExtractionErrorCode, IpcErrorCode> = {
   CANDIDATE_BLOCKED: 'EXTRACTION_CANDIDATE_BLOCKED',
   CANDIDATE_REJECTED: 'EXTRACTION_CANDIDATE_REJECTED',
   CANDIDATE_STALE: 'EXTRACTION_STALE_DECISION',
+  GROUP_ALREADY_CONFIRMED: 'EXTRACTION_GROUP_CONFLICT',
   STALE_EDIT_REVISION: 'EXTRACTION_STALE_DECISION',
   EXPLICIT_CONFIRMATION_REQUIRED: 'EXTRACTION_CONFIRMATION_REQUIRED',
   ACTOR_REQUIRED: 'EXTRACTION_CONFIRMATION_REQUIRED',
@@ -464,6 +466,18 @@ export class ExtractionService {
         actor: EXTRACTION_ACTOR,
         decidedAt,
         reason: request.reason,
+      })
+      if (!result.ok) {
+        return failure(EXTRACTION_ERROR_CODES[result.code], result.message)
+      }
+      updated = result.value
+    } else if (request.action === 'revoke') {
+      const result = revokeConfirmation(draft, {
+        candidateId: request.candidateId,
+        editRevision: request.editRevision,
+        actor: EXTRACTION_ACTOR,
+        decidedAt,
+        ...(request.reason === undefined ? {} : { reason: request.reason }),
       })
       if (!result.ok) {
         return failure(EXTRACTION_ERROR_CODES[result.code], result.message)

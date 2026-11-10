@@ -8,7 +8,7 @@ import { defineConfig } from 'vitest/config'
  */
 export default defineConfig({
   test: {
-    include: ['scripts/v36-seed.ts', 'scripts/v36-ui-seed.ts'],
+    include: ['scripts/v36-seed.ts', 'scripts/v36-ui-seed.ts', 'scripts/v36-ambiguous-seed.ts'],
     environment: 'node',
     setupFiles: [],
   },

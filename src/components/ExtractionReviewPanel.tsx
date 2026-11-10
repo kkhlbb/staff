@@ -43,7 +43,7 @@ export interface ExtractionReviewActions {
     draftId: string
     candidateId: string
     editRevision: number
-    action: 'confirm' | 'reject' | 'edit'
+    action: 'confirm' | 'reject' | 'edit' | 'revoke'
     confirmed?: true
     reason?: string
     field?: EditableField
@@ -220,7 +220,7 @@ export function ExtractionReviewPanel({
 
   async function decide(
     candidate: ExtractionCandidate,
-    action: 'confirm' | 'reject' | 'edit',
+    action: 'confirm' | 'reject' | 'edit' | 'revoke',
     extra: { reason?: string; field?: EditableField; text?: string } = {},
   ): Promise<void> {
     if (draft === null) return
@@ -244,7 +244,9 @@ export function ExtractionReviewPanel({
         ? `已确认候选 ${candidate.candidateId}（仅记录决定，不自动写入尺寸链/条款）。`
         : action === 'reject'
           ? `已拒绝候选 ${candidate.candidateId}；不会复活，也不进入项目。`
-          : `已保存人工修改；该候选回到待确认，需要重新确认。`,
+          : action === 'revoke'
+            ? `已撤销候选 ${candidate.candidateId} 的确认；该候选回到待确认，同一符号其它处恢复可选。`
+            : `已保存人工修改；该候选回到待确认，需要重新确认。`,
     )
     setRejecting(null)
     setRejectReason('')
@@ -424,6 +426,14 @@ export function ExtractionReviewPanel({
                   const evidence = evidenceOf(candidate)
                   const firstEvidence = evidence[0]
                   const canAct = !busy && candidate.status !== 'confirmed' && candidate.status !== 'rejected' && candidate.status !== 'stale'
+                  const occurrence = candidate.occurrence ?? null
+                  const groupMembers = candidate.kind === 'ring' && candidate.groupId !== null
+                    ? draft.candidates.filter((item) => item.kind === 'ring' && item.groupId === candidate.groupId)
+                    : []
+                  const confirmedSibling = groupMembers.length > 1
+                    ? groupMembers.find((item) => item.candidateId !== candidate.candidateId && item.status === 'confirmed')
+                    : undefined
+                  const groupConflict = confirmedSibling !== undefined
                   return (
                     <li
                       key={candidate.candidateId}
@@ -449,8 +459,21 @@ export function ExtractionReviewPanel({
                         <span className={`extraction-review__badge extraction-review__badge--${candidate.status}`}>
                           {STATUS_LABEL[candidate.status]}
                         </span>
+                        {occurrence !== null && occurrence.total > 1 && (
+                          <span className="extraction-review__occurrence">
+                            同一符号第 {occurrence.index}/{occurrence.total} 处
+                          </span>
+                        )}
                         <span className="extraction-review__confidence">置信 {candidate.confidence}</span>
                       </div>
+                      {occurrence !== null && occurrence.total > 1 && (
+                        <p className="extraction-review__group-hint">
+                          同一符号只能确认一处；
+                          {confirmedSibling === undefined
+                            ? '确认一处后其余处不可再确认，需要先撤销。'
+                            : `已确认第 ${confirmedSibling.occurrence?.index ?? '?'}/${confirmedSibling.occurrence?.total ?? '?'} 处，需先撤销该确认才能选此处。`}
+                        </p>
+                      )}
                       <p className="extraction-review__raw">原文：{candidate.rawText}</p>
                       <p className="extraction-review__evidence">
                         第 {candidate.page} 页
@@ -482,7 +505,9 @@ export function ExtractionReviewPanel({
                             ? '确认'
                             : decision.action === 'reject'
                               ? '拒绝'
-                              : '人工修改'
+                              : decision.action === 'revoke'
+                                ? '撤销确认'
+                                : '人工修改'
                         return (
                           <p className="extraction-review__decision">
                             决定：{actionLabel} · {decision.actor} · {decision.decidedAt}
@@ -509,12 +534,28 @@ export function ExtractionReviewPanel({
                         </button>
                         <button
                           type="button"
-                          disabled={!canAct || candidate.status === 'blocked'}
-                          title={candidate.status === 'blocked' ? '阻塞候选必须先解决原因码，不能确认' : undefined}
+                          disabled={!canAct || candidate.status === 'blocked' || groupConflict}
+                          title={
+                            candidate.status === 'blocked'
+                              ? '阻塞候选必须先解决原因码，不能确认'
+                              : groupConflict
+                                ? `同一符号已确认第 ${confirmedSibling?.occurrence?.index ?? '?'} 处；同一符号只能确认一处，请先撤销该确认`
+                                : undefined
+                          }
                           onClick={() => void decide(candidate, 'confirm')}
                         >
                           确认
                         </button>
+                        {candidate.status === 'confirmed' && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            title="撤销后该候选回到待确认，同一符号其它处恢复可选"
+                            onClick={() => void decide(candidate, 'revoke')}
+                          >
+                            撤销确认
+                          </button>
+                        )}
                         <button type="button" disabled={!canAct} onClick={() => { setRejecting(candidate.candidateId); setRejectReason('') }}>
                           拒绝…
                         </button>

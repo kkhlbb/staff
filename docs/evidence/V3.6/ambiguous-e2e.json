@@ -1,0 +1,130 @@
+{
+  "app": "/Users/aston/DSH/staff/out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链",
+  "seed": "/Users/aston/DSH/tmp/cunlian-v36/AMB-V36.cunlian",
+  "work": "/Users/aston/DSH/tmp/cunlian-v36/AMB-V36-run.cunlian",
+  "initial": [
+    {
+      "title": "组成环 · A0",
+      "status": "pending",
+      "occurrence": "同一符号第 1/3 处",
+      "hint": "同一符号只能确认一处；确认一处后其余处不可再确认，需要先撤销。",
+      "values": "基本尺寸=0.100 mm"
+    },
+    {
+      "title": "组成环 · A0",
+      "status": "pending",
+      "occurrence": "同一符号第 2/3 处",
+      "hint": "同一符号只能确认一处；确认一处后其余处不可再确认，需要先撤销。",
+      "values": "基本尺寸=0.200 mm"
+    },
+    {
+      "title": "组成环 · A0",
+      "status": "pending",
+      "occurrence": "同一符号第 3/3 处",
+      "hint": "同一符号只能确认一处；确认一处后其余处不可再确认，需要先撤销。",
+      "values": "基本尺寸=0.150 mm"
+    },
+    {
+      "title": "组成环 · B0",
+      "status": "pending",
+      "occurrence": null,
+      "hint": null,
+      "values": "基本尺寸=0.500 mm"
+    },
+    {
+      "title": "组成环 · C0",
+      "status": "pending",
+      "occurrence": "同一符号第 1/2 处",
+      "hint": "同一符号只能确认一处；确认一处后其余处不可再确认，需要先撤销。",
+      "values": "基本尺寸=0.300 mm"
+    },
+    {
+      "title": "组成环 · C0",
+      "status": "pending",
+      "occurrence": "同一符号第 2/2 处",
+      "hint": "同一符号只能确认一处；确认一处后其余处不可再确认，需要先撤销。",
+      "values": "基本尺寸=0.400 mm"
+    }
+  ],
+  "afterConfirm": [
+    {
+      "occurrence": "同一符号第 1/3 处",
+      "status": "confirmed",
+      "confirmDisabled": true,
+      "confirmTitle": "",
+      "hint": "同一符号只能确认一处；确认一处后其余处不可再确认，需要先撤销。",
+      "hasRevoke": true
+    },
+    {
+      "occurrence": "同一符号第 2/3 处",
+      "status": "pending",
+      "confirmDisabled": true,
+      "confirmTitle": "同一符号已确认第 1 处；同一符号只能确认一处，请先撤销该确认",
+      "hint": "同一符号只能确认一处；已确认第 1/3 处，需先撤销该确认才能选此处。",
+      "hasRevoke": false
+    },
+    {
+      "occurrence": "同一符号第 3/3 处",
+      "status": "pending",
+      "confirmDisabled": true,
+      "confirmTitle": "同一符号已确认第 1 处；同一符号只能确认一处，请先撤销该确认",
+      "hint": "同一符号只能确认一处；已确认第 1/3 处，需先撤销该确认才能选此处。",
+      "hasRevoke": false
+    }
+  ],
+  "ipcAttempt": {
+    "ok": false,
+    "code": "EXTRACTION_GROUP_CONFLICT",
+    "message": "同一符号 A0 已确认第 1/3 处（候选 ring-18c7346a248d1a54）；同一符号只能确认一处，请先撤销该确认"
+  },
+  "afterRevoke": [
+    {
+      "occurrence": "同一符号第 1/3 处",
+      "status": "pending",
+      "confirmDisabled": false
+    },
+    {
+      "occurrence": "同一符号第 2/3 处",
+      "status": "pending",
+      "confirmDisabled": false
+    },
+    {
+      "occurrence": "同一符号第 3/3 处",
+      "status": "pending",
+      "confirmDisabled": false
+    }
+  ],
+  "persisted": {
+    "savedSeq": 2,
+    "statuses": [
+      "pending",
+      "pending",
+      "pending",
+      "pending",
+      "pending",
+      "pending"
+    ],
+    "decisions": [
+      {
+        "action": "confirm",
+        "invalidated": 0
+      },
+      {
+        "action": "revoke",
+        "invalidated": null
+      }
+    ],
+    "occurrences": [
+      "1/3",
+      "2/3",
+      "3/3",
+      "1/2",
+      "2/2"
+    ]
+  },
+  "shots": [
+    "v36-11-ambiguous-candidates.png",
+    "v36-11b-group-mutex.png",
+    "v36-11c-after-revoke.png"
+  ]
+}

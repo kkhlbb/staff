@@ -563,6 +563,18 @@ const extractionCandidateBaseShape = {
   reasonCodes: z.array(z.enum(EXTRACTION_REASON_CODES)).max(32),
   evidence: z.array(extractionEvidenceSchema).max(32),
   editRevision: nonNegativeInt,
+  /**
+   * 同一符号多处赋值时的位置标记（V3.6 体验修订新增）。
+   * 可选：旧 schema8 草稿没有该字段，读时保持兼容；写时由解析器补齐。
+   */
+  occurrence: z
+    .object({
+      index: z.number().int().min(1),
+      total: z.number().int().min(1),
+    })
+    .strict()
+    .nullable()
+    .optional(),
 } as const
 
 const extractionCandidateSchema = z.discriminatedUnion('kind', [
@@ -600,7 +612,7 @@ const extractionDecisionSchema = z
   .object({
     decisionId: idSchema,
     candidateId: idSchema,
-    action: z.enum(['confirm', 'reject', 'edit']),
+    action: z.enum(['confirm', 'reject', 'edit', 'revoke']),
     candidateEditRevision: nonNegativeInt,
     decidedAt: z.string().min(1),
     actor: z.string().min(1).max(200),

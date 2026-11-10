@@ -53,7 +53,7 @@ export const extractionSchemas = {
       draftId: idLike,
       candidateId: idLike,
       editRevision: z.number().int().nonnegative(),
-      action: z.enum(['confirm', 'reject', 'edit']),
+      action: z.enum(['confirm', 'reject', 'edit', 'revoke']),
       confirmed: z.literal(true).optional(),
       reason: z.string().max(2000).optional(),
       field: z

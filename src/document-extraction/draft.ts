@@ -115,6 +115,26 @@ function latestActiveDecision(
   return decisions.length > 0 ? decisions[decisions.length - 1] : null
 }
 
+/**
+ * 同一符号多处赋值形成的 ring group 成员。
+ * 其它类型（区间/公式/部件）没有“同一符号只能确认一处”的语义，不参与互斥。
+ */
+function ringGroupMembers(
+  draft: ExtractionDraft,
+  candidate: ExtractionCandidate,
+): ExtractionCandidate[] {
+  if (candidate.kind !== 'ring' || candidate.groupId === null) return []
+  return draft.candidates.filter(
+    (item) => item.kind === 'ring' && item.groupId === candidate.groupId,
+  )
+}
+
+/** 用于报错文案的位置标记：没有 occurrence 时显示 1/1。 */
+function occurrenceLabel(candidate: ExtractionCandidate): string {
+  const occurrence = candidate.occurrence ?? null
+  return occurrence === null ? '1/1' : `${occurrence.index}/${occurrence.total}`
+}
+
 export interface ConfirmRequest {
   readonly candidateId: string
   /** 候选当前编辑代数；不匹配即拒绝，防止拿旧界面确认新值。 */
@@ -171,6 +191,23 @@ export function confirmCandidate(
   if (candidate.status === 'confirmed' && existing) {
     // 同一确认重复提交：返回原草稿与原有决定，不重复记录。
     return extractionSuccess(draft)
+  }
+
+  // 互斥：同一符号（ring group）只允许一条已确认。确认第二条必须是先撤销第一条，
+  // 这里直接拒绝——不自动改第一条的状态，也不静默取代。
+  if (candidate.kind === 'ring') {
+    const conflict = ringGroupMembers(draft, candidate).find(
+      (other) =>
+        other.candidateId !== candidate.candidateId &&
+        other.status === 'confirmed' &&
+        latestActiveDecision(draft, other.candidateId) !== null,
+    )
+    if (conflict) {
+      return extractionFailure(
+        'GROUP_ALREADY_CONFIRMED',
+        `同一符号 ${candidate.data.symbol ?? '?'} 已确认第 ${occurrenceLabel(conflict)} 处（候选 ${conflict.candidateId}）；同一符号只能确认一处，请先撤销该确认`,
+      )
+    }
   }
 
   const decision: ExtractionDecision = {
@@ -251,6 +288,77 @@ export function rejectCandidate(
     candidateWithStatus(current, 'rejected', current.reasonCodes),
   )
   return extractionSuccess({ ...updated, decisions: [...updated.decisions, decision] })
+}
+
+export interface RevokeRequest {
+  readonly candidateId: string
+  readonly editRevision: number
+  readonly actor: string
+  readonly decidedAt: string
+  readonly reason?: string
+}
+
+/**
+ * 撤销一次已确认（只对“已确认且确认决定仍有效”的候选开放）。
+ *
+ * - 候选回到 pending（reasonCodes 不变，不借撤销改值）；
+ * - 原确认决定写入 invalidatedByEditRevision（= 当前编辑代数）而失效，
+ *   追加一条 action='revoke' 的决定留痕，不删除历史；
+ * - 撤销后同组其它处恢复可确认（互斥检查只看有效确认决定）。
+ */
+export function revokeConfirmation(
+  draft: ExtractionDraft,
+  request: RevokeRequest,
+): ExtractionResult<ExtractionDraft> {
+  const common = requireCommon(request)
+  if (!common.ok) return common
+  const candidate = findCandidate(draft, request.candidateId)
+  if (!candidate) {
+    return extractionFailure('CANDIDATE_NOT_FOUND', `找不到候选 ${request.candidateId}`)
+  }
+  if (candidate.editRevision !== request.editRevision) {
+    return extractionFailure('STALE_EDIT_REVISION', '候选编辑代数已变化，请重新查看原文')
+  }
+  if (candidate.status !== 'confirmed') {
+    return extractionFailure(
+      'NOT_CONFIRMED',
+      `候选当前状态为 ${candidate.status}，没有可撤销的确认`,
+    )
+  }
+  const active = latestActiveDecision(draft, candidate.candidateId)
+  if (!active) {
+    return extractionFailure('NOT_CONFIRMED', '该候选没有仍有效的确认决定，无需撤销')
+  }
+
+  const decision: ExtractionDecision = {
+    decisionId: stableId('decision', [
+      draft.draftId,
+      candidate.candidateId,
+      candidate.editRevision,
+      'revoke',
+      request.actor,
+      request.decidedAt,
+    ]),
+    candidateId: candidate.candidateId,
+    action: 'revoke',
+    candidateEditRevision: candidate.editRevision,
+    decidedAt: request.decidedAt,
+    actor: request.actor,
+    reason: request.reason ?? '撤销确认',
+    valueSnapshot: candidateValueSnapshot(candidate),
+    evidence: candidateNumericFields(candidate).flatMap(({ value }) => value.evidence),
+    invalidatedByEditRevision: null,
+  }
+
+  const decisions = draft.decisions.map((item) =>
+    item.decisionId === active.decisionId
+      ? { ...item, invalidatedByEditRevision: candidate.editRevision }
+      : item,
+  )
+  const updated = replaceCandidate(draft, candidate.candidateId, (current) =>
+    candidateWithStatus(current, 'pending', current.reasonCodes),
+  )
+  return extractionSuccess({ ...updated, decisions: [...decisions, decision] })
 }
 
 export type EditableField =
@@ -484,6 +592,7 @@ export function planApplication(
     return extractionFailure('NOT_CONFIRMED', '未选择任何候选，不能生成应用计划')
   }
   const items: ApplicationPlanItem[] = []
+  const confirmedGroups = new Map<string, string>()
   for (const candidateId of ids) {
     const candidate = findCandidate(draft, candidateId)
     if (!candidate) {
@@ -494,6 +603,17 @@ export function planApplication(
         'NOT_CONFIRMED',
         `候选 ${candidateId} 状态为 ${candidate.status}，未经逐条确认不能送入项目草稿`,
       )
+    }
+    // 防御：即使草稿被手工改过，也不允许同一符号两条已确认同时进入计划。
+    if (candidate.kind === 'ring' && candidate.groupId !== null) {
+      const already = confirmedGroups.get(candidate.groupId)
+      if (already !== undefined) {
+        return extractionFailure(
+          'GROUP_ALREADY_CONFIRMED',
+          `同一符号 ${candidate.data.symbol ?? '?'} 有两条已确认候选（${already}、${candidateId}）；同一符号只能确认一处`,
+        )
+      }
+      confirmedGroups.set(candidate.groupId, candidateId)
     }
     const decision = latestActiveDecision(draft, candidateId)
     if (!decision || decision.candidateEditRevision !== candidate.editRevision) {

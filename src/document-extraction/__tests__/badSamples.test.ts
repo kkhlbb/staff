@@ -165,7 +165,7 @@ describe('不确定分支：合成文本层', () => {
     expect(ring.data.nominal?.valueQ).toBeNull()
   })
 
-  it('同符号出现两组不同数值 → 两个候选都 blocked/AMBIGUOUS_ASSIGNMENT，不按先后择优', () => {
+  it('同符号出现两组不同数值 → 两个候选都待确认、各带第 k/2 处标记，不按先后择优', () => {
     const draft = draftFromPages(
       [
         syntheticPage([
@@ -181,11 +181,17 @@ describe('不确定分支：合成文本层', () => {
       (candidate) => candidate.kind === 'ring' && candidate.data.symbol === 'H',
     )
     expect(rings).toHaveLength(2)
-    expect(rings.map((candidate) => candidate.status)).toEqual(['blocked', 'blocked'])
+    expect(rings.map((candidate) => candidate.status)).toEqual(['pending', 'pending'])
     for (const candidate of rings) {
-      expect(candidate.reasonCodes).toContain('AMBIGUOUS_ASSIGNMENT')
+      expect(candidate.reasonCodes).not.toContain('AMBIGUOUS_ASSIGNMENT')
     }
-    expect(draft.issues.map((item) => item.code)).toContain('AMBIGUOUS_ASSIGNMENT')
+    expect(rings.map((candidate) => candidate.occurrence)).toEqual([
+      { index: 1, total: 2 },
+      { index: 2, total: 2 },
+    ])
+    const issue = draft.issues.find((item) => item.code === 'AMBIGUOUS_ASSIGNMENT')
+    expect(issue?.severity).toBe('warning')
+    expect(issue?.candidateIds).toHaveLength(2)
     const texts = rings.map((candidate) =>
       candidate.kind === 'ring' ? candidate.data.nominal?.text : null,
     )

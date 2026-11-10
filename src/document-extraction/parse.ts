@@ -34,6 +34,7 @@ import {
   type ExtractionDraft,
   type ExtractionEvidence,
   type ExtractionIssue,
+  type ExtractionOccurrence,
   type ExtractionPageRange,
   type ExtractionReasonCode,
   type ExtractionSourceIdentity,
@@ -466,6 +467,28 @@ interface RingCandidateBuild {
   readonly issues: ExtractionIssue[]
 }
 
+/**
+ * 名义值是否可用于候选：必须 mm 且能精确转 q。
+ * valueQ=null 表示单位缺失/不支持/精度超限；这种“解析不了”的一处按任务卡要求
+ * 单独给 issue，不能把同一符号其它能解析的处一起毙掉（也不能把它当候选值）。
+ */
+function nominalUsable(entry: RingEntry): boolean {
+  return entry.nominal !== null && entry.nominal.unit === 'mm' && entry.nominal.valueQ !== null
+}
+
+/** 该处数值解析失败的原因码：优先单位/数值类，避免笼统成 SOURCE_UNRESOLVED。 */
+function unusableReason(entry: RingEntry): ExtractionReasonCode {
+  const preferred: readonly ExtractionReasonCode[] = [
+    'UNSUPPORTED_UNIT',
+    'UNKNOWN_UNIT',
+    'PRECISION_UNSUPPORTED',
+    'NUMBER_UNSUPPORTED',
+    'SOURCE_UNRESOLVED',
+  ]
+  const found = entry.reasons.find((reason) => preferred.includes(reason))
+  return found ?? entry.reasons[0] ?? 'SOURCE_UNRESOLVED'
+}
+
 function resolveRings(
   entries: readonly RingEntry[],
   source: ExtractionSourceIdentity,
@@ -483,9 +506,13 @@ function resolveRings(
   for (const [symbol, group] of [...bySymbol.entries()].sort((left, right) =>
     left[0].localeCompare(right[0]),
   )) {
-    const withNominal = group.filter((entry) => entry.nominal !== null)
-    if (withNominal.length === 0) {
-      // 有符号但数值拿不到完整出处：只留 issue，不造“有值无出处”的候选。
+    const usable = group.filter(nominalUsable)
+    const unusable = group.filter((entry) => !nominalUsable(entry))
+
+    // 整组都解析不了：保持旧行为——有 nominal 对象（如 inch）按数值分组出 blocked 候选，
+    // 完全没有 nominal 只留一条 issue，不造“有值无出处”的候选。
+    const bucketSource = usable.length > 0 ? usable : group.filter((entry) => entry.nominal !== null)
+    if (bucketSource.length === 0) {
       const reason = group.find((entry) => entry.reasons.length > 0)?.reasons[0]
       if (reason) {
         issues.push({
@@ -501,17 +528,43 @@ function resolveRings(
       continue
     }
 
+    // 兜底：同组里有的处能解析、有的解析不了 → 坏的那处单独给 issue，
+    // 好的照常出行，绝不因一处坏掉整组毙掉。
+    if (usable.length > 0) {
+      for (const entry of unusable) {
+        const reason = unusableReason(entry)
+        const evidence = uniqueEvidence(
+          [
+            entry.symbolEvidence,
+            ...(entry.nominal?.evidence ?? []),
+          ].filter((item): item is ExtractionEvidence => item !== null),
+        )
+        issues.push({
+          issueId: stableId('issue', ['RING_OCCURRENCE_UNRESOLVED', reason, symbol, entry.page, entry.rawText]),
+          code: reason,
+          severity: 'blocked',
+          message: `符号 ${symbol} 的第 ${group.indexOf(entry) + 1} 处赋值无法解析（${reason}）；该处未进入候选，同符号其它可解析处照常列出`,
+          page: entry.page,
+          candidateIds: [],
+          evidence,
+        })
+      }
+    }
+
     const buckets = new Map<string, RingEntry[]>()
-    for (const entry of withNominal) {
+    for (const entry of bucketSource) {
       const key = quantityKey(entry.nominal as QuantityValue)
       const list = buckets.get(key) ?? []
       list.push(entry)
       buckets.set(key, list)
     }
-    const ambiguous = buckets.size > 1
+    const total = buckets.size
+    const ambiguous = total > 1
     const built: ExtractionCandidate[] = []
+    let bucketIndex = 0
 
     for (const bucket of buckets.values()) {
+      bucketIndex += 1
       const first = bucket[0]
       const nominal = mergeQuantity(
         bucket.map((entry) => entry.nominal).filter((value): value is QuantityValue => value !== null),
@@ -534,7 +587,6 @@ function resolveRings(
       }
       if (uppers.length > 0 && !upper) reasons.add('AMBIGUOUS_DEVIATION')
       if (lowers.length > 0 && !lower) reasons.add('AMBIGUOUS_DEVIATION')
-      if (ambiguous) reasons.add('AMBIGUOUS_ASSIGNMENT')
 
       const reasonCodes = [...reasons]
       const data: RingCandidateData = {
@@ -554,6 +606,9 @@ function resolveRings(
         ...(upper?.evidence ?? []),
         ...(lower?.evidence ?? []),
       ])
+      const occurrence: ExtractionOccurrence | null = ambiguous
+        ? { index: bucketIndex, total }
+        : null
       const candidate: ExtractionCandidate = {
         candidateId: stableId('ring', [
           source.revisionId,
@@ -578,11 +633,16 @@ function resolveRings(
         confidenceBasis: [
           'RULE_TABLE_OR_ASSIGNMENT',
           unitTextBasis(nominal),
-          ambiguous ? 'RULE_MULTIPLE_VALUES' : 'RULE_SINGLE_VALUE',
+          ambiguous
+            ? 'RULE_MULTIPLE_VALUES'
+            : group.length > 1
+              ? 'RULE_MULTIPLE_SAME_VALUE'
+              : 'RULE_SINGLE_VALUE',
         ],
         reasonCodes,
         evidence,
         editRevision: 0,
+        occurrence,
         data,
       }
       built.push(candidate)
@@ -594,8 +654,8 @@ function resolveRings(
       issues.push({
         issueId: stableId('issue', ['AMBIGUOUS_ASSIGNMENT', symbol]),
         code: 'AMBIGUOUS_ASSIGNMENT',
-        severity: 'blocked',
-        message: `符号 ${symbol} 在页范围里出现 ${built.length} 组不同数值，需人工择一；未自动选取`,
+        severity: 'warning',
+        message: `符号 ${symbol} 在页范围里出现 ${built.length} 处不同取值，已逐处列出候选（第 1–${built.length} 处）；同一符号只能确认一处，确认一处后其余处不可再确认，需先撤销`,
         page: built[0].page,
         candidateIds: built.map((candidate) => candidate.candidateId),
         evidence,

@@ -11,8 +11,12 @@
  */
 import type { PdfPageBox, PdfRect } from '../sources/pdfCoordinates'
 
-/** 提取规则版本；参与幂等键与候选身份。 */
-export const EXTRACTOR_VERSION = 'document-extractor-1'
+/**
+ * 提取规则版本；参与幂等键与候选身份。
+ * 2：同符号多处不同赋值改为逐处候选（不再整批 AMBIGUOUS_ASSIGNMENT 阻塞）；
+ *    同值多处合并；坏处单独 issue。规则语义变化必须升版本，旧草稿需主动重提。
+ */
+export const EXTRACTOR_VERSION = 'document-extractor-2'
 
 export const MAX_EXTRACTION_PAGES = 100
 export const MAX_EXTRACTION_CANDIDATES = 200
@@ -175,6 +179,19 @@ export interface RingCandidateData {
   readonly lowerDeviation: QuantityValue | null
 }
 
+/**
+ * 同一符号多处赋值时，该候选在 group 内的位置（1-based）。
+ *
+ * - 只在同一符号出现 **多个不同取值** 时写入；取值相同的多处已合并成一条候选，
+ *   此时 total=1，不写 occurrence（null/缺省）。
+ * - 一条候选对应一处取值，出处仍是该处自己的页/选区/原文片段/item 索引。
+ * - 互斥由 draft.confirmCandidate 强制：同一 ring group 只允许一条已确认。
+ */
+export interface ExtractionOccurrence {
+  readonly index: number
+  readonly total: number
+}
+
 export interface IntervalCandidateData {
   readonly outputSymbol: string | null
   readonly lower: QuantityValue | null
@@ -223,6 +240,11 @@ interface CandidateBase {
   readonly evidence: readonly ExtractionEvidence[]
   /** 人工编辑代数；每次编辑 +1，旧确认随之失效。 */
   readonly editRevision: number
+  /**
+   * 同一符号多处赋值时的位置标记；单值候选与其它类型为 null/缺省。
+   * 可选是为了读旧 schema8 文件（当时还没有该字段），读取方一律用 `?? null`。
+   */
+  readonly occurrence?: ExtractionOccurrence | null
 }
 
 export type ExtractionCandidate =
@@ -241,7 +263,7 @@ export interface ExtractionIssue {
   readonly evidence: readonly ExtractionEvidence[]
 }
 
-export type DecisionAction = 'confirm' | 'reject' | 'edit'
+export type DecisionAction = 'confirm' | 'reject' | 'edit' | 'revoke'
 
 export interface ExtractionDecision {
   readonly decisionId: string
@@ -285,6 +307,7 @@ export type ExtractionErrorCode =
   | 'CANDIDATE_BLOCKED'
   | 'CANDIDATE_REJECTED'
   | 'CANDIDATE_STALE'
+  | 'GROUP_ALREADY_CONFIRMED'
   | 'STALE_EDIT_REVISION'
   | 'EXPLICIT_CONFIRMATION_REQUIRED'
   | 'ACTOR_REQUIRED'

@@ -1,0 +1,37 @@
+{
+  "r2-tolerance-domain": {
+    "pages": 5,
+    "sha256": "c20d6b523e20a0554b0f5c0c38bbb3c7b32a604505a0dd1b8eb8872483aea9e2",
+    "candidates": 25,
+    "blocked": 23,
+    "pending": 2,
+    "confirmed": 0,
+    "reasonCodes": {
+      "AMBIGUOUS_ASSIGNMENT": 12,
+      "UNKNOWN_UNIT": 11,
+      "FORMULA_UNSUPPORTED": 9
+    },
+    "issueCodes": {
+      "AMBIGUOUS_ASSIGNMENT": 5
+    },
+    "multiCandidateGroups": 5
+  },
+  "r6-segments-assembly": {
+    "pages": 8,
+    "sha256": "fbe5db55db9b6bdf220e1ebef42c3f414580c8e1f360b7c739ab70e7c78d28be",
+    "candidates": 98,
+    "blocked": 96,
+    "pending": 2,
+    "confirmed": 0,
+    "reasonCodes": {
+      "UNKNOWN_UNIT": 55,
+      "AMBIGUOUS_ASSIGNMENT": 59,
+      "FORMULA_UNSUPPORTED": 27,
+      "UNSUPPORTED_UNIT": 1
+    },
+    "issueCodes": {
+      "AMBIGUOUS_ASSIGNMENT": 16
+    },
+    "multiCandidateGroups": 16
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "r2-tolerance-domain": {
+    "pages": 5,
+    "sha256": "c20d6b523e20a0554b0f5c0c38bbb3c7b32a604505a0dd1b8eb8872483aea9e2",
+    "extractorVersion": "document-extractor-2",
+    "candidates": 20,
+    "blocked": 15,
+    "pending": 5,
+    "confirmed": 0,
+    "withOccurrence": 4,
+    "reasonCodes": {
+      "UNKNOWN_UNIT": 6,
+      "FORMULA_UNSUPPORTED": 9
+    },
+    "issueCodes": {
+      "UNKNOWN_UNIT": 5,
+      "AMBIGUOUS_ASSIGNMENT": 2
+    },
+    "multiCandidateGroups": 2
+  },
+  "r6-segments-assembly": {
+    "pages": 8,
+    "sha256": "fbe5db55db9b6bdf220e1ebef42c3f414580c8e1f360b7c739ab70e7c78d28be",
+    "extractorVersion": "document-extractor-2",
+    "candidates": 80,
+    "blocked": 65,
+    "pending": 15,
+    "confirmed": 0,
+    "withOccurrence": 36,
+    "reasonCodes": {
+      "UNKNOWN_UNIT": 37,
+      "FORMULA_UNSUPPORTED": 27,
+      "UNSUPPORTED_UNIT": 1
+    },
+    "issueCodes": {
+      "AMBIGUOUS_ASSIGNMENT": 11,
+      "UNKNOWN_UNIT": 29
+    },
+    "multiCandidateGroups": 11
+  }
+}

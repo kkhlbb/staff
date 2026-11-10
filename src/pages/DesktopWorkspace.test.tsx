@@ -398,13 +398,14 @@ beforeEach(async () => {
       error: { code: 'INVALID_REQUIREMENT_INPUT' as const, message: 'mock 不提供条款确认' },
     })),
     // V3.6 新增：提取/决定默认不适用，既有用例行为不变。
+    // 体验修订：decide 动作新增 revoke；mock 显式回显动作，仍返回失败（无项目会话）。
     runExtraction: vi.fn<CunlianApi['runExtraction']>(async () => ({
       ok: false as const,
       error: { code: 'SOURCE_NOT_FOUND' as const, message: 'mock 不提供提取' },
     })),
-    decideExtraction: vi.fn<CunlianApi['decideExtraction']>(async () => ({
+    decideExtraction: vi.fn<CunlianApi['decideExtraction']>(async (request) => ({
       ok: false as const,
-      error: { code: 'NOT_FOUND' as const, message: 'mock 不提供提取决定' },
+      error: { code: 'NOT_FOUND' as const, message: `mock 不提供提取决定（${request.action}）` },
     })),
     cancelExtraction: vi.fn<CunlianApi['cancelExtraction']>(async () => ({
       ok: true as const,

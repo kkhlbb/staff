@@ -205,6 +205,7 @@ export type CommonErrorCode =
   | 'EXTRACTION_EVIDENCE_REQUIRED'
   | 'EXTRACTION_CANDIDATE_BLOCKED'
   | 'EXTRACTION_CANDIDATE_REJECTED'
+  | 'EXTRACTION_GROUP_CONFLICT'
   | 'EXTRACTION_STALE_DECISION'
   | 'EXTRACTION_REASON_REQUIRED'
   | 'EXTRACTION_VERSION_MISMATCH'
@@ -771,13 +772,15 @@ export interface ExtractionRunValue {
   warning?: string
 }
 
-export type ExtractionDecisionAction = 'confirm' | 'reject' | 'edit'
+export type ExtractionDecisionAction = 'confirm' | 'reject' | 'edit' | 'revoke'
 
 /**
  * 逐条决定请求。
  *
  * - 确认必须显式 `confirmed: true`；main 仍会校验候选状态、编辑代数、出处与决定快照；
  * - 拒绝必须给理由；
+ * - 撤销（action='revoke'）只对仍有效的已确认候选开放，撤销后回到待确认；
+ * - 同一符号（ring group）只允许一条有效确认：确认第二条返回 EXTRACTION_GROUP_CONFLICT；
  * - 编辑只接受 mm 文本，且改后文本必须出现在该字段原有原文片段里（不伪造出处）；
  * - actor/decidedAt 由 main 生成，renderer 不能填写。
  */

@@ -136,6 +136,21 @@
   color: var(--text-h);
 }
 
+.extraction-review__occurrence {
+  padding: 0 6px;
+  border: 1px solid #b45309;
+  border-radius: 999px;
+  color: #b45309;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.extraction-review__group-hint {
+  margin: 2px 0 4px;
+  color: #b45309;
+  font-size: 0.9em;
+}
+
 .extraction-review__issues {
   margin: 0;
   padding-left: 18px;

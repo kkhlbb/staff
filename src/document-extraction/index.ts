@@ -30,6 +30,7 @@ export {
   type ExtractionIssue,
   type ExtractionIssueCode,
   type ExtractionKind,
+  type ExtractionOccurrence,
   type ExtractionPageRange,
   type ExtractionReasonCode,
   type ExtractionResult,
@@ -68,6 +69,7 @@ export {
   mergeExtractionDraft,
   planApplication,
   rejectCandidate,
+  revokeConfirmation,
   type ApplicationPlan,
   type ApplicationPlanItem,
   type ConfirmRequest,
@@ -75,5 +77,6 @@ export {
   type EditRequest,
   type PlanRequest,
   type RejectRequest,
+  type RevokeRequest,
 } from './draft'
 export { stableHash, stableId } from './ids'

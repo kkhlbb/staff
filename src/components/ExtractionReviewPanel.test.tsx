@@ -37,7 +37,7 @@ function ringCandidate(
   return {
     candidateId: 'cand-h',
     kind: 'ring',
-    groupId: 'ring:H',
+    groupId: `ring:${overrides.symbol ?? 'H'}`,
     rawText: 'H 总长 52.20 +0.02 -0.02',
     page: 1,
     status: 'pending',
@@ -181,6 +181,103 @@ function actions(): ExtractionReviewActions {
     onCancel: vi.fn(async () => ({ cancelled: true })),
   }
 }
+
+function ambiguousDraftFixture(): ExtractionDraft {
+  const base = draftFixture()
+  const a0 = ['0.100', '0.200', '0.150'].map((text, index) =>
+    ringCandidate({
+      candidateId: `cand-a0-${index + 1}`,
+      symbol: 'A0',
+      groupId: 'ring:A0',
+      rawText: `A0 = ${text} mm`,
+      status: index === 0 ? 'confirmed' : 'pending',
+      occurrence: { index: index + 1, total: 3 },
+      data: {
+        symbol: 'A0',
+        name: null,
+        nominal: { ...quantity, text, valueQ: Math.round(Number(text) * 10000) },
+        upperDeviation: null,
+        lowerDeviation: null,
+      },
+    }),
+  )
+  return {
+    ...base,
+    candidates: a0,
+    issues: [
+      {
+        issueId: 'issue-ambiguous',
+        code: 'AMBIGUOUS_ASSIGNMENT',
+        severity: 'warning',
+        message: '符号 A0 出现 3 处不同取值；同一符号只能确认一处',
+        page: 1,
+        candidateIds: a0.map((candidate) => candidate.candidateId),
+        evidence: [],
+      },
+    ],
+    decisions: [
+      {
+        decisionId: 'decision-a0-1',
+        candidateId: 'cand-a0-1',
+        action: 'confirm',
+        candidateEditRevision: 0,
+        decidedAt: '2026-11-10T09:01:00.000Z',
+        actor: 'local-operator',
+        reason: null,
+        valueSnapshot: '[]',
+        evidence: [],
+        invalidatedByEditRevision: null,
+      },
+    ],
+  }
+}
+
+async function ambiguousSnapshot(): Promise<SnapshotDto> {
+  const base = await createSampleSnapshot()
+  return {
+    ...base,
+    project: {
+      ...base.project,
+      activeRequirementRevisionId: null,
+      currentRequirementCheck: null,
+      extractionDrafts: [ambiguousDraftFixture()],
+    },
+  }
+}
+
+describe('V3.6 同一符号多处赋值（面板）', () => {
+  it('显示「同一符号第 k/N 处」与互斥提示；已确认一处后其余处确认按钮置灰', async () => {
+    render(<ExtractionReviewPanel snapshot={await ambiguousSnapshot()} busy={false} actions={actions()} />)
+    const list = screen.getByRole('list', { name: '提取候选列表' })
+    const rows = within(list).getAllByRole('listitem')
+    expect(rows).toHaveLength(3)
+    expect(within(rows[0]!).getByText('同一符号第 1/3 处')).toBeInTheDocument()
+    expect(within(rows[1]!).getByText('同一符号第 2/3 处')).toBeInTheDocument()
+    expect(within(rows[2]!).getByText('同一符号第 3/3 处')).toBeInTheDocument()
+    expect(within(rows[0]!).getByText('已确认')).toBeInTheDocument()
+    expect(within(rows[1]!).getByText(/同一符号只能确认一处/)).toBeInTheDocument()
+    expect(within(rows[1]!).getByText(/已确认第 1\/3 处，需先撤销该确认才能选此处/)).toBeInTheDocument()
+    expect(within(rows[1]!).getByRole('button', { name: '确认' })).toBeDisabled()
+    expect(within(rows[1]!).getByRole('button', { name: '确认' }).getAttribute('title')).toContain('请先撤销')
+    expect(within(rows[2]!).getByRole('button', { name: '确认' })).toBeDisabled()
+    expect(within(rows[0]!).getByRole('button', { name: '撤销确认' })).toBeEnabled()
+  })
+
+  it('撤销确认发出 action=revoke（不带 confirmed），不提供批量确认', async () => {
+    const handler = actions()
+    render(<ExtractionReviewPanel snapshot={await ambiguousSnapshot()} busy={false} actions={handler} />)
+    const list = screen.getByRole('list', { name: '提取候选列表' })
+    const first = within(list).getAllByRole('listitem')[0]!
+    fireEvent.click(within(first).getByRole('button', { name: '撤销确认' }))
+    expect(handler.onDecide).toHaveBeenCalledWith({
+      draftId: 'draft-test',
+      candidateId: 'cand-a0-1',
+      editRevision: 0,
+      action: 'revoke',
+    })
+    expect(screen.queryByRole('button', { name: /全部确认|批量确认/ })).toBeNull()
+  })
+})
 
 describe('V3.6 提取审阅面板', () => {
   it('如实显示规则版本、样本限制与“不做 OCR/DOCX”', async () => {
