@@ -23,7 +23,7 @@ import { EXTRACTOR_VERSION, type ExtractionCandidate } from '../../src/document-
 import { PdfTextExtractionError } from '../main/pdfTextExtract'
 import { ExtractionService } from '../main/extractionService'
 import { registerExtractionChannels } from '../main/extractionChannels'
-import { createHarness, type Harness } from './helpers/a04'
+import { createHarness, makeEvent, type Harness } from './helpers/a04'
 
 const FIXTURE = path.join(
   process.cwd(),
@@ -806,6 +806,71 @@ describe('V3.6 main：坏样例（无文本层）', () => {
       const snapshot = harness.projectService.getSession(open.sessionId)!.snapshot
       expect(snapshot.project.dimensionChain.target).toEqual({ minQ: 1000, maxQ: 3000 })
       expect(snapshot.project.requirementRevisions).toEqual([])
+    } finally {
+      await harness.dispose()
+    }
+  })
+})
+
+describe('V3.6 main：通道层 sender / 参数门禁', () => {
+  it('非白名单 sender、子框架、额外字段与错会话都被拒绝，且不触发提取', async () => {
+    const harness = await createHarness()
+    try {
+      await withExtraction(harness)
+      const open = await harness.openSample(await snapshotWithPdf())
+      const request = {
+        sessionId: open.sessionId,
+        baseEditSeq: 0,
+        revisionId: 'sr-1',
+        pageFrom: 1,
+        pageTo: 2,
+        requestId: 'req-gate',
+      }
+
+      const foreign = await harness.ipc.invoke(
+        IPC_CHANNELS.extractionRun,
+        request,
+        makeEvent({ webContentsId: 99 }),
+      )
+      expect(foreign.ok).toBe(false)
+      if (!foreign.ok) expect(foreign.error.code).toBe('FORBIDDEN_SENDER')
+
+      const subFrame = await harness.ipc.invoke(
+        IPC_CHANNELS.extractionRun,
+        request,
+        makeEvent({ webContentsId: 1, subFrame: true }),
+      )
+      expect(subFrame.ok).toBe(false)
+      if (!subFrame.ok) expect(subFrame.error.code).toBe('FORBIDDEN_SENDER')
+
+      // 额外字段（如 renderer 自封 actor/sha256）被严格 schema 拒绝。
+      const extra = await harness.invoke(IPC_CHANNELS.extractionRun, {
+        ...request,
+        actor: 'me',
+        sha256: 'a'.repeat(64),
+      })
+      expect(extra.ok).toBe(false)
+      if (!extra.ok) expect(extra.error.code).toBe('INVALID_REQUEST')
+
+      // 参数里的 revisionId 不能是路径。
+      const pathy = await harness.invoke(IPC_CHANNELS.extractionRun, {
+        ...request,
+        revisionId: '../secret',
+      })
+      expect(pathy.ok).toBe(false)
+      if (!pathy.ok) expect(pathy.error.code).toBe('INVALID_REQUEST')
+
+      // 其它会话 ID 不能冒用当前窗口的活动会话。
+      const wrongSession = await harness.invoke(IPC_CHANNELS.extractionRun, {
+        ...request,
+        sessionId: 'session-other',
+      })
+      expect(wrongSession.ok).toBe(false)
+      if (!wrongSession.ok) expect(wrongSession.error.code).toBe('STALE_SESSION')
+
+      expect(
+        harness.projectService.getSession(open.sessionId)!.snapshot.project.extractionDrafts,
+      ).toEqual([])
     } finally {
       await harness.dispose()
     }
