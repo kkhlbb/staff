@@ -1,0 +1,11 @@
+$ npx vitest run src/requirements/confirm.test.ts -t "新增并确认任务书 PDF"
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 14 skipped (15)
+   Start at  21:07:04
+   Duration  158ms (import 40%, setup 33%, transform 14%, tests 11%, worker 1%)
+
+EXIT_CODE:0

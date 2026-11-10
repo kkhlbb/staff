@@ -1,0 +1,31 @@
+PASS 批次标签 "V3.5 · Beta"
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35fix-00-workspace.png
+SESSION {"path":"/Users/aston/DSH/tmp/cunlian-v35/P35-imported.cunlian","activeRequirementRevisionId":"reqrev-e2d6d92a-3256-49f9-a4ae-c7d3f7233bc3","requirementCount":1,"documents":2,"bindingConfirmEvents":1}
+PASS 项目含活动条款
+PASS 项目含确认绑定事件 1
+BINDING_ROW "S ← 长度（param q=120000，环 q=120000）已确认生效解除绑定"
+PASS 绑定行显示已确认生效
+PASS 绑定行没有来源基准待核
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35fix-01b-binding-detail.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35fix-01-binding-confirmed.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35fix-02-drawing-1200.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35fix-02b-drawing-1200-detail.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35fix-03-drawing-1204.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35fix-03b-drawing-1204-detail.png
+CANDIDATE_1204 {"annotation":"12.04","diameter":"⌀32.00","candidateBanner":"候选参数预览（未提交）：标注与图形按当前参数联动草稿重画；正式图纸仍为 Rev rev-a1， 导出与提交不会使用候选值。","parameterTreeLabel":"长度 · 12.04","previewText":"预览：rev-d-38f8d6dd-8678-43dc-9eab-a85bd772931f\n参数与受影响环（旧 → 新）\n对象\t旧\t新\t说明\n内径\t200000q / 2 位\t200000q / 2 位\t工程值未变，仅有显示/来源变化\n外径\t320000q / 2 位\t320000q / 2 位\t工程值未变，仅有显示/来源变化\n长度\t120000q / 2 位\t120400q / 2 位\t工程值变化\n环 S\t120000q\t120400q\t仅 nominal 同步\n\n旧结果：0.2000 mm；范围 0.1500 ～ 0.2500 mm（within）\n\n新结果：0.1600 mm；范围 0.1100 ～ 0.2100 mm（within）\n\n绑定标注：ann.length（param:spacer:length）、ann.inner-diameter（param:spacer:inner"}
+PASS 二维标注为 12.04 "12.04"
+PASS 项目树参数标签为 12.04 "长度 · 12.04"
+PASS 明确标注候选未提交
+PASS 候选结果 0.1100～0.2100
+PROPERTY_1204 "显示 | q = 120400 · 输入 2 位小数 | 显示：12.04（标注数字来自此参数，不读几何/像素）"
+PASS 属性 q 为 120400
+GATE_1210 {"disabled":true,"reason":"条款检查为「不满足要求」：候选区间在下界越界（下裕量为负）。；正式版本保持在上一次提交。","title":"条款检查为「不满足要求」：候选区间在下界越界（下裕量为负）。；正式版本保持在上一次提交。","annotation":"12.10","requirementStatus":"不满足要求","revision":"参数联动（只同步 nominal）\n\n已关联 1 个组成环（其中 1 个草稿态待确认）；偏差/方向/目标不随参数同步。"}
+PASS 确认提交按钮 disabled
+PASS 原因文字可见（不只在 title） "条款检查为「不满足要求」：候选区间在下界越界（下裕量为负）。；正式版本保持在上一次提交。"
+PASS 原因包含下界越界
+PASS 二维标注为 12.10 "12.10"
+PASS 条款状态为不满足要求 "不满足要求"
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35fix-04-confirm-disabled.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35fix-05-confirm-disabled-full.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35fix-06-3d-candidate-1210.png
+RESULT ALL_PASS

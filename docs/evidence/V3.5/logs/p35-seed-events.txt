@@ -1,0 +1,79 @@
+$ unzip -p /Users/aston/DSH/tmp/cunlian-v35/P35-imported.cunlian project/project.json | jq ...
+{
+  "schemaVersion": 7,
+  "currentRevisionId": "rev-req-f2d8ffa3-c6e8-4e75-b170-b09889d649cd",
+  "activeRequirementRevisionId": "reqrev-e2d6d92a-3256-49f9-a4ae-c7d3f7233bc3",
+  "params": [
+    {
+      "key": "innerDiameter",
+      "valueQ": 200000,
+      "parameterRevision": 1
+    },
+    {
+      "key": "outerDiameter",
+      "valueQ": 320000,
+      "parameterRevision": 1
+    },
+    {
+      "key": "length",
+      "valueQ": 120000,
+      "parameterRevision": 1
+    }
+  ],
+  "reqs": [
+    {
+      "revisionId": "reqrev-e2d6d92a-3256-49f9-a4ae-c7d3f7233bc3",
+      "lowerQ": 1000,
+      "upperQ": 3000,
+      "sourceRevision": "sr-dc689760-228c-4597-aa0e-da79a50a72d2"
+    }
+  ],
+  "links": [
+    {
+      "kind": "parameter-binding",
+      "bindingId": "binding:spacer-length",
+      "parameterId": "param:spacer:length",
+      "termId": "t-s"
+    }
+  ]
+}
+
+$ unzip -p ... history/events.json | jq ...
+[
+  {
+    "type": "source_import",
+    "bindingId": null,
+    "parameterId": null,
+    "parameterRevision": null,
+    "termRevision": null,
+    "sourceBasis": null,
+    "requirementRevisionId": null
+  },
+  {
+    "type": "parameter_binding_confirmed",
+    "bindingId": "binding:spacer-length",
+    "parameterId": "param:spacer:length",
+    "parameterRevision": 1,
+    "termRevision": 1,
+    "sourceBasis": "741c9d2df253",
+    "requirementRevisionId": null
+  },
+  {
+    "type": "source_import",
+    "bindingId": null,
+    "parameterId": null,
+    "parameterRevision": null,
+    "termRevision": null,
+    "sourceBasis": null,
+    "requirementRevisionId": null
+  },
+  {
+    "type": "requirement_confirmed",
+    "bindingId": null,
+    "parameterId": null,
+    "parameterRevision": null,
+    "termRevision": null,
+    "sourceBasis": null,
+    "requirementRevisionId": "reqrev-e2d6d92a-3256-49f9-a4ae-c7d3f7233bc3"
+  }
+]
