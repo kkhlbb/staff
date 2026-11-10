@@ -147,8 +147,35 @@ export interface DemoPartObject {
   /** 语义部件根：userData.partId 是唯一映射来源，位置由 baseTransform 表达。 */
   readonly group: Group
   readonly mesh: Mesh<BufferGeometry, MeshStandardMaterial>
-  readonly geometry: BufferGeometry
+  /** 可在参数联动时被替换；旧 BufferGeometry 由本 owner dispose。 */
+  geometry: BufferGeometry
   readonly material: MeshStandardMaterial
+}
+
+/** D：隔套只读示意几何的参数化尺寸（mm；渲染侧，不写回领域 q）。 */
+export interface SpacerDimensionsMm {
+  innerRadius: number
+  outerRadius: number
+  length: number
+}
+
+/**
+ * 由当前隔套参数推导示意几何；只影响网格，不改 partId/装配顺序/
+ * 偏差/尺寸链。参数值真值仍是领域 q，本函数只接收已换算的 mm。
+ */
+export function spacerDemoDefinition(dimensions: SpacerDimensionsMm): DemoPartDefinition {
+  const base = demoPart('builtin:shaft-demo:spacer')
+  const half = dimensions.length / 2
+  return {
+    ...base,
+    xRange: [-half, half],
+    shape: {
+      kind: 'ring',
+      innerRadius: dimensions.innerRadius,
+      outerRadius: dimensions.outerRadius,
+    },
+    note: '隔套示意几何随当前参数（草稿/正式）更新；不写回尺寸链。',
+  }
 }
 
 export interface DemoAssembly {
@@ -156,19 +183,28 @@ export interface DemoAssembly {
   readonly parts: readonly DemoPartObject[]
   /** 只改 Group.position.x，不触碰几何顶点、参数值或领域数据。 */
   setExplodeT(t: number): void
+  /** D：只替换隔套网格；partId/材质/选中/爆炸/相机不变。 */
+  setSpacerDimensions(dimensions: SpacerDimensionsMm): void
+  /** 当前隔套网格的轴向长度（mm），供测试/证据读取。 */
+  spacerLengthMm(): number
   /** 幂等释放；共享资源由本 owner 唯一释放。 */
   dispose(): void
 }
 
 /**
  * 创建整个示意装配。每件自带独立材质（选中互不影响），语义部件恒为 5 个。
+ * 传入 spacer 时只替换隔套的示意截面（草稿/正式参数），其余部件保持 B1 语义。
  */
-export function createDemoAssembly(): DemoAssembly {
+export function createDemoAssembly(spacer?: SpacerDimensionsMm): DemoAssembly {
   const root = new Group()
   root.name = 'builtin:shaft-demo:root'
   const parts: DemoPartObject[] = []
 
-  for (const definition of DEMO_PARTS) {
+  for (const baseDefinition of DEMO_PARTS) {
+    const definition =
+      baseDefinition.id === 'builtin:shaft-demo:spacer' && spacer !== undefined
+        ? spacerDemoDefinition(spacer)
+        : baseDefinition
     const geometry = createPartGeometry(definition)
     const material = new MeshStandardMaterial({
       color: definition.color,
@@ -194,6 +230,22 @@ export function createDemoAssembly(): DemoAssembly {
       for (const part of parts) {
         part.group.position.set(explodeX(part.id, t), 0, 0)
       }
+    },
+    setSpacerDimensions(dimensions: SpacerDimensionsMm) {
+      const part = parts.find((item) => item.id === 'builtin:shaft-demo:spacer')
+      if (part === undefined) return
+      const next = createPartGeometry(spacerDemoDefinition(dimensions))
+      const previous = part.geometry
+      part.mesh.geometry = next
+      part.geometry = next
+      previous.dispose()
+    },
+    spacerLengthMm() {
+      const part = parts.find((item) => item.id === 'builtin:shaft-demo:spacer')
+      if (part === undefined) return 0
+      part.geometry.computeBoundingBox()
+      const box = part.geometry.boundingBox
+      return box === null ? 0 : box.max.x - box.min.x
     },
     dispose() {
       if (disposed) return

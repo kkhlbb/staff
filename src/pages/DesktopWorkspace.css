@@ -160,3 +160,13 @@
 .desktop-workspace__model-dialog .desktop-workspace__primary { background: #1f3a5f; color: #fff; border-color: #1f3a5f; }
 .desktop-workspace__link-row { display: grid; gap: 4px; padding: 6px 0; border-top: 1px dashed var(--border, #d9e0e9); }
 .desktop-workspace__link-row p { margin: 0; }
+.desktop-workspace__drawing-tab {
+  display: grid;
+  grid-template-rows: minmax(240px, 46%) 1fr;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.desktop-workspace__drawing-tab > .change-workbench {
+  border-bottom: 1px solid var(--border, #d9e0e9);
+}

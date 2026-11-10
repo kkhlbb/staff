@@ -71,7 +71,7 @@ export async function createSampleSnapshot(): Promise<ProjectFileSnapshot> {
   const chain = sampleChain()
   const project = {
     id: SAMPLE_PROJECT_ID,
-    schemaVersion: 5 as const,
+    schemaVersion: 6 as const,
     name: '隔套间隙演示',
     currentRevisionId: 'rev-a1',
     dimensionChain: chain,

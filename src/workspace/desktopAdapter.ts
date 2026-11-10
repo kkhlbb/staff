@@ -21,6 +21,17 @@ import type {
   ProjectStageValue,
   RecoveryWriteState,
   SnapshotDto,
+  ChangeStageRequest,
+  ChangeDraftValue,
+  ChangePreviewValue,
+  ChangeApplyRequest,
+  ChangeApplyValue,
+  ChangeBindRequest,
+  ChangeUnbindRequest,
+  ChangeCompareRequest,
+  ChangeCompareValueResponse,
+  ChangeRestoreRequest,
+  ChangeRestoreValue,
 } from '../../desktop/shared/contracts'
 
 export interface DesktopSessionState {
@@ -310,6 +321,67 @@ export class DesktopSessionAdapter {
     warning?: string
   }): Promise<void> {
     return this.applyModelMutation(value)
+  }
+
+  /* ---- D：参数联动 ------------------------------------------------- */
+
+  async stageChange(request: ChangeStageRequest): Promise<IpcResult<ChangeDraftValue>> {
+    return this.api.stageChangeDraft(request)
+  }
+
+  async previewChange(request: {
+    sessionId: string
+    baseToken: string
+    draftToken: string
+  }): Promise<IpcResult<ChangePreviewValue>> {
+    return this.api.previewChange(request)
+  }
+
+  /** 确认成功后一次性重同步权威快照；失败保留当前编辑与草稿。 */
+  async applyChange(request: ChangeApplyRequest): Promise<IpcResult<ChangeApplyValue>> {
+    const result = await this.api.applyChange(request)
+    if (result.ok) {
+      this.state = {
+        ...this.state,
+        status: 'open',
+        snapshot: result.value.snapshot,
+        path: result.value.path,
+        fingerprint: result.value.fingerprint,
+        acceptedSeq: result.value.acceptedSeq,
+        localSeq: Math.max(this.state.localSeq, result.value.acceptedSeq),
+        savedSeq: result.value.savedSeq,
+        saveStateKnown: true,
+        dirty: result.value.acceptedSeq > result.value.savedSeq,
+        recovery: 'none',
+        warnings: result.value.warnings,
+        lastError: undefined,
+      }
+      this.emit()
+    } else {
+      this.state = { ...this.state, lastError: result.error }
+      this.emit()
+    }
+    return result
+  }
+
+  async bindParameter(request: ChangeBindRequest): Promise<IpcResult<ChangeDraftValue>> {
+    return this.api.bindParameter(request)
+  }
+
+  async unbindParameter(request: ChangeUnbindRequest): Promise<IpcResult<ChangeDraftValue>> {
+    return this.api.unbindParameter(request)
+  }
+
+  async compareDrawings(
+    request: ChangeCompareRequest,
+  ): Promise<IpcResult<ChangeCompareValueResponse>> {
+    return this.api.compareDrawings(request)
+  }
+
+  async restoreRevisionDraft(
+    request: ChangeRestoreRequest,
+  ): Promise<IpcResult<ChangeRestoreValue>> {
+    return this.api.restoreRevisionDraft(request)
   }
 
   private scheduleStage(): void {

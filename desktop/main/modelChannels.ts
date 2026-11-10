@@ -19,7 +19,10 @@ import type {
   ModelReadValue,
 } from '../shared/contracts'
 import { IPC_CHANNELS } from '../shared/contracts'
-import type { ProjectFileSnapshot } from '../../src/project-file/types'
+import type {
+  ProjectFileSnapshot,
+  ProjectFileVisualReferenceLink,
+} from '../../src/project-file/types'
 import {
   assembleSnapshot,
   expectedEntryRoles,
@@ -501,6 +504,7 @@ export function registerModelChannels(ipc: IpcMainLike, deps: ModelChannelDeps):
         // 仅同一部件的已确认关联标记待核对；旧目标版本与确认凭据保留。
         let pendingCount = 0
         const dimensionLinks = snapshot.project.dimensionLinks.map((link) => {
+          if (link.kind !== 'visual-reference') return link
           if (link.target.partId !== partId) return link
           if (link.reviewStatus !== 'confirmed') return link
           pendingCount += 1
@@ -639,8 +643,8 @@ export function registerModelChannels(ipc: IpcMainLike, deps: ModelChannelDeps):
             reject('INVALID_REQUEST', '核对新版需要给出 linkId')
           }
           const existing = snapshot.project.dimensionLinks.find(
-            (item) => item.linkId === params.linkId,
-          )
+            (item) => item.kind === 'visual-reference' && item.linkId === params.linkId,
+          ) as ProjectFileVisualReferenceLink | undefined
           if (existing === undefined) {
             reject('MISSING_REFERENCE', '待核对的关联不存在', params.linkId)
           }
@@ -654,7 +658,7 @@ export function registerModelChannels(ipc: IpcMainLike, deps: ModelChannelDeps):
             reject('INVALID_REQUEST', '核对新版必须指向具体模型版本')
           }
           dimensionLinks = snapshot.project.dimensionLinks.map((item) =>
-            item.linkId === params.linkId
+            item.kind === 'visual-reference' && item.linkId === params.linkId
               ? {
                   ...item,
                   target: params.target,

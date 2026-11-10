@@ -19,6 +19,11 @@ import {
   type ModelReadValue,
   type DrawingExportValue,
   type DrawingUpdateValue,
+  type ChangeApplyValue,
+  type ChangeCompareValueResponse,
+  type ChangeDraftValue,
+  type ChangePreviewValue,
+  type ChangeRestoreValue,
   type ProjectOpenValue,
   type ProjectRevealValue,
   type ProjectSaveValue,
@@ -156,6 +161,34 @@ const api: CunlianApi = {
   exportDrawingSvg: (request) =>
     ipcRenderer.invoke(IPC_CHANNELS.drawingExportSvg, request) as Promise<
       IpcResult<DrawingExportValue>
+    >,
+  stageChangeDraft: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.changeStage, request) as Promise<
+      IpcResult<ChangeDraftValue>
+    >,
+  previewChange: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.changePreview, request) as Promise<
+      IpcResult<ChangePreviewValue>
+    >,
+  applyChange: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.changeApply, request) as Promise<
+      IpcResult<ChangeApplyValue>
+    >,
+  bindParameter: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.changeBind, request) as Promise<
+      IpcResult<ChangeDraftValue>
+    >,
+  unbindParameter: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.changeUnbind, request) as Promise<
+      IpcResult<ChangeDraftValue>
+    >,
+  compareDrawings: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.changeCompare, request) as Promise<
+      IpcResult<ChangeCompareValueResponse>
+    >,
+  restoreRevisionDraft: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.changeRestore, request) as Promise<
+      IpcResult<ChangeRestoreValue>
     >,
 }
 

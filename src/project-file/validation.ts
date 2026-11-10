@@ -21,6 +21,7 @@ import {
   ATTACHMENT_EXTENSION,
   ATTACHMENT_PATH_PREFIX,
   B2_PROJECT_FILE_SCHEMA_VERSION,
+  C_PROJECT_FILE_SCHEMA_VERSION,
   DIMENSION_CHAIN_SCHEMA_VERSION,
   LEGACY_PROJECT_FILE_SCHEMA_VERSION,
   PROJECT_FILE_FORMAT,
@@ -40,6 +41,7 @@ import {
   type ProjectFileProject,
   type ProjectFileProjectV1,
   type ProjectFileProjectV2,
+  type ProjectFileProjectV5,
   type ProjectFileResult,
   type ProjectFileRevision,
   type ProjectFileSnapshot,
@@ -165,6 +167,19 @@ const visualReferenceSchema = z
     { message: '已确认的关联必须带确认版本与时间' },
   )
 
+/** D：参数绑定；syncField 固定 nominal，没有“已确认”布尔。 */
+const parameterBindingSchema = z
+  .object({
+    kind: z.literal('parameter-binding'),
+    bindingId: idSchema,
+    termId: idSchema,
+    partId: idSchema,
+    parameterId: idSchema,
+    syncField: z.literal('nominal'),
+    createdAt: z.string().min(1),
+  })
+  .strict()
+
 const projectCommonShape = {
   id: idSchema,
   name: z.string().min(1).max(200),
@@ -217,7 +232,7 @@ const projectV2Schema = z
   .strict()
 
 /** C：schema5 的隔套参数；q 为正安全整数，有效位 0..4。 */
-const spacerParameterSchema = z
+const spacerParameterV5Schema = z
   .object({
     parameterId: idSchema,
     partId: idSchema,
@@ -227,6 +242,11 @@ const spacerParameterSchema = z
     reviewStatus: z.enum(['draft', 'pending', 'confirmed']),
     sourceNote: z.string().max(2000).optional(),
   })
+  .strict()
+
+/** D：schema6 参数带单调 parameterRevision（从 1 起）。 */
+const spacerParameterSchema = spacerParameterV5Schema
+  .extend({ parameterRevision: z.number().int().positive() })
   .strict()
 
 const drawingFrameFieldsSchema = z
@@ -284,8 +304,22 @@ const drawingRecordSchema = z
   })
   .strict()
 
-/** C：schema5，三参数与图纸引用使用严格类型。 */
+/** C：schema5，三参数与图纸引用使用严格类型（无 parameterRevision）。 */
 const projectV3Schema = z
+  .object({
+    ...projectCommonShape,
+    schemaVersion: z.literal(C_PROJECT_FILE_SCHEMA_VERSION),
+    sourceFormatVersion: z.union([z.literal(1), z.literal(2)]),
+    parts: z.array(partSchema),
+    parameters: z.array(spacerParameterV5Schema).max(3),
+    modelRevisions: z.array(modelRevisionSchema),
+    dimensionLinks: z.array(visualReferenceSchema),
+    drawings: z.array(drawingRecordSchema).max(1),
+  })
+  .strict()
+
+/** D：schema6，参数绑定与参数修订号；容器布局与链 schema 不变。 */
+const projectV4Schema = z
   .object({
     ...projectCommonShape,
     schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
@@ -293,7 +327,9 @@ const projectV3Schema = z
     parts: z.array(partSchema),
     parameters: z.array(spacerParameterSchema).max(3),
     modelRevisions: z.array(modelRevisionSchema),
-    dimensionLinks: z.array(visualReferenceSchema),
+    dimensionLinks: z.array(
+      z.discriminatedUnion('kind', [visualReferenceSchema, parameterBindingSchema]),
+    ),
     drawings: z.array(drawingRecordSchema).max(1),
   })
   .strict()
@@ -414,6 +450,40 @@ const fileRevisionSchema = z
     createdAt: z.string().min(1),
     reason: z.string(),
     project: z.unknown(),
+    evidence: z
+      .object({
+        analysisSnapshotId: idSchema.nullable(),
+        eventIds: z.array(idSchema),
+        sourceManifest: z
+          .object({
+            documents: z.array(
+              z.object({ documentId: idSchema, latestRevisionId: idSchema }).strict(),
+            ),
+            revisions: z.array(
+              z
+                .object({
+                  revisionId: idSchema,
+                  documentId: idSchema,
+                  sha256: sha256Schema,
+                })
+                .strict(),
+            ),
+            bindings: z.array(
+              z
+                .object({
+                  bindingId: idSchema,
+                  revisionId: idSchema,
+                  reviewedTermRevision: z.number().int().positive().nullable(),
+                })
+                .strict(),
+            ),
+            missingBlobKeys: z.array(idSchema),
+          })
+          .strict(),
+        restoredFromRevisionId: idSchema.nullable(),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
 
@@ -540,9 +610,10 @@ const manifestProjectV2Schema = z
   .object({
     id: idSchema,
     name: z.string().min(1).max(200),
-    // formatVersion 2 既可能来自 B2（schema4），也可能是 C 写出的 schema5。
+    // formatVersion 2 既可能来自 B2（schema4），也可能是 C（schema5）/D（schema6）。
     projectSchemaVersion: z.union([
       z.literal(B2_PROJECT_FILE_SCHEMA_VERSION),
+      z.literal(C_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(PROJECT_FILE_SCHEMA_VERSION),
     ]),
     dimensionChainSchemaVersion: z.literal(DIMENSION_CHAIN_SCHEMA_VERSION),
@@ -598,7 +669,8 @@ export function parseManifest(
 export type VersionedProject =
   | { version: 1; project: ProjectFileProjectV1 }
   | { version: 2; project: ProjectFileProjectV2 }
-  | { version: 3; project: ProjectFileProject }
+  | { version: 3; project: ProjectFileProjectV5 }
+  | { version: 4; project: ProjectFileProject }
 
 /** 校验工作链与基线链；两个 schema 版本共用。 */
 function validateProjectChains(
@@ -664,7 +736,7 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
       },
     })
   }
-  if (version === PROJECT_FILE_SCHEMA_VERSION) {
+  if (version === C_PROJECT_FILE_SCHEMA_VERSION) {
     const parsed = projectV3Schema.safeParse(input)
     if (!parsed.success) {
       return fail('INVALID_RECORD', 'project.json 结构不合法（schema 5）', describeZodError(parsed.error))
@@ -673,6 +745,22 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
     if (!chains.ok) return chains
     return ok({
       version: 3,
+      project: {
+        ...(parsed.data as unknown as ProjectFileProjectV5),
+        dimensionChain: chains.value.dimensionChain,
+        baseline: chains.value.baseline,
+      },
+    })
+  }
+  if (version === PROJECT_FILE_SCHEMA_VERSION) {
+    const parsed = projectV4Schema.safeParse(input)
+    if (!parsed.success) {
+      return fail('INVALID_RECORD', 'project.json 结构不合法（schema 6）', describeZodError(parsed.error))
+    }
+    const chains = validateProjectChains(parsed.data)
+    if (!chains.ok) return chains
+    return ok({
+      version: 4,
       project: {
         ...(parsed.data as unknown as ProjectFileProject),
         dimensionChain: chains.value.dimensionChain,
@@ -714,7 +802,22 @@ export function adaptProjectV2(project: ProjectFileProjectV2): ProjectFileProjec
   }
 }
 
-/** 严格解析 project/project.json（接受 schema3/4/5，统一返回当前工作形状）。 */
+/** schema5 → 当前工作形状（schema 6）：补 parameterRevision=1，其余字段原样。 */
+export function adaptProjectV3(project: ProjectFileProjectV5): ProjectFileProject {
+  return {
+    ...project,
+    schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
+    parameters: project.parameters.map((parameter) => ({
+      ...parameter,
+      // C 没有参数修订号；首次读入按 1 起算。这是显式、可追溯的升级，
+      // 不伪造“已确认”，也不改写历史版本记录。
+      parameterRevision: parameter.parameterRevision ?? 1,
+    })),
+    dimensionLinks: project.dimensionLinks,
+  }
+}
+
+/** 严格解析 project/project.json（接受 schema3/4/5/6，统一返回当前工作形状）。 */
 export function parseProject(
   input: unknown,
 ): ProjectFileResult<ProjectFileProject> {
@@ -722,6 +825,7 @@ export function parseProject(
   if (!parsed.ok) return parsed
   if (parsed.value.version === 1) return ok(adaptProjectV1(parsed.value.project))
   if (parsed.value.version === 2) return ok(adaptProjectV2(parsed.value.project))
+  if (parsed.value.version === 3) return ok(adaptProjectV3(parsed.value.project))
   return ok(parsed.value.project)
 }
 
@@ -880,6 +984,26 @@ export function expectedEntryRoles(
   return entries.sort((left, right) =>
     left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
   )
+}
+
+function linkKindId(link: { kind: string; linkId?: string; bindingId?: string }): string {
+  return link.kind === 'parameter-binding' ? (link.bindingId ?? '') : (link.linkId ?? '')
+}
+
+/** linkId 与 bindingId 是两个命名空间，各自查重。 */
+function duplicateLinkIds(
+  links: readonly { kind: string; linkId?: string; bindingId?: string }[],
+): string | null {
+  for (const kind of ['visual-reference', 'parameter-binding'] as const) {
+    const seen = new Set<string>()
+    for (const link of links) {
+      if (link.kind !== kind) continue
+      const id = linkKindId(link)
+      if (seen.has(id)) return id
+      seen.add(id)
+    }
+  }
+  return null
 }
 
 function duplicateIds<T>(records: readonly T[], key: keyof T & string): string | null {
@@ -1042,9 +1166,9 @@ export function validateSnapshotReferences(
   if (modelDuplicate !== null) {
     return fail('INVALID_RECORD', `modelRevisionId 重复：${modelDuplicate}`)
   }
-  const linkDuplicate = duplicateIds(snapshot.project.dimensionLinks, 'linkId')
+  const linkDuplicate = duplicateLinkIds(snapshot.project.dimensionLinks)
   if (linkDuplicate !== null) {
-    return fail('INVALID_RECORD', `维度关联 linkId 重复：${linkDuplicate}`)
+    return fail('INVALID_RECORD', `维度关联 ID 重复：${linkDuplicate}`)
   }
   // 模型版本与来源版本使用不同命名空间：同一个 ID 不能同时出现在两边。
   const sourceRevisionIds = new Set(snapshot.revisions.map((item) => item.id))
@@ -1202,33 +1326,69 @@ export function validateSnapshotReferences(
     }
   }
 
-  // ---- B2：可视关联（外形资料来源，不是参数联动） ----------------------
+  // ---- B2/D：维度关联（外形资料来源 或 参数绑定） ----------------------
+  const bindingTerms = new Set<string>()
   for (const link of snapshot.project.dimensionLinks) {
     if (!termIds.has(link.termId)) {
-      return fail('MISSING_REFERENCE', `关联 ${link.linkId} 引用了不存在的组成环`, link.termId)
+      return fail('MISSING_REFERENCE', `关联 ${linkKindId(link)} 引用了不存在的组成环`, link.termId)
     }
-    if (!partById.has(link.target.partId)) {
-      return fail('MISSING_REFERENCE', `关联 ${link.linkId} 引用了不存在的部件`, link.target.partId)
-    }
-    if (link.target.granularity === 'model' && link.target.modelRevisionId === null) {
-      return fail('INVALID_RECORD', `关联 ${link.linkId} 使用模型粒度但没有具体版本`)
-    }
-    for (const [label, revisionId] of [
-      ['目标版本', link.target.modelRevisionId],
-      ['确认版本', link.reviewedModelRevisionId],
-    ] as const) {
-      if (revisionId === null) continue
-      const model = modelById.get(revisionId)
-      if (model === undefined) {
-        return fail('MISSING_REFERENCE', `关联 ${link.linkId} 的${label}不存在`, revisionId)
+    if (link.kind === 'visual-reference') {
+      if (!partById.has(link.target.partId)) {
+        return fail('MISSING_REFERENCE', `关联 ${link.linkId} 引用了不存在的部件`, link.target.partId)
       }
-      if (model.partId !== link.target.partId) {
-        return fail(
-          'MISSING_REFERENCE',
-          `关联 ${link.linkId} 的${label}属于其它部件`,
-          `${model.partId} != ${link.target.partId}`,
-        )
+      if (link.target.granularity === 'model' && link.target.modelRevisionId === null) {
+        return fail('INVALID_RECORD', `关联 ${link.linkId} 使用模型粒度但没有具体版本`)
       }
+      for (const [label, revisionId] of [
+        ['目标版本', link.target.modelRevisionId],
+        ['确认版本', link.reviewedModelRevisionId],
+      ] as const) {
+        if (revisionId === null) continue
+        const model = modelById.get(revisionId)
+        if (model === undefined) {
+          return fail('MISSING_REFERENCE', `关联 ${link.linkId} 的${label}不存在`, revisionId)
+        }
+        if (model.partId !== link.target.partId) {
+          return fail(
+            'MISSING_REFERENCE',
+            `关联 ${link.linkId} 的${label}属于其它部件`,
+            `${model.partId} != ${link.target.partId}`,
+          )
+        }
+      }
+      continue
+    }
+    // D：参数绑定——一参一环，引用必须指向现存参数且 partId 一致。
+    if (bindingTerms.has(link.termId)) {
+      return fail(
+        'INVALID_RECORD',
+        `组成环 ${link.termId} 存在第二个参数绑定`,
+        link.bindingId,
+      )
+    }
+    bindingTerms.add(link.termId)
+    if (link.partId !== SPACER_PART_ID && !partById.has(link.partId)) {
+      return fail('MISSING_REFERENCE', `参数绑定 ${link.bindingId} 引用了不存在的部件`, link.partId)
+    }
+    const parameter = snapshot.project.parameters.find(
+      (item) => item.parameterId === link.parameterId,
+    )
+    if (parameter === undefined) {
+      return fail(
+        'MISSING_REFERENCE',
+        `参数绑定 ${link.bindingId} 引用了不存在的参数`,
+        link.parameterId,
+      )
+    }
+    if (parameter.partId !== link.partId) {
+      return fail(
+        'MISSING_REFERENCE',
+        `参数绑定 ${link.bindingId} 的部件与参数不一致`,
+        `${link.partId} != ${parameter.partId}`,
+      )
+    }
+    if (parameter.partId !== SPACER_PART_ID) {
+      return fail('MISSING_REFERENCE', `参数绑定 ${link.bindingId} 指向不支持的部件`)
     }
   }
 
@@ -1244,6 +1404,12 @@ export function validateSnapshotReferences(
     }
     parameterIds.add(parameter.parameterId)
     parameterKeys.add(parameter.key)
+    if (!Number.isSafeInteger(parameter.parameterRevision) || parameter.parameterRevision < 1) {
+      return fail(
+        'INVALID_RECORD',
+        `隔套参数修订号必须是 ≥1 的整数：${parameter.parameterId}`,
+      )
+    }
     if (parameter.partId !== SPACER_PART_ID) {
       return fail('MISSING_REFERENCE', `隔套参数引用了不支持的部件：${parameter.partId}`)
     }
@@ -1440,6 +1606,51 @@ export function validateSnapshotReferences(
       }
       visited.add(cursor)
       cursor = revisionFileById.get(cursor)?.parentId ?? null
+    }
+  }
+
+  // D：版本证据只允许引用本次聚合里真实存在的快照/事件/来源版本。
+  const eventById = new Map(snapshot.events.map((event) => [event.id, event]))
+  for (const revision of snapshot.fileRevisions) {
+    if (revision.evidence === undefined) continue
+    const evidence = revision.evidence
+    if (
+      evidence.analysisSnapshotId !== null &&
+      !snapshotById.has(evidence.analysisSnapshotId)
+    ) {
+      return fail(
+        'MISSING_REFERENCE',
+        `版本 ${revision.revisionId} 的证据引用了不存在的分析快照`,
+        evidence.analysisSnapshotId,
+      )
+    }
+    for (const eventId of evidence.eventIds) {
+      if (!eventById.has(eventId)) {
+        return fail(
+          'MISSING_REFERENCE',
+          `版本 ${revision.revisionId} 的证据引用了不存在的事件`,
+          eventId,
+        )
+      }
+    }
+    for (const item of evidence.sourceManifest.revisions) {
+      if (!revisionById.has(item.revisionId)) {
+        return fail(
+          'MISSING_REFERENCE',
+          `版本 ${revision.revisionId} 的来源清单引用了不存在的来源版本`,
+          item.revisionId,
+        )
+      }
+    }
+    if (
+      evidence.restoredFromRevisionId !== null &&
+      !revisionFileById.has(evidence.restoredFromRevisionId)
+    ) {
+      return fail(
+        'MISSING_REFERENCE',
+        `版本 ${revision.revisionId} 的恢复来源不存在`,
+        evidence.restoredFromRevisionId,
+      )
     }
   }
 

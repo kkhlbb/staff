@@ -71,6 +71,8 @@ export interface DemoSceneOptions {
   selectedPartId: BuiltinPartId | null
   explodeT: number
   view: DemoViewState | null
+  /** D：隔套示意几何尺寸（mm）；缺省用 B1 固定值。 */
+  spacerMm?: { innerRadius: number; outerRadius: number; length: number }
   onSelectPart(partId: BuiltinPartId | null): void
   onViewChange(view: DemoViewState): void
   onPerformance(level: 'degraded' | 'insufficient'): void
@@ -81,6 +83,9 @@ export interface DemoSceneHandle {
   readonly probe: SceneProbe
   setExplodeT(t: number): void
   setSelectedPartId(partId: BuiltinPartId | null): void
+  /** D：按当前草稿/正式参数替换隔套网格；不改变选择/相机/爆炸。 */
+  setSpacerDimensions(dimensions: { innerRadius: number; outerRadius: number; length: number }): void
+  spacerLengthMm(): number
   setActive(active: boolean): void
   resetView(): void
   zoomBy(factor: number): void
@@ -197,7 +202,7 @@ export function createDemoScene(options: DemoSceneOptions): DemoSceneHandle {
   fill.position.set(-180, -90, -140)
   scene.add(ambient, hemisphere, key, fill)
 
-  const assembly: DemoAssembly = createDemoAssembly()
+  const assembly: DemoAssembly = createDemoAssembly(options.spacerMm)
   scene.add(assembly.root)
   assembly.setExplodeT(options.explodeT)
 
@@ -443,6 +448,14 @@ export function createDemoScene(options: DemoSceneOptions): DemoSceneHandle {
       if (next === selected) return
       selected = next
       applySelected(next)
+    },
+    setSpacerDimensions(dimensions) {
+      if (disposed) return
+      assembly.setSpacerDimensions(dimensions)
+      invalidate()
+    },
+    spacerLengthMm() {
+      return assembly.spacerLengthMm()
     },
     setActive(next: boolean) {
       if (disposed) return

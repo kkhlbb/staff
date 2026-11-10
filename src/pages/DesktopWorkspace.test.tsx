@@ -5,11 +5,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CunlianApi, ProjectOpenValue, MenuActionPayload, EditorFlushRequest } from '../../desktop/shared/contracts'
 import { createSampleSnapshot } from '../project-file/__fixtures__/sampleProjectFile'
 import { createModelSnapshot, sampleStlTriangle, MODEL_PART_ID, MODEL_REVISION_ID } from '../project-file/__fixtures__/modelProjectFile'
+import { createSpacerSnapshot } from '../project-file/__fixtures__/spacerProjectFile'
 import { toSnapshotDto } from '../project-file/codec'
 import { DesktopWorkspace } from './DesktopWorkspace'
 import { buildSpacerDrawing } from '../drawing/spacerDrawing'
 import { parseSpacerParameters } from '../parts/spacerParameters'
 import type { ProjectFileDrawingRecord } from '../project-file/types'
+import { computeChange } from '../revisions/compute'
+import { buildCommitCandidate } from '../revisions/commit'
+import { deriveReviewGroups } from '../revisions/status'
 
 // 3D 场景在 jsdom 里没有 WebGL2：用伪场景模块替换，只验证接线与命令调用。
 const scene = vi.hoisted(() => ({
@@ -25,6 +29,8 @@ vi.mock('../parts/threeScene', () => ({
       active: true,
       disposed: false,
       setSelectedPartId: (id: string | null) => { handle.selected = id },
+      setSpacerDimensions: () => undefined,
+      spacerLengthMm: () => 12,
       setExplodeT: (t: number) => { handle.explode = t },
       setActive: (value: boolean) => { handle.active = value },
       resetView: () => undefined,
@@ -71,10 +77,12 @@ let flush: (payload: EditorFlushRequest) => void
 let opened: ProjectOpenValue
 let api: CunlianApi
 let drawingSnapshot: ProjectOpenValue['snapshot'] | null = null
+let changeDraft: import('../../desktop/shared/contracts').ChangeDraftValue | null = null
 const failure = { ok: false as const, error: { code: 'NO_SPACE' as const, message: '磁盘空间不足' } }
 beforeEach(async () => {
   opened = { sessionId: 'session-1', editSeq: 0, snapshot: await createSampleSnapshot(), path: null, fingerprint: null, warnings: [] }
   drawingSnapshot = null
+  changeDraft = null
   api = {
     newProject: vi.fn(async () => ({ ok: true as const, value: opened })),
     openProject: vi.fn(async () => ({ ok: true as const, value: opened })),
@@ -132,7 +140,7 @@ beforeEach(async () => {
         }
         const snapshot: ProjectOpenValue['snapshot'] = {
           ...base,
-          project: { ...base.project, parameters: parsed.parameters.map(item => ({ ...item })), drawings: [record] },
+          project: { ...base.project, parameters: parsed.parameters.map(item => ({ ...item, parameterRevision: 1 })), drawings: [record] },
         }
         drawingSnapshot = snapshot
         return {
@@ -152,6 +160,164 @@ beforeEach(async () => {
     }),
     exportDrawingPdf: vi.fn(async () => ({ ok: false as const, error: { code: 'CANCELLED' as const, message: '取消' } })),
     exportDrawingSvg: vi.fn(async () => ({ ok: false as const, error: { code: 'CANCELLED' as const, message: '取消' } })),
+    // D 新增：与真实契约同形状；只证明接线，不替代 main 原子性验收。
+    stageChangeDraft: vi.fn<CunlianApi['stageChangeDraft']>(async request => {
+      const parsed = parseSpacerParameters(request.inputs, request.sourceNotes)
+      if (!parsed.ok) {
+        return { ok: false as const, error: { code: 'INVALID_PARAMETER' as const, message: parsed.message } }
+      }
+      const base = drawingSnapshot ?? opened.snapshot
+      const formal = new Map(base.project.parameters.map(item => [item.key, item]))
+      const parameters = parsed.parameters.map(item => ({
+        ...item,
+        parameterRevision: formal.get(item.key) ? (formal.get(item.key)!.valueQ === item.valueQ ? formal.get(item.key)!.parameterRevision : formal.get(item.key)!.parameterRevision + 1) : 1,
+      }))
+      const bindings = base.project.dimensionLinks.filter((link): link is import('../project-file/types').ProjectFileParameterBindingLink => link.kind === 'parameter-binding').map(link => ({ ...link }))
+      changeDraft = {
+        draftId: 'draft-mock-1',
+        draftRevision: (changeDraft?.draftRevision ?? 0) + 1,
+        baseToken: 'a'.repeat(16),
+        draftToken: 'b'.repeat(16),
+        parameters,
+        bindings,
+        confirmationCleared: false,
+      }
+      return { ok: true as const, value: changeDraft }
+    }),
+    previewChange: vi.fn<CunlianApi['previewChange']>(async request => {
+      if (changeDraft === null || request.draftToken !== changeDraft.draftToken || request.baseToken !== changeDraft.baseToken) {
+        return { ok: false as const, error: { code: 'STALE_BASE' as const, message: '基准已变化，预览已过期，请重新预览' } }
+      }
+      const base = drawingSnapshot ?? opened.snapshot
+      try {
+        const computation = computeChange(
+          { ...base, attachments: [] } as unknown as import('../project-file/types').ProjectFileSnapshot,
+          { parameters: changeDraft.parameters, bindings: changeDraft.bindings },
+          { revisionId: 'rev-d-mock-1', now: '2026-11-09T10:00:00.000Z' },
+        )
+        const groups = deriveReviewGroups(base.project, {
+          computation,
+          availableBlobKeys: new Set(base.blobs.map(blob => blob.blobKey)),
+          documents: base.documents,
+          revisions: base.revisions,
+          sourceBindings: base.bindings,
+        })
+        return {
+          ok: true as const,
+          value: {
+            previewId: 'preview-mock-1',
+            previewToken: 'c'.repeat(16),
+            baseToken: request.baseToken,
+            draftToken: request.draftToken,
+            revisionId: 'rev-d-mock-1',
+            parameters: computation.parameters,
+            previousChain: computation.previousChain,
+            chain: computation.chain,
+            previousResult: computation.previousResult,
+            result: computation.result,
+            parameterDiffs: computation.parameterDiffs,
+            termDiffs: computation.termDiffs,
+            affectedTermIds: computation.affectedTermIds,
+            unboundTermIds: computation.unboundTermIds,
+            drawing: {
+              record: computation.drawing.record,
+              left: computation.drawing.previousData,
+              right: computation.drawing.data,
+              leftProblem: computation.drawing.previousProblem,
+            },
+            review: {
+              rulesVersion: '1.0.0',
+              findings: [],
+              calculation: { status: computation.result.status, label: '预览', satisfied: null },
+              reviewComplete: false,
+              pending: [],
+              canCreateReport: true,
+              hasAnyBinding: true,
+              byStatus: { passed: 0, failed: 0, unchecked: 0, 'needs-human': 0, 'not-applicable': 0 },
+              groups: [],
+            },
+            groups,
+            blockers: [],
+          },
+        }
+      } catch (error) {
+        return { ok: false as const, error: { code: 'CALCULATION_FAILED' as const, message: error instanceof Error ? error.message : String(error) } }
+      }
+    }),
+    applyChange: vi.fn<CunlianApi['applyChange']>(async request => {
+      if (changeDraft === null || request.baseToken !== changeDraft.baseToken || request.draftToken !== changeDraft.draftToken) {
+        return { ok: false as const, error: { code: 'STALE_BASE' as const, message: '基准已变化，旧确认请求已拒绝' } }
+      }
+      const base = drawingSnapshot ?? opened.snapshot
+      try {
+        const computation = computeChange(
+          { ...base, attachments: [] } as unknown as import('../project-file/types').ProjectFileSnapshot,
+          { parameters: changeDraft.parameters, bindings: changeDraft.bindings },
+          { revisionId: 'rev-d-mock-1', now: '2026-11-09T10:00:00.000Z' },
+        )
+        const candidate = buildCommitCandidate(
+          { ...base, attachments: [] } as unknown as import('../project-file/types').ProjectFileSnapshot,
+          computation,
+          {
+            revisionId: 'rev-d-mock-1',
+            analysisSnapshotId: 'snapshot-d-rev-d-mock-1',
+            createdAt: '2026-11-09T10:00:00.000Z',
+            reason: request.reason,
+            restoredFromRevisionId: null,
+            reauthenticateBindings: false,
+          },
+        )
+        opened = { ...opened, snapshot: candidate.snapshot as unknown as ProjectOpenValue['snapshot'], path: '/project.cunlian', fingerprint: 'd'.repeat(64) }
+        drawingSnapshot = candidate.snapshot as unknown as ProjectOpenValue['snapshot']
+        changeDraft = null
+        return {
+          ok: true as const,
+          value: {
+            revisionId: 'rev-d-mock-1',
+            acceptedSeq: 1,
+            savedSeq: 1,
+            snapshot: candidate.snapshot as unknown as ProjectOpenValue['snapshot'],
+            path: '/project.cunlian',
+            fingerprint: 'd'.repeat(64),
+            analysisSnapshotId: 'snapshot-d-rev-d-mock-1',
+            recovery: 'none' as const,
+            warnings: [],
+          },
+        }
+      } catch (error) {
+        return { ok: false as const, error: { code: 'SAVE_FAILED' as const, message: error instanceof Error ? error.message : String(error) } }
+      }
+    }),
+    bindParameter: vi.fn<CunlianApi['bindParameter']>(async request => {
+      const base = drawingSnapshot ?? opened.snapshot
+      const parameters = base.project.parameters.length
+        ? base.project.parameters
+        : parseSpacerParameters({ innerDiameter: '20.00', outerDiameter: '32.00', length: '12.00' }).ok
+          ? (parseSpacerParameters({ innerDiameter: '20.00', outerDiameter: '32.00', length: '12.00' }) as { ok: true; parameters: import('../drawing/types').ParameterSnapshotItem[] }).parameters.map(item => ({ ...item, parameterRevision: 1 }))
+          : []
+      changeDraft = {
+        draftId: 'draft-mock-1',
+        draftRevision: (changeDraft?.draftRevision ?? 0) + 1,
+        baseToken: 'a'.repeat(16),
+        draftToken: 'b'.repeat(16),
+        parameters,
+        bindings: [{ kind: 'parameter-binding', bindingId: 'binding-mock-1', termId: request.termId, partId: request.partId, parameterId: request.parameterId, syncField: 'nominal', createdAt: '2026-11-09T10:00:00.000Z' }],
+        confirmationCleared: false,
+      }
+      return { ok: true as const, value: changeDraft }
+    }),
+    unbindParameter: vi.fn<CunlianApi['unbindParameter']>(async () => ({
+      ok: false as const,
+      error: { code: 'INVALID_BINDING' as const, message: 'mock 未建立绑定' },
+    })),
+    compareDrawings: vi.fn<CunlianApi['compareDrawings']>(async () => ({
+      ok: false as const,
+      error: { code: 'COMPARE_UNAVAILABLE' as const, message: 'mock 不提供图纸对比' },
+    })),
+    restoreRevisionDraft: vi.fn<CunlianApi['restoreRevisionDraft']>(async () => ({
+      ok: false as const,
+      error: { code: 'INVALID_REQUEST' as const, message: 'mock 不提供恢复' },
+    })),
   }
   vi.stubGlobal('cunlian', api)
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
@@ -347,7 +513,7 @@ describe('B1 内置轴系示例整合', () => {
     expect(api.newProject).toHaveBeenCalledWith({ name: '轴系示例（B1）· 示意装配', template: 'chain-demo' })
     expect(screen.getByRole('tab', { name: '3D' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText(/内置轴系示例 · 示意装配/)).toBeInTheDocument()
-    expect(screen.getByText(/与当前项目尺寸链未关联/)).toBeInTheDocument()
+    expect(screen.getByText(/隔套示意几何随当前参数草稿/)).toBeInTheDocument()
     expect(screen.getByText(/需重新打开示例/)).toBeInTheDocument()
     expect(within(partGroup()).getAllByRole('button')).toHaveLength(5)
     for (const name of PART_NAMES) expect(within(partGroup()).getByRole('button', { name })).toBeInTheDocument()
@@ -380,7 +546,7 @@ describe('B1 内置轴系示例整合', () => {
     expect(screen.getByText('32.0000 mm')).toBeInTheDocument()
     expect(screen.getByText('12.0000 mm')).toBeInTheDocument()
     expect(within(document.getElementById('desktop-panel-1')!).getByText('当前选择：隔套')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '编辑参数（C 批次）' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '在工程图页编辑参数' })).toBeEnabled()
     expect(scene.handles.at(-1)!.selected).toBe('builtin:shaft-demo:spacer')
   })
 
@@ -390,7 +556,7 @@ describe('B1 内置轴系示例整合', () => {
     act(() => options.onSelectPart('builtin:shaft-demo:bearing-left'))
     expect(within(tree()).getByRole('button', { name: '左轴承' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('heading', { name: '属性 · 左轴承' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '编辑参数（C 批次）' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '在工程图页编辑参数' })).toBeEnabled()
     act(() => options.onSelectPart(null))
     expect(within(tree()).getByRole('button', { name: '左轴承' })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('heading', { name: '属性 · 未选择' })).toBeInTheDocument()
@@ -461,7 +627,8 @@ describe('B1 内置轴系示例整合', () => {
     await waitFor(() => expect(screen.getByText('尚未打开轴系示例 · B1')).toBeInTheDocument())
     expect(screen.queryByRole('img', { name: /轴系示意装配三维视图/ })).toBeNull()
     expect(scene.handles.length).toBeGreaterThan(0)
-    expect(scene.handles.every(handle => handle.disposed === true)).toBe(true)
+    // 卸载清理与文案更新是同一轮 React 提交后的 effect；在并发负载下要等它完成。
+    await waitFor(() => expect(scene.handles.every(handle => handle.disposed === true)).toBe(true))
     expect(screen.getByRole('heading', { name: '属性 · 未选择' })).toBeInTheDocument()
   })
 })
@@ -717,5 +884,53 @@ describe('C-03 工程图预览与参数联动', () => {
     fireEvent.click(screen.getByRole('button', { name: '50%' }))
     fireEvent.click(screen.getByRole('button', { name: '150%' }))
     expect(vi.mocked(api.updateSpacerDrawing).mock.calls.length).toBe(zoomCalls)
+  })
+})
+
+describe('D 参数联动工作台（renderer mock 接线）', () => {
+  it('无参数绑定显示「未关联尺寸链」', async () => {
+    await openExample()
+    fireEvent.click(screen.getByRole('tab', { name: '工程图' }))
+    const bench = screen.getByLabelText('参数联动')
+    expect(await within(bench).findByText('未关联尺寸链')).toBeInTheDocument()
+    expect(within(bench).getByRole('button', { name: '预览变更' })).toBeDisabled()
+  })
+
+  it('12→14：草稿/预览/确认走新 IPC；五类坏消息独立显示', async () => {
+    opened.snapshot = (await createSpacerSnapshot({
+      length: '12.00',
+      confirmed: true,
+      material: '',
+    })) as unknown as ProjectOpenValue['snapshot']
+    await openExample()
+    fireEvent.click(screen.getByRole('tab', { name: '工程图' }))
+
+    let bench = screen.getByLabelText('参数联动')
+    expect(await within(bench).findByText(/已关联 1 个组成环/)).toBeInTheDocument()
+    expect(within(bench).getByLabelText('长度（mm）')).toHaveValue('12.00')
+
+    fireEvent.change(within(bench).getByLabelText('长度（mm）'), { target: { value: '14.00' } })
+    fireEvent.click(within(bench).getByRole('button', { name: '建立/更新草稿' }))
+    await waitFor(() => expect(api.stageChangeDraft).toHaveBeenCalled())
+    expect(vi.mocked(api.stageChangeDraft).mock.calls.at(-1)?.[0].inputs.length).toBe('14.00')
+
+    // 草稿修订号变化会重建工作区（输入框跟随权威草稿），重新取当前节点。
+    bench = screen.getByLabelText('参数联动')
+    fireEvent.click(within(bench).getByRole('button', { name: '预览变更' }))
+    await waitFor(() => expect(api.previewChange).toHaveBeenCalled())
+    expect(await screen.findByText('预览：rev-d-mock-1')).toBeInTheDocument()
+    expect(screen.getAllByText(/-1\.8500 ～ -1\.7500/).length).toBeGreaterThan(0)
+
+    const group = screen.getByLabelText('复核与变更分组')
+    for (const heading of ['受影响环', '需复核来源', '关系待核', '材料缺失', '计算不满足']) {
+      expect(within(group).getByRole('heading', { name: heading })).toBeInTheDocument()
+    }
+    expect(within(group).getByText(/材料待补充/)).toBeInTheDocument()
+    expect(within(group).getAllByText(/关系待核/).length).toBeGreaterThan(0)
+    expect(within(group).getAllByText(/待复核草稿/).length).toBeGreaterThan(0)
+
+    fireEvent.click(screen.getByRole('button', { name: '确认提交（一次原子写入）' }))
+    await waitFor(() => expect(api.applyChange).toHaveBeenCalled())
+    expect(await screen.findByText(/已提交新版本 rev-d-mock-1/)).toBeInTheDocument()
   })
 })

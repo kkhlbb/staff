@@ -1,0 +1,15 @@
+--- desktop/main/changeService.ts	2026-11-09 17:38:12
++++ /tmp/mut-D3-changeService.ts	2026-11-09 17:38:09
+@@ -745,6 +745,12 @@
+         return null
+       }
+ 
++      // MUT-D3: 先写参数/事件到会话，再尝试提交文件（失败会留下部分业务数据）。
++      session.snapshot = {
++        ...session.snapshot,
++        project: { ...session.snapshot.project, parameters: candidate.snapshot.project.parameters },
++        events: candidate.snapshot.events,
++      }
+       const committedResult = await this.deps.projectService.commitCandidate(session.sessionId, {
+         baseEditSeq: expectedAccepted,
+         candidate: candidate.snapshot,

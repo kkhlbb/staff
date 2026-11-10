@@ -29,6 +29,8 @@ export interface ThreeViewportProps {
   active: boolean
   viewState: DemoViewState | null
   onViewStateChange: (view: DemoViewState) => void
+  /** D：隔套示意几何（mm）；缺省用 B1 固定值。 */
+  spacerMm?: { innerRadius: number; outerRadius: number; length: number }
   /** 仅供测试注入懒加载失败/构造失败；产品路径是动态 import。 */
   sceneLoader?: () => Promise<SceneModule>
 }
@@ -90,6 +92,7 @@ export function ThreeViewport(props: ThreeViewportProps) {
           selectedPartId: propsRef.current.selectedPartId,
           explodeT: propsRef.current.explodeT,
           view: propsRef.current.viewState,
+          ...(propsRef.current.spacerMm === undefined ? {} : { spacerMm: propsRef.current.spacerMm }),
           onSelectPart: handlers.onSelectPart,
           onViewChange: handlers.onViewChange,
           onPerformance: handlers.onPerformance,
@@ -131,6 +134,14 @@ export function ThreeViewport(props: ThreeViewportProps) {
     if (status !== 'ready') return
     sceneRef.current?.setExplodeT(explodeT)
   }, [explodeT, status])
+
+  // D：草稿参数变化时只替换隔套网格；选择/相机/爆炸保持不变。
+  useEffect(() => {
+    if (status !== 'ready') return
+    const spacer = props.spacerMm
+    if (spacer === undefined) return
+    sceneRef.current?.setSpacerDimensions(spacer)
+  }, [status, props.spacerMm])
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -179,7 +190,7 @@ export function ThreeViewport(props: ThreeViewportProps) {
     >
       <p className="three-viewport__banner">
         <strong>内置轴系示例 · 示意装配</strong>{' '}
-        与当前项目尺寸链未关联；几何固定，不随尺寸编辑变化。项目数据可保存；3D 视图状态仅本次会话保留，重开应用后需重新打开示例。
+        隔套示意几何随当前参数草稿/正式值更新（只影响网格）；其他部件固定示意。项目数据可保存；3D 视图状态仅本次会话保留，重开应用后需重新打开示例。
       </p>
       <div className="three-viewport__toolbar" role="toolbar" aria-label="3D 视图操作">
         <button type="button" disabled={!ready} onClick={() => props.onExplodeTChange(0)}>装配</button>

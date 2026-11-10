@@ -42,6 +42,8 @@ import { registerProjectChannels } from './channels'
 import { registerModelChannels } from './modelChannels'
 import { createModelFileIo } from './modelIo'
 import { registerDrawingChannels } from './drawingChannels'
+import { registerChangeChannels } from './changeChannels'
+import { ChangeService } from './changeService'
 import { DrawingExportStore, type DrawingExportKind } from './drawingExportStore'
 import { printDrawingToPdf } from './drawingPdf'
 import { resolvePrintFontPath } from './printAssets'
@@ -341,6 +343,22 @@ async function confirmDrawingOverwrite(windowId: number, targetPath: string): Pr
   return choice.response === 0
 }
 
+async function confirmProjectOverwrite(targetPath: string): Promise<boolean> {
+  const owner = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+  const options = {
+    type: 'warning' as const,
+    message: '目标位置已有项目文件',
+    detail: `${path.basename(targetPath)} 将在原子替换后成为新版本。提交前会再次核对磁盘指纹，原文件在替换前不会被截断。`,
+    buttons: ['替换', '取消'],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  }
+  const choice =
+    owner === undefined ? await dialog.showMessageBox(options) : await dialog.showMessageBox(owner, options)
+  return choice.response === 0
+}
+
 /** 字体从打包资源读取并转 data URL；打印页与网络完全隔离。 */
 async function bundledPrintFonts(): Promise<{ family: string; dataUrl: string }[]> {
   const assets = [
@@ -450,6 +468,20 @@ function installIpcHandlers(): void {
     pickExportPath: pickDrawingExportPath,
     confirmOverwrite: confirmDrawingOverwrite,
     printPdf: printDrawingPdf,
+    log: logStage,
+  })
+
+  const changeService = new ChangeService({
+    projectService,
+    recovery,
+    controller,
+    pickSaveTarget: (suggestedName) => pickSaveTargetFor(sanitizeFileName(suggestedName)),
+    confirmOverwrite: confirmProjectOverwrite,
+  })
+  registerChangeChannels(ipc, {
+    guard,
+    controller,
+    changeService,
     log: logStage,
   })
 

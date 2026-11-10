@@ -15,6 +15,7 @@ import {
   ATTACHMENT_EXTENSION,
   ATTACHMENT_PATH_PREFIX,
   B2_PROJECT_FILE_SCHEMA_VERSION,
+  C_PROJECT_FILE_SCHEMA_VERSION,
   DIMENSION_CHAIN_SCHEMA_VERSION,
   LEGACY_PROJECT_FILE_FORMAT_VERSION,
   LEGACY_PROJECT_FILE_SCHEMA_VERSION,
@@ -344,7 +345,7 @@ export async function decodeProjectFile(
   const expectedProjectSchemas =
     rawVersion === LEGACY_PROJECT_FILE_FORMAT_VERSION
       ? [LEGACY_PROJECT_FILE_SCHEMA_VERSION]
-      : [B2_PROJECT_FILE_SCHEMA_VERSION, PROJECT_FILE_SCHEMA_VERSION]
+      : [B2_PROJECT_FILE_SCHEMA_VERSION, C_PROJECT_FILE_SCHEMA_VERSION, PROJECT_FILE_SCHEMA_VERSION]
   const rawProject = rawRecord.project
   if (typeof rawProject === 'object' && rawProject !== null) {
     const projectRecord = rawProject as Record<string, unknown>
@@ -382,6 +383,22 @@ export async function decodeProjectFile(
 
   const projectPart = readPart(PROJECT_FILE_PATHS.project, true)
   if (!projectPart.ok) return projectPart
+  // manifest 声明的项目 schema 必须与 project.json 实际记录一致；不能只信一边。
+  {
+    const rawProjectPart =
+      typeof projectPart.value === 'object' && projectPart.value !== null
+        ? (projectPart.value as Record<string, unknown>)
+        : {}
+    const actualSchema = rawProjectPart.schemaVersion
+    const expectedByManifest = manifest.value.project.projectSchemaVersion
+    if (actualSchema !== expectedByManifest) {
+      return fail(
+        'INVALID_MANIFEST',
+        'manifest 的项目 schema 与 project.json 不一致',
+        `manifest=${String(expectedByManifest)}，project.json=${String(actualSchema)}`,
+      )
+    }
+  }
   const draftPart = readPart(PROJECT_FILE_PATHS.draft, true)
   if (!draftPart.ok) return draftPart
   const documentsPart = readPart(PROJECT_FILE_PATHS.documents, true)

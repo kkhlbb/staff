@@ -22,7 +22,7 @@ async function buildDrawingRecord(
     length: '12.00',
   })
   if (!parsed.ok) throw new Error(parsed.message)
-  const parameters: ProjectFileSpacerParameter[] = parsed.parameters.map((item) => ({ ...item }))
+  const parameters: ProjectFileSpacerParameter[] = parsed.parameters.map((item) => ({ ...item, parameterRevision: 1 }))
   const drawing = buildSpacerDrawing({
     projectId: snapshot.project.id,
     revisionId: snapshot.project.currentRevisionId,
@@ -86,7 +86,7 @@ describe('C-03 schema 5 持久化', () => {
     expect(encoded.ok).toBe(true)
     if (!encoded.ok) return
     expect(encoded.value.manifest.formatVersion).toBe(2)
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(5)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(6)
     expect(encoded.value.manifest.counts.drawings).toBe(1)
 
     const decoded = await decodeProjectFile(encoded.value.bytes)
@@ -296,7 +296,7 @@ describe('C-03 旧 formatVersion 2 / schema 4 文件兼容', () => {
     expect(decoded.value.manifest.formatVersion).toBe(2)
     expect(decoded.value.manifest.project.projectSchemaVersion).toBe(4)
     // 读入后的工作形状为当前 schema5，但来源格式仍是 2（不产生 dirty）。
-    expect(decoded.value.snapshot.project.schemaVersion).toBe(5)
+    expect(decoded.value.snapshot.project.schemaVersion).toBe(6)
     expect(decoded.value.snapshot.project.sourceFormatVersion).toBe(2)
     expect(decoded.value.snapshot.project.parameters).toEqual([])
     expect(decoded.value.snapshot.project.drawings).toEqual([])
@@ -309,19 +309,19 @@ describe('C-03 旧 formatVersion 2 / schema 4 文件兼容', () => {
       now: () => new Date('2026-11-09T12:00:00.000Z'),
     })
     expect(upgraded.upgraded).toBe(true)
-    expect(upgraded.snapshot.project.schemaVersion).toBe(5)
+    expect(upgraded.snapshot.project.schemaVersion).toBe(6)
     // 旧版本记录保持 schema4 原样（不可变历史）。
     expect(upgraded.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(4)
-    expect(upgraded.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(5)
+    expect(upgraded.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(6)
 
     const saved = await encodeProjectFile(upgraded.snapshot)
     expect(saved.ok).toBe(true)
     if (!saved.ok) return
-    expect(saved.value.manifest.project.projectSchemaVersion).toBe(5)
+    expect(saved.value.manifest.project.projectSchemaVersion).toBe(6)
     const reopened = await decodeProjectFile(saved.value.bytes)
     expect(reopened.ok).toBe(true)
     if (!reopened.ok) return
-    expect(reopened.value.snapshot.project.schemaVersion).toBe(5)
+    expect(reopened.value.snapshot.project.schemaVersion).toBe(6)
     expect(reopened.value.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(4)
   })
 })

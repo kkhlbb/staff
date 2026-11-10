@@ -18,6 +18,7 @@ import type {
   ProjectFileSnapshot,
   ProjectFileSpacerParameter,
 } from '../../src/project-file/types'
+import { PROJECT_FILE_SCHEMA_VERSION } from '../../src/project-file/types'
 import type { IpcErrorCode, IpcErrorPayload, IpcResult } from '../shared/contracts'
 import { FileStore, type SaveError } from './fileStore'
 
@@ -58,6 +59,23 @@ export interface SaveAsRequest extends SaveRequest {
   targetPath: string
   /** 覆盖已存在目标必须给出其当前指纹（A-04 对话框确认后传入）。 */
   overwriteFingerprint?: string | null
+}
+
+export interface CommitCandidateRequest {
+  baseEditSeq: number
+  candidate: ProjectFileSnapshot
+  /** 无会话路径时由 main 对话框选定的目标；有路径时忽略。 */
+  targetPath?: string | null
+  overwriteFingerprint?: string | null
+  /** 返回非 null 即拒绝提交（rename 前仍会再次调用）。 */
+  guard: () => string | null
+}
+
+export interface CommitCandidateValue {
+  acceptedSeq: number
+  path: string
+  fingerprint: string
+  warnings: string[]
 }
 
 export interface ProjectServiceOptions {
@@ -268,6 +286,25 @@ export class ProjectService {
     if (assembled.value.project.id !== session.snapshot.project.id) {
       return ipcFailure('INVALID_REQUEST', '提交的聚合属于其它项目')
     }
+    // D：已绑定参数的组成环只允许通过参数联动确认改 nominal；renderer 不能
+    // 借普通 stage 绕过参数（也就不会出现“环改了、参数没改”的第二真源）。
+    const boundTerms = new Set(
+      authoritative.project.dimensionLinks.flatMap((link) =>
+        link.kind === 'parameter-binding' ? [link.termId] : [],
+      ),
+    )
+    if (boundTerms.size > 0) {
+      for (const term of assembled.value.project.dimensionChain.terms) {
+        const before = authoritative.project.dimensionChain.terms.find((item) => item.id === term.id)
+        if (before !== undefined && boundTerms.has(term.id) && before.nominalQ !== term.nominalQ) {
+          return ipcFailure(
+            'INVALID_BINDING',
+            '该组成环已绑定参数：请编辑参数或先解除绑定，不能直接改 nominal',
+            `termId=${term.id}`,
+          )
+        }
+      }
+    }
     session.snapshot = assembled.value
     session.acceptedSeq = editSeq
     return { ok: true, value: { acceptedSeq: editSeq } }
@@ -315,6 +352,100 @@ export class ProjectService {
     }
     session.acceptedSeq = nextSeq
     return { ok: true, value: { acceptedSeq: nextSeq } }
+  }
+
+  /**
+   * D：一次原子提交完整候选聚合。
+   *
+   * 与 save 的区别：候选不是 renderer DTO，而是 main 已构造并自校验的完整聚合；
+   * 磁盘成功后一次性发布内存状态。`guard` 在临时文件回读后、rename 前再次执行，
+   * 用于挡住 await 编码/校验期间的基准/草稿竞态（返回非 null 即拒绝）。
+   */
+  async commitCandidate(
+    sessionId: string,
+    request: CommitCandidateRequest,
+  ): Promise<IpcResult<CommitCandidateValue>> {
+    const session = this.sessions.get(sessionId)
+    if (session === undefined) {
+      return ipcFailure('STALE_SESSION', '会话已失效，请重新打开项目')
+    }
+    if (!Number.isSafeInteger(request.baseEditSeq) || request.baseEditSeq < 0) {
+      return ipcFailure('INVALID_REQUEST', 'baseEditSeq 必须是非负安全整数')
+    }
+    if (request.baseEditSeq !== session.acceptedSeq) {
+      return ipcFailure(
+        'STALE_EDIT',
+        '提交基准已过期，请重新预览',
+        `acceptedSeq=${session.acceptedSeq}, baseEditSeq=${request.baseEditSeq}`,
+      )
+    }
+    const guarded = request.guard()
+    if (guarded !== null) {
+      return ipcFailure('STALE_BASE', '提交前基准已变化，已拒绝', guarded)
+    }
+    const encoded = await encodeProjectFile(request.candidate)
+    if (!encoded.ok) {
+      return ipcFailure(
+        encoded.error.code,
+        `无法生成合法的项目文件：${encoded.error.message}`,
+        encoded.error.detail,
+      )
+    }
+    const targetPath = session.path ?? request.targetPath ?? null
+    if (targetPath === null) {
+      return ipcFailure('INVALID_REQUEST', '当前项目尚未保存过，需要先选择保存位置')
+    }
+    const overwriteFingerprint =
+      session.path === null
+        ? (request.overwriteFingerprint ?? (await this.store.fingerprint(targetPath)))
+        : session.fingerprint
+
+    const saved = await this.store.saveAtomic({
+      targetPath,
+      bytes: encoded.value.bytes,
+      expectedFingerprint: overwriteFingerprint,
+      verify: async (bytes) => {
+        const late = request.guard()
+        if (late !== null) {
+          return { ok: false, code: 'STALE_BASE', message: late }
+        }
+        const decoded = await decodeProjectFile(bytes)
+        if (!decoded.ok) {
+          return {
+            ok: false,
+            code: decoded.error.code,
+            message: decoded.error.message,
+            detail: decoded.error.detail,
+          }
+        }
+        if (decoded.value.snapshot.project.id !== session.snapshot.project.id) {
+          return { ok: false, code: 'INVALID_RECORD', message: '自校验读到的项目 ID 不一致' }
+        }
+        if (decoded.value.snapshot.project.schemaVersion !== PROJECT_FILE_SCHEMA_VERSION) {
+          return { ok: false, code: 'INVALID_RECORD', message: '自校验读到的项目 schema 不是当前版本' }
+        }
+        return { ok: true }
+      },
+    })
+    if (!saved.ok) {
+      return fromSaveError(saved.error)
+    }
+
+    // 磁盘是提交点；这里一次性发布完整内存聚合，不再安排可能失败的业务写入。
+    session.snapshot = request.candidate
+    session.path = saved.value.path
+    session.fingerprint = saved.value.fingerprint
+    session.acceptedSeq = request.baseEditSeq + 1
+    session.savedSeq = session.acceptedSeq
+    return {
+      ok: true,
+      value: {
+        acceptedSeq: session.acceptedSeq,
+        path: saved.value.path,
+        fingerprint: saved.value.fingerprint,
+        warnings: saved.value.warnings,
+      },
+    }
   }
 
   /** 读取磁盘指纹（不创建会话）；供 dirty gate 的另存覆盖确认与 relink 使用。 */

@@ -24,13 +24,15 @@ export const PROJECT_FILE_FORMAT = 'cunlian-project'
 /** B2 起写出的格式版本：formatVersion=2，project.schemaVersion=4/5。 */
 export const PROJECT_FILE_FORMAT_VERSION = 2
 /**
- * 当前写端项目 schema（V3-C-03 起为 5）：
- * - 5：三参数（q/有效位/来源备注）与图纸快照引用可持久化；
+ * 当前写端项目 schema（V3-D 起为 6）：
+ * - 6：参数绑定（parameter-binding）、单调 parameterRevision、Revision 证据引用；
+ * - 5：三参数（q/有效位/来源备注）与图纸快照引用可持久化（仍可读）；
  * - 4：B2 模型版本与可视关联，parameters/drawings 必须为空（仍可读）；
  * - 3：B1 及更早（仍可读）。
  * `formatVersion` 保持 2：容器布局未变，只扩展 project.json 的 schema 与版本配对。
  */
-export const PROJECT_FILE_SCHEMA_VERSION = 5
+export const PROJECT_FILE_SCHEMA_VERSION = 6
+export const C_PROJECT_FILE_SCHEMA_VERSION = 5
 export const B2_PROJECT_FILE_SCHEMA_VERSION = 4
 /** 仍然可读的 B1 及更早格式（读时兼容，首次保存显式升级）。 */
 export const LEGACY_PROJECT_FILE_FORMAT_VERSION = 1
@@ -100,8 +102,8 @@ export interface ProjectFileWriter {
 export interface ProjectFileManifestProject {
   id: string
   name: string
-  /** 旧文件为 3，B2 为 4，C 写 5；读取时按伴随的 formatVersion 校验配对。 */
-  projectSchemaVersion: 3 | 4 | 5
+  /** 旧文件为 3，B2 为 4，C 为 5，D 写 6；读取时按伴随的 formatVersion 校验配对。 */
+  projectSchemaVersion: 3 | 4 | 5 | 6
   dimensionChainSchemaVersion: typeof DIMENSION_CHAIN_SCHEMA_VERSION
   currentRevisionId: string
 }
@@ -250,7 +252,38 @@ export interface ProjectFileVisualReferenceLink {
   reason: string
 }
 
-export type ProjectFileDimensionLink = ProjectFileVisualReferenceLink
+/**
+ * D：参数绑定（组成环 ↔ 隔套参数），只同步 nominal。
+ *
+ * - 它不是 B2 的 visual-reference：B2 只表示外形资料来源，没有 parameterId；
+ * - 也不是“已确认”布尔：是否已核对由完整确认事件凭据派生；
+ * - `syncField` 固定 'nominal'，不允许同步偏差/方向/目标。
+ */
+export interface ProjectFileParameterBindingLink {
+  kind: 'parameter-binding'
+  bindingId: string
+  termId: string
+  partId: string
+  parameterId: string
+  syncField: 'nominal'
+  createdAt: string
+}
+
+export type ProjectFileDimensionLink =
+  | ProjectFileVisualReferenceLink
+  | ProjectFileParameterBindingLink
+
+export function isParameterBindingLink(
+  link: ProjectFileDimensionLink,
+): link is ProjectFileParameterBindingLink {
+  return link.kind === 'parameter-binding'
+}
+
+export function isVisualReferenceLink(
+  link: ProjectFileDimensionLink,
+): link is ProjectFileVisualReferenceLink {
+  return link.kind === 'visual-reference'
+}
 
 /* ------------------------------------------------------------------ */
 /* C：隔套三参数与图纸快照引用                                         */
@@ -268,6 +301,11 @@ export interface ProjectFileSpacerParameter {
   key: 'innerDiameter' | 'outerDiameter' | 'length'
   valueQ: number
   inputDecimals: number
+  /**
+   * D：单调递增的参数修订号（从 1 起）。只有真实工程值 valueQ 变化才递增；
+   * 改 inputDecimals/sourceNote 不递增但仍使图纸/预览失效。同值往返不回退。
+   */
+  parameterRevision: number
   reviewStatus: 'draft' | 'pending' | 'confirmed'
   sourceNote?: string
 }
@@ -343,14 +381,30 @@ export interface ProjectFileProject {
   drawings: ProjectFileDrawingRecord[]
 }
 
+/**
+ * C 的 schema5 记录：参数没有 parameterRevision、关联只有 visual-reference。
+ * 只用于读时兼容与旧历史原样保留。
+ */
+export type ProjectFileProjectV5 = Omit<
+  ProjectFileProject,
+  'schemaVersion' | 'parameters' | 'dimensionLinks'
+> & {
+  schemaVersion: typeof C_PROJECT_FILE_SCHEMA_VERSION
+  parameters: (Omit<ProjectFileSpacerParameter, 'parameterRevision'> & {
+    parameterRevision?: number
+  })[]
+  dimensionLinks: ProjectFileVisualReferenceLink[]
+}
+
 /** B2 的 schema4 记录：模型/关联有严格类型，parameters/drawings 必须为空。 */
 export type ProjectFileProjectV2 = Omit<
   ProjectFileProject,
-  'schemaVersion' | 'parameters' | 'drawings'
+  'schemaVersion' | 'parameters' | 'drawings' | 'dimensionLinks'
 > & {
   schemaVersion: typeof B2_PROJECT_FILE_SCHEMA_VERSION
   parameters: unknown[]
   drawings: unknown[]
+  dimensionLinks: ProjectFileVisualReferenceLink[]
 }
 
 /** 旧 schema3 项目记录：数组为空，无 sourceFormatVersion。只用于读时兼容。 */
@@ -372,6 +426,27 @@ export type ProjectFileProjectV1 = Omit<
   drawings: unknown[]
 }
 
+/**
+ * D：版本证据引用。只引用、不复制第二套可写结果：
+ * - analysisSnapshotId 指向同次提交冻结的 AnalysisSnapshot；
+ * - eventIds 指向同次提交的变更事件；
+ * - sourceManifest 是来源精确版本与哈希的只读摘要（可回查）；
+ * - restoredFromRevisionId 仅在“恢复旧版生成新版本”时出现。
+ *
+ * 旧 schema3/4/5 版本没有该字段；缺字段表示“未记录”，不补造。
+ */
+export interface ProjectFileRevisionEvidence {
+  analysisSnapshotId: string | null
+  eventIds: string[]
+  sourceManifest: {
+    documents: { documentId: string; latestRevisionId: string }[]
+    revisions: { revisionId: string; documentId: string; sha256: string }[]
+    bindings: { bindingId: string; revisionId: string; reviewedTermRevision: number | null }[]
+    missingBlobKeys: string[]
+  }
+  restoredFromRevisionId: string | null
+}
+
 /** `revisions/<encoded-id>.json`：项目文件版本基准。 */
 export interface ProjectFileRevision {
   revisionId: string
@@ -379,10 +454,12 @@ export interface ProjectFileRevision {
   createdAt: string
   reason: string
   /**
-   * 旧归档快照保留原 schema（3/4）原样（不可变历史）；新快照为当前 schema 5。
+   * 旧归档快照保留原 schema（3/4/5）原样（不可变历史）；新快照为当前 schema 6。
    * 读取按版本化联合解析，保存时不会把旧历史改写成新内容。
    */
-  project: ProjectFileProject | ProjectFileProjectV2 | ProjectFileProjectV1
+  project: ProjectFileProject | ProjectFileProjectV5 | ProjectFileProjectV2 | ProjectFileProjectV1
+  /** D 新版本带证据引用；旧版本没有该字段。 */
+  evidence?: ProjectFileRevisionEvidence
 }
 
 /** `sources/blobs.json` 的元数据；字节在 attachments/ 下。 */

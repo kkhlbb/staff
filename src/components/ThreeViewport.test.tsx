@@ -41,6 +41,8 @@ function harness(): Harness {
           const handle: DemoSceneHandle = {
             probe: { webgl: 'webgl2', glVersion: 'WebGL 2.0 (Mock)', glRenderer: 'Mock GPU', glVendor: 'Mock', antialias: true, dpr: 2 },
             setSelectedPartId: (partId) => { record.selected.push(partId) },
+            setSpacerDimensions: () => undefined,
+            spacerLengthMm: () => 12,
             setExplodeT: (t) => { record.explode.push(t) },
             setActive: (next) => { record.active.push(next) },
             resetView: () => { record.resets += 1 },

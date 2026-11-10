@@ -1,7 +1,38 @@
 import { useEffect, useRef, useState } from 'react'
-import type { IpcResult, MenuAction, MigrationInspectValue, RecentProjectItem, RecoveryItem } from '../../desktop/shared/contracts'
+import type {
+  ChangeCompareValueResponse,
+  ChangeDraftValue,
+  ChangePreviewValue,
+  IpcResult,
+  MenuAction,
+  MigrationInspectValue,
+  RecentProjectItem,
+  RecoveryItem,
+} from '../../desktop/shared/contracts'
 import { DesktopSessionAdapter, type DesktopSessionState } from './desktopAdapter'
 import { chainToDraft, draftToChain, workspaceReducer, type WorkspaceAction } from './draft'
+
+const EMPTY_CHANGE: ChangeUiState = {
+  sessionId: null,
+  draft: null,
+  preview: null,
+  staleReason: null,
+  compare: null,
+  error: null,
+  notice: '',
+}
+
+export interface ChangeUiState {
+  /** 归属会话：换会话即视为无草稿，不串场。 */
+  sessionId: string | null
+  draft: ChangeDraftValue | null
+  preview: ChangePreviewValue | null
+  /** 明确过期原因（不用布尔冒充）。 */
+  staleReason: string | null
+  compare: ChangeCompareValueResponse | null
+  error: { code: string; message: string } | null
+  notice: string
+}
 
 /** 仅持有适配器发布的会话快照；dirty gate 与文件事务始终由 main 执行。 */
 export function useDesktopSession() {
@@ -16,6 +47,16 @@ export function useDesktopSession() {
   const [preview, setPreview] = useState<MigrationInspectValue | null>(null)
   const adapter = useRef<DesktopSessionAdapter | null>(null)
   const locked = useRef(false)
+  const [change, setChange] = useState<ChangeUiState>(EMPTY_CHANGE)
+
+  const sessionId = state?.sessionId ?? null
+  const changeView: ChangeUiState = change.sessionId === sessionId ? change : EMPTY_CHANGE
+  const patchChange = (patch: Partial<ChangeUiState>) => {
+    setChange(current => {
+      const base = current.sessionId === sessionId ? current : { ...EMPTY_CHANGE, sessionId }
+      return { ...base, sessionId, ...patch }
+    })
+  }
 
   function report<T extends IpcResult<unknown>>(result: T) {
     if (!result.ok && result.error.code !== 'CANCELLED') setNotice(`${result.error.code}：${result.error.message}`)
@@ -82,6 +123,20 @@ export function useDesktopSession() {
     window.addEventListener('keydown', keydown)
     return () => window.removeEventListener('keydown', keydown)
   }, [])
+  function changeTarget(): { sessionId: string; acceptedSeq: number } | null {
+    const current = adapter.current?.getState()
+    if (!current || current.sessionId === null) {
+      setNotice('没有活动项目，不能编辑参数草稿')
+      return null
+    }
+    return { sessionId: current.sessionId, acceptedSeq: current.acceptedSeq }
+  }
+
+  const requestId = () => {
+    const random = globalThis.crypto?.randomUUID
+    return random !== undefined ? random.call(globalThis.crypto) : `req-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  }
+
   return {
     state, recent, recovery, notice, busy, newOpen, setNewOpen, importOpen, setImportOpen, preview, action,
     applyModelMutation: async (value: Parameters<DesktopSessionAdapter['applyModelMutation']>[0]) => {
@@ -95,6 +150,19 @@ export function useDesktopSession() {
       if (!current || locked.current) return
       const draft = workspaceReducer(current.draft ?? { ...chainToDraft(current.project.dimensionChain), relationRevision: current.project.relationRevision }, action)
       const parsed = draftToChain(draft)
+      // D：已绑定参数的组成环禁止手动改 nominal；导向参数编辑或解除绑定。
+      if (parsed.ok) {
+        const bound = new Set(
+          current.project.dimensionLinks.flatMap(link => (link.kind === 'parameter-binding' ? [link.termId] : [])),
+        )
+        for (const term of parsed.chain.terms) {
+          const before = current.project.dimensionChain.terms.find(item => item.id === term.id)
+          if (bound.has(term.id) && before !== undefined && before.nominalQ !== term.nominalQ) {
+            setNotice('该组成环已绑定隔套参数：请编辑参数或先解除绑定；不会反向修改参数，也不会静默解除。')
+            return
+          }
+        }
+      }
       adapter.current!.edit({ ...current, draft, project: {
         ...current.project, relationRevision: draft.relationRevision,
         dimensionChain: parsed.ok ? parsed.chain : current.project.dimensionChain,
@@ -117,5 +185,168 @@ export function useDesktopSession() {
       const result = report(await session.importV2(preview.importToken, projectId))
       if (result.ok) { setImportOpen(false); setPreview(null) }
     }),
+    change: changeView,
+    stageChange: async (
+      inputs: { innerDiameter: string; outerDiameter: string; length: string },
+      sourceNotes?: { innerDiameter?: string; outerDiameter?: string; length?: string },
+      bindings?: { termId: string; partId: string; parameterId: string }[],
+    ) => {
+      const target = changeTarget()
+      if (!target || !adapter.current) return null
+      const result = await adapter.current.stageChange({
+        sessionId: target.sessionId,
+        baseEditSeq: target.acceptedSeq,
+        inputs,
+        ...(sourceNotes === undefined ? {} : { sourceNotes }),
+        ...(bindings === undefined ? {} : { bindings }),
+        reason: '隔套参数变更',
+      })
+      if (result.ok) {
+        patchChange({ draft: result.value, preview: null, staleReason: null, error: null, notice: result.value.notice ?? '' })
+      } else {
+        patchChange({
+          error: result.error,
+          preview: null,
+          staleReason: result.error.code === 'STALE_BASE' || result.error.code === 'STALE_DRAFT' ? result.error.message : null,
+        })
+      }
+      return result
+    },
+    previewChange: async () => {
+      const target = changeTarget()
+      const draft = changeView.draft
+      if (!target || !draft || !adapter.current) return null
+      const result = await adapter.current.previewChange({
+        sessionId: target.sessionId,
+        baseToken: draft.baseToken,
+        draftToken: draft.draftToken,
+      })
+      if (result.ok) {
+        patchChange({ preview: result.value, staleReason: null, error: null })
+      } else {
+        patchChange({ preview: null, error: result.error, staleReason: result.error.message })
+      }
+      return result
+    },
+    applyChange: async (reason: string) => {
+      const target = changeTarget()
+      const draft = changeView.draft
+      const shown = changeView.preview
+      if (!target || !draft || !shown || !adapter.current) return null
+      const result = await adapter.current.applyChange({
+        sessionId: target.sessionId,
+        baseToken: draft.baseToken,
+        draftToken: draft.draftToken,
+        previewId: shown.previewId,
+        previewToken: shown.previewToken,
+        requestId: requestId(),
+        reason,
+      })
+      if (result.ok) {
+        patchChange({
+          draft: null,
+          preview: null,
+          staleReason: null,
+          error: null,
+          compare: null,
+          notice: `已提交新版本 ${result.value.revisionId}（一次写入参数/图纸/链/事件/快照/版本）。`,
+        })
+      } else {
+        patchChange({
+          error: result.error,
+          staleReason: result.error.code === 'STALE_BASE' || result.error.code === 'STALE_DRAFT' || result.error.code === 'STALE_PREVIEW'
+            ? result.error.message
+            : null,
+          notice: `提交失败：${result.error.message}`,
+        })
+      }
+      return result
+    },
+    bindParameter: async (termId: string, partId: string, parameterId: string, replaceBindingId?: string) => {
+      const target = changeTarget()
+      if (!target || !adapter.current) return null
+      const result = await adapter.current.bindParameter({
+        sessionId: target.sessionId,
+        baseEditSeq: target.acceptedSeq,
+        termId,
+        partId,
+        parameterId,
+        ...(replaceBindingId === undefined ? {} : { replaceBindingId }),
+        reason: '绑定参数到组成环',
+      })
+      if (result.ok) patchChange({ draft: result.value, preview: null, staleReason: null, error: null })
+      else patchChange({ error: result.error })
+      return result
+    },
+    unbindParameter: async (bindingId: string) => {
+      const target = changeTarget()
+      if (!target || !adapter.current) return null
+      const result = await adapter.current.unbindParameter({
+        sessionId: target.sessionId,
+        baseEditSeq: target.acceptedSeq,
+        bindingId,
+        reason: '解除参数绑定',
+      })
+      if (result.ok) patchChange({ draft: result.value, preview: null, staleReason: null, error: null })
+      else patchChange({ error: result.error })
+      return result
+    },
+    compareDrawings: async (leftRevisionId?: string) => {
+      const target = changeTarget()
+      if (!target || !adapter.current) return null
+      const draft = changeView.draft
+      const result = await adapter.current.compareDrawings({
+        sessionId: target.sessionId,
+        ...(leftRevisionId === undefined ? {} : { leftRevisionId }),
+        ...(draft === null ? {} : { rightDraftToken: draft.draftToken }),
+      })
+      if (result.ok) patchChange({ compare: result.value })
+      else patchChange({ error: result.error })
+      return result
+    },
+    restoreRevisionDraft: async (sourceRevisionId: string) => {
+      const target = changeTarget()
+      if (!target || !adapter.current) return null
+      let baseToken = changeView.draft?.baseToken
+      if (baseToken === undefined) {
+        const snapshot = adapter.current.getState().snapshot
+        const parameters = snapshot?.project.parameters ?? []
+        if (parameters.length !== 3) {
+          patchChange({ error: { code: 'NO_PARAMETER_BINDING', message: '当前项目没有隔套参数，不能建立恢复草稿' } })
+          return null
+        }
+        const text = (valueQ: number, decimals: number) => {
+          const whole = Math.trunc(valueQ / 10000)
+          const fraction = String(valueQ % 10000).padStart(4, '0').slice(0, decimals)
+          return decimals === 0 ? String(whole) : `${whole}.${fraction}`
+        }
+        const byKey = new Map(parameters.map(parameter => [parameter.key, parameter]))
+        const staged = await adapter.current.stageChange({
+          sessionId: target.sessionId,
+          baseEditSeq: target.acceptedSeq,
+          inputs: {
+            innerDiameter: text(byKey.get('innerDiameter')!.valueQ, byKey.get('innerDiameter')!.inputDecimals),
+            outerDiameter: text(byKey.get('outerDiameter')!.valueQ, byKey.get('outerDiameter')!.inputDecimals),
+            length: text(byKey.get('length')!.valueQ, byKey.get('length')!.inputDecimals),
+          },
+          reason: '准备恢复旧版本',
+        })
+        if (!staged.ok) {
+          patchChange({ error: staged.error })
+          return null
+        }
+        patchChange({ draft: staged.value })
+        baseToken = staged.value.baseToken
+      }
+      const result = await adapter.current.restoreRevisionDraft({
+        sessionId: target.sessionId,
+        baseToken,
+        sourceRevisionId,
+        reason: `从版本 ${sourceRevisionId} 恢复`,
+      })
+      if (result.ok) patchChange({ draft: result.value, preview: null, staleReason: null, error: null, notice: result.value.notice })
+      else patchChange({ error: result.error })
+      return result
+    },
   }
 }

@@ -105,7 +105,7 @@ export function createNewProjectSnapshot(options: NewProjectOptions): ProjectFil
 
   const project: ProjectFileProject = {
     id: projectId,
-    schemaVersion: 5,
+    schemaVersion: 6,
     name: options.name,
     currentRevisionId: revisionId,
     dimensionChain: chain,

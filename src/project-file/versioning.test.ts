@@ -23,7 +23,7 @@ describe('B2-02 读时兼容 B1 文件（formatVersion 1 / schema 3）', () => {
     expect(manifest.formatVersion).toBe(1)
     expect(manifest.project.projectSchemaVersion).toBe(3)
     // 工作形状适配为当前 schema5，但记录来源格式供首次保存升级。
-    expect(snapshot.project.schemaVersion).toBe(5)
+    expect(snapshot.project.schemaVersion).toBe(6)
     expect(snapshot.project.sourceFormatVersion).toBe(1)
     expect(snapshot.project.parts).toEqual([])
     expect(snapshot.project.modelRevisions).toEqual([])
@@ -52,7 +52,7 @@ describe('B2-02 读时兼容 B1 文件（formatVersion 1 / schema 3）', () => {
     expect(encoded.ok).toBe(true)
     if (!encoded.ok) return
     expect(encoded.value.manifest.formatVersion).toBe(2)
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(5)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(6)
     expect(encoded.value.manifest.counts.models).toBe(0)
 
     const again = await decodeProjectFile(encoded.value.bytes)
@@ -180,10 +180,10 @@ describe('B2-02 v2/schema5 模型与去重', () => {
             origin: 'builtin' as const,
           },
         ],
-        dimensionLinks: snapshot.project.dimensionLinks.map((link) => ({
-          ...link,
-          target: { ...link.target, partId: 'part-other' },
-        })),
+        dimensionLinks: snapshot.project.dimensionLinks.map((link) => {
+          if (link.kind !== 'visual-reference') throw new Error('样例只含外形关联')
+          return { ...link, target: { ...link.target, partId: 'part-other' } }
+        }),
       },
     }
     const encoded = await encodeProjectFile(broken)

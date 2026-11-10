@@ -9,7 +9,7 @@ import type { ProjectFileSnapshot } from './types'
 import { PROJECT_FILE_SCHEMA_VERSION } from './types'
 
 export const FORMAT_UPGRADE_NOTICE =
-  '已升级为项目文件格式 2（schema 5）：历史版本与数值已保留；B1/B2 及更早程序不能打开此文件，且没有无损降级。'
+  '已升级为项目文件格式 2（schema 6）：参数绑定与版本证据已启用；历史版本与数值已保留；B1/B2/C 及更早程序不能打开此文件，且没有无损降级。'
 
 export interface UpgradeOptions {
   now?: () => Date
@@ -56,7 +56,7 @@ export function upgradeSnapshotToCurrent(
           revisionId,
           createdAt: now,
           parentId: snapshot.project.currentRevisionId,
-          reason: '保存时升级为项目 schema 5（V3-C）',
+          reason: '保存时升级为项目 schema 6（V3-D）',
           project,
         },
       ],

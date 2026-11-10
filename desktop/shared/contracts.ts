@@ -13,6 +13,19 @@
  * - A-04：项目会话、保存、最近项目、恢复草稿通道。
  */
 import type { ProjectFileSnapshot } from '../../src/project-file/types'
+import type {
+  ProjectFileParameterBindingLink,
+  ProjectFileSpacerParameter,
+} from '../../src/project-file/types'
+import type { ChainDefinition, ChainResult } from '../../src/domain/types'
+import type { DrawingData } from '../../src/drawing/types'
+import type { ReviewSummary } from '../../src/review/rules'
+import type { ReviewGroups } from '../../src/revisions/status'
+import type {
+  BindingDiffRow,
+  ParameterDiffRow,
+} from '../../src/revisions/types'
+import type { DrawingCompareValue } from '../../src/revisions/compare'
 
 /** 批次 A 全部 IPC 通道（与任务卡 §3 表格逐项对应）。 */
 export const IPC_CHANNELS = {
@@ -42,6 +55,14 @@ export const IPC_CHANNELS = {
   drawingUpdateSpacer: 'drawing:update-spacer',
   drawingExportPdf: 'drawing:export-pdf',
   drawingExportSvg: 'drawing:export-svg',
+  /** D：参数联动（草稿/预览/确认/绑定/对比/恢复）。 */
+  changeStage: 'change:stage',
+  changePreview: 'change:preview',
+  changeApply: 'change:apply',
+  changeBind: 'change:bind',
+  changeUnbind: 'change:unbind',
+  changeCompare: 'change:compare',
+  changeRestore: 'change:restore',
 } as const
 
 export type IpcChannelName = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
@@ -138,6 +159,14 @@ export type CommonErrorCode =
   | 'PRINT_TIMEOUT'
   | 'PDF_EXPORT_FAILED'
   | 'SVG_EXPORT_FAILED'
+  /** D：参数联动。 */
+  | 'STALE_BASE'
+  | 'STALE_DRAFT'
+  | 'STALE_PREVIEW'
+  | 'INVALID_BINDING'
+  | 'NO_DRAWING'
+  | 'UNSUPPORTED_TEMPLATE'
+  | 'COMPARE_UNAVAILABLE'
 
 export type IpcErrorCode =
   | ContainerErrorCode
@@ -415,6 +444,149 @@ export interface DrawingExportValue {
   drawingFingerprint: string
 }
 
+/* ------------------------------------------------------------------ */
+/* D：参数联动草稿 / 预览 / 确认                                        */
+/* ------------------------------------------------------------------ */
+
+export interface ChangeBindingInput {
+  termId: string
+  partId: string
+  parameterId: string
+}
+
+export interface ChangeStageRequest {
+  sessionId: string
+  /** renderer 看到的 main acceptedSeq；不一致即拒绝，不静默合并。 */
+  baseEditSeq: number
+  inputs: SpacerDrawingInputs
+  sourceNotes?: {
+    innerDiameter?: string
+    outerDiameter?: string
+    length?: string
+  }
+  /** 不传表示沿用当前正式绑定；传空数组表示解除全部参数绑定。 */
+  bindings?: ChangeBindingInput[]
+  reason: string
+}
+
+export interface ChangeDraftValue {
+  draftId: string
+  draftRevision: number
+  baseToken: string
+  draftToken: string
+  parameters: ProjectFileSpacerParameter[]
+  bindings: ProjectFileParameterBindingLink[]
+  /** 恢复旧版/重建草稿时为 true：当前确认已清零，必须重新预览确认。 */
+  confirmationCleared: boolean
+  notice?: string
+}
+
+export interface ChangePreviewRequest {
+  sessionId: string
+  baseToken: string
+  draftToken: string
+}
+
+export interface ChangePreviewValue {
+  previewId: string
+  previewToken: string
+  baseToken: string
+  draftToken: string
+  revisionId: string
+  parameters: ProjectFileSpacerParameter[]
+  previousChain: ChainDefinition
+  chain: ChainDefinition
+  previousResult: ChainResult
+  result: ChainResult
+  parameterDiffs: ParameterDiffRow[]
+  termDiffs: BindingDiffRow[]
+  affectedTermIds: string[]
+  unboundTermIds: string[]
+  drawing: {
+    record: import('../../src/project-file/types').ProjectFileDrawingRecord
+    left: DrawingData | null
+    right: DrawingData
+    leftProblem: string | null
+  }
+  review: ReviewSummary
+  groups: ReviewGroups
+  /** 预览阶段已知的阻断项（悬空引用/半同步等）；非空时确认按钮禁用。 */
+  blockers: string[]
+}
+
+export interface ChangeApplyRequest {
+  sessionId: string
+  baseToken: string
+  draftToken: string
+  previewId: string
+  previewToken: string
+  /** 幂等键：重复点击最多产生一个版本/一组事件/一个快照。 */
+  requestId: string
+  reason: string
+}
+
+export interface ChangeApplyValue {
+  revisionId: string
+  acceptedSeq: number
+  savedSeq: number
+  snapshot: SnapshotDto
+  path: string
+  fingerprint: string
+  analysisSnapshotId: string
+  recovery: RecoveryWriteState | 'none'
+  warnings: string[]
+}
+
+export interface ChangeBindRequest {
+  sessionId: string
+  baseEditSeq: number
+  termId: string
+  partId: string
+  parameterId: string
+  /** 替换同环已有绑定时必须回传旧 bindingId；否则拒绝追加第二参数。 */
+  replaceBindingId?: string
+  reason: string
+}
+
+export interface ChangeUnbindRequest {
+  sessionId: string
+  baseEditSeq: number
+  bindingId: string
+  reason: string
+}
+
+export type ChangeDraftValueResponse = ChangeDraftValue
+
+export interface ChangeCompareRequest {
+  sessionId: string
+  /** 左图版本；不传时用当前正式版本。 */
+  leftRevisionId?: string
+  /** 右侧为当前草稿（需要 draftToken）或当前正式图纸。 */
+  rightDraftToken?: string
+  drawingId?: string
+}
+
+export type ChangeCompareValueResponse = DrawingCompareValue
+
+export interface ChangeRestoreRequest {
+  sessionId: string
+  baseToken: string
+  sourceRevisionId: string
+  reason: string
+}
+
+export interface ChangeRestoreValue {
+  draftId: string
+  draftRevision: number
+  baseToken: string
+  draftToken: string
+  restoredFromRevisionId: string
+  parameters: ProjectFileSpacerParameter[]
+  bindings: ProjectFileParameterBindingLink[]
+  confirmationCleared: true
+  notice: string
+}
+
 /**
  * preload 暴露到 `window.cunlian` 的 API。
  *
@@ -536,6 +708,22 @@ export interface CunlianApi {
   exportDrawingSvg(
     request: DrawingExportRequest,
   ): Promise<IpcResult<DrawingExportValue>>
+
+  /* ---- D：参数联动（新增，旧函数不变） ------------------------------- */
+  /** 建立/更新参数草稿；不写正式链/参数/图纸。 */
+  stageChangeDraft(request: ChangeStageRequest): Promise<IpcResult<ChangeDraftValue>>
+  /** 预览：返回精确 token、参数/标注/环 diff、旧新计算、复核清单与双图数据。 */
+  previewChange(request: ChangePreviewRequest): Promise<IpcResult<ChangePreviewValue>>
+  /** 确认：校验基准/草稿/预览 token，对当前草稿重算并一次原子写入全聚合。 */
+  applyChange(request: ChangeApplyRequest): Promise<IpcResult<ChangeApplyValue>>
+  /** 绑定参数到环（草稿意图）；同环第二参数必须显式替换。 */
+  bindParameter(request: ChangeBindRequest): Promise<IpcResult<ChangeDraftValue>>
+  /** 解除绑定：保留环现值/来源/历史，不反向改参数。 */
+  unbindParameter(request: ChangeUnbindRequest): Promise<IpcResult<ChangeDraftValue>>
+  /** 稳定 ID 字段级双图比较；缺旧图/坏指纹给可解释状态。 */
+  compareDrawings(request: ChangeCompareRequest): Promise<IpcResult<ChangeCompareValueResponse>>
+  /** 从旧版建立新草稿：继承绑定记录、不继承当前确认，正式指针不变。 */
+  restoreRevisionDraft(request: ChangeRestoreRequest): Promise<IpcResult<ChangeRestoreValue>>
 }
 
 /** 应用与 IPC 协议的稳定标识，测试与契约文档共用。 */

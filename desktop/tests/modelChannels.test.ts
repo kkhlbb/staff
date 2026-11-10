@@ -6,7 +6,7 @@ import type {
   ModelPickValue,
   ModelReadValue,
 } from '../shared/contracts'
-import type { ProjectFileSnapshot } from '../../src/project-file/types'
+import type { ProjectFileDimensionLink, ProjectFileSnapshot, ProjectFileVisualReferenceLink } from '../../src/project-file/types'
 import { createSampleSnapshot } from '../../src/project-file/__fixtures__/sampleProjectFile'
 import { sampleStlTriangle } from '../../src/project-file/__fixtures__/modelProjectFile'
 import { decodeProjectFile } from '../../src/project-file/codec'
@@ -23,6 +23,10 @@ import {
   makeEvent,
   type Harness,
 } from './helpers/a04'
+
+function visualLinks(links: ProjectFileDimensionLink[]): ProjectFileVisualReferenceLink[] {
+  return links.filter((link): link is ProjectFileVisualReferenceLink => link.kind === 'visual-reference')
+}
 
 const WINDOW = 1
 
@@ -424,7 +428,7 @@ describe('B2-03 模型导入通道', () => {
     if (!bound.ok || !bound.value) return
     expect(bound.value.warning).toContain('不改变尺寸链数值')
     const chainBefore = JSON.stringify(bound.value.snapshot.project.dimensionChain)
-    const linkId = bound.value.snapshot.project.dimensionLinks[0]!.linkId
+    const linkId = visualLinks(bound.value.snapshot.project.dimensionLinks)[0]!.linkId
 
     const second = await importFile('/models/v2.stl', bound.value.acceptedSeq, partId)
     expect(second.ok).toBe(true)
@@ -437,7 +441,7 @@ describe('B2-03 模型导入通道', () => {
     )!
     expect(model2.parentModelRevisionId).toBe(model1.modelRevisionId)
     expect(model2.partId).toBe(partId)
-    const link = snapshot.project.dimensionLinks.find((item) => item.linkId === linkId)!
+    const link = visualLinks(snapshot.project.dimensionLinks).find((item) => item.linkId === linkId)!
     expect(link.reviewStatus).toBe('pending')
     expect(link.reason).toBe('model-replaced')
     expect(link.target.modelRevisionId).toBe(model1.modelRevisionId)
@@ -457,7 +461,7 @@ describe('B2-03 模型导入通道', () => {
     })
     expect(confirmed.ok).toBe(true)
     if (confirmed.ok && confirmed.value) {
-      const after = confirmed.value.snapshot.project.dimensionLinks.find(
+      const after = visualLinks(confirmed.value.snapshot.project.dimensionLinks).find(
         (item) => item.linkId === linkId,
       )!
       expect(after.reviewStatus).toBe('confirmed')

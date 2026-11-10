@@ -39,6 +39,14 @@ const ADDED_FUNCTIONS = [
   'updateSpacerDrawing',
   'exportDrawingPdf',
   'exportDrawingSvg',
+  // D：参数联动草稿/预览/确认/绑定/对比/恢复。
+  'stageChangeDraft',
+  'previewChange',
+  'applyChange',
+  'bindParameter',
+  'unbindParameter',
+  'compareDrawings',
+  'restoreRevisionDraft',
 ] as const
 
 describe('B2/C preload 契约', () => {

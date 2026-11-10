@@ -227,7 +227,14 @@ export function registerDrawingChannels(ipc: IpcMainLike, deps: DrawingChannelDe
         } catch (error) {
           mapBuildError(error)
         }
-        const parameters = parsed.parameters.map((item) => ({ ...item }))
+        const previous = new Map(
+          project.parameters.map((item) => [item.parameterId, item.parameterRevision]),
+        )
+        const parameters = parsed.parameters.map((item) => ({
+          ...item,
+          // C 通道不改变参数修订号语义：沿用已有修订号，新参数从 1 起。
+          parameterRevision: previous.get(item.parameterId) ?? 1,
+        }))
         const record = drawingRecordOf(data, params.frameFields)
         const applied = deps.projectService.applySpacerDrawing(
           session.sessionId,

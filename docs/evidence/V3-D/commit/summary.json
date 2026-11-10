@@ -1,0 +1,38 @@
+{
+  "beforeSha256": "4f866c9389ac0133bf31d7a5aebd4c670b9d93e9a2c60c3368944dc1fd5557b0",
+  "afterSha256": "b6088f33ed2b93e1d6afe40b45ae7dc3cc9a870d668555e876f48e62317ac88c",
+  "beforeBytes": 7628,
+  "afterBytes": 11564,
+  "revisionId": "rev-d-evidence-2",
+  "parentId": "rev-a1",
+  "currentRevisionId": "rev-d-evidence-2",
+  "parameters": [
+    {
+      "parameterId": "param:spacer:inner-diameter",
+      "valueQ": 200000,
+      "parameterRevision": 1
+    },
+    {
+      "parameterId": "param:spacer:outer-diameter",
+      "valueQ": 320000,
+      "parameterRevision": 1
+    },
+    {
+      "parameterId": "param:spacer:length",
+      "valueQ": 140000,
+      "parameterRevision": 2
+    }
+  ],
+  "spacerNominalQ": 140000,
+  "spacerTermRevision": 2,
+  "drawingFingerprint": "f040bae624d6b94a5861c7bc6d905ba48af54c5391ef1e905987446e59ee9148",
+  "drawingTemplateVersion": 1,
+  "analysisSnapshotId": "snapshot-d-rev-d-evidence-2",
+  "eventIds": [
+    "parameter_changed:rev-d-evidence-2:param:spacer:length",
+    "parameter_binding_confirmed:rev-d-evidence-2:binding:spacer-length",
+    "project_revision_committed:rev-d-evidence-2:rev-d-evidence-2"
+  ],
+  "analysisSnapshots": 2,
+  "fileRevisions": 2
+}

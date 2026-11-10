@@ -10,8 +10,9 @@ import { SessionDialogs } from '../components/SessionDialogs'
 import { DesktopChainView, DesktopSourceView, DesktopHistoryView } from '../components/DesktopSessionViews'
 import { ThreeViewport } from '../components/ThreeViewport'
 import { ModelViewport } from '../components/ModelViewport'
-import { DEMO_PARTS, demoPart, isBuiltinPartId, partPropertyRows } from '../parts/shaftDemo'
+import { DEMO_PARTS, demoPart, isBuiltinPartId, partPropertyRows, qToMm } from '../parts/shaftDemo'
 import { SpacerDrawingPanel } from '../components/SpacerDrawingPanel'
+import { ChangeWorkbench } from '../components/ChangeWorkbench'
 import { rebuildDrawingFromProject } from '../drawing/rebuildDrawing'
 import { dimensionText, resolveDimension } from '../drawing/formatDimension'
 import { formatParameterValue } from '../drawing/formatDimension'
@@ -19,6 +20,7 @@ import {
   SPACER_PARAMETER_LABELS,
 } from '../drawing/types'
 import type { ProjectFileVisualReferenceLink } from '../project-file/types'
+import { isVisualReferenceLink } from '../project-file/types'
 import './Workspace.css'
 import './DesktopWorkspace.css'
 
@@ -119,6 +121,15 @@ export function DesktopWorkspace() {
   const result = parsed?.ok ? calculateChain(parsed.chain) : null
   const calculation = result ? ({ within: '满足目标（非审查结论）', outside: '超出目标', 'no-target': '未设目标' }[result.status]) : '输入无效，未计算'
   const sourceState = snapshot ? `${snapshot.documents.length} 份资料 · ${snapshot.bindings.length} 个绑定 · 未审查附件可读性` : '未载入'
+  const spacerParameters = session.change.draft?.parameters ?? project?.parameters ?? []
+  const spacerByKey = new Map(spacerParameters.map(parameter => [parameter.key, parameter]))
+  const spacerMm = spacerByKey.size === 3
+    ? {
+        innerRadius: qToMm(spacerByKey.get('innerDiameter')!.valueQ) / 2,
+        outerRadius: qToMm(spacerByKey.get('outerDiameter')!.valueQ) / 2,
+        length: qToMm(spacerByKey.get('length')!.valueQ),
+      }
+    : undefined
   const modelParts = project?.parts ?? []
   const currentModelRevision = project?.modelRevisions.find(
     (item) => item.modelRevisionId === model.revisionId,
@@ -195,13 +206,13 @@ export function DesktopWorkspace() {
     : drawingData?.annotations.find(item => item.annotationId === selectedAnnotationId)?.parameterId ?? null
   const activeParameterId = selectedParameterId ?? annotationParameterId
   const selectedTermId = selection?.startsWith('term:') ? selection.slice('term:'.length) : null
-  const termLinks = selectedTermId && project ? project.dimensionLinks.filter(link => link.termId === selectedTermId) : []
+  const termLinks = selectedTermId && project ? project.dimensionLinks.filter(isVisualReferenceLink).filter((link) => link.termId === selectedTermId) : []
   const linkTargetName = (link: ProjectFileVisualReferenceLink): string =>
     project?.parts.find(part => part.partId === link.target.partId)?.name ?? link.target.partId
   const saveState = session.state?.lastError && ['PERMISSION_DENIED', 'NO_SPACE', 'WRITE_FAILED', 'VERIFY_FAILED', 'RENAME_FAILED', 'EXTERNAL_MODIFIED', 'SAVE_FAILED'].includes(session.state.lastError.code) ? '保存失败，编辑内容仍可继续处理' : !session.state?.path ? '未保存草稿' : session.state.saveStateKnown === false ? '已恢复会话 · 正式保存状态未知' : session.state.dirty ? '有未保存修改' : '已保存'
   const dialogs = <SessionDialogs session={session} />
   if (!project) return <main className="desktop-workspace" aria-label="寸链启动页">
-    <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">V3 · C 批次</span></header>
+    <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">V3 · D 批次</span></header>
     <section className="desktop-workspace__start">
       <h2>打开项目，继续设计</h2><p>轴系轴向公差链分析</p>
       <div className="desktop-workspace__start-actions">
@@ -221,7 +232,7 @@ export function DesktopWorkspace() {
   return <main className="desktop-workspace" style={style} aria-label="寸链桌面工作台">
     <header className="desktop-workspace__titlebar">
       <h1>寸链 · {project.name}</h1><span>Rev {project.currentRevisionId}</span><span className="desktop-workspace__pending">{saveState}</span>
-      <span className="desktop-workspace__batch">V3 · C 批次</span>
+      <span className="desktop-workspace__batch">V3 · D 批次</span>
     </header>
     <div className="desktop-workspace__toolbar" role="toolbar" aria-label="项目操作">
       <button disabled={session.busy} onClick={() => session.action('new')}>新建项目</button>
@@ -235,7 +246,7 @@ export function DesktopWorkspace() {
       <button disabled={model.busy || session.busy} onClick={() => void model.beginImport(false)}>导入模型…</button>
       {model.partId && <button disabled={model.busy || session.busy} onClick={() => void model.beginImport(true)}>替换模型…</button>}
       <div className="desktop-workspace__toolbar-end">
-        <button disabled title="C 批次未实现">预览变更</button>
+        <button disabled title="请在工程图页建立参数草稿">预览变更</button>
         <button ref={exportRef} aria-expanded={exportOpen} aria-controls="desktop-export" onClick={() => setExportOpen(!exportOpen)}>导出 PDF ▾</button>
         {exportOpen && <div id="desktop-export" className="desktop-workspace__export">
           <strong>图纸导出在“工程图”页</strong>
@@ -295,7 +306,7 @@ export function DesktopWorkspace() {
         <h2>项目树</h2>
         {groups.map(group => <details key={group} open>
           <summary>{group}</summary>
-          {entries[group].length ? entries[group].map(item => <button key={item.id} aria-pressed={selected?.id === item.id} onClick={() => { setSelection(item.id); if (group === '尺寸链') setTab(3); if (group === '版本历史') setTab(4) }}>{item.label}</button>) : <p>{group === '零件' ? '尚未打开轴系示例 · B1' : group === '工程图' ? '暂无工程图 · C 批次' : `暂无${group}`}</p>}
+          {entries[group].length ? entries[group].map(item => <button key={item.id} aria-pressed={selected?.id === item.id} onClick={() => { setSelection(item.id); if (group === '尺寸链') setTab(3); if (group === '版本历史') setTab(4) }}>{item.label}</button>) : <p>{group === '零件' ? '尚未打开轴系示例 · B1' : group === '工程图' ? '暂无工程图' : `暂无${group}`}</p>}
         </details>)}
       </aside>
       {leftOpen ? <Splitter label="项目树宽度" value={leftWidth} min={180} max={280} onChange={setLeftWidth} /> : <div />}
@@ -304,16 +315,31 @@ export function DesktopWorkspace() {
           {tabs.map((name, index) => <button key={name} ref={node => { tabRefs.current[index] = node }} role="tab" id={`desktop-tab-${index}`} aria-controls={`desktop-panel-${index}`} aria-selected={tab === index} tabIndex={tab === index ? 0 : -1} onKeyDown={tabKey} onClick={() => setTab(index)}>{name}</button>)}
         </div>
         {tabs.map((name, index) => <div key={name} role="tabpanel" id={`desktop-panel-${index}`} aria-labelledby={`desktop-tab-${index}`} tabIndex={0} hidden={tab !== index} className="desktop-workspace__canvas">
-          {index === 0 && <SpacerDrawingPanel
-            sessionId={sessionId}
-            acceptedSeq={session.state?.acceptedSeq ?? 0}
-            project={project}
-            selectedParameterId={activeParameterId}
-            selectedAnnotationId={selectedAnnotationId}
-            onSelectParameter={parameterId => setSelection(parameterId === null ? null : `param:${parameterId}`)}
-            onSelectAnnotation={annotationId => setSelection(`annotation:${annotationId}`)}
-            applySnapshot={session.applyDrawingMutation}
-          />}
+          {index === 0 && <div className="desktop-workspace__drawing-tab">
+            <ChangeWorkbench
+              key={`${session.change.draft?.draftId ?? 'formal'}:${session.change.draft?.draftRevision ?? 0}:${project.currentRevisionId}`}
+              snapshot={snapshot!}
+              events={snapshot!.events}
+              sessionId={sessionId}
+              change={session.change}
+              onStage={session.stageChange}
+              onPreview={session.previewChange}
+              onApply={session.applyChange}
+              onBind={session.bindParameter}
+              onUnbind={session.unbindParameter}
+              onRestore={session.restoreRevisionDraft}
+            />
+            <SpacerDrawingPanel
+              sessionId={sessionId}
+              acceptedSeq={session.state?.acceptedSeq ?? 0}
+              project={project}
+              selectedParameterId={activeParameterId}
+              selectedAnnotationId={selectedAnnotationId}
+              onSelectParameter={parameterId => setSelection(parameterId === null ? null : `param:${parameterId}`)}
+              onSelectAnnotation={annotationId => setSelection(`annotation:${annotationId}`)}
+              applySnapshot={session.applyDrawingMutation}
+            />
+          </div>}
           {index === 1 && (model.revisionId !== null ? (
             model.geometry
               ? <ModelViewport
@@ -334,7 +360,7 @@ export function DesktopWorkspace() {
                   <button type="button" disabled={model.busy} onClick={() => void model.beginImport(true)}>替换模型…</button>
                 </div>
           ) : demo.active
-            ? <ThreeViewport selectedPartId={selectedPart?.id ?? null} onSelectPart={partId => setSelection(partId)} explodeT={demo.explodeT} onExplodeTChange={demo.setExplodeT} active={tab === 1} viewState={demo.view} onViewStateChange={demo.setView} />
+            ? <ThreeViewport selectedPartId={selectedPart?.id ?? null} onSelectPart={partId => setSelection(partId)} explodeT={demo.explodeT} onExplodeTChange={demo.setExplodeT} active={tab === 1} viewState={demo.view} onViewStateChange={demo.setView} spacerMm={spacerMm} />
             : <div className="desktop-workspace__placeholder">
               <span className="desktop-workspace__pending">○ 尚无 3D 视图</span>
               <h2>导入 STL 或查看内置轴系示例</h2>
@@ -354,9 +380,8 @@ export function DesktopWorkspace() {
         <dl><dt>项目版本</dt><dd>{project.currentRevisionId}</dd>{selected?.properties.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl>
         {selectedPart && <section className="desktop-workspace__part-note" aria-label="示例部件只读说明">
           <p className="desktop-workspace__pending">未关联尺寸链 · 示例几何（B1 只读）</p>
-          <button type="button" disabled>编辑参数（C 批次）</button>
-          {selection === 'builtin:shaft-demo:spacer' && <button type="button" onClick={() => setTab(0)}>在工程图页编辑隔套参数</button>}
-          <p>隔套三参数编辑与图纸标注在“工程图”页；示例 3D 几何仍是固定示意，不随参数变化（参数联动属于 D 批次）。</p>
+          <button type="button" onClick={() => setTab(0)}>在工程图页编辑参数</button>
+          <p>隔套三参数编辑与图纸标注在“工程图”页；参数联动草稿/预览/确认同页。</p>
         </section>}
         {selectedModelPart && <section className="desktop-workspace__part-note" aria-label="导入模型只读说明">
           <p className="desktop-workspace__pending">整体网格 · 外形资料来源；不改变尺寸链数值、不自动同步</p>
@@ -414,7 +439,7 @@ export function DesktopWorkspace() {
     <section className={`desktop-workspace__review${reviewOpen ? ' desktop-workspace__review--open' : ''}`} aria-label="复核与变更">
       <button className="desktop-workspace__review-toggle" aria-expanded={reviewOpen} aria-controls="desktop-review-content" onClick={() => setReviewOpen(!reviewOpen)}>{reviewOpen ? '▾' : '▸'} 复核与变更 <span>计算 {calculation} · 来源 {sourceState} · 图纸 {project.drawings.length > 0 ? '待复核草稿' : '未生成'}</span></button>
       <div id="desktop-review-content" hidden={!reviewOpen} className="desktop-workspace__review-groups">
-        <section><h3>变更</h3><p>尚无变更预览。C 批次未实现。</p></section>
+        <section><h3>变更</h3>{session.change.preview ? <><p>预览 {session.change.preview.drawing.record.revisionId}：受影响环 {session.change.preview.affectedTermIds.length} 个；旧结果 {formatMm(session.change.preview.previousResult.minQ)} ～ {formatMm(session.change.preview.previousResult.maxQ)} mm → 新结果 {formatMm(session.change.preview.result.minQ)} ～ {formatMm(session.change.preview.result.maxQ)} mm。</p><p>受影响环不是错误；确认前可在“工程图”页查看逐环 diff。</p></> : <p>尚无变更预览。</p>}{session.change.staleReason && <p role="alert">预览已过期：{session.change.staleReason}</p>}</section>
         <section><h3>校核</h3><p>{calculation}</p>{result && <p>极限范围 {formatMm(result.minQ)} 至 {formatMm(result.maxQ)} mm</p>}{parsed && !parsed.ok && Object.entries(parsed.cellErrors).map(([field, message]) => <p key={field}>{field}：{message}</p>)}</section>
         <section><h3>待办</h3><p>来源 {sourceState}。尚无桌面审查结论。</p></section>
       </div>
