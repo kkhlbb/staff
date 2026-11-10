@@ -1,0 +1,109 @@
+{
+ "prefix": "before",
+ "steps": [
+  {
+   "label": "01-pr2",
+   "file": "/Users/aston/DSH/wt/dsh-v3-A/docs/evidence/V3-B2/fix-refit/before-01-pr2.png",
+   "canvasCount": 1,
+   "status": "3D 就绪 · WebGL2",
+   "banner": "pr2-head-pan-binary.stl 二进制 STL · 1,000 面 · 整体网格，不提供部件爆炸；旋转/缩放/平移只改相机，原顶点与 q 不变。",
+   "rect": {
+    "x": 238,
+    "y": 298.78125,
+    "width": 884,
+    "height": 504.328125
+   },
+   "analysis": {
+    "canvasPixels": {
+     "w": 884,
+     "h": 504
+    },
+    "nonBackground": 65260,
+    "coverage": 0.1465,
+    "bboxFraction": {
+     "x": 0.425,
+     "y": 0.161,
+     "w": 0.232,
+     "h": 0.736
+    }
+   }
+  },
+  {
+   "label": "02-disk",
+   "file": "/Users/aston/DSH/wt/dsh-v3-A/docs/evidence/V3-B2/fix-refit/before-02-disk.png",
+   "canvasCount": 1,
+   "status": "3D 就绪 · WebGL2",
+   "banner": "slotted-disk-ascii.stl ASCII STL · 288 面 · 整体网格，不提供部件爆炸；旋转/缩放/平移只改相机，原顶点与 q 不变。",
+   "rect": {
+    "x": 238,
+    "y": 298.78125,
+    "width": 884,
+    "height": 504.328125
+   },
+   "analysis": {
+    "canvasPixels": {
+     "w": 884,
+     "h": 504
+    },
+    "nonBackground": 348227,
+    "coverage": 0.7816,
+    "bboxFraction": {
+     "x": 0.17,
+     "y": 0,
+     "w": 0.83,
+     "h": 1
+    }
+   }
+  },
+  {
+   "label": "03-wrench",
+   "file": "/Users/aston/DSH/wt/dsh-v3-A/docs/evidence/V3-B2/fix-refit/before-03-wrench.png",
+   "canvasCount": 1,
+   "status": "3D 就绪 · WebGL2",
+   "banner": "nasa-wrench.stl 二进制 STL · 14,564 面 · 整体网格，不提供部件爆炸；旋转/缩放/平移只改相机，原顶点与 q 不变。",
+   "rect": {
+    "x": 238,
+    "y": 298.78125,
+    "width": 884,
+    "height": 504.328125
+   },
+   "analysis": {
+    "canvasPixels": {
+     "w": 884,
+     "h": 504
+    },
+    "nonBackground": 0,
+    "coverage": 0,
+    "bboxFraction": null
+   }
+  },
+  {
+   "label": "04-wrench-after-reset",
+   "file": "/Users/aston/DSH/wt/dsh-v3-A/docs/evidence/V3-B2/fix-refit/before-04-wrench-after-reset.png",
+   "canvasCount": 1,
+   "status": "3D 就绪 · WebGL2",
+   "banner": "nasa-wrench.stl 二进制 STL · 14,564 面 · 整体网格，不提供部件爆炸；旋转/缩放/平移只改相机，原顶点与 q 不变。",
+   "rect": {
+    "x": 238,
+    "y": 298.78125,
+    "width": 884,
+    "height": 504.328125
+   },
+   "analysis": {
+    "canvasPixels": {
+     "w": 884,
+     "h": 504
+    },
+    "nonBackground": 35021,
+    "coverage": 0.0786,
+    "bboxFraction": {
+     "x": 0.443,
+     "y": 0.056,
+     "w": 0.145,
+     "h": 0.815
+    }
+   }
+  }
+ ],
+ "verdict": "FAIL: 03-wrench 覆盖率为 0"
+}

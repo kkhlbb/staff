@@ -1,0 +1,374 @@
+/**
+ * D：参数联动工作区（草稿 → 预览 → 确认）与独立复核分组。
+ *
+ * 界面只消费 main 返回的权威预览/快照；不自行计算 q、不生成图纸、不把
+ * “待核”显示成“已批准”。坏消息分五类独立呈现，互不合并。
+ */
+import { useMemo, useState } from 'react'
+import type { ChangePreviewValue, SnapshotDto } from '../../desktop/shared/contracts'
+import type { ChangeEvent } from '../history/events'
+import { SPACER_PARAMETER_IDS, SPACER_PARAMETER_LABELS, SPACER_PART_ID } from '../drawing/types'
+import {
+  parameterBindingStatusRowsWithSnapshot,
+  deriveReviewGroups,
+} from '../revisions/status'
+import { sourceBasisOf } from '../revisions/digest'
+import { DrawingCanvas } from './DrawingCanvas'
+import type { ChangeUiState } from '../workspace/useDesktopSession'
+import './ChangeWorkbench.css'
+
+export interface ChangeWorkbenchProps {
+  snapshot: SnapshotDto
+  events: readonly ChangeEvent[]
+  sessionId: string | null
+  change: ChangeUiState
+  onStage: (
+    inputs: { innerDiameter: string; outerDiameter: string; length: string },
+    notes: { innerDiameter?: string; outerDiameter?: string; length?: string },
+  ) => Promise<unknown>
+  onPreview: () => Promise<unknown>
+  onApply: (reason: string) => Promise<unknown>
+  onBind: (termId: string, partId: string, parameterId: string) => Promise<unknown>
+  onUnbind: (bindingId: string) => Promise<unknown>
+  onRestore: (revisionId: string) => Promise<unknown>
+}
+
+function qText(valueQ: number, decimals: number): string {
+  const whole = Math.trunc(valueQ / 10000)
+  const fraction = String(valueQ % 10000).padStart(4, '0').slice(0, decimals)
+  return decimals === 0 ? String(whole) : `${whole}.${fraction}`
+}
+
+function resultText(result: { nominalQ: number; minQ: number; maxQ: number; status: string }): string {
+  return `${(result.nominalQ / 10000).toFixed(4)} mm；范围 ${(result.minQ / 10000).toFixed(4)} ～ ${(result.maxQ / 10000).toFixed(4)} mm（${result.status}）`
+}
+
+export function ChangeWorkbench(props: ChangeWorkbenchProps) {
+  const { snapshot, change } = props
+  const project = snapshot.project
+  const draftParameters = change.draft?.parameters ?? project.parameters
+  const byKey = new Map(draftParameters.map((parameter) => [parameter.key, parameter]))
+  const [texts, setTexts] = useState(() => ({
+    innerDiameter: byKey.get('innerDiameter') ? qText(byKey.get('innerDiameter')!.valueQ, byKey.get('innerDiameter')!.inputDecimals) : '20.00',
+    outerDiameter: byKey.get('outerDiameter') ? qText(byKey.get('outerDiameter')!.valueQ, byKey.get('outerDiameter')!.inputDecimals) : '32.00',
+    length: byKey.get('length') ? qText(byKey.get('length')!.valueQ, byKey.get('length')!.inputDecimals) : '12.00',
+  }))
+  const [notes, setNotes] = useState<{ innerDiameter?: string; outerDiameter?: string; length?: string }>({})
+  const [reason, setReason] = useState('参数变更（只同步 nominal）')
+  const [selectedTerm, setSelectedTerm] = useState(project.dimensionChain.terms[0]?.id ?? '')
+  const [selectedParameter, setSelectedParameter] = useState(SPACER_PARAMETER_IDS.length)
+  const [busy, setBusy] = useState(false)
+
+  const bindingRows = useMemo(
+    () =>
+      parameterBindingStatusRowsWithSnapshot(project, props.events, (parameterId) => {
+        const parameter = project.parameters.find((item) => item.parameterId === parameterId)
+        return sourceBasisOf(snapshot, parameter?.sourceNote)
+      }),
+    [project, props.events, snapshot],
+  )
+  const unlinked = bindingRows.length === 0
+  const groups =
+    change.preview?.groups ??
+    deriveReviewGroups(project, {
+      computation: null,
+      availableBlobKeys: new Set(
+        snapshot.blobs
+          .filter((blob) => !snapshot.missingAttachments.some((missing) => missing.blobKey === blob.blobKey))
+          .map((blob) => blob.blobKey),
+      ),
+      documents: snapshot.documents,
+      revisions: snapshot.revisions,
+      sourceBindings: snapshot.bindings,
+    })
+
+  async function run(work: () => Promise<unknown>) {
+    if (busy) return
+    setBusy(true)
+    try {
+      await work()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /**
+   * 「确认提交」当前为什么不能用。三种情况分开写：
+   * 预览已作废（带 main/本地给出的原因）、从未预览、正在处理。
+   */
+  const confirmBlockedReason =
+    change.staleReason !== null
+      ? change.staleReason
+      : change.preview === null
+        ? '尚未预览：先点「预览变更」，预览成功后「确认提交」才可用。'
+        : busy
+          ? '正在处理，请稍候。'
+          : null
+
+  return (
+    <section className="change-workbench" aria-label="参数联动">
+      <header className="change-workbench__header">
+        <h2>参数联动（只同步 nominal）</h2>
+        <p className={unlinked ? 'change-workbench__unlinked' : undefined}>
+          {unlinked
+            ? '未关联尺寸链'
+            : `已关联 ${bindingRows.length} 个组成环；偏差/方向/目标不随参数同步。`}
+        </p>
+      </header>
+
+      <form
+        className="change-workbench__inputs"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void run(() => props.onStage(texts, notes))
+        }}
+      >
+        {(['innerDiameter', 'outerDiameter', 'length'] as const).map((key) => (
+          <label key={key}>
+            {SPACER_PARAMETER_LABELS[key]}
+            <input
+              aria-label={`${SPACER_PARAMETER_LABELS[key]}（mm）`}
+              value={texts[key]}
+              onChange={(event) => setTexts({ ...texts, [key]: event.target.value })}
+            />
+            <input
+              aria-label={`${SPACER_PARAMETER_LABELS[key]}来源备注`}
+              placeholder="来源备注（可选）"
+              value={notes[key] ?? ''}
+              onChange={(event) => setNotes({ ...notes, [key]: event.target.value })}
+            />
+          </label>
+        ))}
+        <div className="change-workbench__actions">
+          <button type="submit" disabled={busy}>建立/更新草稿</button>
+          <button
+            type="button"
+            disabled={busy || change.draft === null}
+            onClick={() => void run(() => props.onPreview())}
+          >
+            预览变更
+          </button>
+          <button
+            type="button"
+            disabled={busy || change.preview === null || change.staleReason !== null}
+            title={confirmBlockedReason ?? undefined}
+            aria-describedby="change-workbench-confirm-reason"
+            onClick={() => void run(() => props.onApply(reason))}
+          >
+            确认提交（一次原子写入）
+          </button>
+        </div>
+        {/* 灰按钮必须有可读原因：从未预览与“预览已作废”用两套文案，不合并。 */}
+        <p id="change-workbench-confirm-reason" className="change-workbench__hint">
+          {confirmBlockedReason ?? '预览有效：可以确认提交。'}
+        </p>
+        <label className="change-workbench__reason">
+          变更理由
+          <input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} />
+        </label>
+      </form>
+
+      <section className="change-workbench__bind" aria-label="参数绑定">
+        <h3>参数绑定</h3>
+        <div>
+          <select aria-label="组成环" value={selectedTerm} onChange={(event) => setSelectedTerm(event.target.value)}>
+            {project.dimensionChain.terms.map((term) => (
+              <option key={term.id} value={term.id}>
+                {term.symbol} · {term.name}
+              </option>
+            ))}
+          </select>
+          <select aria-label="隔套参数" value={selectedParameter} onChange={(event) => setSelectedParameter(event.target.value)}>
+            {Object.entries(SPACER_PARAMETER_IDS).map(([key, id]) => (
+              <option key={id} value={id}>
+                {SPACER_PARAMETER_LABELS[key as keyof typeof SPACER_PARAMETER_LABELS]}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={busy || selectedTerm === ''}
+            onClick={() => void run(() => props.onBind(selectedTerm, SPACER_PART_ID, selectedParameter))}
+          >
+            绑定参数
+          </button>
+        </div>
+        {bindingRows.length === 0 ? (
+          <p>未关联尺寸链：尚无参数绑定（B2 外形资料关联不计入）。</p>
+        ) : (
+          <ul>
+            {bindingRows.map((row) => (
+              <li key={row.bindingId}>
+                <strong>{row.termSymbol}</strong> ← {row.parameterLabel}（param q={row.parameterValueQ}，环 q={row.termNominalQ}）
+                <span className={row.state === 'valid' ? 'change-workbench__ok' : 'change-workbench__pending'}>
+                  {row.state === 'valid' ? '同步有效' : `待核：${row.reasons.join('；')}`}
+                </span>
+                <button type="button" disabled={busy} onClick={() => void run(() => props.onUnbind(row.bindingId))}>
+                  解除绑定
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {change.notice !== '' && (
+        <p className="change-workbench__notice" role="status">{change.notice}</p>
+      )}
+      {change.staleReason !== null && (
+        <div className="change-workbench__stale" role="alert">
+          <strong>预览已过期</strong>
+          <span>{change.staleReason}</span>
+          <span>请重新预览；旧确认请求会被拒绝且不写入。</span>
+        </div>
+      )}
+      {change.error !== null && (
+        <div className="change-workbench__error" role="alert">
+          <strong>{change.error.code}</strong>
+          <span>{change.error.message}</span>
+          <span>未提交的编辑仍保留。</span>
+        </div>
+      )}
+
+      {change.preview !== null && <PreviewBody preview={change.preview} />}
+
+      <section className="change-workbench__history" aria-label="从旧版本恢复">
+        <h3>从旧版本恢复（生成新草稿，需重新确认）</h3>
+        <ul>
+          {snapshot.fileRevisions
+            .slice()
+            .reverse()
+            .map((revision) => (
+              <li key={revision.revisionId}>
+                <span>Rev {revision.revisionId} · {revision.reason} · 父 {revision.parentId ?? '无'}</span>
+                {revision.revisionId !== project.currentRevisionId && (
+                  <button type="button" disabled={busy} onClick={() => void run(() => props.onRestore(revision.revisionId))}>
+                    恢复为新草稿
+                  </button>
+                )}
+              </li>
+            ))}
+        </ul>
+      </section>
+
+      <section className="change-workbench__groups" aria-label="复核与变更分组">
+        <h3>复核与变更（五类独立）</h3>
+        <section data-group="affected">
+          <h4>受影响环</h4>
+          {groups.affectedTerms.length === 0 ? <p>无受影响环。</p> : (
+            <ul>
+              {groups.affectedTerms.map((term) => (
+                <li key={term.termId}>
+                  {term.termSymbol}：{term.beforeNominalQ}q → {term.afterNominalQ}q
+                  {term.changed ? '（数值变化）' : '（被引用，值未变）'}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section data-group="sources">
+          <h4>需复核来源</h4>
+          {groups.sourceReview.length === 0 ? <p>来源项无待办。</p> : (
+            <ul>
+              {groups.sourceReview.map((row, index) => (
+                <li key={`${row.ruleId}-${index}`}>
+                  {row.ruleId}：{row.reason}
+                  {row.revisionId ? `（版本 ${row.revisionId} 第 ${row.page ?? '?'} 页）` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section data-group="relation">
+          <h4>关系待核</h4>
+          <p>{groups.relation.label}。{groups.relation.detail}</p>
+        </section>
+        <section data-group="material">
+          <h4>材料缺失</h4>
+          {groups.materialMissing.length === 0 ? <p>技术字段齐全。</p> : (
+            <ul>
+              {groups.materialMissing.map((row) => <li key={row.field}>{row.label}待补充</li>)}
+            </ul>
+          )}
+        </section>
+        <section data-group="calculation">
+          <h4>计算不满足</h4>
+          <p>
+            {groups.calculation.label}
+            {groups.calculation.result
+              ? `：${resultText(groups.calculation.result)}`
+              : ''}
+            {groups.calculation.shortfallQ !== null
+              ? `；缺口 ${groups.calculation.shortfallQ}q（${(Math.abs(groups.calculation.shortfallQ) / 10000).toFixed(4)} mm）`
+              : ''}
+          </p>
+          <p>{groups.drawing.label}</p>
+        </section>
+      </section>
+    </section>
+  )
+}
+
+function PreviewBody({ preview }: { preview: ChangePreviewValue }) {
+  return (
+    <section className="change-workbench__preview" aria-label="变更预览">
+      <h3>预览：{preview.drawing.record.revisionId}</h3>
+      <table>
+        <caption>参数与受影响环（旧 → 新）</caption>
+        <thead>
+          <tr><th>对象</th><th>旧</th><th>新</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          {preview.parameterDiffs.map((row) => (
+            <tr key={row.parameterId}>
+              <td>{SPACER_PARAMETER_LABELS[row.key]}</td>
+              <td>{row.beforeQ ?? '—'}q / {row.beforeDecimals ?? '—'} 位</td>
+              <td>{row.afterQ}q / {row.afterDecimals} 位</td>
+              <td>{row.valueChanged ? '工程值变化' : '工程值未变，仅有显示/来源变化'}</td>
+            </tr>
+          ))}
+          {preview.termDiffs.map((row) => (
+            <tr key={row.bindingId}>
+              <td>环 {row.termSymbol}</td>
+              <td>{row.beforeNominalQ}q</td>
+              <td>{row.afterNominalQ}q</td>
+              <td>{row.changed ? '仅 nominal 同步' : '被引用，值未变'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p>旧结果：{resultText(preview.previousResult)}</p>
+      <p>新结果：{resultText(preview.result)}</p>
+      <p>
+        绑定标注：{preview.drawing.right.annotations.map((item) => `${item.annotationId}（${item.parameterId}）`).join('、') || '无'}
+      </p>
+      {preview.drawing.leftProblem !== null && (
+        <p className="change-workbench__pending">旧图不能重建：{preview.drawing.leftProblem}</p>
+      )}
+      <div className="change-workbench__compare" aria-label="双图并排">
+        <figure>
+          <figcaption>旧版本 {preview.drawing.left?.revisionId ?? '不可用'} · {preview.drawing.left ? `${preview.drawing.left.scale.numerator}:${preview.drawing.left.scale.denominator}` : '—'}</figcaption>
+          <DrawingCanvas
+            data={preview.drawing.left}
+            selectedAnnotationId={null}
+            onSelectAnnotation={() => undefined}
+            zoom={0.3}
+            emptyReason={preview.drawing.leftProblem ?? '无旧图'}
+          />
+        </figure>
+        <figure>
+          <figcaption>当前草稿 {preview.drawing.right.revisionId} · {preview.drawing.right.scale.numerator}:{preview.drawing.right.scale.denominator}</figcaption>
+          <DrawingCanvas
+            data={preview.drawing.right}
+            selectedAnnotationId={null}
+            onSelectAnnotation={() => undefined}
+            zoom={0.3}
+          />
+        </figure>
+      </div>
+      {preview.blockers.length > 0 && (
+        <p className="change-workbench__error" role="alert">阻断：{preview.blockers.join('；')}</p>
+      )}
+    </section>
+  )
+}

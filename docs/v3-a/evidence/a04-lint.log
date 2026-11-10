@@ -1,0 +1,2 @@
+# npx eslint .
+EXIT=0

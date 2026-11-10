@@ -1,0 +1,19 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/wt/dsh-v3-A
+
+ ✓ src/project-file/versioning.test.ts > B2-02 读时兼容 B1 文件（formatVersion 1 / schema 3） > 真实 B1 产物可打开：格式、数值、PDF 字节与历史快照保持 20ms
+ ✓ src/project-file/versioning.test.ts > B2-02 读时兼容 B1 文件（formatVersion 1 / schema 3） > B1 文件重新编码为 v2/schema4：旧历史仍为 schema3，数值与 PDF 不变 15ms
+ ✓ src/project-file/versioning.test.ts > B2-02 读时兼容 B1 文件（formatVersion 1 / schema 3） > B1 严格规则仍生效：schema3 记录出现非空预留数组即拒绝 3ms
+ ✓ src/project-file/versioning.test.ts > B2-02 读时兼容 B1 文件（formatVersion 1 / schema 3） > 未知 schemaVersion 明确拒绝，不静默 strip 0ms
+ ✓ src/project-file/versioning.test.ts > B2-02 v2/schema4 模型与去重 > 模型版本往返：部件、版本、可视关联、字节均可读 7ms
+ ✓ src/project-file/versioning.test.ts > B2-02 v2/schema4 模型与去重 > 两个模型版本共享同一 blob 时只写一个附件条目，引用按版本枚举 5ms
+ ✓ src/project-file/versioning.test.ts > B2-02 v2/schema4 模型与去重 > 模型引用的字节缺失时拒绝（模型版本不允许缺附件声明） 0ms
+ ✓ src/project-file/versioning.test.ts > B2-02 v2/schema4 模型与去重 > 关联指向其它部件的模型版本时拒绝 0ms
+ ✓ src/project-file/versioning.test.ts > B2-02 容量与条目上限 > 唯一 blob 总量超过 100 MiB 时保存前拒绝并给出字节数 0ms
+ ✓ src/project-file/versioning.test.ts > B2-02 容量与条目上限 > 条目数超过 500 时保存前拒绝 24ms
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  05:29:34
+   Duration  299ms (setup 37%, tests 34%, import 23%, transform 6%, worker 1%)
+

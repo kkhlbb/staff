@@ -1,0 +1,19 @@
+INFO run_at=2026-11-09T09:31:58.188Z
+INFO pid=15230
+INFO command=["/Users/aston/DSH/wt/dsh-v3-A/out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链","--remote-debugging-port=9444","--proxy-server=127.0.0.1:9","--proxy-bypass-list=<-loopback>"]
+PASS 打包应用启动并暴露 page target
+INFO window_inner_x_outer="1200x768x1200x800"
+PASS 生产入口为本地 file://
+PASS 加载出本地桌面壳（找不到本地 UI 即失败）
+PASS 页面没有远程资源请求
+PASS 控制台没有远程请求错误
+PASS 没有 http(s) 文档/资源请求（生产包不得回退开发 URL）
+INFO location=file:///Users/aston/DSH/wt/dsh-v3-A/out/%E5%AF%B8%E9%93%BE-darwin-arm64/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html
+INFO documentRequest=file:///Users/aston/DSH/wt/dsh-v3-A/out/%E5%AF%B8%E9%93%BE-darwin-arm64/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html
+INFO remoteRequests=[]
+INFO title="寸链"
+INFO body="寸链 · 桌面壳\n\n批次 A-01 只交付桌面壳与受限 IPC；工作台、项目会话和尺寸链示例由后续子卡实现。\n\npreload 桥\nwindow.cunlian 可用：onEditorFlush, onMenuAction, request"
+INFO resourceEntries=0 remote=[]
+INFO consoleErrors=[]
+INFO screenshot=/Users/aston/DSH/wt/dsh-v3-A/docs/v3-a/evidence/rollback/a01-offline-green.png
+OFFLINE_LAUNCH_RESULT=PASS

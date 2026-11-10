@@ -4,6 +4,10 @@ coverage/
 .env*
 .DS_Store
 
+# Electron Forge 构建与打包产物
+.vite/
+out/
+
 # Logs
 logs
 *.log

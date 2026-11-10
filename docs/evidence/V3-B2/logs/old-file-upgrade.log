@@ -1,0 +1,12 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/wt/dsh-v3-A
+
+ ✓ desktop/tests/formatUpgrade.test.ts > B2-02 首次保存显式升级（真实 B1 产物） > 打开不写盘；保存升级为格式 2 并保留旧 schema3 历史；二次保存不重复升级 111ms
+ ✓ desktop/tests/formatUpgrade.test.ts > B2-02 首次保存显式升级（真实 B1 产物） > 另存为写新文件不覆盖原 B1 文件；新文件为格式 2 60ms
+ ✓ desktop/tests/formatUpgrade.test.ts > B2-02 首次保存显式升级（真实 B1 产物） > stageDraft 不能伪造模型/关联，也不能把已升级项目退回格式 1 41ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  05:29:35
+   Duration  346ms (tests 78%, import 15%, transform 6%, worker 1%)
+

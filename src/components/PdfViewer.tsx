@@ -68,6 +68,8 @@ export type RenderPdfPage = (
 ) => PdfRenderTaskLike
 
 export interface PdfViewerProps {
+  /** 桌面只读预览：禁用框选与绑定写入，不改变加载/定位能力。 */
+  readOnly?: boolean
   revision: SourceRevision
   bindings: readonly SourceBinding[]
   selectedTermId: string | null
@@ -120,6 +122,7 @@ const ZOOM_OPTIONS = [1, 2] as const
 const ROTATION_OPTIONS = [0, 90, 180, 270] as const
 
 export function PdfViewer({
+  readOnly = false,
   revision,
   bindings,
   selectedTermId,
@@ -153,7 +156,7 @@ export function PdfViewer({
   const [draftRect, setDraftRect] = useState<PdfRect | null>(null)
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
-  const editingDisabled = useDatabaseStaleVersion() !== null
+  const editingDisabled = useDatabaseStaleVersion() !== null || readOnly
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
@@ -349,6 +352,13 @@ export function PdfViewer({
       ? renderError.message
       : null
 
+  // 桌面“查看原图位置”：待确切页面绘制后，把已有高亮滚入可见区。
+  useEffect(() => {
+    if (readOnly && surfaceReady && selectedTermId !== null) {
+      canvasRef.current?.parentElement?.querySelector('.pdf-highlight--active')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+    }
+  }, [readOnly, surfaceReady, selectedTermId, requestKey])
+
   const highlights: PdfPageHighlight[] = bindings
     .filter(
       (binding) =>
@@ -515,7 +525,9 @@ export function PdfViewer({
             </p>
           ) : null}
           <p className="pdf-viewer__hint">
-            在页面上按住鼠标拖动框选区域。高亮使用 PDF 坐标保存，缩放或旋转后仍指向同一块内容。
+            {readOnly ? '只读预览：来源绑定写入本批次未接入；高亮仅表示已有绑定，不代表审查通过。' :
+              '在页面上按住鼠标拖动框选区域。高亮使用 PDF 坐标保存，缩放或旋转后仍指向同一块内容。'
+            }
           </p>
           <div className="pdf-viewer__binding-form">
             <label className="pdf-viewer__note">
@@ -543,7 +555,7 @@ export function PdfViewer({
               {saving ? '保存中…' : (saveButtonLabel ?? '保存来源绑定')}
             </button>
           </div>
-          {selectedTermId === null ? (
+          {selectedTermId === null && !readOnly ? (
             <p className="pdf-viewer__hint">
               先在组成环表中选中一行，才能把框选区域绑定到该环。
             </p>

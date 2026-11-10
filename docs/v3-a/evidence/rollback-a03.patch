@@ -1,0 +1,23 @@
+A-03 回退实验定点变异（仅用于 §8「迁移确认边界」，实验后必须恢复）
+=====================================================================
+
+变异目标：只把“外部导入清当前确认”退回“保留原凭据”，格式转换与历史
+（AnalysisSnapshot 原样拷贝）不动。
+
+diff --git a/src/project-file/migrateV2.ts b/src/project-file/migrateV2.ts
+@@ ZIP 迁移的 project 记录 @@
+-    // 当前确认清零；历史快照内的凭据保持原样。
+-    relationReview: null,
++    relationReview: project.relationReview,
+@@ ZIP 迁移的 bindings 映射 @@
+     bindings: bindings.map((binding) => ({
+       ...binding,
+-      reviewedTermRevision: null,
+-      reviewedAt: null,
+-      historicalAcceptance: null,
+     })),
+
+说明：本变异只动 ZIP 路径；JSON 路径（migrateV2Json）的清零代码未改。
+实验后恢复为 relationReview: null 与三个字段 null，并在最终提交中保留恢复后的
+实现（可用 `grep -n "relationReview: null" src/project-file/migrateV2.ts` 复核，
+两处分别对应 ZIP 与 JSON 路径）。

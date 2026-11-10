@@ -1,0 +1,94 @@
+寸链 V3 A-4：桌面工作台骨架交付
+
+范围
+  工作树 /Users/aston/DSH/wt/venus-v3-a4
+  分支 agent/venus-v3-a4，基线 40efaee。
+  仅修改 src/App.tsx、新建 src/pages/DesktopWorkspace.{tsx,css,test.tsx} 与本证据目录。
+  不修改 desktop/、src/domain、q 精度、schemaVersion 或存储实现。
+  无新增依赖。npm ci 仅在工作树内执行；审计提示 22 moderate 漏洞，未擅自升级依赖。
+
+入口与实现
+  浏览器预览 http://localhost:5178/#/desktop
+  Electron 注入 window.cunlian 且无 hash 时默认工作台；保留原 V2 浏览器路由。
+  标题使用真实空状态：未打开项目 / Rev — / 尚无保存记录，不放假示例或已保存状态。
+  项目树五组可折叠；选择类别后属性栏与标签页显示同一选择。
+  中央四个标签均有占位说明，真正的模型/图纸/PDF/编辑操作禁用。
+  侧栏可折叠；三处分隔线支持指针拖动、方向键及 Home/End。
+  复核区默认一行，展开 200px，变更/校核/待办分组。
+  状态文字 + 色彩 + 圆圈标记，不以颜色代替结论。
+
+真实执行
+  完整输出见 checks.log（最终四项连跑退出码 0）。
+  typecheck: tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit，无诊断。
+  lint: eslint .，无诊断。
+  test: Test Files 57 passed (57)，Tests 594 passed (594)，Duration 16.61s。
+  build: tsc -b && vite build，230 modules transformed，built in 165ms。
+  非失败警告：jsdom navigation / canvas getContext 未实现；Vite bundle 超过 500kB。
+  未将这些警告当成无警告通过；没有进行 Electron 打包或真实系统文件操作验收。
+
+回退实验
+  临时将 src/App.tsx 恢复为 HEAD 40efaee 的原始实现（git diff -- src/App.tsx 为空）。
+  保留新测试运行：1 failed / 4 passed，失败为独立入口找不到“寸链桌面工作台”。
+  原因是原版仍渲染项目列表，不是环境错误。详细输出 rollback.log。
+  恢复工作台入口后最终全量 594 passed。
+  此实验验证入口回归用例有效，不声称逐个完成所有行为的 mutation 测试。
+
+浏览器证据与走查
+  浏览器 Chromium，deviceScaleFactor=1，100% 缩放，横向桌面视口；无旋转变换。
+  1440x900.png：左右栏 232 / 312px，中央 884px；三栏比例正确，标题和占位未裁切。
+  960x640.png：默认收起属性栏，左栏 232px，中央 716px；页面无横向或纵向溢出。
+  最小窗项目树有内部滚动条，版本历史可滚动访问，不将裁切内容藏掉。
+  browser-checks.json：960px 打开双侧栏时中央 404px，折叠左栏时中央 948px。
+  指针拖动左分隔线后 232→256px；复核区展开实测 200px。
+  真实 Tab 顺序：打开项目→保存→导出 PDF→收起项目树→展开属性栏。
+  真实 CDP ⌘O/⌘S/⇧⌘S 均显示对应“未接通”，没有调用不存在的函数。
+  1280x800.png：三栏正常，中央 724px；375x812.png：侧栏作为覆盖面板，收起项目树可返回画布。
+  附加视口无横向溢出，数值见 extra-viewports.json。截图均已人工查看。
+  本次不包含图纸或打印实现，没有声称完成 A4 PDF 逐页验收。
+
+MCP 评审：不是自动全绿
+  使用 mcp__better_design__review_ui_code 实际审查完整 DesktopWorkspace.tsx、CSS 和 App.tsx。
+  第一次只传磁盘路径，工具端读不到项目；随后改传完整源码，获得真实评审结果。
+  React：16 findings（0 critical / 13 serious / 3 moderate）。
+    13 serious：要求把原生 button 换成 @/components/ui/button。
+      不采用：仓库无该组件、无 shadcn，现有 Workspace/ReviewSidebar 均使用原生元素。
+      为工具告警虚构依赖违反沿用现有结构要求，保留原生可达按钮。
+    2 moderate：把普通 BEM 动态类名认成 Tailwind 动态类名。
+      不采用：实际是已定义的普通 CSS 类，浏览器已验证样式生效。
+    1 moderate：Rev — 的破折号。
+      不采用：此处是明确的版本空值，不是营销文案；旁有“未打开项目”。
+  CSS + App：77 findings（0 critical / 61 serious / 16 moderate）。
+    57 serious：要求所有 px（包含 1px 分隔线）改为 rem。
+      本卡保留：权威稿指定窗口、三栏、32pt 控件及 4/8/12/16/24 间距；
+      CSS px 对应桌面逻辑像素，拖动值与 ARIA 数值也以同一逻辑像素表达。
+      未采用工具按 16px 换算的 rem：项目根字号是 15px，会造成比例偏差。
+      后续若要增加用户字体缩放，需单独验证尺寸、内部滚动与桌面缩放。
+    4 serious：App 原有 URI 解码 catch 返回项目列表，工具判静默错误。
+      本卡不改原有路由错误策略；并非新增的网络/项目读写异常吞错。
+    15 moderate：颜色 token 定义里的设计稿色值被判 hardcoded-color。
+      不采用：这些正是作用域内的语义 token 定义，使用处均引用 var，颜色遵循权威稿。
+    1 moderate：工具缺少 --sans 的字体证据。
+      已核查 src/index.css 13–16 行有系统字体回退链；工作台沿用该字体，不另引字体。
+  处理原则：工具意见已全部分类；以上保留项不是“已修复”或“MCP 通过”。
+
+可选 designlang
+  实际调用 verify_ui，viewports [960,1440]。
+  CSS 作为 brand 时返回 Unexpected token '.' ... is not valid JSON。
+  改传设计稿配色 JSON（含 primary）后仍返回 No primary colour found。
+  因工具 brand 格式接入不成功，未得到评分或通过结论，不以手工截图冒充 verify_ui 通过。
+
+接口不足 / 下一批次
+  CunlianApi 当前没有 openProject、saveProject、saveAs，亦无项目读取/会话订阅方法。
+  没有 sourceRead：读取既有来源 PDF 无法接通，不同于导出图纸 PDF。
+  没有图纸导出/预览与工程对象 DTO，无法派生真实项目名、Rev、保存/审查状态。
+  因此采用明确空态，不维护第二份工程数据真相。TODO 留在快捷键/菜单接入处。
+  已接现有 onMenuAction、onEditorFlush、respondEditorFlush，卸载时取消订阅。
+  屏障只回传 requestId，不伪造 sessionId/editSeq 或保存完成。
+  inspectV2/commitV2 已存在，但本卡不做迁移预检/候选选择/提交向导，入口禁用。
+  未实现：B1/B2 3D/STL/参数，C SVG/图纸 PDF/变更预览，来源 PDF 读取、桌面尺寸链编辑、版本历史浏览。
+
+参考依据
+  首要：用户指定《寸链V3_前端GUI设计稿.md》§2、4、5。
+  WAI-ARIA tabs 官方参考 https://www.w3.org/WAI/ARIA/apg/patterns/tabs/
+  官方页面 curl 真实获取为 wai-tabs.html；按其 tablist/tab/tabpanel、左右键、Home/End 交互实现。
+  既有组件结构与颜色变量习惯参考 src/pages/Workspace.tsx/.css、src/components/ReviewSidebar.tsx、src/index.css。

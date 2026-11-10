@@ -34,8 +34,15 @@ export type ChangeEventType =
   | 'relation_confirmation_cleared'
   | 'baseline_saved'
   | 'baseline_restored'
+  | 'parameter_changed'
+  | 'parameter_binding_added'
+  | 'parameter_binding_removed'
+  | 'parameter_binding_confirmed'
+  | 'project_revision_committed'
+  | 'project_restored_from_revision'
   | 'analysis_snapshot_created'
   | 'project_restored_from_bundle'
+  | 'project_migrated_from_v2'
 
 /** 组成环数值字段的强类型变更；q 为单位 0.0001 mm 的整数。 */
 export type NumericChangeField = 'nominal' | 'lower' | 'upper'
@@ -74,6 +81,16 @@ export interface ChangeEvent {
   scope?: string
   /** 面向人的简短说明；不包含数值结论。 */
   message?: string
+  /* ---- D：参数绑定确认凭据（只对相应事件类型有意义） ---------------- */
+  parameterId?: string
+  parameterRevision?: number
+  termRevision?: number
+  drawingId?: string
+  drawingFingerprint?: string
+  /** 来源基准摘要（来源清单稳定指纹 + 参数来源备注）；来源变化即失配。 */
+  sourceBasis?: string
+  /** 提交版本 ID；由同次原子提交写入，便于回查。 */
+  revisionIdAtCommit?: string
 }
 
 /** 读取旧事件时字段缺失的统一显示，不做补造。 */

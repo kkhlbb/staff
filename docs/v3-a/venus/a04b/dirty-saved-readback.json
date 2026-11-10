@@ -1,0 +1,27 @@
+{
+  "path": "/Users/aston/DSH/wt/dsh-v3-A/docs/v3-a/venus/a04b/dirty-saved.cunlian",
+  "bytes": 4119,
+  "sha256": "01f1f4d98d92f830ef04e0501a4c26283d64d1beb0a913aa74d79cca86a58038",
+  "zipCRC": null,
+  "entries": [
+    "project/project.json",
+    "workspace/draft.json",
+    "sources/documents.json",
+    "sources/revisions.json",
+    "sources/bindings.json",
+    "sources/blobs.json",
+    "history/events.json",
+    "history/analysisSnapshots.json",
+    "history/importSnapshots.json",
+    "history/migrationBackups.json",
+    "revisions/rev-577d6dc4-02d1-4ad4-90aa-e23943586929.json",
+    "manifest.json"
+  ],
+  "savedEditedProject": [
+    {
+      "entry": "project/project.json",
+      "name": "A04b 必须真实保存的编辑",
+      "id": "project-9d0d38dc-1374-42f7-8e58-71f6cdb7fdb6"
+    }
+  ]
+}

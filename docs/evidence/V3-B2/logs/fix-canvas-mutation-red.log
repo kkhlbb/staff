@@ -1,0 +1,281 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/wt/dsh-v3-A
+
+ ❯ src/components/ModelViewport.test.tsx (3 tests | 3 failed) 2122ms
+   ❯ B2 · 导入模型替换与重试的 canvas 生命周期 (3)
+     × 连续替换 6 次都能建场：每次换新 canvas，旧场景释放，页面始终只有一张 canvas 1047ms
+     × 初始化失败后重试：释放失败画布、新建 canvas，成功后仍只有一张 canvas 60ms
+     × context lost 后重试：旧场景只释放一次，新场景用新 canvas，重试不叠加 canvas 1014ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/ModelViewport.test.tsx > B2 · 导入模型替换与重试的 canvas 生命周期 > 连续替换 6 次都能建场：每次换新 canvas，旧场景释放，页面始终只有一张 canvas
+AssertionError: expected 'error' to be 'ready' // Object.is equality
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"model-viewport"[39m
+        [33mdata-dpr[39m=[32m"1"[39m
+        [33mdata-three-state[39m=[32m"error"[39m
+        [33mdata-triangle-count[39m=[32m"1"[39m
+        [33mdata-webgl2[39m=[32m"true"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"model-viewport__banner"[39m
+        [36m>[39m
+          [36m<strong>[39m
+            [0m导入模型 · [0m
+            [0mprobe-1.stl[0m
+          [36m</strong>[39m
+          [0m [0m
+          [0m二进制[0m
+          [0m STL · [0m
+          [0m1[0m
+          [0m 面 · 整体网格，不提供部件爆炸；旋转/缩放/平移只改相机，原顶点与 q 不变。[0m
+        [36m</p>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"模型视图操作"[39m
+          [33mclass[39m=[32m"model-viewport__toolbar"[39m
+          [33mrole[39m=[32m"toolbar"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"model-viewport__group"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-label[39m=[32m"放大"[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m放大[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-label[39m=[32m"缩小"[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m缩小[0m
+            [36m</button>[39m
+          [36m</span>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m重置视角[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtitle[39m=[32m"整体网格不支持部件爆炸"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m爆炸（整体网格不支持）[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"model-viewport__stage"[39m
+        [36m>[39m
+          [36m<canvas[39m
+            [33maria-describedby[39m=[32m"model-viewport-status"[39m
+            [33maria-label[39m=[32m"导入模型三维视图：左键拖动旋转，滚轮缩放，右键或 Shift+拖动平移，单击整体选择"[39m
+            [33mrole[39m=[32m"img"[39m
+          [36m/>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"model-viewport__fallback"[39m
+            [33mrole[39m=[32m"alert"[39m
+          [36m>[39m
+            [36m<strong>[39m
+              [0m3D 暂不可用：[0m
+              [0mRENDERER_INIT_FAILED[0m
+            [36m</strong>[39m
+            [36m<p>[39m
+              [0mWebGLRenderer 初始化失败（Cannot read properties of null (reading 'alpha')）[0m
+              [0m。项目数据、属性与其他标签仍可用；可尝试重试。[0m
+            [36m</p>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m重试 3D 视图[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"model-viewport__status"[39m
+          [33mid[39m=[32m"model-viewport-status"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m>[39m
+          [0m3D 暂不可用[0m
+          [36m<span[39m
+            [33mclass[39m=[32m"model-viewport__selection"[39m
+          [36m>[39m
+            [0m当前选择：[0m
+            [0m未选择[0m
+          [36m</span>[39m
+        [36m</p>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+Expected: "ready"
+Received: "error"
+
+ ❯ src/components/ModelViewport.test.tsx:114:52
+    112|     for (let index = 1; index <= 6; index += 1) {
+    113|       rerender(viewport(makeGeometry(index), fake.loader))
+    114|       await waitFor(() => expect(state(container)).toBe('ready'))
+       |                                                    ^
+    115|       expect(canvasCount()).toBe(1)
+    116|     }
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/components/ModelViewport.test.tsx > B2 · 导入模型替换与重试的 canvas 生命周期 > 初始化失败后重试：释放失败画布、新建 canvas，成功后仍只有一张 canvas
+AssertionError: expected <canvas role="img" …(2)></canvas> not to be <canvas role="img" …(2)></canvas> // Object.is equality
+ ❯ src/components/ModelViewport.test.tsx:143:42
+    141|
+    142|     expect(fake.creations).toHaveLength(2)
+    143|     expect(fake.creations[1].canvas).not.toBe(failedCanvas)
+       |                                          ^
+    144|     expect(fake.creations[1].ok).toBe(true)
+    145|     expect(canvasCount()).toBe(1)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/components/ModelViewport.test.tsx > B2 · 导入模型替换与重试的 canvas 生命周期 > context lost 后重试：旧场景只释放一次，新场景用新 canvas，重试不叠加 canvas
+AssertionError: expected 'error' to be 'ready' // Object.is equality
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"model-viewport"[39m
+        [33mdata-dpr[39m=[32m"1"[39m
+        [33mdata-three-state[39m=[32m"error"[39m
+        [33mdata-triangle-count[39m=[32m"1"[39m
+        [33mdata-webgl2[39m=[32m"true"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"model-viewport__banner"[39m
+        [36m>[39m
+          [36m<strong>[39m
+            [0m导入模型 · [0m
+            [0mprobe-0.stl[0m
+          [36m</strong>[39m
+          [0m [0m
+          [0m二进制[0m
+          [0m STL · [0m
+          [0m1[0m
+          [0m 面 · 整体网格，不提供部件爆炸；旋转/缩放/平移只改相机，原顶点与 q 不变。[0m
+        [36m</p>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"模型视图操作"[39m
+          [33mclass[39m=[32m"model-viewport__toolbar"[39m
+          [33mrole[39m=[32m"toolbar"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"model-viewport__group"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-label[39m=[32m"放大"[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m放大[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-label[39m=[32m"缩小"[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m缩小[0m
+            [36m</button>[39m
+          [36m</span>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m重置视角[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtitle[39m=[32m"整体网格不支持部件爆炸"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m爆炸（整体网格不支持）[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"model-viewport__stage"[39m
+        [36m>[39m
+          [36m<canvas[39m
+            [33maria-describedby[39m=[32m"model-viewport-status"[39m
+            [33maria-label[39m=[32m"导入模型三维视图：左键拖动旋转，滚轮缩放，右键或 Shift+拖动平移，单击整体选择"[39m
+            [33mrole[39m=[32m"img"[39m
+          [36m/>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"model-viewport__fallback"[39m
+            [33mrole[39m=[32m"alert"[39m
+          [36m>[39m
+            [36m<strong>[39m
+              [0m3D 暂不可用：[0m
+              [0mRENDERER_INIT_FAILED[0m
+            [36m</strong>[39m
+            [36m<p>[39m
+              [0mWebGLRenderer 初始化失败（Cannot read properties of null (reading 'alpha')）[0m
+              [0m。项目数据、属性与其他标签仍可用；可尝试重试。[0m
+            [36m</p>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m重试 3D 视图[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"model-viewport__status"[39m
+          [33mid[39m=[32m"model-viewport-status"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m>[39m
+          [0m3D 暂不可用[0m
+          [36m<span[39m
+            [33mclass[39m=[32m"model-viewport__selection"[39m
+          [36m>[39m
+            [0m当前选择：[0m
+            [0m未选择[0m
+          [36m</span>[39m
+        [36m</p>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+Expected: "ready"
+Received: "error"
+
+ ❯ src/components/ModelViewport.test.tsx:161:50
+    159|
+    160|     fireEvent.click(screen.getByRole('button', { name: '重试 3D 视图' }))
+    161|     await waitFor(() => expect(state(container)).toBe('ready'))
+       |                                                  ^
+    162|
+    163|     expect(fake.creations).toHaveLength(2)
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  05:45:22
+   Duration  2.39s (tests 91%, environment 7%, setup 1%)
+

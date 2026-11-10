@@ -45,28 +45,24 @@ import {
   writeZipEntries,
   type ZipSafetyError,
 } from './zip'
+import {
+  BACKUP_FILE_SUFFIX,
+  BACKUP_FORMAT,
+  BACKUP_FORMAT_VERSION,
+  MANIFEST_PATH,
+  MAPPING_TEMPLATES_EXCLUDED_NOTE,
+  backupPath,
+} from './backupFormat'
 
-export const BACKUP_FORMAT = 'cunlian-backup'
-export const BACKUP_FORMAT_VERSION = 1
-export const BACKUP_FILE_SUFFIX = '.cunlian.zip'
-export const MANIFEST_PATH = 'manifest.json'
-
-export const MAPPING_TEMPLATES_EXCLUDED_NOTE =
-  '本备份不包含全局映射模板（mappingTemplates）。映射模板属于本机全局设置，不随项目备份；恢复到新浏览器后需要重新建立或重新导入模板。'
-
-export const BACKUP_PATH_PREFIX = {
-  projects: 'projects/',
-  drafts: 'drafts/',
-  documents: 'sourceDocuments/',
-  revisions: 'sourceRevisions/',
-  blobs: 'sourceBlobs/',
-  files: 'sourceFiles/',
-  bindings: 'bindings/',
-  events: 'events/',
-  snapshots: 'snapshots/',
-  importSnapshots: 'importSnapshots/',
-  migrationBackups: 'migrationBackups/',
-} as const
+export {
+  BACKUP_FILE_SUFFIX,
+  BACKUP_FORMAT,
+  BACKUP_FORMAT_VERSION,
+  BACKUP_PATH_PREFIX,
+  MANIFEST_PATH,
+  MAPPING_TEMPLATES_EXCLUDED_NOTE,
+  backupPath,
+} from './backupFormat'
 
 export interface BackupEntryMeta {
   path: string
@@ -181,18 +177,6 @@ function mapZipError(error: ZipSafetyError): BundleError {
     message: error.message,
     ...(error.detail ? { detail: error.detail } : {}),
   }
-}
-
-function encodeId(value: string): string {
-  return encodeURIComponent(value)
-}
-
-export function backupPath(
-  kind: keyof typeof BACKUP_PATH_PREFIX,
-  id: string,
-  extension = 'json',
-): string {
-  return `${BACKUP_PATH_PREFIX[kind]}${encodeId(id)}.${extension}`
 }
 
 function jsonBytes(value: unknown): Uint8Array {

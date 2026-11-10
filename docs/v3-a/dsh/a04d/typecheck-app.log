@@ -1,0 +1,6 @@
+
+> staff@2.0.0 typecheck
+> tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit
+
+src/pages/DesktopWorkspace.test.tsx(153,66): error TS2322: Type '{ editSeq: number; path: string; recovery: "pending"; sessionId: string; snapshot: SnapshotDto; fingerprint: string | null; warnings: string[]; }' is not assignable to type 'SessionReattachValue'.
+  Property 'savedSeq' is missing in type '{ editSeq: number; path: string; recovery: "pending"; sessionId: string; snapshot: SnapshotDto; fingerprint: string | null; warnings: string[]; }' but required in type 'ReattachedSession'.

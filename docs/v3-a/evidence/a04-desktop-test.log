@@ -1,0 +1,101 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/wt/dsh-v3-A
+
+ ✓ desktop/tests/ipc.test.ts > installChannel > 未注册的 channel 不会被注册，调用直接 reject 4ms
+ ✓ desktop/tests/ipc.test.ts > installChannel > 伪造 sender 被拒绝，handler 不被调用 1ms
+ ✓ desktop/tests/ipc.test.ts > installChannel > 子框架调用被拒绝 0ms
+ ✓ desktop/tests/ipc.test.ts > installChannel > frame URL 不匹配时拒绝 0ms
+ ✓ desktop/tests/ipc.test.ts > installChannel > 参数不符合 schema 时返回 INVALID_REQUEST，且不回显原始值 1ms
+ ✓ desktop/tests/ipc.test.ts > installChannel > IpcFailure 保留业务错误码，未知异常统一为 INTERNAL 且不泄露堆栈 0ms
+ ✓ desktop/tests/ipc.test.ts > installChannel > 成功时使用统一 ok/value 包络 0ms
+ ✓ desktop/tests/ipc.test.ts > installSenderChannel > 拒绝伪造 sender 与非法 payload，合法回复才进入 handler 1ms
+ ✓ desktop/tests/desktopAdapter.test.ts > 桌面会话适配器 > 编辑后按序号 stage；保存前先 flush，成功后 dirty=false 5ms
+ ✓ desktop/tests/desktopAdapter.test.ts > 桌面会话适配器 > 编辑屏障：先 flush 再回复 main 已接受的序号 3ms
+ ✓ desktop/tests/desktopAdapter.test.ts > 桌面会话适配器 > stage 失败时保留 dirty，save 直接返回错误且不调用 saveProject 2ms
+ ✓ desktop/tests/desktopAdapter.test.ts > 桌面会话适配器 > 保存失败不把 dirty 清掉 1ms
+ ✓ desktop/tests/desktopAdapter.test.ts > 桌面会话适配器 > 菜单 save/open 走具体方法；没有活动项目时编辑被拒绝 14ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 成功路径（真实 fs） > 写入新文件、回读校验并清理临时文件 24ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 成功路径（真实 fs） > 覆盖已有文件时按期望指纹确认，成功后指纹更新 26ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 故障矩阵：原文件不坏 > EACCES → PERMISSION_DENIED，P0 哈希不变 21ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 故障矩阵：原文件不坏 > ENOSPC → NO_SPACE，P0 哈希不变 18ms
+ ✓ desktop/tests/closeGuard.test.ts > CloseGuard > 同一窗口的合法 flushed 回复放行关闭 3ms
+ ✓ desktop/tests/closeGuard.test.ts > CloseGuard > 超时返回 EDITOR_TIMEOUT，不抛异常 2ms
+ ✓ desktop/tests/closeGuard.test.ts > CloseGuard > 非发起窗口的回复被拒绝，且不破坏待处理请求 0ms
+ ✓ desktop/tests/closeGuard.test.ts > CloseGuard > 无效 editSeq 与未知 requestId 都返回 INVALID_REQUEST 0ms
+ ✓ desktop/tests/closeGuard.test.ts > CloseGuard > 防重入：同一窗口同时只允许一次关闭流程 0ms
+ ✓ desktop/tests/closeGuard.test.ts > CloseGuard > dispose 让等待中的请求以 CANCELLED 结束 0ms
+ ✓ desktop/tests/senderGuard.test.ts > SenderGuard > 接受登记窗口的主框架合法 URL 1ms
+ ✓ desktop/tests/senderGuard.test.ts > SenderGuard > 拒绝未登记 WebContents 0ms
+ ✓ desktop/tests/senderGuard.test.ts > SenderGuard > 拒绝已销毁窗口 0ms
+ ✓ desktop/tests/senderGuard.test.ts > SenderGuard > 拒绝子框架调用 0ms
+ ✓ desktop/tests/senderGuard.test.ts > SenderGuard > 拒绝 null frame URL 与非法 URL 0ms
+ ✓ desktop/tests/senderGuard.test.ts > SenderGuard > 注销后立即失效 0ms
+ ✓ desktop/tests/migrationService.test.ts > migration:inspect 预检 > 完整备份预检只读：返回 token 与候选，不建会话、不落盘 27ms
+ ✓ desktop/tests/migrationService.test.ts > migration:inspect 预检 > 取消选择输入返回 CANCELLED，不产生 token 7ms
+ ✓ desktop/tests/migrationService.test.ts > migration:inspect 预检 > 坏包与超限 JSON 在预检阶段拒绝，不产生 token 5ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 故障矩阵：原文件不坏 > 短写 → WRITE_FAILED，P0 哈希不变 40ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 故障矩阵：原文件不坏 > 保存前自校验失败 → VERIFY_FAILED，原文件与临时文件都安全 55ms
+ ✓ desktop/tests/rendererUrl.test.ts > isProductionRendererUrl > 接受与打包入口完全一致的 file URL（含百分号编码） 1ms
+ ✓ desktop/tests/rendererUrl.test.ts > isProductionRendererUrl > 拒绝其它本地文件、http 与 data URL 0ms
+ ✓ desktop/tests/rendererUrl.test.ts > isProductionRendererUrl > 不接受同目录的其它 html 0ms
+ ✓ desktop/tests/rendererUrl.test.ts > isDevServerFrameUrl > 只接受同源地址 0ms
+ ✓ desktop/tests/rendererUrl.test.ts > isDevServerFrameUrl > 拒绝非 loopback 的开发地址 0ms
+ ✓ desktop/tests/rendererUrl.test.ts > normalizeDevServerUrl > 接受 loopback http，拒绝 https 与远程主机 0ms
+ ✓ desktop/tests/projectService.test.ts > ProjectService 会话与保存 > saveAs 落盘后重新打开得到同样的工程聚合 103ms
+ ✓ desktop/tests/projectService.test.ts > ProjectService 会话与保存 > 已有路径的 save 使用会话指纹，覆盖后 savedSeq 前进 88ms
+ ✓ desktop/tests/recovery.test.ts > 恢复草稿 > stage 只接受内存编辑；防抖到期后才落盘，flush 可立即确认写入 122ms
+ ✓ desktop/tests/migrationService.test.ts > migration:commit 提交 > 成功提交：另存新文件、回读一致、建立会话；输入字节不变 78ms
+ ✓ desktop/tests/migrationService.test.ts > migration:commit 提交 > dirty gate 取消：不落盘、不建会话、当前项目不变 12ms
+ ✓ desktop/tests/migrationService.test.ts > migration:commit 提交 > 保存失败零写入：父目录不存在、目标已存在、目标与输入相同都被拒绝 12ms
+ ✓ desktop/tests/migrationService.test.ts > migration:commit 提交 > token 过期或跨窗口：STALE_IMPORT，且零写入 12ms
+ ✓ desktop/tests/migrationService.test.ts > migration:commit 提交 > 旧 JSON：清当前确认、relationRevision+1、缺附件新 blobKey；重开逐字段一致 45ms
+ ✓ desktop/tests/projectChannels.test.ts > 项目会话通道 > renderer 传 dirty:false 不能绕过 gate：strict schema 直接拒绝，序号不变 126ms
+ ✓ desktop/tests/migrationService.test.ts > migration:commit 提交 > 提交前失败不改变当前会话、编辑序号与 dirty，源文件字节不变 20ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 故障矩阵：原文件不坏 > 临时文件回读内容不一致 → VERIFY_FAILED，原文件不变 44ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 故障矩阵：原文件不坏 > rename 失败 → RENAME_FAILED，原文件保持且临时文件被清理 52ms
+ ✓ desktop/tests/sessionController.test.ts > dirty gate > 取消：保持同一会话与编辑，磁盘不变 185ms
+ ✓ desktop/tests/projectService.test.ts > ProjectService 会话与保存 > 未保存过的新会话直接 save 被拒绝，必须另存为 13ms
+ ✓ desktop/tests/projectService.test.ts > ProjectService 会话与保存 > stage 序号必须严格递增，非法序号与跨项目聚合被拒绝 10ms
+ ✓ desktop/tests/projectService.test.ts > ProjectService 会话与保存 > 保存的 editSeq 与已接受序号不一致时返回 STALE_EDIT 42ms
+ ✓ desktop/tests/recovery.test.ts > 恢复草稿 > 防抖 1 秒外可自动写；内容相同的再次 stage 报 unchanged 85ms
+ ✓ desktop/tests/recovery.test.ts > 恢复草稿 > 草稿写失败返回 failed + warning，不谎报 written，编辑仍保留待重试 15ms
+ ✓ desktop/tests/projectChannels.test.ts > 项目会话通道 > 新建 chain-demo：返回 editSeq 0，另存后重开得到 A-MAC-2 的整数链 118ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 故障矩阵：原文件不坏 > 期望指纹不一致 → EXTERNAL_MODIFIED，不进行任何写入 46ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 故障矩阵：原文件不坏 > rename 后回读不一致 → 报告“已替换但未确认”，不回滚也不谎称原文件未变 72ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 故障矩阵：原文件不坏 > 目录同步失败 → 保存成功但带持久化未确认警告 27ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 目标校验 > 拒绝非 .cunlian 后缀 3ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 目标校验 > 拒绝符号链接目标 17ms
+ ✓ desktop/tests/fileStore.test.ts > FileStore.saveAtomic 目标校验 > 父目录不存在时拒绝 8ms
+ ✓ desktop/tests/sessionController.test.ts > dirty gate > 不保存：切换/关闭放行，磁盘不变，会话与草稿被清理 185ms
+ ✓ desktop/tests/projectService.test.ts > ProjectService 会话与保存 > 磁盘文件被外部修改后保存返回 EXTERNAL_MODIFIED，且不覆盖外部内容 61ms
+ ✓ desktop/tests/projectService.test.ts > ProjectService 会话与保存 > 另存为覆盖已有文件需要当前指纹确认 79ms
+ ✓ desktop/tests/recovery.test.ts > 恢复草稿 > 索引损坏时 list 报 RECOVERY_READ_FAILED；写入前隔离损坏索引 94ms
+ ✓ desktop/tests/recovery.test.ts > 恢复草稿 > 草稿文件损坏时列表带 error 原因，不当作空项目 78ms
+ ✓ desktop/tests/projectChannels.test.ts > 项目会话通道 > stage → save 走同一会话；保存失败不改变路径/指纹/序号 97ms
+ ✓ desktop/tests/recovery.test.ts > 恢复草稿 > discard 同时删除草稿文件与索引记录 81ms
+ ✓ desktop/tests/projectService.test.ts > ProjectService 会话与保存 > 并发保存被串行化：底层写入不重叠 130ms
+ ✓ desktop/tests/projectService.test.ts > ProjectService 会话与保存 > 损坏文件打开失败时不建立会话 8ms
+ ✓ desktop/tests/projectChannels.test.ts > 项目会话通道 > 按 recentId 打开：只解析本机索引，不弹目录对话框 105ms
+ ✓ desktop/tests/projectChannels.test.ts > 项目会话通道 > relink 项目 ID 不符返回 PROJECT_ID_MISMATCH，且不切换当前会话 87ms
+ ✓ desktop/tests/recentProjects.test.ts > 最近项目索引 > 最多保留 20 项且最新在前 550ms
+ ✓ desktop/tests/recentProjects.test.ts > 最近项目索引 > 同路径去重且保留 recentId；同 projectId 的不同副本都保留 27ms
+ ✓ desktop/tests/recentProjects.test.ts > 最近项目索引 > 路径失效标 missing，不自动删除记录 8ms
+ ✓ desktop/tests/recentProjects.test.ts > 最近项目索引 > 索引损坏时报 INDEX_READ_FAILED，写入前把损坏文件隔离 12ms
+ ✓ desktop/tests/recentProjects.test.ts > 最近项目索引 > 索引超过 20 项按损坏处理，不静默截断 5ms
+ ✓ desktop/tests/recentProjects.test.ts > 最近项目索引 > relink 只在项目 ID 相符时修索引；不符返回 PROJECT_ID_MISMATCH 57ms
+ ✓ desktop/tests/sessionController.test.ts > dirty gate > 保存：真实落盘成功后才放行；重开得到新名字，草稿清理，最近项目登记 196ms
+ ✓ desktop/tests/projectChannels.test.ts > 项目会话通道 > 最近项目路径失效：按 recentId 打开返回 NOT_FOUND，当前会话不变 58ms
+ ✓ desktop/tests/sessionController.test.ts > dirty gate > 保存失败：不切换、不退出，会话保留编辑，原文件不变 93ms
+ ✓ desktop/tests/projectChannels.test.ts > 项目会话通道 > 恢复草稿：dirty gate 后切换为 path=null 的未保存副本，并重新落草稿 139ms
+ ✓ desktop/tests/projectChannels.test.ts > 项目会话通道 > 最近索引损坏时通道返回 INDEX_READ_FAILED 45ms
+ ✓ desktop/tests/projectChannels.test.ts > 项目会话通道 > saveAs 成功后会话路径与指纹切换，可直接重开 51ms
+ ✓ desktop/tests/sessionController.test.ts > dirty gate > stage 竞态：保存期间出现更高 editSeq 时不放行，重新询问；取消后编辑仍在 133ms
+ ✓ desktop/tests/sessionController.test.ts > dirty gate > 编辑屏障失败（超时）时不弹三选、不关闭 46ms
+ ✓ desktop/tests/sessionController.test.ts > dirty gate > ⌘Q 与红点走同一关闭流程（仅 purpose 不同） 141ms
+ ✓ desktop/tests/sessionController.test.ts > dirty gate > 并发 gate 直接 BUSY，不弹第二个对话框 66ms
+
+ Test Files  12 passed (12)
+      Tests  92 passed (92)
+   Start at  02:10:59
+   Duration  1.27s (tests 84%, import 12%, transform 3%, worker 1%)
+

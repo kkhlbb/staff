@@ -1,0 +1,668 @@
+{
+  "startedAt": "2026-11-09T12:14:57.887Z",
+  "appExecutable": "out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链",
+  "platform": "darwin",
+  "arch": "arm64",
+  "nodeVersion": "v26.12.1",
+  "checks": [
+    {
+      "name": "window.cunlian 键集合与 A-04 基线完全一致（B1 未新增 IPC）",
+      "ok": true,
+      "detail": "[\"commitV2\",\"inspectV2\",\"listRecent\",\"listRecovery\",\"newProject\",\"onEditorFlush\",\"onMenuAction\",\"openProject\",\"readAttachment\",\"reattachSession\",\"relinkRecent\",\"requestClose\",\"respondEditorFlush\",\"restoreRecovery\",\"revealProject\",\"saveProject\",\"saveProjectAs\",\"stageDraft\"]"
+    },
+    {
+      "name": "renderer 无 Node 全局与通用 IPC 逃逸口",
+      "ok": true,
+      "detail": "{\"hasRequire\":\"undefined\",\"hasProcess\":\"undefined\",\"hasIpc\":\"undefined\",\"generic\":[]}"
+    },
+    {
+      "name": "3D 状态 ready、5 个语义部件、单一 canvas",
+      "ok": true,
+      "detail": "{\"state\":\"ready\",\"webgl2\":\"true\",\"dpr\":\"1\",\"glVersion\":\"WebGL 2.0 (OpenGL ES 3.0 Chromium)\",\"glRenderer\":\"ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)\",\"partCount\":\"5\",\"canvasCount\":1,\"exploded\":0,\"status\":\"3D 就绪 · WebGL2当前选择：未选择\"}"
+    },
+    {
+      "name": "WebGL2 实际创建成功（产品路径）",
+      "ok": true,
+      "detail": "WebGL 2.0 (OpenGL ES 3.0 Chromium) / ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)"
+    },
+    {
+      "name": "独立探测：sandboxed renderer 可创建 WebGL2",
+      "ok": true,
+      "detail": "{\"version\":\"WebGL 2.0 (OpenGL ES 3.0 Chromium)\",\"renderer\":\"ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)\"}"
+    },
+    {
+      "name": "树选中隔套：aria-pressed / 属性 / 当前选择同步",
+      "ok": true,
+      "detail": "{\"pressed\":\"true\",\"heading\":\"属性 · 隔套\",\"section\":\"当前选择：隔套\"}"
+    },
+    {
+      "name": "隔套只读参数来自 q（20/32/12 mm），C 批次编辑按钮禁用",
+      "ok": true,
+      "detail": "[\"rev-4024b5ec-eb57-4b14-8860-a22e22d57655\",\"内置示意部件（只读）\",\"-6.0000 … 6.0000 mm\",\"0.0 mm（X）\",\"0.0 mm（X）（装配基准，不参与爆炸）\",\"10.0000 mm\",\"16.0000 mm\",\"20.0000 mm\",\"32.0000 mm\",\"12.0000 mm\",\"未关联 · 示例几何（不随尺寸编辑变化）\"]"
+    },
+    {
+      "name": "装配态属性：「爆炸位移（当前）」为 0，「设计最大位移（上限）」标注装配基准",
+      "ok": true,
+      "detail": "[[\"类型\",\"内置示意部件（只读）\"],[\"装配 X 区间\",\"-6.0000 … 6.0000 mm\"],[\"爆炸位移（当前）\",\"0.0 mm（X）\"],[\"设计最大位移（上限）\",\"0.0 mm（X）（装配基准，不参与爆炸）\"],[\"内半径\",\"10.0000 mm\"],[\"外半径\",\"16.0000 mm\"],[\"内径（源 q）\",\"20.0000 mm\"],[\"外径（源 q）\",\"32.0000 mm\"],[\"长度（源 q）\",\"12.0000 mm\"],[\"关联尺寸链\",\"未关联 · 示例几何（不随尺寸编辑变化）\"]]"
+    },
+    {
+      "name": "1440 截图像素证明画布内有模型（非空 canvas）",
+      "ok": true,
+      "detail": "{\"imageSize\":[1440,868],\"region\":[238,322,884,481],\"distinctColors\":1114,\"offBackgroundRatio\":0.0819}"
+    },
+    {
+      "name": "滑条 100% 后 t=1",
+      "ok": true,
+      "detail": "{\"slider\":100}"
+    },
+    {
+      "name": "爆炸后隔套仍保持选中（选择不被视觉变换覆盖）",
+      "ok": true,
+      "detail": "3D 就绪 · WebGL2当前选择：隔套"
+    },
+    {
+      "name": "爆炸 100% 截图仍有模型像素",
+      "ok": true,
+      "detail": "{\"imageSize\":[1440,868],\"region\":[238,322,884,481],\"distinctColors\":1461,\"offBackgroundRatio\":0.111}"
+    },
+    {
+      "name": "爆炸 100%：隔套当前位移仍为 0（装配基准件如实显示自身状态）",
+      "ok": true,
+      "detail": "[[\"类型\",\"内置示意部件（只读）\"],[\"装配 X 区间\",\"-6.0000 … 6.0000 mm\"],[\"爆炸位移（当前）\",\"0.0 mm（X）\"],[\"设计最大位移（上限）\",\"0.0 mm（X）（装配基准，不参与爆炸）\"],[\"内半径\",\"10.0000 mm\"],[\"外半径\",\"16.0000 mm\"],[\"内径（源 q）\",\"20.0000 mm\"],[\"外径（源 q）\",\"32.0000 mm\"],[\"长度（源 q）\",\"12.0000 mm\"],[\"关联尺寸链\",\"未关联 · 示例几何（不随尺寸编辑变化）\"]]"
+    },
+    {
+      "name": "爆炸 100% 选左轴承：「当前」与「设计上限」均为 −24.0 mm（X）",
+      "ok": true,
+      "detail": "[[\"类型\",\"内置示意部件（只读）\"],[\"装配 X 区间\",\"-26.0000 … -6.0000 mm\"],[\"爆炸位移（当前）\",\"-24.0 mm（X）\"],[\"设计最大位移（上限）\",\"-24.0 mm（X）\"],[\"内半径\",\"10.0000 mm\"],[\"外半径\",\"22.0000 mm\"],[\"关联尺寸链\",\"未关联 · 示例几何（不随尺寸编辑变化）\"]]"
+    },
+    {
+      "name": "复位装配：t=0 且隔套仍选中",
+      "ok": true,
+      "detail": "{\"slider\":0,\"status\":\"3D 就绪 · WebGL2当前选择：隔套\"}"
+    },
+    {
+      "name": "contextlost 后局部降级并给出原因码",
+      "ok": true,
+      "detail": "error :: 3D 暂不可用：CONTEXT_LOSTWebGL 上下文丢失。项目树与只读属性仍可用，其他标签不受影响；可尝试重试。重"
+    },
+    {
+      "name": "降级时其他标签仍可切换并渲染内容",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "重试后恢复且只有一个 canvas（无叠加上下文）",
+      "ok": true,
+      "detail": "{\"canvases\":1,\"state\":\"ready\"}"
+    },
+    {
+      "name": "960×640 真实窗口生效（outer=960×640，内容区 960×608）",
+      "ok": true,
+      "detail": "{\"resizeMethod\":\"window.resizeTo → 真实 BrowserWindow 960×640\",\"outer\":[960,640],\"inner\":[960,608]}"
+    },
+    {
+      "name": "960×640 无横向溢出，工具条不覆盖画布",
+      "ok": true,
+      "detail": "{\"overflowX\":0,\"toolbarBottom\":353,\"stageTop\":353}"
+    },
+    {
+      "name": "960×640 截图证明画布仍有模型像素",
+      "ok": true,
+      "detail": "{\"imageSize\":[960,608],\"region\":[238,353,404,198],\"distinctColors\":707,\"offBackgroundRatio\":0.0656}"
+    },
+    {
+      "name": "960×640 爆炸 100% 截图仍有模型像素",
+      "ok": true,
+      "detail": "{\"imageSize\":[960,608],\"region\":[238,353,404,198],\"distinctColors\":903,\"offBackgroundRatio\":0.0895}"
+    },
+    {
+      "name": "960 爆炸 100%：隔套当前位移为 0（装配基准件）",
+      "ok": true,
+      "detail": "[[\"类型\",\"内置示意部件（只读）\"],[\"装配 X 区间\",\"-6.0000 … 6.0000 mm\"],[\"爆炸位移（当前）\",\"0.0 mm（X）\"],[\"设计最大位移（上限）\",\"0.0 mm（X）（装配基准，不参与爆炸）\"],[\"内半径\",\"10.0000 mm\"],[\"外半径\",\"16.0000 mm\"],[\"内径（源 q）\",\"20.0000 mm\"],[\"外径（源 q）\",\"32.0000 mm\"],[\"长度（源 q）\",\"12.0000 mm\"],[\"关联尺寸链\",\"未关联 · 示例几何（不随尺寸编辑变化）\"]]"
+    },
+    {
+      "name": "960 爆炸 100% 选左轴承：「当前」为 −24.0 mm（X）（非零、随滑条变化）",
+      "ok": true,
+      "detail": "[[\"类型\",\"内置示意部件（只读）\"],[\"装配 X 区间\",\"-26.0000 … -6.0000 mm\"],[\"爆炸位移（当前）\",\"-24.0 mm（X）\"],[\"设计最大位移（上限）\",\"-24.0 mm（X）\"],[\"内半径\",\"10.0000 mm\"],[\"外半径\",\"22.0000 mm\"],[\"关联尺寸链\",\"未关联 · 示例几何（不随尺寸编辑变化）\"]]"
+    },
+    {
+      "name": "960 复位前清空选择：树无 aria-pressed=true、属性标题为「属性 · 未选择」",
+      "ok": true,
+      "detail": "{\"pressed\":[],\"heading\":\"属性 · 未选择\"}"
+    },
+    {
+      "name": "960 复位装配：滑条 0%、树仍无选中",
+      "ok": true,
+      "detail": "{\"state\":\"ready\",\"webgl2\":\"true\",\"dpr\":\"1\",\"glVersion\":\"WebGL 2.0 (OpenGL ES 3.0 Chromium)\",\"glRenderer\":\"ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)\",\"partCount\":\"5\",\"canvasCount\":1,\"exploded\":0,\"status\":\"3D 就绪 · WebGL2当前选择：未选择\",\"heading\":\"属性 · 未选择\"}"
+    },
+    {
+      "name": "960-reset-assembly.png 与 960-selected.png 哈希不同（不是同一份字节）",
+      "ok": true,
+      "detail": "{\"selected\":\"ea42c663746fb1fad7d0d89db63acf8dd2051c1511860963aed9812262f75d34\",\"resetAssembly\":\"64782439da3f9d9c3484cf061fc5148b4c1dcc813732d5570de0a53589432ce6\"}"
+    },
+    {
+      "name": "阻断 HTTP(S) 后重载仍渲染应用（生产 file:// 产物）",
+      "ok": true,
+      "detail": "{\"href\":\"file:///Users/aston/DSH/wt/dsh-v3-a4c/out/%E5%AF%B8%E9%93%BE-darwin-arm64/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html\",\"body\":\"寸链 · 轴系示例（B1）· 示意装配\\nRev rev-4024b5ec-eb57-4b14-8860-a22e22d57655\\n未保存草稿\\nV3 · B1 批次\\n新建项目\\n打开项目\\n保存\\n另存为…\\n导入 V2 备份…\\n关闭窗口\\n导入资料\\n资料导入本批次未实现\\n预览变更\\n导出 PDF ▾\\n当前会话已载入；绑定来源不等于\"}"
+    },
+    {
+      "name": "阻断远程请求下 3D chunk 仍加载并渲染（无网络兜底）",
+      "ok": true,
+      "detail": "{\"state\":\"ready\",\"webgl2\":\"true\",\"glVersion\":\"WebGL 2.0 (OpenGL ES 3.0 Chromium)\"}"
+    },
+    {
+      "name": "重载+重新打开后截图仍有模型像素",
+      "ok": true,
+      "detail": "{\"imageSize\":[960,608],\"region\":[238,299,716,252],\"distinctColors\":775,\"offBackgroundRatio\":0.047}"
+    },
+    {
+      "name": "重载后所有资源均为本地 file://（无 HTTP(S) 请求）",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "A-04 尺寸链示例仍可打开（组成环表/52.2000/未保存草稿）",
+      "ok": true,
+      "detail": "{\"hasTable\":true,\"nominal\":\"52.2000\",\"target\":null,\"saveState\":\"未保存草稿\"}"
+    },
+    {
+      "name": "A-04 编辑仍经 main stageDraft（editSeq 1、nominalQ 523000、dirty）",
+      "ok": true,
+      "detail": "{\"editSeq\":1,\"nominalQ\":523000}"
+    },
+    {
+      "name": "A-04 结果按原领域公式重算（52.3 输入 → 0.2500 至 0.3500 mm）",
+      "ok": true,
+      "detail": "计算结果 · 非审查结论超出目标封闭环基本尺寸0.3000 mm极值范围0.2500 至 0.3500 mm封闭环公差0.1000 mm"
+    },
+    {
+      "name": "整页重载后 reattach 保留 A-04 编辑（editSeq 1 / nominalQ 523000），3D 示例按设计需重新打开",
+      "ok": true,
+      "detail": "{\"workbench\":true,\"partsEmpty\":true,\"saveState\":\"未保存草稿\",\"canvases\":0,\"editSeq\":1,\"savedSeq\":0,\"nominalQ\":523000}"
+    }
+  ],
+  "shots": [
+    "1440-selected-spacer.png",
+    "1440-exploded-100.png",
+    "1440-exploded-100-bearing-left.png",
+    "1440-reset-assembly.png",
+    "3d-degraded.png",
+    "960-selected.png",
+    "960-exploded-100.png",
+    "960-exploded-100-bearing-left.png",
+    "960-reset-assembly.png",
+    "960-offline-reopened.png"
+  ],
+  "measurements": {
+    "threeProbe": {
+      "state": "ready",
+      "webgl2": "true",
+      "dpr": "1",
+      "glVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+      "glRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "partCount": "5",
+      "canvasCount": 1,
+      "exploded": 0,
+      "status": "3D 就绪 · WebGL2当前选择：未选择"
+    },
+    "window1440": {
+      "window": [
+        1440,
+        900
+      ],
+      "inner": [
+        1440,
+        868
+      ],
+      "dpr": 1,
+      "canvasCss": [
+        884,
+        481
+      ],
+      "canvasBacking": [
+        884,
+        481
+      ],
+      "screen": [
+        2560,
+        1440
+      ]
+    },
+    "independentWebgl2": {
+      "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+      "shading": "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "attributes": {
+        "alpha": true,
+        "antialias": true,
+        "depth": true,
+        "desynchronized": false,
+        "failIfMajorPerformanceCaveat": false,
+        "powerPreference": "default",
+        "premultipliedAlpha": true,
+        "preserveDrawingBuffer": false,
+        "stencil": false,
+        "xrCompatible": false
+      }
+    },
+    "selection": {
+      "pressed": "true",
+      "heading": "属性 · 隔套",
+      "props": [
+        "rev-4024b5ec-eb57-4b14-8860-a22e22d57655",
+        "内置示意部件（只读）",
+        "-6.0000 … 6.0000 mm",
+        "0.0 mm（X）",
+        "0.0 mm（X）（装配基准，不参与爆炸）",
+        "10.0000 mm",
+        "16.0000 mm",
+        "20.0000 mm",
+        "32.0000 mm",
+        "12.0000 mm",
+        "未关联 · 示例几何（不随尺寸编辑变化）"
+      ],
+      "selectionText": "当前选择：隔套",
+      "editDisabled": true,
+      "canvas": {
+        "css": [
+          884,
+          481
+        ],
+        "backing": [
+          884,
+          481
+        ]
+      }
+    },
+    "selectedRows": [
+      [
+        "类型",
+        "内置示意部件（只读）"
+      ],
+      [
+        "装配 X 区间",
+        "-6.0000 … 6.0000 mm"
+      ],
+      [
+        "爆炸位移（当前）",
+        "0.0 mm（X）"
+      ],
+      [
+        "设计最大位移（上限）",
+        "0.0 mm（X）（装配基准，不参与爆炸）"
+      ],
+      [
+        "内半径",
+        "10.0000 mm"
+      ],
+      [
+        "外半径",
+        "16.0000 mm"
+      ],
+      [
+        "内径（源 q）",
+        "20.0000 mm"
+      ],
+      [
+        "外径（源 q）",
+        "32.0000 mm"
+      ],
+      [
+        "长度（源 q）",
+        "12.0000 mm"
+      ],
+      [
+        "关联尺寸链",
+        "未关联 · 示例几何（不随尺寸编辑变化）"
+      ]
+    ],
+    "pixels1440": {
+      "imageSize": [
+        1440,
+        868
+      ],
+      "region": [
+        238,
+        322,
+        884,
+        481
+      ],
+      "distinctColors": 1114,
+      "offBackgroundRatio": 0.0819
+    },
+    "exploded": {
+      "state": {
+        "state": "ready",
+        "webgl2": "true",
+        "dpr": "1",
+        "glVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "glRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "partCount": "5",
+        "canvasCount": 1,
+        "exploded": 100,
+        "status": "3D 就绪 · WebGL2当前选择：隔套"
+      }
+    },
+    "pixelsExploded": {
+      "imageSize": [
+        1440,
+        868
+      ],
+      "region": [
+        238,
+        322,
+        884,
+        481
+      ],
+      "distinctColors": 1461,
+      "offBackgroundRatio": 0.111
+    },
+    "explodedRows": [
+      [
+        "类型",
+        "内置示意部件（只读）"
+      ],
+      [
+        "装配 X 区间",
+        "-6.0000 … 6.0000 mm"
+      ],
+      [
+        "爆炸位移（当前）",
+        "0.0 mm（X）"
+      ],
+      [
+        "设计最大位移（上限）",
+        "0.0 mm（X）（装配基准，不参与爆炸）"
+      ],
+      [
+        "内半径",
+        "10.0000 mm"
+      ],
+      [
+        "外半径",
+        "16.0000 mm"
+      ],
+      [
+        "内径（源 q）",
+        "20.0000 mm"
+      ],
+      [
+        "外径（源 q）",
+        "32.0000 mm"
+      ],
+      [
+        "长度（源 q）",
+        "12.0000 mm"
+      ],
+      [
+        "关联尺寸链",
+        "未关联 · 示例几何（不随尺寸编辑变化）"
+      ]
+    ],
+    "explodedBearingRows": [
+      [
+        "类型",
+        "内置示意部件（只读）"
+      ],
+      [
+        "装配 X 区间",
+        "-26.0000 … -6.0000 mm"
+      ],
+      [
+        "爆炸位移（当前）",
+        "-24.0 mm（X）"
+      ],
+      [
+        "设计最大位移（上限）",
+        "-24.0 mm（X）"
+      ],
+      [
+        "内半径",
+        "10.0000 mm"
+      ],
+      [
+        "外半径",
+        "22.0000 mm"
+      ],
+      [
+        "关联尺寸链",
+        "未关联 · 示例几何（不随尺寸编辑变化）"
+      ]
+    ],
+    "reset": {
+      "state": "ready",
+      "webgl2": "true",
+      "dpr": "1",
+      "glVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+      "glRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "partCount": "5",
+      "canvasCount": 1,
+      "exploded": 0,
+      "status": "3D 就绪 · WebGL2当前选择：隔套"
+    },
+    "degraded": {
+      "state": {
+        "state": "error",
+        "webgl2": "true",
+        "dpr": "1",
+        "glVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "glRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "partCount": "5",
+        "canvasCount": 0,
+        "exploded": 0,
+        "status": "3D 暂不可用当前选择：隔套"
+      },
+      "text": "3D 暂不可用：CONTEXT_LOSTWebGL 上下文丢失。项目树与只读属性仍可用，其他标签不受影响；可尝试重试。重试 3D 视图"
+    },
+    "retry": {
+      "canvases": 1,
+      "state": "ready"
+    },
+    "smallWindow": {
+      "resizeMethod": "window.resizeTo → 真实 BrowserWindow 960×640",
+      "outer": [
+        960,
+        640
+      ],
+      "inner": [
+        960,
+        608
+      ],
+      "dpr": 1,
+      "canvasCss": [
+        404,
+        198
+      ],
+      "canvasBacking": [
+        404,
+        198
+      ],
+      "overflowX": 0,
+      "toolbarRows": 2,
+      "toolbarBottom": 353,
+      "stageTop": 353,
+      "stageBottom": 551,
+      "viewportBottom": 575
+    },
+    "smallPixels": {
+      "imageSize": [
+        960,
+        608
+      ],
+      "region": [
+        238,
+        353,
+        404,
+        198
+      ],
+      "distinctColors": 707,
+      "offBackgroundRatio": 0.0656
+    },
+    "smallExplodedPixels": {
+      "imageSize": [
+        960,
+        608
+      ],
+      "region": [
+        238,
+        353,
+        404,
+        198
+      ],
+      "distinctColors": 903,
+      "offBackgroundRatio": 0.0895
+    },
+    "smallExplodedRows": [
+      [
+        "类型",
+        "内置示意部件（只读）"
+      ],
+      [
+        "装配 X 区间",
+        "-6.0000 … 6.0000 mm"
+      ],
+      [
+        "爆炸位移（当前）",
+        "0.0 mm（X）"
+      ],
+      [
+        "设计最大位移（上限）",
+        "0.0 mm（X）（装配基准，不参与爆炸）"
+      ],
+      [
+        "内半径",
+        "10.0000 mm"
+      ],
+      [
+        "外半径",
+        "16.0000 mm"
+      ],
+      [
+        "内径（源 q）",
+        "20.0000 mm"
+      ],
+      [
+        "外径（源 q）",
+        "32.0000 mm"
+      ],
+      [
+        "长度（源 q）",
+        "12.0000 mm"
+      ],
+      [
+        "关联尺寸链",
+        "未关联 · 示例几何（不随尺寸编辑变化）"
+      ]
+    ],
+    "smallExplodedBearingRows": [
+      [
+        "类型",
+        "内置示意部件（只读）"
+      ],
+      [
+        "装配 X 区间",
+        "-26.0000 … -6.0000 mm"
+      ],
+      [
+        "爆炸位移（当前）",
+        "-24.0 mm（X）"
+      ],
+      [
+        "设计最大位移（上限）",
+        "-24.0 mm（X）"
+      ],
+      [
+        "内半径",
+        "10.0000 mm"
+      ],
+      [
+        "外半径",
+        "22.0000 mm"
+      ],
+      [
+        "关联尺寸链",
+        "未关联 · 示例几何（不随尺寸编辑变化）"
+      ]
+    ],
+    "smallCleared": {
+      "pressed": [],
+      "heading": "属性 · 未选择"
+    },
+    "smallReset": {
+      "state": "ready",
+      "webgl2": "true",
+      "dpr": "1",
+      "glVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+      "glRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "partCount": "5",
+      "canvasCount": 1,
+      "exploded": 0,
+      "status": "3D 就绪 · WebGL2当前选择：未选择",
+      "heading": "属性 · 未选择"
+    },
+    "smallHashes": {
+      "selected": "ea42c663746fb1fad7d0d89db63acf8dd2051c1511860963aed9812262f75d34",
+      "resetAssembly": "64782439da3f9d9c3484cf061fc5148b4c1dcc813732d5570de0a53589432ce6"
+    },
+    "reloadWithBlockedHttp": {
+      "hasStart": false,
+      "hasWorkbench": true,
+      "href": "file:///Users/aston/DSH/wt/dsh-v3-a4c/out/%E5%AF%B8%E9%93%BE-darwin-arm64/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html",
+      "body": "寸链 · 轴系示例（B1）· 示意装配\nRev rev-4024b5ec-eb57-4b14-8860-a22e22d57655\n未保存草稿\nV3 · B1 批次\n新建项目\n打开项目\n保存\n另存为…\n导入 V2 备份…\n关闭窗口\n导入资料\n资料导入本批次未实现\n预览变更\n导出 PDF ▾\n当前会话已载入；绑定来源不等于"
+    },
+    "offlineScene": {
+      "state": "ready",
+      "webgl2": "true",
+      "dpr": "1",
+      "glVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+      "glRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "partCount": "5",
+      "canvasCount": 1,
+      "exploded": 0,
+      "status": "3D 就绪 · WebGL2当前选择：未选择"
+    },
+    "offlinePixels": {
+      "imageSize": [
+        960,
+        608
+      ],
+      "region": [
+        238,
+        299,
+        716,
+        252
+      ],
+      "distinctColors": 775,
+      "offBackgroundRatio": 0.047
+    },
+    "resourceUrls": [],
+    "remoteTransfers": 0,
+    "a04Edit": {
+      "beforeEdit": {
+        "hasTable": true,
+        "nominal": "52.2000",
+        "target": null,
+        "saveState": "未保存草稿"
+      },
+      "editSeq": 1,
+      "nominalQ": 523000,
+      "dirty": true,
+      "resultRange": "计算结果 · 非审查结论超出目标封闭环基本尺寸0.3000 mm极值范围0.2500 至 0.3500 mm封闭环公差0.1000 mm"
+    },
+    "afterReload": {
+      "workbench": true,
+      "partsEmpty": true,
+      "saveState": "未保存草稿",
+      "canvases": 0,
+      "editSeq": 1,
+      "savedSeq": 0,
+      "nominalQ": 523000
+    }
+  },
+  "notes": [
+    "页内 drawImage 采样（受 preserveDrawingBuffer=false 影响，仅作参考）：{\"distinctColors\":133,\"transparentRatio\":0,\"sample\":[\"245,247,250,255\",\"179,193,210,255\",\"179,192,209,255\",\"177,191,207,255\",\"176,189,206,255\",\"173,187,203,255\"],\"backingStore\":[884,481],\"cssSize\":[884,481]}"
+  ],
+  "finishedAt": "2026-11-09T12:15:19.479Z",
+  "result": "PASS"
+}

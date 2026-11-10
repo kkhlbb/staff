@@ -1,0 +1,150 @@
+/* D：参数联动工作区；只负责布局与状态颜色，不表达任何工程结论。 */
+.change-workbench {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px;
+  overflow: auto;
+  height: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+}
+
+.change-workbench__header h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.change-workbench__header p {
+  margin: 4px 0 0;
+  opacity: 0.8;
+}
+
+.change-workbench__unlinked {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.change-workbench__inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.change-workbench__inputs label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.change-workbench__inputs input {
+  font: inherit;
+  padding: 3px 6px;
+}
+
+.change-workbench__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+}
+
+.change-workbench__reason {
+  grid-column: 1 / -1;
+}
+
+/* 灰按钮的可读原因：不使用颜色表达结论，只用文字说明为什么不能确认。 */
+.change-workbench__hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  opacity: 0.85;
+}
+
+.change-workbench__bind ul,
+.change-workbench__history ul,
+.change-workbench__groups ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.change-workbench__bind li,
+.change-workbench__history li {
+  margin: 3px 0;
+}
+
+.change-workbench__ok {
+  color: #15803d;
+  margin: 0 8px;
+}
+
+.change-workbench__pending {
+  color: #b45309;
+  margin: 0 8px;
+}
+
+.change-workbench__stale,
+.change-workbench__error {
+  border: 1px solid #b91c1c;
+  background: #fef2f2;
+  color: #7f1d1d;
+  padding: 6px 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.change-workbench__preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 6px 0;
+}
+
+.change-workbench__preview th,
+.change-workbench__preview td {
+  border: 1px solid #d4d4d8;
+  padding: 3px 6px;
+  text-align: left;
+}
+
+.change-workbench__compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.change-workbench__compare figure {
+  margin: 0;
+  border: 1px solid #d4d4d8;
+  padding: 4px;
+  overflow: auto;
+  max-height: 320px;
+}
+
+.change-workbench__compare figcaption {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.change-workbench__groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+}
+
+.change-workbench__groups > h3 {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.change-workbench__groups > section {
+  border: 1px solid #d4d4d8;
+  padding: 6px 8px;
+}
+
+.change-workbench__groups h4 {
+  margin: 0 0 4px;
+  font-size: 12px;
+}
+
+.change-workbench__groups p {
+  margin: 2px 0;
+}

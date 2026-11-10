@@ -1,0 +1,19 @@
+--- desktop/main/changeService.ts	2026-11-09 17:37:48
++++ /tmp/mut-D1-changeService.ts	2026-11-09 17:37:47
+@@ -667,14 +667,10 @@
+         return failure('STALE_PREVIEW', '预览与当前基准/草稿不匹配，请重新预览')
+       }
+ 
+-      // 关键：从当前草稿重新计算，绝不复用 preview 里的结果。
++      // MUT-D1: reuse preview computation instead of recomputing from the current draft.
+       let computation: ChangeComputation
+       try {
+-        computation = computeChange(
+-          session.snapshot,
+-          { parameters: draft.parameters, bindings: draft.bindings },
+-          { revisionId: preview.revisionId, now: this.nowIso() },
+-        )
++        computation = preview.computation
+       } catch (error) {
+         if (error instanceof ChangeError) {
+           return failure(

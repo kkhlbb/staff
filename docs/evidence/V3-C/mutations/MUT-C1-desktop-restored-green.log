@@ -1,0 +1,10 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/wt/dsh-v3-A
+
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  07:17:01
+   Duration  553ms (tests 88%, import 9%, transform 3%)
+
+DESKTOP_RESTORED_EXIT=0

@@ -1,0 +1,59 @@
+== offline package / warm cache + @electron/get debug trace ==
+run_at=2026-11-09T09:33:37Z  host=astondeMac-mini.local  user=aston
+env=ELECTRON_GET_USE_PROXY=true HTTP_PROXY=http://127.0.0.1:9 HTTPS_PROXY=http://127.0.0.1:9 NO_PROXY=(empty) DEBUG=@electron/get:*
+command=npm run package:desktop -- --arch=arm64
+
+> staff@2.0.0 package:desktop
+> electron-forge package --arch=arm64
+
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.20.0
+✔ Checking your system
+❯ Preparing to package application
+✔ Preparing to package application
+❯ Running packaging hooks
+❯ Running generateAssets hook
+✔ Running generateAssets hook
+❯ Running prePackage hook
+❯ [plugin-vite] Building production Vite bundles
+❯ Building main and preload targets...
+❯ Building renderer targets...
+❯ Building desktop/main/index.ts
+❯ Building desktop/preload/index.ts
+❯ Building main_window
+✔ Built target desktop/preload/index.ts
+✔ Built target desktop/main/index.ts
+✔ Building main and preload targets...
+✔ Built target main_window
+✔ Building renderer targets...
+✔ [plugin-vite] Building production Vite bundles
+✔ Running prePackage hook
+✔ Running packaging hooks
+❯ Packaging application
+› Determining targets...
+❯ Packaging for arm64 on darwin
+❯ Copying files
+2026-11-09T09:33:37.828Z @electron/get:index Checking the cache (undefined) for electron-v45.2.3-darwin-arm64.zip (https://github.com/electron/electron/releases/download/v45.2.3/electron-v45.2.3-darwin-arm64.zip)
+2026-11-09T09:33:37.828Z @electron/get:index Cache hit
+2026-11-09T09:33:37.828Z @electron/get:index Downloading https://github.com/electron/electron/releases/download/v45.2.3/SHASUMS256.txt to /var/folders/r1/wdm1m5zj4zl9bjxzk8sh_jdh0000gn/T/electron-download-0tHsgQ/SHASUMS256.txt with options: undefined
+2026-11-09T09:33:37.832Z @electron/get:index Artifact in cache didn't match checksums [TypeError: fetch failed] {
+  [cause]: Error: connect ECONNREFUSED 127.0.0.1:9
+      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:2083:16) {
+    errno: -61,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 9
+  }
+}
+2026-11-09T09:33:37.832Z @electron/get:index falling back to re-download
+2026-11-09T09:33:37.832Z @electron/get:index Downloading https://github.com/electron/electron/releases/download/v45.2.3/electron-v45.2.3-darwin-arm64.zip to /var/folders/r1/wdm1m5zj4zl9bjxzk8sh_jdh0000gn/T/electron-download-9EbHc7/electron-v45.2.3-darwin-arm64.zip with options: undefined
+✖ Copying files [FAILED: fetch failed]
+✖ Packaging for arm64 on darwin [FAILED: fetch failed]
+✖ Packaging application [FAILED: fetch failed]
+
+An unhandled rejection has occurred inside Forge:
+TypeError: fetch failed
+
+EXIT=1

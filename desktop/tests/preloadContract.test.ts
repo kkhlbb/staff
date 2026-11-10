@@ -1,0 +1,75 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { describe, expect, it } from 'vitest'
+
+/**
+ * 旧桥回归：window.cunlian 原有 18 个函数必须存在；B2 只允许新增。
+ * 这里做静态源码检查，补足“签名由类型系统保证、行为由既有测试保证”的缺口。
+ */
+const PRELOAD = fileURLToPath(new URL('../preload/index.ts', import.meta.url))
+
+const LEGACY_FUNCTIONS = [
+  'newProject',
+  'openProject',
+  'stageDraft',
+  'saveProject',
+  'saveProjectAs',
+  'listRecent',
+  'relinkRecent',
+  'listRecovery',
+  'restoreRecovery',
+  'reattachSession',
+  'readAttachment',
+  'revealProject',
+  'requestClose',
+  'inspectV2',
+  'commitV2',
+  'onMenuAction',
+  'onEditorFlush',
+  'respondEditorFlush',
+] as const
+
+const ADDED_FUNCTIONS = [
+  'pickModel',
+  'readModel',
+  'commitModel',
+  'releaseModel',
+  'linkModel',
+  // C：图纸更新与两种矢量导出（仍只增不改旧函数）。
+  'updateSpacerDrawing',
+  'exportDrawingPdf',
+  'exportDrawingSvg',
+  // D：参数联动草稿/预览/确认/绑定/对比/恢复。
+  'stageChangeDraft',
+  'previewChange',
+  'applyChange',
+  'bindParameter',
+  'unbindParameter',
+  'compareDrawings',
+  'restoreRevisionDraft',
+] as const
+
+describe('B2/C preload 契约', () => {
+  const source = readFileSync(PRELOAD, 'utf8')
+
+  it('原有 18 个函数仍在 api 对象中，B2/C 只允许新增具体函数', () => {
+    for (const name of [...LEGACY_FUNCTIONS, ...ADDED_FUNCTIONS]) {
+      expect(source).toContain(`\n  ${name}:`)
+    }
+    // 除上述具体函数外，不得暴露通用 invoke/send/on 转义口。
+    const apiBlock = source.slice(source.indexOf('const api: CunlianApi = {'), source.indexOf('contextBridge.exposeInMainWorld'))
+    const keys = [...apiBlock.matchAll(/^ {2}([A-Za-z][A-Za-z0-9]*):/gm)].map((match) => match[1])
+    expect(keys.sort()).toEqual([...LEGACY_FUNCTIONS, ...ADDED_FUNCTIONS].sort())
+    expect(apiBlock).not.toMatch(/^ {2}(invoke|send|on):/m)
+  })
+
+  it('5 个模型通道各有独立 channel 常量，不复用 source:read', () => {
+    expect(source).toContain('IPC_CHANNELS.modelPick')
+    expect(source).toContain('IPC_CHANNELS.modelRead')
+    expect(source).toContain('IPC_CHANNELS.modelCommit')
+    expect(source).toContain('IPC_CHANNELS.modelRelease')
+    expect(source).toContain('IPC_CHANNELS.modelLink')
+    // source:read 仍只服务 readAttachment 一处，模型读取走 modelRead。
+    expect(source.match(/IPC_CHANNELS\.sourceRead/g) ?? []).toHaveLength(1)
+  })
+})
