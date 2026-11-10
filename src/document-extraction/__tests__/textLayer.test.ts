@@ -26,6 +26,12 @@ describe('V3.6 文本归一', () => {
     expect(normalizeExtractionText('⽅法')).toBe('方法')
   })
 
+  it('单一 NFKC 不足以覆盖 U+2E80–U+2EFF（这就是需要 UCD 映射的原因）', () => {
+    expect('⽂'.normalize('NFKC')).toBe('文')
+    expect('⻓'.normalize('NFKC')).toBe('⻓')
+    expect('⻚'.normalize('NFKC')).toBe('⻚')
+  })
+
   it('普通文本不被改写：数字尾零、ASCII 符号、空格保持原样', () => {
     expect(normalizeExtractionText('52.20 +0.02 -0.02')).toBe('52.20 +0.02 -0.02')
     expect(normalizeExtractionText('C = H - B1 - S - B2')).toBe('C = H - B1 - S - B2')
