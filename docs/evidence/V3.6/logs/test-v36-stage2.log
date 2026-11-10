@@ -11,9 +11,9 @@ Not implemented: navigation to another Document
 
  Test Files  89 passed (89)
       Tests  909 passed (909)
-   Start at  06:50:58
-   Duration  17.13s (tests 64%, environment 17%, import 9%, setup 8%, transform 2%)
+   Start at  06:51:47
+   Duration  16.99s (tests 65%, environment 16%, import 9%, setup 8%, transform 2%)
 
-    Isolate  89 workers spawned · ~220ms startup each (spawn + environment, per file)
-             at least ~1.95s faster with isolate: false — reuses workers across files instead of one per file
+    Isolate  89 workers spawned · ~207ms startup each (spawn + environment, per file)
+             at least ~1.84s faster with isolate: false — reuses workers across files instead of one per file
 
