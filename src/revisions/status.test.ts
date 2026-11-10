@@ -8,6 +8,7 @@ import {
   deriveReviewGroups,
   hasParameterBindings,
   parameterBindingStatusRowsWithSnapshot,
+  parameterBindingWorkbenchRows,
 } from './status'
 
 function bindingsOf(snapshot: ProjectFileSnapshot): ProjectFileParameterBindingLink[] {
@@ -166,5 +167,85 @@ describe('D 派生状态：只由版本字段与完整确认事件决定', () =>
     // 图纸仍然是待复核草稿，不因“能算”变成已批准。
     expect(groups.drawing.status).toBe('pending-review-draft')
     expect(groups.drawing.label).toContain('待复核草稿')
+  })
+})
+
+describe('D 工作台行列表：只读合并草稿绑定，不把草稿当已确认', () => {
+  const workbenchRows = (snapshot: ProjectFileSnapshot, draft: Parameters<typeof parameterBindingWorkbenchRows>[3]) =>
+    parameterBindingWorkbenchRows(snapshot.project, snapshot.events, (parameterId) => {
+      const parameter = snapshot.project.parameters.find((item) => item.parameterId === parameterId)
+      return sourceBasisOf(snapshot, parameter?.sourceNote)
+    }, draft)
+
+  it('没有草稿：正式绑定仍按确认凭据派生（valid → 已确认生效）', async () => {
+    const base = await createSpacerSnapshot({ length: '12.00', confirmed: true })
+    const rows = workbenchRows(base, null)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.stage).toBe('confirmed')
+    expect(rows[0]!.state).toBe('valid')
+  })
+
+  it('草稿新增绑定：标记 draft/pending，写明尚未确认提交，且不冒充有效', async () => {
+    const base = await createSpacerSnapshot({ length: '12.00', confirmed: true })
+    const original = bindingsOf(base)[0]!
+    const draftBinding: ProjectFileParameterBindingLink = {
+      ...original,
+      bindingId: 'binding:draft-only',
+      parameterId: 'param:spacer:inner-diameter',
+    }
+    const rows = workbenchRows(base, {
+      bindings: [draftBinding],
+      parameters: base.project.parameters,
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.bindingId).toBe('binding:draft-only')
+    expect(rows[0]!.stage).toBe('draft')
+    expect(rows[0]!.state).toBe('pending')
+    expect(rows[0]!.reasons).toContain('草稿态：尚未确认提交')
+  })
+
+  it('草稿未改动绑定且参数未变：沿用正式派生态', async () => {
+    const base = await createSpacerSnapshot({ length: '12.00', confirmed: true })
+    const rows = workbenchRows(base, {
+      bindings: bindingsOf(base),
+      parameters: base.project.parameters,
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.stage).toBe('confirmed')
+    expect(rows[0]!.state).toBe('valid')
+  })
+
+  it('草稿改了参数值：同一绑定降为草稿态，不沿用旧凭据', async () => {
+    const base = await createSpacerSnapshot({ length: '12.00', confirmed: true })
+    const rows = workbenchRows(base, {
+      bindings: bindingsOf(base),
+      parameters: spacerParameters({ length: '14.00' }, 2),
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.stage).toBe('draft')
+    expect(rows[0]!.state).toBe('pending')
+    expect(rows[0]!.parameterValueQ).toBe(140000)
+    expect(rows[0]!.reasons).toContain('草稿态：尚未确认提交')
+  })
+
+  it('草稿只改来源备注（修订号不变）：同样降为草稿态，旧凭据不沿用', async () => {
+    const base = await createSpacerSnapshot({ length: '12.00', confirmed: true })
+    const rows = workbenchRows(base, {
+      bindings: bindingsOf(base),
+      parameters: base.project.parameters.map((parameter) =>
+        parameter.key === 'length' ? { ...parameter, sourceNote: '新版图纸标注' } : parameter,
+      ),
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.parameterRevision).toBe(1)
+    expect(rows[0]!.stage).toBe('draft')
+    expect(rows[0]!.state).toBe('pending')
+  })
+
+  it('解绑后草稿绑定为空：行列表为空（= 未关联尺寸链）', async () => {
+    const base = await createSpacerSnapshot({ length: '12.00', confirmed: true })
+    expect(workbenchRows(base, { bindings: [], parameters: base.project.parameters })).toEqual([])
+    // 快照没有被改写：正式绑定仍在。
+    expect(bindingsOf(base)).toHaveLength(1)
   })
 })

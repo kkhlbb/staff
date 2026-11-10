@@ -306,10 +306,30 @@ beforeEach(async () => {
       }
       return { ok: true as const, value: changeDraft }
     }),
-    unbindParameter: vi.fn<CunlianApi['unbindParameter']>(async () => ({
-      ok: false as const,
-      error: { code: 'INVALID_BINDING' as const, message: 'mock 未建立绑定' },
-    })),
+    unbindParameter: vi.fn<CunlianApi['unbindParameter']>(async request => {
+      // 与真实 main 同语义：没有草稿时先由快照建立草稿，再移除该绑定。
+      const base = drawingSnapshot ?? opened.snapshot
+      const draft = changeDraft ?? {
+        draftId: 'draft-mock-1',
+        draftRevision: 0,
+        baseToken: 'a'.repeat(16),
+        draftToken: 'b'.repeat(16),
+        parameters: base.project.parameters.map(item => ({ ...item })),
+        bindings: base.project.dimensionLinks
+          .filter((link): link is import('../project-file/types').ProjectFileParameterBindingLink => link.kind === 'parameter-binding')
+          .map(link => ({ ...link })),
+        confirmationCleared: false,
+      }
+      if (!draft.bindings.some(binding => binding.bindingId === request.bindingId)) {
+        return { ok: false as const, error: { code: 'INVALID_BINDING' as const, message: '绑定不存在' } }
+      }
+      changeDraft = {
+        ...draft,
+        draftRevision: draft.draftRevision + 1,
+        bindings: draft.bindings.filter(binding => binding.bindingId !== request.bindingId),
+      }
+      return { ok: true as const, value: changeDraft }
+    }),
     compareDrawings: vi.fn<CunlianApi['compareDrawings']>(async () => ({
       ok: false as const,
       error: { code: 'COMPARE_UNAVAILABLE' as const, message: 'mock 不提供图纸对比' },
@@ -1004,5 +1024,71 @@ describe('D 参数联动工作台（renderer mock 接线）', () => {
     expect(within(bench()).queryByText(/旧预览已作废/)).toBeNull()
     expect(confirmButton()).toBeEnabled()
     expect(within(bench()).getByText('预览有效：可以确认提交。')).toBeInTheDocument()
+  })
+
+  // 缺陷：草稿绑定只写 change.draft.bindings，区块却只看已确认快照 → 绑定成功后仍显示“未关联”。
+  it('D-BIND-1 绑定成功后行列表立即出现该环，并标「草稿态待确认」而非有效', async () => {
+    await openExample()
+    fireEvent.click(screen.getByRole('tab', { name: '工程图' }))
+    expect(await within(bench()).findByText('未关联尺寸链')).toBeInTheDocument()
+
+    fireEvent.click(within(bench()).getByRole('button', { name: '绑定参数' }))
+    await waitFor(() => expect(api.bindParameter).toHaveBeenCalled())
+    // 草稿修订号变化会重建工作区节点：每轮重新取当前节点，别抓着旧 DOM。
+    await waitFor(() => expect(bench()).toHaveTextContent('草稿态待确认（尚未确认提交）'))
+
+    const panel = bench()
+    expect(within(panel).queryByText('未关联尺寸链')).toBeNull()
+    expect(within(panel).getByText(/已关联 1 个组成环（其中 1 个草稿态待确认）/)).toBeInTheDocument()
+    // 未确认 ≠ 有效：不得显示“已确认生效”。
+    expect(within(panel).queryByText('已确认生效')).toBeNull()
+    expect(within(panel).queryByText(/未关联尺寸链：尚无参数绑定/)).toBeNull()
+  })
+
+  it('D-BIND-2 确认提交后同一绑定变「已确认生效」，不再显示草稿态', async () => {
+    opened.snapshot = (await createSpacerSnapshot({
+      length: '12.00',
+      confirmed: true,
+      material: '',
+    })) as unknown as ProjectOpenValue['snapshot']
+    await openExample()
+    fireEvent.click(screen.getByRole('tab', { name: '工程图' }))
+    expect(await within(bench()).findByText('已确认生效')).toBeInTheDocument()
+
+    fireEvent.click(within(bench()).getByRole('button', { name: '绑定参数' }))
+    await waitFor(() => expect(api.bindParameter).toHaveBeenCalled())
+    await waitFor(() => expect(bench()).toHaveTextContent('草稿态待确认'))
+
+    fireEvent.click(within(bench()).getByRole('button', { name: '预览变更' }))
+    await waitFor(() => expect(api.previewChange).toHaveBeenCalled())
+    expect(await screen.findByText('预览：rev-d-mock-1')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '确认提交（一次原子写入）' }))
+    await waitFor(() => expect(api.applyChange).toHaveBeenCalled())
+    expect(await screen.findByText(/已提交新版本 rev-d-mock-1/)).toBeInTheDocument()
+
+    await waitFor(() => expect(bench()).toHaveTextContent('已确认生效'))
+    const panel = bench()
+    expect(within(panel).queryByText(/草稿态待确认/)).toBeNull()
+  })
+
+  it('D-BIND-3 解除绑定后该行消失，并回到「未关联尺寸链」', async () => {
+    opened.snapshot = (await createSpacerSnapshot({
+      length: '12.00',
+      confirmed: true,
+      material: '',
+    })) as unknown as ProjectOpenValue['snapshot']
+    await openExample()
+    fireEvent.click(screen.getByRole('tab', { name: '工程图' }))
+    expect(await within(bench()).findByText('已确认生效')).toBeInTheDocument()
+
+    fireEvent.click(within(bench()).getByRole('button', { name: '解除绑定' }))
+    await waitFor(() => expect(api.unbindParameter).toHaveBeenCalled())
+    await waitFor(() => expect(bench()).toHaveTextContent('未关联尺寸链'))
+
+    const panel = bench()
+    expect(within(panel).getByText(/未关联尺寸链：尚无参数绑定/)).toBeInTheDocument()
+    expect(within(panel).queryByText('已确认生效')).toBeNull()
+    expect(within(panel).queryByRole('button', { name: '解除绑定' })).toBeNull()
   })
 })

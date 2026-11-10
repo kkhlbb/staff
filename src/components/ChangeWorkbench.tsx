@@ -9,7 +9,7 @@ import type { ChangePreviewValue, SnapshotDto } from '../../desktop/shared/contr
 import type { ChangeEvent } from '../history/events'
 import { SPACER_PARAMETER_IDS, SPACER_PARAMETER_LABELS, SPACER_PART_ID } from '../drawing/types'
 import {
-  parameterBindingStatusRowsWithSnapshot,
+  parameterBindingWorkbenchRows,
   deriveReviewGroups,
 } from '../revisions/status'
 import { sourceBasisOf } from '../revisions/digest'
@@ -59,15 +59,25 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
   const [selectedParameter, setSelectedParameter] = useState(SPACER_PARAMETER_IDS.length)
   const [busy, setBusy] = useState(false)
 
+  /**
+   * 行列表 = 已确认快照 + 草稿绑定（草稿态标“待确认”，不当有效）。
+   * 只读 change.draft，不把草稿写进 project。
+   */
   const bindingRows = useMemo(
     () =>
-      parameterBindingStatusRowsWithSnapshot(project, props.events, (parameterId) => {
-        const parameter = project.parameters.find((item) => item.parameterId === parameterId)
-        return sourceBasisOf(snapshot, parameter?.sourceNote)
-      }),
-    [project, props.events, snapshot],
+      parameterBindingWorkbenchRows(
+        project,
+        props.events,
+        (parameterId) => {
+          const parameter = project.parameters.find((item) => item.parameterId === parameterId)
+          return sourceBasisOf(snapshot, parameter?.sourceNote)
+        },
+        change.draft,
+      ),
+    [project, props.events, snapshot, change.draft],
   )
   const unlinked = bindingRows.length === 0
+  const draftBindingCount = bindingRows.filter((row) => row.stage === 'draft').length
   const groups =
     change.preview?.groups ??
     deriveReviewGroups(project, {
@@ -112,7 +122,9 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
         <p className={unlinked ? 'change-workbench__unlinked' : undefined}>
           {unlinked
             ? '未关联尺寸链'
-            : `已关联 ${bindingRows.length} 个组成环；偏差/方向/目标不随参数同步。`}
+            : draftBindingCount === 0
+              ? `已关联 ${bindingRows.length} 个组成环；偏差/方向/目标不随参数同步。`
+              : `已关联 ${bindingRows.length} 个组成环（其中 ${draftBindingCount} 个草稿态待确认）；偏差/方向/目标不随参数同步。`}
         </p>
       </header>
 
@@ -200,8 +212,20 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
             {bindingRows.map((row) => (
               <li key={row.bindingId}>
                 <strong>{row.termSymbol}</strong> ← {row.parameterLabel}（param q={row.parameterValueQ}，环 q={row.termNominalQ}）
-                <span className={row.state === 'valid' ? 'change-workbench__ok' : 'change-workbench__pending'}>
-                  {row.state === 'valid' ? '同步有效' : `待核：${row.reasons.join('；')}`}
+                <span
+                  className={
+                    row.stage === 'draft'
+                      ? 'change-workbench__draft'
+                      : row.state === 'valid'
+                        ? 'change-workbench__ok'
+                        : 'change-workbench__pending'
+                  }
+                >
+                  {row.stage === 'draft'
+                    ? '草稿态待确认（尚未确认提交）'
+                    : row.state === 'valid'
+                      ? '已确认生效'
+                      : `待核：${row.reasons.join('；')}`}
                 </span>
                 <button type="button" disabled={busy} onClick={() => void run(() => props.onUnbind(row.bindingId))}>
                   解除绑定

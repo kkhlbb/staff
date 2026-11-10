@@ -13,7 +13,11 @@ import { calculateChain } from '../domain/calculate'
 import type { ChainDefinition, ChainResult } from '../domain/types'
 import type { ChangeEvent } from '../history/events'
 import { SPACER_PARAMETER_LABELS } from '../drawing/types'
-import type { ProjectFileProject } from '../project-file/types'
+import type {
+  ProjectFileParameterBindingLink,
+  ProjectFileProject,
+  ProjectFileSpacerParameter,
+} from '../project-file/types'
 import {
   REVIEW_RULES_VERSION,
   evaluateReviewChecklist,
@@ -224,6 +228,100 @@ export function parameterBindingStatusRowsWithSnapshot(
       return { ...row, reasons, state: 'pending' }
     }
     return row
+  })
+}
+
+export type ParameterBindingRowStage = 'confirmed' | 'draft'
+
+export interface ParameterBindingWorkbenchRow extends ParameterBindingStatusRow {
+  /**
+   * confirmed：该绑定已在正式快照里，状态仍由确认凭据派生；
+   * draft：只存在于 `change.draft.bindings`，尚未确认提交，禁止显示成有效。
+   */
+  stage: ParameterBindingRowStage
+}
+
+export interface DraftBindingInput {
+  bindings: readonly ProjectFileParameterBindingLink[]
+  parameters: readonly ProjectFileSpacerParameter[]
+}
+
+/**
+ * 工作台行列表：已确认快照 + 草稿绑定合并。
+ *
+ * 草稿保存的是“确认后应有的完整绑定集合”，所以有草稿时以它的 bindings 为准：
+ * - 与正式快照同一 bindingId、同一 term/part/parameter，且该参数在草稿里
+ *   数值与修订号都没变 → 沿用正式派生态（valid / pending + 凭据原因）；
+ * - 其余一律 draft + pending，并写明“草稿态：尚未确认提交”，不冒充有效；
+ * - 草稿里没有的绑定（例如解绑后）不出现，因此 `rows.length === 0` 就是
+ *   “未关联尺寸链”的判据。
+ *
+ * 本函数只读 project/events 与草稿，不把草稿写回 project，也不改快照语义。
+ */
+export function parameterBindingWorkbenchRows(
+  project: ProjectFileProject,
+  events: readonly ChangeEvent[],
+  sourceBasisFor: (parameterId: string) => string,
+  draft: DraftBindingInput | null,
+): ParameterBindingWorkbenchRow[] {
+  const confirmedRows = parameterBindingStatusRowsWithSnapshot(project, events, sourceBasisFor)
+  if (draft === null) {
+    return confirmedRows.map((row) => ({ ...row, stage: 'confirmed' as const }))
+  }
+  const confirmedLinks = new Map(
+    project.dimensionLinks
+      .filter((link): link is ProjectFileParameterBindingLink => link.kind === 'parameter-binding')
+      .map((link) => [link.bindingId, link]),
+  )
+  const confirmedRowsById = new Map(confirmedRows.map((row) => [row.bindingId, row]))
+  const snapshotParameters = new Map(
+    project.parameters.map((parameter) => [parameter.parameterId, parameter]),
+  )
+  const draftParameters = new Map(
+    draft.parameters.map((parameter) => [parameter.parameterId, parameter]),
+  )
+
+  return draft.bindings.map((binding): ParameterBindingWorkbenchRow => {
+    const confirmedLink = confirmedLinks.get(binding.bindingId)
+    const confirmedRow = confirmedRowsById.get(binding.bindingId)
+    const draftParameter = draftParameters.get(binding.parameterId)
+    const snapshotParameter = snapshotParameters.get(binding.parameterId)
+    const bindingUnchanged =
+      confirmedLink !== undefined &&
+      confirmedLink.termId === binding.termId &&
+      confirmedLink.partId === binding.partId &&
+      confirmedLink.parameterId === binding.parameterId
+    const parameterUnchanged =
+      draftParameter !== undefined &&
+      snapshotParameter !== undefined &&
+      draftParameter.valueQ === snapshotParameter.valueQ &&
+      draftParameter.parameterRevision === snapshotParameter.parameterRevision &&
+      // 只改来源备注不升修订号，但确认凭据里的来源基准已变 → 必须重新确认。
+      (draftParameter.sourceNote ?? '') === (snapshotParameter.sourceNote ?? '')
+    if (confirmedRow !== undefined && bindingUnchanged && parameterUnchanged) {
+      return { ...confirmedRow, stage: 'confirmed' }
+    }
+
+    const term = project.dimensionChain.terms.find((item) => item.id === binding.termId) ?? null
+    const parameter = draftParameter ?? snapshotParameter ?? null
+    const reasons = ['草稿态：尚未确认提交']
+    if (term === null) reasons.push(`组成环 ${binding.termId} 不存在（悬空引用）`)
+    if (parameter === null) reasons.push(`参数 ${binding.parameterId} 不存在（悬空引用）`)
+    return {
+      bindingId: binding.bindingId,
+      termId: binding.termId,
+      termSymbol: term?.symbol ?? binding.termId,
+      parameterId: binding.parameterId,
+      parameterLabel: parameter === null ? binding.parameterId : SPACER_PARAMETER_LABELS[parameter.key],
+      parameterValueQ: parameter?.valueQ ?? 0,
+      parameterRevision: parameter?.parameterRevision ?? 0,
+      termNominalQ: term?.nominalQ ?? 0,
+      termRevision: term?.termRevision ?? 0,
+      drawingFingerprint: project.drawings[0]?.dataFingerprint ?? null,
+      state: 'pending',
+      stage: 'draft',
+      reasons,
+    }
   })
 }
 

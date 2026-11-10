@@ -81,6 +81,13 @@
   margin: 0 8px;
 }
 
+/* 草稿态：绑定已在草稿里、尚未确认提交；与“待核凭据”用不同颜色区分。 */
+.change-workbench__draft {
+  color: #1d4ed8;
+  margin: 0 8px;
+  font-weight: 600;
+}
+
 .change-workbench__stale,
 .change-workbench__error {
   border: 1px solid #b91c1c;

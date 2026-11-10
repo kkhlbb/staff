@@ -53,7 +53,10 @@ e2e 阻塞说明：本机存在由用户/先前流程启动的实例 PID 57204�
 
 ## 4. 保存前后 `.cunlian` 指纹（真实提交）
 
-由 `desktop/tests/evidence.record.test.ts` 实际执行 stage→preview→apply 后复制文件：
+证据靠 `npm run evidence:record` 显式生成，不随测试变化：该命令执行
+`scripts/evidence-record.ts` → `desktop/tests/helpers/evidenceRecord.ts`，
+真实跑完 stage→preview→apply 后把文件写入本目录。`desktop/tests/evidence.record.test.ts`
+只在 `os.tmpdir()` 里校验生成出来的字节，跑单测不会重写这里的任何文件。
 
 | 文件 | 字节 | SHA-256 |
 |---|---:|---|
