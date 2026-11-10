@@ -1,4 +1,6 @@
-import { defineConfig, type ConfigEnv, type UserConfig } from 'vite'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { defineConfig, type ConfigEnv, type Plugin, type UserConfig } from 'vite'
 
 /**
  * Forge 的 Vite 插件默认用入口文件名作 `[name].cjs`，而本仓库主进程入口是
@@ -10,9 +12,38 @@ interface ForgeViteEnv extends ConfigEnv {
   forgeConfigSelf: { entry: string }
 }
 
+/** 与 pdfjs-dist 同版本的 worker 源文件（精确版本见 package.json）。 */
+const PDF_WORKER_SOURCE = fileURLToPath(
+  new URL('./node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url),
+)
+
+/**
+ * 主进程（Node 环境）里 pdfjs 使用 fake worker，会动态 import worker 模块；
+ * Rollup 不会把动态 import 的模块内联进 main.cjs，因此必须把 worker 作为
+ * 独立文件发到 `.vite/build/`，与 main.cjs 同目录。Forge 只把 `.vite` 打进
+ * asar，所以这个文件会随包进入 `app.asar/.vite/build/pdf.worker.mjs`。
+ *
+ * 生产解析侧（desktop/main/pdfSourceInspect.ts）用绝对 file URL 指向同目录
+ * 文件，不再依赖 pdfjs 默认的相对路径 `./pdf.worker.mjs` 由谁解析。
+ */
+function pdfWorkerAsset(): Plugin {
+  return {
+    name: 'cunlian-pdf-worker-asset',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'pdf.worker.mjs',
+        source: readFileSync(PDF_WORKER_SOURCE),
+      })
+    },
+  }
+}
+
 export default defineConfig((env) => {
   const forgeEnv = env as ForgeViteEnv
   return {
+    plugins: [pdfWorkerAsset()],
     build: {
       lib: {
         entry: forgeEnv.forgeConfigSelf.entry,

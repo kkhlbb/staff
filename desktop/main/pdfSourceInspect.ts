@@ -8,9 +8,34 @@
  * 本模块只被 main 调用，不进入 renderer；renderer 仍通过 `readAttachment`
  * 读取确切版本字节并用 pdfjs 渲染。
  */
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import type { SourcePdfPageInfo } from '../shared/contracts'
 import { normalizePdfPageBox } from '../../src/sources/pdfCoordinates'
+
+/**
+ * pdfjs 在 Node 环境使用 fake worker，并通过动态 import 加载 worker 模块。
+ * 打包后 main.cjs 位于 `app.asar/.vite/build/`，worker 由 vite.main.config.ts
+ * 发到同一目录；这里显式把 workerSrc 指到该文件的绝对 file URL。若不显式设置，
+ * pdfjs 默认的 `./pdf.worker.mjs` 会由 CJS bundle 相对 main.cjs 解析，路径
+ * 虽然相同，但依赖 pdfjs 内部默认值，打包后一旦漏发 worker 就只在运行时炸。
+ *
+ * 单测（Vitest）里源码不是 CJS bundle、没有 __dirname，找不到候选时保持
+ * pdfjs 测试环境的默认解析，不改变现有测试行为。
+ */
+const PDF_WORKER_FILE = 'pdf.worker.mjs'
+
+function configurePdfWorker(): void {
+  if (typeof __dirname !== 'string') return
+  const candidate = join(__dirname, PDF_WORKER_FILE)
+  if (existsSync(candidate)) {
+    GlobalWorkerOptions.workerSrc = pathToFileURL(candidate).href
+  }
+}
+
+configurePdfWorker()
 
 export interface SourcePdfInspection {
   pageCount: number
