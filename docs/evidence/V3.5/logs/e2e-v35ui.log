@@ -1,0 +1,14 @@
+$ node desktop/tests/e2e/v35ui.mjs
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35-00-workspace.png
+opened {"documentId":"doc-47e3cb8b-c8d9-4b4e-9426-71dd6d79bbf2","revisionId":"sr-486c0f78-190a-479e-b6aa-c40b2a8e3ac8","pageCount":2,"sha256":"fec9afafcb044d550422bda68841383543aa99e68b8ba208797dd525082145e9","path":"/Users/aston/DSH/tmp/cunlian-v35/P35-imported.cunlian"}
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35-01-import.png
+saved /Users/aston/DSH/tmp/cunlian-v35/P35-imported.cunlian
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35-02-wizard.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35-02b-wizard-compare.png
+requirement {"requirementId":"req-ae245011-c657-47f7-8f8f-ab02c8bca5e2","revisionId":"reqrev-aadfb889-e320-43c9-9e1f-9ea432fa3e10","lowerQ":1000,"upperQ":3000,"source":{"documentId":"doc-47e3cb8b-c8d9-4b4e-9426-71dd6d79bbf2","revisionId":"sr-486c0f78-190a-479e-b6aa-c40b2a8e3ac8","sha256":"fec9afafcb044d550422bda68841383543aa99e68b8ba208797dd525082145e9","blobKey":"blob-268e4db6-983a-4744-834c-f655d8e97056","page":2,"rectPdf":[71.00081566930169,555.837189572399,511.00587052131215,690.8393911833266],"pageBoxPdf":[0,0,594.95996,841.91998]},"checkStatus":"satisfied","revisionCount":1,"path":"/Users/aston/DSH/tmp/cunlian-v35/P35-imported.cunlian"}
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35-03-confirmed-review.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35-04-locate.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35-05-auto-preview.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.5/screenshots/v35-06-requirement-panel.png
+DONE
+EXIT_CODE=0

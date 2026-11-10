@@ -699,7 +699,7 @@ export function registerModelChannels(ipc: IpcMainLike, deps: ModelChannelDeps):
 }
 
 /** 用打开端同一套 assembleSnapshot 复核候选快照（含模型/关联引用）。 */
-function validateSnapshot(
+export function validateSnapshot(
   next: ProjectFileSnapshot,
   current: ProjectFileSnapshot,
 ): { ok: true } | { ok: false; error: { code: IpcErrorCode; message: string; detail?: string } } {

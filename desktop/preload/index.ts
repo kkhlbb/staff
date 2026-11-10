@@ -34,6 +34,9 @@ import {
   type RequestCloseResult,
   type SessionReattachValue,
   type SourceReadValue,
+  type SourceImportValue,
+  type RequirementEditValue,
+  type RequirementConfirmValue,
 } from '../shared/contracts'
 
 /**
@@ -189,6 +192,18 @@ const api: CunlianApi = {
   restoreRevisionDraft: (request) =>
     ipcRenderer.invoke(IPC_CHANNELS.changeRestore, request) as Promise<
       IpcResult<ChangeRestoreValue>
+    >,
+  importSource: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.sourceImport, request) as Promise<
+      IpcResult<SourceImportValue>
+    >,
+  stageRequirementEdit: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.requirementEdit, request) as Promise<
+      IpcResult<RequirementEditValue>
+    >,
+  confirmRequirement: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.requirementConfirm, request) as Promise<
+      IpcResult<RequirementConfirmValue>
     >,
 }
 

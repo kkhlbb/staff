@@ -4,7 +4,7 @@
  * 界面只消费 main 返回的权威预览/快照；不自行计算 q、不生成图纸、不把
  * “待核”显示成“已批准”。坏消息分五类独立呈现，互不合并。
  */
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangePreviewValue, SnapshotDto } from '../../desktop/shared/contracts'
 import type { ChangeEvent } from '../history/events'
 import { SPACER_PARAMETER_IDS, SPACER_PARAMETER_LABELS, SPACER_PART_ID } from '../drawing/types'
@@ -13,7 +13,9 @@ import {
   deriveReviewGroups,
 } from '../revisions/status'
 import { sourceBasisOf } from '../revisions/digest'
+import { REQUIREMENT_STATUS_LABEL } from '../requirements/types'
 import { DrawingCanvas } from './DrawingCanvas'
+import { RequirementStatusPanel } from './RequirementStatusPanel'
 import type { ChangeUiState } from '../workspace/useDesktopSession'
 import './ChangeWorkbench.css'
 
@@ -28,9 +30,16 @@ export interface ChangeWorkbenchProps {
   ) => Promise<unknown>
   onPreview: () => Promise<unknown>
   onApply: (reason: string) => Promise<unknown>
+  /** V3.5：合法输入自动驱动草稿+预览（带请求序号，迟到响应不覆盖新草稿）。 */
+  onAutoPreview: (
+    inputs: { innerDiameter: string; outerDiameter: string; length: string },
+    notes: { innerDiameter?: string; outerDiameter?: string; length?: string },
+  ) => Promise<unknown>
   onBind: (termId: string, partId: string, parameterId: string) => Promise<unknown>
   onUnbind: (bindingId: string) => Promise<unknown>
   onRestore: (revisionId: string) => Promise<unknown>
+  /** 复核区/工作台“定位任务书”。 */
+  onLocateRequirement: () => void
 }
 
 function qText(valueQ: number, decimals: number): string {
@@ -58,6 +67,26 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
   const [selectedTerm, setSelectedTerm] = useState(project.dimensionChain.terms[0]?.id ?? '')
   const [selectedParameter, setSelectedParameter] = useState(SPACER_PARAMETER_IDS.length)
   const [busy, setBusy] = useState(false)
+  const touched = useRef(false)
+  const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const propsRef = useRef(props)
+  useEffect(() => { propsRef.current = props }, [props])
+
+  // 合法输入自动驱动：用户改过输入后 400ms 防抖；序号与串行在会话层。
+  useEffect(() => {
+    if (!touched.current) return
+    if (autoTimer.current !== null) clearTimeout(autoTimer.current)
+    autoTimer.current = setTimeout(() => {
+      autoTimer.current = null
+      void propsRef.current.onAutoPreview(texts, notes)
+    }, 400)
+    return () => {
+      if (autoTimer.current !== null) {
+        clearTimeout(autoTimer.current)
+        autoTimer.current = null
+      }
+    }
+  }, [texts, notes])
 
   /**
    * 行列表 = 已确认快照 + 草稿绑定（草稿态标“待确认”，不当有效）。
@@ -103,17 +132,27 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
   }
 
   /**
-   * 「确认提交」当前为什么不能用。三种情况分开写：
-   * 预览已作废（带 main/本地给出的原因）、从未预览、正在处理。
+   * 「确认提交」当前为什么不能用。四种情况分开写：预览已作废、从未预览、
+   * 条款门禁、正在处理。
    */
+  const requirementRevision = change.preview?.requirement?.revision ?? null
+  const requirementBlocker =
+    requirementRevision !== null && change.preview !== null && change.preview.requirement !== null
+      ? change.preview.requirement.check.status === 'satisfied'
+        ? null
+        : `条款检查为「${REQUIREMENT_STATUS_LABEL[change.preview.requirement.check.status]}」：` +
+          `${change.preview.requirement.evaluation.reasons.join('；') || '请先补齐条款证据'}；正式版本保持在上一次提交。`
+      : null
   const confirmBlockedReason =
     change.staleReason !== null
       ? change.staleReason
       : change.preview === null
         ? '尚未预览：先点「预览变更」，预览成功后「确认提交」才可用。'
-        : busy
-          ? '正在处理，请稍候。'
-          : null
+        : requirementBlocker !== null
+          ? requirementBlocker
+          : busy
+            ? '正在处理，请稍候。'
+            : null
 
   return (
     <section className="change-workbench" aria-label="参数联动">
@@ -141,13 +180,13 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
             <input
               aria-label={`${SPACER_PARAMETER_LABELS[key]}（mm）`}
               value={texts[key]}
-              onChange={(event) => setTexts({ ...texts, [key]: event.target.value })}
+              onChange={(event) => { touched.current = true; setTexts({ ...texts, [key]: event.target.value }) }}
             />
             <input
               aria-label={`${SPACER_PARAMETER_LABELS[key]}来源备注`}
               placeholder="来源备注（可选）"
               value={notes[key] ?? ''}
-              onChange={(event) => setNotes({ ...notes, [key]: event.target.value })}
+              onChange={(event) => { touched.current = true; setNotes({ ...notes, [key]: event.target.value }) }}
             />
           </label>
         ))}
@@ -174,6 +213,15 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
         <p id="change-workbench-confirm-reason" className="change-workbench__hint">
           {confirmBlockedReason ?? '预览有效：可以确认提交。'}
         </p>
+        {change.autoState === 'pending' && (
+          <p className="change-workbench__hint" role="status">自动预览中：{change.autoMessage || '正在按当前输入重新计算…'}</p>
+        )}
+        {change.autoState === 'invalid' && (
+          <p className="change-workbench__error" role="alert">
+            输入待修正，当前检查未完成。{change.autoMessage !== '' ? `（${change.autoMessage}）` : ''}
+            上次有效几何保留，但旧通过资格已清除。
+          </p>
+        )}
         <label className="change-workbench__reason">
           变更理由
           <input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} />
@@ -252,6 +300,16 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
           <span>{change.error.message}</span>
           <span>未提交的编辑仍保留。</span>
         </div>
+      )}
+
+      {change.preview?.requirement?.revision && (
+        <RequirementStatusPanel
+          requirement={change.preview.requirement}
+          target={project.dimensionChain.target}
+          targetResult={change.preview.result}
+          onLocate={props.onLocateRequirement}
+          locateDisabled={props.sessionId === null}
+        />
       )}
 
       {change.preview !== null && <PreviewBody preview={change.preview} />}

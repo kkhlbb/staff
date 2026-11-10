@@ -1,0 +1,27 @@
+diff --git a/src/requirements/check.ts b/src/requirements/check.ts
+index a12a355..736d9da 100644
+--- a/src/requirements/check.ts
++++ b/src/requirements/check.ts
+@@ -251,14 +251,19 @@ function numericVerdict(
+   chain: ChainDefinition,
+ ): { result: ChainResult; status: RequirementCheckStatus; codes: RequirementReasonCode[] } {
+   // 只替换临时副本的 target；原链及其 target 不变（不写回 chain.target）。
++  // MUT-B35-3: 误把条款判定区间改为 chain.target（混用两套范围）。
++  const bounds = chain.target ?? {
++    minQ: requirement.lowerQ,
++    maxQ: requirement.upperQ,
++  }
+   const probe: ChainDefinition = {
+     terms: chain.terms.map((term) => ({ ...term })),
+-    target: { minQ: requirement.lowerQ, maxQ: requirement.upperQ },
++    target: bounds,
+     assumptions: chain.assumptions,
+   }
+   const result = calculateChain(probe)
+-  const lowerOk = result.minQ >= requirement.lowerQ
+-  const upperOk = result.maxQ <= requirement.upperQ
++  const lowerOk = result.minQ >= bounds.minQ
++  const upperOk = result.maxQ <= bounds.maxQ
+   if (lowerOk && upperOk) {
+     return { result, status: 'satisfied', codes: ['WITHIN_REQUIREMENT'] }
+   }

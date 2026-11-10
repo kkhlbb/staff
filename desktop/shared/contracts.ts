@@ -26,6 +26,13 @@ import type {
   ParameterDiffRow,
 } from '../../src/revisions/types'
 import type { DrawingCompareValue } from '../../src/revisions/compare'
+import type {
+  RequirementCheck,
+  RequirementEvaluation,
+  RequirementEditDraft,
+  RequirementRevision,
+} from '../../src/requirements/types'
+import type { PdfPageBox, PdfRect } from '../../src/sources/pdfCoordinates'
 
 /** 批次 A 全部 IPC 通道（与任务卡 §3 表格逐项对应）。 */
 export const IPC_CHANNELS = {
@@ -63,6 +70,10 @@ export const IPC_CHANNELS = {
   changeUnbind: 'change:unbind',
   changeCompare: 'change:compare',
   changeRestore: 'change:restore',
+  /** V3.5：桌面 PDF 导入/换版与任务书条款。 */
+  sourceImport: 'source:import',
+  requirementEdit: 'requirement:edit',
+  requirementConfirm: 'requirement:confirm',
 } as const
 
 export type IpcChannelName = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
@@ -148,6 +159,10 @@ export type CommonErrorCode =
   | 'REQUIREMENT_UNCHECKED'
   | 'REQUIREMENT_LIMIT_EXCEEDED'
   | 'INVALID_REQUIREMENT_INPUT'
+  | 'SOURCE_NOT_FOUND'
+  | 'SOURCE_UNREADABLE'
+  | 'PAGE_OUT_OF_RANGE'
+  | 'INVALID_REGION'
   | 'STL_EMPTY'
   | 'STL_TOO_LARGE'
   | 'STL_TOO_MANY_TRIANGLES'
@@ -524,6 +539,22 @@ export interface ChangePreviewValue {
   groups: ReviewGroups
   /** 预览阶段已知的阻断项（悬空引用/半同步等）；非空时确认按钮禁用。 */
   blockers: string[]
+  /**
+   * V3.5：本次预览的条款检查（main 权威）。无条款时为 null；原项目 target
+   * 的独立结果在 originalTargetResult 中，二者并列展示、互不覆盖。
+   */
+  requirement: RequirementPreviewValue | null
+}
+
+export interface RequirementPreviewValue {
+  check: RequirementCheck
+  evaluation: RequirementEvaluation
+  /** 当前活动条款版本；无条款为 null。 */
+  revision: RequirementRevision | null
+  /** 原项目 target 的独立计算结果（chain.target 未被条款覆盖）。 */
+  originalTargetResult: ChainResult | null
+  /** 条款区间数值结果（与 check.resultInterval 同源）。 */
+  requirementResult: ChainResult | null
 }
 
 export interface ChangeApplyRequest {
@@ -597,6 +628,94 @@ export interface ChangeRestoreValue {
   bindings: ProjectFileParameterBindingLink[]
   confirmationCleared: true
   notice: string
+}
+
+/* ------------------------------------------------------------------ */
+/* V3.5：桌面 PDF 导入 / 任务书条款                                    */
+/* ------------------------------------------------------------------ */
+
+/** main 解析出的 PDF 页面几何（未旋转 PDF 空间；页码从 1 起）。 */
+export interface SourcePdfPageInfo {
+  page: number
+  pageBoxPdf: PdfPageBox
+  widthPt: number
+  heightPt: number
+  rotate: number
+}
+
+export interface SourceImportRequest {
+  sessionId: string
+  baseEditSeq: number
+  /** 传入既有 documentId 表示同一文档换版；不传/为 null 新建文档。 */
+  documentId?: string | null
+}
+
+export interface SourceImportValue {
+  acceptedSeq: number
+  documentId: string
+  revisionId: string
+  blobKey: string
+  fileName: string
+  sha256: string
+  byteSize: number
+  pageCount: number
+  /** 供框选页身份校验；字节仍只由 readAttachment 按 revisionId 读取。 */
+  pages: SourcePdfPageInfo[]
+  snapshot: SnapshotDto
+  recovery: RecoveryWriteState | 'none'
+  warning?: string
+}
+
+/** 条款编辑中的未确认表单（只存在 main 内存；不写正式条款）。 */
+export interface RequirementEditRequest {
+  sessionId: string
+  baseEditSeq: number
+  /** null 表示取消编辑，回到原活动条款。 */
+  edit: RequirementEditDraft | null
+}
+
+export interface RequirementEditValue {
+  baseToken: string
+  acceptedSeq: number
+  activeRequirementRevisionId: string | null
+  hasPendingEdit: boolean
+}
+
+export interface RequirementConfirmSource {
+  documentId: string
+  revisionId: string
+  page: number
+  rectPdf: PdfRect
+  pageBoxPdf: PdfPageBox
+}
+
+export interface RequirementConfirmRequest {
+  sessionId: string
+  baseToken: string
+  expectedActiveRequirementRevisionId: string | null
+  /** 更新既有条款时的 requirementId；首版为 null。 */
+  requirementId: string | null
+  source: RequirementConfirmSource
+  confirmedText: string
+  lowerText: string
+  upperText: string
+  changeReason: string
+  /** 必须是显式确认；false/缺省一律拒绝。 */
+  confirmed: true
+}
+
+export interface RequirementConfirmValue {
+  requirementId: string
+  requirementRevisionId: string
+  configRevisionId: string
+  baselineCheck: RequirementCheck
+  acceptedSeq: number
+  savedSeq: number
+  path: string
+  fingerprint: string
+  snapshot: SnapshotDto
+  recovery: 'none'
+  warnings: string[]
 }
 
 /**
@@ -736,6 +855,18 @@ export interface CunlianApi {
   compareDrawings(request: ChangeCompareRequest): Promise<IpcResult<ChangeCompareValueResponse>>
   /** 从旧版建立新草稿：继承绑定记录、不继承当前确认，正式指针不变。 */
   restoreRevisionDraft(request: ChangeRestoreRequest): Promise<IpcResult<ChangeRestoreValue>>
+
+  /* ---- V3.5：桌面 PDF 与任务书条款（新增，旧函数不变） ----------------- */
+  /** 系统对话框选 PDF；main 读字节、算 SHA-256、解析页数/页框并原子接纳。 */
+  importSource(request: SourceImportRequest): Promise<IpcResult<SourceImportValue>>
+  /** 登记/更新未确认条款表单；任何变化递增代数并使旧预览失效。 */
+  stageRequirementEdit(
+    request: RequirementEditRequest,
+  ): Promise<IpcResult<RequirementEditValue>>
+  /** 显式确认：新建不可变条款版本并原子写入配置版本与基线检查。 */
+  confirmRequirement(
+    request: RequirementConfirmRequest,
+  ): Promise<IpcResult<RequirementConfirmValue>>
 }
 
 /** 应用与 IPC 协议的稳定标识，测试与契约文档共用。 */

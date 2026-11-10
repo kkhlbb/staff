@@ -13,6 +13,8 @@ import { ModelViewport } from '../components/ModelViewport'
 import { DEMO_PARTS, demoPart, isBuiltinPartId, partPropertyRows, qToMm } from '../parts/shaftDemo'
 import { SpacerDrawingPanel } from '../components/SpacerDrawingPanel'
 import { ChangeWorkbench } from '../components/ChangeWorkbench'
+import { RequirementWizard } from '../components/RequirementWizard'
+import { RequirementStatusPanel } from '../components/RequirementStatusPanel'
 import { rebuildDrawingFromProject } from '../drawing/rebuildDrawing'
 import { dimensionText, resolveDimension } from '../drawing/formatDimension'
 import { formatParameterValue } from '../drawing/formatDimension'
@@ -21,6 +23,7 @@ import {
 } from '../drawing/types'
 import type { ProjectFileVisualReferenceLink } from '../project-file/types'
 import { isVisualReferenceLink } from '../project-file/types'
+import { REQUIREMENT_STATUS_LABEL } from '../requirements/types'
 import './Workspace.css'
 import './DesktopWorkspace.css'
 
@@ -59,6 +62,25 @@ export function DesktopWorkspace() {
   const session = useDesktopSession()
   const snapshot = session.state?.snapshot
   const project = snapshot?.project
+  const activeRequirement =
+    project?.requirementRevisions.find(
+      (item) => item.revisionId === project.activeRequirementRevisionId,
+    ) ?? null
+  const requirementSource = activeRequirement === null
+    ? null
+    : {
+        revisionId: activeRequirement.source.revisionId,
+        page: activeRequirement.source.page,
+        rectPdf: activeRequirement.source.rectPdf,
+        pageBoxPdf: activeRequirement.source.pageBoxPdf,
+        label: `条款 ${activeRequirement.revisionId}`,
+      }
+  function locateRequirement(): void {
+    if (requirementSource === null) return
+    locateNonce.current += 1
+    setLocate({ ...requirementSource, label: `${requirementSource.label}#${locateNonce.current}` })
+    setTab(2)
+  }
   const drawingRebuilt = useMemo(
     () => (project ? rebuildDrawingFromProject(project) : null),
     [project],
@@ -88,6 +110,9 @@ export function DesktopWorkspace() {
   const [rightWidth, setRightWidth] = useState(312)
   const [reviewOpen, setReviewOpen] = useState(false)
   const [reviewHeight, setReviewHeight] = useState(200)
+  const [requirementOpen, setRequirementOpen] = useState(false)
+  const [locate, setLocate] = useState<import('../components/DesktopSessionViews').RequirementSourceLocation | null>(null)
+  const locateNonce = useRef(0)
 
   const [exportOpen, setExportOpen] = useState(false)
   const exportRef = useRef<HTMLButtonElement>(null)
@@ -241,8 +266,8 @@ export function DesktopWorkspace() {
       <button disabled={session.busy} aria-keyshortcuts="Meta+Shift+S" onClick={() => session.action('saveAs')}>另存为…</button>
       <button disabled={session.busy} onClick={() => session.action('importV2')}>导入 V2 备份…</button>
       <button disabled={session.busy} onClick={() => session.action('close')}>关闭窗口</button>
-      <button disabled aria-describedby="desktop-import-reason">导入资料</button>
-      <span id="desktop-import-reason" className="desktop-workspace__toolbar-note">PDF 资料导入本批次未实现</span>
+      <button disabled={session.busy || snapshot === undefined} onClick={() => void session.importSource(null)}>导入资料</button>
+      <span id="desktop-import-reason" className="desktop-workspace__toolbar-note">PDF 由主进程读取字节、SHA-256、页数与附件；失败不写入</span>
       <button disabled={model.busy || session.busy} onClick={() => void model.beginImport(false)}>导入模型…</button>
       {model.partId && <button disabled={model.busy || session.busy} onClick={() => void model.beginImport(true)}>替换模型…</button>}
       <div className="desktop-workspace__toolbar-end">
@@ -317,17 +342,19 @@ export function DesktopWorkspace() {
         {tabs.map((name, index) => <div key={name} role="tabpanel" id={`desktop-panel-${index}`} aria-labelledby={`desktop-tab-${index}`} tabIndex={0} hidden={tab !== index} className="desktop-workspace__canvas">
           {index === 0 && <div className="desktop-workspace__drawing-tab">
             <ChangeWorkbench
-              key={`${session.change.draft?.draftId ?? 'formal'}:${session.change.draft?.draftRevision ?? 0}:${project.currentRevisionId}`}
+              key={`${session.state?.sessionId ?? 'none'}:${project.currentRevisionId}`}
               snapshot={snapshot!}
               events={snapshot!.events}
               sessionId={sessionId}
               change={session.change}
               onStage={session.stageChange}
               onPreview={session.previewChange}
+              onAutoPreview={session.autoPreviewChange}
               onApply={session.applyChange}
               onBind={session.bindParameter}
               onUnbind={session.unbindParameter}
               onRestore={session.restoreRevisionDraft}
+              onLocateRequirement={locateRequirement}
             />
             <SpacerDrawingPanel
               sessionId={sessionId}
@@ -371,7 +398,7 @@ export function DesktopWorkspace() {
                 <button type="button" onClick={() => demo.activate()}>查看内置轴系示例</button>
               </div>
             </div>)}
-          {index > 1 && tab === index && snapshot && (index === 2 ? <DesktopSourceView key={session.state!.sessionId} snapshot={snapshot} sessionId={session.state!.sessionId!} /> : index === 3 ? <DesktopChainView snapshot={snapshot} edit={session.edit} disabled={session.busy} /> : <DesktopHistoryView snapshot={snapshot} />)}
+          {index > 1 && tab === index && snapshot && (index === 2 ? <DesktopSourceView key={`${session.state!.sessionId}:${locate?.label ?? 'none'}`} snapshot={snapshot} sessionId={session.state!.sessionId!} requirementSource={requirementSource} locate={locate} onImportVersion={(documentId) => void session.importSource(documentId)} /> : index === 3 ? <DesktopChainView snapshot={snapshot} edit={session.edit} disabled={session.busy} /> : <DesktopHistoryView snapshot={snapshot} />)}
         </div>)}
       </section>
       {rightOpen ? <Splitter label="属性栏宽度" value={rightWidth} min={240} max={340} reverse onChange={setRightWidth} /> : <div />}
@@ -441,9 +468,40 @@ export function DesktopWorkspace() {
       <div id="desktop-review-content" hidden={!reviewOpen} className="desktop-workspace__review-groups">
         <section><h3>变更</h3>{session.change.preview ? <><p>预览 {session.change.preview.drawing.record.revisionId}：受影响环 {session.change.preview.affectedTermIds.length} 个；旧结果 {formatMm(session.change.preview.previousResult.minQ)} ～ {formatMm(session.change.preview.previousResult.maxQ)} mm → 新结果 {formatMm(session.change.preview.result.minQ)} ～ {formatMm(session.change.preview.result.maxQ)} mm。</p><p>受影响环不是错误；确认前可在“工程图”页查看逐环 diff。</p></> : <p>尚无变更预览。</p>}{session.change.staleReason && <p role="alert">预览已过期：{session.change.staleReason}</p>}</section>
         <section><h3>校核</h3><p>{calculation}</p>{result && <p>极限范围 {formatMm(result.minQ)} 至 {formatMm(result.maxQ)} mm</p>}{parsed && !parsed.ok && Object.entries(parsed.cellErrors).map(([field, message]) => <p key={field}>{field}：{message}</p>)}</section>
+        <section aria-label="任务书要求">
+          <h3>任务书要求（唯一判定依据）</h3>
+          {activeRequirement === null ? <p>尚未绑定任务书要求。原项目目标仍在独立展示与计算。</p> : <>
+            <p>活动条款 {activeRequirement.requirementId} · 版本 {activeRequirement.revisionId} · {formatMm(activeRequirement.lowerQ)} ～ {formatMm(activeRequirement.upperQ)} mm（闭区间）</p>
+            <p>来源 {activeRequirement.source.revisionId} 第 {activeRequirement.source.page} 页 · SHA-256 {activeRequirement.source.sha256.slice(0, 12)}…</p>
+            {project.currentRequirementCheck && <p>当前正式检查（冻结）：{REQUIREMENT_STATUS_LABEL[project.currentRequirementCheck.status]} · {project.currentRequirementCheck.reasonCodes.join('、')}</p>}
+          </>}
+          <div className="desktop-workspace__model-dialog-actions">
+            <button type="button" disabled={session.busy || snapshot === undefined} onClick={() => setRequirementOpen(true)}>{activeRequirement === null ? '绑定任务书要求…' : '更新条款（新建版本）…'}</button>
+            <button type="button" disabled={activeRequirement === null} onClick={locateRequirement}>定位任务书</button>
+            {snapshot.documents.length === 0 && <button type="button" disabled={session.busy} onClick={() => void session.importSource(null)}>先导入任务书 PDF…</button>}
+          </div>
+          {session.change.preview?.requirement?.revision && (
+            <RequirementStatusPanel
+              requirement={session.change.preview.requirement}
+              target={project.dimensionChain.target}
+              targetResult={session.change.preview.result}
+              onLocate={locateRequirement}
+              locateDisabled={session.busy}
+            />
+          )}
+        </section>
         <section><h3>待办</h3><p>来源 {sourceState}。尚无桌面审查结论。</p></section>
       </div>
     </section>
+    {requirementOpen && snapshot && sessionId && <RequirementWizard
+      snapshot={snapshot}
+      sessionId={sessionId}
+      active={activeRequirement}
+      previewRequirement={session.change.preview?.requirement ?? null}
+      onStageEdit={session.stageRequirementEdit}
+      onConfirm={session.confirmRequirement}
+      onClose={() => { void session.stageRequirementEdit(null); setRequirementOpen(false) }}
+    />}
     {dialogs}
   </main>
 }

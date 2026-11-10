@@ -57,8 +57,27 @@ export function DesktopChainView({ snapshot, edit, disabled }: {
   </div>
 }
 
-export function DesktopSourceView({ snapshot, sessionId }: { snapshot: SnapshotDto; sessionId: string }) {
-  const [location, setLocation] = useState({ revisionId: snapshot.revisions[0]?.id ?? '', page: 1, termId: null as string | null })
+export interface RequirementSourceLocation {
+  revisionId: string
+  page: number
+  rectPdf: readonly [number, number, number, number]
+  pageBoxPdf: readonly [number, number, number, number]
+  label: string
+}
+
+export function DesktopSourceView({ snapshot, sessionId, requirementSource, locate, onImportVersion }: {
+  snapshot: SnapshotDto
+  sessionId: string
+  requirementSource: RequirementSourceLocation | null
+  /** 外部（复核区“定位任务书”）请求打开的确切版本/页码/选区。 */
+  locate: RequirementSourceLocation | null
+  onImportVersion: (documentId: string) => void
+}) {
+  const [location, setLocation] = useState({
+    revisionId: locate?.revisionId ?? snapshot.revisions[0]?.id ?? '',
+    page: locate?.page ?? 1,
+    termId: locate === null ? null : '__requirement__',
+  })
   const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
   const revision = snapshot.revisions.find(item => item.id === location.revisionId)
@@ -74,8 +93,19 @@ export function DesktopSourceView({ snapshot, sessionId }: { snapshot: SnapshotD
     <p>读取当前会话内的确切附件版本；有绑定不代表来源已审查。</p>
     {!snapshot.revisions.length ? <p role="status">没有来源 PDF。资料导入本批次未实现。</p> : <>
       <label>来源版本 <select aria-label="来源版本" value={location.revisionId} onChange={event => setLocation({ revisionId: event.target.value, page: 1, termId: null })}>{snapshot.revisions.map(rev => <option key={rev.id} value={rev.id}>{rev.fileName} · {rev.id}</option>)}</select></label>
-      <ul className="desktop-workspace__locations">{snapshot.bindings.map(binding => <li key={binding.id}><span>{snapshot.project.dimensionChain.terms.find(term => term.id === binding.termId)?.symbol ?? binding.termId} · 第 {binding.page} 页 · {binding.revisionId} </span><button disabled={!snapshot.revisions.some(rev => rev.id === binding.revisionId)} onClick={() => { setLocation({ revisionId: binding.revisionId, page: binding.page, termId: binding.termId }); setZoom(1); setRotation(0) }}>查看原图位置</button></li>)}</ul>
-      {missing ? <p role="alert">附件不可用：此版本已声明缺失，无法显示原图。</p> : revision ? <PdfViewer readOnly revision={revision} bindings={snapshot.bindings} selectedTermId={location.termId} page={location.page} zoom={zoom} rotation={rotation}
+      {snapshot.documents.map(doc => <button key={doc.id} type="button" onClick={() => onImportVersion(doc.id)}>导入「{doc.title}」新版…</button>)}
+      <ul className="desktop-workspace__locations">{snapshot.bindings.map(binding => <li key={binding.id}><span>{snapshot.project.dimensionChain.terms.find(term => term.id === binding.termId)?.symbol ?? binding.termId} · 第 {binding.page} 页 · {binding.revisionId} </span><button disabled={!snapshot.revisions.some(rev => rev.id === binding.revisionId)} onClick={() => { setLocation({ revisionId: binding.revisionId, page: binding.page, termId: binding.termId }); setZoom(1); setRotation(0) }}>查看原图位置</button></li>)}
+        {requirementSource && <li><span>任务书条款 · 第 {requirementSource.page} 页 · {requirementSource.revisionId}（{requirementSource.label}）</span><button onClick={() => { setLocation({ revisionId: requirementSource.revisionId, page: requirementSource.page, termId: '__requirement__' }); setZoom(1); setRotation(0) }}>定位任务书</button></li>}
+      </ul>
+      {missing ? <p role="alert">附件不可用：此版本已声明缺失，无法显示原图。</p> : revision ? <PdfViewer readOnly revision={revision}
+        bindings={[...snapshot.bindings, ...(requirementSource ? [{
+          id: 'requirement-source', projectId: snapshot.project.id, termId: '__requirement__',
+          revisionId: requirementSource.revisionId,
+          documentId: snapshot.revisions.find(item => item.id === requirementSource.revisionId)?.documentId ?? '',
+          page: requirementSource.page, rectPdf: requirementSource.rectPdf, pageBoxPdf: requirementSource.pageBoxPdf,
+          note: '任务书条款选区', createdAt: '', reviewedTermRevision: null, reviewedAt: null, historicalAcceptance: null,
+        }] : [])]}
+        selectedTermId={location.termId} page={location.page} zoom={zoom} rotation={rotation}
         onPageChange={page => setLocation(current => ({ ...current, page }))} onZoomChange={setZoom} onRotationChange={setRotation} loadBytes={loadBytes}
         onSaveBinding={async () => ({ ok: false, message: '来源绑定写入本批次未接入' })} /> : <p role="alert">附件不可用：找不到来源版本元数据。</p>}
     </>}

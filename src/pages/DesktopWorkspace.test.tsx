@@ -238,6 +238,7 @@ beforeEach(async () => {
             },
             groups,
             blockers: [],
+            requirement: null,
           },
         }
       } catch (error) {
@@ -337,6 +338,24 @@ beforeEach(async () => {
     restoreRevisionDraft: vi.fn<CunlianApi['restoreRevisionDraft']>(async () => ({
       ok: false as const,
       error: { code: 'INVALID_REQUEST' as const, message: 'mock 不提供恢复' },
+    })),
+    // V3.5：默认取消导入、无待确认表单；用例按需覆盖。
+    importSource: vi.fn<CunlianApi['importSource']>(async () => ({
+      ok: false as const,
+      error: { code: 'CANCELLED' as const, message: '取消' },
+    })),
+    stageRequirementEdit: vi.fn<CunlianApi['stageRequirementEdit']>(async request => ({
+      ok: true as const,
+      value: {
+        baseToken: 'e'.repeat(16),
+        acceptedSeq: 0,
+        activeRequirementRevisionId: opened.snapshot.project.activeRequirementRevisionId,
+        hasPendingEdit: request.edit !== null,
+      },
+    })),
+    confirmRequirement: vi.fn<CunlianApi['confirmRequirement']>(async () => ({
+      ok: false as const,
+      error: { code: 'INVALID_REQUIREMENT_INPUT' as const, message: 'mock 不提供条款确认' },
     })),
   }
   vi.stubGlobal('cunlian', api)
@@ -1090,5 +1109,38 @@ describe('D 参数联动工作台（renderer mock 接线）', () => {
     expect(within(panel).getByText(/未关联尺寸链：尚无参数绑定/)).toBeInTheDocument()
     expect(within(panel).queryByText('已确认生效')).toBeNull()
     expect(within(panel).queryByRole('button', { name: '解除绑定' })).toBeNull()
+  })
+})
+
+describe('V3.5 复核区：任务书条款入口', () => {
+  it('打开向导：双范围并列、固定链与待确认表单登记', async () => {
+    await openExample()
+    fireEvent.click(screen.getByRole('button', { name: /复核与变更/ }))
+    const entry = await screen.findByRole('button', { name: '绑定任务书要求…' })
+    fireEvent.click(entry)
+    const dialog = await screen.findByRole('dialog', { name: '绑定任务书要求' })
+    expect(within(dialog).getByText('原项目目标')).toBeInTheDocument()
+    expect(within(dialog).getByText('任务书要求')).toBeInTheDocument()
+    expect(within(dialog).getByText(/唯一判定依据/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/项目唯一轴向链/)).toBeInTheDocument()
+
+    fireEvent.change(within(dialog).getByLabelText('条款原文'), {
+      target: { value: '轴向装配间隙 C 应为 0.1000～0.3000 mm，含两端' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('条款下限'), { target: { value: '0.1000' } })
+    fireEvent.change(within(dialog).getByLabelText('条款上限'), { target: { value: '0.3000' } })
+    expect(await within(dialog).findByText(/0\.1000 ～ 0\.3000 mm（闭区间/)).toBeInTheDocument()
+
+    await waitFor(
+      () => expect(api.stageRequirementEdit).toHaveBeenCalled(),
+      { timeout: 2000 },
+    )
+    const lastCall = (api.stageRequirementEdit as unknown as { mock: { calls: unknown[][] } })
+      .mock.calls.at(-1)![0] as { edit: { lowerText: string; upperText: string } }
+    expect(lastCall.edit.lowerText).toBe('0.1000')
+    expect(lastCall.edit.upperText).toBe('0.3000')
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '取消' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '绑定任务书要求' })).toBeNull())
   })
 })

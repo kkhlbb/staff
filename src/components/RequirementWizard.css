@@ -1,0 +1,156 @@
+.requirement-wizard__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(15 23 42 / 55%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.requirement-wizard {
+  width: min(1080px, 96vw);
+  max-height: 92vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 24px 24px;
+  box-shadow: 0 20px 60px rgb(15 23 42 / 35%);
+  color: #0f172a;
+}
+
+.requirement-wizard__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.requirement-wizard__header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.requirement-wizard__hint {
+  color: #475569;
+  font-size: 13px;
+}
+
+.requirement-wizard__warning {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.requirement-wizard__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.requirement-wizard__row > label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  min-width: 180px;
+}
+
+.requirement-wizard__row > label.requirement-wizard__text {
+  flex: 1 1 100%;
+}
+
+.requirement-wizard__row input,
+.requirement-wizard__row select,
+.requirement-wizard__row textarea,
+.requirement-wizard__reason input {
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.requirement-wizard__pdf {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px;
+  margin: 8px 0 16px;
+  max-height: 46vh;
+  overflow: auto;
+}
+
+.requirement-wizard__compare,
+.requirement-wizard__result {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 12px 0;
+  background: #f8fafc;
+  font-size: 13px;
+}
+
+.requirement-wizard__compare h3,
+.requirement-wizard__result h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.requirement-wizard__compare dl {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.requirement-wizard__compare dl > div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 8px;
+}
+
+.requirement-wizard__compare dt {
+  font-weight: 600;
+}
+
+.requirement-wizard__compare dd {
+  margin: 0;
+}
+
+.requirement-wizard__reason {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  margin: 12px 0;
+}
+
+.requirement-wizard__confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin: 8px 0;
+}
+
+.requirement-wizard__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.requirement-wizard__primary {
+  background: #0f172a;
+  color: #fff;
+  border: 1px solid #0f172a;
+  border-radius: 6px;
+  padding: 8px 16px;
+}
+
+.requirement-wizard__primary:disabled {
+  opacity: 0.45;
+}

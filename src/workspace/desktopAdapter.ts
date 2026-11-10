@@ -32,6 +32,12 @@ import type {
   ChangeCompareValueResponse,
   ChangeRestoreRequest,
   ChangeRestoreValue,
+  SourceImportRequest,
+  SourceImportValue,
+  RequirementEditRequest,
+  RequirementEditValue,
+  RequirementConfirmRequest,
+  RequirementConfirmValue,
 } from '../../desktop/shared/contracts'
 
 export interface DesktopSessionState {
@@ -382,6 +388,64 @@ export class DesktopSessionAdapter {
     request: ChangeRestoreRequest,
   ): Promise<IpcResult<ChangeRestoreValue>> {
     return this.api.restoreRevisionDraft(request)
+  }
+
+  /* ---- V3.5：桌面 PDF 与条款 --------------------------------------- */
+
+  async importSource(request: SourceImportRequest): Promise<IpcResult<SourceImportValue>> {
+    const result = await this.api.importSource(request)
+    if (result.ok) {
+      this.state = {
+        ...this.state,
+        status: 'open',
+        snapshot: result.value.snapshot,
+        acceptedSeq: result.value.acceptedSeq,
+        localSeq: Math.max(this.state.localSeq, result.value.acceptedSeq),
+        dirty: result.value.acceptedSeq > this.state.savedSeq,
+        recovery: result.value.recovery,
+        lastError: undefined,
+      }
+      this.emit()
+    } else {
+      this.state = { ...this.state, lastError: result.error }
+      this.emit()
+    }
+    return result
+  }
+
+  async stageRequirementEdit(
+    request: RequirementEditRequest,
+  ): Promise<IpcResult<RequirementEditValue>> {
+    return this.api.stageRequirementEdit(request)
+  }
+
+  /** 条款确认已由 main 原子写盘；成功只重同步权威快照与保存状态。 */
+  async confirmRequirement(
+    request: RequirementConfirmRequest,
+  ): Promise<IpcResult<RequirementConfirmValue>> {
+    const result = await this.api.confirmRequirement(request)
+    if (result.ok) {
+      this.state = {
+        ...this.state,
+        status: 'open',
+        snapshot: result.value.snapshot,
+        path: result.value.path,
+        fingerprint: result.value.fingerprint,
+        acceptedSeq: result.value.acceptedSeq,
+        localSeq: Math.max(this.state.localSeq, result.value.acceptedSeq),
+        savedSeq: result.value.savedSeq,
+        saveStateKnown: true,
+        dirty: false,
+        recovery: 'none',
+        warnings: result.value.warnings,
+        lastError: undefined,
+      }
+      this.emit()
+    } else {
+      this.state = { ...this.state, lastError: result.error }
+      this.emit()
+    }
+    return result
   }
 
   private scheduleStage(): void {

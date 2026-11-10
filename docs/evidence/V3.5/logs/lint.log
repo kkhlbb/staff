@@ -1,0 +1,6 @@
+$ npm run lint
+
+> staff@3.0.0 lint
+> eslint .
+
+EXIT_CODE=0

@@ -1,0 +1,13 @@
+diff --git a/src/requirements/check.ts b/src/requirements/check.ts
+index a12a355..0a07449 100644
+--- a/src/requirements/check.ts
++++ b/src/requirements/check.ts
+@@ -215,6 +215,8 @@ function sourceProblems(
+   requirement: RequirementRevision,
+ ): RequirementReasonCode[] {
+   const codes: RequirementReasonCode[] = []
++  // MUT-B35-2: 跳过来源换版/失效检查，旧“满足”继续有效。
++  if (codes.length === 0) return codes
+   const document = snapshot.documents.find(
+     (item) => item.id === requirement.source.documentId,
+   )

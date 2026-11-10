@@ -11,6 +11,7 @@ import type {
 } from '../../desktop/shared/contracts'
 import { DesktopSessionAdapter, type DesktopSessionState } from './desktopAdapter'
 import { chainToDraft, draftToChain, workspaceReducer, type WorkspaceAction } from './draft'
+import type { RequirementEditDraft } from '../requirements/types'
 
 /** 没有可写入的活动会话时统一使用的提示：所有提前返回的写路径都发同一条，不各自编文案。 */
 export const NO_WRITABLE_SESSION_NOTICE = '当前没有可写入的活动项目，请先保存项目文件。'
@@ -31,7 +32,11 @@ const EMPTY_CHANGE: ChangeUiState = {
   compare: null,
   error: null,
   notice: '',
+  autoState: 'idle',
+  autoMessage: '',
 }
+
+export type AutoPreviewState = 'idle' | 'pending' | 'valid' | 'invalid'
 
 export interface ChangeUiState {
   /** 归属会话：换会话即视为无草稿，不串场。 */
@@ -49,6 +54,9 @@ export interface ChangeUiState {
   compare: ChangeCompareValueResponse | null
   error: { code: string; message: string } | null
   notice: string
+  /** 自动预览状态：非法输入 → invalid（保留上次有效几何但不保留通过资格）。 */
+  autoState: AutoPreviewState
+  autoMessage: string
 }
 
 /** 仅持有适配器发布的会话快照；dirty gate 与文件事务始终由 main 执行。 */
@@ -65,6 +73,10 @@ export function useDesktopSession() {
   const adapter = useRef<DesktopSessionAdapter | null>(null)
   const locked = useRef(false)
   const [change, setChange] = useState<ChangeUiState>(EMPTY_CHANGE)
+  /** 自动预览的单调请求序号：迟到响应不得覆盖新草稿。 */
+  const autoSequence = useRef(0)
+  /** 自动预览串行链：避免两次 stage 抢同一 acceptedSeq。 */
+  const autoChain = useRef<Promise<unknown>>(Promise.resolve())
 
   const sessionId = state?.sessionId ?? null
   const changeView: ChangeUiState = change.sessionId === sessionId ? change : EMPTY_CHANGE
@@ -227,13 +239,165 @@ export function useDesktopSession() {
       })
       if (result.ok) {
         // 新草稿的 token 与旧预览不再对应：已有预览时必须留下作废原因，不能清成 null。
-        patchChange({ draft: result.value, preview: null, staleReason: invalidatedPreviewReason(), error: null, notice: result.value.notice ?? '' })
+        patchChange({ draft: result.value, preview: null, staleReason: invalidatedPreviewReason(), error: null, notice: result.value.notice ?? '', autoState: 'idle', autoMessage: '' })
       } else {
+        const invalidInput = result.error.code === 'INVALID_PARAMETER'
         patchChange({
           error: result.error,
-          preview: null,
-          staleReason: result.error.code === 'STALE_BASE' || result.error.code === 'STALE_DRAFT' ? result.error.message : null,
+          // 非法输入保留上次有效几何，但旧绿灯/提交资格立即失效。
+          ...(invalidInput ? {} : { preview: null }),
+          staleReason: invalidInput
+            ? '输入待修正，当前检查未完成。'
+            : result.error.code === 'STALE_BASE' || result.error.code === 'STALE_DRAFT'
+              ? result.error.message
+              : null,
+          autoState: invalidInput ? 'invalid' : 'idle',
+          autoMessage: invalidInput ? result.error.message : '',
         })
+      }
+      return result
+    },
+    /**
+     * 合法输入自动驱动草稿+预览（不点按钮）。
+     *
+     * - 序号单调：只有最新请求的响应可以写入界面；
+     * - 串行执行 stage/preview，避免同一 acceptedSeq 被抢；
+     * - 非法输入保留上次有效画面，但作废旧通过资格。
+     */
+    autoPreviewChange: async (
+      inputs: { innerDiameter: string; outerDiameter: string; length: string },
+      sourceNotes?: { innerDiameter?: string; outerDiameter?: string; length?: string },
+    ) => {
+      const target = requireSession()
+      if (target === null) return null
+      const seq = autoSequence.current + 1
+      autoSequence.current = seq
+      patchChange({ autoState: 'pending', autoMessage: '正在按当前输入重新计算…' })
+
+      const task = autoChain.current.then(async () => {
+        if (seq !== autoSequence.current) return null
+        const staged = await target.session.stageChange({
+          sessionId: target.sessionId,
+          baseEditSeq: target.acceptedSeq,
+          inputs,
+          ...(sourceNotes === undefined ? {} : { sourceNotes }),
+          reason: '参数变更（自动预览）',
+        })
+        if (seq !== autoSequence.current) return null
+        if (!staged.ok) {
+          patchChange({
+            error: staged.error,
+            // 保留上一次有效预览画面，但不再把它当当前有效结论。
+            staleReason: '输入待修正，当前检查未完成。',
+            autoState: 'invalid',
+            autoMessage: `${staged.error.code}：${staged.error.message}`,
+          })
+          return staged
+        }
+        patchChange({ draft: staged.value, error: null, notice: staged.value.notice ?? '' })
+        const previewed = await target.session.previewChange({
+          sessionId: target.sessionId,
+          baseToken: staged.value.baseToken,
+          draftToken: staged.value.draftToken,
+        })
+        if (seq !== autoSequence.current) return null
+        if (!previewed.ok) {
+          patchChange({
+            error: previewed.error,
+            staleReason: `自动预览未完成：${previewed.error.message}`,
+            autoState: 'invalid',
+            autoMessage: `${previewed.error.code}：${previewed.error.message}`,
+          })
+          return previewed
+        }
+        patchChange({
+          preview: previewed.value,
+          staleReason: null,
+          error: null,
+          autoState: 'valid',
+          autoMessage: '',
+        })
+        return previewed
+      })
+      autoChain.current = task.catch(() => undefined)
+      return task
+    },
+    importSource: async (documentId?: string | null) => {
+      const current = adapter.current
+      if (current === null) { setNotice('window.cunlian 不可用，请在桌面应用中执行文件操作。'); return null }
+      if (locked.current) return null
+      locked.current = true; setBusy(true); setNotice('')
+      try {
+        const flushed = await current.flushStage()
+        if (!flushed.ok) return flushed
+        const session = current.getState()
+        if (session.sessionId === null) {
+          setNotice(NO_WRITABLE_SESSION_NOTICE)
+          return null
+        }
+        const result = await current.importSource({
+          sessionId: session.sessionId,
+          baseEditSeq: session.acceptedSeq,
+          ...(documentId === undefined ? {} : { documentId }),
+        })
+        report(result)
+        return result
+      } finally {
+        locked.current = false; setBusy(false); void refresh()
+      }
+    },
+    stageRequirementEdit: async (edit: RequirementEditDraft | null) => {
+      const target = requireSession()
+      if (target === null) return null
+      const result = await target.session.stageRequirementEdit({
+        sessionId: target.sessionId,
+        baseEditSeq: target.acceptedSeq,
+        edit,
+      })
+      if (!result.ok) patchChange({ error: result.error })
+      else if (edit !== null) {
+        patchChange({
+          preview: null,
+          staleReason: invalidatedPreviewReason(),
+          autoState: 'idle',
+          autoMessage: '条款表单尚未确认：当前结论待确认。',
+        })
+      } else {
+        patchChange({ autoMessage: '', autoState: 'idle' })
+      }
+      return result
+    },
+    confirmRequirement: async (input: {
+      baseToken: string
+      expectedActiveRequirementRevisionId: string | null
+      requirementId: string | null
+      source: Parameters<DesktopSessionAdapter['confirmRequirement']>[0]['source']
+      confirmedText: string
+      lowerText: string
+      upperText: string
+      changeReason: string
+    }) => {
+      const target = requireSession()
+      if (target === null) return null
+      const result = await target.session.confirmRequirement({
+        sessionId: target.sessionId,
+        confirmed: true,
+        ...input,
+      })
+      if (result.ok) {
+        patchChange({
+          draft: null,
+          preview: null,
+          staleReason: '条款版本已更新，请重新预览当前草稿。',
+          error: null,
+          notice: `已确认条款版本 ${result.value.requirementRevisionId}（基线检查：${result.value.baselineCheck.status}）。`,
+          autoState: 'idle',
+          autoMessage: '',
+        })
+        setNotice(`任务书要求已保存为条款版本 ${result.value.requirementRevisionId}。`)
+      } else {
+        patchChange({ error: result.error, notice: `条款确认失败：${result.error.message}` })
+        report(result)
       }
       return result
     },
@@ -247,9 +411,9 @@ export function useDesktopSession() {
         draftToken: draft.draftToken,
       })
       if (result.ok) {
-        patchChange({ preview: result.value, staleReason: null, error: null })
+        patchChange({ preview: result.value, staleReason: null, error: null, autoState: 'valid', autoMessage: '' })
       } else {
-        patchChange({ preview: null, error: result.error, staleReason: result.error.message })
+        patchChange({ preview: null, error: result.error, staleReason: result.error.message, autoState: 'invalid', autoMessage: result.error.message })
       }
       return result
     },

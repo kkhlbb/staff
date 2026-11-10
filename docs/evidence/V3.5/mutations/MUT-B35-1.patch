@@ -1,0 +1,54 @@
+diff --git a/src/requirements/commit.ts b/src/requirements/commit.ts
+index e219a7e..7be1164 100644
+--- a/src/requirements/commit.ts
++++ b/src/requirements/commit.ts
+@@ -114,26 +114,29 @@ export async function commitRecomputedChange(
+     }
+   }
+ 
+-  const recomputed = await runCheck({
+-    snapshot: input.snapshot,
+-    requirementRevisions: input.requirementRevisions,
+-    activeRequirementRevisionId: input.activeRequirementRevisionId,
+-    pendingEdit: input.pendingEdit,
+-    draft: input.draft,
+-    baseRevisionId: input.baseRevisionId,
+-    baseGeneration: input.baseGeneration,
+-    acceptedSeq: input.acceptedSeq,
+-    checkedAt: input.checkedAt,
+-    checkId: input.checkId,
+-    inputIssue: null,
+-    basis: {
+-      kind: 'draft',
+-      baseRevisionId: input.baseRevisionId,
+-      draftId: input.draft.draftId,
+-      draftRevision: input.draft.draftRevision,
+-    },
+-    provenance: 'candidate',
+-  })
++  const recomputed =
++    input.previewCheck !== null
++      ? { ok: true as const, value: { check: input.previewCheck } }
++      : await runCheck({
++          snapshot: input.snapshot,
++          requirementRevisions: input.requirementRevisions,
++          activeRequirementRevisionId: input.activeRequirementRevisionId,
++          pendingEdit: input.pendingEdit,
++          draft: input.draft,
++          baseRevisionId: input.baseRevisionId,
++          baseGeneration: input.baseGeneration,
++          acceptedSeq: input.acceptedSeq,
++          checkedAt: input.checkedAt,
++          checkId: input.checkId,
++          inputIssue: null,
++          basis: {
++            kind: 'draft',
++            baseRevisionId: input.baseRevisionId,
++            draftId: input.draft.draftId,
++            draftRevision: input.draft.draftRevision,
++          },
++          provenance: 'candidate',
++        })
+   if (!recomputed.ok) {
+     return {
+       ok: false,

@@ -22,6 +22,10 @@ import type {
   ChangeUnbindRequest,
   IpcErrorCode,
   IpcResult,
+  RequirementConfirmRequest,
+  RequirementConfirmValue,
+  RequirementEditRequest,
+  RequirementEditValue,
 } from '../shared/contracts'
 import type { ProjectFileParameterBindingLink, ProjectFileRevision, ProjectFileSnapshot, ProjectFileSpacerParameter } from '../../src/project-file/types'
 import { buildSpacerDrawing } from '../../src/drawing/spacerDrawing'
@@ -54,6 +58,7 @@ import {
   computeCandidateRequirementCheck,
 } from '../../src/requirements/check'
 import { commitRecomputedChange } from '../../src/requirements/commit'
+import { confirmOrUpdateRequirement } from '../../src/requirements/confirm'
 import type {
   RequirementCheck,
   RequirementEditDraft,
@@ -655,8 +660,35 @@ export class ChangeService {
       review: candidate.analysisSnapshot.review,
       groups,
       blockers: [],
+      requirement: this.requirementPreviewOf(session, requirementCheck.value),
     }
     return { ok: true, value }
+  }
+
+  /** 把条款检查与对应版本装入预览；原项目 target 结果独立保留。 */
+  private requirementPreviewOf(
+    session: ProjectSession,
+    checkValue: {
+      check: RequirementCheck
+      evaluation: import('../../src/requirements/types').RequirementEvaluation
+      originalTargetResult: ChangePreviewValue['result'] | null
+      requirementResult: ChangePreviewValue['result'] | null
+    },
+  ): ChangePreviewValue['requirement'] {
+    const revisionId = checkValue.check.requirementRevisionId
+    const revision =
+      revisionId === null
+        ? null
+        : (session.snapshot.project.requirementRevisions.find(
+            (item) => item.revisionId === revisionId,
+          ) ?? null)
+    return {
+      check: checkValue.check,
+      evaluation: checkValue.evaluation,
+      revision,
+      originalTargetResult: checkValue.originalTargetResult,
+      requirementResult: checkValue.requirementResult,
+    }
   }
 
   /** 供 IPC 层做幂等/队列；真正提交序列化在 apply 内。 */
@@ -1158,6 +1190,234 @@ export class ChangeService {
         null,
       ),
     }
+  }
+
+  /* ---- V3.5：条款表单与确认 ---------------------------------------- */
+
+  /**
+   * 登记/取消未确认条款表单。表单只存在 main 内存，不写正式条款；任何变化
+   * 推进基准代数并清空旧预览（旧 token/旧确认都会被拒绝）。
+   */
+  async stageRequirementEdit(
+    sessionId: string,
+    request: RequirementEditRequest,
+  ): Promise<ChangeResult<RequirementEditValue>> {
+    const found = this.requireSession(sessionId)
+    if ('error' in found) return failure(found.error.code, found.error.message, found.error.detail)
+    const { session } = found
+    if (request.baseEditSeq !== session.acceptedSeq) {
+      return failure(
+        'STALE_EDIT',
+        '编辑序号已过期，请基于最新状态重试',
+        `acceptedSeq=${session.acceptedSeq}, baseEditSeq=${request.baseEditSeq}`,
+      )
+    }
+    const state = this.stateOf(sessionId)
+    if (request.edit !== null) {
+      if (!Number.isSafeInteger(request.edit.editRevision) || request.edit.editRevision < 0) {
+        return failure('INVALID_REQUEST', '条款表单代数必须是非负安全整数')
+      }
+      if (
+        state.requirementEdit !== null &&
+        request.edit.editRevision <= state.requirementEdit.editRevision
+      ) {
+        return failure(
+          'STALE_DRAFT',
+          '条款表单代数未递增，已拒绝',
+          `previous=${state.requirementEdit.editRevision}, next=${request.edit.editRevision}`,
+        )
+      }
+      const nextEdit: RequirementEditDraft = {
+        requirementId: request.edit.requirementId,
+        editRevision: request.edit.editRevision,
+        confirmedText: request.edit.confirmedText.slice(0, 20000),
+        lowerText: request.edit.lowerText.slice(0, 64),
+        upperText: request.edit.upperText.slice(0, 64),
+        source: {
+          documentId: request.edit.source.documentId,
+          revisionId: request.edit.source.revisionId,
+          page: request.edit.source.page,
+          rectPdf:
+            request.edit.source.rectPdf === null
+              ? null
+              : ([...request.edit.source.rectPdf] as RequirementEditDraft['source']['rectPdf']),
+          pageBoxPdf:
+            request.edit.source.pageBoxPdf === null
+              ? null
+              : ([...request.edit.source.pageBoxPdf] as RequirementEditDraft['source']['pageBoxPdf']),
+        },
+      }
+      state.requirementEdit = nextEdit
+    } else {
+      state.requirementEdit = null
+    }
+    // 表单变化也推进代数和基准：改后改回不会复活旧预览/旧确认。
+    state.generation += 1
+    state.base = null
+    state.previews.clear()
+    const base = await this.currentBase(session, state)
+    return {
+      ok: true,
+      value: {
+        baseToken: base.token,
+        acceptedSeq: session.acceptedSeq,
+        activeRequirementRevisionId: session.snapshot.project.activeRequirementRevisionId,
+        hasPendingEdit: state.requirementEdit !== null,
+      },
+    }
+  }
+
+  /**
+   * 显式确认条款：新建不可变版本 + 基线检查，然后走与参数提交同一条
+   * commitCandidate/saveAtomic 原子写盘路径。失败保留草稿与原正式版本。
+   */
+  async confirmRequirement(
+    sessionId: string,
+    request: RequirementConfirmRequest,
+  ): Promise<ChangeResult<RequirementConfirmValue>> {
+    return this.enqueue(sessionId, async () => {
+      const found = this.requireSession(sessionId)
+      if ('error' in found) return failure(found.error.code, found.error.message, found.error.detail)
+      const { session } = found
+      const state = this.stateOf(sessionId)
+      const base = await this.currentBase(session, state)
+      if (request.baseToken !== base.token) {
+        const changes = state.knownBases.has(request.baseToken)
+          ? explainBaseChange(state.knownBases.get(request.baseToken)!, base)
+          : []
+        return failure(
+          'STALE_BASE',
+          '基准已变化，旧条款确认请求已拒绝',
+          changes.length === 0
+            ? '基准代数已推进（改后改回同样失效）'
+            : `变化：${changes.map((item) => item.label).join('；')}`,
+        )
+      }
+
+      const createdAt = this.nowIso()
+      const newRequirementId = `req-${this.id()}`
+      const newRevisionId = `reqrev-${this.id()}`
+      const newCheckId = `check-req-${this.id()}`
+      const newConfigRevisionId = `rev-req-${this.id()}`
+      const confirmed = await confirmOrUpdateRequirement({
+        snapshot: session.snapshot,
+        expectedBaseToken: request.baseToken,
+        currentBaseToken: base.token,
+        expectedActiveRequirementRevisionId: request.expectedActiveRequirementRevisionId,
+        requirementId: request.requirementId,
+        newRequirementId,
+        newRevisionId,
+        newCheckId,
+        newConfigRevisionId,
+        source: request.source,
+        confirmedText: request.confirmedText,
+        lowerText: request.lowerText,
+        upperText: request.upperText,
+        chainRef: {
+          projectId: session.snapshot.project.id,
+          kind: 'project-dimension-chain',
+        },
+        confirmed: request.confirmed,
+        changeReason: request.changeReason,
+        confirmedAt: createdAt,
+      })
+      if (!confirmed.ok) {
+        return failure(
+          confirmed.error.code as IpcErrorCode,
+          confirmed.error.message,
+          confirmed.error.detail,
+          confirmed.error.reasonCodes,
+        )
+      }
+      const candidate = confirmed.value.snapshot
+
+      let targetPath: string | null = null
+      let overwriteFingerprint: string | null = null
+      if (session.path === null) {
+        if (this.deps.pickSaveTarget === undefined) {
+          return failure('INVALID_REQUEST', '当前项目尚未保存过，需要先选择保存位置')
+        }
+        targetPath = await this.deps.pickSaveTarget(`${session.snapshot.project.name}.cunlian`)
+        if (targetPath === null) {
+          return failure('CANCELLED', '已取消选择保存位置；条款未写入，原项目不变')
+        }
+        const existing = await this.deps.projectService.fingerprint(targetPath)
+        if (existing !== null) {
+          const ok = (await this.deps.confirmOverwrite?.(targetPath)) ?? false
+          if (!ok) {
+            return failure('CANCELLED', '已取消覆盖已有文件；条款未写入，原项目不变')
+          }
+        }
+        overwriteFingerprint = existing
+      }
+
+      // 最终 CAS：对话框/编码/回读期间正式聚合或字段变更即拒绝。
+      const expectedStamp = snapshotStamp(session.snapshot)
+      const expectedAccepted = session.acceptedSeq
+      const expectedActive = session.snapshot.project.activeRequirementRevisionId
+      const expectedEditRevision = state.requirementEdit?.editRevision ?? null
+      const guard = (): string | null => {
+        if (session.acceptedSeq !== expectedAccepted) {
+          return `会话编辑序号变化（acceptedSeq=${session.acceptedSeq}）`
+        }
+        if (snapshotStamp(session.snapshot) !== expectedStamp) {
+          return '正式聚合在条款确认期间发生变化'
+        }
+        if (session.snapshot.project.activeRequirementRevisionId !== expectedActive) {
+          return '活动条款在确认期间发生变化'
+        }
+        if ((state.requirementEdit?.editRevision ?? null) !== expectedEditRevision) {
+          return '条款表单在确认期间发生变化'
+        }
+        return null
+      }
+
+      const committedResult = await this.deps.projectService.commitCandidate(session.sessionId, {
+        baseEditSeq: expectedAccepted,
+        candidate,
+        targetPath,
+        overwriteFingerprint,
+        guard,
+      })
+      if (!committedResult.ok) {
+        if (
+          committedResult.error.code === 'VERIFY_FAILED' &&
+          committedResult.error.detail?.startsWith('STALE_BASE:')
+        ) {
+          return failure('STALE_BASE', '确认期间基准已变化，已拒绝写入；原项目不变', committedResult.error.detail)
+        }
+        return failure(
+          committedResult.error.code,
+          `${committedResult.error.message}；条款未提交，原项目不变`,
+          committedResult.error.detail,
+        )
+      }
+
+      const current = this.deps.projectService.getSession(session.sessionId)
+      if (current === null) {
+        return failure('STALE_SESSION', '会话已失效，请重新打开项目')
+      }
+      await this.deps.recovery.discard(current.sessionId)
+      state.requirementEdit = null
+      state.previews.clear()
+      state.generation += 1
+      state.base = null
+
+      const value: RequirementConfirmValue = {
+        requirementId: confirmed.value.revision.requirementId,
+        requirementRevisionId: confirmed.value.revision.revisionId,
+        configRevisionId: newConfigRevisionId,
+        baselineCheck: confirmed.value.baselineCheck,
+        acceptedSeq: committedResult.value.acceptedSeq,
+        savedSeq: committedResult.value.acceptedSeq,
+        path: committedResult.value.path,
+        fingerprint: committedResult.value.fingerprint,
+        snapshot: toSnapshotDto(current.snapshot),
+        recovery: 'none',
+        warnings: [...committedResult.value.warnings],
+      }
+      return { ok: true, value }
+    })
   }
 
   resetSession(sessionId: string): void {

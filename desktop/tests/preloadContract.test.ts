@@ -47,6 +47,10 @@ const ADDED_FUNCTIONS = [
   'unbindParameter',
   'compareDrawings',
   'restoreRevisionDraft',
+  // V3.5：桌面 PDF 与任务书条款。
+  'importSource',
+  'stageRequirementEdit',
+  'confirmRequirement',
 ] as const
 
 describe('B2/C preload 契约', () => {

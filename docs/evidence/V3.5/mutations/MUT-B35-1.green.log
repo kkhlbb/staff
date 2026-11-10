@@ -1,0 +1,21 @@
+$ npx vitest run src/requirements/commit.test.ts --reporter=verbose
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ✓ src/requirements/commit.test.ts > V3.5 提交重算：只放行 satisfied，且用当前草稿重算 > S=12.04 满足：候选冻结条款版本/检查/证据引用 20ms
+ ✓ src/requirements/commit.test.ts > V3.5 提交重算：只放行 satisfied，且用当前草稿重算 > S=12.10 不满足：拒绝提交，不产生候选 4ms
+ ✓ src/requirements/commit.test.ts > V3.5 提交重算：只放行 satisfied，且用当前草稿重算 > P35-T S=11.90：原目标满足但条款不满足，仍拒绝 3ms
+ ✓ src/requirements/commit.test.ts > V3.5 提交重算：只放行 satisfied，且用当前草稿重算 > 待确认（PDF 换版）→ REQUIREMENT_PENDING_CONFIRMATION 3ms
+ ✓ src/requirements/commit.test.ts > V3.5 提交重算：只放行 satisfied，且用当前草稿重算 > 未检查（规则不支持）→ REQUIREMENT_UNCHECKED 3ms
+ ✓ src/requirements/commit.test.ts > V3.5 提交重算：只放行 satisfied，且用当前草稿重算 > 预览后来源换版：旧 satisfied 检查不能提交（STALE_REQUIREMENT） 3ms
+ ✓ src/requirements/commit.test.ts > V3.5 提交重算：只放行 satisfied，且用当前草稿重算 > 伪造“已满足”预览（指纹不符）被拒绝，不采信 renderer 结果 3ms
+ ✓ src/requirements/commit.test.ts > V3.5 提交重算：只放行 satisfied，且用当前草稿重算 > 同一草稿身份但数值已变（预览与草稿不一致）→ 重算后拒绝 3ms
+ ✓ src/requirements/commit.test.ts > V3.5 提交重算：只放行 satisfied，且用当前草稿重算 > 提交路径确实第二次调用条款检查（依赖注入计数） 3ms
+ ✓ src/requirements/commit.test.ts > V3.5 提交重算：只放行 satisfied，且用当前草稿重算 > 无条款老项目不被 Beta 门禁锁住（沿用 D 重算/CAS 语义） 2ms
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  20:37:54
+   Duration  197ms (tests 36%, import 29%, setup 23%, transform 11%, worker 1%)
+
+EXIT_CODE=0

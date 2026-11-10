@@ -43,7 +43,10 @@ import { registerModelChannels } from './modelChannels'
 import { createModelFileIo } from './modelIo'
 import { registerDrawingChannels } from './drawingChannels'
 import { registerChangeChannels } from './changeChannels'
+import { registerSourceChannels } from './sourceChannels'
+import { registerRequirementChannels } from './requirementChannels'
 import { ChangeService } from './changeService'
+import { inspectSourcePdf } from './pdfSourceInspect'
 import { DrawingExportStore, type DrawingExportKind } from './drawingExportStore'
 import { printDrawingToPdf } from './drawingPdf'
 import { resolvePrintFontPath } from './printAssets'
@@ -302,6 +305,23 @@ async function pickModelFileFor(windowId: number): Promise<string | null> {
   return picked.filePaths[0] ?? null
 }
 
+async function pickSourcePdfFor(windowId: number): Promise<string | null> {
+  const owner = BrowserWindow.fromId(windowId) ?? BrowserWindow.getFocusedWindow()
+  const options = {
+    title: '导入任务书 PDF',
+    properties: ['openFile' as const],
+    filters: [{ name: 'PDF 文件', extensions: ['pdf', 'PDF'] }],
+  }
+  const picked =
+    owner === null
+      ? await dialog.showOpenDialog(options)
+      : await dialog.showOpenDialog(owner, options)
+  if (picked.canceled || picked.filePaths.length !== 1) {
+    return null
+  }
+  return picked.filePaths[0] ?? null
+}
+
 /** C：导出对话框只允许对应后缀；路径只来自系统对话框。 */
 async function pickDrawingExportPath(
   windowId: number,
@@ -479,6 +499,24 @@ function installIpcHandlers(): void {
     confirmOverwrite: confirmProjectOverwrite,
   })
   registerChangeChannels(ipc, {
+    guard,
+    controller,
+    changeService,
+    log: logStage,
+  })
+
+  registerSourceChannels(ipc, {
+    guard,
+    controller,
+    projectService,
+    recovery,
+    pickSourcePath: pickSourcePdfFor,
+    io: createModelFileIo(),
+    inspectPdf: (bytes) => inspectSourcePdf(bytes),
+    log: logStage,
+  })
+
+  registerRequirementChannels(ipc, {
     guard,
     controller,
     changeService,
