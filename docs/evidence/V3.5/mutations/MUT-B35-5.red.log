@@ -1,0 +1,55 @@
+$ npx vitest run src/requirements/history.test.ts -t "两个版本的 pdfRevisionId/页码/rect 不同时"
+
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/requirements/history.test.ts (4 tests | 1 failed | 3 skipped) 16ms
+   ❯ V3.5 历史条款版本：按 revisionId 解析各自来源 (4)
+     × 两个版本的 pdfRevisionId/页码/rect 不同时，定位结果分别取各自值 15ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/requirements/history.test.ts > V3.5 历史条款版本：按 revisionId 解析各自来源 > 两个版本的 pdfRevisionId/页码/rect 不同时，定位结果分别取各自值
+AssertionError: expected { …(8) } to match object { …(4) }
+(4 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "page": 2,
++   "page": 1,
+    "rectPdf": [
+-     10,
+-     10,
+-     110,
+-     30,
++     20,
++     40,
++     220,
++     80,
+    ],
+-   "requirementRevisionId": "reqrev-1",
+-   "revisionId": "sr-1",
++   "requirementRevisionId": "reqrev-2",
++   "revisionId": "sr-taskbook-2",
+  }
+
+ ❯ src/requirements/history.test.ts:44:32
+     42|     const newSource = resolveRequirementRevisionSource(project.snapsho…
+     43|
+     44|     expect(oldSource.location).toMatchObject({
+       |                                ^
+     45|       requirementRevisionId: 'reqrev-1',
+     46|       revisionId: 'sr-1',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  01:44:23
+   Duration  182ms (import 36%, setup 29%, transform 20%, tests 14%, worker 1%)
+
+
+EXIT_CODE:1
