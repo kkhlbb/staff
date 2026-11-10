@@ -1,21 +1,24 @@
 /**
- * 临时证据生成器（只在本机显式运行时写外部临时目录，不进入常规测试）。
+ * V3.5 证据生成器（显式运行，不进入 npm test / test:desktop）。
  * 生成：含真实两页任务书附件的 P35-A 项目文件，供打包应用通过 open-file 打开。
+ *
+ * 用法：
+ *   V35_SEED_OUT=<path.cunlian> npx vitest run --config vitest.v35fixture.config.ts
  */
 import { promises as fsp } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { createSpacerSnapshot } from '../../src/project-file/__fixtures__/spacerProjectFile'
-import { IPC_CHANNELS } from '../shared/contracts'
-import { registerSourceChannels } from '../main/sourceChannels'
-import { inspectSourcePdf } from '../main/pdfSourceInspect'
-import { createHarness } from './helpers/a04'
+import { createSpacerSnapshot } from '../src/project-file/__fixtures__/spacerProjectFile'
+import { IPC_CHANNELS } from '../desktop/shared/contracts'
+import { registerSourceChannels } from '../desktop/main/sourceChannels'
+import { inspectSourcePdf } from '../desktop/main/pdfSourceInspect'
+import { createHarness } from '../desktop/tests/helpers/a04'
 
 const OUT = process.env.V35_SEED_OUT
 const PDF = path.join(process.cwd(), 'docs/evidence/V3.5/fixtures/taskbook-2p.pdf')
 
 describe('V3.5 证据夹具', () => {
-  it.runIf(Boolean(OUT))('生成含 PDF 附件的项目文件', async () => {
+  it.skipIf(!OUT)('生成含 PDF 附件的项目文件', async () => {
     const harness = await createHarness()
     try {
       const snapshot = await createSpacerSnapshot({ length: '12.00', confirmed: true })

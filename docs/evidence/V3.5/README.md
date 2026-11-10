@@ -39,7 +39,7 @@
 | `npm run typecheck:desktop` | 0 | desktop tsc 通过 | `logs/typecheck-desktop.log` |
 | `npm run lint` | 0 | eslint 全仓通过 | `logs/lint.log` |
 | `npm test` | 0 | **81 文件 / 838 用例全过** | `logs/test.log` |
-| `npm run test:desktop` | 0 | **26 文件 / 178 用例通过，1 个证据生成器按环境变量跳过**（`v35Seed.test.ts`；正常套件不执行、不写仓库） | `logs/test-desktop.log` |
+| `npm run test:desktop` | 0 | **26 文件 / 178 用例全过**（证据生成器不属于该套件） | `logs/test-desktop.log` |
 | `npm run build` | 0 | vite 生产构建通过（既有 chunk 体积警告） | `logs/build.log` |
 | `npm run package:desktop` | 0 | `out/寸链-darwin-arm64/寸链.app`（arm64，未签名） | `logs/package-desktop.log` |
 | `node desktop/tests/e2e/v35ui.mjs` | 0 | 打包应用内打开含 PDF 的项目→向导框选→确认条款→定位→自动预览，截图见 `screenshots/` | `logs/e2e-v35ui.log` |
@@ -71,8 +71,8 @@
 - `fixtures/P35-imported-seed.cunlian` — 通过真实 `source:import` 通道把上述 PDF
   写入 P35-A（S=12.00、已确认参数绑定）的项目文件，249,801 字节，
   SHA-256 `50f74124e2b2ef396d1df615e57e69452fdd98d591ff54466a0d1d2c2cd91ef2`。
-  生成命令（显式证据脚本，正常测试不执行）：
-  `V35_SEED_OUT=<out> npx vitest run --config vitest.desktop.config.ts desktop/tests/v35Seed.test.ts`
+  生成命令（显式证据脚本，不属于常规测试套件）：
+  `V35_SEED_OUT=<out> npx vitest run --config vitest.v35fixture.config.ts`（`scripts/v35-seed.ts`）
 
 ## 5. 打包应用截图（`screenshots/`）
 
