@@ -289,6 +289,9 @@ export class ProjectService {
       // stageDraft 不能伪造参数、图纸指纹或复核状态。
       parameters: authoritative.project.parameters,
       drawings: authoritative.project.drawings,
+      // V3.6：提取候选与逐条决定只能经 extraction:run/decide 写入；
+      // stageDraft 不能伪造“已确认”、决定时间或出处。
+      extractionDrafts: authoritative.project.extractionDrafts,
     }
     const assembled = assembleSnapshot({
       project: protectedProject,

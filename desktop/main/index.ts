@@ -45,6 +45,8 @@ import { registerDrawingChannels } from './drawingChannels'
 import { registerChangeChannels } from './changeChannels'
 import { registerSourceChannels } from './sourceChannels'
 import { registerRequirementChannels } from './requirementChannels'
+import { registerExtractionChannels } from './extractionChannels'
+import { ExtractionService } from './extractionService'
 import { ChangeService } from './changeService'
 import { inspectSourcePdf } from './pdfSourceInspect'
 import { DrawingExportStore, type DrawingExportKind } from './drawingExportStore'
@@ -520,6 +522,18 @@ function installIpcHandlers(): void {
     guard,
     controller,
     changeService,
+    log: logStage,
+  })
+
+  const extractionService = new ExtractionService({
+    controller,
+    projectService,
+    recovery,
+  })
+  registerExtractionChannels(ipc, {
+    guard,
+    controller,
+    service: extractionService,
     log: logStage,
   })
 

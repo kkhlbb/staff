@@ -27,7 +27,7 @@ import { normalizePdfPageBox } from '../../src/sources/pdfCoordinates'
  */
 const PDF_WORKER_FILE = 'pdf.worker.mjs'
 
-function configurePdfWorker(): void {
+export function configurePdfWorker(): void {
   if (typeof __dirname !== 'string') return
   const candidate = join(__dirname, PDF_WORKER_FILE)
   if (existsSync(candidate)) {

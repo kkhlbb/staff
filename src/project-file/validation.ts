@@ -30,6 +30,7 @@ import {
   PROJECT_FILE_PATHS,
   PROJECT_FILE_SCHEMA_VERSION,
   REVISION_EXTENSION,
+  V35_PROJECT_FILE_SCHEMA_VERSION,
   REVISION_PATH_PREFIX,
   type ProjectFileAttachmentInput,
   type ProjectFileAttachmentRef,
@@ -44,6 +45,7 @@ import {
   type ProjectFileProjectV2,
   type ProjectFileProjectV5,
   type ProjectFileProjectV6,
+  type ProjectFileProjectV7,
   type ProjectFileResult,
   type ProjectFileRevision,
   type ProjectFileSnapshot,
@@ -56,6 +58,18 @@ import { PROJECT_ASSETS_MAX_BYTES, sumUniqueBlobBytes } from '../parts/stlLimits
 import { buildSpacerDrawing, DrawingBuildError } from '../drawing/spacerDrawing'
 import { SPACER_PART_ID } from '../drawing/types'
 import { validateSpacerParameterSnapshot } from '../parts/spacerParameters'
+import {
+  CONFIDENCE_LEVELS,
+  EXTRACTION_ISSUE_CODES,
+  EXTRACTION_REASON_CODES,
+  candidateNumericFields,
+  candidateValueSnapshot,
+  isEvidenceComplete,
+  type ExtractionCandidate,
+  type ExtractionDecision,
+  type ExtractionDraft,
+  type ExtractionEvidence,
+} from '../document-extraction/types'
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/
 
@@ -454,6 +468,194 @@ const requirementCheckSchema = z
     { message: '无条款的检查不得带条款证据引用' },
   )
 
+/* ---- V3.6：任务书提取草稿（schema8） -------------------------------- */
+
+const extractionEvidenceSchema = z
+  .object({
+    documentId: idSchema,
+    revisionId: idSchema,
+    sha256: sha256Schema,
+    blobKey: idSchema,
+    page: z.number().int().min(1),
+    rectPdf: coords4Schema,
+    pageBoxPdf: coords4Schema,
+    textSnippet: z.string().min(1).max(4000),
+    normalizedSnippet: z.string().max(4000),
+    textItemIndexes: z.array(nonNegativeInt).max(64),
+  })
+  .strict()
+  .refine(
+    (evidence) =>
+      evidence.rectPdf.every((value) => Number.isFinite(value)) &&
+      evidence.pageBoxPdf.every((value) => Number.isFinite(value)),
+    { message: '提取出处的选区/页框必须是有限数值' },
+  )
+
+const extractionQuantitySchema = z
+  .object({
+    text: z.string().min(1).max(64),
+    decimals: z.number().int().min(0).max(12),
+    valueQ: z.number().int().nullable(),
+    unitText: z.string().max(32).nullable(),
+    unit: z.literal('mm').nullable(),
+    evidence: z.array(extractionEvidenceSchema).max(16),
+  })
+  .strict()
+
+const ringCandidateDataSchema = z
+  .object({
+    symbol: z.string().max(32).nullable(),
+    name: z.string().max(200).nullable(),
+    nominal: extractionQuantitySchema.nullable(),
+    upperDeviation: extractionQuantitySchema.nullable(),
+    lowerDeviation: extractionQuantitySchema.nullable(),
+  })
+  .strict()
+
+const intervalCandidateDataSchema = z
+  .object({
+    outputSymbol: z.string().max(32).nullable(),
+    lower: extractionQuantitySchema.nullable(),
+    upper: extractionQuantitySchema.nullable(),
+    lowerInclusive: z.boolean().nullable(),
+    upperInclusive: z.boolean().nullable(),
+    endpointEvidence: z.array(extractionEvidenceSchema).max(8),
+  })
+  .strict()
+
+const formulaCandidateDataSchema = z
+  .object({
+    outputSymbol: z.string().max(32).nullable(),
+    rawExpression: z.string().min(1).max(2000),
+    expression: z.string().min(1).max(2000),
+    operands: z
+      .array(
+        z
+          .object({
+            symbol: z.string().min(1).max(32),
+            sign: z.union([z.literal(1), z.literal(-1)]),
+          })
+          .strict(),
+      )
+      .max(32),
+    unsupported: z.boolean(),
+    conflict: z.boolean(),
+  })
+  .strict()
+
+const partDimensionDataSchema = z
+  .object({
+    partName: z.string().max(200).nullable(),
+    innerDiameter: extractionQuantitySchema.nullable(),
+    outerDiameter: extractionQuantitySchema.nullable(),
+    length: extractionQuantitySchema.nullable(),
+  })
+  .strict()
+
+const extractionCandidateBaseShape = {
+  candidateId: idSchema,
+  groupId: idSchema.nullable(),
+  rawText: z.string().max(4000),
+  page: z.number().int().min(1),
+  status: z.enum(['pending', 'blocked', 'confirmed', 'rejected', 'stale']),
+  confidence: z.enum(CONFIDENCE_LEVELS),
+  confidenceBasis: z.array(z.string().min(1).max(200)).max(16),
+  reasonCodes: z.array(z.enum(EXTRACTION_REASON_CODES)).max(32),
+  evidence: z.array(extractionEvidenceSchema).max(32),
+  editRevision: nonNegativeInt,
+} as const
+
+const extractionCandidateSchema = z.discriminatedUnion('kind', [
+  z
+    .object({
+      ...extractionCandidateBaseShape,
+      kind: z.literal('ring'),
+      data: ringCandidateDataSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...extractionCandidateBaseShape,
+      kind: z.literal('interval'),
+      data: intervalCandidateDataSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...extractionCandidateBaseShape,
+      kind: z.literal('formula'),
+      data: formulaCandidateDataSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...extractionCandidateBaseShape,
+      kind: z.literal('part-dimension'),
+      data: partDimensionDataSchema,
+    })
+    .strict(),
+])
+
+const extractionDecisionSchema = z
+  .object({
+    decisionId: idSchema,
+    candidateId: idSchema,
+    action: z.enum(['confirm', 'reject', 'edit']),
+    candidateEditRevision: nonNegativeInt,
+    decidedAt: z.string().min(1),
+    actor: z.string().min(1).max(200),
+    reason: z.string().max(2000).nullable(),
+    valueSnapshot: z.string().max(8000),
+    evidence: z.array(extractionEvidenceSchema).max(64),
+    invalidatedByEditRevision: nonNegativeInt.nullable(),
+  })
+  .strict()
+
+const extractionIssueSchema = z
+  .object({
+    issueId: idSchema,
+    code: z.enum(EXTRACTION_ISSUE_CODES),
+    severity: z.enum(['blocked', 'warning']),
+    message: z.string().min(1).max(2000),
+    page: z.number().int().min(1).nullable(),
+    candidateIds: z.array(idSchema).max(64),
+    evidence: z.array(extractionEvidenceSchema).max(64),
+  })
+  .strict()
+
+const extractionSourceIdentitySchema = z
+  .object({
+    documentId: idSchema,
+    revisionId: idSchema,
+    sha256: sha256Schema,
+    blobKey: idSchema,
+    pageCount: z.number().int().min(1),
+  })
+  .strict()
+
+const extractionDraftSchema = z
+  .object({
+    draftId: idSchema,
+    draftRevision: z.number().int().positive(),
+    status: z.literal('draft'),
+    projectId: idSchema,
+    baseToken: z.string().min(1).max(200),
+    sourceIdentity: extractionSourceIdentitySchema,
+    pageRange: z
+      .object({
+        from: z.number().int().min(1),
+        to: z.number().int().min(1),
+      })
+      .strict()
+      .refine((range) => range.to >= range.from, { message: '页范围上限必须不小于下限' }),
+    extractorVersion: z.string().min(1).max(120),
+    idempotencyKey: z.string().min(1).max(2000),
+    candidates: z.array(extractionCandidateSchema).max(200),
+    issues: z.array(extractionIssueSchema).max(200),
+    decisions: z.array(extractionDecisionSchema).max(5000),
+  })
+  .strict()
+
 /** C：schema5，三参数与图纸引用使用严格类型（无 parameterRevision）。 */
 const projectV3Schema = z
   .object({
@@ -484,11 +686,11 @@ const projectV4Schema = z
   })
   .strict()
 
-/** V3.5：schema7，在 schema6 之上增加 Beta 条款版本/活动指针/当前检查。 */
+/** V3.5：schema7，在 schema6 之上增加 Beta 条款版本/活动指针/当前检查（无提取草稿）。 */
 const projectV5Schema = z
   .object({
     ...projectCommonShape,
-    schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
+    schemaVersion: z.literal(V35_PROJECT_FILE_SCHEMA_VERSION),
     sourceFormatVersion: z.union([z.literal(1), z.literal(2)]),
     parts: z.array(partSchema),
     parameters: z.array(spacerParameterSchema).max(3),
@@ -500,6 +702,18 @@ const projectV5Schema = z
     requirementRevisions: z.array(requirementRevisionSchema),
     activeRequirementRevisionId: idSchema.nullable(),
     currentRequirementCheck: requirementCheckSchema.nullable(),
+  })
+  .strict()
+
+/**
+ * V3.6：schema8，在 schema7 之上只增加提取草稿。
+ * 旧 schema7 记录没有该字段，按严格 schema 会被拒绝；读取时经 adaptProjectV7
+ * 补空数组，保存时才写 8。
+ */
+const projectV6Schema = projectV5Schema
+  .extend({
+    schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
+    extractionDrafts: z.array(extractionDraftSchema).max(8),
   })
   .strict()
 
@@ -781,11 +995,12 @@ const manifestProjectV2Schema = z
   .object({
     id: idSchema,
     name: z.string().min(1).max(200),
-    // formatVersion 2 既可能来自 B2（schema4），也可能是 C（5）/D（6）/V3.5（7）。
+    // formatVersion 2 既可能来自 B2（schema4），也可能是 C（5）/D（6）/V3.5（7）/V3.6（8）。
     projectSchemaVersion: z.union([
       z.literal(B2_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(C_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(D_PROJECT_FILE_SCHEMA_VERSION),
+      z.literal(V35_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(PROJECT_FILE_SCHEMA_VERSION),
     ]),
     dimensionChainSchemaVersion: z.literal(DIMENSION_CHAIN_SCHEMA_VERSION),
@@ -843,7 +1058,8 @@ export type VersionedProject =
   | { version: 2; project: ProjectFileProjectV2 }
   | { version: 3; project: ProjectFileProjectV5 }
   | { version: 4; project: ProjectFileProjectV6 }
-  | { version: 5; project: ProjectFileProject }
+  | { version: 5; project: ProjectFileProjectV7 }
+  | { version: 6; project: ProjectFileProject }
 
 /** 校验工作链与基线链；两个 schema 版本共用。 */
 function validateProjectChains(
@@ -941,7 +1157,7 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
       },
     })
   }
-  if (version === PROJECT_FILE_SCHEMA_VERSION) {
+  if (version === V35_PROJECT_FILE_SCHEMA_VERSION) {
     const parsed = projectV5Schema.safeParse(input)
     if (!parsed.success) {
       return fail('INVALID_RECORD', 'project.json 结构不合法（schema 7）', describeZodError(parsed.error))
@@ -950,6 +1166,22 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
     if (!chains.ok) return chains
     return ok({
       version: 5,
+      project: {
+        ...(parsed.data as unknown as ProjectFileProjectV7),
+        dimensionChain: chains.value.dimensionChain,
+        baseline: chains.value.baseline,
+      },
+    })
+  }
+  if (version === PROJECT_FILE_SCHEMA_VERSION) {
+    const parsed = projectV6Schema.safeParse(input)
+    if (!parsed.success) {
+      return fail('INVALID_RECORD', 'project.json 结构不合法（schema 8）', describeZodError(parsed.error))
+    }
+    const chains = validateProjectChains(parsed.data)
+    if (!chains.ok) return chains
+    return ok({
+      version: 6,
       project: {
         ...(parsed.data as unknown as ProjectFileProject),
         dimensionChain: chains.value.dimensionChain,
@@ -981,6 +1213,7 @@ export function adaptProjectV1(project: ProjectFileProjectV1): ProjectFileProjec
     requirementRevisions: [],
     activeRequirementRevisionId: null,
     currentRequirementCheck: null,
+    extractionDrafts: [],
   }
 }
 
@@ -994,6 +1227,7 @@ export function adaptProjectV2(project: ProjectFileProjectV2): ProjectFileProjec
     requirementRevisions: [],
     activeRequirementRevisionId: null,
     currentRequirementCheck: null,
+    extractionDrafts: [],
   }
 }
 
@@ -1012,11 +1246,12 @@ export function adaptProjectV3(project: ProjectFileProjectV5): ProjectFileProjec
     requirementRevisions: [],
     activeRequirementRevisionId: null,
     currentRequirementCheck: null,
+    extractionDrafts: [],
   }
 }
 
 /**
- * schema6 → 当前工作形状（schema 7）：老项目默认“无 Beta 条款”。
+ * schema6 → 当前工作形状（schema 8）：老项目默认“无 Beta 条款、无提取草稿”。
  * 不补造旧检查或旧确认；旧历史 Revision 原样保留。
  */
 export function adaptProjectV6(project: ProjectFileProjectV6): ProjectFileProject {
@@ -1026,10 +1261,23 @@ export function adaptProjectV6(project: ProjectFileProjectV6): ProjectFileProjec
     requirementRevisions: [],
     activeRequirementRevisionId: null,
     currentRequirementCheck: null,
+    extractionDrafts: [],
   }
 }
 
-/** 严格解析 project/project.json（接受 schema3/4/5/6/7，统一返回当前工作形状）。 */
+/**
+ * schema7 → 当前工作形状（schema 8）：老项目默认“无提取草稿”。
+ * 不补造候选或决定；旧历史 Revision 原样保留。
+ */
+export function adaptProjectV7(project: ProjectFileProjectV7): ProjectFileProject {
+  return {
+    ...project,
+    schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
+    extractionDrafts: [],
+  }
+}
+
+/** 严格解析 project/project.json（接受 schema3/4/5/6/7/8，统一返回当前工作形状）。 */
 export function parseProject(
   input: unknown,
 ): ProjectFileResult<ProjectFileProject> {
@@ -1039,6 +1287,7 @@ export function parseProject(
   if (parsed.value.version === 2) return ok(adaptProjectV2(parsed.value.project))
   if (parsed.value.version === 3) return ok(adaptProjectV3(parsed.value.project))
   if (parsed.value.version === 4) return ok(adaptProjectV6(parsed.value.project))
+  if (parsed.value.version === 5) return ok(adaptProjectV7(parsed.value.project))
   return ok(parsed.value.project)
 }
 
@@ -1323,6 +1572,193 @@ export function assembleSnapshot(parts: {
     return fail(references.error.code, references.error.message, references.error.detail)
   }
   return ok(snapshot)
+}
+
+
+/**
+ * 提取草稿的引用与决定一致性（V3.6）。
+ *
+ * 只读校验，不修数据：
+ * - 草稿的 PDF 版本身份必须指向本项目里确切存在的 revision，且 sha256/blobKey 一致；
+ * - 页范围/页码必须落在该版本页数内；
+ * - 每个数值字段的出处必须完整，并且确实引用同一 PDF 版本；
+ * - confirmed/rejected 状态必须有对应的、未被编辑失效的决定；
+ * - “已确认”的值快照必须与当前候选数值一致（防止事后改值冒充已确认）。
+ */
+export function validateExtractionDraftReferences(
+  snapshot: ProjectFileSnapshot,
+): ProjectFileResult<void> {
+  const projectId = snapshot.project.id
+  const revisionById = new Map(snapshot.revisions.map((item) => [item.id, item]))
+  const documentIds = new Set(snapshot.documents.map((item) => item.id))
+  const draftIds = new Set<string>()
+  const idempotencyKeys = new Set<string>()
+
+  const evidenceMatchesSource = (
+    evidence: ExtractionEvidence,
+    draft: ExtractionDraft,
+  ): boolean => {
+    const revision = revisionById.get(evidence.revisionId)
+    if (revision === undefined) return false
+    if (revision.documentId !== evidence.documentId) return false
+    if (revision.sha256 !== evidence.sha256) return false
+    if (revision.blobKey !== evidence.blobKey) return false
+    if (
+      evidence.revisionId !== draft.sourceIdentity.revisionId ||
+      evidence.sha256 !== draft.sourceIdentity.sha256
+    ) {
+      return false
+    }
+    return evidence.page >= draft.pageRange.from && evidence.page <= draft.pageRange.to
+  }
+
+  for (const draft of snapshot.project.extractionDrafts) {
+    if (draft.projectId !== projectId) {
+      return fail('MISSING_REFERENCE', `提取草稿 ${draft.draftId} 不属于当前项目`)
+    }
+    if (draftIds.has(draft.draftId)) {
+      return fail('INVALID_RECORD', `提取草稿 ID 重复：${draft.draftId}`)
+    }
+    draftIds.add(draft.draftId)
+    if (idempotencyKeys.has(draft.idempotencyKey)) {
+      return fail('INVALID_RECORD', `提取幂等键重复：${draft.idempotencyKey}`)
+    }
+    idempotencyKeys.add(draft.idempotencyKey)
+
+    const source = draft.sourceIdentity
+    const revision = revisionById.get(source.revisionId)
+    if (revision === undefined || !documentIds.has(source.documentId)) {
+      return fail(
+        'MISSING_REFERENCE',
+        `提取草稿 ${draft.draftId} 引用的 PDF 版本不存在`,
+        source.revisionId,
+      )
+    }
+    if (revision.documentId !== source.documentId) {
+      return fail('MISSING_REFERENCE', `提取草稿 ${draft.draftId} 的文档与版本不一致`)
+    }
+    if (revision.sha256 !== source.sha256 || revision.blobKey !== source.blobKey) {
+      return fail('HASH_MISMATCH', `提取草稿 ${draft.draftId} 的版本哈希/blobKey 与来源不一致`)
+    }
+    if (source.pageCount !== revision.pageCount) {
+      return fail('INVALID_RECORD', `提取草稿 ${draft.draftId} 的页数与来源版本不一致`)
+    }
+    if (draft.pageRange.to > revision.pageCount) {
+      return fail(
+        'INVALID_RECORD',
+        `提取草稿 ${draft.draftId} 的页范围越界`,
+        `to=${draft.pageRange.to}, pageCount=${revision.pageCount}`,
+      )
+    }
+
+    const candidateById = new Map<string, ExtractionCandidate>()
+    const decisionIds = new Set<string>()
+    for (const candidate of draft.candidates) {
+      if (candidateById.has(candidate.candidateId)) {
+        return fail('INVALID_RECORD', `提取候选 ID 重复：${candidate.candidateId}`)
+      }
+      candidateById.set(candidate.candidateId, candidate)
+      if (candidate.page < draft.pageRange.from || candidate.page > draft.pageRange.to) {
+        return fail(
+          'INVALID_RECORD',
+          `提取候选 ${candidate.candidateId} 的页码不在提取页范围内`,
+        )
+      }
+      for (const evidence of candidate.evidence) {
+        if (!evidenceMatchesSource(evidence, draft)) {
+          return fail(
+            'MISSING_REFERENCE',
+            `提取候选 ${candidate.candidateId} 的出处与草稿来源不一致`,
+            evidence.revisionId,
+          )
+        }
+      }
+      for (const { field, value } of candidateNumericFields(candidate)) {
+        if (value.evidence.length === 0) {
+          return fail(
+            'INVALID_RECORD',
+            `提取候选 ${candidate.candidateId} 的 ${field} 缺少出处`,
+          )
+        }
+        for (const evidence of value.evidence) {
+          if (!isEvidenceComplete(evidence)) {
+            return fail(
+              'INVALID_RECORD',
+              `提取候选 ${candidate.candidateId} 的 ${field} 出处不完整`,
+            )
+          }
+          if (!evidenceMatchesSource(evidence, draft)) {
+            return fail(
+              'MISSING_REFERENCE',
+              `提取候选 ${candidate.candidateId} 的 ${field} 出处指向其它版本`,
+            )
+          }
+        }
+      }
+    }
+
+    const activeDecisions = new Map<string, ExtractionDecision[]>()
+    for (const decision of draft.decisions) {
+      if (decisionIds.has(decision.decisionId)) {
+        return fail('INVALID_RECORD', `提取决定 ID 重复：${decision.decisionId}`)
+      }
+      decisionIds.add(decision.decisionId)
+      const candidate = candidateById.get(decision.candidateId)
+      if (candidate === undefined) {
+        return fail(
+          'MISSING_REFERENCE',
+          `提取决定 ${decision.decisionId} 引用了不存在的候选`,
+          decision.candidateId,
+        )
+      }
+      if (decision.candidateEditRevision > candidate.editRevision) {
+        return fail(
+          'INVALID_RECORD',
+          `提取决定 ${decision.decisionId} 的代数为未来代数`,
+        )
+      }
+      if (decision.invalidatedByEditRevision === null) {
+        const list = activeDecisions.get(decision.candidateId) ?? []
+        list.push(decision)
+        activeDecisions.set(decision.candidateId, list)
+      }
+    }
+
+    for (const candidate of draft.candidates) {
+      const decisions = (activeDecisions.get(candidate.candidateId) ?? []).filter(
+        (decision) => decision.candidateEditRevision === candidate.editRevision,
+      )
+      const confirm = decisions.find((decision) => decision.action === 'confirm')
+      const reject = decisions.find((decision) => decision.action === 'reject')
+      if (candidate.status === 'confirmed') {
+        if (confirm === undefined) {
+          return fail(
+            'INVALID_RECORD',
+            `候选 ${candidate.candidateId} 标记为已确认，但没有当前代数的确认决定`,
+          )
+        }
+        if (confirm.valueSnapshot !== candidateValueSnapshot(candidate)) {
+          return fail(
+            'INVALID_RECORD',
+            `候选 ${candidate.candidateId} 的数值与确认时的快照不一致`,
+          )
+        }
+      }
+      if (candidate.status === 'rejected' && reject === undefined) {
+        return fail(
+          'INVALID_RECORD',
+          `候选 ${candidate.candidateId} 标记为已拒绝，但没有当前代数的拒绝决定`,
+        )
+      }
+      if (candidate.status !== 'confirmed' && confirm !== undefined) {
+        return fail(
+          'INVALID_RECORD',
+          `候选 ${candidate.candidateId} 存在确认决定，但状态不是已确认`,
+        )
+      }
+    }
+  }
+  return ok(undefined)
 }
 
 /** 结构与引用完整性（不含字节哈希，字节在 codec 中核对）。 */
@@ -1750,6 +2186,10 @@ export function validateSnapshotReferences(
       return fail('INVALID_RECORD', '未检查的条款不得携带当前有效结果区间/裕量')
     }
   }
+
+  // ---- V3.6：提取草稿的引用与决定一致性 -------------------------------
+  const extractionCheck = validateExtractionDraftReferences(snapshot)
+  if (!extractionCheck.ok) return extractionCheck
 
   // ---- C：隔套参数与图纸快照引用 --------------------------------------
   const parameterIds = new Set<string>()

@@ -1,0 +1,16 @@
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.6/screenshots/v36-01-extraction-empty.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.6/screenshots/v36-02-candidates-pending.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.6/screenshots/v36-03-confirmed-rejected.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.6/screenshots/v36-03a-confirmed-row.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.6/screenshots/v36-03b-rejected-row.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.6/screenshots/v36-04-locate-pdf-selection.png
+saved {"path":"/Users/aston/DSH/tmp/cunlian-v36/E2E-V36-run.cunlian","savedSeq":3,"editSeq":3,"drafts":1,"candidates":7,"statuses":["pending","confirmed","pending","pending","rejected","pending","pending"],"decisions":[{"action":"confirm","actor":"local-operator","reason":null},{"action":"reject","actor":"local-operator","reason":"长度数值需人工核对"}],"target":{"minQ":1000,"maxQ":3000},"activeRequirementRevisionId":null,"parameters":0,"bindings":0}
+idempotent {"drafts":1,"candidates":7,"draftRevision":3,"editSeq":3,"savedSeq":3}
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.6/screenshots/v36-05-idempotent-reextract.png
+reopened {"path":"/Users/aston/DSH/tmp/cunlian-v36/E2E-V36-run.cunlian","drafts":1,"candidates":7,"statuses":["pending","confirmed","pending","pending","rejected","pending","pending"],"decisions":[{"action":"confirm","actor":"local-operator","reason":null},{"action":"reject","actor":"local-operator","reason":"长度数值需人工核对"}],"extractorVersion":"document-extractor-1"}
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.6/screenshots/v36-06-reopened-state-kept.png
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.6/screenshots/v36-06b-reopened-rejected-row.png
+idempotentAfterReopen {"drafts":1,"candidates":7,"statuses":["pending","confirmed","pending","pending","rejected","pending","pending"],"editSeq":0,"savedSeq":0}
+SHOT /Users/aston/DSH/staff/docs/evidence/V3.6/screenshots/v36-07-reopened-idempotent.png
+SUMMARY /Users/aston/DSH/staff/docs/evidence/V3.6/stage2-e2e.json
+DONE

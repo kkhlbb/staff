@@ -37,6 +37,9 @@ import {
   type SourceImportValue,
   type RequirementEditValue,
   type RequirementConfirmValue,
+  type ExtractionRunValue,
+  type ExtractionDecideValue,
+  type ExtractionCancelValue,
 } from '../shared/contracts'
 
 /**
@@ -204,6 +207,18 @@ const api: CunlianApi = {
   confirmRequirement: (request) =>
     ipcRenderer.invoke(IPC_CHANNELS.requirementConfirm, request) as Promise<
       IpcResult<RequirementConfirmValue>
+    >,
+  runExtraction: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.extractionRun, request) as Promise<
+      IpcResult<ExtractionRunValue>
+    >,
+  decideExtraction: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.extractionDecide, request) as Promise<
+      IpcResult<ExtractionDecideValue>
+    >,
+  cancelExtraction: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.extractionCancel, request) as Promise<
+      IpcResult<ExtractionCancelValue>
     >,
 }
 

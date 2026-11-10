@@ -1,0 +1,14 @@
+diff --git a/src/document-extraction/draft.ts b/src/document-extraction/draft.ts
+index 4bbe5d0..2048414 100644
+--- a/src/document-extraction/draft.ts
++++ b/src/document-extraction/draft.ts
+@@ -148,9 +148,6 @@ export function confirmCandidate(
+       `候选编辑代数已变化（当前 ${candidate.editRevision}，请求 ${request.editRevision}），请重新查看原文`,
+     )
+   }
+-  if (candidate.status === 'rejected') {
+-    return extractionFailure('CANDIDATE_REJECTED', '该候选已被人工拒绝，不能直接复活为确认')
+-  }
+   if (candidate.status === 'stale') {
+     return extractionFailure('CANDIDATE_STALE', '候选已因来源或规则变化失效，不能确认')
+   }

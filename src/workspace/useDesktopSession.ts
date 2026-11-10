@@ -8,6 +8,10 @@ import type {
   MigrationInspectValue,
   RecentProjectItem,
   RecoveryItem,
+  ExtractionRunRequest,
+  ExtractionDecideRequest,
+  ExtractionDecideValue,
+  ExtractionCancelValue,
 } from '../../desktop/shared/contracts'
 import { DesktopSessionAdapter, type DesktopSessionState } from './desktopAdapter'
 import { chainToDraft, draftToChain, workspaceReducer, type WorkspaceAction } from './draft'
@@ -345,6 +349,57 @@ export function useDesktopSession() {
       } finally {
         locked.current = false; setBusy(false); void refresh()
       }
+    },
+    /** V3.6：提取/决定只改隔离草稿；项目正式保存仍需用户显式保存。 */
+    runExtraction: async (
+      request: Omit<ExtractionRunRequest, 'sessionId' | 'baseEditSeq'>,
+    ): Promise<{ requestId: string; result: Awaited<ReturnType<DesktopSessionAdapter['runExtraction']>> } | null> => {
+      const current = adapter.current
+      if (current === null) { setNotice('window.cunlian 不可用，请在桌面应用中执行文件操作。'); return null }
+      if (locked.current) return null
+      const state = current.getState()
+      if (state.sessionId === null) { setNotice(NO_WRITABLE_SESSION_NOTICE); return null }
+      locked.current = true; setBusy(true); setNotice('')
+      try {
+        const result = await current.runExtraction({
+          sessionId: state.sessionId,
+          baseEditSeq: state.acceptedSeq,
+          ...request,
+        })
+        report(result)
+        return { requestId: request.requestId, result }
+      } finally {
+        locked.current = false; setBusy(false); void refresh()
+      }
+    },
+    decideExtraction: async (
+      request: Omit<ExtractionDecideRequest, 'sessionId' | 'baseEditSeq'>,
+    ): Promise<ExtractionDecideValue | null> => {
+      const current = adapter.current
+      if (current === null) { setNotice('window.cunlian 不可用，请在桌面应用中执行文件操作。'); return null }
+      if (locked.current) return null
+      const state = current.getState()
+      if (state.sessionId === null) { setNotice(NO_WRITABLE_SESSION_NOTICE); return null }
+      locked.current = true; setBusy(true); setNotice('')
+      try {
+        const result = await current.decideExtraction({
+          sessionId: state.sessionId,
+          baseEditSeq: state.acceptedSeq,
+          ...request,
+        })
+        report(result)
+        return result.ok ? result.value : null
+      } finally {
+        locked.current = false; setBusy(false); void refresh()
+      }
+    },
+    cancelExtraction: async (requestId: string): Promise<ExtractionCancelValue | null> => {
+      const current = adapter.current
+      const state = current?.getState()
+      if (current === null || state === undefined || state.sessionId === null) return null
+      const result = await current.cancelExtraction({ sessionId: state.sessionId, requestId })
+      report(result)
+      return result.ok ? result.value : null
     },
     stageRequirementEdit: async (edit: RequirementEditDraft | null) => {
       const target = requireSession()

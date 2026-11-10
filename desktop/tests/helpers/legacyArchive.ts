@@ -1,5 +1,5 @@
 /**
- * 测试辅助：把当前 schema7 容器降级为 schema6/5，用于真实“旧文件”迁移用例。
+ * 测试辅助：把当前 schema8 容器降级为 schema6/5，用于真实“旧文件”迁移用例。
  * 只用于测试；不进入产品路径。
  */
 import { readZipEntries, writeZipEntries } from '../../../src/backup/zip'
@@ -67,6 +67,7 @@ export async function downgradeToSchema6(bytes: Uint8Array): Promise<Uint8Array>
       delete project.requirementRevisions
       delete project.activeRequirementRevisionId
       delete project.currentRequirementCheck
+      delete project.extractionDrafts
     }
     patchJson(parts, 'project/project.json', strip)
     for (const path of [...parts.keys()]) {

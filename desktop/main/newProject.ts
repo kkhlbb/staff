@@ -126,6 +126,7 @@ export function createNewProjectSnapshot(options: NewProjectOptions): ProjectFil
     requirementRevisions: [],
     activeRequirementRevisionId: null,
     currentRequirementCheck: null,
+    extractionDrafts: [],
   }
 
   return {

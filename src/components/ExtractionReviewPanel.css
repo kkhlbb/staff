@@ -1,0 +1,285 @@
+/* V3.6 任务书提取审阅：沿用应用浅色主题；状态用颜色 + 文字双重编码。 */
+.extraction-review {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px 28px;
+  overflow: auto;
+  height: 100%;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.extraction-review h2 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text-h);
+}
+
+.extraction-review__truth {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.extraction-review__truth strong {
+  color: #b45309;
+}
+
+.extraction-review__warning,
+.extraction-review__error {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-size: 12.5px;
+}
+
+.extraction-review__warning {
+  background: #fff7e6;
+  border: 1px solid #e8b04b;
+  color: #8a5a00;
+}
+
+.extraction-review__error {
+  background: #fef2f2;
+  border: 1px solid #e39a9a;
+  color: var(--danger);
+}
+
+.extraction-review__message {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: #f0fdf4;
+  border: 1px solid #9fd8b3;
+  color: #166534;
+  font-size: 12.5px;
+}
+
+.extraction-review section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.extraction-review section[aria-label='提取范围'] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.extraction-review label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.extraction-review input,
+.extraction-review select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 7px;
+  font-size: 12.5px;
+}
+
+.extraction-review button {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.extraction-review button:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.extraction-review button:disabled {
+  opacity: 1;
+  color: var(--muted);
+  background: var(--bg);
+  cursor: not-allowed;
+}
+
+.extraction-review button[aria-pressed='true'] {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.extraction-review__drafts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.extraction-review__meta,
+.extraction-review__counts {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.extraction-review__counts {
+  color: var(--text-h);
+}
+
+.extraction-review__issues {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: #8a5a00;
+}
+
+.extraction-review__batch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.extraction-review__hint {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.extraction-review__candidates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.extraction-review__candidate {
+  border: 1px solid var(--border);
+  border-left-width: 5px;
+  border-radius: 5px;
+  padding: 9px 11px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.extraction-review__candidate--pending {
+  border-left-color: #b45309;
+}
+
+.extraction-review__candidate--blocked {
+  border-left-color: var(--danger);
+  background: #fffafa;
+}
+
+.extraction-review__candidate--confirmed {
+  border-left-color: #15803d;
+  background: #f6fdf8;
+}
+
+.extraction-review__candidate--rejected {
+  border-left-color: #64748b;
+  background: #f8fafc;
+}
+
+.extraction-review__candidate--stale {
+  border-left-color: #7c3aed;
+  opacity: 0.75;
+}
+
+.extraction-review__candidate-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+.extraction-review__badge {
+  padding: 1px 7px;
+  border-radius: 9px;
+  font-size: 11px;
+  border: 1px solid currentColor;
+  background: #fff;
+}
+
+.extraction-review__badge--pending { color: #b45309; }
+.extraction-review__badge--blocked { color: var(--danger); }
+.extraction-review__badge--confirmed { color: #15803d; }
+.extraction-review__badge--rejected { color: #64748b; }
+.extraction-review__badge--stale { color: #7c3aed; }
+
+.extraction-review__confidence {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.extraction-review__raw,
+.extraction-review__evidence,
+.extraction-review__values,
+.extraction-review__reasons {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.extraction-review__raw {
+  color: var(--text-h);
+}
+
+.extraction-review__reasons {
+  color: #8a5a00;
+}
+
+.extraction-review__decision {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.extraction-review__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.extraction-review__inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+
+.extraction-review__inline input {
+  min-width: 220px;
+}
+
+.extraction-review__locate {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.extraction-review__locate .pdf-viewer {
+  max-height: 520px;
+}

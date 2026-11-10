@@ -394,6 +394,19 @@ beforeEach(async () => {
       ok: false as const,
       error: { code: 'INVALID_REQUIREMENT_INPUT' as const, message: 'mock 不提供条款确认' },
     })),
+    // V3.6 新增：提取/决定默认不适用，既有用例行为不变。
+    runExtraction: vi.fn<CunlianApi['runExtraction']>(async () => ({
+      ok: false as const,
+      error: { code: 'SOURCE_NOT_FOUND' as const, message: 'mock 不提供提取' },
+    })),
+    decideExtraction: vi.fn<CunlianApi['decideExtraction']>(async () => ({
+      ok: false as const,
+      error: { code: 'NOT_FOUND' as const, message: 'mock 不提供提取决定' },
+    })),
+    cancelExtraction: vi.fn<CunlianApi['cancelExtraction']>(async () => ({
+      ok: true as const,
+      value: { cancelled: false },
+    })),
   }
   vi.stubGlobal('cunlian', api)
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
@@ -1417,5 +1430,32 @@ describe('V3.5 补缺：历史条款版本定位（复核区入口）', () => {
     expect(api.readAttachment).not.toHaveBeenCalled()
     expect(api.confirmRequirement).not.toHaveBeenCalled()
     expect(api.applyChange).not.toHaveBeenCalled()
+  })
+})
+
+describe('V3.6 任务书提取页', () => {
+  it('显示规则版本/样本限制，提取只传确切 revision 与页范围（不传路径或字节）', async () => {
+    await openExample()
+    fireEvent.click(screen.getByRole('tab', { name: '任务书提取' }))
+    const panel = await screen.findByRole('tabpanel', { name: /任务书提取/ })
+    expect(within(panel).getByText(/只验证过 1 份自造样例/)).toBeInTheDocument()
+    expect(within(panel).getByText(/不做 OCR、DOCX、图片识别或联网识别/)).toBeInTheDocument()
+    expect(within(panel).getByText(/未确认前不参与任何计算/)).toBeInTheDocument()
+
+    fireEvent.click(within(panel).getByRole('button', { name: '提取候选' }))
+    await waitFor(() => expect(api.runExtraction).toHaveBeenCalledTimes(1))
+    const request = vi.mocked(api.runExtraction).mock.calls[0]![0]
+    expect(request).toMatchObject({
+      sessionId: 'session-1',
+      revisionId: 'sr-1',
+      pageFrom: 1,
+      pageTo: 2,
+    })
+    const raw = request as unknown as Record<string, unknown>
+    expect(raw).not.toHaveProperty('path')
+    expect(raw).not.toHaveProperty('bytes')
+    expect(raw).not.toHaveProperty('sha256')
+    // mock 明确失败：面板必须展示错误，而不是假装提取成功。
+    expect(await within(panel).findByRole('alert')).toHaveTextContent('SOURCE_NOT_FOUND')
   })
 })

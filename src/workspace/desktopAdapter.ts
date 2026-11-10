@@ -38,6 +38,12 @@ import type {
   RequirementEditValue,
   RequirementConfirmRequest,
   RequirementConfirmValue,
+  ExtractionRunRequest,
+  ExtractionRunValue,
+  ExtractionDecideRequest,
+  ExtractionDecideValue,
+  ExtractionCancelRequest,
+  ExtractionCancelValue,
 } from '../../desktop/shared/contracts'
 
 export interface DesktopSessionState {
@@ -417,6 +423,61 @@ export class DesktopSessionAdapter {
     request: RequirementEditRequest,
   ): Promise<IpcResult<RequirementEditValue>> {
     return this.api.stageRequirementEdit(request)
+  }
+
+  /* ---- V3.6：任务书 PDF 提取 ----------------------------------------- */
+
+  /** 提取只更新会话快照里的隔离草稿；不自动保存项目文件。 */
+  async runExtraction(request: ExtractionRunRequest): Promise<IpcResult<ExtractionRunValue>> {
+    const result = await this.api.runExtraction(request)
+    if (result.ok) {
+      this.state = {
+        ...this.state,
+        status: 'open',
+        snapshot: result.value.snapshot,
+        acceptedSeq: result.value.acceptedSeq,
+        localSeq: Math.max(this.state.localSeq, result.value.acceptedSeq),
+        dirty: result.value.acceptedSeq > this.state.savedSeq,
+        recovery: result.value.recovery,
+        lastError: undefined,
+      }
+      this.emit()
+    } else {
+      this.state = { ...this.state, lastError: result.error }
+      this.emit()
+    }
+    return result
+  }
+
+  /** 逐条确认/拒绝/编辑：main 校验候选代数、出处与状态后才推进快照。 */
+  async decideExtraction(
+    request: ExtractionDecideRequest,
+  ): Promise<IpcResult<ExtractionDecideValue>> {
+    const result = await this.api.decideExtraction(request)
+    if (result.ok) {
+      this.state = {
+        ...this.state,
+        status: 'open',
+        snapshot: result.value.snapshot,
+        acceptedSeq: result.value.acceptedSeq,
+        localSeq: Math.max(this.state.localSeq, result.value.acceptedSeq),
+        dirty: result.value.acceptedSeq > this.state.savedSeq,
+        recovery: result.value.recovery,
+        lastError: undefined,
+      }
+      this.emit()
+    } else {
+      this.state = { ...this.state, lastError: result.error }
+      this.emit()
+    }
+    return result
+  }
+
+  /** 取消进行中的提取；不改变会话快照。 */
+  async cancelExtraction(
+    request: ExtractionCancelRequest,
+  ): Promise<IpcResult<ExtractionCancelValue>> {
+    return this.api.cancelExtraction(request)
   }
 
   /** 条款确认已由 main 原子写盘；成功只重同步权威快照与保存状态。 */

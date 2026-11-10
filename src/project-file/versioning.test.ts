@@ -22,8 +22,8 @@ describe('B2-02 读时兼容 B1 文件（formatVersion 1 / schema 3）', () => {
 
     expect(manifest.formatVersion).toBe(1)
     expect(manifest.project.projectSchemaVersion).toBe(3)
-    // 工作形状适配为当前 schema7，但记录来源格式供首次保存升级。
-    expect(snapshot.project.schemaVersion).toBe(7)
+    // 工作形状适配为当前 schema8，但记录来源格式供首次保存升级。
+    expect(snapshot.project.schemaVersion).toBe(8)
     expect(snapshot.project.sourceFormatVersion).toBe(1)
     expect(snapshot.project.parts).toEqual([])
     expect(snapshot.project.modelRevisions).toEqual([])
@@ -52,7 +52,7 @@ describe('B2-02 读时兼容 B1 文件（formatVersion 1 / schema 3）', () => {
     expect(encoded.ok).toBe(true)
     if (!encoded.ok) return
     expect(encoded.value.manifest.formatVersion).toBe(2)
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(7)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(8)
     expect(encoded.value.manifest.counts.models).toBe(0)
 
     const again = await decodeProjectFile(encoded.value.bytes)

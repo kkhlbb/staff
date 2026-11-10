@@ -1,0 +1,38 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/document-extraction/__tests__/confirmation.test.ts (17 tests | 1 failed) 87ms
+   ❯ V3.6 拒绝与编辑 (3)
+     × 拒绝必须写理由；拒绝后不能直接确认复活 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/document-extraction/__tests__/confirmation.test.ts > V3.6 拒绝与编辑 > 拒绝必须写理由；拒绝后不能直接确认复活
+AssertionError: expected { ok: true, value: { …(12) } } to match object { ok: false, …(1) }
+(13 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "CANDIDATE_REJECTED",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ src/document-extraction/__tests__/confirmation.test.ts:207:68
+    205|       reason: '与图纸不符，需人工核对',
+    206|     })
+    207|     expect(confirmCandidate(rejected.value, confirmRequest(part))).toM…
+       |                                                                    ^
+    208|       ok: false,
+    209|       code: 'CANDIDATE_REJECTED',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  1 failed | 43 passed (44)
+   Start at  06:47:50
+   Duration  371ms (import 48%, tests 27%, setup 18%, transform 7%, worker 1%)
+

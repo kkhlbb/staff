@@ -74,6 +74,10 @@ export const IPC_CHANNELS = {
   sourceImport: 'source:import',
   requirementEdit: 'requirement:edit',
   requirementConfirm: 'requirement:confirm',
+  /** V3.6：任务书 PDF 提取（main 精确版本读取、页范围/预算/取消）与逐条决定。 */
+  extractionRun: 'extraction:run',
+  extractionDecide: 'extraction:decide',
+  extractionCancel: 'extraction:cancel',
 } as const
 
 export type IpcChannelName = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
@@ -192,6 +196,18 @@ export type CommonErrorCode =
   | 'NO_DRAWING'
   | 'UNSUPPORTED_TEMPLATE'
   | 'COMPARE_UNAVAILABLE'
+  /** V3.6：任务书提取。 */
+  | 'EXTRACTION_BUSY'
+  | 'EXTRACTION_CANCELLED'
+  | 'EXTRACTION_TIMEOUT'
+  | 'EXTRACTION_BUDGET'
+  | 'EXTRACTION_CONFIRMATION_REQUIRED'
+  | 'EXTRACTION_EVIDENCE_REQUIRED'
+  | 'EXTRACTION_CANDIDATE_BLOCKED'
+  | 'EXTRACTION_CANDIDATE_REJECTED'
+  | 'EXTRACTION_STALE_DECISION'
+  | 'EXTRACTION_REASON_REQUIRED'
+  | 'EXTRACTION_VERSION_MISMATCH'
 
 export type IpcErrorCode =
   | ContainerErrorCode
@@ -718,6 +734,90 @@ export interface RequirementConfirmValue {
   warnings: string[]
 }
 
+
+/* ------------------------------------------------------------------ */
+/* V3.6：任务书 PDF 提取（隔离草稿 + 逐条人工决定）                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 提取请求。
+ *
+ * renderer 只传“确切 revision + 页范围 + 请求号”：
+ * - revisionId 必须是当前会话快照里存在的版本，main 不会自动追随 latest；
+ * - 不传路径、blobKey、sha256 或字节；main 从版本记录解析并自算哈希；
+ * - requestId 供 `extraction:cancel` 取消同一次提取。
+ */
+export interface ExtractionRunRequest {
+  sessionId: string
+  baseEditSeq: number
+  revisionId: string
+  /** 1-based 闭合页范围。 */
+  pageFrom: number
+  pageTo: number
+  requestId: string
+}
+
+export interface ExtractionRunValue {
+  acceptedSeq: number
+  draftId: string
+  extractorVersion: string
+  candidateCount: number
+  /** 本次新增的候选数；同一版本/页范围/规则重提时为 0。 */
+  addedCandidateCount: number
+  /** true 表示重提完全命中已有草稿，未产生新候选/issue，也未推进编辑序号。 */
+  unchanged: boolean
+  snapshot: SnapshotDto
+  recovery: RecoveryWriteState | 'none'
+  warning?: string
+}
+
+export type ExtractionDecisionAction = 'confirm' | 'reject' | 'edit'
+
+/**
+ * 逐条决定请求。
+ *
+ * - 确认必须显式 `confirmed: true`；main 仍会校验候选状态、编辑代数、出处与决定快照；
+ * - 拒绝必须给理由；
+ * - 编辑只接受 mm 文本，且改后文本必须出现在该字段原有原文片段里（不伪造出处）；
+ * - actor/decidedAt 由 main 生成，renderer 不能填写。
+ */
+export interface ExtractionDecideRequest {
+  sessionId: string
+  baseEditSeq: number
+  draftId: string
+  candidateId: string
+  /** 界面看到的候选编辑代数；不匹配即拒绝。 */
+  editRevision: number
+  action: ExtractionDecisionAction
+  /** action=confirm 时必须为字面量 true。 */
+  confirmed?: true
+  /** action=reject 时必填。 */
+  reason?: string
+  /** action=edit 时必填：字段名与 mm 十进制文本。 */
+  field?: 'nominal' | 'upperDeviation' | 'lowerDeviation' | 'lower' | 'upper' | 'innerDiameter' | 'outerDiameter' | 'length'
+  text?: string
+}
+
+export interface ExtractionDecideValue {
+  acceptedSeq: number
+  draftId: string
+  candidateId: string
+  status: 'pending' | 'blocked' | 'confirmed' | 'rejected' | 'stale'
+  decisionId: string | null
+  snapshot: SnapshotDto
+  recovery: RecoveryWriteState | 'none'
+  warning?: string
+}
+
+export interface ExtractionCancelRequest {
+  sessionId: string
+  requestId: string
+}
+
+export interface ExtractionCancelValue {
+  cancelled: boolean
+}
+
 /**
  * preload 暴露到 `window.cunlian` 的 API。
  *
@@ -867,6 +967,14 @@ export interface CunlianApi {
   confirmRequirement(
     request: RequirementConfirmRequest,
   ): Promise<IpcResult<RequirementConfirmValue>>
+
+  /* ---- V3.6：任务书 PDF 提取（新增，旧函数不变） ---------------------- */
+  /** 从确切 PDF 版本提取页范围候选；失败零写入，不留半截草稿。 */
+  runExtraction(request: ExtractionRunRequest): Promise<IpcResult<ExtractionRunValue>>
+  /** 逐条确认/拒绝/编辑候选；未确认候选不进入项目计算或条款。 */
+  decideExtraction(request: ExtractionDecideRequest): Promise<IpcResult<ExtractionDecideValue>>
+  /** 取消同一会话中正在进行的提取（按 requestId）。 */
+  cancelExtraction(request: ExtractionCancelRequest): Promise<IpcResult<ExtractionCancelValue>>
 }
 
 /** 应用与 IPC 协议的稳定标识，测试与契约文档共用。 */

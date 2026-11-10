@@ -28,7 +28,7 @@ describe('B2-02 首次保存显式升级（真实 B1 产物）', () => {
       expect(opened.ok).toBe(true)
       if (!opened.ok) return
       expect(opened.value.snapshot.project.sourceFormatVersion).toBe(1)
-      expect(opened.value.snapshot.project.schemaVersion).toBe(7)
+      expect(opened.value.snapshot.project.schemaVersion).toBe(8)
       expect(opened.value.snapshot.project.modelRevisions).toEqual([])
       expect(opened.value.snapshot.project.dimensionChain.terms.map((term) => term.nominalQ)).toEqual([
         522000, 200000, 120000, 200000,
@@ -53,13 +53,13 @@ describe('B2-02 首次保存显式升级（真实 B1 产物）', () => {
       expect(after.ok).toBe(true)
       if (!after.ok) return
       expect(after.value.manifest.formatVersion).toBe(2)
-      expect(after.value.manifest.project.projectSchemaVersion).toBe(7)
+      expect(after.value.manifest.project.projectSchemaVersion).toBe(8)
       expect(after.value.snapshot.project.sourceFormatVersion).toBe(2)
       expect(after.value.snapshot.fileRevisions).toHaveLength(2)
       // 旧版本保留 schema3 原样。
       expect(after.value.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(3)
       const newest = after.value.snapshot.fileRevisions[1]!
-      expect(newest.project.schemaVersion).toBe(7)
+      expect(newest.project.schemaVersion).toBe(8)
       expect(newest.parentId).toBe('rev-a1')
       expect(newest.revisionId).toBe(after.value.snapshot.project.currentRevisionId)
       expect(after.value.snapshot.project.dimensionChain.terms.map((term) => term.nominalQ)).toEqual([

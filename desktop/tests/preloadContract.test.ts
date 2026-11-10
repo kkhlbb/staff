@@ -51,6 +51,10 @@ const ADDED_FUNCTIONS = [
   'importSource',
   'stageRequirementEdit',
   'confirmRequirement',
+  // V3.6：任务书 PDF 提取与逐条决定（仍只增不改旧函数）。
+  'runExtraction',
+  'decideExtraction',
+  'cancelExtraction',
 ] as const
 
 describe('B2/C preload 契约', () => {

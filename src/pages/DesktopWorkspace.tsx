@@ -16,6 +16,7 @@ import { ChangeWorkbench } from '../components/ChangeWorkbench'
 import { RequirementWizard } from '../components/RequirementWizard'
 import { RequirementStatusPanel } from '../components/RequirementStatusPanel'
 import { RequirementRevisionHistory } from '../components/RequirementRevisionHistory'
+import { ExtractionReviewPanel } from '../components/ExtractionReviewPanel'
 import {
   listRequirementRevisionHistory,
   resolveRequirementRevisionSource,
@@ -32,7 +33,7 @@ import { REQUIREMENT_STATUS_LABEL } from '../requirements/types'
 import './Workspace.css'
 import './DesktopWorkspace.css'
 
-const tabs = ['工程图', '3D', '来源 PDF', '尺寸链', '历史报告'] as const
+const tabs = ['工程图', '3D', '来源 PDF', '尺寸链', '历史报告', '任务书提取'] as const
 const groups = ['零件', '工程图', '尺寸链', '来源资料', '版本历史'] as const
 
 /** 只调整布局，不维护工程数据或计算状态。 */
@@ -131,6 +132,13 @@ export function DesktopWorkspace() {
   const [reviewHeight, setReviewHeight] = useState(200)
   const [requirementOpen, setRequirementOpen] = useState(false)
   const [locateError, setLocateError] = useState<string | null>(null)
+  // V3.6：提取定位只读读取确切版本字节；不接受本地路径或任意 blobKey。
+  const readExtractionBytes = async (revision: import('../sources/types').SourceRevision): Promise<Uint8Array> => {
+    if (sessionId === null || window.cunlian === undefined) throw new Error('window.cunlian 不可用')
+    const result = await window.cunlian.readAttachment({ sessionId, revisionId: revision.id })
+    if (!result.ok) throw new Error(`附件不可用 · ${result.error.code}：${result.error.message}`)
+    return result.value.bytes
+  }
   const [locate, setLocate] = useState<import('../components/DesktopSessionViews').RequirementSourceLocation | null>(null)
   const locateNonce = useRef(0)
 
@@ -423,7 +431,16 @@ export function DesktopWorkspace() {
                 <button type="button" onClick={() => demo.activate()}>查看内置轴系示例</button>
               </div>
             </div>)}
-          {index > 1 && tab === index && snapshot && (index === 2 ? <DesktopSourceView key={`${session.state!.sessionId}:${locate?.locateNonce ?? 'none'}`} snapshot={snapshot} sessionId={session.state!.sessionId!} requirementSource={requirementSource} locate={locate} onImportVersion={(documentId) => void session.importSource(documentId)} /> : index === 3 ? <DesktopChainView snapshot={snapshot} edit={session.edit} disabled={session.busy} /> : <DesktopHistoryView snapshot={snapshot} requirementHistory={requirementHistory} onLocateRequirement={locateRequirementRevision} />)}
+          {index > 1 && tab === index && snapshot && (index === 2 ? <DesktopSourceView key={`${session.state!.sessionId}:${locate?.locateNonce ?? 'none'}`} snapshot={snapshot} sessionId={session.state!.sessionId!} requirementSource={requirementSource} locate={locate} onImportVersion={(documentId) => void session.importSource(documentId)} /> : index === 3 ? <DesktopChainView snapshot={snapshot} edit={session.edit} disabled={session.busy} /> : index === 4 ? <DesktopHistoryView snapshot={snapshot} requirementHistory={requirementHistory} onLocateRequirement={locateRequirementRevision} /> : <ExtractionReviewPanel
+            snapshot={snapshot}
+            busy={session.busy}
+            readBytes={readExtractionBytes}
+            actions={{
+              onRun: (request) => session.runExtraction(request),
+              onDecide: (request) => session.decideExtraction(request),
+              onCancel: (requestId) => session.cancelExtraction(requestId),
+            }}
+          />)}
         </div>)}
       </section>
       {rightOpen ? <Splitter label="属性栏宽度" value={rightWidth} min={240} max={340} reverse onChange={setRightWidth} /> : <div />}

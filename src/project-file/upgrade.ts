@@ -1,5 +1,5 @@
 /**
- * 项目文件格式升级（V3.5）：formatVersion 保持 2，项目 schema 6 → 7。
+ * 项目文件格式升级（V3.6）：formatVersion 保持 2，项目 schema 3..7 → 8。
  *
  * 只在用户显式保存或首次需要正式写盘的条款/变更提交时由 main 执行；
  * 打开旧文件不写盘、不产生 dirty。旧的文件版本快照原样保留（schema3/4/5/6），
@@ -12,7 +12,7 @@ import type { ProjectFileSnapshot } from './types'
 import { PROJECT_FILE_SCHEMA_VERSION } from './types'
 
 export const FORMAT_UPGRADE_NOTICE =
-  '已升级为项目文件格式 2（schema 7）：任务书条款与检查证据已启用；历史版本、PDF、模型、图纸与数值均已保留；旧版程序不能打开此文件，且没有无损降级。'
+  '已升级为项目文件格式 2（schema 8）：任务书提取候选与逐条决定可随项目保存；历史版本、PDF、模型、图纸、条款与数值均已保留；旧版程序不能打开此文件，且没有无损降级。'
 
 export interface UpgradeOptions {
   now?: () => Date
@@ -33,8 +33,8 @@ export function upgradeSnapshotToCurrent(
   if (
     snapshot.project.schemaVersion === PROJECT_FILE_SCHEMA_VERSION &&
     snapshot.project.sourceFormatVersion === 2 &&
-    // 当前版本记录也必须是 schema7；schema6 文件读入后工作形状虽为 7，
-    // 但当前历史记录仍是 6，保存时必须新增一条 7 的版本（旧记录不可变）。
+    // 当前版本记录也必须是 schema8；schema7 文件读入后工作形状虽为 8，
+    // 但当前历史记录仍是 7，保存时必须新增一条 8 的版本（旧记录不可变）。
     currentRevision?.project.schemaVersion === PROJECT_FILE_SCHEMA_VERSION
   ) {
     return { snapshot, upgraded: false, notice: null }
@@ -59,7 +59,7 @@ export function upgradeSnapshotToCurrent(
           revisionId,
           createdAt: now,
           parentId: snapshot.project.currentRevisionId,
-          reason: '保存时升级为项目 schema 7（V3.5）',
+          reason: '保存时升级为项目 schema 8（V3.6）',
           project,
         },
       ],

@@ -103,7 +103,7 @@ describe('V3.5 提交重算：只放行 satisfied，且用当前草稿重算', (
       requirementRevisionId: 'reqrev-1',
       resultInterval: { minQ: 1100, maxQ: 2100 },
     })
-    expect(candidate.snapshot.project.schemaVersion).toBe(7)
+    expect(candidate.snapshot.project.schemaVersion).toBe(8)
     expect(candidate.snapshot.project.activeRequirementRevisionId).toBe('reqrev-1')
     expect(candidate.snapshot.project.requirementRevisions[0]).toEqual(
       project.snapshot.project.requirementRevisions[0],
