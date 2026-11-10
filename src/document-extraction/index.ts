@@ -43,6 +43,12 @@ export {
 } from './types'
 export { buildExtractionDraft, evidenceFromSpan, matchTextOf, type ExtractionRequest } from './parse'
 export {
+  countPendingExtractionCandidates,
+  pendingExtractionBadgeLabel,
+  pendingExtractionBadgeTitle,
+  type ExtractionPendingCounts,
+} from './pending'
+export {
   buildPdfTextLayer,
   isRadicalCodePoint,
   itemRectPdf,

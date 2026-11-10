@@ -31,8 +31,14 @@
   font-size: 0.8rem;
 }
 
+/*
+ * V3.6 体验补丁：默认高度改成“按内容自适应到上限”。
+ * 4 行（1440 宽 ≈ 45px/行、960 宽 ≈ 59px/行）在未超上限时完整显示；
+ * 超过上限（1440 约 8 行、960 约 6 行）才在表内滚动，不再由复核区 200px 硬裁切。
+ */
 .requirement-history__scroll {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 360px;
 }
 
 .requirement-history__table {

@@ -16,6 +16,9 @@ import { computeChange } from '../revisions/compute'
 import { buildCommitCandidate } from '../revisions/commit'
 import { deriveReviewGroups } from '../revisions/status'
 import { computeCandidateRequirementCheck } from '../requirements/check'
+import { confirmCandidate, rejectCandidate } from '../document-extraction/draft'
+import type { ExtractionDraft } from '../document-extraction/types'
+import { buildSyntheticExtractionDraft } from '../document-extraction/__fixtures__/draftFixture'
 
 // 3D 场景在 jsdom 里没有 WebGL2：用伪场景模块替换，只验证接线与命令调用。
 const scene = vi.hoisted(() => ({
@@ -1457,5 +1460,121 @@ describe('V3.6 任务书提取页', () => {
     expect(raw).not.toHaveProperty('sha256')
     // mock 明确失败：面板必须展示错误，而不是假装提取成功。
     expect(await within(panel).findByRole('alert')).toHaveTextContent('SOURCE_NOT_FOUND')
+  })
+})
+
+describe('V3.6 补缺：提取入口角标（未决计数）', () => {
+  type Snapshot = ProjectOpenValue['snapshot']
+
+  /** 用项目文件里的真实提取草稿（合成文本层 → 领域解析，4 待确认 + 1 阻塞）。 */
+  async function withDrafts(base: Snapshot): Promise<{ snapshot: Snapshot; draft: ExtractionDraft }> {
+    const revision = base.revisions[0]!
+    const draft = buildSyntheticExtractionDraft({
+      projectId: base.project.id,
+      baseToken: `base-${base.project.id}`,
+      source: {
+        documentId: revision.documentId,
+        revisionId: revision.id,
+        sha256: revision.sha256,
+        blobKey: revision.blobKey,
+        pageCount: revision.pageCount,
+      },
+    })
+    return {
+      snapshot: { ...base, project: { ...base.project, extractionDrafts: [draft] } },
+      draft,
+    }
+  }
+
+  /** 全部处理：待确认逐条确认，阻塞拒绝（阻塞不能确认）。 */
+  function decideAll(draft: ExtractionDraft): ExtractionDraft {
+    let current = draft
+    for (const candidate of draft.candidates) {
+      const result = candidate.status === 'pending'
+        ? confirmCandidate(current, {
+            candidateId: candidate.candidateId,
+            editRevision: candidate.editRevision,
+            confirmed: true,
+            actor: 'local-operator',
+            decidedAt: '2026-11-10T10:00:00.000Z',
+          })
+        : candidate.status === 'blocked'
+          ? rejectCandidate(current, {
+              candidateId: candidate.candidateId,
+              editRevision: candidate.editRevision,
+              actor: 'local-operator',
+              decidedAt: '2026-11-10T10:00:00.000Z',
+              reason: '不支持运算符，改人工录入',
+            })
+          : { ok: true as const, value: current }
+      if (!result.ok) throw new Error(`决定失败：${result.code}`)
+      current = result.value
+    }
+    return current
+  }
+
+  it('有未决项：入口角标显示待确认/阻塞数，title 一句话可读，面板不自动展开也不自动提取', async () => {
+    const prepared = await withDrafts(await createSampleSnapshot())
+    opened.snapshot = prepared.snapshot
+
+    await openExample()
+
+    const badge = screen.getByTestId('extraction-pending-badge')
+    expect(badge).toHaveTextContent('待确认 4 · 阻塞 1')
+    const tab = screen.getByRole('tab', { name: '任务书提取' })
+    expect(tab).toHaveAttribute('title', '有 5 项提取候选待处理（4 待确认、1 阻塞）')
+    expect(tab).toHaveAttribute('aria-describedby', 'desktop-extraction-pending-desc')
+    expect(screen.getByText('有 5 项提取候选待处理（4 待确认、1 阻塞）')).toBeInTheDocument()
+
+    // 不自动展开面板：提取页仍然隐藏在 tab 之后，且没有触发任何提取。
+    expect(screen.getByRole('tab', { name: '任务书提取' })).toHaveAttribute('aria-selected', 'false')
+    expect(document.getElementById('desktop-panel-5')!.hidden).toBe(true)
+    expect(screen.getByRole('tabpanel', { name: '工程图' })).toBeVisible()
+    expect(api.runExtraction).not.toHaveBeenCalled()
+  })
+
+  it('已确认/已拒绝全部处理完：角标消失（不显示 0 或空徽标）', async () => {
+    const prepared = await withDrafts(await createSampleSnapshot())
+    const decided = decideAll(prepared.draft)
+    expect(decided.candidates.map((candidate) => candidate.status)).toEqual([
+      'confirmed',
+      'confirmed',
+      'confirmed',
+      'confirmed',
+      'rejected',
+    ])
+    opened.snapshot = { ...prepared.snapshot, project: { ...prepared.snapshot.project, extractionDrafts: [decided] } }
+
+    await openExample()
+
+    expect(screen.queryByTestId('extraction-pending-badge')).toBeNull()
+    const tab = screen.getByRole('tab', { name: '任务书提取' })
+    expect(tab).not.toHaveAttribute('title')
+    expect(tab).not.toHaveAttribute('aria-describedby')
+    expect(document.querySelector('.desktop-workspace__tab-badge')).toBeNull()
+    expect(screen.queryByText(/待确认 0|阻塞 0/)).toBeNull()
+  })
+
+  it('关闭重开（项目文件编码/解码往返）：角标与数字保持一致', async () => {
+    const prepared = await withDrafts(await createSampleSnapshot())
+    const encoded = await encodeProjectFile(prepared.snapshot as unknown as import('../project-file/types').ProjectFileSnapshot)
+    expect(encoded.ok, encoded.ok ? '' : encoded.error.message).toBe(true)
+    if (!encoded.ok) return
+    const decoded = await decodeProjectFile(encoded.value.bytes)
+    expect(decoded.ok, decoded.ok ? '' : decoded.error.message).toBe(true)
+    if (!decoded.ok) return
+    const reopened = decoded.value.snapshot
+    const candidates = reopened.project.extractionDrafts[0]!.candidates
+    expect(candidates.filter((candidate) => candidate.status === 'pending')).toHaveLength(4)
+    expect(candidates.filter((candidate) => candidate.status === 'blocked')).toHaveLength(1)
+
+    opened.snapshot = toSnapshotDto(reopened) as unknown as Snapshot
+    await openExample()
+
+    expect(screen.getByTestId('extraction-pending-badge')).toHaveTextContent('待确认 4 · 阻塞 1')
+    expect(screen.getByRole('tab', { name: '任务书提取' })).toHaveAttribute(
+      'title',
+      '有 5 项提取候选待处理（4 待确认、1 阻塞）',
+    )
   })
 })

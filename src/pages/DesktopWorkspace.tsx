@@ -18,6 +18,11 @@ import { RequirementStatusPanel } from '../components/RequirementStatusPanel'
 import { RequirementRevisionHistory } from '../components/RequirementRevisionHistory'
 import { ExtractionReviewPanel } from '../components/ExtractionReviewPanel'
 import {
+  countPendingExtractionCandidates,
+  pendingExtractionBadgeLabel,
+  pendingExtractionBadgeTitle,
+} from '../document-extraction/pending'
+import {
   listRequirementRevisionHistory,
   resolveRequirementRevisionSource,
 } from '../requirements/history'
@@ -129,7 +134,15 @@ export function DesktopWorkspace() {
   const [leftWidth, setLeftWidth] = useState(232)
   const [rightWidth, setRightWidth] = useState(312)
   const [reviewOpen, setReviewOpen] = useState(false)
-  const [reviewHeight, setReviewHeight] = useState(200)
+  /**
+   * V3.6 体验补丁：复核区默认高度 200 → 340，让「条款版本历史」不再被 200px
+   * 硬裁成 2 行。默认值随窗口收口（见 `--review-height`）：
+   *   max(200px, min(340px, 100dvh - 360px))
+   * 900 高窗口给 340px（够 5 行），640 高窗口给 280px（够 4 行），
+   * 同时保证复核区自身可滚动、不溢出。用户拖动分隔条后按用户选的像素渲染。
+   */
+  const [reviewHeight, setReviewHeight] = useState(340)
+  const [reviewHeightTouched, setReviewHeightTouched] = useState(false)
   const [requirementOpen, setRequirementOpen] = useState(false)
   const [locateError, setLocateError] = useState<string | null>(null)
   // V3.6：提取定位只读读取确切版本字节；不接受本地路径或任意 blobKey。
@@ -169,7 +182,10 @@ export function DesktopWorkspace() {
     const next = event.key === 'ArrowRight' ? (tab + 1) % tabs.length : event.key === 'ArrowLeft' ? (tab + tabs.length - 1) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null
     if (next !== null) { event.preventDefault(); setTab(next); tabRefs.current[next]?.focus() }
   }
-  const style = { '--tree-width': `${leftOpen ? leftWidth : 0}px`, '--properties-width': `${rightOpen ? rightWidth : 0}px`, '--review-height': `${reviewHeight}px` } as CSSProperties
+  const reviewHeightCss = reviewHeightTouched
+    ? `${reviewHeight}px`
+    : `max(200px, min(${reviewHeight}px, calc(100dvh - 360px)))`
+  const style = { '--tree-width': `${leftOpen ? leftWidth : 0}px`, '--properties-width': `${rightOpen ? rightWidth : 0}px`, '--review-height': reviewHeightCss } as CSSProperties
   const parsed = snapshot?.draft ? draftToChain(snapshot.draft) : project ? { ok: true as const, chain: project.dimensionChain } : null
   const result = parsed?.ok ? calculateChain(parsed.chain) : null
   const calculation = result ? ({ within: '满足目标（非审查结论）', outside: '超出目标', 'no-target': '未设目标' }[result.status]) : '输入无效，未计算'
@@ -263,6 +279,13 @@ export function DesktopWorkspace() {
   const linkTargetName = (link: ProjectFileVisualReferenceLink): string =>
     project?.parts.find(part => part.partId === link.target.partId)?.name ?? link.target.partId
   const saveState = session.state?.lastError && ['PERMISSION_DENIED', 'NO_SPACE', 'WRITE_FAILED', 'VERIFY_FAILED', 'RENAME_FAILED', 'EXTERNAL_MODIFIED', 'SAVE_FAILED'].includes(session.state.lastError.code) ? '保存失败，编辑内容仍可继续处理' : !session.state?.path ? '未保存草稿' : session.state.saveStateKnown === false ? '已恢复会话 · 正式保存状态未知' : session.state.dirty ? '有未保存修改' : '已保存'
+  // V3.6 体验补丁：入口角标只读项目文件里的提取草稿；不展开面板、不触发提取。
+  const extractionPending = useMemo(
+    () => countPendingExtractionCandidates(project?.extractionDrafts ?? []),
+    [project],
+  )
+  const extractionBadge = pendingExtractionBadgeLabel(extractionPending)
+  const extractionBadgeTitle = pendingExtractionBadgeTitle(extractionPending)
   const dialogs = <SessionDialogs session={session} />
   if (!project) return <main className="desktop-workspace" aria-label="寸链启动页">
     <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">V3.5 · Beta</span></header>
@@ -365,8 +388,16 @@ export function DesktopWorkspace() {
       {leftOpen ? <Splitter label="项目树宽度" value={leftWidth} min={180} max={280} onChange={setLeftWidth} /> : <div />}
       <section className="desktop-workspace__center" aria-label="中央工作区">
         <div role="tablist" aria-label="工作视图" className="desktop-workspace__tabs">
-          {tabs.map((name, index) => <button key={name} ref={node => { tabRefs.current[index] = node }} role="tab" id={`desktop-tab-${index}`} aria-controls={`desktop-panel-${index}`} aria-selected={tab === index} tabIndex={tab === index ? 0 : -1} onKeyDown={tabKey} onClick={() => setTab(index)}>{name}</button>)}
+          {tabs.map((name, index) => <button key={name} ref={node => { tabRefs.current[index] = node }} role="tab" id={`desktop-tab-${index}`} aria-controls={`desktop-panel-${index}`} aria-selected={tab === index} tabIndex={tab === index ? 0 : -1} onKeyDown={tabKey} onClick={() => setTab(index)}
+            aria-labelledby={`desktop-tab-${index}-label`}
+            title={index === 5 ? extractionBadgeTitle ?? undefined : undefined}
+            aria-describedby={index === 5 && extractionBadge !== null ? 'desktop-extraction-pending-desc' : undefined}>
+            <span id={`desktop-tab-${index}-label`}>{name}</span>
+            {index === 5 && extractionBadge !== null && <span className="desktop-workspace__tab-badge" data-testid="extraction-pending-badge" aria-hidden="true">{extractionBadge}</span>}
+          </button>)}
         </div>
+        {/* 角标数字的完整说明放在 tablist 之外：不污染 tablist 的子元素语义，aria-describedby 仍可跨节点引用。 */}
+        {extractionBadge !== null && extractionBadgeTitle !== null && <span id="desktop-extraction-pending-desc" className="desktop-workspace__sr-only">{extractionBadgeTitle}</span>}
         {tabs.map((name, index) => <div key={name} role="tabpanel" id={`desktop-panel-${index}`} aria-labelledby={`desktop-tab-${index}`} tabIndex={0} hidden={tab !== index} className="desktop-workspace__canvas">
           {index === 0 && <div className="desktop-workspace__drawing-tab">
             <ChangeWorkbench
@@ -504,7 +535,7 @@ export function DesktopWorkspace() {
         <p className="desktop-workspace__pending">○ 尚无审查结论</p>
       </aside>
     </div>
-    {reviewOpen && <Splitter label="复核区高度" value={reviewHeight} min={160} max={280} horizontal reverse onChange={setReviewHeight} />}
+    {reviewOpen && <Splitter label="复核区高度" value={reviewHeight} min={200} max={480} horizontal reverse onChange={value => { setReviewHeightTouched(true); setReviewHeight(value) }} />}
     <section className={`desktop-workspace__review${reviewOpen ? ' desktop-workspace__review--open' : ''}`} aria-label="复核与变更">
       <button className="desktop-workspace__review-toggle" aria-expanded={reviewOpen} aria-controls="desktop-review-content" onClick={() => setReviewOpen(!reviewOpen)}>{reviewOpen ? '▾' : '▸'} 复核与变更 <span>计算 {calculation} · 来源 {sourceState} · 图纸 {project.drawings.length > 0 ? '待复核草稿' : '未生成'}</span></button>
       <div id="desktop-review-content" hidden={!reviewOpen} className="desktop-workspace__review-groups">
