@@ -1,18 +1,69 @@
-# staff
+# staff · 寸链
 
-轴系轴向公差链分析与修改追踪工具（MVP）。产品与验收依据见
-[docs/MVP开发文档.md](docs/MVP开发文档.md)。
+轴系轴向公差链分析与修改追踪工具。浏览器端用极值法分析一维轴向尺寸链；V3 起提供 macOS 桌面制图工作台：零件参数、3D 部件、A4 工程图、尺寸链联动与版本快照。
+
+许可：**MIT**（见 `LICENSE`）。第三方组件与字体的许可见 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)。
+
+## 两个运行形态
+
+| 形态 | 说明 |
+|---|---|
+| 浏览器版 | `npm run build && npm run preview`，数据存本机 IndexedDB |
+| macOS 桌面版（V3） | Electron 应用，项目以 `.cunlian` 单文件保存，可直接出 A4 PDF/SVG 工程图 |
+
+## 从源码构建 macOS 应用
+
+```bash
+npm install
+npm run package:desktop -- --arch=arm64
+# 产物：out/寸链-darwin-arm64/寸链.app
+```
+
+需要 Node.js 20+ 与 macOS。构建本机无需 Apple 开发者账号。
+
+### 未签名说明（重要）
+
+发布出来的 `.app` **没有使用 Apple Developer ID 签名，也没有公证**。因此：
+
+- **你自己构建的**产物可以直接打开；
+- 从网络下载/网盘/压缩包解压得到的，会被 Gatekeeper 拦下，需要手动放行一次：
+  1. 在 Finder 里**右键 → 打开**，或
+  2. 系统设置 → 隐私与安全性 → 找到拦截提示 → **仍要打开**，或
+  3. 终端执行 `xattr -dr com.apple.quarantine /Applications/寸链.app`
+
+这不是缺陷，是没买 99 美元/年的开发者账号。要消除这个弹窗只能走签名 + 公证。
+
+## 数据与隐私
+
+- 所有计算、渲染、PDF 生成都在本机完成，**不发网络请求**；
+- 项目文件是你自己指定的 `.cunlian`（ZIP 容器：项目、来源附件、版本、事件、分析快照）；
+- 应用目录只存最近项目索引、界面偏好与恢复草稿。
 
 ## 常用命令
 
 ```bash
 npm install
-npm run dev
-npm test
+npm run dev          # 浏览器开发
+npm test             # 单元/组件测试
+npm run test:desktop # 主进程与 IPC 测试
 npm run lint
 npm run typecheck
 npm run build
 ```
+
+> `package.json` 里的 `"private": true` 是为了防止误 `npm publish`——这是应用不是库，不影响开源与再分发。
+
+## 桌面版功能范围（V3）
+
+- 打开/保存/另存为 `.cunlian`，导入 V2 `.cunlian.zip` 备份，最近项目
+- 内置轴系示意装配（阶梯轴/左右轴承/隔套/挡圈），3D 旋转缩放、装配与爆炸、树↔画布互选
+- STL 导入（二进制/ASCII，上限 10 MiB / 20 万面），替换生成新模型版本，旧关联标记待核
+- 隔套三参数（内径/外径/长度，整数 q，1q = 0.0001 mm）驱动 A4 横向工程图：主视图 + 端视图、中心线、尺寸线与箭头、图框
+- 图纸以矢量 PDF / SVG 导出（真文本与矢量路径，不是截图；字体子集嵌入）
+- 参数与组成环绑定，只同步基本尺寸；改参数给出旧值/新值、受影响环、旧结果/新结果；基准变化使旧预览作废；确认时一次原子写入
+- 不可变版本历史与分析快照
+
+**范围外**：STEP 出图、多尺寸链联合求解、自动读图、Agent 指令入口。
 
 ## 分析快照与完整备份（V2.2 第二组）
 
