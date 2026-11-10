@@ -1,0 +1,24 @@
+diff --git a/src/document-extraction/draft.ts b/src/document-extraction/draft.ts
+index 4bbe5d0..dc0998d 100644
+--- a/src/document-extraction/draft.ts
++++ b/src/document-extraction/draft.ts
+@@ -489,19 +489,6 @@ export function planApplication(
+     if (!candidate) {
+       return extractionFailure('CANDIDATE_NOT_FOUND', `找不到候选 ${candidateId}`)
+     }
+-    if (candidate.status !== 'confirmed') {
+-      return extractionFailure(
+-        'NOT_CONFIRMED',
+-        `候选 ${candidateId} 状态为 ${candidate.status}，未经逐条确认不能送入项目草稿`,
+-      )
+-    }
+-    const decision = latestActiveDecision(draft, candidateId)
+-    if (!decision || decision.candidateEditRevision !== candidate.editRevision) {
+-      return extractionFailure('STALE_DECISION', `候选 ${candidateId} 的确认已失效，需重新确认`)
+-    }
+-    if (decision.valueSnapshot !== candidateValueSnapshot(candidate)) {
+-      return extractionFailure('STALE_DECISION', `候选 ${candidateId} 的数值在确认后被改动`)
+-    }
+     const missing = evidenceMissing(candidate)
+     if (missing) {
+       return extractionFailure(

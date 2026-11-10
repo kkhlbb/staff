@@ -1,0 +1,2052 @@
+[
+  {
+    "fixture": "bad-no-text-layer.pdf",
+    "sha256": "b2d83bdf27fcce19f86973c4d5b21c434c260aa2988e5876c6ba8f3a44cd6f84",
+    "candidates": [],
+    "issues": [
+      {
+        "issueId": "issue-6efc61bf2ea7dcc5",
+        "code": "EXTRACTION_EMPTY",
+        "severity": "warning",
+        "message": "页范围内没有生成任何候选；不填默认值，等待人工补充或换文本层样例",
+        "page": null,
+        "candidateIds": [],
+        "evidence": []
+      },
+      {
+        "issueId": "issue-e9d22d8f92c4d3fd",
+        "code": "NO_TEXT_LAYER",
+        "severity": "blocked",
+        "message": "第 1 页没有可读文本层（扫描件/图片页）；本版本不做 OCR，拒绝数值提取",
+        "page": 1,
+        "candidateIds": [],
+        "evidence": []
+      }
+    ]
+  },
+  {
+    "fixture": "bad-formula-conflict.pdf",
+    "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+    "candidates": [
+      {
+        "kind": "ring",
+        "page": 1,
+        "status": "pending",
+        "reasonCodes": [],
+        "data": {
+          "symbol": "H",
+          "name": "总长",
+          "nominal": {
+            "text": "52.20",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  171.42186785742186,
+                  648.9206130603907,
+                  198.05516305262626,
+                  661.4174874459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "52.20",
+                "normalizedSnippet": "52.20",
+                "textItemIndexes": [
+                  31
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  234.2751100385367,
+                  672.9206120603907,
+                  271.94565889380533,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（mm）",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  20
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  50.999997875,
+                  401.1712484020313,
+                  359.3653622011927,
+                  414.91499764187506
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "其中 H = 52.20 mm，B1 = B2 = 20.00 mm，S = 12.00 mm。",
+                "normalizedSnippet": "其中 H = 52.20 mm,B1 = B2 = 20.00 mm,S = 12.00 mm。",
+                "textItemIndexes": [
+                  71
+                ]
+              }
+            ],
+            "valueQ": 522000,
+            "unit": "mm"
+          },
+          "upperDeviation": {
+            "text": "+0.02",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  307.5702996845703,
+                  648.9206130603907,
+                  334.2535826776918,
+                  661.4174874459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "+0.02",
+                "normalizedSnippet": "+0.02",
+                "textItemIndexes": [
+                  33
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  234.2751100385367,
+                  672.9206120603907,
+                  271.94565889380533,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（mm）",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  20
+                ]
+              }
+            ],
+            "valueQ": 200,
+            "unit": "mm"
+          },
+          "lowerDeviation": {
+            "text": "-0.02",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  428.6484196396484,
+                  648.9206130603907,
+                  455.33170263276986,
+                  661.4174874459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "-0.02",
+                "normalizedSnippet": "-0.02",
+                "textItemIndexes": [
+                  35
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  234.2751100385367,
+                  672.9206120603907,
+                  271.94565889380533,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（mm）",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  20
+                ]
+              }
+            ],
+            "valueQ": -200,
+            "unit": "mm"
+          }
+        }
+      },
+      {
+        "kind": "ring",
+        "page": 1,
+        "status": "pending",
+        "reasonCodes": [],
+        "data": {
+          "symbol": "B1",
+          "name": "左轴承",
+          "nominal": {
+            "text": "20.00",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  171.42186785742186,
+                  625.6706140291407,
+                  198.05516305262626,
+                  638.1674884146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "20.00",
+                "normalizedSnippet": "20.00",
+                "textItemIndexes": [
+                  40
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  234.2751100385367,
+                  672.9206120603907,
+                  271.94565889380533,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（mm）",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  20
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  50.999997875,
+                  401.1712484020313,
+                  359.3653622011927,
+                  414.91499764187506
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "其中 H = 52.20 mm，B1 = B2 = 20.00 mm，S = 12.00 mm。",
+                "normalizedSnippet": "其中 H = 52.20 mm,B1 = B2 = 20.00 mm,S = 12.00 mm。",
+                "textItemIndexes": [
+                  71
+                ]
+              }
+            ],
+            "valueQ": 200000,
+            "unit": "mm"
+          },
+          "upperDeviation": {
+            "text": "+0.01",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  307.5702996845703,
+                  625.6706140291407,
+                  332.2640801760376,
+                  638.1674884146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "+0.01",
+                "normalizedSnippet": "+0.01",
+                "textItemIndexes": [
+                  42
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  234.2751100385367,
+                  672.9206120603907,
+                  271.94565889380533,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（mm）",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  20
+                ]
+              }
+            ],
+            "valueQ": 100,
+            "unit": "mm"
+          },
+          "lowerDeviation": {
+            "text": "-0.01",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  428.6484196396484,
+                  625.6706140291407,
+                  453.34220013111565,
+                  638.1674884146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "-0.01",
+                "normalizedSnippet": "-0.01",
+                "textItemIndexes": [
+                  44
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  234.2751100385367,
+                  672.9206120603907,
+                  271.94565889380533,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（mm）",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  20
+                ]
+              }
+            ],
+            "valueQ": -100,
+            "unit": "mm"
+          }
+        }
+      },
+      {
+        "kind": "ring",
+        "page": 1,
+        "status": "pending",
+        "reasonCodes": [],
+        "data": {
+          "symbol": "B2",
+          "name": "右轴承",
+          "nominal": {
+            "text": "20.00",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  171.42186785742186,
+                  601.6706150291407,
+                  198.05516305262626,
+                  614.1674894146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "20.00",
+                "normalizedSnippet": "20.00",
+                "textItemIndexes": [
+                  49
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  234.2751100385367,
+                  672.9206120603907,
+                  271.94565889380533,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（mm）",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  20
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  50.999997875,
+                  401.1712484020313,
+                  359.3653622011927,
+                  414.91499764187506
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "其中 H = 52.20 mm，B1 = B2 = 20.00 mm，S = 12.00 mm。",
+                "normalizedSnippet": "其中 H = 52.20 mm,B1 = B2 = 20.00 mm,S = 12.00 mm。",
+                "textItemIndexes": [
+                  71
+                ]
+              }
+            ],
+            "valueQ": 200000,
+            "unit": "mm"
+          },
+          "upperDeviation": {
+            "text": "+0.01",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  307.5702996845703,
+                  601.6706150291407,
+                  332.2640801760376,
+                  614.1674894146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "+0.01",
+                "normalizedSnippet": "+0.01",
+                "textItemIndexes": [
+                  51
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  234.2751100385367,
+                  672.9206120603907,
+                  271.94565889380533,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（mm）",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  20
+                ]
+              }
+            ],
+            "valueQ": 100,
+            "unit": "mm"
+          },
+          "lowerDeviation": {
+            "text": "-0.01",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  428.6484196396484,
+                  601.6706150291407,
+                  453.34220013111565,
+                  614.1674894146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "-0.01",
+                "normalizedSnippet": "-0.01",
+                "textItemIndexes": [
+                  53
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  234.2751100385367,
+                  672.9206120603907,
+                  271.94565889380533,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（mm）",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  20
+                ]
+              }
+            ],
+            "valueQ": -100,
+            "unit": "mm"
+          }
+        }
+      },
+      {
+        "kind": "ring",
+        "page": 1,
+        "status": "pending",
+        "reasonCodes": [],
+        "data": {
+          "symbol": "S",
+          "name": "隔套",
+          "nominal": {
+            "text": "12.00",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  171.42186785742186,
+                  577.6706160291407,
+                  196.06566506052195,
+                  590.1674904146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "12.00",
+                "normalizedSnippet": "12.00",
+                "textItemIndexes": [
+                  58
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  234.2751100385367,
+                  672.9206120603907,
+                  271.94565889380533,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（mm）",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  20
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  50.999997875,
+                  401.1712484020313,
+                  359.3653622011927,
+                  414.91499764187506
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "其中 H = 52.20 mm，B1 = B2 = 20.00 mm，S = 12.00 mm。",
+                "normalizedSnippet": "其中 H = 52.20 mm,B1 = B2 = 20.00 mm,S = 12.00 mm。",
+                "textItemIndexes": [
+                  71
+                ]
+              }
+            ],
+            "valueQ": 120000,
+            "unit": "mm"
+          },
+          "upperDeviation": {
+            "text": "+0.01",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  307.5702996845703,
+                  577.6706160291407,
+                  332.2640801760376,
+                  590.1674904146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "+0.01",
+                "normalizedSnippet": "+0.01",
+                "textItemIndexes": [
+                  60
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  234.2751100385367,
+                  672.9206120603907,
+                  271.94565889380533,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（mm）",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  20
+                ]
+              }
+            ],
+            "valueQ": 100,
+            "unit": "mm"
+          },
+          "lowerDeviation": {
+            "text": "-0.01",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  428.6484196396484,
+                  577.6706160291407,
+                  453.34220013111565,
+                  590.1674904146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "-0.01",
+                "normalizedSnippet": "-0.01",
+                "textItemIndexes": [
+                  62
+                ]
+              },
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  234.2751100385367,
+                  672.9206120603907,
+                  271.94565889380533,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（mm）",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  20
+                ]
+              }
+            ],
+            "valueQ": -100,
+            "unit": "mm"
+          }
+        }
+      },
+      {
+        "kind": "interval",
+        "page": 1,
+        "status": "blocked",
+        "reasonCodes": [
+          "CONFLICT_GROUP_MEMBER",
+          "FORMULA_VALUE_CONFLICT"
+        ],
+        "data": {
+          "outputSymbol": "C",
+          "lower": {
+            "text": "0.1000",
+            "decimals": 4,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  50.999997875,
+                  515.1712436520313,
+                  315.9682233594068,
+                  528.914992891875
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "轴向装配间隙 C 应为 0.1000～0.3000 mm，含两端。",
+                "normalizedSnippet": "轴向装配间隙 C 应为 0.1000~0.3000 mm,含两端。",
+                "textItemIndexes": [
+                  66
+                ]
+              }
+            ],
+            "valueQ": 1000,
+            "unit": "mm"
+          },
+          "upper": {
+            "text": "0.3000",
+            "decimals": 4,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-bad-formula-conflict",
+                "revisionId": "rev-bad-formula-conflict",
+                "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+                "blobKey": "blob-bad-formula-conflict",
+                "page": 1,
+                "rectPdf": [
+                  50.999997875,
+                  515.1712436520313,
+                  315.9682233594068,
+                  528.914992891875
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "轴向装配间隙 C 应为 0.1000～0.3000 mm，含两端。",
+                "normalizedSnippet": "轴向装配间隙 C 应为 0.1000~0.3000 mm,含两端。",
+                "textItemIndexes": [
+                  66
+                ]
+              }
+            ],
+            "valueQ": 3000,
+            "unit": "mm"
+          },
+          "lowerInclusive": true,
+          "upperInclusive": true,
+          "endpointEvidence": [
+            {
+              "documentId": "doc-bad-formula-conflict",
+              "revisionId": "rev-bad-formula-conflict",
+              "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+              "blobKey": "blob-bad-formula-conflict",
+              "page": 1,
+              "rectPdf": [
+                50.999997875,
+                515.1712436520313,
+                315.9682233594068,
+                528.914992891875
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                594.95996,
+                841.91998
+              ],
+              "textSnippet": "轴向装配间隙 C 应为 0.1000～0.3000 mm，含两端。",
+              "normalizedSnippet": "轴向装配间隙 C 应为 0.1000~0.3000 mm,含两端。",
+              "textItemIndexes": [
+                66
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "kind": "formula",
+        "page": 1,
+        "status": "blocked",
+        "reasonCodes": [
+          "FORMULA_CONFLICT"
+        ],
+        "data": {
+          "outputSymbol": "C",
+          "rawExpression": "C = H − B1 − S − B2",
+          "expression": "C = H - B1 - S - B2",
+          "operands": [
+            {
+              "symbol": "H",
+              "sign": 1
+            },
+            {
+              "symbol": "B1",
+              "sign": -1
+            },
+            {
+              "symbol": "S",
+              "sign": -1
+            },
+            {
+              "symbol": "B2",
+              "sign": -1
+            }
+          ],
+          "unsupported": false,
+          "conflict": false
+        }
+      },
+      {
+        "kind": "formula",
+        "page": 1,
+        "status": "blocked",
+        "reasonCodes": [
+          "FORMULA_CONFLICT",
+          "FORMULA_VALUE_CONFLICT"
+        ],
+        "data": {
+          "outputSymbol": "C",
+          "rawExpression": "C = H − B1 + S − B2",
+          "expression": "C = H - B1 + S - B2",
+          "operands": [
+            {
+              "symbol": "H",
+              "sign": 1
+            },
+            {
+              "symbol": "B1",
+              "sign": -1
+            },
+            {
+              "symbol": "S",
+              "sign": 1
+            },
+            {
+              "symbol": "B2",
+              "sign": -1
+            }
+          ],
+          "unsupported": false,
+          "conflict": false
+        }
+      }
+    ],
+    "issues": [
+      {
+        "issueId": "issue-7ee3f07cdf12475a",
+        "code": "FORMULA_CONFLICT",
+        "severity": "blocked",
+        "message": "符号 C 的同页公式结构互相矛盾（2 组），公式与关联区间已阻塞，未择优修正",
+        "page": 1,
+        "candidateIds": [
+          "formula-b50259d2b25c378c",
+          "formula-7817483052bdb8d6",
+          "interval-4db203646f13d2da"
+        ],
+        "evidence": [
+          {
+            "documentId": "doc-bad-formula-conflict",
+            "revisionId": "rev-bad-formula-conflict",
+            "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+            "blobKey": "blob-bad-formula-conflict",
+            "page": 1,
+            "rectPdf": [
+              50.999997875,
+              469.4212455582813,
+              162.88496112797634,
+              483.16499479812506
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              594.95996,
+              841.91998
+            ],
+            "textSnippet": "C = H − B1 − S − B2",
+            "normalizedSnippet": "C = H − B1 − S − B2",
+            "textItemIndexes": [
+              68
+            ]
+          },
+          {
+            "documentId": "doc-bad-formula-conflict",
+            "revisionId": "rev-bad-formula-conflict",
+            "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+            "blobKey": "blob-bad-formula-conflict",
+            "page": 1,
+            "rectPdf": [
+              50.999997875,
+              424.42124743328134,
+              160.47705570330578,
+              438.1649966731251
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              594.95996,
+              841.91998
+            ],
+            "textSnippet": "C = H − B1 + S − B2",
+            "normalizedSnippet": "C = H − B1 + S − B2",
+            "textItemIndexes": [
+              70
+            ]
+          },
+          {
+            "documentId": "doc-bad-formula-conflict",
+            "revisionId": "rev-bad-formula-conflict",
+            "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+            "blobKey": "blob-bad-formula-conflict",
+            "page": 1,
+            "rectPdf": [
+              50.999997875,
+              515.1712436520313,
+              315.9682233594068,
+              528.914992891875
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              594.95996,
+              841.91998
+            ],
+            "textSnippet": "轴向装配间隙 C 应为 0.1000～0.3000 mm，含两端。",
+            "normalizedSnippet": "轴向装配间隙 C 应为 0.1000~0.3000 mm,含两端。",
+            "textItemIndexes": [
+              66
+            ]
+          }
+        ]
+      },
+      {
+        "issueId": "issue-4fc4d7b6ed6ed294",
+        "code": "FORMULA_VALUE_CONFLICT",
+        "severity": "blocked",
+        "message": "公式 C = H - B1 + S - B2 按原文数值计算得 242000 q，落在区间 [1000, 3000] q 之外；两组证据并列阻塞，未修改任何数值或公式",
+        "page": 1,
+        "candidateIds": [
+          "formula-7817483052bdb8d6",
+          "interval-4db203646f13d2da"
+        ],
+        "evidence": [
+          {
+            "documentId": "doc-bad-formula-conflict",
+            "revisionId": "rev-bad-formula-conflict",
+            "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+            "blobKey": "blob-bad-formula-conflict",
+            "page": 1,
+            "rectPdf": [
+              50.999997875,
+              424.42124743328134,
+              160.47705570330578,
+              438.1649966731251
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              594.95996,
+              841.91998
+            ],
+            "textSnippet": "C = H − B1 + S − B2",
+            "normalizedSnippet": "C = H − B1 + S − B2",
+            "textItemIndexes": [
+              70
+            ]
+          },
+          {
+            "documentId": "doc-bad-formula-conflict",
+            "revisionId": "rev-bad-formula-conflict",
+            "sha256": "2ff92117735020bdd470e10de189095a180d650b186778cb7b7be3bb98feb56f",
+            "blobKey": "blob-bad-formula-conflict",
+            "page": 1,
+            "rectPdf": [
+              50.999997875,
+              515.1712436520313,
+              315.9682233594068,
+              528.914992891875
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              594.95996,
+              841.91998
+            ],
+            "textSnippet": "轴向装配间隙 C 应为 0.1000～0.3000 mm，含两端。",
+            "normalizedSnippet": "轴向装配间隙 C 应为 0.1000~0.3000 mm,含两端。",
+            "textItemIndexes": [
+              66
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "fixture": "bad-inch-unit.pdf",
+    "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+    "candidates": [
+      {
+        "kind": "ring",
+        "page": 1,
+        "status": "blocked",
+        "reasonCodes": [
+          "UNSUPPORTED_UNIT"
+        ],
+        "data": {
+          "symbol": "H",
+          "name": "总长",
+          "nominal": {
+            "text": "52.20",
+            "decimals": 2,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  181.81640242431624,
+                  648.9206130603907,
+                  208.44969761952055,
+                  661.4174874459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "52.20",
+                "normalizedSnippet": "52.20",
+                "textItemIndexes": [
+                  29
+                ]
+              },
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  247.95088696871258,
+                  672.9206120603907,
+                  276.5037222788861,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（in）",
+                "normalizedSnippet": "(in)",
+                "textItemIndexes": [
+                  18
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          },
+          "upperDeviation": {
+            "text": "+0.02",
+            "decimals": 2,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  315.3984243583984,
+                  648.9206130603907,
+                  342.0817073515199,
+                  661.4174874459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "+0.02",
+                "normalizedSnippet": "+0.02",
+                "textItemIndexes": [
+                  31
+                ]
+              },
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  247.95088696871258,
+                  672.9206120603907,
+                  276.5037222788861,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（in）",
+                "normalizedSnippet": "(in)",
+                "textItemIndexes": [
+                  18
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          },
+          "lowerDeviation": {
+            "text": "-0.02",
+            "decimals": 2,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  432.5624819765625,
+                  648.9206130603907,
+                  459.245764969684,
+                  661.4174874459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "-0.02",
+                "normalizedSnippet": "-0.02",
+                "textItemIndexes": [
+                  33
+                ]
+              },
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  247.95088696871258,
+                  672.9206120603907,
+                  276.5037222788861,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（in）",
+                "normalizedSnippet": "(in)",
+                "textItemIndexes": [
+                  18
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          }
+        }
+      },
+      {
+        "kind": "ring",
+        "page": 1,
+        "status": "blocked",
+        "reasonCodes": [
+          "UNSUPPORTED_UNIT"
+        ],
+        "data": {
+          "symbol": "B1",
+          "name": "左轴承",
+          "nominal": {
+            "text": "20.00",
+            "decimals": 2,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  181.81640242431624,
+                  625.6706140291407,
+                  208.44969761952055,
+                  638.1674884146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "20.00",
+                "normalizedSnippet": "20.00",
+                "textItemIndexes": [
+                  38
+                ]
+              },
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  247.95088696871258,
+                  672.9206120603907,
+                  276.5037222788861,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（in）",
+                "normalizedSnippet": "(in)",
+                "textItemIndexes": [
+                  18
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          },
+          "upperDeviation": {
+            "text": "+0.01",
+            "decimals": 2,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  315.3984243583984,
+                  625.6706140291407,
+                  340.09220484986577,
+                  638.1674884146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "+0.01",
+                "normalizedSnippet": "+0.01",
+                "textItemIndexes": [
+                  40
+                ]
+              },
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  247.95088696871258,
+                  672.9206120603907,
+                  276.5037222788861,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（in）",
+                "normalizedSnippet": "(in)",
+                "textItemIndexes": [
+                  18
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          },
+          "lowerDeviation": {
+            "text": "-0.01",
+            "decimals": 2,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  432.5624819765625,
+                  625.6706140291407,
+                  457.25626246802983,
+                  638.1674884146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "-0.01",
+                "normalizedSnippet": "-0.01",
+                "textItemIndexes": [
+                  42
+                ]
+              },
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  247.95088696871258,
+                  672.9206120603907,
+                  276.5037222788861,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（in）",
+                "normalizedSnippet": "(in)",
+                "textItemIndexes": [
+                  18
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          }
+        }
+      },
+      {
+        "kind": "ring",
+        "page": 1,
+        "status": "blocked",
+        "reasonCodes": [
+          "UNSUPPORTED_UNIT"
+        ],
+        "data": {
+          "symbol": "B2",
+          "name": "右轴承",
+          "nominal": {
+            "text": "20.00",
+            "decimals": 2,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  181.81640242431624,
+                  601.6706150291407,
+                  208.44969761952055,
+                  614.1674894146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "20.00",
+                "normalizedSnippet": "20.00",
+                "textItemIndexes": [
+                  47
+                ]
+              },
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  247.95088696871258,
+                  672.9206120603907,
+                  276.5037222788861,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（in）",
+                "normalizedSnippet": "(in)",
+                "textItemIndexes": [
+                  18
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          },
+          "upperDeviation": {
+            "text": "+0.01",
+            "decimals": 2,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  315.3984243583984,
+                  601.6706150291407,
+                  340.09220484986577,
+                  614.1674894146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "+0.01",
+                "normalizedSnippet": "+0.01",
+                "textItemIndexes": [
+                  49
+                ]
+              },
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  247.95088696871258,
+                  672.9206120603907,
+                  276.5037222788861,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（in）",
+                "normalizedSnippet": "(in)",
+                "textItemIndexes": [
+                  18
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          },
+          "lowerDeviation": {
+            "text": "-0.01",
+            "decimals": 2,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  432.5624819765625,
+                  601.6706150291407,
+                  457.25626246802983,
+                  614.1674894146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "-0.01",
+                "normalizedSnippet": "-0.01",
+                "textItemIndexes": [
+                  51
+                ]
+              },
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  247.95088696871258,
+                  672.9206120603907,
+                  276.5037222788861,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（in）",
+                "normalizedSnippet": "(in)",
+                "textItemIndexes": [
+                  18
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          }
+        }
+      },
+      {
+        "kind": "ring",
+        "page": 1,
+        "status": "blocked",
+        "reasonCodes": [
+          "UNSUPPORTED_UNIT"
+        ],
+        "data": {
+          "symbol": "S",
+          "name": "隔套",
+          "nominal": {
+            "text": "12.00",
+            "decimals": 2,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  181.81640242431624,
+                  577.6706160291407,
+                  206.46019962741633,
+                  590.1674904146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "12.00",
+                "normalizedSnippet": "12.00",
+                "textItemIndexes": [
+                  56
+                ]
+              },
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  247.95088696871258,
+                  672.9206120603907,
+                  276.5037222788861,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（in）",
+                "normalizedSnippet": "(in)",
+                "textItemIndexes": [
+                  18
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          },
+          "upperDeviation": {
+            "text": "+0.01",
+            "decimals": 2,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  315.3984243583984,
+                  577.6706160291407,
+                  340.09220484986577,
+                  590.1674904146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "+0.01",
+                "normalizedSnippet": "+0.01",
+                "textItemIndexes": [
+                  58
+                ]
+              },
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  247.95088696871258,
+                  672.9206120603907,
+                  276.5037222788861,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（in）",
+                "normalizedSnippet": "(in)",
+                "textItemIndexes": [
+                  18
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          },
+          "lowerDeviation": {
+            "text": "-0.01",
+            "decimals": 2,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  432.5624819765625,
+                  577.6706160291407,
+                  457.25626246802983,
+                  590.1674904146876
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "-0.01",
+                "normalizedSnippet": "-0.01",
+                "textItemIndexes": [
+                  60
+                ]
+              },
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  247.95088696871258,
+                  672.9206120603907,
+                  276.5037222788861,
+                  685.4174864459376
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "（in）",
+                "normalizedSnippet": "(in)",
+                "textItemIndexes": [
+                  18
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          }
+        }
+      },
+      {
+        "kind": "interval",
+        "page": 1,
+        "status": "blocked",
+        "reasonCodes": [
+          "UNSUPPORTED_UNIT"
+        ],
+        "data": {
+          "outputSymbol": "C",
+          "lower": {
+            "text": "0.0039",
+            "decimals": 4,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  50.999997875,
+                  515.1712436520313,
+                  303.939705185595,
+                  528.914992891875
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "轴向装配间隙 C 应为 0.0039～0.0118 in，含两端。",
+                "normalizedSnippet": "轴向装配间隙 C 应为 0.0039~0.0118 in,含两端。",
+                "textItemIndexes": [
+                  64
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          },
+          "upper": {
+            "text": "0.0118",
+            "decimals": 4,
+            "unitText": "in",
+            "evidence": [
+              {
+                "documentId": "doc-bad-inch-unit",
+                "revisionId": "rev-bad-inch-unit",
+                "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+                "blobKey": "blob-bad-inch-unit",
+                "page": 1,
+                "rectPdf": [
+                  50.999997875,
+                  515.1712436520313,
+                  303.939705185595,
+                  528.914992891875
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  594.95996,
+                  841.91998
+                ],
+                "textSnippet": "轴向装配间隙 C 应为 0.0039～0.0118 in，含两端。",
+                "normalizedSnippet": "轴向装配间隙 C 应为 0.0039~0.0118 in,含两端。",
+                "textItemIndexes": [
+                  64
+                ]
+              }
+            ],
+            "valueQ": null,
+            "unit": null
+          },
+          "lowerInclusive": true,
+          "upperInclusive": true,
+          "endpointEvidence": [
+            {
+              "documentId": "doc-bad-inch-unit",
+              "revisionId": "rev-bad-inch-unit",
+              "sha256": "70bf40f5c36e5e881bbd173e2e39dcf36b892e2851254696a192efa4bceac10a",
+              "blobKey": "blob-bad-inch-unit",
+              "page": 1,
+              "rectPdf": [
+                50.999997875,
+                515.1712436520313,
+                303.939705185595,
+                528.914992891875
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                594.95996,
+                841.91998
+              ],
+              "textSnippet": "轴向装配间隙 C 应为 0.0039～0.0118 in，含两端。",
+              "normalizedSnippet": "轴向装配间隙 C 应为 0.0039~0.0118 in,含两端。",
+              "textItemIndexes": [
+                64
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "kind": "formula",
+        "page": 1,
+        "status": "blocked",
+        "reasonCodes": [
+          "UNSUPPORTED_UNIT"
+        ],
+        "data": {
+          "outputSymbol": "C",
+          "rawExpression": "C = H − B1 − S − B2",
+          "expression": "C = H - B1 - S - B2",
+          "operands": [
+            {
+              "symbol": "H",
+              "sign": 1
+            },
+            {
+              "symbol": "B1",
+              "sign": -1
+            },
+            {
+              "symbol": "S",
+              "sign": -1
+            },
+            {
+              "symbol": "B2",
+              "sign": -1
+            }
+          ],
+          "unsupported": false,
+          "conflict": false
+        }
+      }
+    ],
+    "issues": []
+  }
+]

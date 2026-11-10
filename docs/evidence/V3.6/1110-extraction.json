@@ -1,0 +1,2205 @@
+{
+  "fixture": "/Users/aston/DSH/staff/src/document-extraction/__fixtures__/taskbook-TB-2026-1110.pdf",
+  "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+  "draft": {
+    "draftId": "draft-793590e034dfdc5a",
+    "draftRevision": 1,
+    "status": "draft",
+    "projectId": "fixed-1110",
+    "baseToken": "base-v36-evidence",
+    "sourceIdentity": {
+      "documentId": "doc-fixed-1110",
+      "revisionId": "rev-fixed-1110",
+      "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+      "blobKey": "blob-fixed-1110",
+      "pageCount": 2
+    },
+    "pageRange": {
+      "from": 1,
+      "to": 2
+    },
+    "extractorVersion": "document-extractor-1",
+    "idempotencyKey": "fixed-1110|doc-fixed-1110|rev-fixed-1110|6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff|1|2|document-extractor-1",
+    "decisions": [],
+    "candidates": [
+      {
+        "candidateId": "part-dimension-44b0950cfe6ccb2a",
+        "kind": "part-dimension",
+        "groupId": "part:隔套",
+        "rawText": "隔套：内径 20.00 mm，外径 32.00 mm，⻓度 12.00 mm。",
+        "page": 1,
+        "status": "pending",
+        "confidence": "medium",
+        "confidenceBasis": [
+          "RULE_PART_LABEL_LINE"
+        ],
+        "reasonCodes": [],
+        "evidence": [
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              83.8012,
+              676.284,
+              141.40959999999998,
+              691.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "20.00 mm",
+            "normalizedSnippet": "20.00 mm",
+            "textItemIndexes": [
+              31,
+              32,
+              33
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              184.61169999999998,
+              676.284,
+              242.2201,
+              691.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "32.00 mm",
+            "normalizedSnippet": "32.00 mm",
+            "textItemIndexes": [
+              36,
+              37,
+              38
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              285.42230000000006,
+              676.284,
+              343.03069999999985,
+              691.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "12.00 mm",
+            "normalizedSnippet": "12.00 mm",
+            "textItemIndexes": [
+              43,
+              44,
+              45
+            ]
+          }
+        ],
+        "editRevision": 0,
+        "data": {
+          "partName": "隔套",
+          "innerDiameter": {
+            "text": "20.00",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  83.8012,
+                  676.284,
+                  141.40959999999998,
+                  691.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "20.00 mm",
+                "normalizedSnippet": "20.00 mm",
+                "textItemIndexes": [
+                  31,
+                  32,
+                  33
+                ]
+              }
+            ],
+            "valueQ": 200000,
+            "unit": "mm"
+          },
+          "outerDiameter": {
+            "text": "32.00",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  184.61169999999998,
+                  676.284,
+                  242.2201,
+                  691.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "32.00 mm",
+                "normalizedSnippet": "32.00 mm",
+                "textItemIndexes": [
+                  36,
+                  37,
+                  38
+                ]
+              }
+            ],
+            "valueQ": 320000,
+            "unit": "mm"
+          },
+          "length": {
+            "text": "12.00",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  285.42230000000006,
+                  676.284,
+                  343.03069999999985,
+                  691.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "12.00 mm",
+                "normalizedSnippet": "12.00 mm",
+                "textItemIndexes": [
+                  43,
+                  44,
+                  45
+                ]
+              }
+            ],
+            "valueQ": 120000,
+            "unit": "mm"
+          }
+        }
+      },
+      {
+        "candidateId": "ring-d1696aa6b7ec74d0",
+        "kind": "ring",
+        "groupId": "ring:H",
+        "rawText": "H 总⻓ 52.20 +0.02 -0.02",
+        "page": 1,
+        "status": "pending",
+        "confidence": "high",
+        "confidenceBasis": [
+          "RULE_TABLE_OR_ASSIGNMENT",
+          "RULE_UNIT_MM",
+          "RULE_SINGLE_VALUE"
+        ],
+        "reasonCodes": [],
+        "evidence": [
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              16.6,
+              640.284,
+              23.8,
+              655.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "H",
+            "normalizedSnippet": "H",
+            "textItemIndexes": [
+              61
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              59.807030000000005,
+              640.284,
+              83.80703,
+              655.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "总⻓",
+            "normalizedSnippet": "总长",
+            "textItemIndexes": [
+              63,
+              64
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              47.8012,
+              676.284,
+              55.0012,
+              691.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "H",
+            "normalizedSnippet": "H",
+            "textItemIndexes": [
+              78
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              141.41663,
+              640.284,
+              177.42143000000004,
+              655.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "52.20",
+            "normalizedSnippet": "52.20",
+            "textItemIndexes": [
+              66
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              170.2094,
+              652.284,
+              199.013,
+              667.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "(mm)",
+            "normalizedSnippet": "(mm)",
+            "textItemIndexes": [
+              54
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              76.606,
+              676.284,
+              112.61079999999993,
+              691.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "52.20",
+            "normalizedSnippet": "52.20",
+            "textItemIndexes": [
+              82
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              119.8132,
+              676.284,
+              134.21439999999998,
+              691.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "mm",
+            "normalizedSnippet": "mm",
+            "textItemIndexes": [
+              84
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              235.03223,
+              640.284,
+              271.0370300000001,
+              655.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "+0.02",
+            "normalizedSnippet": "+0.02",
+            "textItemIndexes": [
+              68
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              314.24542999999994,
+              640.284,
+              350.2502299999999,
+              655.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "-0.02",
+            "normalizedSnippet": "-0.02",
+            "textItemIndexes": [
+              70
+            ]
+          }
+        ],
+        "editRevision": 0,
+        "data": {
+          "symbol": "H",
+          "name": "总长",
+          "nominal": {
+            "text": "52.20",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  141.41663,
+                  640.284,
+                  177.42143000000004,
+                  655.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "52.20",
+                "normalizedSnippet": "52.20",
+                "textItemIndexes": [
+                  66
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  170.2094,
+                  652.284,
+                  199.013,
+                  667.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "(mm)",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  54
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 2,
+                "rectPdf": [
+                  76.606,
+                  676.284,
+                  112.61079999999993,
+                  691.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "52.20",
+                "normalizedSnippet": "52.20",
+                "textItemIndexes": [
+                  82
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 2,
+                "rectPdf": [
+                  119.8132,
+                  676.284,
+                  134.21439999999998,
+                  691.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "mm",
+                "normalizedSnippet": "mm",
+                "textItemIndexes": [
+                  84
+                ]
+              }
+            ],
+            "valueQ": 522000,
+            "unit": "mm"
+          },
+          "upperDeviation": {
+            "text": "+0.02",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  235.03223,
+                  640.284,
+                  271.0370300000001,
+                  655.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "+0.02",
+                "normalizedSnippet": "+0.02",
+                "textItemIndexes": [
+                  68
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  170.2094,
+                  652.284,
+                  199.013,
+                  667.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "(mm)",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  54
+                ]
+              }
+            ],
+            "valueQ": 200,
+            "unit": "mm"
+          },
+          "lowerDeviation": {
+            "text": "-0.02",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  314.24542999999994,
+                  640.284,
+                  350.2502299999999,
+                  655.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "-0.02",
+                "normalizedSnippet": "-0.02",
+                "textItemIndexes": [
+                  70
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  170.2094,
+                  652.284,
+                  199.013,
+                  667.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "(mm)",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  54
+                ]
+              }
+            ],
+            "valueQ": -200,
+            "unit": "mm"
+          }
+        }
+      },
+      {
+        "candidateId": "ring-359d4689573cfccb",
+        "kind": "ring",
+        "groupId": "ring:B1",
+        "rawText": "B1 左轴承 20.00 +0.01 -0.01",
+        "page": 1,
+        "status": "pending",
+        "confidence": "high",
+        "confidenceBasis": [
+          "RULE_TABLE_OR_ASSIGNMENT",
+          "RULE_UNIT_MM",
+          "RULE_SINGLE_VALUE"
+        ],
+        "reasonCodes": [],
+        "evidence": [
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              16.6,
+              628.284,
+              31.0012,
+              643.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "B1",
+            "normalizedSnippet": "B1",
+            "textItemIndexes": [
+              71
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              59.807030000000005,
+              628.284,
+              95.80703,
+              643.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "左轴承",
+            "normalizedSnippet": "左轴承",
+            "textItemIndexes": [
+              73
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              146.21519999999998,
+              676.284,
+              160.6164,
+              691.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "B1",
+            "normalizedSnippet": "B1",
+            "textItemIndexes": [
+              86
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              139.01423,
+              628.284,
+              175.01903000000004,
+              643.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "20.00",
+            "normalizedSnippet": "20.00",
+            "textItemIndexes": [
+              75
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              170.2094,
+              652.284,
+              199.013,
+              667.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "(mm)",
+            "normalizedSnippet": "(mm)",
+            "textItemIndexes": [
+              54
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              218.22719999999998,
+              676.284,
+              254.23200000000003,
+              691.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "20.00",
+            "normalizedSnippet": "20.00",
+            "textItemIndexes": [
+              94
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              261.4344,
+              676.284,
+              275.8356,
+              691.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "mm",
+            "normalizedSnippet": "mm",
+            "textItemIndexes": [
+              96
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              232.62983,
+              628.284,
+              268.6346300000001,
+              643.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "+0.01",
+            "normalizedSnippet": "+0.01",
+            "textItemIndexes": [
+              77
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              311.8430299999999,
+              628.284,
+              347.8478299999998,
+              643.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "-0.01",
+            "normalizedSnippet": "-0.01",
+            "textItemIndexes": [
+              79
+            ]
+          }
+        ],
+        "editRevision": 0,
+        "data": {
+          "symbol": "B1",
+          "name": "左轴承",
+          "nominal": {
+            "text": "20.00",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  139.01423,
+                  628.284,
+                  175.01903000000004,
+                  643.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "20.00",
+                "normalizedSnippet": "20.00",
+                "textItemIndexes": [
+                  75
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  170.2094,
+                  652.284,
+                  199.013,
+                  667.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "(mm)",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  54
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 2,
+                "rectPdf": [
+                  218.22719999999998,
+                  676.284,
+                  254.23200000000003,
+                  691.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "20.00",
+                "normalizedSnippet": "20.00",
+                "textItemIndexes": [
+                  94
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 2,
+                "rectPdf": [
+                  261.4344,
+                  676.284,
+                  275.8356,
+                  691.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "mm",
+                "normalizedSnippet": "mm",
+                "textItemIndexes": [
+                  96
+                ]
+              }
+            ],
+            "valueQ": 200000,
+            "unit": "mm"
+          },
+          "upperDeviation": {
+            "text": "+0.01",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  232.62983,
+                  628.284,
+                  268.6346300000001,
+                  643.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "+0.01",
+                "normalizedSnippet": "+0.01",
+                "textItemIndexes": [
+                  77
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  170.2094,
+                  652.284,
+                  199.013,
+                  667.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "(mm)",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  54
+                ]
+              }
+            ],
+            "valueQ": 100,
+            "unit": "mm"
+          },
+          "lowerDeviation": {
+            "text": "-0.01",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  311.8430299999999,
+                  628.284,
+                  347.8478299999998,
+                  643.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "-0.01",
+                "normalizedSnippet": "-0.01",
+                "textItemIndexes": [
+                  79
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  170.2094,
+                  652.284,
+                  199.013,
+                  667.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "(mm)",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  54
+                ]
+              }
+            ],
+            "valueQ": -100,
+            "unit": "mm"
+          }
+        }
+      },
+      {
+        "candidateId": "ring-26920dd86dbd036e",
+        "kind": "ring",
+        "groupId": "ring:B2",
+        "rawText": "B2 右轴承 20.00 +0.01 -0.01",
+        "page": 1,
+        "status": "pending",
+        "confidence": "high",
+        "confidenceBasis": [
+          "RULE_TABLE_OR_ASSIGNMENT",
+          "RULE_UNIT_MM",
+          "RULE_SINGLE_VALUE"
+        ],
+        "reasonCodes": [],
+        "evidence": [
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              16.6,
+              616.284,
+              31.0012,
+              631.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "B2",
+            "normalizedSnippet": "B2",
+            "textItemIndexes": [
+              80
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              59.807030000000005,
+              616.284,
+              95.80703,
+              631.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "右轴承",
+            "normalizedSnippet": "右轴承",
+            "textItemIndexes": [
+              82
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              182.22119999999998,
+              676.284,
+              196.6224,
+              691.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "B2",
+            "normalizedSnippet": "B2",
+            "textItemIndexes": [
+              90
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              139.01423,
+              616.284,
+              175.01903000000004,
+              631.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "20.00",
+            "normalizedSnippet": "20.00",
+            "textItemIndexes": [
+              84
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              170.2094,
+              652.284,
+              199.013,
+              667.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "(mm)",
+            "normalizedSnippet": "(mm)",
+            "textItemIndexes": [
+              54
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              218.22719999999998,
+              676.284,
+              254.23200000000003,
+              691.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "20.00",
+            "normalizedSnippet": "20.00",
+            "textItemIndexes": [
+              94
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              261.4344,
+              676.284,
+              275.8356,
+              691.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "mm",
+            "normalizedSnippet": "mm",
+            "textItemIndexes": [
+              96
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              232.62983,
+              616.284,
+              268.6346300000001,
+              631.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "+0.01",
+            "normalizedSnippet": "+0.01",
+            "textItemIndexes": [
+              86
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              311.8430299999999,
+              616.284,
+              347.8478299999998,
+              631.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "-0.01",
+            "normalizedSnippet": "-0.01",
+            "textItemIndexes": [
+              88
+            ]
+          }
+        ],
+        "editRevision": 0,
+        "data": {
+          "symbol": "B2",
+          "name": "右轴承",
+          "nominal": {
+            "text": "20.00",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  139.01423,
+                  616.284,
+                  175.01903000000004,
+                  631.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "20.00",
+                "normalizedSnippet": "20.00",
+                "textItemIndexes": [
+                  84
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  170.2094,
+                  652.284,
+                  199.013,
+                  667.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "(mm)",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  54
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 2,
+                "rectPdf": [
+                  218.22719999999998,
+                  676.284,
+                  254.23200000000003,
+                  691.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "20.00",
+                "normalizedSnippet": "20.00",
+                "textItemIndexes": [
+                  94
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 2,
+                "rectPdf": [
+                  261.4344,
+                  676.284,
+                  275.8356,
+                  691.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "mm",
+                "normalizedSnippet": "mm",
+                "textItemIndexes": [
+                  96
+                ]
+              }
+            ],
+            "valueQ": 200000,
+            "unit": "mm"
+          },
+          "upperDeviation": {
+            "text": "+0.01",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  232.62983,
+                  616.284,
+                  268.6346300000001,
+                  631.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "+0.01",
+                "normalizedSnippet": "+0.01",
+                "textItemIndexes": [
+                  86
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  170.2094,
+                  652.284,
+                  199.013,
+                  667.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "(mm)",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  54
+                ]
+              }
+            ],
+            "valueQ": 100,
+            "unit": "mm"
+          },
+          "lowerDeviation": {
+            "text": "-0.01",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  311.8430299999999,
+                  616.284,
+                  347.8478299999998,
+                  631.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "-0.01",
+                "normalizedSnippet": "-0.01",
+                "textItemIndexes": [
+                  88
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  170.2094,
+                  652.284,
+                  199.013,
+                  667.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "(mm)",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  54
+                ]
+              }
+            ],
+            "valueQ": -100,
+            "unit": "mm"
+          }
+        }
+      },
+      {
+        "candidateId": "ring-bf530fd78f782f21",
+        "kind": "ring",
+        "groupId": "ring:S",
+        "rawText": "S 隔套 12.00 +0.01 -0.01",
+        "page": 1,
+        "status": "pending",
+        "confidence": "high",
+        "confidenceBasis": [
+          "RULE_TABLE_OR_ASSIGNMENT",
+          "RULE_UNIT_MM",
+          "RULE_SINGLE_VALUE"
+        ],
+        "reasonCodes": [],
+        "evidence": [
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              16.6,
+              604.284,
+              23.8,
+              619.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "S",
+            "normalizedSnippet": "S",
+            "textItemIndexes": [
+              89
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              59.807030000000005,
+              604.284,
+              83.80703,
+              619.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "隔套",
+            "normalizedSnippet": "隔套",
+            "textItemIndexes": [
+              91
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              141.41663,
+              604.284,
+              177.42143000000004,
+              619.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "12.00",
+            "normalizedSnippet": "12.00",
+            "textItemIndexes": [
+              93
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              170.2094,
+              652.284,
+              199.013,
+              667.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "(mm)",
+            "normalizedSnippet": "(mm)",
+            "textItemIndexes": [
+              54
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              235.03223,
+              604.284,
+              271.0370300000001,
+              619.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "+0.01",
+            "normalizedSnippet": "+0.01",
+            "textItemIndexes": [
+              95
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 1,
+            "rectPdf": [
+              314.24542999999994,
+              604.284,
+              350.2502299999999,
+              619.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "-0.01",
+            "normalizedSnippet": "-0.01",
+            "textItemIndexes": [
+              97
+            ]
+          }
+        ],
+        "editRevision": 0,
+        "data": {
+          "symbol": "S",
+          "name": "隔套",
+          "nominal": {
+            "text": "12.00",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  141.41663,
+                  604.284,
+                  177.42143000000004,
+                  619.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "12.00",
+                "normalizedSnippet": "12.00",
+                "textItemIndexes": [
+                  93
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  170.2094,
+                  652.284,
+                  199.013,
+                  667.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "(mm)",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  54
+                ]
+              }
+            ],
+            "valueQ": 120000,
+            "unit": "mm"
+          },
+          "upperDeviation": {
+            "text": "+0.01",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  235.03223,
+                  604.284,
+                  271.0370300000001,
+                  619.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "+0.01",
+                "normalizedSnippet": "+0.01",
+                "textItemIndexes": [
+                  95
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  170.2094,
+                  652.284,
+                  199.013,
+                  667.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "(mm)",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  54
+                ]
+              }
+            ],
+            "valueQ": 100,
+            "unit": "mm"
+          },
+          "lowerDeviation": {
+            "text": "-0.01",
+            "decimals": 2,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  314.24542999999994,
+                  604.284,
+                  350.2502299999999,
+                  619.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "-0.01",
+                "normalizedSnippet": "-0.01",
+                "textItemIndexes": [
+                  97
+                ]
+              },
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 1,
+                "rectPdf": [
+                  170.2094,
+                  652.284,
+                  199.013,
+                  667.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "(mm)",
+                "normalizedSnippet": "(mm)",
+                "textItemIndexes": [
+                  54
+                ]
+              }
+            ],
+            "valueQ": -100,
+            "unit": "mm"
+          }
+        }
+      },
+      {
+        "candidateId": "interval-4326ea60d816b9ba",
+        "kind": "interval",
+        "groupId": "interval:C",
+        "rawText": "轴向装配间隙 C 应为 0.1000～0.3000 mm，含两端。",
+        "page": 2,
+        "status": "pending",
+        "confidence": "high",
+        "confidenceBasis": [
+          "RULE_INTERVAL_SENTENCE"
+        ],
+        "reasonCodes": [],
+        "evidence": [
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              141.4047,
+              712.284,
+              184.61070000000007,
+              727.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "0.1000",
+            "normalizedSnippet": "0.1000",
+            "textItemIndexes": [
+              31
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              196.61169999999998,
+              712.284,
+              239.81770000000006,
+              727.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "0.3000",
+            "normalizedSnippet": "0.3000",
+            "textItemIndexes": [
+              33
+            ]
+          },
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              261.4223,
+              712.284,
+              321.4223,
+              727.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "，含两端。",
+            "normalizedSnippet": ",含两端。",
+            "textItemIndexes": [
+              36
+            ]
+          }
+        ],
+        "editRevision": 0,
+        "data": {
+          "outputSymbol": "C",
+          "lower": {
+            "text": "0.1000",
+            "decimals": 4,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 2,
+                "rectPdf": [
+                  141.4047,
+                  712.284,
+                  184.61070000000007,
+                  727.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "0.1000",
+                "normalizedSnippet": "0.1000",
+                "textItemIndexes": [
+                  31
+                ]
+              }
+            ],
+            "valueQ": 1000,
+            "unit": "mm"
+          },
+          "upper": {
+            "text": "0.3000",
+            "decimals": 4,
+            "unitText": "mm",
+            "evidence": [
+              {
+                "documentId": "doc-fixed-1110",
+                "revisionId": "rev-fixed-1110",
+                "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                "blobKey": "blob-fixed-1110",
+                "page": 2,
+                "rectPdf": [
+                  196.61169999999998,
+                  712.284,
+                  239.81770000000006,
+                  727.284
+                ],
+                "pageBoxPdf": [
+                  0,
+                  0,
+                  612,
+                  792
+                ],
+                "textSnippet": "0.3000",
+                "normalizedSnippet": "0.3000",
+                "textItemIndexes": [
+                  33
+                ]
+              }
+            ],
+            "valueQ": 3000,
+            "unit": "mm"
+          },
+          "lowerInclusive": true,
+          "upperInclusive": true,
+          "endpointEvidence": [
+            {
+              "documentId": "doc-fixed-1110",
+              "revisionId": "rev-fixed-1110",
+              "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+              "blobKey": "blob-fixed-1110",
+              "page": 2,
+              "rectPdf": [
+                261.4223,
+                712.284,
+                321.4223,
+                727.284
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                612,
+                792
+              ],
+              "textSnippet": "，含两端。",
+              "normalizedSnippet": ",含两端。",
+              "textItemIndexes": [
+                36
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "candidateId": "formula-0b0ba4041c6369ca",
+        "kind": "formula",
+        "groupId": "formula:C",
+        "rawText": "C = H - B1 - S - B2",
+        "page": 2,
+        "status": "pending",
+        "confidence": "high",
+        "confidenceBasis": [
+          "RULE_LINEAR_FORMULA"
+        ],
+        "reasonCodes": [],
+        "evidence": [
+          {
+            "documentId": "doc-fixed-1110",
+            "revisionId": "rev-fixed-1110",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "blobKey": "blob-fixed-1110",
+            "page": 2,
+            "rectPdf": [
+              16.6,
+              688.284,
+              153.4216,
+              703.284
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              612,
+              792
+            ],
+            "textSnippet": "C = H - B1 - S - B2",
+            "normalizedSnippet": "C = H - B1 - S - B2",
+            "textItemIndexes": [
+              58,
+              59,
+              60,
+              61,
+              62,
+              63,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72,
+              73,
+              74
+            ]
+          }
+        ],
+        "editRevision": 0,
+        "data": {
+          "outputSymbol": "C",
+          "rawExpression": "C = H - B1 - S - B2",
+          "expression": "C = H - B1 - S - B2",
+          "operands": [
+            {
+              "symbol": "H",
+              "sign": 1
+            },
+            {
+              "symbol": "B1",
+              "sign": -1
+            },
+            {
+              "symbol": "S",
+              "sign": -1
+            },
+            {
+              "symbol": "B2",
+              "sign": -1
+            }
+          ],
+          "unsupported": false,
+          "conflict": false
+        }
+      }
+    ],
+    "issues": []
+  }
+}

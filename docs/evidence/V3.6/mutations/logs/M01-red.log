@@ -1,0 +1,62 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/document-extraction/__tests__/confirmation.test.ts (17 tests | 2 failed) 74ms
+   ❯ V3.6 应用计划门禁（M01/M02 目标） (6)
+     × 未确认候选不能进入应用计划 3ms
+     × 确认后数值被改动 → STALE_DECISION（不只看状态布尔） 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/document-extraction/__tests__/confirmation.test.ts > V3.6 应用计划门禁（M01/M02 目标） > 未确认候选不能进入应用计划
+AssertionError: expected { ok: true, value: { …(2) } } to match object { ok: false, code: 'NOT_CONFIRMED' }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "NOT_CONFIRMED",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ src/document-extraction/__tests__/confirmation.test.ts:315:7
+    313|         source: { revisionId: source.revisionId, sha256: source.sha256…
+    314|       }),
+    315|     ).toMatchObject({ ok: false, code: 'NOT_CONFIRMED' })
+       |       ^
+    316|   })
+    317|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/document-extraction/__tests__/confirmation.test.ts > V3.6 应用计划门禁（M01/M02 目标） > 确认后数值被改动 → STALE_DECISION（不只看状态布尔）
+AssertionError: expected { ok: true, value: { …(2) } } to match object { ok: false, code: 'STALE_DECISION' }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "STALE_DECISION",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ src/document-extraction/__tests__/confirmation.test.ts:370:7
+    368|         source: { revisionId: source.revisionId, sha256: source.sha256…
+    369|       }),
+    370|     ).toMatchObject({ ok: false, code: 'STALE_DECISION' })
+       |       ^
+    371|   })
+    372|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 15 passed (17)
+   Start at  06:25:09
+   Duration  280ms (import 46%, tests 35%, setup 15%, transform 3%, worker 1%)
+
