@@ -85,6 +85,7 @@ describe('V3.6 固定样例 TB-2026-1110：候选与出处', () => {
     expect(kinds.filter((kind) => kind === 'formula')).toHaveLength(1)
     expect(new Set(draft.candidates.map((candidate) => candidate.candidateId)).size).toBe(7)
     expect(draft.decisions).toEqual([])
+    expect(draft.issues).toEqual([])
   })
 
   it('组成环数值与上下偏差逐项精确（保留尾零与符号）', () => {

@@ -116,6 +116,9 @@ describe('坏样例三：单位写成 inch', () => {
     const interval = inch.candidates.find((candidate) => candidate.kind === 'interval')
     expect(interval?.status).toBe('blocked')
     expect(interval?.reasonCodes).toContain('UNSUPPORTED_UNIT')
+    const formula = inch.candidates.find((candidate) => candidate.kind === 'formula')
+    expect(formula?.status).toBe('blocked')
+    expect(formula?.reasonCodes).toContain('UNSUPPORTED_UNIT')
     // 任何候选都不能把 inch 换算成 mm 数值。
     for (const candidate of inch.candidates) {
       for (const { value } of candidateNumericFields(candidate)) {

@@ -886,6 +886,26 @@ function ringQuantity(
   return nominal
 }
 
+/** 公式操作数无法按 mm 解析时，优先给出单位原因，而不是笼统的“未解析”。 */
+function operandUnitReason(
+  candidates: readonly ExtractionCandidate[],
+  operands: readonly FormulaOperand[],
+): ExtractionReasonCode | null {
+  for (const operand of operands) {
+    const matches = candidates.filter(
+      (candidate): candidate is ExtractionCandidate & { kind: 'ring' } =>
+        candidate.kind === 'ring' && candidate.data.symbol === operand.symbol,
+    )
+    for (const candidate of matches) {
+      const nominal = candidate.data.nominal
+      if (!nominal || nominal.unit === 'mm') continue
+      if (nominal.unitText !== null && nominal.unitText !== '') return 'UNSUPPORTED_UNIT'
+      return 'UNKNOWN_UNIT'
+    }
+  }
+  return null
+}
+
 function addBlockedOverride(
   overrides: Map<string, { status: CandidateStatus; reasons: ExtractionReasonCode[] }>,
   candidate: ExtractionCandidate,
@@ -963,7 +983,9 @@ function checkConflicts(candidates: readonly ExtractionCandidate[]): ConflictRes
       values.push({ operand, value })
     }
     if (!resolved) {
-      addBlockedOverride(overrides, formula, ['FORMULA_UNRESOLVED_OPERAND'])
+      addBlockedOverride(overrides, formula, [
+        operandUnitReason(candidates, formula.data.operands) ?? 'FORMULA_UNRESOLVED_OPERAND',
+      ])
       continue
     }
     const computed = values.reduce(
@@ -1141,11 +1163,9 @@ export function buildExtractionDraft(request: ExtractionRequest): ExtractionDraf
       continue
     }
     let index = 0
-    let headerSeen = false
     while (index < page.lines.length) {
       const line = page.lines[index]
       if (TABLE_HEADER_TOKENS.every((token) => matchTextOf(line).includes(token))) {
-        headerSeen = true
         if (!tableLayoutSupported(line)) {
           issues.push(
             issue(
@@ -1185,17 +1205,6 @@ export function buildExtractionDraft(request: ExtractionRequest): ExtractionDraf
         ringEntries.push(...parseAssignmentLine(line, page, request.source))
       }
       index += 1
-    }
-    if (!headerSeen) {
-      // 没有表头不算错误：可能整页只有区间/公式；但记 warning 便于人工核对。
-      issues.push(
-        issue(
-          'NO_TABLE_HEADER',
-          'warning',
-          `第 ${page.page} 页没有识别到组成环表头`,
-          page.page,
-        ),
-      )
     }
   }
 
