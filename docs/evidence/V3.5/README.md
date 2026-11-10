@@ -54,7 +54,7 @@
 
 | ID | 变异 | patch | 红日志（退出码 1） | 恢复绿（退出码 0） |
 |---|---|---|---|---|
-| MUT-B35-1 | 提交复用预览计算与预览检查、不重算（`src/requirements/commit.ts`） | `mutations/MUT-B35-1.patch` | `mutations/MUT-B35-1.red.log`：若干 failed（伪造满足、草稿数值已变、previewComputation 受控差异等） | `mutations/MUT-B35-1.green.log` |
+| MUT-B35-1 | 提交复用预览计算与预览检查、不重算（`src/requirements/commit.ts`） | `mutations/MUT-B35-1.patch` | `mutations/MUT-B35-1.red.log`：6 failed（伪造满足、草稿数值已变、previewComputation 受控差异、spy 未调用等） | `mutations/MUT-B35-1.green.log`：11 passed |
 | MUT-B35-2 | 条款失效后仍出满足（`src/requirements/check.ts` 跳过来源换版/不可读检查） | `mutations/MUT-B35-2.patch` | `mutations/MUT-B35-2.red.log`：2 failed（PDF 换版、PDF 不可读） | `mutations/MUT-B35-2.green.log`：21 passed |
 | MUT-B35-3 | 条款区间与 target 混用（判定改读 `chain.target`） | `mutations/MUT-B35-3.patch` | `mutations/MUT-B35-3.red.log`：2 failed，含 B35-07 P35-T 双向独立 | `mutations/MUT-B35-3.green.log`：21 passed |
 
