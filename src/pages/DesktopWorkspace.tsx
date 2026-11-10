@@ -85,7 +85,14 @@ export function DesktopWorkspace() {
     () => (project ? rebuildDrawingFromProject(project) : null),
     [project],
   )
-  const drawingData = drawingRebuilt?.ok ? drawingRebuilt.data : null
+  const committedDrawing = drawingRebuilt?.ok ? drawingRebuilt.data : null
+  /**
+   * 合法草稿的自动预览成功后，main 返回按候选参数重建的 DrawingData。
+   * 图纸区/属性/项目树显示候选画面（明确标“未提交”），但正式图纸记录、
+   * 导出与提交仍只走 project 的权威数据；非法输入时保留上次有效候选画面。
+   */
+  const candidateDrawing = session.change.preview?.drawing.right ?? null
+  const effectiveDrawing = candidateDrawing ?? committedDrawing
   const sessionId = session.state?.sessionId ?? null
   const [tab, setTab] = useState(0)
   // 选择归属当前会话：换会话即派生为 null，不靠 effect 清理（也不会串场）。
@@ -191,7 +198,7 @@ export function DesktopWorkspace() {
           ['参数引用', record.parameterIds.join('、')],
         ] as [string, string][],
       })),
-      ...(drawingData?.parameterSnapshot ?? []).map(parameter => ({
+      ...(effectiveDrawing?.parameterSnapshot ?? []).map(parameter => ({
         id: `param:${parameter.parameterId}`,
         label: `${SPACER_PARAMETER_LABELS[parameter.key]} · ${formatParameterValue(parameter.valueQ, parameter.inputDecimals) ?? '数据不一致'}`,
         properties: [
@@ -199,11 +206,11 @@ export function DesktopWorkspace() {
           ['输入小数位', String(parameter.inputDecimals)],
           ['显示', formatParameterValue(parameter.valueQ, parameter.inputDecimals) ?? '数据不一致'],
           ['来源备注', parameter.sourceNote ?? '无'],
-          ['绑定标注', drawingData?.annotations.filter(item => item.parameterId === parameter.parameterId).map(item => item.kind === 'diameter' ? '直径' : '长度').join('、') || '无'],
+          ['绑定标注', effectiveDrawing?.annotations.filter(item => item.parameterId === parameter.parameterId).map(item => item.kind === 'diameter' ? '直径' : '长度').join('、') || '无'],
         ] as [string, string][],
       })),
-      ...(drawingData?.annotations ?? []).map(annotation => {
-        const resolved = resolveDimension(annotation.parameterId, drawingData!.parameterSnapshot)
+      ...(effectiveDrawing?.annotations ?? []).map(annotation => {
+        const resolved = resolveDimension(annotation.parameterId, effectiveDrawing!.parameterSnapshot)
         const text = resolved.ok ? dimensionText(resolved.value, annotation.kind) : '解析失败'
         return {
           id: `annotation:${annotation.annotationId}`,
@@ -228,7 +235,7 @@ export function DesktopWorkspace() {
   const selectedAnnotationId = selection?.startsWith('annotation:') ? selection.slice('annotation:'.length) : null
   const annotationParameterId = selectedAnnotationId === null
     ? null
-    : drawingData?.annotations.find(item => item.annotationId === selectedAnnotationId)?.parameterId ?? null
+    : effectiveDrawing?.annotations.find(item => item.annotationId === selectedAnnotationId)?.parameterId ?? null
   const activeParameterId = selectedParameterId ?? annotationParameterId
   const selectedTermId = selection?.startsWith('term:') ? selection.slice('term:'.length) : null
   const termLinks = selectedTermId && project ? project.dimensionLinks.filter(isVisualReferenceLink).filter((link) => link.termId === selectedTermId) : []
@@ -237,7 +244,7 @@ export function DesktopWorkspace() {
   const saveState = session.state?.lastError && ['PERMISSION_DENIED', 'NO_SPACE', 'WRITE_FAILED', 'VERIFY_FAILED', 'RENAME_FAILED', 'EXTERNAL_MODIFIED', 'SAVE_FAILED'].includes(session.state.lastError.code) ? '保存失败，编辑内容仍可继续处理' : !session.state?.path ? '未保存草稿' : session.state.saveStateKnown === false ? '已恢复会话 · 正式保存状态未知' : session.state.dirty ? '有未保存修改' : '已保存'
   const dialogs = <SessionDialogs session={session} />
   if (!project) return <main className="desktop-workspace" aria-label="寸链启动页">
-    <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">V3 · D 批次</span></header>
+    <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">V3.5 · Beta</span></header>
     <section className="desktop-workspace__start">
       <h2>打开项目，继续设计</h2><p>轴系轴向公差链分析</p>
       <div className="desktop-workspace__start-actions">
@@ -257,7 +264,7 @@ export function DesktopWorkspace() {
   return <main className="desktop-workspace" style={style} aria-label="寸链桌面工作台">
     <header className="desktop-workspace__titlebar">
       <h1>寸链 · {project.name}</h1><span>Rev {project.currentRevisionId}</span><span className="desktop-workspace__pending">{saveState}</span>
-      <span className="desktop-workspace__batch">V3 · D 批次</span>
+      <span className="desktop-workspace__batch">V3.5 · Beta</span>
     </header>
     <div className="desktop-workspace__toolbar" role="toolbar" aria-label="项目操作">
       <button disabled={session.busy} onClick={() => session.action('new')}>新建项目</button>
@@ -360,6 +367,11 @@ export function DesktopWorkspace() {
               sessionId={sessionId}
               acceptedSeq={session.state?.acceptedSeq ?? 0}
               project={project}
+              draftPreview={{
+                drawing: candidateDrawing,
+                staleReason: session.change.staleReason,
+                autoState: session.change.autoState,
+              }}
               selectedParameterId={activeParameterId}
               selectedAnnotationId={selectedAnnotationId}
               onSelectParameter={parameterId => setSelection(parameterId === null ? null : `param:${parameterId}`)}
@@ -441,10 +453,10 @@ export function DesktopWorkspace() {
           {!model.partId && <p>先导入或打开含模型的部件后才能建立关联。</p>}
           <p className="desktop-workspace__pending">参数联动（改尺寸→改模型）属于 D 批次，不在本关联内。</p>
         </section>}
-        {activeParameterId && drawingData && (() => {
-          const parameter = drawingData.parameterSnapshot.find(item => item.parameterId === activeParameterId)
+        {activeParameterId && effectiveDrawing && (() => {
+          const parameter = effectiveDrawing.parameterSnapshot.find(item => item.parameterId === activeParameterId)
           if (!parameter) return <section className="desktop-workspace__part-note"><p>该参数不在当前图纸快照中。</p></section>
-          const bound = drawingData.annotations.filter(item => item.parameterId === parameter.parameterId)
+          const bound = effectiveDrawing.annotations.filter(item => item.parameterId === parameter.parameterId)
           return <section className="desktop-workspace__part-note" aria-label="图纸参数详情">
             <h3>{SPACER_PARAMETER_LABELS[parameter.key]} · 图纸参数</h3>
             <p>q = {parameter.valueQ} · 输入 {parameter.inputDecimals} 位小数</p>

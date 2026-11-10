@@ -36,6 +36,16 @@ export interface SpacerDrawingPanelProps {
   sessionId: string | null
   acceptedSeq: number
   project: ProjectFileProject
+  /**
+   * 参数联动的合法草稿预览：main 已按候选参数重建 DrawingData。
+   * 有值时画布/标注显示候选画面并明确标“未提交”；正式导出仍只读 project。
+   * 非法输入时 drawing 保留上一次有效候选，staleReason 说明原因。
+   */
+  draftPreview?: {
+    drawing: DrawingData | null
+    staleReason: string | null
+    autoState: 'idle' | 'pending' | 'valid' | 'invalid'
+  }
   selectedParameterId: string | null
   selectedAnnotationId: string | null
   onSelectParameter: (parameterId: string | null) => void
@@ -68,7 +78,14 @@ function textsFrom(parameters: ProjectFileSpacerParameter[]): Record<SpacerParam
 export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
   const record = props.project.drawings[0]
   const rebuilt = useMemo(() => rebuildDrawingFromProject(props.project), [props.project])
-  const data: DrawingData | null = rebuilt.ok ? rebuilt.data : null
+  /** 正式图纸：表单、比例、图框、导出仍只读这一份。 */
+  const committedData: DrawingData | null = rebuilt.ok ? rebuilt.data : null
+  /** 候选草稿画面：只用于显示；未提交，不得据此导出或声称正式版本已变。 */
+  const draftData = props.draftPreview?.drawing ?? null
+  const displayData = draftData ?? committedData
+  const showingDraft = draftData !== null
+  const draftStaleReason = props.draftPreview?.staleReason ?? null
+  const draftAutoState = props.draftPreview?.autoState ?? 'idle'
   const [showFrame, setShowFrame] = useState(false)
   const [zoom, setZoom] = useState<number | 'fit'>('fit')
   const [busy, setBusy] = useState(false)
@@ -107,7 +124,7 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
     props.selectedAnnotationId ??
     (props.selectedParameterId === null
       ? null
-      : data?.annotations.find((item) => item.parameterId === props.selectedParameterId)?.annotationId ??
+      : displayData?.annotations.find((item) => item.parameterId === props.selectedParameterId)?.annotationId ??
         null)
 
   function setInput(key: SpacerParameterKey, value: string) {
@@ -157,7 +174,7 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
   }
 
   async function exportAs(kind: 'pdf' | 'svg') {
-    if (props.sessionId === null || record === undefined || data === null) {
+    if (props.sessionId === null || record === undefined || committedData === null) {
       setError('尚无有效图纸，无法导出')
       return
     }
@@ -189,8 +206,8 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
     }
   }
 
-  const missing = data?.frame.missingFields ?? []
-  const rows = data?.parameterSnapshot ?? []
+  const missing = committedData?.frame.missingFields ?? []
+  const rows = committedData?.parameterSnapshot ?? []
   return (
     <section className="spacer-drawing" aria-label="隔套工程图">
       <header className="spacer-drawing__header">
@@ -214,6 +231,32 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
           </button>
         </div>
       </header>
+
+      {showingDraft && (
+        <p className="spacer-drawing__candidate" role="status">
+          候选参数预览（未提交）：标注与图形按当前参数联动草稿重画；正式图纸仍为 Rev {record?.revisionId ?? '—'}，
+          导出与提交不会使用候选值。
+        </p>
+      )}
+      {draftAutoState === 'invalid' && (
+        <p className="spacer-drawing__error" role="alert">
+          输入待修正，当前检查未完成。
+          {draftStaleReason !== null ? `（${draftStaleReason}）` : ''}
+          {showingDraft
+            ? ' 画面停留在上次有效候选参数。'
+            : ' 当前显示正式图纸；没有可保留的候选画面。'}
+        </p>
+      )}
+      {draftAutoState !== 'invalid' && draftStaleReason !== null && (
+        <p className="spacer-drawing__error" role="alert">
+          候选画面不是当前有效结论：{draftStaleReason}
+        </p>
+      )}
+      {draftAutoState === 'pending' && (
+        <p className="spacer-drawing__candidate" role="status">
+          自动预览中：候选图画布刷新完成后替换当前显示。
+        </p>
+      )}
 
       <form
         className="spacer-drawing__parameters"
@@ -255,7 +298,7 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
           <small>只改视图尺寸</small>
         </label>
         <button type="submit" className="spacer-drawing__primary" disabled={busy || props.sessionId === null}>
-          {data === null ? '生成图纸' : '应用参数与比例'}
+          {committedData === null ? '生成图纸' : '应用参数与比例'}
         </button>
       </form>
 
@@ -306,7 +349,7 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
 
       <div className="spacer-drawing__canvas">
         <DrawingCanvas
-          data={data}
+          data={displayData}
           selectedAnnotationId={selectedAnnotationId}
           zoom={zoom}
           onSelectAnnotation={(annotationId, parameterId) => {
@@ -323,27 +366,30 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
 
       <footer className="spacer-drawing__footer">
         <div>
-          {data !== null && (
+          {displayData !== null && (
             <>
-              <span className="spacer-drawing__chip">指纹 {data.fingerprint.slice(0, 12)}…</span>
-              <span className="spacer-drawing__chip">比例 {scaleText(data.scale)}</span>
+              <span className="spacer-drawing__chip">指纹 {displayData.fingerprint.slice(0, 12)}…</span>
+              <span className="spacer-drawing__chip">比例 {scaleText(displayData.scale)}</span>
               <span className="spacer-drawing__chip">
                 缺项：{missing.length === 0 ? '无' : missing.join('、')}
               </span>
+              {showingDraft && <span className="spacer-drawing__chip">候选草稿 · 未提交</span>}
             </>
           )}
         </div>
         <div className="spacer-drawing__actions">
           <button
             type="button"
-            disabled={busy || data === null || !data.layout.fits}
+            disabled={busy || committedData === null || !committedData.layout.fits || showingDraft}
+            title={showingDraft ? '候选草稿未提交；导出只使用正式图纸，请先确认提交' : undefined}
             onClick={() => void exportAs('pdf')}
           >
             导出 PDF（矢量）
           </button>
           <button
             type="button"
-            disabled={busy || data === null || !data.layout.fits}
+            disabled={busy || committedData === null || !committedData.layout.fits || showingDraft}
+            title={showingDraft ? '候选草稿未提交；导出只使用正式图纸，请先确认提交' : undefined}
             onClick={() => void exportAs('svg')}
           >
             导出 SVG

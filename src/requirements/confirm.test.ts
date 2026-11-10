@@ -9,6 +9,8 @@ import type { ProjectFileSnapshot } from '../project-file/types'
 import { createSpacerSnapshot } from '../project-file/__fixtures__/spacerProjectFile'
 import { SAMPLE_PROJECT_ID } from '../project-file/__fixtures__/sampleProjectFile'
 import { confirmOrUpdateRequirement, type ConfirmRequirementInput } from './confirm'
+import { parameterBindingStatusRowsWithSnapshot } from '../revisions/status'
+import { sourceBasisOf } from '../revisions/digest'
 import {
   activeRequirement,
   createRequirementProject,
@@ -310,5 +312,101 @@ describe('V3.5 条款更新：新建不可变版本、单条限制', () => {
     // 旧条款仍指向旧 PDF 版本与旧选区。
     expect(candidate.project.requirementRevisions[0]!.source.revisionId).toBe('sr-1')
     expect(activeRequirement(candidate).revisionId).toBe('reqrev-2')
+  })
+})
+
+describe('V3.5 条款来源与参数绑定：不因无关附件过度失效', () => {
+  it('新增并确认任务书 PDF 后，未改动的参数绑定仍为已确认生效', async () => {
+    const base = await createSpacerSnapshot({ length: '12.00', confirmed: true })
+    const taskbookSha = 'c'.repeat(64)
+    const taskbookRevisionId = 'sr-taskbook'
+    const withTaskbook: ProjectFileSnapshot = {
+      ...base,
+      documents: [
+        ...base.documents,
+        {
+          id: 'doc-taskbook',
+          projectId: SAMPLE_PROJECT_ID,
+          title: 'taskbook-2p.pdf',
+          latestRevisionId: taskbookRevisionId,
+        },
+      ],
+      revisions: [
+        ...base.revisions,
+        {
+          id: taskbookRevisionId,
+          projectId: SAMPLE_PROJECT_ID,
+          documentId: 'doc-taskbook',
+          fileName: 'taskbook-2p.pdf',
+          sha256: taskbookSha,
+          byteSize: 1234,
+          pageCount: 2,
+          createdAt: '2026-11-09T10:00:00.000Z',
+          blobKey: 'blob-taskbook',
+        },
+      ],
+      blobs: [
+        ...base.blobs,
+        {
+          blobKey: 'blob-taskbook',
+          projectId: SAMPLE_PROJECT_ID,
+          sha256: taskbookSha,
+          byteSize: 1234,
+        },
+      ],
+      attachments: [
+        ...base.attachments,
+        { blobKey: 'blob-taskbook', bytes: new Uint8Array(1234) },
+      ],
+    }
+    const confirmed = await confirmOrUpdateRequirement({
+      ...baseInput(withTaskbook),
+      source: {
+        documentId: 'doc-taskbook',
+        revisionId: taskbookRevisionId,
+        page: 1,
+        rectPdf: [10, 10, 110, 30],
+        pageBoxPdf: [0, 0, 595, 842],
+      },
+    })
+    expect(confirmed.ok).toBe(true)
+    if (!confirmed.ok) return
+    const snapshot = confirmed.value.snapshot
+    const rows = parameterBindingStatusRowsWithSnapshot(
+      snapshot.project,
+      snapshot.events,
+      (parameterId) => {
+        const parameter = snapshot.project.parameters.find(
+          (item) => item.parameterId === parameterId,
+        )
+        return sourceBasisOf(snapshot, parameter?.sourceNote)
+      },
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.state).toBe('valid')
+    expect(rows[0]!.reasons).toEqual([])
+  })
+
+  it('已绑定来源本身变化时仍然失效（不是把凭据检查关掉）', async () => {
+    const base = await createSpacerSnapshot({ length: '12.00', confirmed: true })
+    const changed: ProjectFileSnapshot = {
+      ...base,
+      revisions: base.revisions.map((revision) => ({
+        ...revision,
+        sha256: 'd'.repeat(64),
+      })),
+    }
+    const rows = parameterBindingStatusRowsWithSnapshot(
+      changed.project,
+      changed.events,
+      (parameterId) => {
+        const parameter = changed.project.parameters.find(
+          (item) => item.parameterId === parameterId,
+        )
+        return sourceBasisOf(changed, parameter?.sourceNote)
+      },
+    )
+    expect(rows[0]!.state).toBe('pending')
+    expect(rows[0]!.reasons.join('；')).toContain('来源基准与确认时不一致')
   })
 })

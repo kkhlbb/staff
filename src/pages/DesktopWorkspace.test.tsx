@@ -6,6 +6,7 @@ import type { CunlianApi, ProjectOpenValue, MenuActionPayload, EditorFlushReques
 import { createSampleSnapshot } from '../project-file/__fixtures__/sampleProjectFile'
 import { createModelSnapshot, sampleStlTriangle, MODEL_PART_ID, MODEL_REVISION_ID } from '../project-file/__fixtures__/modelProjectFile'
 import { createSpacerSnapshot } from '../project-file/__fixtures__/spacerProjectFile'
+import { createRequirementProject } from '../requirements/__fixtures__/requirementFixture'
 import { toSnapshotDto } from '../project-file/codec'
 import { DesktopWorkspace } from './DesktopWorkspace'
 import { buildSpacerDrawing } from '../drawing/spacerDrawing'
@@ -14,11 +15,13 @@ import type { ProjectFileDrawingRecord } from '../project-file/types'
 import { computeChange } from '../revisions/compute'
 import { buildCommitCandidate } from '../revisions/commit'
 import { deriveReviewGroups } from '../revisions/status'
+import { computeCandidateRequirementCheck } from '../requirements/check'
 
 // 3D 场景在 jsdom 里没有 WebGL2：用伪场景模块替换，只验证接线与命令调用。
 const scene = vi.hoisted(() => ({
   options: [] as Record<string, unknown>[],
   handles: [] as Record<string, unknown>[],
+  spacerDimensions: [] as unknown[],
 }))
 vi.mock('../parts/threeScene', () => ({
   createDemoScene: (options: Record<string, unknown>) => {
@@ -29,7 +32,7 @@ vi.mock('../parts/threeScene', () => ({
       active: true,
       disposed: false,
       setSelectedPartId: (id: string | null) => { handle.selected = id },
-      setSpacerDimensions: () => undefined,
+      setSpacerDimensions: (spacer: unknown) => { scene.spacerDimensions.push(spacer) },
       spacerLengthMm: () => 12,
       setExplodeT: (t: number) => { handle.explode = t },
       setActive: (value: boolean) => { handle.active = value },
@@ -190,8 +193,13 @@ beforeEach(async () => {
       }
       const base = drawingSnapshot ?? opened.snapshot
       try {
+        const fullSnapshot = {
+          ...base,
+          // SnapshotDto 不携带附件字节；mock 用 blob 键合成可读附件，供条款来源检查。
+          attachments: base.blobs.map(blob => ({ blobKey: blob.blobKey, bytes: new Uint8Array(1) })),
+        } as unknown as import('../project-file/types').ProjectFileSnapshot
         const computation = computeChange(
-          { ...base, attachments: [] } as unknown as import('../project-file/types').ProjectFileSnapshot,
+          fullSnapshot,
           { parameters: changeDraft.parameters, bindings: changeDraft.bindings },
           { revisionId: 'rev-d-mock-1', now: '2026-11-09T10:00:00.000Z' },
         )
@@ -202,6 +210,35 @@ beforeEach(async () => {
           revisions: base.revisions,
           sourceBindings: base.bindings,
         })
+        let requirement: import('../../desktop/shared/contracts').ChangePreviewValue['requirement'] = null
+        const activeRequirementId = base.project.activeRequirementRevisionId
+        if (activeRequirementId !== null) {
+          const checked = await computeCandidateRequirementCheck({
+            snapshot: fullSnapshot,
+            requirementRevisions: base.project.requirementRevisions,
+            activeRequirementRevisionId: activeRequirementId,
+            pendingEdit: null,
+            draft: {
+              draftId: changeDraft.draftId,
+              draftRevision: changeDraft.draftRevision,
+              parameters: changeDraft.parameters,
+              bindings: changeDraft.bindings,
+            },
+            checkedAt: '2026-11-09T10:00:00.000Z',
+            checkId: 'check-preview-mock',
+            inputIssue: null,
+          })
+          if (!checked.ok) throw new Error(checked.error.message)
+          requirement = {
+            check: checked.value.check,
+            evaluation: checked.value.evaluation,
+            revision: base.project.requirementRevisions.find(
+              item => item.revisionId === activeRequirementId,
+            ) ?? null,
+            originalTargetResult: checked.value.originalTargetResult,
+            requirementResult: checked.value.requirementResult,
+          }
+        }
         return {
           ok: true as const,
           value: {
@@ -238,7 +275,7 @@ beforeEach(async () => {
             },
             groups,
             blockers: [],
-            requirement: null,
+            requirement,
           },
         }
       } catch (error) {
@@ -363,6 +400,9 @@ beforeEach(async () => {
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
   modelScene.handles.length = 0
   modelScene.options.length = 0
+  scene.handles.length = 0
+  scene.options.length = 0
+  scene.spacerDimensions.length = 0
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 async function openExample() {
@@ -923,6 +963,146 @@ describe('C-03 工程图预览与参数联动', () => {
     fireEvent.click(screen.getByRole('button', { name: '50%' }))
     fireEvent.click(screen.getByRole('button', { name: '150%' }))
     expect(vi.mocked(api.updateSpacerDrawing).mock.calls.length).toBe(zoomCalls)
+  })
+})
+
+describe('V3.5 第 3 阶段：草稿候选画面与提交门禁', () => {
+  it('合法草稿自动预览后工程图/标注/属性按候选参数重画；非法输入保留上次画面并标注', async () => {
+    opened.snapshot = (await createSpacerSnapshot({
+      length: '12.00',
+      confirmed: true,
+      material: '',
+    })) as unknown as ProjectOpenValue['snapshot']
+    await openExample()
+
+    // 3D 在场时也读取同一份草稿参数（只替换隔套网格，组件不重建）。
+    fireEvent.click(screen.getByRole('tab', { name: '3D' }))
+    fireEvent.click(await screen.findByRole('button', { name: '查看内置轴系示例' }))
+    await waitFor(() => expect(scene.handles).toHaveLength(1))
+    await waitFor(() =>
+      expect(document.querySelector('.three-viewport')?.getAttribute('data-three-state')).toBe('ready'),
+    )
+    const sceneHandleBefore = scene.handles[0]
+
+    fireEvent.click(screen.getByRole('tab', { name: '工程图' }))
+    const drawingPanel = screen.getByLabelText('隔套工程图')
+    const annotationText = () =>
+      drawingPanel.querySelector('[data-annotation-id="ann.length"] text')?.textContent
+    await waitFor(() => expect(annotationText()).toBe('12.00'))
+    fireEvent.click(screen.getByRole('button', { name: '150%' }))
+    expect(screen.getByRole('button', { name: '150%' })).toHaveAttribute('aria-pressed', 'true')
+
+    const bench = screen.getByLabelText('参数联动')
+    fireEvent.change(within(bench).getByLabelText('长度（mm）'), { target: { value: '12.04' } })
+    await waitFor(() => expect(api.previewChange).toHaveBeenCalled(), { timeout: 3000 })
+    await waitFor(() => expect(annotationText()).toBe('12.04'), { timeout: 3000 })
+
+    // 2D 图形与标注确实按候选参数重画，并明确标“未提交”。
+    expect(within(drawingPanel).getByText(/候选参数预览（未提交）/)).toBeInTheDocument()
+    expect(within(drawingPanel).getByText('候选草稿 · 未提交')).toBeInTheDocument()
+    // 项目树与属性也读候选快照（用户实测的 120000 q 不再停留）。
+    fireEvent.click(screen.getByRole('button', { name: '长度 · 12.04' }))
+    expect(screen.getByRole('heading', { name: '长度 · 图纸参数' })).toBeInTheDocument()
+    expect(screen.getByText(/q = 120400 · 输入 2 位小数/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '标注 · 12.04' })).toBeInTheDocument()
+    // 3D：隔套长度随草稿变成 12.04。
+    await waitFor(() =>
+      expect(
+        scene.spacerDimensions.some(
+          (item) => Math.abs((item as { length: number }).length - 12.04) < 1e-9,
+        ),
+      ).toBe(true),
+    )
+    // 候选值刷新不能重建 3D 场景/图纸组件：同一个场景句柄与 2D 缩放保持不变。
+    expect(scene.handles).toHaveLength(1)
+    expect(scene.handles[0]).toBe(sceneHandleBefore)
+    expect(screen.getByRole('button', { name: '150%' })).toHaveAttribute('aria-pressed', 'true')
+
+    // 非法输入：保留上次有效候选画面，并标明“输入待修正”。
+    const benchAfter = screen.getByLabelText('参数联动')
+    fireEvent.change(within(benchAfter).getByLabelText('长度（mm）'), { target: { value: 'abc' } })
+    await waitFor(
+      () => expect(within(screen.getByLabelText('隔套工程图')).getByText(/输入待修正/)).toBeInTheDocument(),
+      { timeout: 3000 },
+    )
+    expect(annotationText()).toBe('12.04')
+    expect(drawingPanel.querySelector('[data-drawing-fingerprint]')).not.toBeNull()
+  })
+
+  it('条款检查为不满足时确认提交按钮 disabled，原因文字仍可见', async () => {
+    const requirement = await createRequirementProject()
+    // 模拟真实项目：条款确认后又导入了任务书 PDF（与参数绑定无关的来源清单项）。
+    // 旧 sourceBasis 会把这条新增文档算进去，导致绑定被误判待核。
+    const base = requirement.snapshot
+    opened.snapshot = {
+      ...base,
+      documents: [
+        ...base.documents,
+        {
+          id: 'doc-taskbook-extra',
+          projectId: base.project.id,
+          title: 'taskbook-2p.pdf',
+          latestRevisionId: 'sr-taskbook-extra',
+        },
+      ],
+      revisions: [
+        ...base.revisions,
+        {
+          id: 'sr-taskbook-extra',
+          projectId: base.project.id,
+          documentId: 'doc-taskbook-extra',
+          fileName: 'taskbook-2p.pdf',
+          sha256: 'e'.repeat(64),
+          byteSize: 2048,
+          pageCount: 2,
+          createdAt: '2026-11-09T09:30:00.000Z',
+          blobKey: 'blob-taskbook-extra',
+        },
+      ],
+      blobs: [
+        ...base.blobs,
+        {
+          blobKey: 'blob-taskbook-extra',
+          projectId: base.project.id,
+          sha256: 'e'.repeat(64),
+          byteSize: 2048,
+        },
+      ],
+    } as unknown as ProjectOpenValue['snapshot']
+    await openExample()
+    fireEvent.click(screen.getByRole('tab', { name: '工程图' }))
+    await within(screen.getByLabelText('参数联动')).findByText('已确认生效')
+
+    fireEvent.change(within(screen.getByLabelText('参数联动')).getByLabelText('长度（mm）'), {
+      target: { value: '12.10' },
+    })
+    fireEvent.click(within(screen.getByLabelText('参数联动')).getByRole('button', { name: '建立/更新草稿' }))
+    await waitFor(() => expect(api.stageChangeDraft).toHaveBeenCalled())
+    fireEvent.click(within(screen.getByLabelText('参数联动')).getByRole('button', { name: '预览变更' }))
+    expect(await screen.findByText('预览：rev-d-mock-1')).toBeInTheDocument()
+
+    const bench = screen.getByLabelText('参数联动')
+    const confirm = within(bench).getByRole('button', { name: '确认提交（一次原子写入）' })
+    await waitFor(() => expect(confirm).toBeDisabled())
+    const reason = document.getElementById('change-workbench-confirm-reason')
+    expect(reason).toHaveTextContent('条款检查为「不满足要求」')
+    expect(reason).toHaveTextContent('下界越界')
+    expect(confirm).toHaveAttribute('title', expect.stringContaining('条款检查为「不满足要求」'))
+    expect(api.applyChange).not.toHaveBeenCalled()
+  })
+
+  it('顶栏批次标签在启动页与工作台两处都是 V3.5 · Beta', async () => {
+    render(<DesktopWorkspace />)
+    await waitFor(() => expect(screen.getByRole('button', { name: /打开内置示例/ })).toBeEnabled())
+    expect(document.querySelector('.desktop-workspace__batch')).toHaveTextContent('V3.5 · Beta')
+    expect(screen.queryByText('V3 · D 批次')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /打开内置示例/ }))
+    await screen.findByRole('main', { name: '寸链桌面工作台' })
+    const batches = document.querySelectorAll('.desktop-workspace__batch')
+    expect(batches).toHaveLength(1)
+    expect(batches[0]).toHaveTextContent('V3.5 · Beta')
+    expect(screen.queryByText('V3 · D 批次')).toBeNull()
   })
 })
 

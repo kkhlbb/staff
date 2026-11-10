@@ -201,7 +201,12 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
           </button>
           <button
             type="button"
-            disabled={busy || change.preview === null || change.staleReason !== null}
+            disabled={
+              busy ||
+              change.preview === null ||
+              change.staleReason !== null ||
+              requirementBlocker !== null
+            }
             title={confirmBlockedReason ?? undefined}
             aria-describedby="change-workbench-confirm-reason"
             onClick={() => void run(() => props.onApply(reason))}
