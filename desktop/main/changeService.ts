@@ -777,6 +777,7 @@ export class ChangeService {
         activeRequirementRevisionId: session.snapshot.project.activeRequirementRevisionId,
         pendingEdit: state.requirementEdit,
         previewCheck: preview.requirementCheck,
+        previewComputation: preview.computation,
         baseRevisionId: session.snapshot.project.currentRevisionId,
         baseGeneration: state.generation,
         acceptedSeq: session.acceptedSeq,

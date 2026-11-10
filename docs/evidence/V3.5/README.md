@@ -38,7 +38,7 @@
 | `npm run typecheck` | 0 | app + node 两套 tsc 通过 | `logs/typecheck.log` |
 | `npm run typecheck:desktop` | 0 | desktop tsc 通过 | `logs/typecheck-desktop.log` |
 | `npm run lint` | 0 | eslint 全仓通过 | `logs/lint.log` |
-| `npm test` | 0 | **81 文件 / 838 用例全过** | `logs/test.log` |
+| `npm test` | 0 | **81 文件 / 839 用例全过** | `logs/test.log` |
 | `npm run test:desktop` | 0 | **26 文件 / 178 用例全过**（证据生成器不属于该套件） | `logs/test-desktop.log` |
 | `npm run build` | 0 | vite 生产构建通过（既有 chunk 体积警告） | `logs/build.log` |
 | `npm run package:desktop` | 0 | `out/寸链-darwin-arm64/寸链.app`（arm64，未签名） | `logs/package-desktop.log` |
@@ -54,7 +54,7 @@
 
 | ID | 变异 | patch | 红日志（退出码 1） | 恢复绿（退出码 0） |
 |---|---|---|---|---|
-| MUT-B35-1 | 提交复用预览检查、不重算（`src/requirements/commit.ts`） | `mutations/MUT-B35-1.patch` | `mutations/MUT-B35-1.red.log`：5 failed（伪造满足、草稿数值已变、spy 未调用等） | `mutations/MUT-B35-1.green.log`：10 passed |
+| MUT-B35-1 | 提交复用预览计算与预览检查、不重算（`src/requirements/commit.ts`） | `mutations/MUT-B35-1.patch` | `mutations/MUT-B35-1.red.log`：若干 failed（伪造满足、草稿数值已变、previewComputation 受控差异等） | `mutations/MUT-B35-1.green.log` |
 | MUT-B35-2 | 条款失效后仍出满足（`src/requirements/check.ts` 跳过来源换版/不可读检查） | `mutations/MUT-B35-2.patch` | `mutations/MUT-B35-2.red.log`：2 failed（PDF 换版、PDF 不可读） | `mutations/MUT-B35-2.green.log`：21 passed |
 | MUT-B35-3 | 条款区间与 target 混用（判定改读 `chain.target`） | `mutations/MUT-B35-3.patch` | `mutations/MUT-B35-3.red.log`：2 failed，含 B35-07 P35-T 双向独立 | `mutations/MUT-B35-3.green.log`：21 passed |
 

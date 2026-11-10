@@ -48,6 +48,11 @@ export interface CommitRecomputedChangeInput {
   pendingEdit: RequirementEditDraft | null
   /** 预览时 main 记录的条款检查；提交必须重算并与它比对。 */
   previewCheck: RequirementCheck | null
+  /**
+   * 预览时 main 持有的计算结果。仅用于一致性比对，**绝不作为提交结果**；
+   * 重算必须从当前草稿重新执行 computeChange。
+   */
+  previewComputation?: ChangeComputation
   baseRevisionId: string
   baseGeneration: number
   acceptedSeq: number
@@ -70,6 +75,35 @@ export interface CommitRecomputedChangeValue {
   check: RequirementCheck
   /** 是否启用了 Beta 门禁（无条款的老项目走原 D 路径）。 */
   requirementGate: boolean
+}
+
+/** 参数/环/结果的稳定比较键；不比较 revisionId 等每次调用都会变的身份。 */
+function computationSignature(computation: ChangeComputation): string {
+  return JSON.stringify({
+    parameters: computation.parameters
+      .map((parameter) => ({
+        parameterId: parameter.parameterId,
+        valueQ: parameter.valueQ,
+        inputDecimals: parameter.inputDecimals,
+        parameterRevision: parameter.parameterRevision,
+      }))
+      .sort((left, right) => (left.parameterId < right.parameterId ? -1 : 1)),
+    terms: computation.chain.terms
+      .map((term) => ({
+        id: term.id,
+        nominalQ: term.nominalQ,
+        lowerDeviationQ: term.lowerDeviationQ,
+        upperDeviationQ: term.upperDeviationQ,
+        sign: term.sign,
+      }))
+      .sort((left, right) => (left.id < right.id ? -1 : 1)),
+    result: {
+      nominalQ: computation.result.nominalQ,
+      minQ: computation.result.minQ,
+      maxQ: computation.result.maxQ,
+      status: computation.result.status,
+    },
+  })
 }
 
 export async function commitRecomputedChange(
@@ -110,6 +144,19 @@ export async function commitRecomputedChange(
       error: {
         code: 'CALCULATION_FAILED',
         message: error instanceof Error ? error.message : String(error),
+      },
+    }
+  }
+
+  if (
+    input.previewComputation !== undefined &&
+    computationSignature(input.previewComputation) !== computationSignature(computation)
+  ) {
+    return {
+      ok: false,
+      error: {
+        code: 'STALE_PREVIEW',
+        message: '提交重算结果与预览计算不一致，已拒绝；请重新预览。',
       },
     }
   }

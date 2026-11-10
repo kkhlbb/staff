@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { ProjectFileSnapshot } from '../project-file/types'
 import { createSpacerSnapshot } from '../project-file/__fixtures__/spacerProjectFile'
 import { computeCandidateRequirementCheck } from './check'
+import { computeChange } from '../revisions/compute'
 import { commitRecomputedChange, type CommitRecomputedChangeInput } from './commit'
 import type { RequirementCheck } from './types'
 import {
@@ -231,6 +232,23 @@ describe('V3.5 提交重算：只放行 satisfied，且用当前草稿重算', (
     )
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe('STALE_REQUIREMENT')
+  })
+
+  it('提交不采信 previewComputation：预览 12.04、草稿 12.10 → 拒绝', async () => {
+    const project = await createRequirementProject()
+    const previewDraft = draftWithLength(project.snapshot, '12.04')
+    const previewComputation = computeChange(
+      project.snapshot,
+      { parameters: previewDraft.parameters, bindings: previewDraft.bindings },
+      { revisionId: 'rev-commit-1', now: CHECKED_AT },
+    )
+    const previewCheck = await checkFor(project.snapshot, previewDraft)
+    const commitDraft = draftWithLength(project.snapshot, '12.10')
+    const result = await commitRecomputedChange(
+      commitInput(project.snapshot, commitDraft, previewCheck, { previewComputation }),
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('STALE_PREVIEW')
   })
 
   it('提交路径确实第二次调用条款检查（依赖注入计数）', async () => {
