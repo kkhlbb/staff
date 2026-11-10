@@ -25,6 +25,7 @@ export type BaseGroupId =
   | 'drawing'
   | 'models'
   | 'sources'
+  | 'requirement'
   | 'versions'
   | 'revision'
 
@@ -35,6 +36,7 @@ export const BASE_GROUP_LABEL: Record<BaseGroupId, string> = {
   drawing: '图纸引用（模板/比例/图框/指纹）',
   models: '模型当前版本与附件',
   sources: '来源文档/版本/绑定/附件可用性',
+  requirement: '任务书条款（版本/区间/来源）',
   versions: '引擎/规则/生成器版本',
   revision: '正式版本指针与编辑代数',
 }
@@ -190,6 +192,39 @@ export function sourceFingerprint(snapshot: SourceSnapshotLike): string {
   return stableFingerprint(sourceInput(snapshot))
 }
 
+/**
+ * 条款分组：任何条款版本/区间/来源/确认依据变化都会改变基准摘要，
+ * 从而让旧预览与旧令牌失效（改后改回也因代数推进而失效）。
+ */
+export function requirementInput(snapshot: ProjectFileSnapshot): unknown {
+  return {
+    activeRequirementRevisionId: snapshot.project.activeRequirementRevisionId,
+    revisions: [...snapshot.project.requirementRevisions]
+      .map((revision) => ({
+        requirementId: revision.requirementId,
+        revisionId: revision.revisionId,
+        parentRevisionId: revision.parentRevisionId,
+        ruleType: revision.ruleType,
+        lowerQ: revision.lowerQ,
+        upperQ: revision.upperQ,
+        confirmedText: revision.confirmedText,
+        confirmedAt: revision.confirmedAt,
+        confirmedAgainstLatestRevisionId: revision.confirmedAgainstLatestRevisionId,
+        source: {
+          documentId: revision.source.documentId,
+          revisionId: revision.source.revisionId,
+          sha256: revision.source.sha256,
+          blobKey: revision.source.blobKey,
+          page: revision.source.page,
+          rectPdf: revision.source.rectPdf,
+          pageBoxPdf: revision.source.pageBoxPdf,
+        },
+        bindingBasisDigest: revision.bindingBasis.digest,
+      }))
+      .sort((left, right) => (left.revisionId < right.revisionId ? -1 : 1)),
+  }
+}
+
 /** 一次确认事件的来源基准：来源清单指纹 + 该参数来源备注。 */
 export function sourceBasisOf(snapshot: SourceSnapshotLike, sourceNote: string | undefined): string {
   return `${sourceFingerprint(snapshot)}:${sourceNote ?? ''}`
@@ -206,6 +241,7 @@ export async function computeBaseDigest(
     { id: 'drawing', value: drawingInput(snapshot) },
     { id: 'models', value: modelInput(snapshot) },
     { id: 'sources', value: sourceInput(snapshot) },
+    { id: 'requirement', value: requirementInput(snapshot) },
     {
       id: 'versions',
       value: {

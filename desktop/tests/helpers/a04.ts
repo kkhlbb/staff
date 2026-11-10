@@ -132,6 +132,8 @@ export interface HarnessOptions {
   flushResult?: IpcResult<null>
   fileOps?: FileOps
   debounceMs?: number
+  /** 迁移前副本的唯一后缀；测试用它固定备份文件名。 */
+  newBackupSuffix?: () => string
   openPaths?: (string | null)[]
   relinkPaths?: (string | null)[]
   /** 注入 reveal 端口失败，用于 REVEAL_FAILED 路径。 */
@@ -197,6 +199,9 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
       return sessionId
     },
     store: new FileStore(options.fileOps === undefined ? {} : { ops: options.fileOps }),
+    ...(options.newBackupSuffix === undefined
+      ? {}
+      : { newBackupSuffix: options.newBackupSuffix }),
   })
   const recovery = new RecoveryStore({
     rootDir: workspace,

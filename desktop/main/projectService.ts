@@ -21,6 +21,11 @@ import type {
 import { PROJECT_FILE_SCHEMA_VERSION } from '../../src/project-file/types'
 import type { IpcErrorCode, IpcErrorPayload, IpcResult } from '../shared/contracts'
 import { FileStore, type SaveError } from './fileStore'
+import {
+  createMigrationBackup,
+  migrationBackupNotice,
+  type MigrationBackupRecord,
+} from './migrationBackup'
 
 export type SnapshotDto = ReturnType<typeof toSnapshotDto>
 
@@ -33,6 +38,13 @@ export interface ProjectSession {
   path: string | null
   fingerprint: string | null
   snapshot: ProjectFileSnapshot
+  /**
+   * 打开时磁盘项目的 schema 版本（manifest 声明）。< 7 表示首次正式写盘
+   * 需要先创建可恢复副本；保存成功后置为当前版本。
+   */
+  sourceProjectSchemaVersion: number
+  /** 本会话已创建的迁移前副本；null 表示尚未创建或无需创建。 */
+  migrationBackup: MigrationBackupRecord | null
 }
 
 export interface OpenResult {
@@ -81,6 +93,8 @@ export interface CommitCandidateValue {
 export interface ProjectServiceOptions {
   store?: FileStore
   newSessionId?: () => string
+  now?: () => Date
+  newBackupSuffix?: () => string
 }
 
 function ipcFailure(code: IpcErrorCode, message: string, detail?: string): IpcResult<never> {
@@ -96,12 +110,17 @@ function fromSaveError(error: SaveError): IpcResult<never> {
 export class ProjectService {
   private readonly store: FileStore
   private readonly newSessionId: () => string
+  private readonly now: () => Date
+  private readonly newBackupSuffix: () => string
   private readonly sessions = new Map<string, ProjectSession>()
   private readonly queues = new Map<string, Promise<unknown>>()
 
   constructor(options: ProjectServiceOptions = {}) {
     this.store = options.store ?? new FileStore()
     this.newSessionId = options.newSessionId ?? (() => randomUUID())
+    this.now = options.now ?? (() => new Date())
+    this.newBackupSuffix =
+      options.newBackupSuffix ?? (() => randomUUID().replace(/-/g, '').slice(0, 16))
   }
 
   getSession(sessionId: string): ProjectSession | null {
@@ -143,17 +162,26 @@ export class ProjectService {
     if (!decoded.ok) {
       return ipcFailure(decoded.error.code, decoded.error.message, decoded.error.detail)
     }
-    return this.adoptSnapshot(decoded.value.snapshot, targetPath, fingerprint)
+    return this.adoptSnapshot(
+      decoded.value.snapshot,
+      targetPath,
+      fingerprint,
+      decoded.value.manifest.project.projectSchemaVersion,
+    )
   }
 
   /**
    * 用 main 已构造/已校验的内存聚合建立会话（新建项目、恢复草稿）。
    * 不写磁盘；附件字节继续由 main 持有。
+   *
+   * `sourceProjectSchemaVersion` 记录磁盘来源版本：< 7 时首次覆盖写盘前必须
+   * 创建可恢复副本（新建/恢复的内存项目默认已是当前 schema）。
    */
   adoptSnapshot(
     snapshot: ProjectFileSnapshot,
     targetPath: string | null,
     fingerprint: string | null,
+    sourceProjectSchemaVersion: number = PROJECT_FILE_SCHEMA_VERSION,
   ): IpcResult<OpenResult> {
     const sessionId = this.newSessionId()
     const session: ProjectSession = {
@@ -163,6 +191,8 @@ export class ProjectService {
       path: null,
       fingerprint: null,
       snapshot,
+      sourceProjectSchemaVersion,
+      migrationBackup: null,
     }
     if (targetPath !== null && fingerprint !== null) {
       session.path = targetPath
@@ -395,6 +425,12 @@ export class ProjectService {
     if (targetPath === null) {
       return ipcFailure('INVALID_REQUEST', '当前项目尚未保存过，需要先选择保存位置')
     }
+    // 旧 schema 文件被覆盖前先留可恢复副本；失败即阻止提交，原文件不变。
+    const backup = await this.ensureMigrationBackup(session, targetPath)
+    if (!backup.ok) {
+      return ipcFailure(backup.error.code, backup.error.message, backup.error.detail)
+    }
+    const warnings = backup.value === null ? [] : [migrationBackupNotice(backup.value)]
     const overwriteFingerprint =
       session.path === null
         ? (request.overwriteFingerprint ?? (await this.store.fingerprint(targetPath)))
@@ -437,13 +473,15 @@ export class ProjectService {
     session.fingerprint = saved.value.fingerprint
     session.acceptedSeq = request.baseEditSeq + 1
     session.savedSeq = session.acceptedSeq
+    session.sourceProjectSchemaVersion = PROJECT_FILE_SCHEMA_VERSION
+    if (backup.value !== null) session.migrationBackup = backup.value
     return {
       ok: true,
       value: {
         acceptedSeq: session.acceptedSeq,
         path: saved.value.path,
         fingerprint: saved.value.fingerprint,
-        warnings: saved.value.warnings,
+        warnings: [...warnings, ...saved.value.warnings],
       },
     }
   }
@@ -451,6 +489,37 @@ export class ProjectService {
   /** 读取磁盘指纹（不创建会话）；供 dirty gate 的另存覆盖确认与 relink 使用。 */
   async fingerprint(targetPath: string): Promise<string | null> {
     return this.store.fingerprint(targetPath)
+  }
+
+  /**
+   * 迁移前副本：仅在“即将覆盖打开时的旧 schema 文件”时创建一次。
+   * 写入新目标时原文件仍留在原路径，本身就是恢复来源，不重复复制。
+   * 失败一律阻止升级（返回错误，原文件保持不变）。
+   */
+  private async ensureMigrationBackup(
+    session: ProjectSession,
+    targetPath: string,
+  ): Promise<IpcResult<MigrationBackupRecord | null>> {
+    if (session.migrationBackup !== null) {
+      return { ok: true, value: session.migrationBackup }
+    }
+    if (session.sourceProjectSchemaVersion >= PROJECT_FILE_SCHEMA_VERSION) {
+      return { ok: true, value: null }
+    }
+    if (session.path === null || targetPath !== session.path) {
+      return { ok: true, value: null }
+    }
+    const backup = await createMigrationBackup({
+      ops: this.store.fileOps,
+      originalPath: targetPath,
+      expectedFingerprint: session.fingerprint,
+      now: this.now,
+      newSuffix: this.newBackupSuffix,
+    })
+    if (!backup.ok) {
+      return ipcFailure(backup.error.code, backup.error.message, backup.error.detail)
+    }
+    return { ok: true, value: backup.value }
   }
 
   /** 只判断目标文件类型（不读内容）。 */
@@ -563,6 +632,17 @@ export class ProjectService {
       )
     }
 
+    // 迁移写盘屏障：覆盖旧 schema 原文件前先留可恢复副本；失败阻止升级。
+    let backupRecord: MigrationBackupRecord | null = null
+    if (upgrade.upgraded) {
+      const backup = await this.ensureMigrationBackup(session, targetPath)
+      if (!backup.ok) {
+        return ipcFailure(backup.error.code, backup.error.message, backup.error.detail)
+      }
+      backupRecord = backup.value
+    }
+    const previousPath = session.path
+
     const saved = await this.store.saveAtomic({
       targetPath,
       bytes: encoded.value.bytes,
@@ -602,7 +682,23 @@ export class ProjectService {
     session.path = saved.value.path
     session.fingerprint = saved.value.fingerprint
     session.savedSeq = request.editSeq
+    session.sourceProjectSchemaVersion = PROJECT_FILE_SCHEMA_VERSION
+    if (backupRecord !== null) session.migrationBackup = backupRecord
     const warnings = [...saved.value.warnings]
+    if (backupRecord !== null) {
+      warnings.push(migrationBackupNotice(backupRecord))
+    } else if (
+      upgrade.upgraded &&
+      previousPath !== null &&
+      previousPath !== saved.value.path
+    ) {
+      const originalReadable = (await this.store.fingerprint(previousPath)) !== null
+      warnings.push(
+        originalReadable
+          ? `另存升级：原文件 ${previousPath} 保留为恢复来源（已回读确认可读）。`
+          : `另存升级：原文件 ${previousPath} 未能回读确认，请自行核对可恢复性。`,
+      )
+    }
     if (upgrade.upgraded && upgrade.notice !== null) {
       warnings.push(upgrade.notice)
     }

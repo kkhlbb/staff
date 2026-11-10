@@ -12,6 +12,7 @@
 import type { ChainDefinition, Project, RelationReview, ProjectMigration } from '../domain/types'
 import type { ChangeEvent } from '../history/events'
 import type { AnalysisSnapshot } from '../history/snapshots'
+import type { RequirementCheck, RequirementRevision } from '../requirements/types'
 import type { SourceBinding } from '../sources/bindings'
 import type { SourceDocument, SourceRevision } from '../sources/types'
 import type { WorkspaceDraft } from '../workspace/draft'
@@ -24,14 +25,17 @@ export const PROJECT_FILE_FORMAT = 'cunlian-project'
 /** B2 起写出的格式版本：formatVersion=2，project.schemaVersion=4/5。 */
 export const PROJECT_FILE_FORMAT_VERSION = 2
 /**
- * 当前写端项目 schema（V3-D 起为 6）：
+ * 当前写端项目 schema（V3.5 起为 7）：
+ * - 7：Beta 任务书条款（RequirementRevision/RequirementCheck 与活动指针）；
  * - 6：参数绑定（parameter-binding）、单调 parameterRevision、Revision 证据引用；
  * - 5：三参数（q/有效位/来源备注）与图纸快照引用可持久化（仍可读）；
  * - 4：B2 模型版本与可视关联，parameters/drawings 必须为空（仍可读）；
  * - 3：B1 及更早（仍可读）。
  * `formatVersion` 保持 2：容器布局未变，只扩展 project.json 的 schema 与版本配对。
  */
-export const PROJECT_FILE_SCHEMA_VERSION = 6
+export const PROJECT_FILE_SCHEMA_VERSION = 7
+/** D 的 schema6；仍可读，保存时显式升级为 7。 */
+export const D_PROJECT_FILE_SCHEMA_VERSION = 6
 export const C_PROJECT_FILE_SCHEMA_VERSION = 5
 export const B2_PROJECT_FILE_SCHEMA_VERSION = 4
 /** 仍然可读的 B1 及更早格式（读时兼容，首次保存显式升级）。 */
@@ -102,8 +106,8 @@ export interface ProjectFileWriter {
 export interface ProjectFileManifestProject {
   id: string
   name: string
-  /** 旧文件为 3，B2 为 4，C 为 5，D 写 6；读取时按伴随的 formatVersion 校验配对。 */
-  projectSchemaVersion: 3 | 4 | 5 | 6
+  /** 旧文件为 3，B2 为 4，C 为 5，D 写 6，V3.5 写 7；读取时按伴随的 formatVersion 校验配对。 */
+  projectSchemaVersion: 3 | 4 | 5 | 6 | 7
   dimensionChainSchemaVersion: typeof DIMENSION_CHAIN_SCHEMA_VERSION
   currentRevisionId: string
 }
@@ -359,6 +363,8 @@ export interface ProjectFileDrawingRecord {
  * 从哪种文件格式读入（1=B1 及更早，2=B2），用于“首次保存显式升级”。
  *
  * C：schemaVersion=5，parameters/drawings 使用严格类型（三参数 + 图纸引用）。
+ * D：schemaVersion=6，参数绑定与单调 parameterRevision。
+ * V3.5：schemaVersion=7，Beta 任务书条款。
  */
 export interface ProjectFileProject {
   id: string
@@ -379,6 +385,26 @@ export interface ProjectFileProject {
   modelRevisions: ProjectFileModelRevision[]
   dimensionLinks: ProjectFileDimensionLink[]
   drawings: ProjectFileDrawingRecord[]
+  /** 确认后的不可变条款版本（可累积多个版本；只有一个活动 requirementId）。 */
+  requirementRevisions: RequirementRevision[]
+  /** 当前活动条款版本；null 表示无 Beta 条款。 */
+  activeRequirementRevisionId: string | null
+  /** 最近一次基线/正式检查证据；不存“已通过”布尔。 */
+  currentRequirementCheck: RequirementCheck | null
+}
+
+/**
+ * V3.5 的 schema6 记录（D）：没有 Beta 条款字段。
+ * 只用于读时兼容与旧历史原样保留。
+ */
+export type ProjectFileProjectV6 = Omit<
+  ProjectFileProject,
+  | 'schemaVersion'
+  | 'requirementRevisions'
+  | 'activeRequirementRevisionId'
+  | 'currentRequirementCheck'
+> & {
+  schemaVersion: typeof D_PROJECT_FILE_SCHEMA_VERSION
 }
 
 /**
@@ -387,7 +413,12 @@ export interface ProjectFileProject {
  */
 export type ProjectFileProjectV5 = Omit<
   ProjectFileProject,
-  'schemaVersion' | 'parameters' | 'dimensionLinks'
+  | 'schemaVersion'
+  | 'parameters'
+  | 'dimensionLinks'
+  | 'requirementRevisions'
+  | 'activeRequirementRevisionId'
+  | 'currentRequirementCheck'
 > & {
   schemaVersion: typeof C_PROJECT_FILE_SCHEMA_VERSION
   parameters: (Omit<ProjectFileSpacerParameter, 'parameterRevision'> & {
@@ -399,7 +430,13 @@ export type ProjectFileProjectV5 = Omit<
 /** B2 的 schema4 记录：模型/关联有严格类型，parameters/drawings 必须为空。 */
 export type ProjectFileProjectV2 = Omit<
   ProjectFileProject,
-  'schemaVersion' | 'parameters' | 'drawings' | 'dimensionLinks'
+  | 'schemaVersion'
+  | 'parameters'
+  | 'drawings'
+  | 'dimensionLinks'
+  | 'requirementRevisions'
+  | 'activeRequirementRevisionId'
+  | 'currentRequirementCheck'
 > & {
   schemaVersion: typeof B2_PROJECT_FILE_SCHEMA_VERSION
   parameters: unknown[]
@@ -417,6 +454,9 @@ export type ProjectFileProjectV1 = Omit<
   | 'modelRevisions'
   | 'dimensionLinks'
   | 'drawings'
+  | 'requirementRevisions'
+  | 'activeRequirementRevisionId'
+  | 'currentRequirementCheck'
 > & {
   schemaVersion: typeof LEGACY_PROJECT_FILE_SCHEMA_VERSION
   parts: unknown[]
@@ -445,6 +485,9 @@ export interface ProjectFileRevisionEvidence {
     missingBlobKeys: string[]
   }
   restoredFromRevisionId: string | null
+  /** V3.5：本版本冻结的活动条款与同次检查；旧版本没有该字段。 */
+  requirementRevisionId?: string | null
+  checkId?: string | null
 }
 
 /** `revisions/<encoded-id>.json`：项目文件版本基准。 */
@@ -454,10 +497,15 @@ export interface ProjectFileRevision {
   createdAt: string
   reason: string
   /**
-   * 旧归档快照保留原 schema（3/4/5）原样（不可变历史）；新快照为当前 schema 6。
+   * 旧归档快照保留原 schema（3/4/5/6）原样（不可变历史）；新快照为当前 schema 7。
    * 读取按版本化联合解析，保存时不会把旧历史改写成新内容。
    */
-  project: ProjectFileProject | ProjectFileProjectV5 | ProjectFileProjectV2 | ProjectFileProjectV1
+  project:
+    | ProjectFileProject
+    | ProjectFileProjectV6
+    | ProjectFileProjectV5
+    | ProjectFileProjectV2
+    | ProjectFileProjectV1
   /** D 新版本带证据引用；旧版本没有该字段。 */
   evidence?: ProjectFileRevisionEvidence
 }

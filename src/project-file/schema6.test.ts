@@ -78,13 +78,13 @@ describe('D-01 schema 6 持久化与旧版本读取', () => {
     const encoded = await encodeProjectFile(withRevision)
     expect(encoded.ok).toBe(true)
     if (!encoded.ok) return
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(6)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(7)
 
     const decoded = await decodeProjectFile(encoded.value.bytes)
     expect(decoded.ok).toBe(true)
     if (!decoded.ok) return
     const project = decoded.value.snapshot.project
-    expect(project.schemaVersion).toBe(6)
+    expect(project.schemaVersion).toBe(7)
     expect(project.parameters.find((item) => item.key === 'length')!.parameterRevision).toBe(3)
     const binding = project.dimensionLinks.find((link) => link.kind === 'parameter-binding')
     expect(binding).toMatchObject({
@@ -111,6 +111,9 @@ describe('D-01 schema 6 持久化与旧版本读取', () => {
       patchJson(parts, 'project/project.json', (project) => {
         project.schemaVersion = 5
         project.dimensionLinks = []
+        delete project.requirementRevisions
+        delete project.activeRequirementRevisionId
+        delete project.currentRequirementCheck
         project.parameters = (project.parameters as Record<string, unknown>[]).map((parameter) => {
           const { parameterRevision: _revision, ...rest } = parameter
           void _revision
@@ -121,6 +124,9 @@ describe('D-01 schema 6 持久化与旧版本读取', () => {
         const project = revision.project as Record<string, unknown>
         project.schemaVersion = 5
         project.dimensionLinks = []
+        delete project.requirementRevisions
+        delete project.activeRequirementRevisionId
+        delete project.currentRequirementCheck
         project.parameters = (project.parameters as Record<string, unknown>[]).map((parameter) => {
           const { parameterRevision: _revision, ...rest } = parameter
           void _revision
@@ -133,18 +139,18 @@ describe('D-01 schema 6 持久化与旧版本读取', () => {
     expect(decoded.ok, decoded.ok ? '' : `${decoded.error.code}: ${decoded.error.message}`).toBe(true)
     if (!decoded.ok) return
     expect(decoded.value.manifest.project.projectSchemaVersion).toBe(5)
-    expect(decoded.value.snapshot.project.schemaVersion).toBe(6)
+    expect(decoded.value.snapshot.project.schemaVersion).toBe(7)
     expect(decoded.value.snapshot.project.parameters.every((item) => item.parameterRevision === 1)).toBe(true)
     expect(decoded.value.snapshot.project.dimensionLinks).toEqual([])
     // 历史版本保持 schema5 原样，不被改写。
     expect(decoded.value.snapshot.fileRevisions[0]!.project.schemaVersion).toBe(5)
 
-    // 首次保存显式升级：新增 schema6 版本，旧版仍是 5。
+    // 首次保存显式升级：新增 schema7 版本，旧版仍是 5。
     const upgraded = upgradeSnapshotToCurrent(decoded.value.snapshot, { newRevisionId: () => 'rev-upgrade' })
     expect(upgraded.upgraded).toBe(true)
-    expect(upgraded.snapshot.project.schemaVersion).toBe(6)
+    expect(upgraded.snapshot.project.schemaVersion).toBe(7)
     expect(upgraded.snapshot.fileRevisions[0]!.project.schemaVersion).toBe(5)
-    expect(upgraded.snapshot.fileRevisions.at(-1)!.project.schemaVersion).toBe(6)
+    expect(upgraded.snapshot.fileRevisions.at(-1)!.project.schemaVersion).toBe(7)
     const reopened = await encodeProjectFile(upgraded.snapshot)
     expect(reopened.ok).toBe(true)
   })

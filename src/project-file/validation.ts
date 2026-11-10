@@ -22,6 +22,7 @@ import {
   ATTACHMENT_PATH_PREFIX,
   B2_PROJECT_FILE_SCHEMA_VERSION,
   C_PROJECT_FILE_SCHEMA_VERSION,
+  D_PROJECT_FILE_SCHEMA_VERSION,
   DIMENSION_CHAIN_SCHEMA_VERSION,
   LEGACY_PROJECT_FILE_SCHEMA_VERSION,
   PROJECT_FILE_FORMAT,
@@ -42,10 +43,15 @@ import {
   type ProjectFileProjectV1,
   type ProjectFileProjectV2,
   type ProjectFileProjectV5,
+  type ProjectFileProjectV6,
   type ProjectFileResult,
   type ProjectFileRevision,
   type ProjectFileSnapshot,
 } from './types'
+import {
+  REQUIREMENT_CHECK_STATUSES,
+  REQUIREMENT_REASON_CODES,
+} from '../requirements/types'
 import { PROJECT_ASSETS_MAX_BYTES, sumUniqueBlobBytes } from '../parts/stlLimits'
 import { buildSpacerDrawing, DrawingBuildError } from '../drawing/spacerDrawing'
 import { SPACER_PART_ID } from '../drawing/types'
@@ -304,6 +310,150 @@ const drawingRecordSchema = z
   })
   .strict()
 
+/** V3.5：条款固定链引用、来源版本与区域、确认时的绑定依据。 */
+const requirementChainRefSchema = z
+  .object({
+    projectId: idSchema,
+    kind: z.literal('project-dimension-chain'),
+  })
+  .strict()
+
+const requirementSourceRefSchema = z
+  .object({
+    documentId: idSchema,
+    revisionId: idSchema,
+    sha256: sha256Schema,
+    blobKey: idSchema,
+    page: z.number().int().min(1),
+    rectPdf: coords4Schema,
+    pageBoxPdf: coords4Schema,
+  })
+  .strict()
+
+const requirementBindingBasisSchema = z
+  .object({
+    parameters: z.array(
+      z
+        .object({
+          parameterId: idSchema,
+          key: z.enum(['innerDiameter', 'outerDiameter', 'length']),
+          valueQ: z.number().int(),
+          parameterRevision: z.number().int().positive(),
+        })
+        .strict(),
+    ),
+    terms: z.array(
+      z
+        .object({
+          termId: idSchema,
+          nominalQ: z.number().int(),
+          termRevision: z.number().int().positive(),
+        })
+        .strict(),
+    ),
+    bindings: z.array(
+      z
+        .object({
+          bindingId: idSchema,
+          termId: idSchema,
+          parameterId: idSchema,
+        })
+        .strict(),
+    ),
+    digest: z.string().min(1).max(80),
+  })
+  .strict()
+
+const requirementRevisionSchema = z
+  .object({
+    requirementId: idSchema,
+    revisionId: idSchema,
+    parentRevisionId: idSchema.nullable(),
+    projectId: idSchema,
+    chainRef: requirementChainRefSchema,
+    source: requirementSourceRefSchema,
+    confirmedText: z.string().min(1).max(20000),
+    confirmedAt: z.string().min(1),
+    confirmedAgainstLatestRevisionId: idSchema,
+    ruleType: z.literal('closed-interval-mm'),
+    lowerQ: z.number().int(),
+    upperQ: z.number().int(),
+    changeReason: z.string().max(2000),
+    bindingBasis: requirementBindingBasisSchema,
+  })
+  .strict()
+  .refine((value) => value.lowerQ <= value.upperQ, {
+    message: '条款下限必须不大于上限',
+  })
+
+const requirementCheckBasisSchema = z.discriminatedUnion('kind', [
+  z
+    .object({
+      kind: z.literal('draft'),
+      baseRevisionId: idSchema,
+      draftId: idSchema,
+      draftRevision: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('project-revision'),
+      projectRevisionId: idSchema,
+      parentRevisionId: idSchema.nullable(),
+    })
+    .strict(),
+])
+
+const requirementEvidenceRefSchema = z
+  .object({
+    requirementId: idSchema,
+    requirementRevisionId: idSchema,
+    requirementRulesVersion: z.string().min(1),
+    source: requirementSourceRefSchema,
+    bindingBasisDigest: z.string().min(1).max(80),
+    analysisSnapshotId: idSchema.nullable(),
+    projectRevisionId: idSchema.nullable(),
+    drawingFingerprint: z.string().min(1).nullable(),
+  })
+  .strict()
+
+const requirementCheckSchema = z
+  .object({
+    checkId: idSchema,
+    projectId: idSchema,
+    requirementRevisionId: idSchema.nullable(),
+    chainRef: requirementChainRefSchema,
+    basis: requirementCheckBasisSchema,
+    engineVersion: z.string().min(1),
+    requirementRulesVersion: z.string().min(1),
+    inputFingerprint: z.string().min(1),
+    checkedAt: z.string().min(1),
+    status: z.enum(REQUIREMENT_CHECK_STATUSES),
+    reasonCodes: z.array(z.enum(REQUIREMENT_REASON_CODES)),
+    resultInterval: z
+      .object({ minQ: z.number().int(), maxQ: z.number().int() })
+      .strict()
+      .nullable(),
+    margins: z
+      .object({ lowerQ: z.number().int(), upperQ: z.number().int() })
+      .strict()
+      .nullable(),
+    evidenceRef: requirementEvidenceRefSchema.nullable(),
+    provenance: z.enum(['candidate', 'committed']),
+  })
+  .strict()
+  .refine(
+    (check) =>
+      check.status === 'unchecked'
+        ? check.resultInterval === null && check.margins === null
+        : true,
+    { message: '未检查不得携带当前有效结果区间/裕量' },
+  )
+  .refine(
+    (check) => (check.requirementRevisionId === null ? check.evidenceRef === null : true),
+    { message: '无条款的检查不得带条款证据引用' },
+  )
+
 /** C：schema5，三参数与图纸引用使用严格类型（无 parameterRevision）。 */
 const projectV3Schema = z
   .object({
@@ -318,8 +468,24 @@ const projectV3Schema = z
   })
   .strict()
 
-/** D：schema6，参数绑定与参数修订号；容器布局与链 schema 不变。 */
+/** D：schema6，参数绑定与参数修订号；容器布局与链 schema 不变，无 Beta 条款字段。 */
 const projectV4Schema = z
+  .object({
+    ...projectCommonShape,
+    schemaVersion: z.literal(D_PROJECT_FILE_SCHEMA_VERSION),
+    sourceFormatVersion: z.union([z.literal(1), z.literal(2)]),
+    parts: z.array(partSchema),
+    parameters: z.array(spacerParameterSchema).max(3),
+    modelRevisions: z.array(modelRevisionSchema),
+    dimensionLinks: z.array(
+      z.discriminatedUnion('kind', [visualReferenceSchema, parameterBindingSchema]),
+    ),
+    drawings: z.array(drawingRecordSchema).max(1),
+  })
+  .strict()
+
+/** V3.5：schema7，在 schema6 之上增加 Beta 条款版本/活动指针/当前检查。 */
+const projectV5Schema = z
   .object({
     ...projectCommonShape,
     schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
@@ -331,6 +497,9 @@ const projectV4Schema = z
       z.discriminatedUnion('kind', [visualReferenceSchema, parameterBindingSchema]),
     ),
     drawings: z.array(drawingRecordSchema).max(1),
+    requirementRevisions: z.array(requirementRevisionSchema),
+    activeRequirementRevisionId: idSchema.nullable(),
+    currentRequirementCheck: requirementCheckSchema.nullable(),
   })
   .strict()
 
@@ -481,6 +650,8 @@ const fileRevisionSchema = z
           })
           .strict(),
         restoredFromRevisionId: idSchema.nullable(),
+        requirementRevisionId: idSchema.nullable().optional(),
+        checkId: idSchema.nullable().optional(),
       })
       .strict()
       .optional(),
@@ -610,10 +781,11 @@ const manifestProjectV2Schema = z
   .object({
     id: idSchema,
     name: z.string().min(1).max(200),
-    // formatVersion 2 既可能来自 B2（schema4），也可能是 C（schema5）/D（schema6）。
+    // formatVersion 2 既可能来自 B2（schema4），也可能是 C（5）/D（6）/V3.5（7）。
     projectSchemaVersion: z.union([
       z.literal(B2_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(C_PROJECT_FILE_SCHEMA_VERSION),
+      z.literal(D_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(PROJECT_FILE_SCHEMA_VERSION),
     ]),
     dimensionChainSchemaVersion: z.literal(DIMENSION_CHAIN_SCHEMA_VERSION),
@@ -670,7 +842,8 @@ export type VersionedProject =
   | { version: 1; project: ProjectFileProjectV1 }
   | { version: 2; project: ProjectFileProjectV2 }
   | { version: 3; project: ProjectFileProjectV5 }
-  | { version: 4; project: ProjectFileProject }
+  | { version: 4; project: ProjectFileProjectV6 }
+  | { version: 5; project: ProjectFileProject }
 
 /** 校验工作链与基线链；两个 schema 版本共用。 */
 function validateProjectChains(
@@ -752,7 +925,7 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
       },
     })
   }
-  if (version === PROJECT_FILE_SCHEMA_VERSION) {
+  if (version === D_PROJECT_FILE_SCHEMA_VERSION) {
     const parsed = projectV4Schema.safeParse(input)
     if (!parsed.success) {
       return fail('INVALID_RECORD', 'project.json 结构不合法（schema 6）', describeZodError(parsed.error))
@@ -761,6 +934,22 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
     if (!chains.ok) return chains
     return ok({
       version: 4,
+      project: {
+        ...(parsed.data as unknown as ProjectFileProjectV6),
+        dimensionChain: chains.value.dimensionChain,
+        baseline: chains.value.baseline,
+      },
+    })
+  }
+  if (version === PROJECT_FILE_SCHEMA_VERSION) {
+    const parsed = projectV5Schema.safeParse(input)
+    if (!parsed.success) {
+      return fail('INVALID_RECORD', 'project.json 结构不合法（schema 7）', describeZodError(parsed.error))
+    }
+    const chains = validateProjectChains(parsed.data)
+    if (!chains.ok) return chains
+    return ok({
+      version: 5,
       project: {
         ...(parsed.data as unknown as ProjectFileProject),
         dimensionChain: chains.value.dimensionChain,
@@ -789,6 +978,9 @@ export function adaptProjectV1(project: ProjectFileProjectV1): ProjectFileProjec
     modelRevisions: [],
     dimensionLinks: [],
     drawings: [],
+    requirementRevisions: [],
+    activeRequirementRevisionId: null,
+    currentRequirementCheck: null,
   }
 }
 
@@ -799,10 +991,13 @@ export function adaptProjectV2(project: ProjectFileProjectV2): ProjectFileProjec
     schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
     parameters: [],
     drawings: [],
+    requirementRevisions: [],
+    activeRequirementRevisionId: null,
+    currentRequirementCheck: null,
   }
 }
 
-/** schema5 → 当前工作形状（schema 6）：补 parameterRevision=1，其余字段原样。 */
+/** schema5 → 当前工作形状：补 parameterRevision=1，其余字段原样。 */
 export function adaptProjectV3(project: ProjectFileProjectV5): ProjectFileProject {
   return {
     ...project,
@@ -814,10 +1009,27 @@ export function adaptProjectV3(project: ProjectFileProjectV5): ProjectFileProjec
       parameterRevision: parameter.parameterRevision ?? 1,
     })),
     dimensionLinks: project.dimensionLinks,
+    requirementRevisions: [],
+    activeRequirementRevisionId: null,
+    currentRequirementCheck: null,
   }
 }
 
-/** 严格解析 project/project.json（接受 schema3/4/5/6，统一返回当前工作形状）。 */
+/**
+ * schema6 → 当前工作形状（schema 7）：老项目默认“无 Beta 条款”。
+ * 不补造旧检查或旧确认；旧历史 Revision 原样保留。
+ */
+export function adaptProjectV6(project: ProjectFileProjectV6): ProjectFileProject {
+  return {
+    ...project,
+    schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
+    requirementRevisions: [],
+    activeRequirementRevisionId: null,
+    currentRequirementCheck: null,
+  }
+}
+
+/** 严格解析 project/project.json（接受 schema3/4/5/6/7，统一返回当前工作形状）。 */
 export function parseProject(
   input: unknown,
 ): ProjectFileResult<ProjectFileProject> {
@@ -826,6 +1038,7 @@ export function parseProject(
   if (parsed.value.version === 1) return ok(adaptProjectV1(parsed.value.project))
   if (parsed.value.version === 2) return ok(adaptProjectV2(parsed.value.project))
   if (parsed.value.version === 3) return ok(adaptProjectV3(parsed.value.project))
+  if (parsed.value.version === 4) return ok(adaptProjectV6(parsed.value.project))
   return ok(parsed.value.project)
 }
 
@@ -1392,6 +1605,152 @@ export function validateSnapshotReferences(
     }
   }
 
+  // ---- V3.5：Beta 任务书条款与检查证据 --------------------------------
+  const fileRevisionIds = new Set(snapshot.fileRevisions.map((item) => item.revisionId))
+  const requirementRevisionIds = new Set<string>()
+  const requirementIds = new Set<string>()
+  for (const requirement of snapshot.project.requirementRevisions) {
+    if (requirementRevisionIds.has(requirement.revisionId)) {
+      return fail('INVALID_RECORD', `条款版本 ID 重复：${requirement.revisionId}`)
+    }
+    requirementRevisionIds.add(requirement.revisionId)
+    if (requirementIds.has(requirement.requirementId) === false) {
+      requirementIds.add(requirement.requirementId)
+    }
+    if (requirement.projectId !== projectId) {
+      return fail(
+        'MISSING_REFERENCE',
+        `条款 ${requirement.revisionId} 不属于当前项目`,
+        requirement.projectId,
+      )
+    }
+    if (
+      requirement.chainRef.kind !== 'project-dimension-chain' ||
+      requirement.chainRef.projectId !== projectId
+    ) {
+      return fail('MISSING_REFERENCE', `条款 ${requirement.revisionId} 的链引用不合法`)
+    }
+    if (!Number.isSafeInteger(requirement.lowerQ) || !Number.isSafeInteger(requirement.upperQ)) {
+      return fail('INVALID_RECORD', `条款 ${requirement.revisionId} 的上下限必须是整数 q`)
+    }
+    if (requirement.lowerQ > requirement.upperQ) {
+      return fail('INVALID_RECORD', `条款 ${requirement.revisionId} 的下限大于上限`)
+    }
+    if (requirement.parentRevisionId !== null) {
+      const parent = snapshot.project.requirementRevisions.find(
+        (item) => item.revisionId === requirement.parentRevisionId,
+      )
+      if (parent === undefined) {
+        return fail(
+          'MISSING_REFERENCE',
+          `条款 ${requirement.revisionId} 的父版本不存在`,
+          requirement.parentRevisionId,
+        )
+      }
+      if (parent.requirementId !== requirement.requirementId) {
+        return fail(
+          'INVALID_RECORD',
+          `条款 ${requirement.revisionId} 的父版本属于其它条款`,
+        )
+      }
+    }
+    const sourceDocument = documentById.get(requirement.source.documentId)
+    const sourceRevision = revisionById.get(requirement.source.revisionId)
+    if (sourceDocument === undefined || sourceRevision === undefined) {
+      return fail(
+        'MISSING_REFERENCE',
+        `条款 ${requirement.revisionId} 引用的任务书版本不存在`,
+      )
+    }
+    if (sourceRevision.documentId !== sourceDocument.id) {
+      return fail(
+        'MISSING_REFERENCE',
+        `条款 ${requirement.revisionId} 的文档与版本不一致`,
+      )
+    }
+    if (sourceRevision.sha256 !== requirement.source.sha256) {
+      return fail(
+        'HASH_MISMATCH',
+        `条款 ${requirement.revisionId} 的 PDF 哈希与来源版本不一致`,
+      )
+    }
+    if (requirement.source.page > sourceRevision.pageCount) {
+      return fail(
+        'INVALID_RECORD',
+        `条款 ${requirement.revisionId} 的页码越界`,
+        `page=${requirement.source.page}, pageCount=${sourceRevision.pageCount}`,
+      )
+    }
+    const regionError = validateBindingRegion(
+      requirement.source.pageBoxPdf,
+      requirement.source.rectPdf,
+    )
+    if (regionError !== null) {
+      return fail(
+        'INVALID_RECORD',
+        `条款 ${requirement.revisionId} 的选区不合法`,
+        regionError,
+      )
+    }
+  }
+  // Beta 只允许一个活动 requirementId，且活动版本必须存在。
+  if (requirementIds.size > 1) {
+    return fail(
+      'INVALID_RECORD',
+      'Beta 一条尺寸链最多允许一个活动条款身份',
+      [...requirementIds].join('；'),
+    )
+  }
+  const activeRequirementRevisionId = snapshot.project.activeRequirementRevisionId
+  if (activeRequirementRevisionId !== null && !requirementRevisionIds.has(activeRequirementRevisionId)) {
+    return fail(
+      'MISSING_REFERENCE',
+      '活动条款版本不存在',
+      activeRequirementRevisionId,
+    )
+  }
+  const currentCheck = snapshot.project.currentRequirementCheck
+  if (currentCheck !== null) {
+    if (currentCheck.projectId !== projectId) {
+      return fail('MISSING_REFERENCE', '当前条款检查不属于当前项目')
+    }
+    if (
+      currentCheck.chainRef.kind !== 'project-dimension-chain' ||
+      currentCheck.chainRef.projectId !== projectId
+    ) {
+      return fail('MISSING_REFERENCE', '当前条款检查的链引用不合法')
+    }
+    if (
+      currentCheck.requirementRevisionId !== null &&
+      !requirementRevisionIds.has(currentCheck.requirementRevisionId)
+    ) {
+      return fail(
+        'MISSING_REFERENCE',
+        '当前条款检查引用的条款版本不存在',
+        currentCheck.requirementRevisionId,
+      )
+    }
+    if (currentCheck.requirementRevisionId === null && currentCheck.status !== 'unchecked') {
+      return fail('INVALID_RECORD', '无条款的检查只能是未检查状态')
+    }
+    if (currentCheck.basis.kind === 'project-revision') {
+      const basisRevision = fileRevisionIds.has(currentCheck.basis.projectRevisionId)
+      if (!basisRevision) {
+        return fail(
+          'MISSING_REFERENCE',
+          '当前条款检查的正式版本基准不存在',
+          currentCheck.basis.projectRevisionId,
+        )
+      }
+    }
+    if (
+      currentCheck.status === 'unchecked' &&
+      (currentCheck.resultInterval !== null || currentCheck.margins !== null)
+    ) {
+      return fail('INVALID_RECORD', '未检查的条款不得携带当前有效结果区间/裕量')
+    }
+  }
+
   // ---- C：隔套参数与图纸快照引用 --------------------------------------
   const parameterIds = new Set<string>()
   const parameterKeys = new Set<string>()
@@ -1421,7 +1780,6 @@ export function validateSnapshotReferences(
       return fail('INVALID_RECORD', `隔套参数不合法：${validatedParameters.message}`)
     }
   }
-  const fileRevisionIds = new Set(snapshot.fileRevisions.map((item) => item.revisionId))
   const drawingIds = new Set<string>()
   for (const drawing of snapshot.project.drawings) {
     if (drawingIds.has(drawing.drawingId)) {

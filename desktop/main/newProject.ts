@@ -16,6 +16,7 @@ import { ENGINE_VERSION } from '../../src/domain/calculate'
 import type { ChainDefinition, DimensionTerm } from '../../src/domain/types'
 import { formatMm } from '../../src/domain/units'
 import type { ProjectFileProject, ProjectFileSnapshot } from '../../src/project-file/types'
+import { PROJECT_FILE_SCHEMA_VERSION } from '../../src/project-file/types'
 import type { WorkspaceDraft } from '../../src/workspace/draft'
 
 export type NewProjectTemplate = 'empty' | 'chain-demo'
@@ -105,7 +106,7 @@ export function createNewProjectSnapshot(options: NewProjectOptions): ProjectFil
 
   const project: ProjectFileProject = {
     id: projectId,
-    schemaVersion: 6,
+    schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
     name: options.name,
     currentRevisionId: revisionId,
     dimensionChain: chain,
@@ -122,6 +123,9 @@ export function createNewProjectSnapshot(options: NewProjectOptions): ProjectFil
     modelRevisions: [],
     dimensionLinks: [],
     drawings: [],
+    requirementRevisions: [],
+    activeRequirementRevisionId: null,
+    currentRequirementCheck: null,
   }
 
   return {

@@ -71,7 +71,7 @@ export async function createSampleSnapshot(): Promise<ProjectFileSnapshot> {
   const chain = sampleChain()
   const project = {
     id: SAMPLE_PROJECT_ID,
-    schemaVersion: 6 as const,
+    schemaVersion: 7 as const,
     name: '隔套间隙演示',
     currentRevisionId: 'rev-a1',
     dimensionChain: chain,
@@ -88,6 +88,9 @@ export async function createSampleSnapshot(): Promise<ProjectFileSnapshot> {
     modelRevisions: [],
     dimensionLinks: [],
     drawings: [],
+    requirementRevisions: [],
+    activeRequirementRevisionId: null,
+    currentRequirementCheck: null,
   }
   const draft = {
     terms: chain.terms.map((term) => ({

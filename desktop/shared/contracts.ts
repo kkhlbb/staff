@@ -138,6 +138,16 @@ export type CommonErrorCode =
   | 'INTERNAL'
   | 'CANDIDATE_EXPIRED'
   | 'FILE_CHANGED'
+  | 'BACKUP_FAILED'
+  | 'BACKUP_VERIFY_FAILED'
+  | 'BACKUP_SOURCE_UNREADABLE'
+  | 'BACKUP_SOURCE_CHANGED'
+  | 'STALE_REQUIREMENT'
+  | 'REQUIREMENT_NOT_SATISFIED'
+  | 'REQUIREMENT_PENDING_CONFIRMATION'
+  | 'REQUIREMENT_UNCHECKED'
+  | 'REQUIREMENT_LIMIT_EXCEEDED'
+  | 'INVALID_REQUIREMENT_INPUT'
   | 'STL_EMPTY'
   | 'STL_TOO_LARGE'
   | 'STL_TOO_MANY_TRIANGLES'
@@ -177,6 +187,8 @@ export interface IpcErrorPayload {
   code: IpcErrorCode
   message: string
   detail?: string
+  /** 条款类错误的明确原因码（与 message 并列，不只有文案）。 */
+  reasonCodes?: string[]
 }
 
 /** 所有 IPC 调用的统一结果：成功值或结构化错误，不用裸异常跨进程。 */

@@ -86,7 +86,7 @@ describe('C-03 schema 5 持久化', () => {
     expect(encoded.ok).toBe(true)
     if (!encoded.ok) return
     expect(encoded.value.manifest.formatVersion).toBe(2)
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(6)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(7)
     expect(encoded.value.manifest.counts.drawings).toBe(1)
 
     const decoded = await decodeProjectFile(encoded.value.bytes)
@@ -177,8 +177,12 @@ describe('C-03 schema 5 持久化', () => {
 
   it('schema4 文件仍可读，但非空 parameters/drawings 仍拒绝（不放宽旧格式）', async () => {
     const snapshot = await createSampleSnapshot()
-    const schema4 = { ...snapshot.project, schemaVersion: 4 }
-    const parsed = parseProjectVersioned(schema4)
+    const v4 = { ...snapshot.project, schemaVersion: 4 }
+    // 旧格式没有 Beta 条款字段。
+    delete (v4 as Record<string, unknown>).requirementRevisions
+    delete (v4 as Record<string, unknown>).activeRequirementRevisionId
+    delete (v4 as Record<string, unknown>).currentRequirementCheck
+    const parsed = parseProjectVersioned(v4)
     expect(parsed.ok).toBe(true)
     if (parsed.ok) {
       expect(parsed.value.version).toBe(2)
@@ -189,6 +193,9 @@ describe('C-03 schema 5 持久化', () => {
       ...full.project,
       schemaVersion: 4,
     }
+    delete (withParameters as Record<string, unknown>).requirementRevisions
+    delete (withParameters as Record<string, unknown>).activeRequirementRevisionId
+    delete (withParameters as Record<string, unknown>).currentRequirementCheck
     const rejected = parseProjectVersioned(withParameters)
     expect(rejected.ok).toBe(false)
     if (!rejected.ok) expect(rejected.error.code).toBe('INVALID_RECORD')
@@ -242,6 +249,10 @@ async function rewriteAsSchema4(bytes: Uint8Array): Promise<Uint8Array> {
     project.schemaVersion = 4
     project.parameters = []
     project.drawings = []
+    // 旧格式没有 Beta 条款字段；严格 schema4 会拒绝多余键。
+    delete project.requirementRevisions
+    delete project.activeRequirementRevisionId
+    delete project.currentRequirementCheck
   })
   for (const path of [...parts.keys()]) {
     if (path.startsWith('revisions/')) {
@@ -250,6 +261,9 @@ async function rewriteAsSchema4(bytes: Uint8Array): Promise<Uint8Array> {
         project.schemaVersion = 4
         project.parameters = []
         project.drawings = []
+        delete project.requirementRevisions
+        delete project.activeRequirementRevisionId
+        delete project.currentRequirementCheck
       })
     }
   }
@@ -295,8 +309,8 @@ describe('C-03 旧 formatVersion 2 / schema 4 文件兼容', () => {
     if (!decoded.ok) return
     expect(decoded.value.manifest.formatVersion).toBe(2)
     expect(decoded.value.manifest.project.projectSchemaVersion).toBe(4)
-    // 读入后的工作形状为当前 schema5，但来源格式仍是 2（不产生 dirty）。
-    expect(decoded.value.snapshot.project.schemaVersion).toBe(6)
+    // 读入后的工作形状为当前 schema7，但来源格式仍是 2（不产生 dirty）。
+    expect(decoded.value.snapshot.project.schemaVersion).toBe(7)
     expect(decoded.value.snapshot.project.sourceFormatVersion).toBe(2)
     expect(decoded.value.snapshot.project.parameters).toEqual([])
     expect(decoded.value.snapshot.project.drawings).toEqual([])
@@ -309,19 +323,19 @@ describe('C-03 旧 formatVersion 2 / schema 4 文件兼容', () => {
       now: () => new Date('2026-11-09T12:00:00.000Z'),
     })
     expect(upgraded.upgraded).toBe(true)
-    expect(upgraded.snapshot.project.schemaVersion).toBe(6)
+    expect(upgraded.snapshot.project.schemaVersion).toBe(7)
     // 旧版本记录保持 schema4 原样（不可变历史）。
     expect(upgraded.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(4)
-    expect(upgraded.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(6)
+    expect(upgraded.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(7)
 
     const saved = await encodeProjectFile(upgraded.snapshot)
     expect(saved.ok).toBe(true)
     if (!saved.ok) return
-    expect(saved.value.manifest.project.projectSchemaVersion).toBe(6)
+    expect(saved.value.manifest.project.projectSchemaVersion).toBe(7)
     const reopened = await decodeProjectFile(saved.value.bytes)
     expect(reopened.ok).toBe(true)
     if (!reopened.ok) return
-    expect(reopened.value.snapshot.project.schemaVersion).toBe(6)
+    expect(reopened.value.snapshot.project.schemaVersion).toBe(7)
     expect(reopened.value.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(4)
   })
 })

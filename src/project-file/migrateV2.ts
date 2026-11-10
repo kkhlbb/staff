@@ -583,6 +583,9 @@ export async function migrateV2Bundle(
     modelRevisions: [],
     dimensionLinks: [],
     drawings: [],
+    requirementRevisions: [],
+    activeRequirementRevisionId: null,
+    currentRequirementCheck: null,
   }
 
   const archive = collectArchive(backup, project.id)
@@ -750,6 +753,9 @@ export async function migrateV2Json(
     modelRevisions: [],
     dimensionLinks: [],
     drawings: [],
+    requirementRevisions: [],
+    activeRequirementRevisionId: null,
+    currentRequirementCheck: null,
   }
 
   const warnings = [...value.warnings]

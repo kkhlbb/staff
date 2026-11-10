@@ -202,6 +202,11 @@ export class FileStore {
     this.newSuffix = options.newSuffix ?? (() => randomUUID())
   }
 
+  /** 迁移前副本与保存必须使用同一组文件端口，避免测试/产物走真实磁盘。 */
+  get fileOps(): FileOps {
+    return this.ops
+  }
+
   /** 读取项目文件字节与磁盘指纹；不做业务解析。 */
   async readProjectFile(
     targetPath: string,

@@ -16,6 +16,7 @@ import {
   ATTACHMENT_PATH_PREFIX,
   B2_PROJECT_FILE_SCHEMA_VERSION,
   C_PROJECT_FILE_SCHEMA_VERSION,
+  D_PROJECT_FILE_SCHEMA_VERSION,
   DIMENSION_CHAIN_SCHEMA_VERSION,
   LEGACY_PROJECT_FILE_FORMAT_VERSION,
   LEGACY_PROJECT_FILE_SCHEMA_VERSION,
@@ -345,7 +346,12 @@ export async function decodeProjectFile(
   const expectedProjectSchemas =
     rawVersion === LEGACY_PROJECT_FILE_FORMAT_VERSION
       ? [LEGACY_PROJECT_FILE_SCHEMA_VERSION]
-      : [B2_PROJECT_FILE_SCHEMA_VERSION, C_PROJECT_FILE_SCHEMA_VERSION, PROJECT_FILE_SCHEMA_VERSION]
+      : [
+          B2_PROJECT_FILE_SCHEMA_VERSION,
+          C_PROJECT_FILE_SCHEMA_VERSION,
+          D_PROJECT_FILE_SCHEMA_VERSION,
+          PROJECT_FILE_SCHEMA_VERSION,
+        ]
   const rawProject = rawRecord.project
   if (typeof rawProject === 'object' && rawProject !== null) {
     const projectRecord = rawProject as Record<string, unknown>

@@ -341,6 +341,7 @@ export function registerProjectChannels(ipc: IpcMainLike, deps: ProjectChannelDe
             decoded.value.snapshot,
             targetPath,
             read.fingerprint,
+            decoded.value.manifest.project.projectSchemaVersion,
           )
           if (!opened.ok) {
             reject(opened.error.code, opened.error.message, opened.error.detail)

@@ -51,6 +51,14 @@ import { compareDrawings } from '../../src/revisions/compare'
 import { rebuildFromGenerationInput } from '../../src/revisions/rebuild'
 import { rebuildDrawingFromProject } from '../../src/drawing/rebuildDrawing'
 import {
+  computeCandidateRequirementCheck,
+} from '../../src/requirements/check'
+import { commitRecomputedChange } from '../../src/requirements/commit'
+import type {
+  RequirementCheck,
+  RequirementEditDraft,
+} from '../../src/requirements/types'
+import {
   deriveReviewGroups,
   type ReviewGroups,
 } from '../../src/revisions/status'
@@ -67,6 +75,8 @@ interface DraftRecord {
   reason: string
   restoredFromRevisionId: string | null
   sourceRevisionId: string | null
+  /** 草稿针对的条款版本；条款换版后旧草稿的候选检查自然过期。 */
+  requirementRevisionId: string | null
 }
 
 interface Expectation {
@@ -88,6 +98,8 @@ interface PreviewRecord {
   createdAt: string
   expectation: Expectation
   groups: ReviewGroups
+  /** 预览时的条款检查（main 内部记录）；确认路径必须重算后与它比对。 */
+  requirementCheck: RequirementCheck | null
   /** 仅内存缓存，供 T7 比对/测试；确认路径不得直接拿它当结果。 */
   computation: ChangeComputation
 }
@@ -98,6 +110,8 @@ interface ChangeSessionState {
   /** token → 当时的分组摘要（有界）；用于拒绝时解释“哪一类基准变了”。 */
   knownBases: Map<string, BaseDigest>
   draft: DraftRecord | null
+  /** 未确认的条款编辑表单；存在即“待确认”，不属于正式条款。 */
+  requirementEdit: RequirementEditDraft | null
   previews: Map<string, PreviewRecord>
   committed: Map<string, ChangeApplyValue>
 }
@@ -117,12 +131,26 @@ export interface ChangeFailure {
   code: IpcErrorCode
   message: string
   detail?: string
+  reasonCodes?: string[]
 }
 
 export type ChangeResult<T> = IpcResult<T>
 
-function failure(code: IpcErrorCode, message: string, detail?: string): { ok: false; error: ChangeFailure } {
-  return detail === undefined ? { ok: false, error: { code, message } } : { ok: false, error: { code, message, detail } }
+function failure(
+  code: IpcErrorCode,
+  message: string,
+  detail?: string,
+  reasonCodes?: string[],
+): { ok: false; error: ChangeFailure } {
+  return {
+    ok: false,
+    error: {
+      code,
+      message,
+      ...(detail === undefined ? {} : { detail }),
+      ...(reasonCodes === undefined ? {} : { reasonCodes }),
+    },
+  }
 }
 
 /** 同步快照戳：供 rename 前 CAS 用（不哈希附件字节，只含键与长度）。 */
@@ -264,7 +292,7 @@ export class ChangeService {
   private stateOf(sessionId: string): ChangeSessionState {
     let state = this.states.get(sessionId)
     if (state === undefined) {
-      state = { generation: 0, base: null, knownBases: new Map(), draft: null, previews: new Map(), committed: new Map() }
+      state = { generation: 0, base: null, knownBases: new Map(), draft: null, requirementEdit: null, previews: new Map(), committed: new Map() }
       this.states.set(sessionId, state)
     }
     return state
@@ -368,6 +396,7 @@ export class ChangeService {
       reason,
       restoredFromRevisionId: null,
       sourceRevisionId: null,
+      requirementRevisionId: session.snapshot.project.activeRequirementRevisionId,
     }
     state.draft = draft
     return draft
@@ -460,6 +489,7 @@ export class ChangeService {
       reason: request.reason.trim() === '' ? '参数变更' : request.reason.trim(),
       restoredFromRevisionId: existing?.restoredFromRevisionId ?? null,
       sourceRevisionId: existing?.sourceRevisionId ?? null,
+      requirementRevisionId: session.snapshot.project.activeRequirementRevisionId,
     }
     state.draft = draft
     const token = await this.draftTokenOf(draft)
@@ -535,6 +565,32 @@ export class ChangeService {
 
     const previewId = `preview:${this.id()}`
     const createdAt = this.nowIso()
+    const requirementCheck = await computeCandidateRequirementCheck({
+      snapshot: session.snapshot,
+      requirementRevisions: session.snapshot.project.requirementRevisions,
+      activeRequirementRevisionId: session.snapshot.project.activeRequirementRevisionId,
+      pendingEdit: state.requirementEdit,
+      draft: {
+        draftId: draft.draftId,
+        draftRevision: draft.draftRevision,
+        parameters: draft.parameters,
+        bindings: draft.bindings,
+      },
+      baseRevisionId: session.snapshot.project.currentRevisionId,
+      baseGeneration: state.generation,
+      acceptedSeq: session.acceptedSeq,
+      checkedAt: createdAt,
+      checkId: `check-d-${revisionId}`,
+      inputIssue: null,
+    })
+    if (!requirementCheck.ok) {
+      return failure(
+        requirementCheck.error.code,
+        requirementCheck.error.message,
+        requirementCheck.error.detail,
+      )
+    }
+    const check = requirementCheck.value.check
     const candidate = buildCommitCandidate(session.snapshot, computation, {
       revisionId,
       analysisSnapshotId: `snapshot-d-${revisionId}`,
@@ -553,6 +609,11 @@ export class ChangeService {
       revisionId,
       expectation,
       drawingId: computation.drawing.record.drawingId,
+      requirement: {
+        revisionId: check.requirementRevisionId,
+        status: check.status,
+        fingerprint: check.inputFingerprint,
+      },
     })
 
     state.previews.set(previewId, {
@@ -566,6 +627,7 @@ export class ChangeService {
       createdAt,
       expectation,
       groups,
+      requirementCheck: check,
       computation,
     })
 
@@ -668,23 +730,41 @@ export class ChangeService {
       }
 
       // 关键：从当前草稿重新计算，绝不复用 preview 里的结果。
-      let computation: ChangeComputation
-      try {
-        computation = computeChange(
-          session.snapshot,
-          { parameters: draft.parameters, bindings: draft.bindings },
-          { revisionId: preview.revisionId, now: this.nowIso() },
+      // commitRecomputedChange 同时重算条款检查并与预览指纹比对；旧检查不得提交。
+      const createdAt = this.nowIso()
+      const reason = request.reason.trim() === '' ? draft.reason : request.reason.trim()
+      const recomputedCommit = await commitRecomputedChange({
+        snapshot: session.snapshot,
+        draft: {
+          draftId: draft.draftId,
+          draftRevision: draft.draftRevision,
+          parameters: draft.parameters,
+          bindings: draft.bindings,
+        },
+        requirementRevisions: session.snapshot.project.requirementRevisions,
+        activeRequirementRevisionId: session.snapshot.project.activeRequirementRevisionId,
+        pendingEdit: state.requirementEdit,
+        previewCheck: preview.requirementCheck,
+        baseRevisionId: session.snapshot.project.currentRevisionId,
+        baseGeneration: state.generation,
+        acceptedSeq: session.acceptedSeq,
+        checkedAt: createdAt,
+        checkId: `check-commit-${preview.revisionId}`,
+        revisionId: preview.revisionId,
+        analysisSnapshotId: `snapshot-d-${preview.revisionId}`,
+        reason,
+        restoredFromRevisionId: draft.restoredFromRevisionId,
+      })
+      if (!recomputedCommit.ok) {
+        return failure(
+          recomputedCommit.error.code,
+          recomputedCommit.error.message,
+          recomputedCommit.error.detail,
+          recomputedCommit.error.reasonCodes,
         )
-      } catch (error) {
-        if (error instanceof ChangeError) {
-          return failure(
-            error.code === 'DRAWING_FAILED' ? 'INVALID_DRAWING' : error.code,
-            error.message,
-            error.detail,
-          )
-        }
-        return failure('CALCULATION_FAILED', error instanceof Error ? error.message : String(error))
       }
+      const computation = recomputedCommit.value.computation
+      const candidate = recomputedCommit.value.candidate
       const recomputed = expectationOf(computation)
       recomputed.pendingCount = preview.expectation.pendingCount
       const mismatches = expectationDiff(preview.expectation, recomputed)
@@ -695,17 +775,6 @@ export class ChangeService {
           mismatches.join('；'),
         )
       }
-
-      const createdAt = this.nowIso()
-      const reason = request.reason.trim() === '' ? draft.reason : request.reason.trim()
-      const candidate = buildCommitCandidate(session.snapshot, computation, {
-        revisionId: preview.revisionId,
-        analysisSnapshotId: `snapshot-d-${preview.revisionId}`,
-        createdAt,
-        reason,
-        restoredFromRevisionId: draft.restoredFromRevisionId,
-        reauthenticateBindings: false,
-      })
 
       let targetPath: string | null = null
       let overwriteFingerprint: string | null = null
@@ -940,6 +1009,7 @@ export class ChangeService {
       reason: request.reason.trim() || `从版本 ${request.sourceRevisionId} 恢复`,
       restoredFromRevisionId: request.sourceRevisionId,
       sourceRevisionId: request.sourceRevisionId,
+      requirementRevisionId: session.snapshot.project.activeRequirementRevisionId,
     }
     state.draft = draft
     state.previews.clear()

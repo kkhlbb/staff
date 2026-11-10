@@ -20,10 +20,13 @@ import { isRelationConfirmed } from '../workspace/relation'
 import { chainToDraft } from '../workspace/draft'
 import type {
   ProjectFileParameterBindingLink,
+  ProjectFileProject,
   ProjectFileRevision,
   ProjectFileRevisionEvidence,
   ProjectFileSnapshot,
 } from '../project-file/types'
+import { PROJECT_FILE_SCHEMA_VERSION } from '../project-file/types'
+import type { RequirementCheck } from '../requirements/types'
 import { stableFingerprint } from './canonical'
 import { nextRelationRevision } from './compute'
 import type { ChangeComputation } from './types'
@@ -37,6 +40,14 @@ export interface CommitOptions {
   restoredFromRevisionId: string | null
   /** 恢复来源的旧版确认不继承：true 时即使值未变也不产生“有效确认”凭据。 */
   reauthenticateBindings: boolean
+  /**
+   * V3.5：本次提交冻结的条款检查（main 重算后传入）。
+   * 不传表示调用方尚未接入 Beta 门禁，保持旧行为（不写 currentRequirementCheck）。
+   */
+  requirement?: {
+    requirementRevisionId: string | null
+    check: RequirementCheck
+  }
 }
 
 export interface CommitCandidate {
@@ -299,9 +310,9 @@ export function buildCommitCandidate(
 
   const events = buildEvents(base, computation, options)
 
-  const nextProject = {
+  const nextProject: ProjectFileProject = {
     ...base.project,
-    schemaVersion: 6 as const,
+    schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
     currentRevisionId: options.revisionId,
     dimensionChain: computation.chain,
     relationRevision: nextRelationRevision(base, computation),
@@ -309,6 +320,9 @@ export function buildCommitCandidate(
     drawings: [{ ...computation.drawing.record }],
     dimensionLinks: mergeBindings(base, computation.bindings),
     updatedAt: options.createdAt,
+    ...(options.requirement === undefined
+      ? {}
+      : { currentRequirementCheck: options.requirement.check }),
   }
 
   const evidence: ProjectFileRevisionEvidence = {
@@ -332,6 +346,12 @@ export function buildCommitCandidate(
       missingBlobKeys: base.missingAttachments.map((item) => item.blobKey),
     },
     restoredFromRevisionId: options.restoredFromRevisionId,
+    ...(options.requirement === undefined
+      ? {}
+      : {
+          requirementRevisionId: options.requirement.requirementRevisionId,
+          checkId: options.requirement.check.checkId,
+        }),
   }
 
   const revision: ProjectFileRevision = {

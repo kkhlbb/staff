@@ -40,6 +40,7 @@ export type ChangeEventType =
   | 'parameter_binding_confirmed'
   | 'project_revision_committed'
   | 'project_restored_from_revision'
+  | 'requirement_confirmed'
   | 'analysis_snapshot_created'
   | 'project_restored_from_bundle'
   | 'project_migrated_from_v2'
@@ -91,6 +92,18 @@ export interface ChangeEvent {
   sourceBasis?: string
   /** 提交版本 ID；由同次原子提交写入，便于回查。 */
   revisionIdAtCommit?: string
+  /* ---- V3.5：任务书条款确认事件（只对 requirement_confirmed 有意义） -- */
+  requirementId?: string
+  requirementRevisionId?: string
+  parentRevisionId?: string | null
+  lowerQ?: number
+  upperQ?: number
+  /** 原文的稳定摘要；事件不复制整段原文。 */
+  confirmedTextDigest?: string
+  sourceRevisionId?: string
+  sourceSha256?: string
+  checkId?: string
+  checkStatus?: string
 }
 
 /** 读取旧事件时字段缺失的统一显示，不做补造。 */
