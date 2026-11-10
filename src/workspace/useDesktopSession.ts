@@ -12,6 +12,17 @@ import type {
 import { DesktopSessionAdapter, type DesktopSessionState } from './desktopAdapter'
 import { chainToDraft, draftToChain, workspaceReducer, type WorkspaceAction } from './draft'
 
+/** 没有可写入的活动会话时统一使用的提示：所有提前返回的写路径都发同一条，不各自编文案。 */
+export const NO_WRITABLE_SESSION_NOTICE = '当前没有可写入的活动项目，请先保存项目文件。'
+
+/**
+ * 预览因基准/草稿变化而作废的固定原因。
+ *
+ * 与“从未预览”区分：staleReason 只在确实存在过预览、且该预览已被后续编辑作废时写入；
+ * 首次进入或从未预览时保持 null，界面不得显示“已作废”。
+ */
+export const PREVIEW_INVALIDATED_NOTICE = '基准已变化，旧预览已作废；请重新预览后再确认。'
+
 const EMPTY_CHANGE: ChangeUiState = {
   sessionId: null,
   draft: null,
@@ -27,7 +38,13 @@ export interface ChangeUiState {
   sessionId: string | null
   draft: ChangeDraftValue | null
   preview: ChangePreviewValue | null
-  /** 明确过期原因（不用布尔冒充）。 */
+  /**
+   * 明确过期原因（不用布尔冒充）。
+   *
+   * null 表示“没有作废的预览”：既可能是从未预览过，也可能是当前预览仍然有效。
+   * 界面据 preview === null && staleReason === null 显示“尚未预览”，据 staleReason !== null
+   * 显示“已作废 + 原因”，两种情况不混用同一句文案。
+   */
   staleReason: string | null
   compare: ChangeCompareValueResponse | null
   error: { code: string; message: string } | null
@@ -123,14 +140,21 @@ export function useDesktopSession() {
     window.addEventListener('keydown', keydown)
     return () => window.removeEventListener('keydown', keydown)
   }, [])
-  function changeTarget(): { sessionId: string; acceptedSeq: number } | null {
-    const current = adapter.current?.getState()
-    if (!current || current.sessionId === null) {
-      setNotice('没有活动项目，不能编辑参数草稿')
+  function requireSession(): { session: DesktopSessionAdapter; sessionId: string; acceptedSeq: number } | null {
+    const session = adapter.current
+    const current = session?.getState()
+    if (session === null || current === undefined || current.sessionId === null) {
+      // 所有写路径共用同一条提示；不静默返回 null。
+      setNotice(NO_WRITABLE_SESSION_NOTICE)
+      patchChange({ notice: NO_WRITABLE_SESSION_NOTICE })
       return null
     }
-    return { sessionId: current.sessionId, acceptedSeq: current.acceptedSeq }
+    return { session, sessionId: current.sessionId, acceptedSeq: current.acceptedSeq }
   }
+
+  /** 草稿被后续编辑/绑定替换时，之前建立过的预览必然作废；从未预览过则不写原因。 */
+  const invalidatedPreviewReason = (): string | null =>
+    changeView.preview !== null || changeView.staleReason !== null ? PREVIEW_INVALIDATED_NOTICE : null
 
   const requestId = () => {
     const random = globalThis.crypto?.randomUUID
@@ -191,9 +215,9 @@ export function useDesktopSession() {
       sourceNotes?: { innerDiameter?: string; outerDiameter?: string; length?: string },
       bindings?: { termId: string; partId: string; parameterId: string }[],
     ) => {
-      const target = changeTarget()
-      if (!target || !adapter.current) return null
-      const result = await adapter.current.stageChange({
+      const target = requireSession()
+      if (target === null) return null
+      const result = await target.session.stageChange({
         sessionId: target.sessionId,
         baseEditSeq: target.acceptedSeq,
         inputs,
@@ -202,7 +226,8 @@ export function useDesktopSession() {
         reason: '隔套参数变更',
       })
       if (result.ok) {
-        patchChange({ draft: result.value, preview: null, staleReason: null, error: null, notice: result.value.notice ?? '' })
+        // 新草稿的 token 与旧预览不再对应：已有预览时必须留下作废原因，不能清成 null。
+        patchChange({ draft: result.value, preview: null, staleReason: invalidatedPreviewReason(), error: null, notice: result.value.notice ?? '' })
       } else {
         patchChange({
           error: result.error,
@@ -213,10 +238,10 @@ export function useDesktopSession() {
       return result
     },
     previewChange: async () => {
-      const target = changeTarget()
+      const target = requireSession()
       const draft = changeView.draft
-      if (!target || !draft || !adapter.current) return null
-      const result = await adapter.current.previewChange({
+      if (target === null || !draft) return null
+      const result = await target.session.previewChange({
         sessionId: target.sessionId,
         baseToken: draft.baseToken,
         draftToken: draft.draftToken,
@@ -229,11 +254,11 @@ export function useDesktopSession() {
       return result
     },
     applyChange: async (reason: string) => {
-      const target = changeTarget()
+      const target = requireSession()
       const draft = changeView.draft
       const shown = changeView.preview
-      if (!target || !draft || !shown || !adapter.current) return null
-      const result = await adapter.current.applyChange({
+      if (target === null || !draft || !shown) return null
+      const result = await target.session.applyChange({
         sessionId: target.sessionId,
         baseToken: draft.baseToken,
         draftToken: draft.draftToken,
@@ -263,9 +288,9 @@ export function useDesktopSession() {
       return result
     },
     bindParameter: async (termId: string, partId: string, parameterId: string, replaceBindingId?: string) => {
-      const target = changeTarget()
-      if (!target || !adapter.current) return null
-      const result = await adapter.current.bindParameter({
+      const target = requireSession()
+      if (target === null) return null
+      const result = await target.session.bindParameter({
         sessionId: target.sessionId,
         baseEditSeq: target.acceptedSeq,
         termId,
@@ -274,28 +299,28 @@ export function useDesktopSession() {
         ...(replaceBindingId === undefined ? {} : { replaceBindingId }),
         reason: '绑定参数到组成环',
       })
-      if (result.ok) patchChange({ draft: result.value, preview: null, staleReason: null, error: null })
+      if (result.ok) patchChange({ draft: result.value, preview: null, staleReason: invalidatedPreviewReason(), error: null })
       else patchChange({ error: result.error })
       return result
     },
     unbindParameter: async (bindingId: string) => {
-      const target = changeTarget()
-      if (!target || !adapter.current) return null
-      const result = await adapter.current.unbindParameter({
+      const target = requireSession()
+      if (target === null) return null
+      const result = await target.session.unbindParameter({
         sessionId: target.sessionId,
         baseEditSeq: target.acceptedSeq,
         bindingId,
         reason: '解除参数绑定',
       })
-      if (result.ok) patchChange({ draft: result.value, preview: null, staleReason: null, error: null })
+      if (result.ok) patchChange({ draft: result.value, preview: null, staleReason: invalidatedPreviewReason(), error: null })
       else patchChange({ error: result.error })
       return result
     },
     compareDrawings: async (leftRevisionId?: string) => {
-      const target = changeTarget()
-      if (!target || !adapter.current) return null
+      const target = requireSession()
+      if (target === null) return null
       const draft = changeView.draft
-      const result = await adapter.current.compareDrawings({
+      const result = await target.session.compareDrawings({
         sessionId: target.sessionId,
         ...(leftRevisionId === undefined ? {} : { leftRevisionId }),
         ...(draft === null ? {} : { rightDraftToken: draft.draftToken }),
@@ -305,11 +330,11 @@ export function useDesktopSession() {
       return result
     },
     restoreRevisionDraft: async (sourceRevisionId: string) => {
-      const target = changeTarget()
-      if (!target || !adapter.current) return null
+      const target = requireSession()
+      if (target === null) return null
       let baseToken = changeView.draft?.baseToken
       if (baseToken === undefined) {
-        const snapshot = adapter.current.getState().snapshot
+        const snapshot = target.session.getState().snapshot
         const parameters = snapshot?.project.parameters ?? []
         if (parameters.length !== 3) {
           patchChange({ error: { code: 'NO_PARAMETER_BINDING', message: '当前项目没有隔套参数，不能建立恢复草稿' } })
@@ -321,7 +346,7 @@ export function useDesktopSession() {
           return decimals === 0 ? String(whole) : `${whole}.${fraction}`
         }
         const byKey = new Map(parameters.map(parameter => [parameter.key, parameter]))
-        const staged = await adapter.current.stageChange({
+        const staged = await target.session.stageChange({
           sessionId: target.sessionId,
           baseEditSeq: target.acceptedSeq,
           inputs: {
@@ -338,13 +363,13 @@ export function useDesktopSession() {
         patchChange({ draft: staged.value })
         baseToken = staged.value.baseToken
       }
-      const result = await adapter.current.restoreRevisionDraft({
+      const result = await target.session.restoreRevisionDraft({
         sessionId: target.sessionId,
         baseToken,
         sourceRevisionId,
         reason: `从版本 ${sourceRevisionId} 恢复`,
       })
-      if (result.ok) patchChange({ draft: result.value, preview: null, staleReason: null, error: null, notice: result.value.notice })
+      if (result.ok) patchChange({ draft: result.value, preview: null, staleReason: invalidatedPreviewReason(), error: null, notice: result.value.notice })
       else patchChange({ error: result.error })
       return result
     },

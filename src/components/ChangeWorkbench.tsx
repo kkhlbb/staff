@@ -92,6 +92,19 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
     }
   }
 
+  /**
+   * 「确认提交」当前为什么不能用。三种情况分开写：
+   * 预览已作废（带 main/本地给出的原因）、从未预览、正在处理。
+   */
+  const confirmBlockedReason =
+    change.staleReason !== null
+      ? change.staleReason
+      : change.preview === null
+        ? '尚未预览：先点「预览变更」，预览成功后「确认提交」才可用。'
+        : busy
+          ? '正在处理，请稍候。'
+          : null
+
   return (
     <section className="change-workbench" aria-label="参数联动">
       <header className="change-workbench__header">
@@ -138,11 +151,17 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
           <button
             type="button"
             disabled={busy || change.preview === null || change.staleReason !== null}
+            title={confirmBlockedReason ?? undefined}
+            aria-describedby="change-workbench-confirm-reason"
             onClick={() => void run(() => props.onApply(reason))}
           >
             确认提交（一次原子写入）
           </button>
         </div>
+        {/* 灰按钮必须有可读原因：从未预览与“预览已作废”用两套文案，不合并。 */}
+        <p id="change-workbench-confirm-reason" className="change-workbench__hint">
+          {confirmBlockedReason ?? '预览有效：可以确认提交。'}
+        </p>
         <label className="change-workbench__reason">
           变更理由
           <input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} />

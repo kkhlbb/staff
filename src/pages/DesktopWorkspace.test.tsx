@@ -933,4 +933,76 @@ describe('D 参数联动工作台（renderer mock 接线）', () => {
     await waitFor(() => expect(api.applyChange).toHaveBeenCalled())
     expect(await screen.findByText(/已提交新版本 rev-d-mock-1/)).toBeInTheDocument()
   })
+
+  // 缺陷 1：旧预览失效必须写明原因；“从未预览”与“预览作废”不能共用一套文案。
+  const bench = () => screen.getByLabelText('参数联动')
+  const confirmButton = () => within(bench()).getByRole('button', { name: '确认提交（一次原子写入）' })
+  async function openSpacerBench() {
+    opened.snapshot = (await createSpacerSnapshot({
+      length: '12.00',
+      confirmed: true,
+      material: '',
+    })) as unknown as ProjectOpenValue['snapshot']
+    await openExample()
+    fireEvent.click(screen.getByRole('tab', { name: '工程图' }))
+    await within(bench()).findByText(/已关联 1 个组成环/)
+  }
+  async function stageLength(value: string) {
+    const before = vi.mocked(api.stageChangeDraft).mock.calls.length
+    fireEvent.change(within(bench()).getByLabelText('长度（mm）'), { target: { value } })
+    fireEvent.click(within(bench()).getByRole('button', { name: '建立/更新草稿' }))
+    await waitFor(() => expect(vi.mocked(api.stageChangeDraft).mock.calls.length).toBe(before + 1))
+    await waitFor(() => expect(vi.mocked(api.stageChangeDraft).mock.calls.at(-1)?.[0].inputs.length).toBe(value))
+  }
+
+  it('D-UI-1 预览后再次建立草稿：role=alert 写明旧预览作废原因，确认按钮带可读原因', async () => {
+    await openSpacerBench()
+    await stageLength('14.00')
+    await waitFor(() => expect(within(bench()).getByRole('button', { name: '预览变更' })).toBeEnabled())
+
+    fireEvent.click(within(bench()).getByRole('button', { name: '预览变更' }))
+    expect(await screen.findByText('预览：rev-d-mock-1')).toBeInTheDocument()
+
+    await stageLength('15.00')
+
+    const alert = await within(bench()).findByRole('alert')
+    expect(alert).toHaveTextContent('基准已变化，旧预览已作废')
+    expect(alert).toHaveTextContent('请重新预览后再确认')
+    expect(confirmButton()).toBeDisabled()
+    expect(confirmButton()).toHaveAttribute('title', expect.stringContaining('旧预览已作废'))
+    // 已作废 ≠ 从未预览：不再显示“尚未预览”。
+    expect(within(bench()).queryByText(/尚未预览/)).toBeNull()
+    expect(screen.queryByText('预览：rev-d-mock-1')).toBeNull()
+  })
+
+  it('D-UI-2 从未预览：不出现“已作废”文案，灰按钮用 title 与文本说明尚未预览', async () => {
+    await openSpacerBench()
+    // 首次进入：既没预览过，也不能冒充“已作废”。
+    expect(within(bench()).queryByText(/旧预览已作废/)).toBeNull()
+    expect(within(bench()).queryByRole('alert')).toBeNull()
+    expect(confirmButton()).toBeDisabled()
+    expect(confirmButton()).toHaveAttribute('title', expect.stringContaining('尚未预览'))
+    expect(within(bench()).getByText(/尚未预览：先点「预览变更」/)).toBeInTheDocument()
+
+    await stageLength('14.00')
+    await waitFor(() => expect(within(bench()).getByRole('button', { name: '预览变更' })).toBeEnabled())
+    expect(within(bench()).queryByText(/旧预览已作废/)).toBeNull()
+    expect(within(bench()).queryByRole('alert')).toBeNull()
+  })
+
+  it('D-UI-3 作废后重新预览：原因消失、确认按钮恢复可用', async () => {
+    await openSpacerBench()
+    await stageLength('14.00')
+    await waitFor(() => expect(within(bench()).getByRole('button', { name: '预览变更' })).toBeEnabled())
+    fireEvent.click(within(bench()).getByRole('button', { name: '预览变更' }))
+    expect(await screen.findByText('预览：rev-d-mock-1')).toBeInTheDocument()
+    await stageLength('15.00')
+    expect(await within(bench()).findByRole('alert')).toHaveTextContent('基准已变化')
+
+    fireEvent.click(within(bench()).getByRole('button', { name: '预览变更' }))
+    await waitFor(() => expect(within(bench()).queryByRole('alert')).toBeNull())
+    expect(within(bench()).queryByText(/旧预览已作废/)).toBeNull()
+    expect(confirmButton()).toBeEnabled()
+    expect(within(bench()).getByText('预览有效：可以确认提交。')).toBeInTheDocument()
+  })
 })

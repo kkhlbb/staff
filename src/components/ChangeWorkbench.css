@@ -52,6 +52,13 @@
   grid-column: 1 / -1;
 }
 
+/* 灰按钮的可读原因：不使用颜色表达结论，只用文字说明为什么不能确认。 */
+.change-workbench__hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  opacity: 0.85;
+}
+
 .change-workbench__bind ul,
 .change-workbench__history ul,
 .change-workbench__groups ul {
