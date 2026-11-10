@@ -7,6 +7,7 @@
 - 分支：`main`
 - 基线：`b1d2b31`（第 1 阶段证据提交，工作区干净）
 - 实现提交：`441caaf`（feat：main 提取 IPC + 审阅界面 + schema8）
+- 通道门禁用例提交：`20221a2`
 - 证据提交：`<DOCS_COMMIT>`（本文件与最终六条命令日志）
 - 未改：domain 公式、q 精度、V3.5 数值断言（1500/2500、1100/2100、500/1500、1000/2000）、
   既有 schema3–7 严格判据（只新增 schema8，旧版本读入规则不放宽）。
@@ -56,6 +57,8 @@ renderer 的普通编辑通道不能伪造“已确认”、决定时间或出�
 - 附件缺失 → `ATTACHMENT_MISSING`；字节哈希不符 → `HASH_MISMATCH`；
 - 并发提取 → `EXTRACTION_BUSY`；取消 → `EXTRACTION_CANCELLED`；超时 → `EXTRACTION_TIMEOUT`；
   词项超预算 → `EXTRACTION_BUDGET`；无文本层 → 草稿 0 候选 + `NO_TEXT_LAYER`（blocked），不报假成功；
+- 通道层：非白名单 sender / 子框架 → `FORBIDDEN_SENDER`；额外字段（actor/sha256）或路径型
+  revisionId → `INVALID_REQUEST`；冒用其它 sessionId → `STALE_SESSION`（均有用例，且不触发提取）。
 - 决定门禁：`EXTRACTION_CONFIRMATION_REQUIRED`、`EXTRACTION_EVIDENCE_REQUIRED`、
   `EXTRACTION_CANDIDATE_BLOCKED`、`EXTRACTION_CANDIDATE_REJECTED`、`EXTRACTION_STALE_DECISION`、
   `EXTRACTION_REASON_REQUIRED`。
@@ -112,7 +115,7 @@ renderer 的普通编辑通道不能伪造“已确认”、决定时间或出�
 | 2 | `npm run typecheck:desktop` | 0 | 无诊断 | `logs/typecheck-desktop-v36-stage2.log` |
 | 3 | `npm run lint` | 0 | `eslint .` 无告警 | `logs/lint-v36-stage2.log` |
 | 4 | `npm test` | 0 | **89 文件 / 909 用例全过** | `logs/test-v36-stage2.log` |
-| 5 | `npm run test:desktop` | 0 | **27 文件 / 191 用例全过** | `logs/test-desktop-v36-stage2.log` |
+| 5 | `npm run test:desktop` | 0 | **27 文件 / 192 用例全过** | `logs/test-desktop-v36-stage2.log` |
 | 6 | `npm run build` | 0 | vite 生产构建通过（既有 chunk 体积警告） | `logs/build-v36-stage2.log` |
 
 `npm run package:desktop -- --arch=arm64`：退出码 0，真实输出（节选）：

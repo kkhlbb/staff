@@ -20,4 +20,4 @@ dist/assets/index-A2IhuUUO.js            1,404.51 kB │ gzip: 443.00 kB
 - Using dynamic import() to code-split the application
 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-✓ built in 202ms
+✓ built in 201ms
