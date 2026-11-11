@@ -173,7 +173,9 @@ EID-06 的恢复路径旁证：`src/backup/projectBundle.test.ts` 的「原有�
 | 09 | 8 passed (8) | 绿 |
 | 10 | 8 passed (8) | 绿 |
 
-**10/10**。对照组（未修复，`scripts/repro-baseline.sh` 把 `events.ts` 临时回退到 `ae3e89e`）：
+**10/10**。10 轮跑于代码提交 `4bc6aba`；此后只新增 `docs/evidence/` 文件，
+`git diff 4bc6aba HEAD -- src/` 为空，`src/review/invalidation.test.ts` 从基线到 HEAD 无改动。
+对照组（未修复，`scripts/repro-baseline.sh` 把 `events.ts` 临时回退到 `ae3e89e`）：
 
 | 轮 | Tests | 结果 |
 |---|---|---|
