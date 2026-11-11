@@ -179,6 +179,13 @@ function actions(): ExtractionReviewActions {
       recovery: 'written' as const,
     })),
     onCancel: vi.fn(async () => ({ cancelled: true })),
+    onDeleteDraft: vi.fn(async (request) => ({
+      acceptedSeq: 2,
+      draftId: request.draftId,
+      remainingDraftCount: 1,
+      snapshot: null as never,
+      recovery: 'written' as const,
+    })),
   }
 }
 
@@ -368,3 +375,129 @@ describe('V3.6 提取审阅面板', () => {
     )
   })
 })
+
+/** 同一 PDF 版本 + 同一页范围的旧规则版本草稿（4 条候选，含 1 条有效确认决定）。 */
+function supersededDraft(): ExtractionDraft {
+  return {
+    ...draftFixture(),
+    draftId: 'draft-old',
+    extractorVersion: 'document-extractor-1',
+    draftRevision: 3,
+  }
+}
+
+/** 新规则版本草稿：候选故意与旧草稿不同，便于确认候选列表来自哪一份。 */
+function latestDraft(): ExtractionDraft {
+  return {
+    ...draftFixture(),
+    draftId: 'draft-new',
+    extractorVersion: 'document-extractor-2',
+    draftRevision: 1,
+    candidates: [
+      ringCandidate({
+        candidateId: 'cand-new-h',
+        symbol: 'H',
+        rawText: 'H 总长 52.20 +0.02 -0.02（新规则）',
+      }),
+    ],
+    issues: [],
+    decisions: [],
+  }
+}
+
+async function twoDraftSnapshot(order: 'old-first' | 'new-first'): Promise<SnapshotDto> {
+  const base = await createSampleSnapshot()
+  const list = order === 'old-first'
+    ? [supersededDraft(), latestDraft()]
+    : [latestDraft(), supersededDraft()]
+  return {
+    ...base,
+    project: {
+      ...base.project,
+      activeRequirementRevisionId: null,
+      currentRequirementCheck: null,
+      extractionDrafts: list,
+    },
+  }
+}
+
+describe('V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次确认', () => {
+  it('默认选中最新的 extractor 版本（旧版在前也选新），顶部写明版本与草稿 id', async () => {
+    render(<ExtractionReviewPanel snapshot={await twoDraftSnapshot('old-first')} busy={false} actions={actions()} />)
+    const current = screen.getByTestId('extraction-current-draft')
+    expect(current.textContent).toContain('document-extractor-2')
+    expect(current.textContent).toContain('draft-new')
+    expect(current.textContent).not.toContain('document-extractor-1')
+    const list = screen.getByRole('list', { name: '提取候选列表' })
+    expect(within(list).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(list).getByText(/新规则/)).toBeInTheDocument()
+  })
+
+  it('旧草稿折叠成一行：版本/候选数/已确认数/被谁取代', async () => {
+    render(<ExtractionReviewPanel snapshot={await twoDraftSnapshot('new-first')} busy={false} actions={actions()} />)
+    expect(
+      screen.getByText('旧规则版本（document-extractor-1）· 共 4 条候选（已确认 1）· 已被 v2 取代'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: /旧草稿候选列表/ })).toBeNull()
+  })
+
+  it('展开旧草稿：候选可看、确认/编辑/拒绝禁用并写明原因，定位仍可用', async () => {
+    render(<ExtractionReviewPanel snapshot={await twoDraftSnapshot('old-first')} busy={false} actions={actions()} />)
+    fireEvent.click(screen.getByRole('button', { name: '展开查看旧草稿候选' }))
+    const oldList = screen.getByRole('list', { name: '旧草稿候选列表 draft-old' })
+    const rows = within(oldList).getAllByRole('listitem')
+    expect(rows).toHaveLength(4)
+    expect(
+      within(rows[0]!).getByText(/旧规则版本，请在新版（document-extractor-2）上复核后确认/),
+    ).toBeInTheDocument()
+    expect(within(rows[0]!).getByRole('button', { name: '确认' })).toBeDisabled()
+    expect(within(rows[0]!).getByRole('button', { name: '确认' }).getAttribute('title')).toContain('旧规则版本')
+    expect(within(rows[0]!).getByRole('button', { name: '拒绝…' })).toBeDisabled()
+    expect(within(rows[0]!).getByRole('button', { name: '编辑…' })).toBeDisabled()
+    expect(within(rows[0]!).getByLabelText(/选择候选 cand-h/)).toBeDisabled()
+    const locateButton = within(rows[0]!).getByRole('button', { name: '定位到 PDF 选区' })
+    expect(locateButton).toBeEnabled()
+    fireEvent.click(locateButton)
+    expect(screen.getByTestId('extraction-locate-summary').textContent).toContain('来源 PDF sr-1 第 1 页')
+  })
+
+  it('删除先二次确认：写明已确认决定数，确认后才发删除请求', async () => {
+    const handler = actions()
+    render(<ExtractionReviewPanel snapshot={await twoDraftSnapshot('old-first')} busy={false} actions={handler} />)
+    fireEvent.click(screen.getByRole('button', { name: '删除该旧草稿…' }))
+    const box = screen.getByRole('group', { name: '删除旧草稿确认' })
+    expect(within(box).getByRole('alert').textContent).toContain('该草稿有 1 条已确认决定，删除后不可恢复')
+    expect(handler.onDeleteDraft).not.toHaveBeenCalled()
+    fireEvent.click(within(box).getByRole('button', { name: '确认删除' }))
+    await waitFor(() => expect(handler.onDeleteDraft).toHaveBeenCalledWith({ draftId: 'draft-old' }))
+    expect(screen.getByRole('status').textContent).toContain('已删除旧草稿 draft-old')
+  })
+
+  it('无已确认决定的旧草稿：确认框写明“无已确认决定”', async () => {
+    const base = await createSampleSnapshot()
+    const snapshot: SnapshotDto = {
+      ...base,
+      project: {
+        ...base.project,
+        activeRequirementRevisionId: null,
+        currentRequirementCheck: null,
+        extractionDrafts: [{ ...supersededDraft(), decisions: [] }, latestDraft()],
+      },
+    }
+    render(<ExtractionReviewPanel snapshot={snapshot} busy={false} actions={actions()} />)
+    fireEvent.click(screen.getByRole('button', { name: '删除该旧草稿…' }))
+    const box = screen.getByRole('group', { name: '删除旧草稿确认' })
+    expect(within(box).getByRole('alert').textContent).toContain('该草稿无已确认决定')
+  })
+
+  it('删除失败（返回 null）：提示错误、旧草稿仍在', async () => {
+    const handler = actions()
+    handler.onDeleteDraft = vi.fn(async () => null)
+    render(<ExtractionReviewPanel snapshot={await twoDraftSnapshot('old-first')} busy={false} actions={handler} />)
+    fireEvent.click(screen.getByRole('button', { name: '删除该旧草稿…' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+    await waitFor(() => expect(screen.getByText(/删除未执行/)).toBeInTheDocument())
+    expect(screen.getByText(/旧规则版本（document-extractor-1）/)).toBeInTheDocument()
+  })
+})
+

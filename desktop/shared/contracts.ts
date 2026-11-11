@@ -78,6 +78,8 @@ export const IPC_CHANNELS = {
   extractionRun: 'extraction:run',
   extractionDecide: 'extraction:decide',
   extractionCancel: 'extraction:cancel',
+  /** V3.6 多草稿：删除被取代（旧规则版本）的草稿。 */
+  extractionDeleteDraft: 'extraction:delete-draft',
 } as const
 
 export type IpcChannelName = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
@@ -209,6 +211,9 @@ export type CommonErrorCode =
   | 'EXTRACTION_STALE_DECISION'
   | 'EXTRACTION_REASON_REQUIRED'
   | 'EXTRACTION_VERSION_MISMATCH'
+  /** V3.6 多草稿：旧规则版本草稿只读；最新草稿不许删。 */
+  | 'EXTRACTION_DRAFT_SUPERSEDED'
+  | 'EXTRACTION_DRAFT_LATEST'
 
 export type IpcErrorCode =
   | ContainerErrorCode
@@ -822,6 +827,32 @@ export interface ExtractionCancelValue {
 }
 
 /**
+ * 删除一份被取代的草稿（多草稿方案 3）。
+ *
+ * - 只允许删“同一 PDF 版本 + 同一页范围下存在严格更高 extractorVersion”的草稿；
+ *   最新草稿一律拒绝（EXTRACTION_DRAFT_LATEST）——删除最新等于删掉唯一可用结果，
+ *   用户真正需要的是重提，而不是把提取页清空。
+ * - 只删这一份 `extractionDrafts` 条目；来源 PDF、条款、绑定、图纸、其它草稿都不动。
+ * - 原子：先按 schema8 编码自校验、再写恢复草稿，两步都成功才切换会话快照；
+ *   任一步失败返回错误且内存/磁盘都不变。
+ */
+export interface ExtractionDeleteDraftRequest {
+  sessionId: string
+  baseEditSeq: number
+  draftId: string
+}
+
+export interface ExtractionDeleteDraftValue {
+  acceptedSeq: number
+  /** 已删除的草稿 id（便于界面确认删的是哪一份）。 */
+  draftId: string
+  remainingDraftCount: number
+  snapshot: SnapshotDto
+  recovery: RecoveryWriteState | 'none'
+  warning?: string
+}
+
+/**
  * preload 暴露到 `window.cunlian` 的 API。
  *
  * 只列具体函数；A-02/A-03/A-04 扩展项目会话方法时同步扩展本接口，并由主进程
@@ -978,6 +1009,10 @@ export interface CunlianApi {
   decideExtraction(request: ExtractionDecideRequest): Promise<IpcResult<ExtractionDecideValue>>
   /** 取消同一会话中正在进行的提取（按 requestId）。 */
   cancelExtraction(request: ExtractionCancelRequest): Promise<IpcResult<ExtractionCancelValue>>
+  /** 删除一份被取代的旧规则版本草稿；最新草稿拒绝，失败零写入。 */
+  deleteExtractionDraft(
+    request: ExtractionDeleteDraftRequest,
+  ): Promise<IpcResult<ExtractionDeleteDraftValue>>
 }
 
 /** 应用与 IPC 协议的稳定标识，测试与契约文档共用。 */

@@ -110,4 +110,16 @@ describe('V3.6 提取入口角标：计数与文案', () => {
     expect(counts).toEqual({ pending: 8, blocked: 2, total: 10 })
     expect(pendingExtractionBadgeLabel(counts)).toBe('待确认 8 · 阻塞 2')
   })
+
+  it('被取代的旧规则版本草稿不计入角标（只看当前草稿）', () => {
+    const oldRule: ExtractionDraft = { ...fixtureDraft(), extractorVersion: 'document-extractor-1' }
+    const newRule: ExtractionDraft = {
+      ...decideAll({ ...fixtureDraft(), extractorVersion: 'document-extractor-2' }),
+      draftId: 'draft-new-rule',
+    }
+    // 旧草稿即使还有 5 条未决，也已折叠只读，不应让角标继续喊“待处理”。
+    const counts = countPendingExtractionCandidates([oldRule, newRule])
+    expect(counts).toEqual({ pending: 0, blocked: 0, total: 0 })
+    expect(pendingExtractionBadgeLabel(counts)).toBeNull()
+  })
 })

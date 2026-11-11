@@ -6,10 +6,12 @@
  * 只注入“取消”场景的慢提取器，不伪造 PDF 文本。
  */
 import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type {
   ExtractionDecideValue,
+  ExtractionDeleteDraftValue,
   ExtractionRunValue,
   ProjectOpenValue,
   ProjectSaveValue,
@@ -19,7 +21,7 @@ import { IPC_CHANNELS } from '../shared/contracts'
 import { decodeProjectFile, toSnapshotDto } from '../../src/project-file/codec'
 import type { ProjectFileSnapshot } from '../../src/project-file/types'
 import { sha256Hex } from '../../src/sources/hash'
-import { EXTRACTOR_VERSION, type ExtractionCandidate } from '../../src/document-extraction'
+import { EXTRACTOR_VERSION, selectDefaultDraft, type ExtractionCandidate } from '../../src/document-extraction'
 import { PdfTextExtractionError } from '../main/pdfTextExtract'
 import { ExtractionService } from '../main/extractionService'
 import { registerExtractionChannels } from '../main/extractionChannels'
@@ -104,13 +106,18 @@ async function snapshotWithPdf(options: {
 
 async function withExtraction(
   harness: Harness,
-  options: { extractText?: ConstructorParameters<typeof ExtractionService>[0]['extractText'] } = {},
+  options: {
+    extractText?: ConstructorParameters<typeof ExtractionService>[0]['extractText']
+    extractorVersion?: string
+    recovery?: ConstructorParameters<typeof ExtractionService>[0]['recovery']
+  } = {},
 ): Promise<ExtractionService> {
   const service = new ExtractionService({
     controller: harness.controller,
     projectService: harness.projectService,
-    recovery: harness.recovery,
+    recovery: options.recovery ?? harness.recovery,
     ...(options.extractText === undefined ? {} : { extractText: options.extractText }),
+    ...(options.extractorVersion === undefined ? {} : { extractorVersion: options.extractorVersion }),
   })
   registerExtractionChannels(harness.ipc, {
     guard: harness.guard,
@@ -876,3 +883,284 @@ describe('V3.6 main：通道层 sender / 参数门禁', () => {
     }
   })
 })
+
+/* ------------------------------------------------------------------ */
+/* V3.6 多草稿：默认最新、旧草稿只读、删除只删这一份、失败零写入        */
+/* ------------------------------------------------------------------ */
+
+function digestOfFile(target: string): string {
+  return createHash('sha256').update(readFileSync(target)).digest('hex')
+}
+
+interface TwoDraftState {
+  oldDraftId: string
+  newDraftId: string
+  /** 旧草稿里已确认的候选（用于证明旧草稿确实带决定）。 */
+  confirmedCandidateId: string
+  acceptedSeq: number
+}
+
+/**
+ * 造出“同一 PDF 版本 + 同一页范围、两个规则版本”的真实场景：
+ * 先用 document-extractor-1 跑真实提取并确认一条候选，再用当前规则版本重跑。
+ */
+async function twoVersionDrafts(
+  harness: Harness,
+  open: ProjectOpenValue,
+): Promise<TwoDraftState> {
+  await withExtraction(harness, { extractorVersion: 'document-extractor-1' })
+  const old = await harness.invoke<ExtractionRunValue>(IPC_CHANNELS.extractionRun, {
+    sessionId: open.sessionId,
+    baseEditSeq: 0,
+    revisionId: 'sr-1',
+    pageFrom: 1,
+    pageTo: 2,
+    requestId: 'req-old-rule',
+  })
+  if (!old.ok) throw new Error(`旧规则提取失败：${old.error.code} ${old.error.message}`)
+  const oldDraft = old.value.snapshot.project.extractionDrafts[0]
+  if (oldDraft === undefined) throw new Error('旧规则提取没有生成草稿')
+  const target = oldDraft.candidates.find(
+    (candidate) => candidate.kind === 'ring' && candidate.status === 'pending',
+  )
+  if (target === undefined) throw new Error('旧规则草稿没有可确认的组成环候选')
+  const decided = await harness.invoke<ExtractionDecideValue>(IPC_CHANNELS.extractionDecide, {
+    sessionId: open.sessionId,
+    baseEditSeq: old.value.acceptedSeq,
+    draftId: oldDraft.draftId,
+    candidateId: target.candidateId,
+    editRevision: target.editRevision,
+    action: 'confirm',
+    confirmed: true,
+  })
+  if (!decided.ok) {
+    throw new Error(`旧规则草稿确认失败：${decided.error.code} ${decided.error.message}`)
+  }
+
+  await withExtraction(harness)
+  const newer = await harness.invoke<ExtractionRunValue>(IPC_CHANNELS.extractionRun, {
+    sessionId: open.sessionId,
+    baseEditSeq: decided.value.acceptedSeq,
+    revisionId: 'sr-1',
+    pageFrom: 1,
+    pageTo: 2,
+    requestId: 'req-new-rule',
+  })
+  if (!newer.ok) throw new Error(`新规则提取失败：${newer.error.code} ${newer.error.message}`)
+  const drafts = newer.value.snapshot.project.extractionDrafts
+  const newDraft = drafts.find((draft) => draft.draftId !== oldDraft.draftId)
+  if (newDraft === undefined || drafts.length !== 2) {
+    throw new Error(`预期两份草稿，实际 ${drafts.length}`)
+  }
+  return {
+    oldDraftId: oldDraft.draftId,
+    newDraftId: newDraft.draftId,
+    confirmedCandidateId: target.candidateId,
+    acceptedSeq: newer.value.acceptedSeq,
+  }
+}
+
+describe('V3.6 多草稿（main）', () => {
+  it('旧规则版本草稿只读：main 拒绝在旧草稿上确认，快照不变', async () => {
+    const harness = await createHarness()
+    try {
+      const { open } = await openWithPdf(harness)
+      const state = await twoVersionDrafts(harness, open)
+      const session = harness.projectService.getSession(open.sessionId)!
+      const oldDraft = session.snapshot.project.extractionDrafts.find(
+        (draft) => draft.draftId === state.oldDraftId,
+      )!
+      const other = oldDraft.candidates.find(
+        (candidate) => candidate.status === 'pending' && candidate.candidateId !== state.confirmedCandidateId,
+      )!
+      const rejected = await harness.invoke<ExtractionDecideValue>(IPC_CHANNELS.extractionDecide, {
+        sessionId: open.sessionId,
+        baseEditSeq: session.acceptedSeq,
+        draftId: state.oldDraftId,
+        candidateId: other.candidateId,
+        editRevision: other.editRevision,
+        action: 'confirm',
+        confirmed: true,
+      })
+      expect(rejected.ok).toBe(false)
+      if (!rejected.ok) {
+        expect(rejected.error.code).toBe('EXTRACTION_DRAFT_SUPERSEDED')
+        expect(rejected.error.message).toContain('旧规则版本')
+      }
+      expect(session.snapshot.project.extractionDrafts).toHaveLength(2)
+      expect(
+        session.snapshot.project.extractionDrafts.find((draft) => draft.draftId === state.oldDraftId)!
+          .candidates.find((candidate) => candidate.candidateId === other.candidateId)?.status,
+      ).toBe('pending')
+    } finally {
+      await harness.dispose()
+    }
+  })
+
+  it('删除旧草稿：只删它、其它数据完好，保存后重开默认仍是新草稿', async () => {
+    const harness = await createHarness()
+    try {
+      const { open } = await openWithPdf(harness)
+      const state = await twoVersionDrafts(harness, open)
+      const session = harness.projectService.getSession(open.sessionId)!
+      const before = session.snapshot
+
+      const removed = await harness.invoke<ExtractionDeleteDraftValue>(
+        IPC_CHANNELS.extractionDeleteDraft,
+        {
+          sessionId: open.sessionId,
+          baseEditSeq: session.acceptedSeq,
+          draftId: state.oldDraftId,
+        },
+      )
+      expect(removed.ok, removed.ok ? '' : `${removed.error.code}: ${removed.error.message}`).toBe(true)
+      if (!removed.ok) return
+      expect(removed.value.draftId).toBe(state.oldDraftId)
+      expect(removed.value.remainingDraftCount).toBe(1)
+
+      const after = harness.projectService.getSession(open.sessionId)!.snapshot
+      expect(after.project.extractionDrafts.map((draft) => draft.draftId)).toEqual([
+        state.newDraftId,
+      ])
+      // 只删这一份草稿：来源 PDF、版本、绑定、条款、参数、图纸、事件、模型都不动。
+      expect(after.documents).toEqual(before.documents)
+      expect(after.revisions).toEqual(before.revisions)
+      expect(after.blobs).toEqual(before.blobs)
+      expect(after.bindings).toEqual(before.bindings)
+      expect(after.events).toEqual(before.events)
+      expect(after.fileRevisions).toEqual(before.fileRevisions)
+      expect(after.project.dimensionChain).toEqual(before.project.dimensionChain)
+      expect(after.project.dimensionLinks).toEqual(before.project.dimensionLinks)
+      expect(after.project.parameters).toEqual(before.project.parameters)
+      expect(after.project.drawings).toEqual(before.project.drawings)
+      expect(after.project.requirementRevisions).toEqual(before.project.requirementRevisions)
+      expect(after.project.parts).toEqual(before.project.parts)
+      expect(after.project.modelRevisions).toEqual(before.project.modelRevisions)
+      expect(after.project.currentRevisionId).toBe(before.project.currentRevisionId)
+      expect(Number.isSafeInteger(removed.value.acceptedSeq)).toBe(true)
+
+      // 显式保存 → 从磁盘字节解码：删除结果与默认选中都保持。
+      const saved = await harness.invoke<ProjectSaveValue>(IPC_CHANNELS.projectSave, {
+        sessionId: open.sessionId,
+        editSeq: removed.value.acceptedSeq,
+        expectedFingerprint: harness.projectService.getSession(open.sessionId)!.fingerprint,
+      })
+      expect(saved.ok, saved.ok ? '' : `${saved.error.code}: ${saved.error.message}`).toBe(true)
+      if (!saved.ok) return
+      const decoded = await decodeProjectFile(new Uint8Array(readFileSync(saved.value.path)))
+      expect(decoded.ok, decoded.ok ? '' : `${decoded.error.code}: ${decoded.error.message}`).toBe(true)
+      if (!decoded.ok) return
+      expect(decoded.value.snapshot.project.extractionDrafts.map((draft) => draft.draftId)).toEqual([
+        state.newDraftId,
+      ])
+      expect(selectDefaultDraft(decoded.value.snapshot.project.extractionDrafts)?.draftId).toBe(
+        state.newDraftId,
+      )
+    } finally {
+      await harness.dispose()
+    }
+  })
+
+  it('最新规则版本草稿不许删：明确拒绝且零写入', async () => {
+    const harness = await createHarness()
+    try {
+      const { open } = await openWithPdf(harness)
+      const state = await twoVersionDrafts(harness, open)
+      const session = harness.projectService.getSession(open.sessionId)!
+      const seqBefore = session.acceptedSeq
+      const newest = await harness.invoke<ExtractionDeleteDraftValue>(
+        IPC_CHANNELS.extractionDeleteDraft,
+        {
+          sessionId: open.sessionId,
+          baseEditSeq: seqBefore,
+          draftId: state.newDraftId,
+        },
+      )
+      expect(newest.ok).toBe(false)
+      if (!newest.ok) {
+        expect(newest.error.code).toBe('EXTRACTION_DRAFT_LATEST')
+        expect(newest.error.message).toContain('不能删除')
+      }
+      expect(session.acceptedSeq).toBe(seqBefore)
+      expect(session.snapshot.project.extractionDrafts).toHaveLength(2)
+    } finally {
+      await harness.dispose()
+    }
+  })
+
+  it('删除失败注入（恢复草稿写入抛错）：项目文件字节不变、两份草稿都在', async () => {
+    const harness = await createHarness()
+    try {
+      const { open } = await openWithPdf(harness)
+      const state = await twoVersionDrafts(harness, open)
+      const session = harness.projectService.getSession(open.sessionId)!
+      const saved = await harness.invoke<ProjectSaveValue>(IPC_CHANNELS.projectSave, {
+        sessionId: open.sessionId,
+        editSeq: session.acceptedSeq,
+        expectedFingerprint: session.fingerprint,
+      })
+      expect(saved.ok, saved.ok ? '' : `${saved.error.code}: ${saved.error.message}`).toBe(true)
+      if (!saved.ok) return
+      const digestBefore = digestOfFile(saved.value.path)
+      const seqBefore = harness.projectService.getSession(open.sessionId)!.acceptedSeq
+
+      // 注入：恢复草稿写入抛出，删除必须整体回退（不先改内存再补写）。
+      const failingRecovery = {
+        stage: async () => {
+          throw new Error('injected stage failure')
+        },
+        stateOf: () => 'failed' as const,
+      } as unknown as ConstructorParameters<typeof ExtractionService>[0]['recovery']
+      await withExtraction(harness, { recovery: failingRecovery })
+
+      const failed = await harness.invoke<ExtractionDeleteDraftValue>(
+        IPC_CHANNELS.extractionDeleteDraft,
+        {
+          sessionId: open.sessionId,
+          baseEditSeq: seqBefore,
+          draftId: state.oldDraftId,
+        },
+      )
+      expect(failed.ok).toBe(false)
+      if (!failed.ok) {
+        expect(failed.error.code).toBe('INTERNAL')
+        expect(failed.error.message).toContain('已取消删除')
+        expect(failed.error.detail).toContain('injected stage failure')
+      }
+
+      const after = harness.projectService.getSession(open.sessionId)!
+      expect(after.acceptedSeq).toBe(seqBefore)
+      expect(after.snapshot.project.extractionDrafts.map((draft) => draft.draftId).sort()).toEqual(
+        [state.oldDraftId, state.newDraftId].sort(),
+      )
+      expect(digestOfFile(saved.value.path)).toBe(digestBefore)
+      const onDisk = await decodeProjectFile(new Uint8Array(readFileSync(saved.value.path)))
+      expect(onDisk.ok).toBe(true)
+      if (onDisk.ok) {
+        expect(onDisk.value.snapshot.project.extractionDrafts).toHaveLength(2)
+      }
+    } finally {
+      await harness.dispose()
+    }
+  })
+
+  it('删除不存在的草稿：NOT_FOUND 且零写入', async () => {
+    const harness = await createHarness()
+    try {
+      const { open } = await openWithPdf(harness)
+      const state = await twoVersionDrafts(harness, open)
+      const session = harness.projectService.getSession(open.sessionId)!
+      const result = await harness.invoke<ExtractionDeleteDraftValue>(
+        IPC_CHANNELS.extractionDeleteDraft,
+        { sessionId: open.sessionId, baseEditSeq: session.acceptedSeq, draftId: 'draft-missing' },
+      )
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.error.code).toBe('NOT_FOUND')
+      expect(session.snapshot.project.extractionDrafts).toHaveLength(2)
+      expect(session.acceptedSeq).toBe(state.acceptedSeq)
+    } finally {
+      await harness.dispose()
+    }
+  })
+})
+

@@ -9,6 +9,7 @@ import { z } from 'zod'
 import type {
   ExtractionCancelValue,
   ExtractionDecideValue,
+  ExtractionDeleteDraftValue,
   ExtractionRunValue,
   IpcErrorCode,
   IpcResult,
@@ -77,6 +78,13 @@ export const extractionSchemas = {
       requestId: requestIdSchema,
     })
     .strict(),
+  deleteDraft: z
+    .object({
+      sessionId: z.string().min(1).max(200),
+      baseEditSeq: z.number().int().nonnegative(),
+      draftId: idLike,
+    })
+    .strict(),
 } as const
 
 export interface ExtractionChannelDeps {
@@ -141,6 +149,19 @@ export function registerExtractionChannels(
       handle: async ({ sender }, params): Promise<ExtractionCancelValue> => {
         requireActive(sender.webContentsId, params.sessionId)
         return unwrap(deps.service.cancel(sender.webContentsId, params))
+      },
+    },
+    ipcDeps,
+  )
+
+  installChannel(
+    ipc,
+    {
+      channel: IPC_CHANNELS.extractionDeleteDraft,
+      schema: extractionSchemas.deleteDraft,
+      handle: async ({ sender }, params): Promise<ExtractionDeleteDraftValue> => {
+        requireActive(sender.webContentsId, params.sessionId)
+        return unwrap(await deps.service.deleteDraft(params))
       },
     },
     ipcDeps,

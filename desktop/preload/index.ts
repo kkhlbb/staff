@@ -40,6 +40,7 @@ import {
   type ExtractionRunValue,
   type ExtractionDecideValue,
   type ExtractionCancelValue,
+  type ExtractionDeleteDraftValue,
 } from '../shared/contracts'
 
 /**
@@ -219,6 +220,10 @@ const api: CunlianApi = {
   cancelExtraction: (request) =>
     ipcRenderer.invoke(IPC_CHANNELS.extractionCancel, request) as Promise<
       IpcResult<ExtractionCancelValue>
+    >,
+  deleteExtractionDraft: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.extractionDeleteDraft, request) as Promise<
+      IpcResult<ExtractionDeleteDraftValue>
     >,
 }
 

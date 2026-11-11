@@ -12,6 +12,8 @@ import type {
   ExtractionDecideRequest,
   ExtractionDecideValue,
   ExtractionCancelValue,
+  ExtractionDeleteDraftRequest,
+  ExtractionDeleteDraftValue,
 } from '../../desktop/shared/contracts'
 import { DesktopSessionAdapter, type DesktopSessionState } from './desktopAdapter'
 import { chainToDraft, draftToChain, workspaceReducer, type WorkspaceAction } from './draft'
@@ -400,6 +402,28 @@ export function useDesktopSession() {
       const result = await current.cancelExtraction({ sessionId: state.sessionId, requestId })
       report(result)
       return result.ok ? result.value : null
+    },
+    /** 多草稿方案 3：删除旧规则版本草稿；main 校验“必须被取代”，失败零写入。 */
+    deleteExtractionDraft: async (
+      request: Omit<ExtractionDeleteDraftRequest, 'sessionId' | 'baseEditSeq'>,
+    ): Promise<ExtractionDeleteDraftValue | null> => {
+      const current = adapter.current
+      if (current === null) { setNotice('window.cunlian 不可用，请在桌面应用中执行文件操作。'); return null }
+      if (locked.current) return null
+      const state = current.getState()
+      if (state.sessionId === null) { setNotice(NO_WRITABLE_SESSION_NOTICE); return null }
+      locked.current = true; setBusy(true); setNotice('')
+      try {
+        const result = await current.deleteExtractionDraft({
+          sessionId: state.sessionId,
+          baseEditSeq: state.acceptedSeq,
+          ...request,
+        })
+        report(result)
+        return result.ok ? result.value : null
+      } finally {
+        locked.current = false; setBusy(false); void refresh()
+      }
     },
     stageRequirementEdit: async (edit: RequirementEditDraft | null) => {
       const target = requireSession()

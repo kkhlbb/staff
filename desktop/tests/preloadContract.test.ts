@@ -55,6 +55,8 @@ const ADDED_FUNCTIONS = [
   'runExtraction',
   'decideExtraction',
   'cancelExtraction',
+  // V3.6 多草稿：删除被取代的旧规则版本草稿（仍只增不改旧函数）。
+  'deleteExtractionDraft',
 ] as const
 
 describe('B2/C preload 契约', () => {

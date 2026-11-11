@@ -411,6 +411,11 @@ beforeEach(async () => {
       ok: true as const,
       value: { cancelled: false },
     })),
+    // 多草稿：删除旧草稿默认不适用；用例按需覆盖，既有行为不变。
+    deleteExtractionDraft: vi.fn<CunlianApi['deleteExtractionDraft']>(async () => ({
+      ok: false as const,
+      error: { code: 'NOT_FOUND' as const, message: 'mock 不提供草稿删除' },
+    })),
   }
   vi.stubGlobal('cunlian', api)
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }

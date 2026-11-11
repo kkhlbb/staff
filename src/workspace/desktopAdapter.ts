@@ -44,6 +44,8 @@ import type {
   ExtractionDecideValue,
   ExtractionCancelRequest,
   ExtractionCancelValue,
+  ExtractionDeleteDraftRequest,
+  ExtractionDeleteDraftValue,
 } from '../../desktop/shared/contracts'
 
 export interface DesktopSessionState {
@@ -478,6 +480,30 @@ export class DesktopSessionAdapter {
     request: ExtractionCancelRequest,
   ): Promise<IpcResult<ExtractionCancelValue>> {
     return this.api.cancelExtraction(request)
+  }
+
+  /** 删除被取代的旧规则版本草稿：main 原子校验并切快照，失败零写入。 */
+  async deleteExtractionDraft(
+    request: ExtractionDeleteDraftRequest,
+  ): Promise<IpcResult<ExtractionDeleteDraftValue>> {
+    const result = await this.api.deleteExtractionDraft(request)
+    if (result.ok) {
+      this.state = {
+        ...this.state,
+        status: 'open',
+        snapshot: result.value.snapshot,
+        acceptedSeq: result.value.acceptedSeq,
+        localSeq: Math.max(this.state.localSeq, result.value.acceptedSeq),
+        dirty: result.value.acceptedSeq > this.state.savedSeq,
+        recovery: result.value.recovery,
+        lastError: undefined,
+      }
+      this.emit()
+    } else {
+      this.state = { ...this.state, lastError: result.error }
+      this.emit()
+    }
+    return result
   }
 
   /** 条款确认已由 main 原子写盘；成功只重同步权威快照与保存状态。 */

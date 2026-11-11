@@ -44,6 +44,18 @@ export {
 } from './types'
 export { buildExtractionDraft, evidenceFromSpan, matchTextOf, type ExtractionRequest } from './parse'
 export {
+  activeConfirmedDecisionCount,
+  canDeleteDraft,
+  compareExtractorVersions,
+  draftScopeKey,
+  extractorVersionLabel,
+  extractorVersionNumber,
+  groupExtractionDrafts,
+  isDraftSuperseded,
+  selectDefaultDraft,
+  type ExtractionDraftScope,
+} from './draftScope'
+export {
   countPendingExtractionCandidates,
   pendingExtractionBadgeLabel,
   pendingExtractionBadgeTitle,

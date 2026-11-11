@@ -7,17 +7,27 @@
  * - 拒绝必须填理由；批量操作只支持批量拒绝；
  * - 未确认/阻塞候选永远不会被展示成已应用，也不会影响尺寸链计算（计算不读候选）；
  * - 界面如实显示 extractorVersion、样本覆盖限制与“不做 OCR/DOCX”。
+ *
+ * 多草稿（同一 PDF 版本 + 同一页范围有多个规则版本）：
+ * - 默认显示 extractorVersion 最高的草稿，顶部明确写出当前显示哪个草稿（版本 + 草稿 id）；
+ * - 其余草稿折叠成一行，可展开查看候选（只读）或显式删除；删除必须二次确认。
  */
 import { useMemo, useState } from 'react'
 import type {
   ExtractionCancelValue,
   ExtractionDecideValue,
+  ExtractionDeleteDraftValue,
   ExtractionRunValue,
   IpcResult,
   SnapshotDto,
 } from '../../desktop/shared/contracts'
 import {
   EXTRACTOR_VERSION,
+  activeConfirmedDecisionCount,
+  canDeleteDraft,
+  compareExtractorVersions,
+  extractorVersionLabel,
+  groupExtractionDrafts,
   type EditableField,
   type ExtractionCandidate,
   type ExtractionDraft,
@@ -50,6 +60,8 @@ export interface ExtractionReviewActions {
     text?: string
   }) => Promise<ExtractionDecideValue | null>
   onCancel: (requestId: string) => Promise<ExtractionCancelValue | null>
+  /** 删除一份被取代的旧规则版本草稿；返回 null 表示失败（错误由外层提示）。 */
+  onDeleteDraft: (request: { draftId: string }) => Promise<ExtractionDeleteDraftValue | null>
 }
 
 export interface ExtractionReviewPanelProps {
@@ -155,7 +167,7 @@ export function ExtractionReviewPanel({
   const [revisionId, setRevisionId] = useState(revisions[0]?.id ?? '')
   const [pageFrom, setPageFrom] = useState('1')
   const [pageTo, setPageTo] = useState(String(revisions[0]?.pageCount ?? 2))
-  const [draftId, setDraftId] = useState<string | null>(drafts[0]?.draftId ?? null)
+  const [draftId, setDraftId] = useState<string | null>(null)
   const [running, setRunning] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -163,21 +175,24 @@ export function ExtractionReviewPanel({
   const [rejecting, setRejecting] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [editing, setEditing] = useState<{ candidateId: string; field: EditableField; text: string } | null>(null)
+  const [expandedDraftIds, setExpandedDraftIds] = useState<Record<string, true>>({})
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
   const [locate, setLocate] = useState<
     { revisionId: string; page: number; rectPdf: readonly [number, number, number, number]; pageBoxPdf: readonly [number, number, number, number]; label: string } | null
   >(null)
 
-  // 会话/草稿变化后保持选择可用：选中的草稿不存在时派生为第一份（不写状态，
-  // 避免 effect 里同步 setState）。
-  const effectiveDraftId =
-    draftId !== null && drafts.some((draft) => draft.draftId === draftId)
-      ? draftId
-      : (drafts[0]?.draftId ?? null)
+  // 同一 PDF 版本 + 同一页范围为一组；组内默认显示版本最高的草稿，其余折叠成旧草稿行。
+  const scopes = useMemo(() => groupExtractionDrafts(drafts), [drafts])
+  // 用户显式切换过的草稿必须仍存在且仍属于某个作用域；否则回落到第一个作用域的当前草稿。
+  // 不写 effect 里同步 setState：这里只派生，不产生额外渲染。
+  const selectedScope =
+    scopes.find((scope) => scope.drafts.some((item) => item.draftId === draftId)) ?? scopes[0] ?? null
+  const draft: ExtractionDraft | null = selectedScope?.current ?? null
 
   const revision = revisions.find((item) => item.id === revisionId) ?? null
   const sourceDocument = revision === null ? null : snapshot.documents.find((item) => item.id === revision.documentId) ?? null
   const outdated = revision !== null && sourceDocument !== null && sourceDocument.latestRevisionId !== revision.id
-  const draft: ExtractionDraft | null = drafts.find((item) => item.draftId === effectiveDraftId) ?? null
   const counts = useMemo(() => {
     const base = { pending: 0, blocked: 0, confirmed: 0, rejected: 0, stale: 0 }
     for (const candidate of draft?.candidates ?? []) base[candidate.status] += 1
@@ -277,6 +292,253 @@ export function ExtractionReviewPanel({
     setMessage(`已批量拒绝 ${selectedIds.length} 条候选（逐条记录理由）。`)
   }
 
+  /** 删除旧草稿：二次确认框里的按钮才会走到这里；失败零写入由 main 保证。 */
+  async function deleteOldDraft(target: ExtractionDraft): Promise<void> {
+    if (deleting !== null) return
+    setError('')
+    setMessage('')
+    setDeleting(target.draftId)
+    try {
+      const result = await actions.onDeleteDraft({ draftId: target.draftId })
+      if (result === null) {
+        setError('删除未执行：请检查错误提示或项目会话。')
+        return
+      }
+      setConfirmDeleteId(null)
+      setExpandedDraftIds((current) => {
+        const next = { ...current }
+        delete next[target.draftId]
+        return next
+      })
+      setSelected({})
+      setMessage(
+        `已删除旧草稿 ${target.draftId}（${target.extractorVersion}）：只删了这一份草稿，来源 PDF、条款、绑定与图纸未改动；保存项目后写入文件。`,
+      )
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  /**
+   * 一行候选。`readOnlyReason` 非 null 时是旧规则版本草稿：取值/出处仍可看，
+   * 确认/撤销/拒绝/编辑与批量选择一律禁用，只有定位到 PDF 选区可用。
+   */
+  function renderCandidate(
+    candidate: ExtractionCandidate,
+    owner: ExtractionDraft,
+    readOnlyReason: string | null,
+  ) {
+    const readOnly = readOnlyReason !== null
+    const evidence = evidenceOf(candidate)
+    const firstEvidence = evidence[0]
+    const canAct = !readOnly && !busy && candidate.status !== 'confirmed' && candidate.status !== 'rejected' && candidate.status !== 'stale'
+    const occurrence = candidate.occurrence ?? null
+    const groupMembers = candidate.kind === 'ring' && candidate.groupId !== null
+      ? owner.candidates.filter((item) => item.kind === 'ring' && item.groupId === candidate.groupId)
+      : []
+    const confirmedSibling = groupMembers.length > 1
+      ? groupMembers.find((item) => item.candidateId !== candidate.candidateId && item.status === 'confirmed')
+      : undefined
+    const groupConflict = confirmedSibling !== undefined
+    return (
+      <li
+        key={candidate.candidateId}
+        data-status={candidate.status}
+        data-readonly={readOnly ? 'true' : undefined}
+        className={`extraction-review__candidate extraction-review__candidate--${candidate.status}`}
+      >
+        <div className="extraction-review__candidate-head">
+          <input
+            type="checkbox"
+            aria-label={`选择候选 ${candidate.candidateId}`}
+            checked={selected[candidate.candidateId] === true}
+            disabled={readOnly || candidate.status === 'confirmed' || candidate.status === 'rejected'}
+            onChange={(event) => {
+              setSelected((current) => {
+                const next = { ...current }
+                if (event.target.checked) next[candidate.candidateId] = true
+                else delete next[candidate.candidateId]
+                return next
+              })
+            }}
+          />
+          <strong>{KIND_LABEL[candidate.kind]} · {candidateTitle(candidate)}</strong>
+          <span className={`extraction-review__badge extraction-review__badge--${candidate.status}`}>
+            {STATUS_LABEL[candidate.status]}
+          </span>
+          {occurrence !== null && occurrence.total > 1 && (
+            <span className="extraction-review__occurrence">
+              同一符号第 {occurrence.index}/{occurrence.total} 处
+            </span>
+          )}
+          <span className="extraction-review__confidence">置信 {candidate.confidence}</span>
+        </div>
+        {readOnly && (
+          <p className="extraction-review__readonly" role="note">{readOnlyReason}</p>
+        )}
+        {occurrence !== null && occurrence.total > 1 && (
+          <p className="extraction-review__group-hint">
+            同一符号只能确认一处；
+            {confirmedSibling === undefined
+              ? '确认一处后其余处不可再确认，需要先撤销。'
+              : `已确认第 ${confirmedSibling.occurrence?.index ?? '?'}/${confirmedSibling.occurrence?.total ?? '?'} 处，需先撤销该确认才能选此处。`}
+          </p>
+        )}
+        <p className="extraction-review__raw">原文：{candidate.rawText}</p>
+        <p className="extraction-review__evidence">
+          第 {candidate.page} 页
+          {firstEvidence !== undefined
+            ? ` · 选区 PDF 点 ${formatRect(firstEvidence.rectPdf)} · 页框 ${formatRect(firstEvidence.pageBoxPdf)} · 片段「${firstEvidence.textSnippet}」· item ${firstEvidence.textItemIndexes.join(',')}`
+            : ' · 无选区出处'}
+        </p>
+        <p className="extraction-review__values">
+          {numericFields(candidate).length === 0
+            ? '无数值字段（仅保留原文与结构）'
+            : numericFields(candidate)
+                .map(({ field, value }) => `${FIELD_LABEL[field] ?? field}=${value.text}${value.unitText ? ` ${value.unitText}` : ''}${value.unit === null ? '（单位未确认）' : ''}`)
+                .join(' · ')}
+        </p>
+        {candidate.reasonCodes.length > 0 && (
+          <p className="extraction-review__reasons">原因码：{candidate.reasonCodes.join('、')}</p>
+        )}
+        {(() => {
+          const decision = [...owner.decisions]
+            .filter(
+              (item) =>
+                item.candidateId === candidate.candidateId &&
+                item.invalidatedByEditRevision === null,
+            )
+            .at(-1)
+          if (decision === undefined) return null
+          const actionLabel =
+            decision.action === 'confirm'
+              ? '确认'
+              : decision.action === 'reject'
+                ? '拒绝'
+                : decision.action === 'revoke'
+                  ? '撤销确认'
+                  : '人工修改'
+          return (
+            <p className="extraction-review__decision">
+              决定：{actionLabel} · {decision.actor} · {decision.decidedAt}
+              {decision.reason === null ? '' : ` · 理由：${decision.reason}`}
+            </p>
+          )
+        })()}
+        <div className="extraction-review__actions">
+          <button
+            type="button"
+            disabled={firstEvidence === undefined}
+            onClick={() => {
+              if (firstEvidence === undefined) return
+              setLocate({
+                revisionId: firstEvidence.revisionId,
+                page: firstEvidence.page,
+                rectPdf: firstEvidence.rectPdf,
+                pageBoxPdf: firstEvidence.pageBoxPdf,
+                label: candidateTitle(candidate),
+              })
+            }}
+          >
+            定位到 PDF 选区
+          </button>
+          <button
+            type="button"
+            disabled={!canAct || candidate.status === 'blocked' || groupConflict}
+            title={
+              readOnly
+                ? readOnlyReason ?? undefined
+                : candidate.status === 'blocked'
+                  ? '阻塞候选必须先解决原因码，不能确认'
+                  : groupConflict
+                    ? `同一符号已确认第 ${confirmedSibling?.occurrence?.index ?? '?'} 处；同一符号只能确认一处，请先撤销该确认`
+                    : undefined
+            }
+            onClick={() => void decide(candidate, 'confirm')}
+          >
+            确认
+          </button>
+          {!readOnly && candidate.status === 'confirmed' && (
+            <button
+              type="button"
+              disabled={busy}
+              title="撤销后该候选回到待确认，同一符号其它处恢复可选"
+              onClick={() => void decide(candidate, 'revoke')}
+            >
+              撤销确认
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={!canAct}
+            title={readOnly ? readOnlyReason ?? undefined : undefined}
+            onClick={() => { setRejecting(candidate.candidateId); setRejectReason('') }}
+          >
+            拒绝…
+          </button>
+          {numericFields(candidate).length > 0 && (
+            <button
+              type="button"
+              disabled={!canAct}
+              title={readOnly ? readOnlyReason ?? undefined : undefined}
+              onClick={() => {
+                const first = numericFields(candidate)[0]
+                if (first === undefined) return
+                setEditing({ candidateId: candidate.candidateId, field: first.field as EditableField, text: first.value.text })
+              }}
+            >
+              编辑…
+            </button>
+          )}
+        </div>
+        {rejecting === candidate.candidateId && (
+          <div className="extraction-review__inline" role="group" aria-label="拒绝理由">
+            <input
+              aria-label="拒绝理由"
+              value={rejectReason}
+              placeholder="必须填写拒绝理由"
+              onChange={(event) => setRejectReason(event.target.value)}
+            />
+            <button
+              type="button"
+              disabled={rejectReason.trim() === ''}
+              onClick={() => void decide(candidate, 'reject', { reason: rejectReason.trim() })}
+            >
+              确认拒绝
+            </button>
+            <button type="button" onClick={() => setRejecting(null)}>取消</button>
+          </div>
+        )}
+        {editing?.candidateId === candidate.candidateId && (
+          <div className="extraction-review__inline" role="group" aria-label="编辑候选">
+            <select
+              aria-label="编辑字段"
+              value={editing.field}
+              onChange={(event) => setEditing({ ...editing, field: event.target.value as EditableField })}
+            >
+              {numericFields(candidate).map(({ field }) => (
+                <option key={field} value={field}>{FIELD_LABEL[field] ?? field}</option>
+              ))}
+            </select>
+            <input
+              aria-label="编辑数值"
+              value={editing.text}
+              onChange={(event) => setEditing({ ...editing, text: event.target.value })}
+            />
+            <button
+              type="button"
+              onClick={() => void decide(candidate, 'edit', { field: editing.field, text: editing.text })}
+            >
+              保存修改
+            </button>
+            <button type="button" onClick={() => setEditing(null)}>取消</button>
+            <span className="extraction-review__hint">只接受 mm，且改后写法必须出现在该字段原文片段里；否则请拒绝后走人工录入。</span>
+          </div>
+        )}
+      </li>
+    )
+  }
+
   const locateRevision = locate === null
     ? null
     : revisions.find((item) => item.id === locate.revisionId) ?? null
@@ -302,9 +564,10 @@ export function ExtractionReviewPanel({
     <div className="extraction-review">
       <h2>任务书提取（待人工确认）</h2>
       <p className="extraction-review__truth">
-        规则版本 <code>{draft?.extractorVersion ?? EXTRACTOR_VERSION}</code>；本功能只做<strong>带文本层 PDF</strong>，
+        本功能只做<strong>带文本层 PDF</strong>，
         不做 OCR、DOCX、图片识别或联网识别。样本覆盖：<strong>只验证过 1 份自造样例</strong>
         （TB-2026-1110，2 页）；真实外部任务书、复杂表格/分栏/字体编码尚未验证。
+        当前规则版本见下方「当前显示」。
       </p>
       <p className="extraction-review__truth">
         提取结果只是隔离草稿：候选<strong>未确认前不参与任何计算</strong>，不写项目 target、不建条款版本、
@@ -369,6 +632,9 @@ export function ExtractionReviewPanel({
               取消提取
             </button>
           )}
+          <span className="extraction-review__hint">
+            新提取使用规则版本 <code>{EXTRACTOR_VERSION}</code>。
+          </span>
           {outdated && (
             <p role="alert" className="extraction-review__warning">
               当前选择的是旧版本（latest 为 {sourceDocument?.latestRevisionId}）。提取只读这个确切版本，不会自动改用 latest。
@@ -380,248 +646,128 @@ export function ExtractionReviewPanel({
       {message !== '' && <p role="status" className="extraction-review__message">{message}</p>}
       {error !== '' && <p role="alert" className="extraction-review__error">{error}</p>}
 
-      {drafts.length > 0 && (
+      {scopes.length > 0 && selectedScope !== null && draft !== null && (
         <section aria-label="提取草稿">
-          <div className="extraction-review__drafts">
-            {drafts.map((item) => (
-              <button
-                key={item.draftId}
-                type="button"
-                aria-pressed={item.draftId === effectiveDraftId}
-                onClick={() => setDraftId(item.draftId)}
-              >
-                草稿 {item.draftId.slice(0, 14)} · 第 {item.pageRange.from}–{item.pageRange.to} 页 · {item.extractorVersion}
-              </button>
-            ))}
-          </div>
-          {draft !== null && (
-            <>
-              <p className="extraction-review__meta">
-                确切 PDF 版本 <code>{draft.sourceIdentity.revisionId}</code> · SHA-256{' '}
-                <code>{draft.sourceIdentity.sha256.slice(0, 12)}…</code> · 页范围 {draft.pageRange.from}–{draft.pageRange.to}
-              </p>
-              <p className="extraction-review__counts">
-                待确认 {counts.pending} · 阻塞 {counts.blocked} · 已确认 {counts.confirmed} · 已拒绝 {counts.rejected}
-                {counts.stale > 0 ? ` · 已失效 ${counts.stale}` : ''}
-              </p>
-              {draft.issues.length > 0 && (
-                <ul className="extraction-review__issues" aria-label="提取问题">
-                  {draft.issues.map((issue) => (
-                    <li key={issue.issueId} data-severity={issue.severity}>
-                      {issue.code}：{issue.message}
-                      {issue.page === null ? '' : `（第 ${issue.page} 页）`}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="extraction-review__batch">
-                <span>已选 {selectedIds.length} 项</span>
-                <button type="button" onClick={() => void rejectSelected()} disabled={busy || selectedIds.length === 0}>
-                  批量拒绝选中项
+          {scopes.length > 1 && (
+            <div className="extraction-review__drafts">
+              {scopes.map((scope) => (
+                <button
+                  key={scope.key}
+                  type="button"
+                  aria-pressed={scope.key === selectedScope.key}
+                  onClick={() => setDraftId(scope.current.draftId)}
+                >
+                  草稿 {scope.current.draftId.slice(0, 14)} · {extractorVersionLabel(scope.current.extractorVersion)} · 第 {scope.current.pageRange.from}–{scope.current.pageRange.to} 页
                 </button>
-                <span className="extraction-review__hint">不提供批量确认：每条必须单独核对原文后确认。</span>
-              </div>
-              <ul className="extraction-review__candidates" aria-label="提取候选列表">
-                {draft.candidates.map((candidate) => {
-                  const evidence = evidenceOf(candidate)
-                  const firstEvidence = evidence[0]
-                  const canAct = !busy && candidate.status !== 'confirmed' && candidate.status !== 'rejected' && candidate.status !== 'stale'
-                  const occurrence = candidate.occurrence ?? null
-                  const groupMembers = candidate.kind === 'ring' && candidate.groupId !== null
-                    ? draft.candidates.filter((item) => item.kind === 'ring' && item.groupId === candidate.groupId)
-                    : []
-                  const confirmedSibling = groupMembers.length > 1
-                    ? groupMembers.find((item) => item.candidateId !== candidate.candidateId && item.status === 'confirmed')
-                    : undefined
-                  const groupConflict = confirmedSibling !== undefined
-                  return (
-                    <li
-                      key={candidate.candidateId}
-                      data-status={candidate.status}
-                      className={`extraction-review__candidate extraction-review__candidate--${candidate.status}`}
-                    >
-                      <div className="extraction-review__candidate-head">
-                        <input
-                          type="checkbox"
-                          aria-label={`选择候选 ${candidate.candidateId}`}
-                          checked={selected[candidate.candidateId] === true}
-                          disabled={candidate.status === 'confirmed' || candidate.status === 'rejected'}
-                          onChange={(event) => {
-                            setSelected((current) => {
-                              const next = { ...current }
-                              if (event.target.checked) next[candidate.candidateId] = true
-                              else delete next[candidate.candidateId]
-                              return next
-                            })
-                          }}
-                        />
-                        <strong>{KIND_LABEL[candidate.kind]} · {candidateTitle(candidate)}</strong>
-                        <span className={`extraction-review__badge extraction-review__badge--${candidate.status}`}>
-                          {STATUS_LABEL[candidate.status]}
-                        </span>
-                        {occurrence !== null && occurrence.total > 1 && (
-                          <span className="extraction-review__occurrence">
-                            同一符号第 {occurrence.index}/{occurrence.total} 处
-                          </span>
-                        )}
-                        <span className="extraction-review__confidence">置信 {candidate.confidence}</span>
-                      </div>
-                      {occurrence !== null && occurrence.total > 1 && (
-                        <p className="extraction-review__group-hint">
-                          同一符号只能确认一处；
-                          {confirmedSibling === undefined
-                            ? '确认一处后其余处不可再确认，需要先撤销。'
-                            : `已确认第 ${confirmedSibling.occurrence?.index ?? '?'}/${confirmedSibling.occurrence?.total ?? '?'} 处，需先撤销该确认才能选此处。`}
+              ))}
+            </div>
+          )}
+          <p className="extraction-review__current" data-testid="extraction-current-draft">
+            当前显示：<code>{draft.extractorVersion}</code> · 草稿 <code>{draft.draftId}</code> · 第 {draft.pageRange.from}–{draft.pageRange.to} 页
+            {selectedScope.superseded.length > 0
+              ? `（该范围另有 ${selectedScope.superseded.length} 份旧草稿已折叠，只读）`
+              : ''}
+          </p>
+          <p className="extraction-review__meta">
+            确切 PDF 版本 <code>{draft.sourceIdentity.revisionId}</code> · SHA-256{' '}
+            <code>{draft.sourceIdentity.sha256.slice(0, 12)}…</code> · 页范围 {draft.pageRange.from}–{draft.pageRange.to}
+          </p>
+          <p className="extraction-review__counts">
+            待确认 {counts.pending} · 阻塞 {counts.blocked} · 已确认 {counts.confirmed} · 已拒绝 {counts.rejected}
+            {counts.stale > 0 ? ` · 已失效 ${counts.stale}` : ''}
+          </p>
+          {draft.issues.length > 0 && (
+            <ul className="extraction-review__issues" aria-label="提取问题">
+              {draft.issues.map((issue) => (
+                <li key={issue.issueId} data-severity={issue.severity}>
+                  {issue.code}：{issue.message}
+                  {issue.page === null ? '' : `（第 ${issue.page} 页）`}
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="extraction-review__batch">
+            <span>已选 {selectedIds.length} 项</span>
+            <button type="button" onClick={() => void rejectSelected()} disabled={busy || selectedIds.length === 0}>
+              批量拒绝选中项
+            </button>
+            <span className="extraction-review__hint">不提供批量确认：每条必须单独核对原文后确认。</span>
+          </div>
+          <ul className="extraction-review__candidates" aria-label="提取候选列表">
+            {draft.candidates.map((candidate) => renderCandidate(candidate, draft, null))}
+          </ul>
+
+          {selectedScope.superseded.length > 0 && (
+            <section aria-label="旧规则版本草稿" className="extraction-review__superseded">
+              <h3>旧草稿（折叠，只读）</h3>
+              {selectedScope.superseded.map((old) => {
+                const expanded = expandedDraftIds[old.draftId] === true
+                const confirmedCount = activeConfirmedDecisionCount(old)
+                const deletable = canDeleteDraft(old, drafts)
+                const older = compareExtractorVersions(old.extractorVersion, draft.extractorVersion) < 0
+                const readOnlyReason = older
+                  ? `旧规则版本，请在新版（${draft.extractorVersion}）上复核后确认：此处只读，确认/编辑/拒绝均不可用。`
+                  : `非当前草稿（同版本重复），请在新版（${draft.extractorVersion}）上复核后确认：此处只读，确认/编辑/拒绝均不可用。`
+                return (
+                  <div key={old.draftId} className="extraction-review__superseded-row">
+                    <p className="extraction-review__superseded-headline">
+                      {older
+                        ? `旧规则版本（${old.extractorVersion}）· 共 ${old.candidates.length} 条候选${confirmedCount > 0 ? `（已确认 ${confirmedCount}）` : ''}${confirmedCount > 0 ? '' : ' '}· 已被 ${extractorVersionLabel(draft.extractorVersion)} 取代`
+                        : `同版本重复草稿（${old.extractorVersion}）· 共 ${old.candidates.length} 条候选${confirmedCount > 0 ? `（已确认 ${confirmedCount}）` : ''}${confirmedCount > 0 ? '' : ' '}· 未删除，仅供对照`}
+                    </p>
+                    <div className="extraction-review__actions">
+                      <button
+                        type="button"
+                        aria-expanded={expanded}
+                        onClick={() => setExpandedDraftIds((current) => {
+                          const next = { ...current }
+                          if (expanded) delete next[old.draftId]
+                          else next[old.draftId] = true
+                          return next
+                        })}
+                      >
+                        {expanded ? '收起旧草稿候选' : '展开查看旧草稿候选'}
+                      </button>
+                      {deletable && (
+                        <button
+                          type="button"
+                          disabled={busy || deleting !== null}
+                          onClick={() => setConfirmDeleteId(old.draftId)}
+                        >
+                          删除该旧草稿…
+                        </button>
+                      )}
+                    </div>
+                    {confirmDeleteId === old.draftId && (
+                      <div className="extraction-review__inline" role="group" aria-label="删除旧草稿确认">
+                        <p role="alert">
+                          {confirmedCount > 0
+                            ? `该草稿有 ${confirmedCount} 条已确认决定，删除后不可恢复；`
+                            : '该草稿无已确认决定；'}
+                          只删除该草稿的候选与决定，来源 PDF、条款、绑定与图纸不受影响。
                         </p>
-                      )}
-                      <p className="extraction-review__raw">原文：{candidate.rawText}</p>
-                      <p className="extraction-review__evidence">
-                        第 {candidate.page} 页
-                        {firstEvidence !== undefined
-                          ? ` · 选区 PDF 点 ${formatRect(firstEvidence.rectPdf)} · 页框 ${formatRect(firstEvidence.pageBoxPdf)} · 片段「${firstEvidence.textSnippet}」· item ${firstEvidence.textItemIndexes.join(',')}`
-                          : ' · 无选区出处'}
-                      </p>
-                      <p className="extraction-review__values">
-                        {numericFields(candidate).length === 0
-                          ? '无数值字段（仅保留原文与结构）'
-                          : numericFields(candidate)
-                              .map(({ field, value }) => `${FIELD_LABEL[field] ?? field}=${value.text}${value.unitText ? ` ${value.unitText}` : ''}${value.unit === null ? '（单位未确认）' : ''}`)
-                              .join(' · ')}
-                      </p>
-                      {candidate.reasonCodes.length > 0 && (
-                        <p className="extraction-review__reasons">原因码：{candidate.reasonCodes.join('、')}</p>
-                      )}
-                      {(() => {
-                        const decision = [...draft.decisions]
-                          .filter(
-                            (item) =>
-                              item.candidateId === candidate.candidateId &&
-                              item.invalidatedByEditRevision === null,
-                          )
-                          .at(-1)
-                        if (decision === undefined) return null
-                        const actionLabel =
-                          decision.action === 'confirm'
-                            ? '确认'
-                            : decision.action === 'reject'
-                              ? '拒绝'
-                              : decision.action === 'revoke'
-                                ? '撤销确认'
-                                : '人工修改'
-                        return (
-                          <p className="extraction-review__decision">
-                            决定：{actionLabel} · {decision.actor} · {decision.decidedAt}
-                            {decision.reason === null ? '' : ` · 理由：${decision.reason}`}
-                          </p>
-                        )
-                      })()}
-                      <div className="extraction-review__actions">
                         <button
                           type="button"
-                          disabled={firstEvidence === undefined}
-                          onClick={() => {
-                            if (firstEvidence === undefined) return
-                            setLocate({
-                              revisionId: firstEvidence.revisionId,
-                              page: firstEvidence.page,
-                              rectPdf: firstEvidence.rectPdf,
-                              pageBoxPdf: firstEvidence.pageBoxPdf,
-                              label: candidateTitle(candidate),
-                            })
-                          }}
+                          disabled={busy || deleting === old.draftId}
+                          onClick={() => void deleteOldDraft(old)}
                         >
-                          定位到 PDF 选区
+                          确认删除
                         </button>
-                        <button
-                          type="button"
-                          disabled={!canAct || candidate.status === 'blocked' || groupConflict}
-                          title={
-                            candidate.status === 'blocked'
-                              ? '阻塞候选必须先解决原因码，不能确认'
-                              : groupConflict
-                                ? `同一符号已确认第 ${confirmedSibling?.occurrence?.index ?? '?'} 处；同一符号只能确认一处，请先撤销该确认`
-                                : undefined
-                          }
-                          onClick={() => void decide(candidate, 'confirm')}
-                        >
-                          确认
-                        </button>
-                        {candidate.status === 'confirmed' && (
-                          <button
-                            type="button"
-                            disabled={busy}
-                            title="撤销后该候选回到待确认，同一符号其它处恢复可选"
-                            onClick={() => void decide(candidate, 'revoke')}
-                          >
-                            撤销确认
-                          </button>
-                        )}
-                        <button type="button" disabled={!canAct} onClick={() => { setRejecting(candidate.candidateId); setRejectReason('') }}>
-                          拒绝…
-                        </button>
-                        {numericFields(candidate).length > 0 && (
-                          <button
-                            type="button"
-                            disabled={!canAct}
-                            onClick={() => {
-                              const first = numericFields(candidate)[0]
-                              if (first === undefined) return
-                              setEditing({ candidateId: candidate.candidateId, field: first.field as EditableField, text: first.value.text })
-                            }}
-                          >
-                            编辑…
-                          </button>
-                        )}
+                        <button type="button" onClick={() => setConfirmDeleteId(null)}>取消</button>
                       </div>
-                      {rejecting === candidate.candidateId && (
-                        <div className="extraction-review__inline" role="group" aria-label="拒绝理由">
-                          <input
-                            aria-label="拒绝理由"
-                            value={rejectReason}
-                            placeholder="必须填写拒绝理由"
-                            onChange={(event) => setRejectReason(event.target.value)}
-                          />
-                          <button
-                            type="button"
-                            disabled={rejectReason.trim() === ''}
-                            onClick={() => void decide(candidate, 'reject', { reason: rejectReason.trim() })}
-                          >
-                            确认拒绝
-                          </button>
-                          <button type="button" onClick={() => setRejecting(null)}>取消</button>
-                        </div>
-                      )}
-                      {editing?.candidateId === candidate.candidateId && (
-                        <div className="extraction-review__inline" role="group" aria-label="编辑候选">
-                          <select
-                            aria-label="编辑字段"
-                            value={editing.field}
-                            onChange={(event) => setEditing({ ...editing, field: event.target.value as EditableField })}
-                          >
-                            {numericFields(candidate).map(({ field }) => (
-                              <option key={field} value={field}>{FIELD_LABEL[field] ?? field}</option>
-                            ))}
-                          </select>
-                          <input
-                            aria-label="编辑数值"
-                            value={editing.text}
-                            onChange={(event) => setEditing({ ...editing, text: event.target.value })}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => void decide(candidate, 'edit', { field: editing.field, text: editing.text })}
-                          >
-                            保存修改
-                          </button>
-                          <button type="button" onClick={() => setEditing(null)}>取消</button>
-                          <span className="extraction-review__hint">只接受 mm，且改后写法必须出现在该字段原文片段里；否则请拒绝后走人工录入。</span>
-                        </div>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            </>
+                    )}
+                    {expanded && (
+                      <ul
+                        className="extraction-review__candidates"
+                        aria-label={`旧草稿候选列表 ${old.draftId}`}
+                      >
+                        {old.candidates.map((candidate) => renderCandidate(candidate, old, readOnlyReason))}
+                      </ul>
+                    )}
+                  </div>
+                )
+              })}
+            </section>
           )}
         </section>
       )}

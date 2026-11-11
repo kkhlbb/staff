@@ -6,8 +6,13 @@
  *
  * 语义：一条草稿内 pending / blocked 都是“未决”；confirmed / rejected / stale
  * 已处理完，不计入。多份草稿（不同页范围）逐份累加，因为入口角标面向整个项目。
+ *
+ * 多草稿修订：同一 PDF 版本 + 同一页范围下的旧规则版本草稿已被取代（只读、不可
+ * 确认），它的候选算“已看不到的旧结果”，不再计入角标——否则用户点进提取页只
+ * 能看到折叠行，角标却按两份草稿累加，计数与实际可处理项对不上。
  */
 import type { ExtractionDraft } from './types'
+import { isDraftSuperseded } from './draftScope'
 
 export interface ExtractionPendingCounts {
   readonly pending: number
@@ -22,6 +27,7 @@ export function countPendingExtractionCandidates(
   let pending = 0
   let blocked = 0
   for (const draft of drafts) {
+    if (isDraftSuperseded(draft, drafts)) continue
     for (const candidate of draft.candidates) {
       if (candidate.status === 'pending') pending += 1
       else if (candidate.status === 'blocked') blocked += 1

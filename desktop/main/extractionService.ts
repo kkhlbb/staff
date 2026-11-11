@@ -17,12 +17,14 @@ import type {
   ExtractionCancelValue,
   ExtractionDecideRequest,
   ExtractionDecideValue,
+  ExtractionDeleteDraftRequest,
+  ExtractionDeleteDraftValue,
   ExtractionRunRequest,
   ExtractionRunValue,
   IpcErrorCode,
   IpcResult,
 } from '../shared/contracts'
-import { toSnapshotDto } from '../../src/project-file/codec'
+import { encodeProjectFile, toSnapshotDto } from '../../src/project-file/codec'
 import type { ProjectFileProject, ProjectFileRevision, ProjectFileSnapshot } from '../../src/project-file/types'
 import type { SourceRevision } from '../../src/sources/types'
 import { sha256Hex } from '../../src/sources/hash'
@@ -39,6 +41,7 @@ import {
   mergeExtractionDraft,
   rejectCandidate,
   revokeConfirmation,
+  isDraftSuperseded,
   type EditableField,
   type ExtractionCandidate,
   type ExtractionDraft,
@@ -426,6 +429,15 @@ export class ExtractionService {
     if (draft === undefined) {
       return failure('NOT_FOUND', '提取草稿不存在或已被替换', `draftId=${request.draftId}`)
     }
+    // 多草稿：旧规则版本的草稿只能查看/定位/删除；确认、拒绝、编辑一律拒绝，
+    // 避免界面或伪造请求把旧规则结果当成现行结论确认。
+    if (isDraftSuperseded(draft, drafts)) {
+      return failure(
+        'EXTRACTION_DRAFT_SUPERSEDED',
+        '旧规则版本的草稿只读：请在最新版本草稿上复核后确认',
+        `draftId=${draft.draftId}, extractorVersion=${draft.extractorVersion}`,
+      )
+    }
     const candidate = findCandidate(draft, request.candidateId)
     if (candidate === null) {
       return failure('NOT_FOUND', '候选不存在', `candidateId=${request.candidateId}`)
@@ -569,6 +581,103 @@ export class ExtractionService {
         recovery,
       },
     }
+  }
+
+  /**
+   * 删除一份被取代的草稿（多草稿方案 3）。
+   *
+   * 原子顺序：校验（会话/编辑序号/草稿存在/确实被取代）→ 按 schema8 编码自校验
+   * → 写恢复草稿 → 才切换会话快照与编辑序号。任何一步失败都返回错误，内存快照、
+   * 恢复草稿与项目文件都不变；成功也只删这一份草稿条目，来源 PDF/条款/绑定/图纸
+   * 与其它草稿原样保留。项目文件仍需用户显式保存才落盘。
+   */
+  async deleteDraft(
+    request: ExtractionDeleteDraftRequest,
+  ): Promise<IpcResult<ExtractionDeleteDraftValue>> {
+    return this.enqueue(request.sessionId, () => this.deleteDraftInner(request))
+  }
+
+  private async deleteDraftInner(
+    request: ExtractionDeleteDraftRequest,
+  ): Promise<IpcResult<ExtractionDeleteDraftValue>> {
+    const session = this.deps.projectService.getSession(request.sessionId)
+    if (session === null) {
+      return failure('STALE_SESSION', '会话已失效，请重新打开项目')
+    }
+    if (request.baseEditSeq !== session.acceptedSeq) {
+      return failure(
+        'STALE_EDIT',
+        '删除期间项目已发生其它编辑，请刷新后重试',
+        `acceptedSeq=${session.acceptedSeq}, baseEditSeq=${request.baseEditSeq}`,
+      )
+    }
+    const drafts = session.snapshot.project.extractionDrafts
+    const draft = drafts.find((item) => item.draftId === request.draftId)
+    if (draft === undefined) {
+      return failure('NOT_FOUND', '提取草稿不存在或已被删除', `draftId=${request.draftId}`)
+    }
+    if (!isDraftSuperseded(draft, drafts)) {
+      return failure(
+        'EXTRACTION_DRAFT_LATEST',
+        '最新规则版本的草稿不能删除；如需重新提取，直接在同一范围重提即可，旧结果会自动折叠保留',
+        `draftId=${draft.draftId}, extractorVersion=${draft.extractorVersion}`,
+      )
+    }
+
+    const nextDrafts = drafts.filter((item) => item.draftId !== draft.draftId)
+    const nextSnapshot: ProjectFileSnapshot = {
+      ...session.snapshot,
+      project: { ...session.snapshot.project, extractionDrafts: nextDrafts },
+    }
+    const nextSeq = request.baseEditSeq + 1
+
+    // 写前自校验：删除后的聚合必须仍能按 schema8 完整编码/回读，否则零写入。
+    let encoded: Awaited<ReturnType<typeof encodeProjectFile>>
+    try {
+      encoded = await encodeProjectFile(nextSnapshot)
+    } catch (error) {
+      return failure(
+        'INTERNAL',
+        '删除后的项目无法通过格式校验，已取消删除',
+        error instanceof Error ? error.message : String(error),
+      )
+    }
+    if (!encoded.ok) {
+      return failure(
+        'INTERNAL',
+        '删除后的项目无法通过格式校验，已取消删除',
+        `${encoded.error.code}: ${encoded.error.message}`,
+      )
+    }
+
+    let staged: Awaited<ReturnType<RecoveryStore['stage']>>
+    try {
+      staged = await this.deps.recovery.stage(
+        session.sessionId,
+        nextSnapshot,
+        nextSeq,
+        this.deps.controller.recoveryMeta(session, nextSnapshot),
+      )
+    } catch (error) {
+      // 恢复草稿写失败：会话快照与草稿都保持原样（不先改内存再补写）。
+      return failure(
+        'INTERNAL',
+        '草稿删除未能写入恢复文件，已取消删除（项目与草稿均未改变）',
+        error instanceof Error ? error.message : String(error),
+      )
+    }
+
+    session.snapshot = nextSnapshot
+    session.acceptedSeq = nextSeq
+    const value: ExtractionDeleteDraftValue = {
+      acceptedSeq: nextSeq,
+      draftId: draft.draftId,
+      remainingDraftCount: nextDrafts.length,
+      snapshot: toSnapshotDto(nextSnapshot),
+      recovery: staged.state,
+    }
+    if (staged.warning !== undefined) value.warning = staged.warning
+    return { ok: true, value }
   }
 
   /** 只读：给定快照与版本，返回该版本是否不是 latest（供 UI 醒目提示）。 */
