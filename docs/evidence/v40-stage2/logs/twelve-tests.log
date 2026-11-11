@@ -1,0 +1,24 @@
+$ npm exec -- vitest run --config vitest.desktop.config.ts desktop/tests/agentScheduler.test.ts --reporter=verbose
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ✓ desktop/tests/agentScheduler.test.ts > V4.0 阶段 2：Agent 调度十二项状态验收 > S2-01 假模型正常：context → stage → preview → done，状态按表推进、步骤与草稿落盘 137ms
+ ✓ desktop/tests/agentScheduler.test.ts > V4.0 阶段 2：Agent 调度十二项状态验收 > S2-02 模型超时：TIMEOUT → failed，草稿保留，可继续并在原记录后追加步骤 147ms
+ ✓ desktop/tests/agentScheduler.test.ts > V4.0 阶段 2：Agent 调度十二项状态验收 > S2-03 连接失败与非 JSON 回包：TOOL_FAILED，不执行任何工具 89ms
+ ✓ desktop/tests/agentScheduler.test.ts > V4.0 阶段 2：Agent 调度十二项状态验收 > S2-04 工具参数不合法（缺字段/类型错/多字段/非 JSON）：INVALID_INPUT，不执行、不猜参数 98ms
+ ✓ desktop/tests/agentScheduler.test.ts > V4.0 阶段 2：Agent 调度十二项状态验收 > S2-05 模型说“已保存”但工具失败：状态按工具回执，不得标记完成 87ms
+ ✓ desktop/tests/agentScheduler.test.ts > V4.0 阶段 2：Agent 调度十二项状态验收 > S2-06 超过 20 次工具调用：第 21 次不执行，awaiting-input 并保留证据 778ms
+ ✓ desktop/tests/agentScheduler.test.ts > V4.0 阶段 2：Agent 调度十二项状态验收 > S2-07 同一工具连续两次相同失败：停止并说明（REPEATED_FAILURE） 106ms
+ ✓ desktop/tests/agentScheduler.test.ts > V4.0 阶段 2：Agent 调度十二项状态验收 > S2-08 取消：未执行回包丢弃；已进入执行的跑到边界并如实报告真实结果 212ms
+ ✓ desktop/tests/agentScheduler.test.ts > V4.0 阶段 2：Agent 调度十二项状态验收 > S2-09 切换项目后旧任务回包：按 taskId+projectId 丢弃，新项目零写入（M12） 90ms
+ ✓ desktop/tests/agentScheduler.test.ts > V4.0 阶段 2：Agent 调度十二项状态验收 > S2-10 同项目第二个写任务：CONSTRAINT_VIOLATED，不创建第二条任务 126ms
+ ✓ desktop/tests/agentScheduler.test.ts > V4.0 阶段 2：Agent 调度十二项状态验收 > S2-11 任务记录脱敏：不含 key、/Users/、PDF 全文，保留工具名与关键数值 88ms
+ ✓ desktop/tests/agentScheduler.test.ts > V4.0 阶段 2：Agent 调度十二项状态验收 > S2-12 未配置模型：明确报未配置，不创建任务、不假装可用 2ms
+
+ Test Files  1 passed (1)
+      Tests  12 passed (12)
+   Start at  01:18:23
+   Duration  2.05s (tests 99%, import 1%)
+
+
+exitCode=0
