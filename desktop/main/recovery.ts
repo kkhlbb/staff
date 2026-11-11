@@ -249,6 +249,20 @@ export class RecoveryStore {
     return this.sessions.get(sessionId)?.lastState ?? 'none'
   }
 
+  /** V4：只读已持久化的项目容器，绝不把 pending 内存副本当确认凭据。 */
+  async readPersisted(sessionId: string): Promise<IpcResult<ProjectFileSnapshot>> {
+    const state = this.sessions.get(sessionId)
+    if (state === undefined || state.pending !== null || state.writing !== null) {
+      return fail('RECOVERY_READ_FAILED', '候选决定尚未持久化')
+    }
+    try {
+      const decoded = await decodeProjectFile(await this.ops.readFile(this.draftPath(state.recoveryId)))
+      return decoded.ok ? { ok: true, value: decoded.value.snapshot } : decoded
+    } catch {
+      return fail('RECOVERY_READ_FAILED', '已保存的候选决定无法读取')
+    }
+  }
+
   /** 草稿被正式保存或用户明确放弃后清理；清理失败不否认主操作。 */
   async discard(sessionId: string): Promise<void> {
     const state = this.sessions.get(sessionId)

@@ -1,0 +1,13 @@
+file:///Users/aston/DSH/staff/scripts/v40-stage1-packaged.mjs:24
+    if (child.exitCode !== null) throw new Error(`app exited ${child.exitCode}: ${appOutput}`)
+                                       ^
+
+Error: app exited 0: Warning: Cannot access the `require` function: "TypeError [ERR_INVALID_ARG_VALUE]: The argument 'filename' must be a file URL object, file URL string, or absolute path string. Received undefined".
+Warning: Cannot polyfill `DOMMatrix`, rendering may be broken.
+Warning: Cannot polyfill `Path2D`, rendering may be broken.
+
+DevTools listening on ws://127.0.0.1:9341/devtools/browser/7f2a202e-9af2-45a9-a5e0-8c05a03cfee8
+
+    at file:///Users/aston/DSH/staff/scripts/v40-stage1-packaged.mjs:24:40
+
+Node.js v26.12.1

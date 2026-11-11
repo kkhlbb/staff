@@ -1,0 +1,13 @@
+PASS 7 real-PDF candidates confirmed
+PASS geometry 20/32/12 mm q
+PASS chain directions H-B1-S-B2
+PASS length binding
+PASS draft-only requirement [0.1000,0.3000]
+PASS baseline [0.1500,0.2500]
+PASS drawing parameters same q
+PASS idempotent draft identity
+PASS increment is integer-q and preview checks [0.1100,0.2100]
+PASS formal version and target untouched
+PASS seed project disk bytes untouched
+PASS actual workspace draft+recovery record read back
+PASS packaged A40-01 trace written; steps=15

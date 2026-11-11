@@ -48,6 +48,8 @@ import { registerRequirementChannels } from './requirementChannels'
 import { registerExtractionChannels } from './extractionChannels'
 import { ExtractionService } from './extractionService'
 import { ChangeService } from './changeService'
+import { AgentToolService } from './agentToolService'
+import { registerAgentToolChannels, agentChangeRouter } from './agentToolChannels'
 import { inspectSourcePdf } from './pdfSourceInspect'
 import { DrawingExportStore, type DrawingExportKind } from './drawingExportStore'
 import { printDrawingToPdf } from './drawingPdf'
@@ -500,7 +502,9 @@ function installIpcHandlers(): void {
     pickSaveTarget: (suggestedName) => pickSaveTargetFor(sanitizeFileName(suggestedName)),
     confirmOverwrite: confirmProjectOverwrite,
   })
-  registerChangeChannels(ipc, {
+  const agentTools = new AgentToolService({ projectService, recovery, controller, rootDir: path.join(app.getPath('userData'), 'workspace') })
+  registerAgentToolChannels(ipc, { guard, service: agentTools })
+  registerChangeChannels(agentChangeRouter(ipc, { guard, service: agentTools }), {
     guard,
     controller,
     changeService,
@@ -534,6 +538,7 @@ function installIpcHandlers(): void {
     guard,
     controller,
     service: extractionService,
+    issuePlanToken: (windowId, draftId) => agentTools.issueAfterDecision(windowId, draftId),
     log: logStage,
   })
 

@@ -80,6 +80,9 @@ export const IPC_CHANNELS = {
   extractionCancel: 'extraction:cancel',
   /** V3.6 多草稿：删除被取代（旧规则版本）的草稿。 */
   extractionDeleteDraft: 'extraction:delete-draft',
+  agentContext: 'agent:context',
+  agentConfirmedInputs: 'agent:confirmed-inputs',
+  agentApplyConfirmed: 'agent:apply-confirmed',
 } as const
 
 export type IpcChannelName = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
@@ -807,6 +810,8 @@ export interface ExtractionDecideRequest {
 }
 
 export interface ExtractionDecideValue {
+  /** Main-issued after UI confirmation has been persisted; never accepted from Agent input. */
+  planToken?: string
   acceptedSeq: number
   draftId: string
   candidateId: string
@@ -858,7 +863,67 @@ export interface ExtractionDeleteDraftValue {
  * 只列具体函数；A-02/A-03/A-04 扩展项目会话方法时同步扩展本接口，并由主进程
  * 注册对应通道。这里不出现 `invoke`/`send`/`on` 这类通用转义口。
  */
+export type ToolErrorCode =
+  | 'INVALID_INPUT' | 'NEEDS_CLARIFICATION' | 'UNSUPPORTED_SCOPE' | 'SOURCE_CHANGED'
+  | 'NOT_CONFIRMED' | 'CONSTRAINT_VIOLATED' | 'STALE_BASE' | 'STALE_PREVIEW'
+  | 'CANCELLED' | 'TIMEOUT' | 'TOOL_FAILED' | 'SAVE_FAILED'
+
+export type ToolResult<T> =
+  | { ok: true; data: T; requestId: string; objectVersion: string }
+  | { ok: false; code: ToolErrorCode; message: string; requestId: string; objectVersion?: string; details?: unknown }
+
+export interface ApplyConfirmedInputsRequest {
+  planToken: string
+  baseRevisionId: string
+  candidateIds: string[]
+  mapping: import('../../src/agent-tools/mapConfirmed').MappingIntent
+}
+
+export interface AgentDraftValue extends importAgentMappedInputs {
+  draftId: string
+  draftRevision: number
+  baseRevisionId: string
+  checkStatus: 'pending-confirmation'
+  requirementPreview: { status: 'pending-confirmation' | 'unchecked'; reasonCodes: string[]; result: ChainResult | null }
+  stale: boolean
+  evidenceRefs: import('../../src/document-extraction').ExtractionEvidence[]
+  issues: { code: ToolErrorCode; missing: { field: string; purpose: string }[] }[]
+  geometry: { innerDiameterQ: number; outerDiameterQ: number; lengthQ: number }
+  diff: { before: ChainDefinition; after: ChainDefinition; parameters: ParameterDiffRow[] }
+}
+type importAgentMappedInputs = import('../../src/agent-tools/mapConfirmed').MappedInputs
+
+export interface AgentContextValue {
+  projectId: string
+  revisionId: string
+  draft: AgentDraftValue | null
+  parameters: ProjectFileSpacerParameter[]
+  bindings: ProjectFileSnapshot['project']['dimensionLinks']
+  requirements: RequirementRevision[]
+  check: RequirementCheck | null
+}
+
+export interface AgentParameterChangeRequest {
+  toolMode: 'agent'
+  draftId: string
+  baseRevisionId: string
+  parameter: 'innerDiameter' | 'outerDiameter' | 'length'
+  valueMm?: string
+  deltaMm?: string
+  lockedKeys: ('innerDiameter' | 'outerDiameter' | 'length')[]
+}
+export interface AgentPreviewRequest {
+  toolMode: 'agent'
+  draftId: string
+  baseRevisionId: string
+}
+
 export interface CunlianApi {
+  getProjectContext(): Promise<ToolResult<AgentContextValue>>
+  getConfirmedInputs(request: { draftId: string }): Promise<ToolResult<import('../../src/document-extraction').ExtractionDraft>>
+  applyConfirmedInputs(request: ApplyConfirmedInputsRequest): Promise<ToolResult<AgentDraftValue>>
+  stageParameterChange(request: AgentParameterChangeRequest): Promise<ToolResult<AgentDraftValue>>
+  previewAndCheck(request: AgentPreviewRequest): Promise<ToolResult<AgentDraftValue>>
   /** 新建项目（A-04）：dirty gate → main 构造默认聚合 → editSeq 从 0 开始。 */
   newProject(request: {
     name: string

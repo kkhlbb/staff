@@ -1,0 +1,9 @@
+PASS evidence serializer/guard docs/evidence/v40-stage1/a40-01-packaged-trace.json
+PASS evidence serializer/guard docs/evidence/v40-stage1/a40-01-state-trace.json
+PASS evidence serializer/guard docs/evidence/v40-stage1/artifacts.json
+PASS evidence serializer/guard docs/evidence/v40-stage1/verification.json
+nine-tests: Test Files  1 passed (1); Tests  16 passed (16)
+test: Test Files  95 passed (95); Tests  1008 passed (1008)
+test-desktop: Test Files  30 passed (30); Tests  217 passed (217)
+PASS JSON count=4
+PASS product git diff HEAD --check (raw PDF fixture text whitespace preserved)
