@@ -1,0 +1,110 @@
+{
+  "beforeDelete": {
+    "header": "当前显示：document-extractor-2 · 草稿 draft-d11a60a683e35328 · 第 1–2 页（该范围另有 1 份旧草稿已折叠，只读）",
+    "rows": 7,
+    "statuses": [
+      "pending",
+      "pending",
+      "pending",
+      "pending",
+      "pending",
+      "pending",
+      "pending"
+    ],
+    "counts": "待确认 7 · 阻塞 0 · 已确认 0 · 已拒绝 0",
+    "badge": "待确认 7",
+    "supersededRows": 1,
+    "foldedHeadline": "旧规则版本（document-extractor-1）· 共 7 条候选（已确认 1）· 已被 v2 取代",
+    "session": {
+      "drafts": [
+        {
+          "draftId": "draft-d01a5f1315a6b269",
+          "extractorVersion": "document-extractor-1",
+          "candidates": 7,
+          "confirmed": 1,
+          "decisions": 1
+        },
+        {
+          "draftId": "draft-d11a60a683e35328",
+          "extractorVersion": "document-extractor-2",
+          "candidates": 7,
+          "confirmed": 0,
+          "decisions": 0
+        }
+      ],
+      "savedSeq": 0,
+      "editSeq": 0
+    }
+  },
+  "expandedOldDraft": {
+    "rows": 7,
+    "note": "旧规则版本，请在新版（document-extractor-2）上复核后确认：此处只读，确认/编辑/拒绝均不可用。",
+    "confirmDisabled": true,
+    "confirmTitle": "旧规则版本，请在新版（document-extractor-2）上复核后确认：此处只读，确认/编辑/拒绝均不可用。",
+    "rejectDisabled": true,
+    "editDisabled": true,
+    "locateDisabled": false,
+    "checkboxDisabled": true
+  },
+  "deleteConfirm": {
+    "alert": "该草稿有 1 条已确认决定，删除后不可恢复；只删除该草稿的候选与决定，来源 PDF、条款、绑定与图纸不受影响。",
+    "buttons": [
+      "确认删除",
+      "取消"
+    ]
+  },
+  "afterDelete": {
+    "header": "当前显示：document-extractor-2 · 草稿 draft-d11a60a683e35328 · 第 1–2 页",
+    "rows": 7,
+    "counts": "待确认 7 · 阻塞 0 · 已确认 0 · 已拒绝 0",
+    "badge": "待确认 7",
+    "message": "已删除旧草稿 draft-d01a5f1315a6b269（document-extractor-1）：只删了这一份草稿，来源 PDF、条款、绑定与图纸未改动；保存项目后写入文件。",
+    "supersededRows": 0,
+    "session": {
+      "drafts": [
+        {
+          "draftId": "draft-d11a60a683e35328",
+          "extractorVersion": "document-extractor-2",
+          "candidates": 7,
+          "confirmed": 0,
+          "decisions": 0
+        }
+      ],
+      "savedSeq": 0,
+      "editSeq": 1
+    }
+  },
+  "saved": {
+    "drafts": [
+      {
+        "draftId": "draft-d11a60a683e35328",
+        "extractorVersion": "document-extractor-2",
+        "candidates": 7,
+        "confirmed": 0,
+        "decisions": 0
+      }
+    ],
+    "savedSeq": 1,
+    "editSeq": 1
+  },
+  "reopened": {
+    "header": "当前显示：document-extractor-2 · 草稿 draft-d11a60a683e35328 · 第 1–2 页",
+    "rows": 7,
+    "supersededRows": 0,
+    "badge": "待确认 7",
+    "session": {
+      "drafts": [
+        {
+          "draftId": "draft-d11a60a683e35328",
+          "extractorVersion": "document-extractor-2",
+          "candidates": 7,
+          "confirmed": 0,
+          "decisions": 0
+        }
+      ],
+      "savedSeq": 0,
+      "editSeq": 0
+    }
+  },
+  "result": "PASS"
+}

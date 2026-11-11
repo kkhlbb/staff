@@ -1,0 +1,4 @@
+
+> staff@3.6.0-alpha typecheck:desktop
+> tsc -p tsconfig.desktop.json --noEmit
+

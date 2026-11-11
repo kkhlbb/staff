@@ -1,0 +1,9 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+
+ Test Files  2 passed (2)
+      Tests  20 passed (20)
+   Start at  18:06:18
+   Duration  470ms (environment 38%, tests 38%, setup 14%, import 5%, transform 4%, worker 1%)
+

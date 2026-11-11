@@ -1,0 +1,4588 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/document-extraction/draftScope.test.ts (6 tests | 2 failed) 16ms
+   ❯ V3.6 多草稿：默认选最新、旧草稿折叠、可删判定 (5)
+     × 默认选中最新的 extractor 版本，与数组顺序无关 11ms
+     × 同一 PDF 版本 + 同一页范围才互相取代；不同页范围各自是独立作用域 2ms
+stderr | src/components/ExtractionReviewPanel.test.tsx
+Warning: Please use the `legacy` build in Node.js environments.
+
+ ❯ src/components/ExtractionReviewPanel.test.tsx (14 tests | 6 failed) 225ms
+   ❯ V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次确认 (6)
+     × 默认选中最新的 extractor 版本（旧版在前也选新），顶部写明版本与草稿 id 4ms
+     × 旧草稿折叠成一行：版本/候选数/已确认数/被谁取代 4ms
+     × 展开旧草稿：候选可看、确认/编辑/拒绝禁用并写明原因，定位仍可用 28ms
+     × 删除先二次确认：写明已确认决定数，确认后才发删除请求 20ms
+     × 无已确认决定的旧草稿：确认框写明“无已确认决定” 19ms
+     × 删除失败（返回 null）：提示错误、旧草稿仍在 18ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/ExtractionReviewPanel.test.tsx > V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次确认 > 默认选中最新的 extractor 版本（旧版在前也选新），顶部写明版本与草稿 id
+AssertionError: expected '当前显示：document-extractor-1 · 草稿 draft-…' to contain 'document-extractor-2'
+
+Expected: "document-extractor-2"
+Received: "当前显示：document-extractor-1 · 草稿 draft-old · 第 1–2 页（该范围另有 1 份旧草稿已折叠，只读）"
+
+ ❯ src/components/ExtractionReviewPanel.test.tsx:428:33
+    426|     render(<ExtractionReviewPanel snapshot={await twoDraftSnapshot('ol…
+    427|     const current = screen.getByTestId('extraction-current-draft')
+    428|     expect(current.textContent).toContain('document-extractor-2')
+       |                                 ^
+    429|     expect(current.textContent).toContain('draft-new')
+    430|     expect(current.textContent).not.toContain('document-extractor-1')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  src/components/ExtractionReviewPanel.test.tsx > V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次确认 > 旧草稿折叠成一行：版本/候选数/已确认数/被谁取代
+TestingLibraryElementError: Unable to find an element with the text: 旧规则版本（document-extractor-1）· 共 4 条候选（已确认 1）· 已被 v2 取代. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"extraction-review"[39m
+    [36m>[39m
+      [36m<h2>[39m
+        [0m任务书提取（待人工确认）[0m
+      [36m</h2>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"extraction-review__truth"[39m
+      [36m>[39m
+        [0m本功能只做[0m
+        [36m<strong>[39m
+          [0m带文本层 PDF[0m
+        [36m</strong>[39m
+        [0m， 不做 OCR、DOCX、图片识别或联网识别。样本覆盖：[0m
+        [36m<strong>[39m
+          [0m只验证过 1 份自造样例[0m
+        [36m</strong>[39m
+        [0m（TB-2026-1110，2 页）；真实外部任务书、复杂表格/分栏/字体编码尚未验证。 当前规则版本见下方「当前显示」。[0m
+      [36m</p>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"extraction-review__truth"[39m
+      [36m>[39m
+        [0m提取结果只是隔离草稿：候选[0m
+        [36m<strong>[39m
+          [0m未确认前不参与任何计算[0m
+        [36m</strong>[39m
+        [0m，不写项目 target、不建条款版本、 不改绑定、不自动提交。确认/拒绝决定随项目文件保存（schema 8），关闭重开仍可追溯。[0m
+      [36m</p>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"提取范围"[39m
+      [36m>[39m
+        [36m<label>[39m
+          [0m来源版本[0m
+          [36m<select[39m
+            [33maria-label[39m=[32m"提取来源版本"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"sr-1"[39m
+            [36m>[39m
+              [0m轴系装配图.pdf[0m
+              [0m · [0m
+              [0msr-1[0m
+              [0m · [0m
+              [0m2[0m
+              [0m 页[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</label>[39m
+        [36m<label>[39m
+          [0m起始页[0m
+          [36m<input[39m
+            [33maria-label[39m=[32m"提取起始页"[39m
+            [33minputmode[39m=[32m"numeric"[39m
+            [33mvalue[39m=[32m"1"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [36m<label>[39m
+          [0m结束页[0m
+          [36m<input[39m
+            [33maria-label[39m=[32m"提取结束页"[39m
+            [33minputmode[39m=[32m"numeric"[39m
+            [33mvalue[39m=[32m"2"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m提取候选[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"extraction-review__hint"[39m
+        [36m>[39m
+          [0m新提取使用规则版本 [0m
+          [36m<code>[39m
+            [0mdocument-extractor-2[0m
+          [36m</code>[39m
+          [0m。[0m
+        [36m</span>[39m
+      [36m</section>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"提取草稿"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__current"[39m
+          [33mdata-testid[39m=[32m"extraction-current-draft"[39m
+        [36m>[39m
+          [0m当前显示：[0m
+          [36m<code>[39m
+            [0mdocument-extractor-1[0m
+          [36m</code>[39m
+          [0m · 草稿 [0m
+          [36m<code>[39m
+            [0mdraft-old[0m
+          [36m</code>[39m
+          [0m · 第 [0m
+          [0m1[0m
+          [0m–[0m
+          [0m2[0m
+          [0m 页[0m
+          [0m（该范围另有 1 份旧草稿已折叠，只读）[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__meta"[39m
+        [36m>[39m
+          [0m确切 PDF 版本 [0m
+          [36m<code>[39m
+            [0msr-1[0m
+          [36m</code>[39m
+          [0m · SHA-256[0m
+          [0m [0m
+          [36m<code>[39m
+            [0maaaaaaaaaaaa[0m
+            [0m…[0m
+          [36m</code>[39m
+          [0m · 页范围 [0m
+          [0m1[0m
+          [0m–[0m
+          [0m2[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__counts"[39m
+        [36m>[39m
+          [0m待确认 [0m
+          [0m1[0m
+          [0m · 阻塞 [0m
+          [0m1[0m
+          [0m · 已确认 [0m
+          [0m1[0m
+          [0m · 已拒绝 [0m
+          [0m1[0m
+        [36m</p>[39m
+        [36m<ul[39m
+          [33maria-label[39m=[32m"提取问题"[39m
+          [33mclass[39m=[32m"extraction-review__issues"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mdata-severity[39m=[32m"blocked"[39m
+          [36m>[39m
+            [0mENDPOINT_SEMANTICS_MISSING[0m
+            [0m：[0m
+            [0m端点语义缺失，不能默认闭区间[0m
+            [0m（第 2 页）[0m
+          [36m</li>[39m
+        [36m</ul>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"extraction-review__batch"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0m已选 [0m
+            [0m0[0m
+            [0m 项[0m
+          [36m</span>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m批量拒绝选中项[0m
+          [36m</button>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"extraction-review__hint"[39m
+          [36m>[39m
+            [0m不提供批量确认：每条必须单独核对原文后确认。[0m
+          [36m</span>[39m
+        [36m</div>[39m
+        [36m<ul[39m
+          [33maria-label[39m=[32m"提取候选列表"[39m
+          [33mclass[39m=[32m"extraction-review__candidates"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--pending"[39m
+            [33mdata-status[39m=[32m"pending"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-h"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mH · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--pending"[39m
+              [36m>[39m
+                [0m待确认[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mH 总长 52.20 +0.02 -0.02[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--blocked"[39m
+            [33mdata-status[39m=[32m"blocked"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-c"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m目标区间[0m
+                [0m · [0m
+                [0mC[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--blocked"[39m
+              [36m>[39m
+                [0m阻塞[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mlow[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0m轴向装配间隙 C 应为 0.1000～0.3000 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m2[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「0.1000～0.3000」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m下限=0.1000 mm · 上限=0.3000 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__reasons"[39m
+            [36m>[39m
+              [0m原因码：[0m
+              [0mENDPOINT_SEMANTICS_MISSING[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtitle[39m=[32m"阻塞候选必须先解决原因码，不能确认"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--rejected"[39m
+            [33mdata-status[39m=[32m"rejected"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-s"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mS · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--rejected"[39m
+              [36m>[39m
+                [0m已拒绝[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mS 隔套 12.00[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__decision"[39m
+            [36m>[39m
+              [0m决定：[0m
+              [0m拒绝[0m
+              [0m · [0m
+              [0mlocal-operator[0m
+              [0m · [0m
+              [0m2026-11-10T09:00:00.000Z[0m
+              [0m · 理由：长度需人工核对[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--confirmed"[39m
+            [33mdata-status[39m=[32m"confirmed"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-b1"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mB1 · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--confirmed"[39m
+              [36m>[39m
+                [0m已确认[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mB1 左轴承 20.00[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__decision"[39m
+            [36m>[39m
+              [0m决定：[0m
+              [0m确认[0m
+              [0m · [0m
+              [0mlocal-operator[0m
+              [0m · [0m
+              [0m2026-11-10T09:01:00.000Z[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtitle[39m=[32m"撤销后该候选回到待确认，同一符号其它处恢复可选"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m撤销确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"旧规则版本草稿"[39m
+          [33mclass[39m=[32m"extraction-review__superseded"[39m
+        [36m>[39m
+          [36m<h3>[39m
+            [0m旧草稿（折叠，只读）[0m
+          [36m</h3>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"extraction-review__superseded-row"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__superseded-headline"[39m
+            [36m>[39m
+              [0m同版本重复草稿（document-extractor-2）· 共 1 条候选 · 未删除，仅供对照[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33maria-expanded[39m=[32m"false"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m展开查看旧草稿候选[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/ExtractionReviewPanel.test.tsx:439:14
+    437|     render(<ExtractionReviewPanel snapshot={await twoDraftSnapshot('ne…
+    438|     expect(
+    439|       screen.getByText('旧规则版本（document-extractor-1）· 共 4 条候选（已确认 1）· 已…
+       |              ^
+    440|     ).toBeInTheDocument()
+    441|     expect(screen.queryByRole('list', { name: /旧草稿候选列表/ })).toBeNull()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  src/components/ExtractionReviewPanel.test.tsx > V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次确认 > 展开旧草稿：候选可看、确认/编辑/拒绝禁用并写明原因，定位仍可用
+TestingLibraryElementError: Unable to find an accessible element with the role "list" and name "旧草稿候选列表 draft-old"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "任务书提取（待人工确认）":
+  [36m<h2 />[39m
+
+  Name "旧草稿（折叠，只读）":
+  [36m<h3 />[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__truth"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__truth"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__current"[39m
+    [33mdata-testid[39m=[32m"extraction-current-draft"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__meta"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__counts"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__reasons"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__decision"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__decision"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__superseded-headline"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  strong:
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "提取范围":
+  [36m<section[39m
+    [33maria-label[39m=[32m"提取范围"[39m
+  [36m/>[39m
+
+  Name "提取草稿":
+  [36m<section[39m
+    [33maria-label[39m=[32m"提取草稿"[39m
+  [36m/>[39m
+
+  Name "旧规则版本草稿":
+  [36m<section[39m
+    [33maria-label[39m=[32m"旧规则版本草稿"[39m
+    [33mclass[39m=[32m"extraction-review__superseded"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "提取来源版本":
+  [36m<select[39m
+    [33maria-label[39m=[32m"提取来源版本"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "轴系装配图.pdf · sr-1 · 2 页":
+  [36m<option[39m
+    [33mvalue[39m=[32m"sr-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "提取起始页":
+  [36m<input[39m
+    [33maria-label[39m=[32m"提取起始页"[39m
+    [33minputmode[39m=[32m"numeric"[39m
+    [33mvalue[39m=[32m"1"[39m
+  [36m/>[39m
+
+  Name "提取结束页":
+  [36m<input[39m
+    [33maria-label[39m=[32m"提取结束页"[39m
+    [33minputmode[39m=[32m"numeric"[39m
+    [33mvalue[39m=[32m"2"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "提取候选":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "批量拒绝选中项":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtitle[39m=[32m"阻塞候选必须先解决原因码，不能确认"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "撤销确认":
+  [36m<button[39m
+    [33mtitle[39m=[32m"撤销后该候选回到待确认，同一符号其它处恢复可选"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "收起旧草稿候选":
+  [36m<button[39m
+    [33maria-expanded[39m=[32m"true"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtitle[39m=[32m"非当前草稿（同版本重复），请在新版（document-extractor-1）上复核后确认：此处只读，确认/编辑/拒绝均不可用。"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtitle[39m=[32m"非当前草稿（同版本重复），请在新版（document-extractor-1）上复核后确认：此处只读，确认/编辑/拒绝均不可用。"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtitle[39m=[32m"非当前草稿（同版本重复），请在新版（document-extractor-1）上复核后确认：此处只读，确认/编辑/拒绝均不可用。"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  code:
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "提取问题":
+  [36m<ul[39m
+    [33maria-label[39m=[32m"提取问题"[39m
+    [33mclass[39m=[32m"extraction-review__issues"[39m
+  [36m/>[39m
+
+  Name "提取候选列表":
+  [36m<ul[39m
+    [33maria-label[39m=[32m"提取候选列表"[39m
+    [33mclass[39m=[32m"extraction-review__candidates"[39m
+  [36m/>[39m
+
+  Name "旧草稿候选列表 draft-new":
+  [36m<ul[39m
+    [33maria-label[39m=[32m"旧草稿候选列表 draft-new"[39m
+    [33mclass[39m=[32m"extraction-review__candidates"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li[39m
+    [33mdata-severity[39m=[32m"blocked"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--pending"[39m
+    [33mdata-status[39m=[32m"pending"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--blocked"[39m
+    [33mdata-status[39m=[32m"blocked"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--rejected"[39m
+    [33mdata-status[39m=[32m"rejected"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--confirmed"[39m
+    [33mdata-status[39m=[32m"confirmed"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--pending"[39m
+    [33mdata-readonly[39m=[32m"true"[39m
+    [33mdata-status[39m=[32m"pending"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  checkbox:
+
+  Name "选择候选 cand-h":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-h"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-c":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-c"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-s":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-s"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-b1":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-b1"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-new-h":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-new-h"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  note:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__readonly"[39m
+    [33mrole[39m=[32m"note"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"extraction-review"[39m
+    [36m>[39m
+      [36m<h2>[39m
+        [0m任务书提取（待人工确认）[0m
+      [36m</h2>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"extraction-review__truth"[39m
+      [36m>[39m
+        [0m本功能只做[0m
+        [36m<strong>[39m
+          [0m带文本层 PDF[0m
+        [36m</strong>[39m
+        [0m， 不做 OCR、DOCX、图片识别或联网识别。样本覆盖：[0m
+        [36m<strong>[39m
+          [0m只验证过 1 份自造样例[0m
+        [36m</strong>[39m
+        [0m（TB-2026-1110，2 页）；真实外部任务书、复杂表格/分栏/字体编码尚未验证。 当前规则版本见下方「当前显示」。[0m
+      [36m</p>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"extraction-review__truth"[39m
+      [36m>[39m
+        [0m提取结果只是隔离草稿：候选[0m
+        [36m<strong>[39m
+          [0m未确认前不参与任何计算[0m
+        [36m</strong>[39m
+        [0m，不写项目 target、不建条款版本、 不改绑定、不自动提交。确认/拒绝决定随项目文件保存（schema 8），关闭重开仍可追溯。[0m
+      [36m</p>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"提取范围"[39m
+      [36m>[39m
+        [36m<label>[39m
+          [0m来源版本[0m
+          [36m<select[39m
+            [33maria-label[39m=[32m"提取来源版本"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"sr-1"[39m
+            [36m>[39m
+              [0m轴系装配图.pdf[0m
+              [0m · [0m
+              [0msr-1[0m
+              [0m · [0m
+              [0m2[0m
+              [0m 页[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</label>[39m
+        [36m<label>[39m
+          [0m起始页[0m
+          [36m<input[39m
+            [33maria-label[39m=[32m"提取起始页"[39m
+            [33minputmode[39m=[32m"numeric"[39m
+            [33mvalue[39m=[32m"1"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [36m<label>[39m
+          [0m结束页[0m
+          [36m<input[39m
+            [33maria-label[39m=[32m"提取结束页"[39m
+            [33minputmode[39m=[32m"numeric"[39m
+            [33mvalue[39m=[32m"2"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m提取候选[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"extraction-review__hint"[39m
+        [36m>[39m
+          [0m新提取使用规则版本 [0m
+          [36m<code>[39m
+            [0mdocument-extractor-2[0m
+          [36m</code>[39m
+          [0m。[0m
+        [36m</span>[39m
+      [36m</section>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"提取草稿"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__current"[39m
+          [33mdata-testid[39m=[32m"extraction-current-draft"[39m
+        [36m>[39m
+          [0m当前显示：[0m
+          [36m<code>[39m
+            [0mdocument-extractor-1[0m
+          [36m</code>[39m
+          [0m · 草稿 [0m
+          [36m<code>[39m
+            [0mdraft-old[0m
+          [36m</code>[39m
+          [0m · 第 [0m
+          [0m1[0m
+          [0m–[0m
+          [0m2[0m
+          [0m 页[0m
+          [0m（该范围另有 1 份旧草稿已折叠，只读）[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__meta"[39m
+        [36m>[39m
+          [0m确切 PDF 版本 [0m
+          [36m<code>[39m
+            [0msr-1[0m
+          [36m</code>[39m
+          [0m · SHA-256[0m
+          [0m [0m
+          [36m<code>[39m
+            [0maaaaaaaaaaaa[0m
+            [0m…[0m
+          [36m</code>[39m
+          [0m · 页范围 [0m
+          [0m1[0m
+          [0m–[0m
+          [0m2[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__counts"[39m
+        [36m>[39m
+          [0m待确认 [0m
+          [0m1[0m
+          [0m · 阻塞 [0m
+          [0m1[0m
+          [0m · 已确认 [0m
+          [0m1[0m
+          [0m · 已拒绝 [0m
+          [0m1[0m
+        [36m</p>[39m
+        [36m<ul[39m
+          [33maria-label[39m=[32m"提取问题"[39m
+          [33mclass[39m=[32m"extraction-review__issues"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mdata-severity[39m=[32m"blocked"[39m
+          [36m>[39m
+            [0mENDPOINT_SEMANTICS_MISSING[0m
+            [0m：[0m
+            [0m端点语义缺失，不能默认闭区间[0m
+            [0m（第 2 页）[0m
+          [36m</li>[39m
+        [36m</ul>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"extraction-review__batch"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0m已选 [0m
+            [0m0[0m
+            [0m 项[0m
+          [36m</span>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m批量拒绝选中项[0m
+          [36m</button>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"extraction-review__hint"[39m
+          [36m>[39m
+            [0m不提供批量确认：每条必须单独核对原文后确认。[0m
+          [36m</span>[39m
+        [36m</div>[39m
+        [36m<ul[39m
+          [33maria-label[39m=[32m"提取候选列表"[39m
+          [33mclass[39m=[32m"extraction-review__candidates"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--pending"[39m
+            [33mdata-status[39m=[32m"pending"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-h"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mH · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--pending"[39m
+              [36m>[39m
+                [0m待确认[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mH 总长 52.20 +0.02 -0.02[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--blocked"[39m
+            [33mdata-status[39m=[32m"blocked"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-c"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m目标区间[0m
+                [0m · [0m
+                [0mC[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--blocked"[39m
+              [36m>[39m
+                [0m阻塞[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mlow[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0m轴向装配间隙 C 应为 0.1000～0.3000 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m2[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「0.1000～0.3000」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m下限=0.1000 mm · 上限=0.3000 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__reasons"[39m
+            [36m>[39m
+              [0m原因码：[0m
+              [0mENDPOINT_SEMANTICS_MISSING[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtitle[39m=[32m"阻塞候选必须先解决原因码，不能确认"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--rejected"[39m
+            [33mdata-status[39m=[32m"rejected"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-s"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mS · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--rejected"[39m
+              [36m>[39m
+                [0m已拒绝[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mS 隔套 12.00[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__decision"[39m
+            [36m>[39m
+              [0m决定：[0m
+              [0m拒绝[0m
+              [0m · [0m
+              [0mlocal-operator[0m
+              [0m · [0m
+              [0m2026-11-10T09:00:00.000Z[0m
+              [0m · 理由：长度需人工核对[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--confirmed"[39m
+            [33mdata-status[39m=[32m"confirmed"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-b1"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mB1 · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--confirmed"[39m
+              [36m>[39m
+                [0m已确认[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mB1 左轴承 20.00[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__decision"[39m
+            [36m>[39m
+              [0m决定：[0m
+              [0m确认[0m
+              [0m · [0m
+              [0mlocal-operator[0m
+              [0m · [0m
+              [0m2026-11-10T09:01:00.000Z[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtitle[39m=[32m"撤销后该候选回到待确认，同一符号其它处恢复可选"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m撤销确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"旧规则版本草稿"[39m
+          [33mclass[39m=[32m"extraction-review__superseded"[39m
+        [36m>[39m
+          [36m<h3>[39m
+            [0m旧草稿（折叠，只读）[0m
+          [36m</h3>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"extraction-review__superseded-row"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__superseded-headline"[39m
+            [36m>[39m
+              [0m同版本重复草稿（document-extractor-2）· 共 1 条候选 · 未删除，仅供对照[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33maria-expanded[39m=[32m"true"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m收起旧草稿候选[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<ul[39m
+              [33maria-label[39m=[32m"旧草稿候选列表 draft-new"[39m
+              [33mclass[39m=[32m"extraction-review__candidates"[39m
+            [36m>[39m
+              [36m<li[39m
+                [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--pending"[39m
+                [33mdata-readonly[39m=[32m"true"[39m
+                [33mdata-status[39m=[32m"pending"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"选择候选 cand-new-h"[39m
+                    [33mdisabled[39m=[32m""[39m
+                    [33mtype[39m=[32m"checkbox"[39m
+                  [36m/>[39m
+                  [36m<strong>[39m
+                    [0m组成环[0m
+                    [0m · [0m
+                    [0mH · 总长[0m
+                  [36m</strong>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--pending"[39m
+                  [36m>[39m
+                    [0m待确认[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"extraction-review__confidence"[39m
+                  [36m>[39m
+                    [0m置信 [0m
+                    [0mhigh[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"extraction-review__readonly"[39m
+                  [33mrole[39m=[32m"note"[39m
+                [36m>[39m
+                  [0m非当前草稿（同版本重复），请在新版（document-extractor-1）上复核后确认：此处只读，确认/编辑/拒绝均不可用。[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"extraction-review__raw"[39m
+                [36m>[39m
+                  [0m原文：[0m
+                  [0mH 总长 52.20 +0.02 -0.02（新规则）[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"extraction-review__evidence"[39m
+                [36m>[39m
+                  [0m第 [0m
+                  [0m1[0m
+                  [0m 页[0m
+                  [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"extraction-review__values"[39m
+                [36m>[39m
+                  [0m基本尺寸=52.20 mm[0m
+                [36m</p>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"extraction-review__actions"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [0m定位到 PDF 选区[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mdisabled[39m=[32m""[39m
+                    [33mtitle[39m=[32m"非当前草稿（同版本重复），请在新版（document-extractor-1）上复核后确认：此处只读，确认/编辑/拒绝均不可用。"[39m
+                    [33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [0m确认[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mdisabled[39m=[32m""[39m
+                    [33mtitle[39m=[32m"非当前草稿（同版本重复），请在新版（document-extractor-1）上复核后确认：此处只读，确认/编辑/拒绝均不可用。"[39m
+                    [33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [0m拒绝…[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mdisabled[39m=[32m""[39m
+                    [33mtitle[39m=[32m"非当前草稿（同版本重复），请在新版（document-extractor-1）上复核后确认：此处只读，确认/编辑/拒绝均不可用。"[39m
+                    [33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [0m编辑…[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/ExtractionReviewPanel.test.tsx:447:28
+    445|     render(<ExtractionReviewPanel snapshot={await twoDraftSnapshot('ol…
+    446|     fireEvent.click(screen.getByRole('button', { name: '展开查看旧草稿候选' }))
+    447|     const oldList = screen.getByRole('list', { name: '旧草稿候选列表 draft-ol…
+       |                            ^
+    448|     const rows = within(oldList).getAllByRole('listitem')
+    449|     expect(rows).toHaveLength(4)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  src/components/ExtractionReviewPanel.test.tsx > V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次确认 > 删除先二次确认：写明已确认决定数，确认后才发删除请求
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "删除该旧草稿…"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "任务书提取（待人工确认）":
+  [36m<h2 />[39m
+
+  Name "旧草稿（折叠，只读）":
+  [36m<h3 />[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__truth"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__truth"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__current"[39m
+    [33mdata-testid[39m=[32m"extraction-current-draft"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__meta"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__counts"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__reasons"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__decision"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__decision"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__superseded-headline"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  strong:
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "提取范围":
+  [36m<section[39m
+    [33maria-label[39m=[32m"提取范围"[39m
+  [36m/>[39m
+
+  Name "提取草稿":
+  [36m<section[39m
+    [33maria-label[39m=[32m"提取草稿"[39m
+  [36m/>[39m
+
+  Name "旧规则版本草稿":
+  [36m<section[39m
+    [33maria-label[39m=[32m"旧规则版本草稿"[39m
+    [33mclass[39m=[32m"extraction-review__superseded"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "提取来源版本":
+  [36m<select[39m
+    [33maria-label[39m=[32m"提取来源版本"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "轴系装配图.pdf · sr-1 · 2 页":
+  [36m<option[39m
+    [33mvalue[39m=[32m"sr-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "提取起始页":
+  [36m<input[39m
+    [33maria-label[39m=[32m"提取起始页"[39m
+    [33minputmode[39m=[32m"numeric"[39m
+    [33mvalue[39m=[32m"1"[39m
+  [36m/>[39m
+
+  Name "提取结束页":
+  [36m<input[39m
+    [33maria-label[39m=[32m"提取结束页"[39m
+    [33minputmode[39m=[32m"numeric"[39m
+    [33mvalue[39m=[32m"2"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "提取候选":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "批量拒绝选中项":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtitle[39m=[32m"阻塞候选必须先解决原因码，不能确认"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "撤销确认":
+  [36m<button[39m
+    [33mtitle[39m=[32m"撤销后该候选回到待确认，同一符号其它处恢复可选"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "展开查看旧草稿候选":
+  [36m<button[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  code:
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "提取问题":
+  [36m<ul[39m
+    [33maria-label[39m=[32m"提取问题"[39m
+    [33mclass[39m=[32m"extraction-review__issues"[39m
+  [36m/>[39m
+
+  Name "提取候选列表":
+  [36m<ul[39m
+    [33maria-label[39m=[32m"提取候选列表"[39m
+    [33mclass[39m=[32m"extraction-review__candidates"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li[39m
+    [33mdata-severity[39m=[32m"blocked"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--pending"[39m
+    [33mdata-status[39m=[32m"pending"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--blocked"[39m
+    [33mdata-status[39m=[32m"blocked"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--rejected"[39m
+    [33mdata-status[39m=[32m"rejected"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--confirmed"[39m
+    [33mdata-status[39m=[32m"confirmed"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  checkbox:
+
+  Name "选择候选 cand-h":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-h"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-c":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-c"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-s":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-s"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-b1":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-b1"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"extraction-review"[39m
+    [36m>[39m
+      [36m<h2>[39m
+        [0m任务书提取（待人工确认）[0m
+      [36m</h2>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"extraction-review__truth"[39m
+      [36m>[39m
+        [0m本功能只做[0m
+        [36m<strong>[39m
+          [0m带文本层 PDF[0m
+        [36m</strong>[39m
+        [0m， 不做 OCR、DOCX、图片识别或联网识别。样本覆盖：[0m
+        [36m<strong>[39m
+          [0m只验证过 1 份自造样例[0m
+        [36m</strong>[39m
+        [0m（TB-2026-1110，2 页）；真实外部任务书、复杂表格/分栏/字体编码尚未验证。 当前规则版本见下方「当前显示」。[0m
+      [36m</p>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"extraction-review__truth"[39m
+      [36m>[39m
+        [0m提取结果只是隔离草稿：候选[0m
+        [36m<strong>[39m
+          [0m未确认前不参与任何计算[0m
+        [36m</strong>[39m
+        [0m，不写项目 target、不建条款版本、 不改绑定、不自动提交。确认/拒绝决定随项目文件保存（schema 8），关闭重开仍可追溯。[0m
+      [36m</p>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"提取范围"[39m
+      [36m>[39m
+        [36m<label>[39m
+          [0m来源版本[0m
+          [36m<select[39m
+            [33maria-label[39m=[32m"提取来源版本"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"sr-1"[39m
+            [36m>[39m
+              [0m轴系装配图.pdf[0m
+              [0m · [0m
+              [0msr-1[0m
+              [0m · [0m
+              [0m2[0m
+              [0m 页[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</label>[39m
+        [36m<label>[39m
+          [0m起始页[0m
+          [36m<input[39m
+            [33maria-label[39m=[32m"提取起始页"[39m
+            [33minputmode[39m=[32m"numeric"[39m
+            [33mvalue[39m=[32m"1"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [36m<label>[39m
+          [0m结束页[0m
+          [36m<input[39m
+            [33maria-label[39m=[32m"提取结束页"[39m
+            [33minputmode[39m=[32m"numeric"[39m
+            [33mvalue[39m=[32m"2"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m提取候选[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"extraction-review__hint"[39m
+        [36m>[39m
+          [0m新提取使用规则版本 [0m
+          [36m<code>[39m
+            [0mdocument-extractor-2[0m
+          [36m</code>[39m
+          [0m。[0m
+        [36m</span>[39m
+      [36m</section>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"提取草稿"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__current"[39m
+          [33mdata-testid[39m=[32m"extraction-current-draft"[39m
+        [36m>[39m
+          [0m当前显示：[0m
+          [36m<code>[39m
+            [0mdocument-extractor-1[0m
+          [36m</code>[39m
+          [0m · 草稿 [0m
+          [36m<code>[39m
+            [0mdraft-old[0m
+          [36m</code>[39m
+          [0m · 第 [0m
+          [0m1[0m
+          [0m–[0m
+          [0m2[0m
+          [0m 页[0m
+          [0m（该范围另有 1 份旧草稿已折叠，只读）[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__meta"[39m
+        [36m>[39m
+          [0m确切 PDF 版本 [0m
+          [36m<code>[39m
+            [0msr-1[0m
+          [36m</code>[39m
+          [0m · SHA-256[0m
+          [0m [0m
+          [36m<code>[39m
+            [0maaaaaaaaaaaa[0m
+            [0m…[0m
+          [36m</code>[39m
+          [0m · 页范围 [0m
+          [0m1[0m
+          [0m–[0m
+          [0m2[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__counts"[39m
+        [36m>[39m
+          [0m待确认 [0m
+          [0m1[0m
+          [0m · 阻塞 [0m
+          [0m1[0m
+          [0m · 已确认 [0m
+          [0m1[0m
+          [0m · 已拒绝 [0m
+          [0m1[0m
+        [36m</p>[39m
+        [36m<ul[39m
+          [33maria-label[39m=[32m"提取问题"[39m
+          [33mclass[39m=[32m"extraction-review__issues"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mdata-severity[39m=[32m"blocked"[39m
+          [36m>[39m
+            [0mENDPOINT_SEMANTICS_MISSING[0m
+            [0m：[0m
+            [0m端点语义缺失，不能默认闭区间[0m
+            [0m（第 2 页）[0m
+          [36m</li>[39m
+        [36m</ul>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"extraction-review__batch"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0m已选 [0m
+            [0m0[0m
+            [0m 项[0m
+          [36m</span>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m批量拒绝选中项[0m
+          [36m</button>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"extraction-review__hint"[39m
+          [36m>[39m
+            [0m不提供批量确认：每条必须单独核对原文后确认。[0m
+          [36m</span>[39m
+        [36m</div>[39m
+        [36m<ul[39m
+          [33maria-label[39m=[32m"提取候选列表"[39m
+          [33mclass[39m=[32m"extraction-review__candidates"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--pending"[39m
+            [33mdata-status[39m=[32m"pending"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-h"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mH · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--pending"[39m
+              [36m>[39m
+                [0m待确认[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mH 总长 52.20 +0.02 -0.02[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--blocked"[39m
+            [33mdata-status[39m=[32m"blocked"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-c"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m目标区间[0m
+                [0m · [0m
+                [0mC[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--blocked"[39m
+              [36m>[39m
+                [0m阻塞[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mlow[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0m轴向装配间隙 C 应为 0.1000～0.3000 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m2[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「0.1000～0.3000」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m下限=0.1000 mm · 上限=0.3000 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__reasons"[39m
+            [36m>[39m
+              [0m原因码：[0m
+              [0mENDPOINT_SEMANTICS_MISSING[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtitle[39m=[32m"阻塞候选必须先解决原因码，不能确认"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--rejected"[39m
+            [33mdata-status[39m=[32m"rejected"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-s"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mS · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--rejected"[39m
+              [36m>[39m
+                [0m已拒绝[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mS 隔套 12.00[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__decision"[39m
+            [36m>[39m
+              [0m决定：[0m
+              [0m拒绝[0m
+              [0m · [0m
+              [0mlocal-operator[0m
+              [0m · [0m
+              [0m2026-11-10T09:00:00.000Z[0m
+              [0m · 理由：长度需人工核对[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--confirmed"[39m
+            [33mdata-status[39m=[32m"confirmed"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-b1"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mB1 · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--confirmed"[39m
+              [36m>[39m
+                [0m已确认[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mB1 左轴承 20.00[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__decision"[39m
+            [36m>[39m
+              [0m决定：[0m
+              [0m确认[0m
+              [0m · [0m
+              [0mlocal-operator[0m
+              [0m · [0m
+              [0m2026-11-10T09:01:00.000Z[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtitle[39m=[32m"撤销后该候选回到待确认，同一符号其它处恢复可选"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m撤销确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"旧规则版本草稿"[39m
+          [33mclass[39m=[32m"extraction-review__superseded"[39m
+        [36m>[39m
+          [36m<h3>[39m
+            [0m旧草稿（折叠，只读）[0m
+          [36m</h3>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"extraction-review__superseded-row"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__superseded-headline"[39m
+            [36m>[39m
+              [0m同版本重复草稿（document-extractor-2）· 共 1 条候选 · 未删除，仅供对照[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33maria-expanded[39m=[32m"false"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m展开查看旧草稿候选[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/ExtractionReviewPanel.test.tsx:467:28
+    465|     const handler = actions()
+    466|     render(<ExtractionReviewPanel snapshot={await twoDraftSnapshot('ol…
+    467|     fireEvent.click(screen.getByRole('button', { name: '删除该旧草稿…' }))
+       |                            ^
+    468|     const box = screen.getByRole('group', { name: '删除旧草稿确认' })
+    469|     expect(within(box).getByRole('alert').textContent).toContain('该草稿有…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  src/components/ExtractionReviewPanel.test.tsx > V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次确认 > 无已确认决定的旧草稿：确认框写明“无已确认决定”
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "删除该旧草稿…"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "任务书提取（待人工确认）":
+  [36m<h2 />[39m
+
+  Name "旧草稿（折叠，只读）":
+  [36m<h3 />[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__truth"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__truth"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__current"[39m
+    [33mdata-testid[39m=[32m"extraction-current-draft"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__meta"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__counts"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__reasons"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__superseded-headline"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  strong:
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "提取范围":
+  [36m<section[39m
+    [33maria-label[39m=[32m"提取范围"[39m
+  [36m/>[39m
+
+  Name "提取草稿":
+  [36m<section[39m
+    [33maria-label[39m=[32m"提取草稿"[39m
+  [36m/>[39m
+
+  Name "旧规则版本草稿":
+  [36m<section[39m
+    [33maria-label[39m=[32m"旧规则版本草稿"[39m
+    [33mclass[39m=[32m"extraction-review__superseded"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "提取来源版本":
+  [36m<select[39m
+    [33maria-label[39m=[32m"提取来源版本"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "轴系装配图.pdf · sr-1 · 2 页":
+  [36m<option[39m
+    [33mvalue[39m=[32m"sr-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "提取起始页":
+  [36m<input[39m
+    [33maria-label[39m=[32m"提取起始页"[39m
+    [33minputmode[39m=[32m"numeric"[39m
+    [33mvalue[39m=[32m"1"[39m
+  [36m/>[39m
+
+  Name "提取结束页":
+  [36m<input[39m
+    [33maria-label[39m=[32m"提取结束页"[39m
+    [33minputmode[39m=[32m"numeric"[39m
+    [33mvalue[39m=[32m"2"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "提取候选":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "批量拒绝选中项":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtitle[39m=[32m"阻塞候选必须先解决原因码，不能确认"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "撤销确认":
+  [36m<button[39m
+    [33mtitle[39m=[32m"撤销后该候选回到待确认，同一符号其它处恢复可选"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "展开查看旧草稿候选":
+  [36m<button[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  code:
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "提取问题":
+  [36m<ul[39m
+    [33maria-label[39m=[32m"提取问题"[39m
+    [33mclass[39m=[32m"extraction-review__issues"[39m
+  [36m/>[39m
+
+  Name "提取候选列表":
+  [36m<ul[39m
+    [33maria-label[39m=[32m"提取候选列表"[39m
+    [33mclass[39m=[32m"extraction-review__candidates"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li[39m
+    [33mdata-severity[39m=[32m"blocked"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--pending"[39m
+    [33mdata-status[39m=[32m"pending"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--blocked"[39m
+    [33mdata-status[39m=[32m"blocked"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--rejected"[39m
+    [33mdata-status[39m=[32m"rejected"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--confirmed"[39m
+    [33mdata-status[39m=[32m"confirmed"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  checkbox:
+
+  Name "选择候选 cand-h":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-h"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-c":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-c"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-s":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-s"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-b1":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-b1"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"extraction-review"[39m
+    [36m>[39m
+      [36m<h2>[39m
+        [0m任务书提取（待人工确认）[0m
+      [36m</h2>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"extraction-review__truth"[39m
+      [36m>[39m
+        [0m本功能只做[0m
+        [36m<strong>[39m
+          [0m带文本层 PDF[0m
+        [36m</strong>[39m
+        [0m， 不做 OCR、DOCX、图片识别或联网识别。样本覆盖：[0m
+        [36m<strong>[39m
+          [0m只验证过 1 份自造样例[0m
+        [36m</strong>[39m
+        [0m（TB-2026-1110，2 页）；真实外部任务书、复杂表格/分栏/字体编码尚未验证。 当前规则版本见下方「当前显示」。[0m
+      [36m</p>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"extraction-review__truth"[39m
+      [36m>[39m
+        [0m提取结果只是隔离草稿：候选[0m
+        [36m<strong>[39m
+          [0m未确认前不参与任何计算[0m
+        [36m</strong>[39m
+        [0m，不写项目 target、不建条款版本、 不改绑定、不自动提交。确认/拒绝决定随项目文件保存（schema 8），关闭重开仍可追溯。[0m
+      [36m</p>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"提取范围"[39m
+      [36m>[39m
+        [36m<label>[39m
+          [0m来源版本[0m
+          [36m<select[39m
+            [33maria-label[39m=[32m"提取来源版本"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"sr-1"[39m
+            [36m>[39m
+              [0m轴系装配图.pdf[0m
+              [0m · [0m
+              [0msr-1[0m
+              [0m · [0m
+              [0m2[0m
+              [0m 页[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</label>[39m
+        [36m<label>[39m
+          [0m起始页[0m
+          [36m<input[39m
+            [33maria-label[39m=[32m"提取起始页"[39m
+            [33minputmode[39m=[32m"numeric"[39m
+            [33mvalue[39m=[32m"1"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [36m<label>[39m
+          [0m结束页[0m
+          [36m<input[39m
+            [33maria-label[39m=[32m"提取结束页"[39m
+            [33minputmode[39m=[32m"numeric"[39m
+            [33mvalue[39m=[32m"2"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m提取候选[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"extraction-review__hint"[39m
+        [36m>[39m
+          [0m新提取使用规则版本 [0m
+          [36m<code>[39m
+            [0mdocument-extractor-2[0m
+          [36m</code>[39m
+          [0m。[0m
+        [36m</span>[39m
+      [36m</section>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"提取草稿"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__current"[39m
+          [33mdata-testid[39m=[32m"extraction-current-draft"[39m
+        [36m>[39m
+          [0m当前显示：[0m
+          [36m<code>[39m
+            [0mdocument-extractor-1[0m
+          [36m</code>[39m
+          [0m · 草稿 [0m
+          [36m<code>[39m
+            [0mdraft-old[0m
+          [36m</code>[39m
+          [0m · 第 [0m
+          [0m1[0m
+          [0m–[0m
+          [0m2[0m
+          [0m 页[0m
+          [0m（该范围另有 1 份旧草稿已折叠，只读）[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__meta"[39m
+        [36m>[39m
+          [0m确切 PDF 版本 [0m
+          [36m<code>[39m
+            [0msr-1[0m
+          [36m</code>[39m
+          [0m · SHA-256[0m
+          [0m [0m
+          [36m<code>[39m
+            [0maaaaaaaaaaaa[0m
+            [0m…[0m
+          [36m</code>[39m
+          [0m · 页范围 [0m
+          [0m1[0m
+          [0m–[0m
+          [0m2[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__counts"[39m
+        [36m>[39m
+          [0m待确认 [0m
+          [0m1[0m
+          [0m · 阻塞 [0m
+          [0m1[0m
+          [0m · 已确认 [0m
+          [0m1[0m
+          [0m · 已拒绝 [0m
+          [0m1[0m
+        [36m</p>[39m
+        [36m<ul[39m
+          [33maria-label[39m=[32m"提取问题"[39m
+          [33mclass[39m=[32m"extraction-review__issues"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mdata-severity[39m=[32m"blocked"[39m
+          [36m>[39m
+            [0mENDPOINT_SEMANTICS_MISSING[0m
+            [0m：[0m
+            [0m端点语义缺失，不能默认闭区间[0m
+            [0m（第 2 页）[0m
+          [36m</li>[39m
+        [36m</ul>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"extraction-review__batch"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0m已选 [0m
+            [0m0[0m
+            [0m 项[0m
+          [36m</span>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m批量拒绝选中项[0m
+          [36m</button>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"extraction-review__hint"[39m
+          [36m>[39m
+            [0m不提供批量确认：每条必须单独核对原文后确认。[0m
+          [36m</span>[39m
+        [36m</div>[39m
+        [36m<ul[39m
+          [33maria-label[39m=[32m"提取候选列表"[39m
+          [33mclass[39m=[32m"extraction-review__candidates"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--pending"[39m
+            [33mdata-status[39m=[32m"pending"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-h"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mH · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--pending"[39m
+              [36m>[39m
+                [0m待确认[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mH 总长 52.20 +0.02 -0.02[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--blocked"[39m
+            [33mdata-status[39m=[32m"blocked"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-c"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m目标区间[0m
+                [0m · [0m
+                [0mC[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--blocked"[39m
+              [36m>[39m
+                [0m阻塞[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mlow[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0m轴向装配间隙 C 应为 0.1000～0.3000 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m2[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「0.1000～0.3000」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m下限=0.1000 mm · 上限=0.3000 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__reasons"[39m
+            [36m>[39m
+              [0m原因码：[0m
+              [0mENDPOINT_SEMANTICS_MISSING[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtitle[39m=[32m"阻塞候选必须先解决原因码，不能确认"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--rejected"[39m
+            [33mdata-status[39m=[32m"rejected"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-s"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mS · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--rejected"[39m
+              [36m>[39m
+                [0m已拒绝[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mS 隔套 12.00[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--confirmed"[39m
+            [33mdata-status[39m=[32m"confirmed"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-b1"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mB1 · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--confirmed"[39m
+              [36m>[39m
+                [0m已确认[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mB1 左轴承 20.00[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtitle[39m=[32m"撤销后该候选回到待确认，同一符号其它处恢复可选"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m撤销确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"旧规则版本草稿"[39m
+          [33mclass[39m=[32m"extraction-review__superseded"[39m
+        [36m>[39m
+          [36m<h3>[39m
+            [0m旧草稿（折叠，只读）[0m
+          [36m</h3>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"extraction-review__superseded-row"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__superseded-headline"[39m
+            [36m>[39m
+              [0m同版本重复草稿（document-extractor-2）· 共 1 条候选 · 未删除，仅供对照[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33maria-expanded[39m=[32m"false"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m展开查看旧草稿候选[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/ExtractionReviewPanel.test.tsx:488:28
+    486|     }
+    487|     render(<ExtractionReviewPanel snapshot={snapshot} busy={false} act…
+    488|     fireEvent.click(screen.getByRole('button', { name: '删除该旧草稿…' }))
+       |                            ^
+    489|     const box = screen.getByRole('group', { name: '删除旧草稿确认' })
+    490|     expect(within(box).getByRole('alert').textContent).toContain('该草稿无…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  src/components/ExtractionReviewPanel.test.tsx > V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次确认 > 删除失败（返回 null）：提示错误、旧草稿仍在
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "删除该旧草稿…"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "任务书提取（待人工确认）":
+  [36m<h2 />[39m
+
+  Name "旧草稿（折叠，只读）":
+  [36m<h3 />[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__truth"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__truth"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__current"[39m
+    [33mdata-testid[39m=[32m"extraction-current-draft"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__meta"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__counts"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__reasons"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__decision"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__raw"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__evidence"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__values"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__decision"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"extraction-review__superseded-headline"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  strong:
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "提取范围":
+  [36m<section[39m
+    [33maria-label[39m=[32m"提取范围"[39m
+  [36m/>[39m
+
+  Name "提取草稿":
+  [36m<section[39m
+    [33maria-label[39m=[32m"提取草稿"[39m
+  [36m/>[39m
+
+  Name "旧规则版本草稿":
+  [36m<section[39m
+    [33maria-label[39m=[32m"旧规则版本草稿"[39m
+    [33mclass[39m=[32m"extraction-review__superseded"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "提取来源版本":
+  [36m<select[39m
+    [33maria-label[39m=[32m"提取来源版本"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "轴系装配图.pdf · sr-1 · 2 页":
+  [36m<option[39m
+    [33mvalue[39m=[32m"sr-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "提取起始页":
+  [36m<input[39m
+    [33maria-label[39m=[32m"提取起始页"[39m
+    [33minputmode[39m=[32m"numeric"[39m
+    [33mvalue[39m=[32m"1"[39m
+  [36m/>[39m
+
+  Name "提取结束页":
+  [36m<input[39m
+    [33maria-label[39m=[32m"提取结束页"[39m
+    [33minputmode[39m=[32m"numeric"[39m
+    [33mvalue[39m=[32m"2"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "提取候选":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "批量拒绝选中项":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtitle[39m=[32m"阻塞候选必须先解决原因码，不能确认"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "定位到 PDF 选区":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "确认":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "撤销确认":
+  [36m<button[39m
+    [33mtitle[39m=[32m"撤销后该候选回到待确认，同一符号其它处恢复可选"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "拒绝…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑…":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "展开查看旧草稿候选":
+  [36m<button[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  code:
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  Name "":
+  [36m<code />[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "提取问题":
+  [36m<ul[39m
+    [33maria-label[39m=[32m"提取问题"[39m
+    [33mclass[39m=[32m"extraction-review__issues"[39m
+  [36m/>[39m
+
+  Name "提取候选列表":
+  [36m<ul[39m
+    [33maria-label[39m=[32m"提取候选列表"[39m
+    [33mclass[39m=[32m"extraction-review__candidates"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li[39m
+    [33mdata-severity[39m=[32m"blocked"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--pending"[39m
+    [33mdata-status[39m=[32m"pending"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--blocked"[39m
+    [33mdata-status[39m=[32m"blocked"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--rejected"[39m
+    [33mdata-status[39m=[32m"rejected"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--confirmed"[39m
+    [33mdata-status[39m=[32m"confirmed"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  checkbox:
+
+  Name "选择候选 cand-h":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-h"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-c":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-c"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-s":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-s"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "选择候选 cand-b1":
+  [36m<input[39m
+    [33maria-label[39m=[32m"选择候选 cand-b1"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"extraction-review"[39m
+    [36m>[39m
+      [36m<h2>[39m
+        [0m任务书提取（待人工确认）[0m
+      [36m</h2>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"extraction-review__truth"[39m
+      [36m>[39m
+        [0m本功能只做[0m
+        [36m<strong>[39m
+          [0m带文本层 PDF[0m
+        [36m</strong>[39m
+        [0m， 不做 OCR、DOCX、图片识别或联网识别。样本覆盖：[0m
+        [36m<strong>[39m
+          [0m只验证过 1 份自造样例[0m
+        [36m</strong>[39m
+        [0m（TB-2026-1110，2 页）；真实外部任务书、复杂表格/分栏/字体编码尚未验证。 当前规则版本见下方「当前显示」。[0m
+      [36m</p>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"extraction-review__truth"[39m
+      [36m>[39m
+        [0m提取结果只是隔离草稿：候选[0m
+        [36m<strong>[39m
+          [0m未确认前不参与任何计算[0m
+        [36m</strong>[39m
+        [0m，不写项目 target、不建条款版本、 不改绑定、不自动提交。确认/拒绝决定随项目文件保存（schema 8），关闭重开仍可追溯。[0m
+      [36m</p>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"提取范围"[39m
+      [36m>[39m
+        [36m<label>[39m
+          [0m来源版本[0m
+          [36m<select[39m
+            [33maria-label[39m=[32m"提取来源版本"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"sr-1"[39m
+            [36m>[39m
+              [0m轴系装配图.pdf[0m
+              [0m · [0m
+              [0msr-1[0m
+              [0m · [0m
+              [0m2[0m
+              [0m 页[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</label>[39m
+        [36m<label>[39m
+          [0m起始页[0m
+          [36m<input[39m
+            [33maria-label[39m=[32m"提取起始页"[39m
+            [33minputmode[39m=[32m"numeric"[39m
+            [33mvalue[39m=[32m"1"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [36m<label>[39m
+          [0m结束页[0m
+          [36m<input[39m
+            [33maria-label[39m=[32m"提取结束页"[39m
+            [33minputmode[39m=[32m"numeric"[39m
+            [33mvalue[39m=[32m"2"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m提取候选[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"extraction-review__hint"[39m
+        [36m>[39m
+          [0m新提取使用规则版本 [0m
+          [36m<code>[39m
+            [0mdocument-extractor-2[0m
+          [36m</code>[39m
+          [0m。[0m
+        [36m</span>[39m
+      [36m</section>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"提取草稿"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__current"[39m
+          [33mdata-testid[39m=[32m"extraction-current-draft"[39m
+        [36m>[39m
+          [0m当前显示：[0m
+          [36m<code>[39m
+            [0mdocument-extractor-1[0m
+          [36m</code>[39m
+          [0m · 草稿 [0m
+          [36m<code>[39m
+            [0mdraft-old[0m
+          [36m</code>[39m
+          [0m · 第 [0m
+          [0m1[0m
+          [0m–[0m
+          [0m2[0m
+          [0m 页[0m
+          [0m（该范围另有 1 份旧草稿已折叠，只读）[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__meta"[39m
+        [36m>[39m
+          [0m确切 PDF 版本 [0m
+          [36m<code>[39m
+            [0msr-1[0m
+          [36m</code>[39m
+          [0m · SHA-256[0m
+          [0m [0m
+          [36m<code>[39m
+            [0maaaaaaaaaaaa[0m
+            [0m…[0m
+          [36m</code>[39m
+          [0m · 页范围 [0m
+          [0m1[0m
+          [0m–[0m
+          [0m2[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"extraction-review__counts"[39m
+        [36m>[39m
+          [0m待确认 [0m
+          [0m1[0m
+          [0m · 阻塞 [0m
+          [0m1[0m
+          [0m · 已确认 [0m
+          [0m1[0m
+          [0m · 已拒绝 [0m
+          [0m1[0m
+        [36m</p>[39m
+        [36m<ul[39m
+          [33maria-label[39m=[32m"提取问题"[39m
+          [33mclass[39m=[32m"extraction-review__issues"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mdata-severity[39m=[32m"blocked"[39m
+          [36m>[39m
+            [0mENDPOINT_SEMANTICS_MISSING[0m
+            [0m：[0m
+            [0m端点语义缺失，不能默认闭区间[0m
+            [0m（第 2 页）[0m
+          [36m</li>[39m
+        [36m</ul>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"extraction-review__batch"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0m已选 [0m
+            [0m0[0m
+            [0m 项[0m
+          [36m</span>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m批量拒绝选中项[0m
+          [36m</button>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"extraction-review__hint"[39m
+          [36m>[39m
+            [0m不提供批量确认：每条必须单独核对原文后确认。[0m
+          [36m</span>[39m
+        [36m</div>[39m
+        [36m<ul[39m
+          [33maria-label[39m=[32m"提取候选列表"[39m
+          [33mclass[39m=[32m"extraction-review__candidates"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--pending"[39m
+            [33mdata-status[39m=[32m"pending"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-h"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mH · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--pending"[39m
+              [36m>[39m
+                [0m待确认[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mH 总长 52.20 +0.02 -0.02[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--blocked"[39m
+            [33mdata-status[39m=[32m"blocked"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-c"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m目标区间[0m
+                [0m · [0m
+                [0mC[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--blocked"[39m
+              [36m>[39m
+                [0m阻塞[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mlow[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0m轴向装配间隙 C 应为 0.1000～0.3000 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m2[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「0.1000～0.3000」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m下限=0.1000 mm · 上限=0.3000 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__reasons"[39m
+            [36m>[39m
+              [0m原因码：[0m
+              [0mENDPOINT_SEMANTICS_MISSING[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtitle[39m=[32m"阻塞候选必须先解决原因码，不能确认"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--rejected"[39m
+            [33mdata-status[39m=[32m"rejected"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-s"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mS · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--rejected"[39m
+              [36m>[39m
+                [0m已拒绝[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mS 隔套 12.00[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__decision"[39m
+            [36m>[39m
+              [0m决定：[0m
+              [0m拒绝[0m
+              [0m · [0m
+              [0mlocal-operator[0m
+              [0m · [0m
+              [0m2026-11-10T09:00:00.000Z[0m
+              [0m · 理由：长度需人工核对[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"extraction-review__candidate extraction-review__candidate--confirmed"[39m
+            [33mdata-status[39m=[32m"confirmed"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__candidate-head"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"选择候选 cand-b1"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [36m<strong>[39m
+                [0m组成环[0m
+                [0m · [0m
+                [0mB1 · 总长[0m
+              [36m</strong>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__badge extraction-review__badge--confirmed"[39m
+              [36m>[39m
+                [0m已确认[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"extraction-review__confidence"[39m
+              [36m>[39m
+                [0m置信 [0m
+                [0mhigh[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__raw"[39m
+            [36m>[39m
+              [0m原文：[0m
+              [0mB1 左轴承 20.00[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__evidence"[39m
+            [36m>[39m
+              [0m第 [0m
+              [0m1[0m
+              [0m 页[0m
+              [0m · 选区 PDF 点 [100, 600, 140, 615] · 页框 [0, 0, 612, 792] · 片段「52.20」· item 3,4[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__values"[39m
+            [36m>[39m
+              [0m基本尺寸=52.20 mm[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__decision"[39m
+            [36m>[39m
+              [0m决定：[0m
+              [0m确认[0m
+              [0m · [0m
+              [0mlocal-operator[0m
+              [0m · [0m
+              [0m2026-11-10T09:01:00.000Z[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m定位到 PDF 选区[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtitle[39m=[32m"撤销后该候选回到待确认，同一符号其它处恢复可选"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m撤销确认[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m拒绝…[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m编辑…[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+        [36m<section[39m
+          [33maria-label[39m=[32m"旧规则版本草稿"[39m
+          [33mclass[39m=[32m"extraction-review__superseded"[39m
+        [36m>[39m
+          [36m<h3>[39m
+            [0m旧草稿（折叠，只读）[0m
+          [36m</h3>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"extraction-review__superseded-row"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"extraction-review__superseded-headline"[39m
+            [36m>[39m
+              [0m同版本重复草稿（document-extractor-2）· 共 1 条候选 · 未删除，仅供对照[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"extraction-review__actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33maria-expanded[39m=[32m"false"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m展开查看旧草稿候选[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/ExtractionReviewPanel.test.tsx:497:28
+    495|     handler.onDeleteDraft = vi.fn(async () => null)
+    496|     render(<ExtractionReviewPanel snapshot={await twoDraftSnapshot('ol…
+    497|     fireEvent.click(screen.getByRole('button', { name: '删除该旧草稿…' }))
+       |                            ^
+    498|     fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+    499|     await waitFor(() => expect(screen.getByText(/删除未执行/)).toBeInTheDoc…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  src/document-extraction/draftScope.test.ts > V3.6 多草稿：默认选最新、旧草稿折叠、可删判定 > 默认选中最新的 extractor 版本，与数组顺序无关
+AssertionError: expected 'document-extractor-1' to be 'document-extractor-2' // Object.is equality
+
+Expected: "document-extractor-2"
+Received: "document-extractor-1"
+
+ ❯ src/document-extraction/draftScope.test.ts:59:60
+     57|     const oldFirst = [draftOf('document-extractor-1'), draftOf('docume…
+     58|     const newFirst = [draftOf('document-extractor-2'), draftOf('docume…
+     59|     expect(selectDefaultDraft(oldFirst)?.extractorVersion).toBe('docum…
+       |                                                            ^
+     60|     expect(selectDefaultDraft(newFirst)?.extractorVersion).toBe('docum…
+     61|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  src/document-extraction/draftScope.test.ts > V3.6 多草稿：默认选最新、旧草稿折叠、可删判定 > 同一 PDF 版本 + 同一页范围才互相取代；不同页范围各自是独立作用域
+AssertionError: expected [ 'draft-document-extractor-2' ] to deeply equal [ 'draft-document-extractor-1' ]
+
+- Expected
++ Received
+
+  [
+-   "draft-document-extractor-1",
++   "draft-document-extractor-2",
+  ]
+
+ ❯ src/document-extraction/draftScope.test.ts:82:65
+     80|     const scopes = groupExtractionDrafts([v1, v2, otherRange])
+     81|     expect(scopes).toHaveLength(2)
+     82|     expect(scopes[0]?.superseded.map((draft) => draft.draftId)).toEqua…
+       |                                                                 ^
+     83|     expect(scopes[1]?.current.draftId).toBe('draft-other-range')
+     84|     expect(scopes[1]?.superseded).toEqual([])
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  8 failed | 12 passed (20)
+   Start at  18:06:06
+   Duration  710ms (environment 46%, tests 32%, setup 14%, transform 5%, import 3%)
+
