@@ -6,14 +6,14 @@
 
 | 文件 | 大小 | SHA-256 |
 |---|---|---|
-| `寸链-v0.0.5beta-macOS-arm64.zip` | 121,147,046 字节 | `2fa81c456a9b8b1f5066ec7d51db2b4bc26b3d8658a2c5cdcd260700efbe8447` |
+| `cunlian-v0.0.5beta-macOS-arm64.zip` | 121,147,046 字节 | `2fa81c456a9b8b1f5066ec7d51db2b4bc26b3d8658a2c5cdcd260700efbe8447` |
 
 `CFBundleShortVersionString` = `0.0.5-beta`，arm64，未签名未公证（`adhoc, linker-signed`）。
 
 下载后先校验，再解压：
 
 ```bash
-shasum -a 256 寸链-v0.0.5beta-macOS-arm64.zip
+shasum -a 256 cunlian-v0.0.5beta-macOS-arm64.zip
 # 必须与上表一致；不一致就别用
 ```
 
