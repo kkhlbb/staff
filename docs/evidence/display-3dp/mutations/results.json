@@ -1,0 +1,5 @@
+{
+  "command": "npm test -- src/domain/units.test.ts",
+  "mutationExitCode": 1,
+  "restoredExitCode": 0
+}

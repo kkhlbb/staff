@@ -106,8 +106,8 @@ describe('C-01 显示有效位', () => {
     expect(lengthText.ok).toBe(true)
     if (!lengthText.ok) return
     expect(lengthText.value.valueQ).toBe(121000)
-    expect(dimensionText(lengthText.value, 'length')).toBe('12.10')
-    expect(dimensionText(lengthText.value, 'diameter')).toBe('⌀12.10')
+    expect(dimensionText(lengthText.value, 'length')).toBe('12.100')
+    expect(dimensionText(lengthText.value, 'diameter')).toBe('⌀12.100')
     expect(
       resolveDimension('param:spacer:not-exist', data.parameterSnapshot).ok,
     ).toBe(false)
@@ -176,9 +176,9 @@ describe('C-02 模板几何与比例', () => {
     const inner = primitive(half, 'end.inner').geometryMm as { r: number }
     expect(inner.r).toBe(5)
     expect(annotationTextsOf(half)).toEqual({
-      'ann.length': '12.00',
-      'ann.inner-diameter': '⌀20.00',
-      'ann.outer-diameter': '⌀32.00',
+      'ann.length': '12.000',
+      'ann.inner-diameter': '⌀20.000',
+      'ann.outer-diameter': '⌀32.000',
     })
     expect(half.parameterSnapshot).toEqual(one.parameterSnapshot)
     expect(half.views.map((view) => view.anchorMm)).toEqual(one.views.map((view) => view.anchorMm))
@@ -191,7 +191,7 @@ describe('C-02 模板几何与比例', () => {
       const factor = scale.numerator / scale.denominator
       const outer = primitive(data, 'end.outer').geometryMm as { r: number }
       expect(outer.r).toBeCloseTo(16 * factor, 6)
-      expect(annotationTextsOf(data)['ann.outer-diameter']).toBe('⌀32.00')
+      expect(annotationTextsOf(data)['ann.outer-diameter']).toBe('⌀32.000')
     }
   })
 
@@ -204,7 +204,7 @@ describe('C-02 模板几何与比例', () => {
     expect(other.fingerprint).not.toBe(a.fingerprint)
   })
 
-  it('12.1000 与 12.10 同 q、同几何，只改变显示与指纹', () => {
+  it('12.1000 与 12.10 同 q、同几何、同显示，输入元数据仍改变指纹', () => {
     const four = build({ length: '12.1000' })
     const two = build({ length: '12.10' })
     const geometry = (data: DrawingData) =>
@@ -212,8 +212,8 @@ describe('C-02 模板几何与比例', () => {
         .filter((item) => item.area === 'drawing' && item.kind !== 'text')
         .map((item) => item.geometryMm)
     expect(geometry(four)).toEqual(geometry(two))
-    expect(annotationTextsOf(four)['ann.length']).toBe('12.1000')
-    expect(annotationTextsOf(two)['ann.length']).toBe('12.10')
+    expect(annotationTextsOf(four)['ann.length']).toBe('12.100')
+    expect(annotationTextsOf(two)['ann.length']).toBe('12.100')
     expect(four.fingerprint).not.toBe(two.fingerprint)
   })
 
@@ -258,9 +258,9 @@ describe('C-02 SVG 唯一序列化器', () => {
     expect(svg).not.toMatch(/<image|<script|<foreignObject|@font-face/)
     expect(svg.match(/<circle/g)).toHaveLength(2)
     expect(svg.match(/<line/g)?.length ?? 0).toBeGreaterThan(8)
-    expect(svg).toContain('⌀20.00')
-    expect(svg).toContain('⌀32.00')
-    expect(svg).toContain('12.00')
+    expect(svg).toContain('⌀20.000')
+    expect(svg).toContain('⌀32.000')
+    expect(svg).toContain('12.000')
     expect(svg).toContain(DRAFT_STATUS_TEXT)
     expect(svg).toContain('第三角投影')
     expect(svg).toContain('待补充')

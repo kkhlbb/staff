@@ -450,13 +450,13 @@ describe('A-04b 会话接线', () => {
     expect(screen.getByText('未保存草稿')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'H · 总长' }))
     expect(screen.getByRole('heading', { name: '属性 · H · 总长' })).toBeInTheDocument()
-    expect(screen.getByText('52.2000 mm')).toBeInTheDocument()
+    expect(screen.getByText('52.200 mm')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: '尺寸链' }))
     expect(screen.getByRole('tab', { name: '尺寸链' })).toHaveAttribute('aria-selected', 'true')
     const splitter = screen.getByRole('separator', { name: '项目树宽度' })
     fireEvent.keyDown(splitter, { key: 'ArrowRight' }); expect(splitter).toHaveAttribute('aria-valuenow', '240')
     fireEvent.click(screen.getByRole('button', { name: /复核与变更/ }))
-    expect(screen.getByText('极限范围 0.1500 至 0.2500 mm')).toBeInTheDocument()
+    expect(screen.getByText('极限范围 0.150 至 0.250 mm')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /复核与变更/ })).toHaveTextContent('图纸 未生成')
     expect(screen.getByRole('button', { name: '增加组成环' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: opened.snapshot.documents[0].title }))
@@ -552,7 +552,7 @@ describe('A-04c 实质页面', () => {
     await openExample()
     fireEvent.click(screen.getByRole('tab', { name: '尺寸链' }))
     fireEvent.change(screen.getByLabelText('第 1 行 H 基本尺寸'), { target: { value: '52.3' } })
-    expect(within(screen.getByRole('region', { name: '当前计算结果' })).getByText('0.2500 至 0.3500 mm')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: '当前计算结果' })).getByText('0.250 至 0.350 mm')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('目标上限'), { target: { value: '0.4' } })
     await waitFor(() => expect(api.stageDraft).toHaveBeenCalled())
     const request = vi.mocked(api.stageDraft).mock.calls.at(-1)![0]
@@ -566,7 +566,7 @@ describe('A-04c 实质页面', () => {
     const input = screen.getByLabelText('第 1 行 H 基本尺寸')
     expect(input).toHaveAttribute('aria-invalid', 'true')
     expect(document.getElementById(input.getAttribute('aria-describedby')!)).toHaveTextContent(/.+/)
-    expect(within(screen.getByRole('region', { name: '当前计算结果' })).queryByText('0.2500 至 0.3500 mm')).not.toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: '当前计算结果' })).queryByText('0.250 至 0.350 mm')).not.toBeInTheDocument()
     await waitFor(() => expect(vi.mocked(api.stageDraft).mock.calls.at(-1)![0].snapshot.draft?.terms[0].nominal).toBe('bad'))
   })
   it('来源 PDF 通过 readAttachment 取确切版本，读取失败有明确不可用提示，定位切页', async () => {
@@ -591,7 +591,7 @@ describe('A-04c 实质页面', () => {
     await openExample()
     fireEvent.click(screen.getByRole('tab', { name: '历史报告' }))
     expect(screen.getByText('导入的历史记录/冻结结果，不代表当前已确认')).toBeInTheDocument()
-    expect(screen.getByText('0.1234 至 0.2500 mm')).toBeInTheDocument()
+    expect(screen.getByText('0.1234 至 0.250 mm')).toBeInTheDocument()
     expect(screen.getByText('未冻结')).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(api.stageDraft).not.toHaveBeenCalled()
@@ -646,9 +646,9 @@ describe('B1 内置轴系示例整合', () => {
     expect(within(tree()).getByRole('button', { name: '隔套' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(tree()).getByRole('button', { name: '阶梯轴' })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('heading', { name: '属性 · 隔套' })).toBeInTheDocument()
-    expect(screen.getByText('20.0000 mm')).toBeInTheDocument()
-    expect(screen.getByText('32.0000 mm')).toBeInTheDocument()
-    expect(screen.getByText('12.0000 mm')).toBeInTheDocument()
+    expect(screen.getByText('20.000 mm')).toBeInTheDocument()
+    expect(screen.getByText('32.000 mm')).toBeInTheDocument()
+    expect(screen.getByText('12.000 mm')).toBeInTheDocument()
     expect(within(document.getElementById('desktop-panel-1')!).getByText('当前选择：隔套')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '在工程图页编辑参数' })).toBeEnabled()
     expect(scene.handles.at(-1)!.selected).toBe('builtin:shaft-demo:spacer')
@@ -682,17 +682,17 @@ describe('B1 内置轴系示例整合', () => {
     fireEvent.click(within(tree()).getByRole('button', { name: '左轴承' }))
     const panel = document.getElementById('desktop-properties')!
     const value = (key: string) => within(panel).getByText(key).nextElementSibling?.textContent
-    expect(value('爆炸位移（当前）')).toBe('0.0 mm（X）')
-    expect(value('设计最大位移（上限）')).toBe('-24.0 mm（X）')
+    expect(value('爆炸位移（当前）')).toBe('0.000 mm（X）')
+    expect(value('设计最大位移（上限）')).toBe('-24.000 mm（X）')
     fireEvent.change(screen.getByRole('slider', { name: '爆炸程度' }), { target: { value: '100' } })
-    expect(value('爆炸位移（当前）')).toBe('-24.0 mm（X）')
+    expect(value('爆炸位移（当前）')).toBe('-24.000 mm（X）')
     fireEvent.change(screen.getByRole('slider', { name: '爆炸程度' }), { target: { value: '50' } })
-    expect(value('爆炸位移（当前）')).toBe('-12.0 mm（X）')
+    expect(value('爆炸位移（当前）')).toBe('-12.000 mm（X）')
     fireEvent.click(screen.getByRole('button', { name: '复位装配' }))
-    expect(value('爆炸位移（当前）')).toBe('0.0 mm（X）')
+    expect(value('爆炸位移（当前）')).toBe('0.000 mm（X）')
     fireEvent.click(within(tree()).getByRole('button', { name: '隔套' }))
-    expect(value('爆炸位移（当前）')).toBe('0.0 mm（X）')
-    expect(value('设计最大位移（上限）')).toBe('0.0 mm（X）（装配基准，不参与爆炸）')
+    expect(value('爆炸位移（当前）')).toBe('0.000 mm（X）')
+    expect(value('设计最大位移（上限）')).toBe('0.000 mm（X）（装配基准，不参与爆炸）')
   })
 
   it('B1-A07 标签保持：切走时暂停渲染，切换后选择/爆炸/实例不丢', async () => {
@@ -934,18 +934,18 @@ describe('C-03 工程图预览与参数联动', () => {
       if (found === null) throw new Error('no canvas')
       return found as HTMLElement
     })
-    expect(canvas.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.00')
-    expect(canvas.querySelector('[data-annotation-id="ann.outer-diameter"] text')?.textContent).toBe('⌀32.00')
+    expect(canvas.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.000')
+    expect(canvas.querySelector('[data-annotation-id="ann.outer-diameter"] text')?.textContent).toBe('⌀32.000')
 
     const annotation = canvas.querySelector('[data-annotation-id="ann.length"]')
     expect(annotation).not.toBeNull()
     fireEvent.click(annotation as Element)
-    expect(await screen.findByRole('heading', { name: /属性 · 标注 · 12.00/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /属性 · 标注 · 12.000/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '长度 · 图纸参数' })).toBeInTheDocument()
     expect(screen.getByText(/q = 120000 · 输入 2 位小数/)).toBeInTheDocument()
   })
 
-  it('12.1000 与 12.10 显示随元数据变化，几何/参数 q 不变；非法输入保留旧图', async () => {
+  it('12.1000 与 12.10 统一显示三位且保留元数据，几何/参数 q 不变；非法输入保留旧图', async () => {
     await openExample()
     fireEvent.click(screen.getByRole('button', { name: '生成图纸' }))
     await waitFor(() => expect(document.querySelector('[data-drawing-fingerprint]')).not.toBeNull())
@@ -953,12 +953,12 @@ describe('C-03 工程图预览与参数联动', () => {
     fireEvent.change(lengthInput, { target: { value: '12.1000' } })
     fireEvent.click(screen.getByRole('button', { name: '应用参数与比例' }))
     await waitFor(() => {
-      expect(document.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.1000')
+      expect(document.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.100')
     })
     fireEvent.change(lengthInput, { target: { value: '12.10' } })
     fireEvent.click(screen.getByRole('button', { name: '应用参数与比例' }))
     await waitFor(() => {
-      expect(document.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.10')
+      expect(document.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.100')
     })
     // 预览的参数元数据来自同一份快照：q 不变，只有有效位不同。
     expect(screen.getByText('121000 q · 2 位')).toBeInTheDocument()
@@ -968,7 +968,7 @@ describe('C-03 工程图预览与参数联动', () => {
     fireEvent.click(screen.getByRole('button', { name: '应用参数与比例' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/外径必须大于内径/)
     expect(document.querySelector('[data-drawing-fingerprint]')?.getAttribute('data-drawing-fingerprint')).toBe(before)
-    expect(document.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.10')
+    expect(document.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.100')
   })
 
   it('纸面比例只改视图尺寸；画布缩放不触发数据更新', async () => {
@@ -982,7 +982,7 @@ describe('C-03 工程图预览与参数联动', () => {
     const last = vi.mocked(api.updateSpacerDrawing).mock.calls.at(-1)?.[0]
     expect(last?.scale).toEqual({ numerator: 1, denominator: 2 })
     await waitFor(() => {
-      expect(document.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.00')
+      expect(document.querySelector('[data-annotation-id="ann.length"] text')?.textContent).toBe('12.000')
     })
     const zoomCalls = vi.mocked(api.updateSpacerDrawing).mock.calls.length
     fireEvent.click(screen.getByRole('button', { name: '50%' }))
@@ -1013,23 +1013,23 @@ describe('V3.5 第 3 阶段：草稿候选画面与提交门禁', () => {
     const drawingPanel = screen.getByLabelText('隔套工程图')
     const annotationText = () =>
       drawingPanel.querySelector('[data-annotation-id="ann.length"] text')?.textContent
-    await waitFor(() => expect(annotationText()).toBe('12.00'))
+    await waitFor(() => expect(annotationText()).toBe('12.000'))
     fireEvent.click(screen.getByRole('button', { name: '150%' }))
     expect(screen.getByRole('button', { name: '150%' })).toHaveAttribute('aria-pressed', 'true')
 
     const bench = screen.getByLabelText('参数联动')
     fireEvent.change(within(bench).getByLabelText('长度（mm）'), { target: { value: '12.04' } })
     await waitFor(() => expect(api.previewChange).toHaveBeenCalled(), { timeout: 3000 })
-    await waitFor(() => expect(annotationText()).toBe('12.04'), { timeout: 3000 })
+    await waitFor(() => expect(annotationText()).toBe('12.040'), { timeout: 3000 })
 
     // 2D 图形与标注确实按候选参数重画，并明确标“未提交”。
     expect(within(drawingPanel).getByText(/候选参数预览（未提交）/)).toBeInTheDocument()
     expect(within(drawingPanel).getByText('候选草稿 · 未提交')).toBeInTheDocument()
     // 项目树与属性也读候选快照（用户实测的 120000 q 不再停留）。
-    fireEvent.click(screen.getByRole('button', { name: '长度 · 12.04' }))
+    fireEvent.click(screen.getByRole('button', { name: '长度 · 12.040' }))
     expect(screen.getByRole('heading', { name: '长度 · 图纸参数' })).toBeInTheDocument()
     expect(screen.getByText(/q = 120400 · 输入 2 位小数/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '标注 · 12.04' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '标注 · 12.040' })).toBeInTheDocument()
     // 3D：隔套长度随草稿变成 12.04。
     await waitFor(() =>
       expect(
@@ -1050,7 +1050,7 @@ describe('V3.5 第 3 阶段：草稿候选画面与提交门禁', () => {
       () => expect(within(screen.getByLabelText('隔套工程图')).getByText(/输入待修正/)).toBeInTheDocument(),
       { timeout: 3000 },
     )
-    expect(annotationText()).toBe('12.04')
+    expect(annotationText()).toBe('12.040')
     expect(drawingPanel.querySelector('[data-drawing-fingerprint]')).not.toBeNull()
   })
 
@@ -1151,7 +1151,7 @@ describe('D 参数联动工作台（renderer mock 接线）', () => {
 
     let bench = screen.getByLabelText('参数联动')
     expect(await within(bench).findByText(/已关联 1 个组成环/)).toBeInTheDocument()
-    expect(within(bench).getByLabelText('长度（mm）')).toHaveValue('12.00')
+    expect(within(bench).getByLabelText('长度（mm）')).toHaveValue('12.000')
 
     fireEvent.change(within(bench).getByLabelText('长度（mm）'), { target: { value: '14.00' } })
     fireEvent.click(within(bench).getByRole('button', { name: '建立/更新草稿' }))
@@ -1163,7 +1163,7 @@ describe('D 参数联动工作台（renderer mock 接线）', () => {
     fireEvent.click(within(bench).getByRole('button', { name: '预览变更' }))
     await waitFor(() => expect(api.previewChange).toHaveBeenCalled())
     expect(await screen.findByText('预览：rev-d-mock-1')).toBeInTheDocument()
-    expect(screen.getAllByText(/-1\.8500 ～ -1\.7500/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/-1\.850 ～ -1\.750/).length).toBeGreaterThan(0)
 
     const group = screen.getByLabelText('复核与变更分组')
     for (const heading of ['受影响环', '需复核来源', '关系待核', '材料缺失', '计算不满足']) {
@@ -1334,7 +1334,7 @@ describe('V3.5 复核区：任务书条款入口', () => {
     })
     fireEvent.change(within(dialog).getByLabelText('条款下限'), { target: { value: '0.1000' } })
     fireEvent.change(within(dialog).getByLabelText('条款上限'), { target: { value: '0.3000' } })
-    expect(await within(dialog).findByText(/0\.1000 ～ 0\.3000 mm（闭区间/)).toBeInTheDocument()
+    expect(await within(dialog).findByText(/0\.100 ～ 0\.300 mm（闭区间/)).toBeInTheDocument()
 
     await waitFor(
       () => expect(api.stageRequirementEdit).toHaveBeenCalled(),

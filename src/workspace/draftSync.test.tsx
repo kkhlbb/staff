@@ -29,8 +29,8 @@ function assertViews(snapshot: ProjectFileSnapshot, q: number, min: number, max:
   expect(snapshot.draft!.relationRevision).toBe(snapshot.project.relationRevision)
   expect(calculateChain(parsed.chain)).toMatchObject({ minQ: min, maxQ: max })
   render(<DesktopChainView snapshot={snapshot} edit={vi.fn()} disabled={false} />)
-  expect(screen.getByRole('region', { name: '当前计算结果' }).textContent).toContain(`${(min / 10000).toFixed(4)} 至 ${(max / 10000).toFixed(4)}`)
-  expect(screen.getByRole('textbox', { name: /S 基本尺寸/ })).toHaveValue((q / 10000).toFixed(4))
+  expect(screen.getByRole('region', { name: '当前计算结果' }).textContent).toContain(`${(min / 10000).toFixed(3)} 至 ${(max / 10000).toFixed(3)}`)
+  expect(screen.getByRole('textbox', { name: /S 基本尺寸/ })).toHaveValue((q / 10000).toFixed(3))
   cleanup()
 }
 afterEach(cleanup)
@@ -73,7 +73,7 @@ describe('V3.5 draft sync', () => {
     expect(resolveDraft(next).kind).toBe('stale-mirror')
     render(<DesktopChainView snapshot={next} edit={vi.fn()} disabled={false} />)
     expect(screen.getByText(/旧草稿.*已由正式版本/)).toBeVisible()
-    expect(screen.getByRole('region', { name: '当前计算结果' })).toHaveTextContent('0.1000 至 0.2000')
+    expect(screen.getByRole('region', { name: '当前计算结果' })).toHaveTextContent('0.100 至 0.200')
     expect(next).toEqual(before)
   })
   it('FIX-06: real numeric/invalid/structural/target edits survive, with original basis', async () => {

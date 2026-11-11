@@ -70,7 +70,7 @@ export function parseMm(input: string): Q {
   return result.value
 }
 
-/** 用整数运算把 q 格式化为固定 4 位小数的 mm 字符串。 */
+/** 用整数 q 判定精度：默认 3 位，第 4 位非零时完整保留 4 位。 */
 export function formatMm(value: Q, options: { signed?: boolean } = {}): string {
   if (!Number.isSafeInteger(value)) {
     throw new RangeError(`formatMm 需要安全整数，收到 ${String(value)}`)
@@ -79,5 +79,6 @@ export function formatMm(value: Q, options: { signed?: boolean } = {}): string {
   const intPart = Math.floor(abs / Q_PER_MM)
   const fracPart = String(abs % Q_PER_MM).padStart(DECIMALS, '0')
   const sign = value < 0 ? '-' : options.signed ? '+' : ''
-  return `${sign}${intPart}.${fracPart}`
+  const displayedFraction = abs % 10 === 0 ? fracPart.slice(0, 3) : fracPart
+  return `${sign}${intPart}.${displayedFraction}`
 }

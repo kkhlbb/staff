@@ -237,7 +237,7 @@ describe('Workspace 真实贯通：来源核对随数值修订失效', () => {
     first.unmount()
     render(<Workspace projectId={projectId} />)
     await screen.findByRole('button', { name: '增加行' })
-    expect(screen.getByRole('textbox', { name: 'H 上偏差' })).toHaveValue('0.1000')
+    expect(screen.getByRole('textbox', { name: 'H 上偏差' })).toHaveValue('0.100')
     await waitFor(() =>
       expect(screen.getByTestId('source-badge-t-h')).toHaveTextContent('1 处待复核'),
     )

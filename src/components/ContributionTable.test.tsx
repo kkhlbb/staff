@@ -66,10 +66,10 @@ describe('ContributionTable：排序与数值', () => {
 
     // H 与 S 同为 0.1000，B1 与 B2 同为 0.0200；相等项保持 contributions 原顺序。
     expect(bodyRows().map(rowCells)).toEqual([
-      ['H', '0.1000', '41.7%'],
-      ['S', '0.1000', '41.7%'],
-      ['B1', '0.0200', '8.3%'],
-      ['B2', '0.0200', '8.3%'],
+      ['H', '0.100', '41.7%'],
+      ['S', '0.100', '41.7%'],
+      ['B1', '0.020', '8.3%'],
+      ['B2', '0.020', '8.3%'],
     ])
   })
 
@@ -120,8 +120,8 @@ describe('ContributionTable：全零公差', () => {
 
     const rows = bodyRows().map(rowCells)
     expect(rows).toEqual([
-      ['A', '0.0000', '—'],
-      ['B', '0.0000', '—'],
+      ['A', '0.000', '—'],
+      ['B', '0.000', '—'],
     ])
     expect(screen.queryByText(/NaN/)).toBeNull()
   })

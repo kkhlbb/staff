@@ -1,3 +1,4 @@
+import { MmInput } from './MmInput'
 import { useId, type Dispatch } from 'react'
 import type { ChainDefinition, ChainResult, Q } from '../domain/types'
 import { formatMm } from '../domain/units'
@@ -336,7 +337,7 @@ export function ResultPanel({
       <div className="result-panel__target">
         <div className="result-panel__target-field">
           <label htmlFor={targetMinId}>目标下限</label>
-          <input
+          <MmInput
             id={targetMinId}
             type="text"
             inputMode="decimal"
@@ -361,7 +362,7 @@ export function ResultPanel({
 
         <div className="result-panel__target-field">
           <label htmlFor={targetMaxId}>目标上限</label>
-          <input
+          <MmInput
             id={targetMaxId}
             type="text"
             inputMode="decimal"

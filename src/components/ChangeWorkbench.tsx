@@ -17,6 +17,9 @@ import { REQUIREMENT_STATUS_LABEL } from '../requirements/types'
 import { DrawingCanvas } from './DrawingCanvas'
 import { RequirementStatusPanel } from './RequirementStatusPanel'
 import type { ChangeUiState } from '../workspace/useDesktopSession'
+import { formatMm } from '../domain/units'
+import { formatQWithDecimals } from '../drawing/formatDimension'
+import { MmInput } from './MmInput'
 import './ChangeWorkbench.css'
 
 export interface ChangeWorkbenchProps {
@@ -42,14 +45,8 @@ export interface ChangeWorkbenchProps {
   onLocateRequirement: () => void
 }
 
-function qText(valueQ: number, decimals: number): string {
-  const whole = Math.trunc(valueQ / 10000)
-  const fraction = String(valueQ % 10000).padStart(4, '0').slice(0, decimals)
-  return decimals === 0 ? String(whole) : `${whole}.${fraction}`
-}
-
 function resultText(result: { nominalQ: number; minQ: number; maxQ: number; status: string }): string {
-  return `${(result.nominalQ / 10000).toFixed(4)} mm；范围 ${(result.minQ / 10000).toFixed(4)} ～ ${(result.maxQ / 10000).toFixed(4)} mm（${result.status}）`
+  return `${formatMm(result.nominalQ)} mm；范围 ${formatMm(result.minQ)} ～ ${formatMm(result.maxQ)} mm（${result.status}）`
 }
 
 export function ChangeWorkbench(props: ChangeWorkbenchProps) {
@@ -57,10 +54,12 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
   const project = snapshot.project
   const draftParameters = change.draft?.parameters ?? project.parameters
   const byKey = new Map(draftParameters.map((parameter) => [parameter.key, parameter]))
+  // 只恢复编辑/提交原文的位数，不把显示规范写入 inputDecimals。
+  // 非编辑文字统一由 MmInput → formatMm 生成。
   const [texts, setTexts] = useState(() => ({
-    innerDiameter: byKey.get('innerDiameter') ? qText(byKey.get('innerDiameter')!.valueQ, byKey.get('innerDiameter')!.inputDecimals) : '20.00',
-    outerDiameter: byKey.get('outerDiameter') ? qText(byKey.get('outerDiameter')!.valueQ, byKey.get('outerDiameter')!.inputDecimals) : '32.00',
-    length: byKey.get('length') ? qText(byKey.get('length')!.valueQ, byKey.get('length')!.inputDecimals) : '12.00',
+    innerDiameter: byKey.get('innerDiameter') ? formatQWithDecimals(byKey.get('innerDiameter')!.valueQ, byKey.get('innerDiameter')!.inputDecimals) ?? '' : '20.00',
+    outerDiameter: byKey.get('outerDiameter') ? formatQWithDecimals(byKey.get('outerDiameter')!.valueQ, byKey.get('outerDiameter')!.inputDecimals) ?? '' : '32.00',
+    length: byKey.get('length') ? formatQWithDecimals(byKey.get('length')!.valueQ, byKey.get('length')!.inputDecimals) ?? '' : '12.00',
   }))
   const [notes, setNotes] = useState<{ innerDiameter?: string; outerDiameter?: string; length?: string }>({})
   const [reason, setReason] = useState('参数变更（只同步 nominal）')
@@ -177,7 +176,8 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
         {(['innerDiameter', 'outerDiameter', 'length'] as const).map((key) => (
           <label key={key}>
             {SPACER_PARAMETER_LABELS[key]}
-            <input
+            <MmInput
+              inputMode="decimal"
               aria-label={`${SPACER_PARAMETER_LABELS[key]}（mm）`}
               value={texts[key]}
               onChange={(event) => { touched.current = true; setTexts({ ...texts, [key]: event.target.value }) }}
@@ -386,7 +386,7 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
               ? `：${resultText(groups.calculation.result)}`
               : ''}
             {groups.calculation.shortfallQ !== null
-              ? `；缺口 ${groups.calculation.shortfallQ}q（${(Math.abs(groups.calculation.shortfallQ) / 10000).toFixed(4)} mm）`
+              ? `；缺口 ${groups.calculation.shortfallQ}q（${formatMm(Math.abs(groups.calculation.shortfallQ))} mm）`
               : ''}
           </p>
           <p>{groups.drawing.label}</p>

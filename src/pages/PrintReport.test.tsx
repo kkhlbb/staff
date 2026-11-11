@@ -289,23 +289,23 @@ describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
     expect(rowCells(hRow)).toEqual([
       'H',
       '机架',
-      '100.0000',
-      '0.0000',
-      '0.1000',
+      '100.000',
+      '0.000',
+      '0.100',
       '+1（增加封闭环）',
       '图纸 A-01，H 尺寸',
     ])
     expect(rowCells(b1Row)).toEqual([
       'B1',
       '轴承 1',
-      '20.0000',
-      '-0.0200',
-      '0.0000',
+      '20.000',
+      '-0.020',
+      '0.000',
       '-1（减小封闭环）',
       '轴承样本 B1',
     ])
     expect(
-      within(report).getAllByText('0.1000 ~ 0.3000').length,
+      within(report).getAllByText('0.100 ~ 0.300').length,
     ).toBeGreaterThan(0)
     expect(
       within(report).getAllByText('假设各组成环独立，作用方向如表达式中标注。')
@@ -318,23 +318,23 @@ describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
     )
     expect(within(report).getByText(/极值法公式/)).toBeInTheDocument()
     expect(within(report).getByTestId('report-substitution')).toHaveTextContent(
-      'C = +100.0000 - 20.0000 - 59.8000 - 20.0000 = 0.2000',
+      'C = +100.000 - 20.000 - 59.800 - 20.000 = 0.200',
     )
 
     // 5. 目标区间、计算区间、两侧裕量与判定。
-    expect(resultText('report-result-nominal')).toBe('0.2000')
-    expect(resultText('report-result-min')).toBe('0.1500')
-    expect(resultText('report-result-max')).toBe('0.3900')
-    expect(resultText('report-result-lower-deviation')).toBe('-0.0500')
-    expect(resultText('report-result-upper-deviation')).toBe('+0.1900')
-    expect(resultText('report-result-tolerance')).toBe('0.2400')
-    expect(resultText('report-result-target')).toBe('0.1000 ~ 0.3000')
+    expect(resultText('report-result-nominal')).toBe('0.200')
+    expect(resultText('report-result-min')).toBe('0.150')
+    expect(resultText('report-result-max')).toBe('0.390')
+    expect(resultText('report-result-lower-deviation')).toBe('-0.050')
+    expect(resultText('report-result-upper-deviation')).toBe('+0.190')
+    expect(resultText('report-result-tolerance')).toBe('0.240')
+    expect(resultText('report-result-target')).toBe('0.100 ~ 0.300')
     // 没有来源绑定：计算结论仍是“不满足”，但审查未完成要单独标明。
     expect(resultText('report-result-status')).toBe(
       '计算不满足（审查未完成，见待办）',
     )
-    expect(resultText('report-result-lower-margin')).toBe('+0.0500')
-    expect(resultText('report-result-upper-margin')).toBe('-0.0900')
+    expect(resultText('report-result-lower-margin')).toBe('+0.050')
+    expect(resultText('report-result-upper-margin')).toBe('-0.090')
 
     // 6. 公差贡献表与比例。
     const contributionTable = within(report).getByRole('table', {
@@ -344,10 +344,10 @@ describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
       .getAllByRole('row')
       .slice(1)
     expect(contributionRows.map(rowCells)).toEqual([
-      ['H', '0.1000', '41.7%'],
-      ['S', '0.1000', '41.7%'],
-      ['B1', '0.0200', '8.3%'],
-      ['B2', '0.0200', '8.3%'],
+      ['H', '0.100', '41.7%'],
+      ['S', '0.100', '41.7%'],
+      ['B1', '0.020', '8.3%'],
+      ['B2', '0.020', '8.3%'],
     ])
 
     // 7. 负间隙说明、来源清单与审查待办。
@@ -371,10 +371,10 @@ describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
     expect(
       within(report).getByRole('heading', { name: '基线对比（快照冻结）' }),
     ).toBeInTheDocument()
-    expect(within(report).getByTestId('compare-min')).toHaveTextContent('0.1800')
-    expect(within(report).getByTestId('compare-min')).toHaveTextContent('0.1500')
-    expect(within(report).getByTestId('compare-max')).toHaveTextContent('0.2900')
-    expect(within(report).getByTestId('compare-max')).toHaveTextContent('0.3900')
+    expect(within(report).getByTestId('compare-min')).toHaveTextContent('0.180')
+    expect(within(report).getByTestId('compare-min')).toHaveTextContent('0.150')
+    expect(within(report).getByTestId('compare-max')).toHaveTextContent('0.290')
+    expect(within(report).getByTestId('compare-max')).toHaveTextContent('0.390')
 
     // 每页页脚：页码 / 总页数 + 快照短 ID。@page 规则由打印分页生成。
     const pageRule = screen.getByTestId('report-page-rule')
@@ -408,8 +408,8 @@ describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
     expect(
       within(report).getByRole('heading', { level: 1, name: '案例 A 打印报告' }),
     ).toBeInTheDocument()
-    expect(resultText('report-result-min')).toBe('0.1500')
-    expect(resultText('report-result-max')).toBe('0.3900')
+    expect(resultText('report-result-min')).toBe('0.150')
+    expect(resultText('report-result-max')).toBe('0.390')
     expect(within(report).queryByText('已改名的工作项目')).toBeNull()
     expect(
       within(report).getByTestId('report-snapshot-id'),
@@ -443,7 +443,7 @@ describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
     const report = await screen.findByTestId('print-report')
     const minRow = within(report).getByTestId('compare-min')
     expect(minRow).toHaveTextContent('99.9999')
-    expect(minRow).not.toHaveTextContent('0.1800')
+    expect(minRow).not.toHaveTextContent('0.180')
   })
 
   it('旧版快照没有冻结对比结果时不补算，只显示不可用说明', async () => {

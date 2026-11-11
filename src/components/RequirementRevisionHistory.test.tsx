@@ -19,7 +19,7 @@ describe('V3.5 复核区：条款版本历史列表', () => {
     expect(oldRow).toHaveTextContent('reqrev-1')
     expect(oldRow).toHaveTextContent('无（首版）')
     expect(oldRow).toHaveTextContent('2026-11-09T09:00:00.000Z')
-    expect(oldRow).toHaveTextContent('0.1000 ～ 0.3000 mm')
+    expect(oldRow).toHaveTextContent('0.100 ～ 0.300 mm')
     expect(oldRow).toHaveTextContent('sr-1')
     expect(oldRow).toHaveTextContent('第 2 页')
     expect(oldRow).toHaveTextContent('[10, 10, 110, 30]')

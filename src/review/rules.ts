@@ -11,6 +11,7 @@
  * - 历史来源接受只解决 SOURCE_CURRENT，不代替 SOURCE_VALUE_REVIEWED。
  * - 本模块是纯函数：不读存储、不写事件、不依赖 React。
  */
+import { formatMm } from '../domain/units'
 import { ENGINE_VERSION } from '../domain/calculate'
 import type { ChainDefinition, ChainResult } from '../domain/types'
 import type { SourceBinding } from '../sources/bindings'
@@ -310,7 +311,7 @@ function makeFinding(draft: FindingDraft): ReviewFinding {
 }
 
 function formatRange(minQ: number, maxQ: number): string {
-  return `[${(minQ / 10000).toFixed(4)}, ${(maxQ / 10000).toFixed(4)}] mm`
+  return `[${formatMm(minQ)}, ${formatMm(maxQ)}] mm`
 }
 
 function compareFindings(left: ReviewFinding, right: ReviewFinding): number {

@@ -8,7 +8,7 @@
  * 比例只作用于视图尺寸，不改参数、单位或输入精度。
  */
 import { Q_PER_MM } from '../domain/types'
-import { formatParameterValue, resolveDimension, dimensionText } from './formatDimension'
+import { formatParameterValue, formatQWithDecimals, resolveDimension, dimensionText } from './formatDimension'
 import { stableFingerprint } from './fingerprint'
 import { computeLayout } from './layout'
 import {
@@ -494,7 +494,10 @@ export function buildSpacerDrawing(input: BuildSpacerDrawingInput): DrawingData 
     if (!resolved.ok) {
       throw new DrawingBuildError('INVALID_DRAWING', resolved.message)
     }
-    annotationTexts[annotation.annotationId] = dimensionText(resolved.value, annotation.kind)
+    // layout 是持久化指纹的一部分，保留按输入精度计算的既有布局度量。
+    // 可见标注由 renderDrawingSvg / annotationTextsOf 经 formatMm 单独生成。
+    const layoutText = formatQWithDecimals(resolved.value.valueQ, resolved.value.inputDecimals)!
+    annotationTexts[annotation.annotationId] = annotation.kind === 'diameter' ? `⌀${layoutText}` : layoutText
   }
 
   const views: DrawingView[] = [

@@ -81,7 +81,7 @@ describe('MUT-C1 边界：标注只读参数真值', () => {
       const lengthText = svg.match(/data-annotation-id="ann.length"[\s\S]*?class="t-dim">([^<]+)</)?.[1]
       texts.add(lengthText ?? 'missing')
     }
-    expect([...texts]).toEqual(['12.10'])
+    expect([...texts]).toEqual(['12.100'])
     // 12.1001 不能在两位/三位小数下被裁成 12.10。
     expect(formatQWithDecimals(121001, 2)).toBeNull()
     expect(resolveDimension('param:spacer:length', parsed.parameters).ok).toBe(true)

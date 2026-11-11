@@ -71,26 +71,26 @@ describe('ScenarioCompare：文档第 8 节案例 A → B', () => {
     const resultTable = screen.getByRole('table', { name: '结果变化对比' })
 
     expect(within(resultTable).getByTestId('compare-min')).toHaveTextContent(
-      '0.1500',
+      '0.150',
     )
     expect(within(resultTable).getByTestId('compare-min')).toHaveTextContent(
-      '0.1800',
+      '0.180',
     )
     expect(
       within(resultTable).getByTestId('compare-min-delta'),
-    ).toHaveTextContent('+0.0300')
+    ).toHaveTextContent('+0.030')
     expect(
       within(resultTable).getByTestId('compare-max-delta'),
-    ).toHaveTextContent('-0.1000')
+    ).toHaveTextContent('-0.100')
     expect(
       within(resultTable).getByTestId('compare-tolerance-delta'),
-    ).toHaveTextContent('-0.1300')
+    ).toHaveTextContent('-0.130')
     expect(
       within(resultTable).getByTestId('compare-lower-margin-delta'),
-    ).toHaveTextContent('+0.0300')
+    ).toHaveTextContent('+0.030')
     expect(
       within(resultTable).getByTestId('compare-upper-margin-delta'),
-    ).toHaveTextContent('+0.1000')
+    ).toHaveTextContent('+0.100')
 
     expect(
       within(resultTable).getByTestId('compare-status-before'),
@@ -104,20 +104,20 @@ describe('ScenarioCompare：文档第 8 节案例 A → B', () => {
       'compare-change-H-upperDeviationQ',
     )
     expect(hUpperRow).toHaveTextContent('上偏差')
-    expect(hUpperRow).toHaveTextContent('0.1000')
-    expect(hUpperRow).toHaveTextContent('0.0300')
+    expect(hUpperRow).toHaveTextContent('0.100')
+    expect(hUpperRow).toHaveTextContent('0.030')
 
     const sLowerRow = within(fieldTable).getByTestId(
       'compare-change-S-lowerDeviationQ',
     )
-    expect(sLowerRow).toHaveTextContent('-0.0500')
-    expect(sLowerRow).toHaveTextContent('-0.0200')
+    expect(sLowerRow).toHaveTextContent('-0.050')
+    expect(sLowerRow).toHaveTextContent('-0.020')
 
     const sUpperRow = within(fieldTable).getByTestId(
       'compare-change-S-upperDeviationQ',
     )
-    expect(sUpperRow).toHaveTextContent('0.0500')
-    expect(sUpperRow).toHaveTextContent('0.0200')
+    expect(sUpperRow).toHaveTextContent('0.050')
+    expect(sUpperRow).toHaveTextContent('0.020')
   })
 
   it('无变化时不渲染差异表', () => {

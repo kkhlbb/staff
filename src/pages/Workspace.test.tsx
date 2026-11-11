@@ -199,23 +199,23 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     expect(screen.getAllByRole('checkbox')).toHaveLength(1)
     expect(checkbox).not.toBeChecked()
     expect(resultValue('result-status')).toBe('待确认（预览）')
-    expect(resultValue('result-min')).toBe('0.1500')
-    expect(resultValue('result-max')).toBe('0.3900')
+    expect(resultValue('result-min')).toBe('0.150')
+    expect(resultValue('result-max')).toBe('0.390')
 
     await user.click(checkbox)
 
     expect(checkbox).toBeChecked()
     expect(resultValue('result-status')).toBe('不满足')
     expect(screen.getByRole('table', { name: '公差贡献表' })).toBeInTheDocument()
-    expect(resultValue('result-nominal')).toBe('0.2000')
-    expect(resultValue('result-min')).toBe('0.1500')
-    expect(resultValue('result-max')).toBe('0.3900')
-    expect(resultValue('result-lower-deviation')).toBe('-0.0500')
-    expect(resultValue('result-upper-deviation')).toBe('+0.1900')
-    expect(resultValue('result-tolerance')).toBe('0.2400')
-    expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
-    expect(resultValue('result-lower-margin')).toBe('+0.0500')
-    expect(resultValue('result-upper-margin')).toBe('-0.0900')
+    expect(resultValue('result-nominal')).toBe('0.200')
+    expect(resultValue('result-min')).toBe('0.150')
+    expect(resultValue('result-max')).toBe('0.390')
+    expect(resultValue('result-lower-deviation')).toBe('-0.050')
+    expect(resultValue('result-upper-deviation')).toBe('+0.190')
+    expect(resultValue('result-tolerance')).toBe('0.240')
+    expect(resultValue('result-target')).toBe('0.100 ~ 0.300')
+    expect(resultValue('result-lower-margin')).toBe('+0.050')
+    expect(resultValue('result-upper-margin')).toBe('-0.090')
 
     // 示意图与表格选中行双向联动。
     const selectS = screen.getByRole('button', { name: '选择 S' })
@@ -245,20 +245,20 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
 
     expect(confirmationCheckbox()).not.toBeChecked()
     expect(resultValue('result-status')).toBe('待确认（预览）')
-    expect(resultValue('result-nominal')).toBe('0.2000')
-    expect(resultValue('result-min')).toBe('0.1800')
-    expect(resultValue('result-max')).toBe('0.2900')
-    expect(resultValue('result-lower-deviation')).toBe('-0.0200')
-    expect(resultValue('result-upper-deviation')).toBe('+0.0900')
-    expect(resultValue('result-tolerance')).toBe('0.1100')
-    expect(resultValue('result-lower-margin')).toBe('+0.0800')
-    expect(resultValue('result-upper-margin')).toBe('+0.0100')
+    expect(resultValue('result-nominal')).toBe('0.200')
+    expect(resultValue('result-min')).toBe('0.180')
+    expect(resultValue('result-max')).toBe('0.290')
+    expect(resultValue('result-lower-deviation')).toBe('-0.020')
+    expect(resultValue('result-upper-deviation')).toBe('+0.090')
+    expect(resultValue('result-tolerance')).toBe('0.110')
+    expect(resultValue('result-lower-margin')).toBe('+0.080')
+    expect(resultValue('result-upper-margin')).toBe('+0.010')
 
     await user.click(confirmationCheckbox())
 
     expect(confirmationCheckbox()).toBeChecked()
     expect(resultValue('result-status')).toBe('满足')
-    expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
+    expect(resultValue('result-target')).toBe('0.100 ~ 0.300')
   })
 
   it('F-01 目标下限大于上限时允许区间、裕量和目标图不套用上次有效目标', async () => {
@@ -268,7 +268,7 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     await buildCaseA(user)
     await user.click(confirmationCheckbox())
     expect(resultValue('result-status')).toBe('不满足')
-    expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
+    expect(resultValue('result-target')).toBe('0.100 ~ 0.300')
     expect(
       screen.getByRole('button', { name: '创建分析快照' }),
     ).not.toBeDisabled()
@@ -284,8 +284,8 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
       screen.getByText('输入有误，显示的是上次有效结果'),
     ).toBeInTheDocument()
     // C₀/Cmin/Cmax 仍可显示上次有效结果。
-    expect(resultValue('result-min')).toBe('0.1500')
-    expect(resultValue('result-max')).toBe('0.3900')
+    expect(resultValue('result-min')).toBe('0.150')
+    expect(resultValue('result-max')).toBe('0.390')
     // 允许区间、两侧裕量和目标图不能混入旧的 target。
     expect(resultValue('result-target')).toBe('—')
     expect(resultValue('result-lower-margin')).toBe('—')
@@ -303,7 +303,7 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     })
     expect(within(contributionTable).getAllByRole('row')).toHaveLength(5)
     expect(contributionTable).toHaveTextContent('H')
-    expect(contributionTable).toHaveTextContent('0.1000')
+    expect(contributionTable).toHaveTextContent('0.100')
   })
 
   it('F-02 改回合法目标后允许区间、裕量与判定恢复，快照入口重新可用', async () => {
@@ -324,9 +324,9 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => 
     expect(
       screen.queryByText('输入有误，显示的是上次有效结果'),
     ).toBeNull()
-    expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
-    expect(resultValue('result-lower-margin')).toBe('+0.0500')
-    expect(resultValue('result-upper-margin')).toBe('-0.0900')
+    expect(resultValue('result-target')).toBe('0.100 ~ 0.300')
+    expect(resultValue('result-lower-margin')).toBe('+0.050')
+    expect(resultValue('result-upper-margin')).toBe('-0.090')
     expect(resultValue('result-status')).toBe('不满足')
     expect(screen.getByTestId('target-range')).toBeInTheDocument()
     expect(
@@ -565,8 +565,8 @@ describe('Workspace：自动保存与刷新恢复', () => {
     await waitForSaveSettled()
 
     expect(resultValue('result-status')).toBe('不满足')
-    expect(resultValue('result-min')).toBe('0.1500')
-    expect(resultValue('result-max')).toBe('0.3900')
+    expect(resultValue('result-min')).toBe('0.150')
+    expect(resultValue('result-max')).toBe('0.390')
 
     first.unmount()
 
@@ -574,17 +574,17 @@ describe('Workspace：自动保存与刷新恢复', () => {
     await screen.findByRole('button', { name: '增加行' })
 
     expect(screen.getByRole('textbox', { name: 'H 基本尺寸' })).toHaveValue(
-      '100.0000',
+      '100.000',
     )
     expect(screen.getByRole('textbox', { name: 'S 下偏差' })).toHaveValue(
-      '-0.0500',
+      '-0.050',
     )
-    expect(screen.getByLabelText('目标下限')).toHaveValue('0.1000')
-    expect(screen.getByLabelText('目标上限')).toHaveValue('0.3000')
+    expect(screen.getByLabelText('目标下限')).toHaveValue('0.100')
+    expect(screen.getByLabelText('目标上限')).toHaveValue('0.300')
     expect(confirmationCheckbox()).toBeChecked()
     expect(resultValue('result-status')).toBe('不满足')
-    expect(resultValue('result-min')).toBe('0.1500')
-    expect(resultValue('result-max')).toBe('0.3900')
+    expect(resultValue('result-min')).toBe('0.150')
+    expect(resultValue('result-max')).toBe('0.390')
   })
 
   it('无效草稿刷新后仍然保留，并显示上一次有效结果和待修正状态', async () => {
@@ -620,9 +620,9 @@ describe('Workspace：自动保存与刷新恢复', () => {
 
     // 结果卡显示的是项目里上一次有效模型（案例 A），而不是空结果。
     expect(resultValue('result-status')).toBe('待确认（预览）')
-    expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
-    expect(resultValue('result-min')).toBe('0.1500')
-    expect(resultValue('result-max')).toBe('0.3900')
+    expect(resultValue('result-target')).toBe('0.100 ~ 0.300')
+    expect(resultValue('result-min')).toBe('0.150')
+    expect(resultValue('result-max')).toBe('0.390')
   })
 
   it('保存失败时显示“保存失败”并提示导出 JSON，不显示“已保存”', async () => {
@@ -805,13 +805,13 @@ describe('Workspace：基线、方案对比与恢复', () => {
     })
     expect(
       within(resultCompare).getByTestId('compare-min-delta'),
-    ).toHaveTextContent('+0.0300')
+    ).toHaveTextContent('+0.030')
     expect(
       within(resultCompare).getByTestId('compare-max-delta'),
-    ).toHaveTextContent('-0.1000')
+    ).toHaveTextContent('-0.100')
     expect(
       within(resultCompare).getByTestId('compare-tolerance-delta'),
-    ).toHaveTextContent('-0.1300')
+    ).toHaveTextContent('-0.130')
     expect(
       within(resultCompare).getByTestId('compare-status-before'),
     ).toHaveTextContent('不满足')
@@ -820,10 +820,10 @@ describe('Workspace：基线、方案对比与恢复', () => {
     ).toHaveTextContent('满足')
 
     const fieldCompare = screen.getByRole('table', { name: '字段变化对比' })
-    const hUpperRow = within(fieldCompare).getByText('0.1000').closest('tr')
+    const hUpperRow = within(fieldCompare).getByText('0.100').closest('tr')
     expect(hUpperRow).not.toBeNull()
     expect(hUpperRow).toHaveTextContent('上偏差')
-    expect(hUpperRow).toHaveTextContent('0.0300')
+    expect(hUpperRow).toHaveTextContent('0.030')
 
     // 已有基线时再次保存必须先经过确认；取消后基线不变。
     await user.click(screen.getByRole('button', { name: '保存为基线' }))
@@ -852,13 +852,13 @@ describe('Workspace：基线、方案对比与恢复', () => {
       await screen.findByText('已恢复基线，关系确认已清除'),
     ).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'H 上偏差' })).toHaveValue(
-      '0.1000',
+      '0.100',
     )
     expect(screen.getByRole('textbox', { name: 'S 下偏差' })).toHaveValue(
-      '-0.0500',
+      '-0.050',
     )
     expect(screen.getByRole('textbox', { name: 'S 上偏差' })).toHaveValue(
-      '0.0500',
+      '0.050',
     )
     expect(confirmationCheckbox()).not.toBeChecked()
     expect(screen.getByText(/未发现差异/)).toBeInTheDocument()
@@ -871,7 +871,7 @@ describe('Workspace：基线、方案对比与恢复', () => {
     expect(await screen.findByText(/已有基线/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '恢复基线' })).not.toBeDisabled()
     expect(screen.getByRole('textbox', { name: 'H 上偏差' })).toHaveValue(
-      '0.1000',
+      '0.100',
     )
     expect(confirmationCheckbox()).not.toBeChecked()
     expect(screen.getByText(/未发现差异/)).toBeInTheDocument()
@@ -1174,7 +1174,7 @@ describe('Workspace：本地 V1 项目升级提示', () => {
       await screen.findByText(/旧的人工确认没有版本凭据，已清除/),
     ).toBeInTheDocument()
     expect(screen.getByText(/项目、基线与未通过的草稿输入均已保留/)).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: 'H 基本尺寸' })).toHaveValue('100.0000')
+    expect(screen.getByRole('textbox', { name: 'H 基本尺寸' })).toHaveValue('100.000')
     expect(confirmationCheckbox()).not.toBeChecked()
     expect(resultValue('result-status')).toBe('待确认（预览）')
   })
@@ -1214,7 +1214,7 @@ describe('Workspace：改后改回不恢复关系确认', () => {
 
     render(<Workspace />)
     await screen.findByRole('button', { name: '增加行' })
-    expect(screen.getByRole('textbox', { name: 'H 上偏差' })).toHaveValue('0.1000')
+    expect(screen.getByRole('textbox', { name: 'H 上偏差' })).toHaveValue('0.100')
     expect(confirmationCheckbox()).not.toBeChecked()
     expect(resultValue('result-status')).toBe('待确认（预览）')
   })

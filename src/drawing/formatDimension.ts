@@ -3,9 +3,10 @@
  *
  * 约束：
  * - 标注只绑定 parameterId，数字来自参数快照的 valueQ，不读几何、像素或缩放；
- * - 用整数商/余数格式化到 inputDecimals，不经过浮点 toFixed；
+ * - 先验证 inputDecimals 元数据，再用 formatMm 统一显示，不经过浮点 toFixed；
  * - valueQ 不能被 inputDecimals 无损表达时明确报错，绝不把 12.1001 显示成 12.10。
  */
+import { formatMm } from '../domain/units'
 import { Q_PER_MM, type Q } from '../domain/types'
 import type { ParameterSnapshotItem } from '../drawing/types'
 
@@ -42,7 +43,7 @@ export function formatQWithDecimals(valueQ: Q, decimals: number): string | null 
 
 /** 只返回格式化文字；调用方拿不到文字时必须按数据不一致处理。 */
 export function formatParameterValue(valueQ: Q, decimals: number): string | null {
-  return formatQWithDecimals(valueQ, decimals)
+  return formatQWithDecimals(valueQ, decimals) === null ? null : formatMm(valueQ)
 }
 
 /**

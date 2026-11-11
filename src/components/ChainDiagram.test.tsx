@@ -139,10 +139,10 @@ describe('ChainDiagram：几何与方向', () => {
     )
 
     for (const [id, nominal] of [
-      ['H', '100.0000'],
-      ['B1', '20.0000'],
-      ['S', '59.8000'],
-      ['B2', '20.0000'],
+      ['H', '100.000'],
+      ['B1', '20.000'],
+      ['S', '59.800'],
+      ['B2', '20.000'],
     ]) {
       const text = groupById(container, id).textContent
       expect(text).toContain(id)
@@ -157,10 +157,18 @@ describe('ChainDiagram：几何与方向', () => {
 
     const rendered = groups(container)
     expect(rendered).toHaveLength(7)
-    for (const term of real01Terms()) {
-      const text = groupById(container, term.id).textContent
-      expect(text).toContain(term.symbol)
-      expect(text).toContain(term.nominal)
+    for (const [id, symbol, nominal] of [
+      ['A', 'A', '208.000'],
+      ['B', 'B', '1.750'],
+      ['C', 'C', '23.000'],
+      ['D', 'D', '20.000'],
+      ['E', 'E', '200.000'],
+      ['F', 'F', '20.000'],
+      ['G', 'G', '23.000'],
+    ]) {
+      const text = groupById(container, id).textContent
+      expect(text).toContain(symbol)
+      expect(text).toContain(nominal)
     }
 
     const boxes = labelBoxes(container)
@@ -291,7 +299,7 @@ describe('ChainDiagram：空链与无效尺寸', () => {
     }
 
     const z = groupById(container, 'Z')
-    expect(z.textContent).toContain('0.0000')
+    expect(z.textContent).toContain('0.000')
     expect(z.getAttribute('data-direction')).toBe('right')
 
     const x = groupById(container, 'X')
@@ -313,8 +321,8 @@ describe('ChainDiagram：空链与无效尺寸', () => {
       />,
     )
 
-    expect(groupById(container, 'H').textContent).toContain('100.0000')
-    expect(groupById(container, 'B1').textContent).toContain('20.0000')
+    expect(groupById(container, 'H').textContent).toContain('100.000')
+    expect(groupById(container, 'B1').textContent).toContain('20.000')
   })
 })
 

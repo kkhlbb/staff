@@ -155,8 +155,8 @@ describe('C-04 drawing:update-spacer', () => {
     const geometry = (data: DrawingData) =>
       data.primitives.filter((item) => item.area === 'drawing' && item.kind !== 'text').map((item) => item.geometryMm)
     expect(geometry(four)).toEqual(geometry(two))
-    expect(renderDrawingSvg(four)).toContain('>12.1000</text>')
-    expect(renderDrawingSvg(two)).toContain('>12.10</text>')
+    expect(renderDrawingSvg(four)).toContain('>12.100</text>')
+    expect(renderDrawingSvg(two)).toContain('>12.100</text>')
     // 尺寸链数值未被 C 参数改动。
     expect(two.parameterSnapshot.map((item) => item.valueQ)).toEqual([
       200000, 320000, 121000,

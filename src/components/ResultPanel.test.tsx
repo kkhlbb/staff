@@ -251,46 +251,46 @@ describe('ResultPanel：标准案例数值', () => {
   it('案例 A 显示不满足目标时的全部数值', () => {
     renderPanel(caseADraft())
 
-    expect(displayed('result-nominal')).toBe('0.2000')
-    expect(displayed('result-min')).toBe('0.1500')
-    expect(displayed('result-max')).toBe('0.3900')
-    expect(displayed('result-lower-deviation')).toBe('-0.0500')
-    expect(displayed('result-upper-deviation')).toBe('+0.1900')
-    expect(displayed('result-tolerance')).toBe('0.2400')
-    expect(displayed('result-target')).toBe('0.1000 ~ 0.3000')
+    expect(displayed('result-nominal')).toBe('0.200')
+    expect(displayed('result-min')).toBe('0.150')
+    expect(displayed('result-max')).toBe('0.390')
+    expect(displayed('result-lower-deviation')).toBe('-0.050')
+    expect(displayed('result-upper-deviation')).toBe('+0.190')
+    expect(displayed('result-tolerance')).toBe('0.240')
+    expect(displayed('result-target')).toBe('0.100 ~ 0.300')
     expect(displayed('result-status')).toBe('不满足')
-    expect(displayed('result-lower-margin')).toBe('+0.0500')
-    expect(displayed('result-upper-margin')).toBe('-0.0900')
+    expect(displayed('result-lower-margin')).toBe('+0.050')
+    expect(displayed('result-upper-margin')).toBe('-0.090')
   })
 
   it('案例 B 显示修改后满足目标的全部数值', () => {
     renderPanel(caseBDraft())
 
-    expect(displayed('result-nominal')).toBe('0.2000')
-    expect(displayed('result-min')).toBe('0.1800')
-    expect(displayed('result-max')).toBe('0.2900')
-    expect(displayed('result-lower-deviation')).toBe('-0.0200')
-    expect(displayed('result-upper-deviation')).toBe('+0.0900')
-    expect(displayed('result-tolerance')).toBe('0.1100')
-    expect(displayed('result-target')).toBe('0.1000 ~ 0.3000')
+    expect(displayed('result-nominal')).toBe('0.200')
+    expect(displayed('result-min')).toBe('0.180')
+    expect(displayed('result-max')).toBe('0.290')
+    expect(displayed('result-lower-deviation')).toBe('-0.020')
+    expect(displayed('result-upper-deviation')).toBe('+0.090')
+    expect(displayed('result-tolerance')).toBe('0.110')
+    expect(displayed('result-target')).toBe('0.100 ~ 0.300')
     expect(displayed('result-status')).toBe('满足')
-    expect(displayed('result-lower-margin')).toBe('+0.0800')
-    expect(displayed('result-upper-margin')).toBe('+0.0100')
+    expect(displayed('result-lower-margin')).toBe('+0.080')
+    expect(displayed('result-upper-margin')).toBe('+0.010')
   })
 
   it('案例 C 显示负间隙和零裕量边界', () => {
     renderPanel(caseCDraft())
 
-    expect(displayed('result-nominal')).toBe('-0.0500')
-    expect(displayed('result-min')).toBe('-0.2000')
-    expect(displayed('result-max')).toBe('-0.0500')
-    expect(displayed('result-lower-deviation')).toBe('-0.1500')
-    expect(displayed('result-upper-deviation')).toBe('+0.0000')
-    expect(displayed('result-tolerance')).toBe('0.1500')
-    expect(displayed('result-target')).toBe('-0.2000 ~ -0.0500')
+    expect(displayed('result-nominal')).toBe('-0.050')
+    expect(displayed('result-min')).toBe('-0.200')
+    expect(displayed('result-max')).toBe('-0.050')
+    expect(displayed('result-lower-deviation')).toBe('-0.150')
+    expect(displayed('result-upper-deviation')).toBe('+0.000')
+    expect(displayed('result-tolerance')).toBe('0.150')
+    expect(displayed('result-target')).toBe('-0.200 ~ -0.050')
     expect(displayed('result-status')).toBe('满足')
-    expect(displayed('result-lower-margin')).toBe('+0.0000')
-    expect(displayed('result-upper-margin')).toBe('+0.0000')
+    expect(displayed('result-lower-margin')).toBe('+0.000')
+    expect(displayed('result-upper-margin')).toBe('+0.000')
   })
 })
 
@@ -346,10 +346,10 @@ describe('ResultPanel：目标区间状态', () => {
     const minInput = screen.getByLabelText('目标下限')
     fireEvent.change(minInput, { target: { value: '0.2000' } })
 
-    expect(minInput).toHaveValue('0.2000')
-    expect(displayed('result-target')).toBe('0.2000 ~ 0.3000')
-    expect(displayed('result-lower-margin')).toBe('-0.0500')
-    expect(displayed('result-upper-margin')).toBe('-0.0900')
+    expect(minInput).toHaveValue('0.200')
+    expect(displayed('result-target')).toBe('0.200 ~ 0.300')
+    expect(displayed('result-lower-margin')).toBe('-0.050')
+    expect(displayed('result-upper-margin')).toBe('-0.090')
 
     fireEvent.change(screen.getByLabelText('目标上限'), {
       target: { value: '' },
@@ -370,9 +370,9 @@ describe('ResultPanel：无效输入与 stale', () => {
 
     expect(screen.getByText('输入有误，显示的是上次有效结果')).toBeInTheDocument()
     // 链数值仍来自上次有效结果。
-    expect(displayed('result-nominal')).toBe('0.2000')
-    expect(displayed('result-min')).toBe('0.1500')
-    expect(displayed('result-max')).toBe('0.3900')
+    expect(displayed('result-nominal')).toBe('0.200')
+    expect(displayed('result-min')).toBe('0.150')
+    expect(displayed('result-max')).toBe('0.390')
     expect(screen.getByTestId('result-range')).toBeInTheDocument()
     // 当前无效目标不能混用上次有效链的允许区间和裕量。
     expect(displayed('result-target')).toBe('—')
@@ -406,7 +406,7 @@ describe('ResultPanel：无效输入与 stale', () => {
       throw new Error('目标下限缺失 aria-describedby')
     }
     expect(document.getElementById(describedBy)).toHaveTextContent('格式不正确')
-    expect(displayed('result-min')).toBe('0.1500')
+    expect(displayed('result-min')).toBe('0.150')
     expect(displayed('result-target')).toBe('—')
     expect(displayed('result-lower-margin')).toBe('—')
     expect(displayed('result-upper-margin')).toBe('—')
@@ -436,9 +436,9 @@ describe('ResultPanel：零宽区间', () => {
   it('结果区间和允许区间零宽时都渲染 circle 标记点', () => {
     renderPanel(zeroToleranceDraft())
 
-    expect(displayed('result-min')).toBe('5.0000')
-    expect(displayed('result-max')).toBe('5.0000')
-    expect(displayed('result-tolerance')).toBe('0.0000')
+    expect(displayed('result-min')).toBe('5.000')
+    expect(displayed('result-max')).toBe('5.000')
+    expect(displayed('result-tolerance')).toBe('0.000')
     expect(displayed('result-status')).toBe('满足')
     expect(screen.getByText('所有输入公差为零')).toBeInTheDocument()
     expect(screen.queryByText(/NaN/)).toBeNull()
