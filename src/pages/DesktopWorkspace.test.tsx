@@ -556,8 +556,11 @@ describe('A-04c 实质页面', () => {
     fireEvent.change(screen.getByLabelText('目标上限'), { target: { value: '0.4' } })
     await waitFor(() => expect(api.stageDraft).toHaveBeenCalled())
     const request = vi.mocked(api.stageDraft).mock.calls.at(-1)![0]
-    expect(request.snapshot.project.dimensionChain.terms[0].nominalQ).toBe(523000)
-    expect(request.snapshot.project.dimensionChain.target?.maxQ).toBe(4000)
+    // Independent input must not silently become the official chain.
+    expect(request.snapshot.project.dimensionChain).toEqual(opened.snapshot.project.dimensionChain)
+    expect(request.snapshot.draft?.terms[0].nominal).toBe('52.3')
+    expect(request.snapshot.draft?.targetMax).toBe('0.4')
+    expect(request.snapshot.draft?.basisRelationRevision).toBe(opened.snapshot.project.relationRevision)
     expect(request.snapshot.analysisSnapshots).toEqual(opened.snapshot.analysisSnapshots)
     fireEvent.change(screen.getByLabelText('第 1 行 H 基本尺寸'), { target: { value: 'bad' } })
     const input = screen.getByLabelText('第 1 行 H 基本尺寸')

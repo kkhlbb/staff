@@ -1,0 +1,24 @@
+
+> staff@0.0.5-beta test
+> vitest run src/workspace/draftSync.test.tsx --reporter=verbose
+
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+stderr | src/workspace/draftSync.test.tsx
+Warning: Please use the `legacy` build in Node.js environments.
+
+ ✓ src/workspace/draftSync.test.tsx > V3.5 draft sync > FIX-01: top-level draft, official chain and visible calculation 66ms
+ ✓ src/workspace/draftSync.test.tsx > V3.5 draft sync > FIX-03: top-level draft, official chain and visible calculation 12ms
+ ✓ src/workspace/draftSync.test.tsx > V3.5 draft sync > FIX-01/03: sequential commits update top-level draft, official chain and visible calculation 24ms
+ ✓ src/workspace/draftSync.test.tsx > V3.5 draft sync > FIX-04: encode/decode preserves synced inputs and historical references 32ms
+ ✓ src/workspace/draftSync.test.tsx > V3.5 draft sync > FIX-05: proven historical mirror uses official values without changing archive 7ms
+ ✓ src/workspace/draftSync.test.tsx > V3.5 draft sync > FIX-06: real numeric/invalid/structural/target edits survive, with original basis 51ms
+ ✓ src/workspace/draftSync.test.tsx > V3.5 draft sync > FIX-06: reset requires explicit confirmation; cancel and keep preserve every field 6ms
+ ✓ src/workspace/draftSync.test.tsx > V3.5 draft sync > unknown legacy numeric edits are not overwritten merely because structure matches 0ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  22:36:02
+   Duration  537ms (tests 42%, environment 36%, import 10%, setup 6%, transform 5%)
+

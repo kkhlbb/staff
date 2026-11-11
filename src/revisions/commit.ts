@@ -18,6 +18,7 @@ import type {
 import { REVIEW_RULES_VERSION, evaluateReviewChecklist } from '../review/rules'
 import { isRelationConfirmed } from '../workspace/relation'
 import { chainToDraft } from '../workspace/draft'
+import { draftAfterCommit } from '../workspace/draftSync'
 import type {
   ProjectFileParameterBindingLink,
   ProjectFileProject,
@@ -367,6 +368,7 @@ export function buildCommitCandidate(
     snapshot: {
       ...base,
       project: nextProject,
+      draft: draftAfterCommit(base, computation.chain, nextRevision),
       events: [...base.events, ...events],
       analysisSnapshots: [...base.analysisSnapshots, analysisSnapshot],
       fileRevisions: [...base.fileRevisions, revision],

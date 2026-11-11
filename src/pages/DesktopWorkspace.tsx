@@ -6,6 +6,7 @@ import type { PendingImport } from '../workspace/useImportedModel'
 import { calculateChain } from '../domain/calculate'
 import { formatMm } from '../domain/units'
 import { draftToChain } from '../workspace/draft'
+import { resolveDraft } from '../workspace/draftSync'
 import { SessionDialogs } from '../components/SessionDialogs'
 import { DesktopChainView, DesktopSourceView, DesktopHistoryView } from '../components/DesktopSessionViews'
 import { ThreeViewport } from '../components/ThreeViewport'
@@ -186,7 +187,7 @@ export function DesktopWorkspace() {
     ? `${reviewHeight}px`
     : `max(200px, min(${reviewHeight}px, calc(100dvh - 360px)))`
   const style = { '--tree-width': `${leftOpen ? leftWidth : 0}px`, '--properties-width': `${rightOpen ? rightWidth : 0}px`, '--review-height': reviewHeightCss } as CSSProperties
-  const parsed = snapshot?.draft ? draftToChain(snapshot.draft) : project ? { ok: true as const, chain: project.dimensionChain } : null
+  const parsed = snapshot ? draftToChain(resolveDraft(snapshot).draft) : null
   const result = parsed?.ok ? calculateChain(parsed.chain) : null
   const calculation = result ? ({ within: '满足目标（非审查结论）', outside: '超出目标', 'no-target': '未设目标' }[result.status]) : '输入无效，未计算'
   const sourceState = snapshot ? `${snapshot.documents.length} 份资料 · ${snapshot.bindings.length} 个绑定 · 未审查附件可读性` : '未载入'
@@ -541,7 +542,7 @@ export function DesktopWorkspace() {
       <button className="desktop-workspace__review-toggle" aria-expanded={reviewOpen} aria-controls="desktop-review-content" onClick={() => setReviewOpen(!reviewOpen)}>{reviewOpen ? '▾' : '▸'} 复核与变更 <span>计算 {calculation} · 来源 {sourceState} · 图纸 {project.drawings.length > 0 ? '待复核草稿' : '未生成'}</span></button>
       <div id="desktop-review-content" hidden={!reviewOpen} className="desktop-workspace__review-groups">
         <section><h3>变更</h3>{session.change.preview ? <><p>预览 {session.change.preview.drawing.record.revisionId}：受影响环 {session.change.preview.affectedTermIds.length} 个；旧结果 {formatMm(session.change.preview.previousResult.minQ)} ～ {formatMm(session.change.preview.previousResult.maxQ)} mm → 新结果 {formatMm(session.change.preview.result.minQ)} ～ {formatMm(session.change.preview.result.maxQ)} mm。</p><p>受影响环不是错误；确认前可在“工程图”页查看逐环 diff。</p></> : <p>尚无变更预览。</p>}{session.change.staleReason && <p role="alert">预览已过期：{session.change.staleReason}</p>}</section>
-        <section><h3>校核</h3><p>{calculation}</p>{result && <p>极限范围 {formatMm(result.minQ)} 至 {formatMm(result.maxQ)} mm</p>}{parsed && !parsed.ok && Object.entries(parsed.cellErrors).map(([field, message]) => <p key={field}>{field}：{message}</p>)}</section>
+        <section><h3>校核</h3><p>{resolveDraft(snapshot).message}</p><p>{calculation}</p>{result && <p>极限范围 {formatMm(result.minQ)} 至 {formatMm(result.maxQ)} mm</p>}{parsed && !parsed.ok && Object.entries(parsed.cellErrors).map(([field, message]) => <p key={field}>{field}：{message}</p>)}</section>
         <section aria-label="任务书要求">
           <h3>任务书要求（唯一判定依据）</h3>
           {activeRequirement === null ? <p>尚未绑定任务书要求。原项目目标仍在独立展示与计算。</p> : <>

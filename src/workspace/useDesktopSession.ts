@@ -16,7 +16,8 @@ import type {
   ExtractionDeleteDraftValue,
 } from '../../desktop/shared/contracts'
 import { DesktopSessionAdapter, type DesktopSessionState } from './desktopAdapter'
-import { chainToDraft, draftToChain, workspaceReducer, type WorkspaceAction } from './draft'
+import { draftToChain, workspaceReducer, type WorkspaceAction } from './draft'
+import { resolveDraft } from './draftSync'
 import type { RequirementEditDraft } from '../requirements/types'
 
 /** 没有可写入的活动会话时统一使用的提示：所有提前返回的写路径都发同一条，不各自编文案。 */
@@ -190,25 +191,23 @@ export function useDesktopSession() {
     edit: (action: WorkspaceAction) => {
       const current = adapter.current?.getState().snapshot
       if (!current || locked.current) return
-      const draft = workspaceReducer(current.draft ?? { ...chainToDraft(current.project.dimensionChain), relationRevision: current.project.relationRevision }, action)
+      const resolved = resolveDraft(current)
+      const draft = workspaceReducer({ ...resolved.draft, basisRelationRevision: resolved.basis }, action)
       const parsed = draftToChain(draft)
       // D：已绑定参数的组成环禁止手动改 nominal；导向参数编辑或解除绑定。
-      if (parsed.ok) {
+      if (parsed.ok && action.type === 'updateField' && action.field === 'nominal') {
         const bound = new Set(
           current.project.dimensionLinks.flatMap(link => (link.kind === 'parameter-binding' ? [link.termId] : [])),
         )
         for (const term of parsed.chain.terms) {
           const before = current.project.dimensionChain.terms.find(item => item.id === term.id)
-          if (bound.has(term.id) && before !== undefined && before.nominalQ !== term.nominalQ) {
+          if (term.id === action.termId && bound.has(term.id) && before !== undefined && before.nominalQ !== term.nominalQ) {
             setNotice('该组成环已绑定隔套参数：请编辑参数或先解除绑定；不会反向修改参数，也不会静默解除。')
             return
           }
         }
       }
-      adapter.current!.edit({ ...current, draft, project: {
-        ...current.project, relationRevision: draft.relationRevision,
-        dimensionChain: parsed.ok ? parsed.chain : current.project.dimensionChain,
-      } })
+      adapter.current!.edit({ ...current, draft })
     },
     create: async (name: string, template: 'empty' | 'chain-demo') => {
       let created: string | null = null
