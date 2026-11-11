@@ -1,0 +1,15 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+Not implemented: navigation to another Document
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: navigation to another Document
+
+ Test Files  96 passed (96)
+      Tests  1013 passed (1013)
+   Start at  03:10:56
+   Duration  47.29s (tests 62%, environment 18%, setup 8%, import 8%, transform 3%)
+
+    Isolate  96 workers spawned · ~400ms startup each (spawn + environment, per file)
+             at least ~4.40s faster with isolate: false — reuses workers across files instead of one per file
+

@@ -1,0 +1,169 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+Not implemented: navigation to another Document
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: navigation to another Document
+stderr | src/pages/Workspace.test.tsx > Workspace：按 projectId 打开与返回列表 > 来源元数据也读不到时明确说明是降级备份，不把空来源当作普通备份
+[probe-open] #1 name=shaft-tolerance-chain stack=at FDBFactory.open (file:///Users/aston/DSH/staff/node_modules/vitest/dist/chunks/spy.DDMXghXv.js:353:40) <- at /Users/aston/DSH/staff/src/storage/db.ts:245:27 <- at new Promise (<anonymous>)
+
+stderr | src/pages/Workspace.test.tsx > Workspace：按 projectId 打开与返回列表 > 来源元数据也读不到时明确说明是降级备份，不把空来源当作普通备份
+[probe-open] #2 name=shaft-tolerance-chain stack=at FDBFactory.open (file:///Users/aston/DSH/staff/node_modules/vitest/dist/chunks/spy.DDMXghXv.js:353:40) <- at /Users/aston/DSH/staff/src/storage/db.ts:245:27 <- at new Promise (<anonymous>)
+
+stderr | src/pages/Workspace.test.tsx > Workspace：按 projectId 打开与返回列表 > 来源元数据也读不到时明确说明是降级备份，不把空来源当作普通备份
+[probe-open] #3 name=shaft-tolerance-chain stack=at FDBFactory.open (file:///Users/aston/DSH/staff/node_modules/vitest/dist/chunks/spy.DDMXghXv.js:353:40) <- at /Users/aston/DSH/staff/src/storage/db.ts:245:27 <- at new Promise (<anonymous>)
+
+stderr | src/pages/Workspace.test.tsx > Workspace：按 projectId 打开与返回列表 > 来源元数据也读不到时明确说明是降级备份，不把空来源当作普通备份
+[probe-open] #4 name=shaft-tolerance-chain stack=at FDBFactory.open (file:///Users/aston/DSH/staff/node_modules/vitest/dist/chunks/spy.DDMXghXv.js:353:40) <- at /Users/aston/DSH/staff/src/storage/db.ts:245:27 <- at new Promise (<anonymous>)
+
+stderr | src/pages/Workspace.test.tsx > Workspace：按 projectId 打开与返回列表 > 来源元数据也读不到时明确说明是降级备份，不把空来源当作普通备份
+[probe-open] #5 name=shaft-tolerance-chain stack=at FDBFactory.open (file:///Users/aston/DSH/staff/node_modules/vitest/dist/chunks/spy.DDMXghXv.js:353:40) <- at /Users/aston/DSH/staff/src/storage/db.ts:245:27 <- at new Promise (<anonymous>)
+
+stderr | src/pages/Workspace.test.tsx > Workspace：按 projectId 打开与返回列表 > 来源元数据也读不到时明确说明是降级备份，不把空来源当作普通备份
+[probe-open] #6 name=shaft-tolerance-chain stack=at FDBFactory.open (file:///Users/aston/DSH/staff/node_modules/vitest/dist/chunks/spy.DDMXghXv.js:353:40) <- at /Users/aston/DSH/staff/src/storage/db.ts:245:27 <- at new Promise (<anonymous>)
+
+stderr | src/pages/Workspace.test.tsx > Workspace：按 projectId 打开与返回列表 > 来源元数据也读不到时明确说明是降级备份，不把空来源当作普通备份
+[probe-open] #7 name=shaft-tolerance-chain stack=at FDBFactory.open (file:///Users/aston/DSH/staff/node_modules/vitest/dist/chunks/spy.DDMXghXv.js:353:40) <- at /Users/aston/DSH/staff/src/storage/db.ts:245:27 <- at new Promise (<anonymous>)
+
+stderr | src/pages/Workspace.test.tsx
+Warning: Please use the `legacy` build in Node.js environments.
+
+ ❯ src/pages/Workspace.test.tsx (21 tests | 1 failed) 30612ms
+   ❯ Workspace：按 projectId 打开与返回列表 (5)
+     × 来源元数据也读不到时明确说明是降级备份，不把空来源当作普通备份 1039ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/Workspace.test.tsx > Workspace：按 projectId 打开与返回列表 > 来源元数据也读不到时明确说明是降级备份，不把空来源当作普通备份
+TestingLibraryElementError: Unable to find an element with the text: /已导出降级备份/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"workspace"[39m
+    [36m>[39m
+      [36m<section[39m
+        [33mclass[39m=[32m"workspace__load-error"[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"workspace__error-title"[39m
+          [36m>[39m
+            [0m本地存储不可用[0m
+          [36m</h1>[39m
+          [36m<p>[39m
+            [0m发生了什么：[0m
+            [0m读取项目失败：模拟打开失败[0m
+            [0m。浏览器无法打开 IndexedDB 数据库，当前输入和草稿可能没有保存。[0m
+          [36m</p>[39m
+          [36m<p>[39m
+            [0m接下来：先点“重试”重新打开本地数据库；如果仍然失败，请返回项目列表。 若之前保存过项目，可以尝试导出 JSON 备份。[0m
+          [36m</p>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"workspace__backup-note"[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [0m已导出项目 JSON 备份：其中不含来源附件；当前页面中尚未保存的输入不在备份内。[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"workspace__load-error-actions"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m导出 JSON 备份[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m重试[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m返回项目列表[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"workspace"[39m
+    [36m>[39m
+      [36m<section[39m
+        [33mclass[39m=[32m"workspace__load-error"[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"workspace__error-title"[39m
+          [36m>[39m
+            [0m本地存储不可用[0m
+          [36m</h1>[39m
+          [36m<p>[39m
+            [0m发生了什么：[0m
+            [0m读取项目失败：模拟打开失败[0m
+            [0m。浏览器无法打开 IndexedDB 数据库，当前输入和草稿可能没有保存。[0m
+          [36m</p>[39m
+          [36m<p>[39m
+            [0m接下来：先点“重试”重新打开本地数据库；如果仍然失败，请返回项目列表。 若之前保存过项目，可以尝试导出 JSON 备份。[0m
+          [36m</p>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"workspace__backup-note"[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [0m已导出项目 JSON 备份：其中不含来源附件；当前页面中尚未保存的输入不在备份内。[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"workspace__load-error-actions"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m导出 JSON 备份[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m重试[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m返回项目列表[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/pages/Workspace.test.tsx:555:33
+    553|
+    554|     await user.click(within(alert).getByRole('button', { name: '导出 JSO…
+    555|     const notice = await screen.findByText(/已导出降级备份/)
+       |                                 ^
+    556|     expect(notice).toHaveTextContent('不含来源记录、绑定坐标与附件')
+    557|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 95 passed (96)
+      Tests  1 failed | 1012 passed (1013)
+   Start at  03:01:27
+   Duration  31.86s (tests 64%, environment 18%, import 8%, setup 7%, transform 3%)
+
+    Isolate  96 workers spawned · ~319ms startup each (spawn + environment, per file)
+             at least ~3.51s faster with isolate: false — reuses workers across files instead of one per file
+
