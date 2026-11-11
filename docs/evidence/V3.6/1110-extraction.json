@@ -1,8 +1,8 @@
 {
-  "fixture": "src/document-extraction/__fixtures__/taskbook-TB-2026-1110.pdf",
+  "fixture": "/Users/aston/DSH/staff/src/document-extraction/__fixtures__/taskbook-TB-2026-1110.pdf",
   "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
   "draft": {
-    "draftId": "<generated>",
+    "draftId": "draft-793590e034dfdc5a",
     "draftRevision": 1,
     "status": "draft",
     "projectId": "fixed-1110",
@@ -2201,12 +2201,5 @@
       }
     ],
     "issues": []
-  },
-  "reproduction": {
-    "kind": "historical-capture-reserialization",
-    "sourceCommit": "9fe22fdaac6cdfc2a7c7bbf254cded61e4e73d13",
-    "sourceFile": "docs/evidence/V3.6/1110-extraction.json"
-  },
-  "generatedValueKind": "<generated> denotes an automatically generated identifier or run-time timestamp; not product data",
-  "generatedAtKind": "run-time"
+  }
 }

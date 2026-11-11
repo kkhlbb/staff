@@ -16,7 +16,7 @@ dist/assets/threeScene-U4vL2S7D.js          10.32 kB │ gzip:   4.66 kB
 dist/assets/frameStats-v_nPHHsT.js         561.17 kB │ gzip: 138.50 kB
 dist/assets/index-DimsaWI6.js            1,412.37 kB │ gzip: 445.11 kB
 
-✓ built in 204ms
+✓ built in 205ms
 [plugin builtin:vite-reporter] 
 (!) Some chunks are larger than 500 kB after minification. Consider:
 - Using dynamic import() to code-split the application

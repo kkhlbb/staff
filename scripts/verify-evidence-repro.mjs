@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { evidenceFiles } from './evidence-json.ts'
+import { evidenceFiles, evidenceComparisonBytes } from './evidence-json.ts'
 
 const root = process.env.EVIDENCE_VERIFY_OUT ?? 'docs/evidence/V3.6'
 mkdirSync(`${root}/mutations`, { recursive: true })
@@ -30,7 +30,13 @@ if (process.argv.includes('--suites')) {
   const hashes = []
   for (const pass of [1, 2]) {
     if (run('node', ['scripts/reproduce-evidence.mjs'], `${root}/logs/evidence-repro/generate-${pass}.log`).status !== 0) throw new Error('generation failed')
-    const result = run('shasum', ['-a', '256', ...evidenceFiles], `${root}/logs/evidence-repro/sha256-${pass}.log`)
+    const comparisonFiles = evidenceFiles.map((file) => {
+      const target = `node_modules/.tmp/evidence-repro/comparison/${file}`
+      mkdirSync(target.slice(0, target.lastIndexOf('/')), { recursive: true })
+      writeFileSync(target, evidenceComparisonBytes(readFileSync(file, 'utf8')))
+      return target
+    })
+    const result = run('shasum', ['-a', '256', ...comparisonFiles], `${root}/logs/evidence-repro/sha256-${pass}.log`)
     if (result.status !== 0) throw new Error('shasum failed')
     hashes.push(result.stdout)
     console.log(`PASS ${pass}\n${result.stdout}`)
@@ -57,5 +63,5 @@ if (process.argv.includes('--suites')) {
   }
   const green = run('npx', ['vitest', 'run', 'src/test/evidenceRepro.test.ts'], `${root}/mutations/M06-green.log`)
   if (green.status !== 0) throw new Error('M06 restoration failed')
-  console.log('PASS: six byte-identical outputs; M06 red -> restored green')
+  console.log('PASS: six byte-identical comparison copies (declared run-time fields blanked); M06 red -> restored green')
 }

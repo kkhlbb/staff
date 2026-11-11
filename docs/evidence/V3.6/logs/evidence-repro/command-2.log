@@ -9,8 +9,8 @@ $ npm run test:desktop
 
  Test Files  27 passed (27)
       Tests  197 passed (197)
-   Start at  19:38:06
-   Duration  2.57s (tests 85%, import 12%, transform 2%)
+   Start at  19:44:18
+   Duration  2.61s (tests 85%, import 12%, transform 3%)
 
 
 EXIT 0

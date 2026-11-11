@@ -1,5 +1,5 @@
 {
-  "startedAt": "<generated>",
+  "startedAt": "2026-11-09T12:14:57.887Z",
   "appExecutable": "out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链",
   "platform": "darwin",
   "arch": "arm64",
@@ -38,7 +38,7 @@
     {
       "name": "隔套只读参数来自 q（20/32/12 mm），C 批次编辑按钮禁用",
       "ok": true,
-      "detail": "[\"<generated>\",\"内置示意部件（只读）\",\"-6.0000 … 6.0000 mm\",\"0.0 mm（X）\",\"0.0 mm（X）（装配基准，不参与爆炸）\",\"10.0000 mm\",\"16.0000 mm\",\"20.0000 mm\",\"32.0000 mm\",\"12.0000 mm\",\"未关联 · 示例几何（不随尺寸编辑变化）\"]"
+      "detail": "[\"rev-4024b5ec-eb57-4b14-8860-a22e22d57655\",\"内置示意部件（只读）\",\"-6.0000 … 6.0000 mm\",\"0.0 mm（X）\",\"0.0 mm（X）（装配基准，不参与爆炸）\",\"10.0000 mm\",\"16.0000 mm\",\"20.0000 mm\",\"32.0000 mm\",\"12.0000 mm\",\"未关联 · 示例几何（不随尺寸编辑变化）\"]"
     },
     {
       "name": "装配态属性：「爆炸位移（当前）」为 0，「设计最大位移（上限）」标注装配基准",
@@ -143,7 +143,7 @@
     {
       "name": "阻断 HTTP(S) 后重载仍渲染应用（生产 file:// 产物）",
       "ok": true,
-      "detail": "{\"href\":\"file:out/%E5%AF%B8%E9%93%BE-darwin-arm64/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html\",\"body\":\"寸链 · 轴系示例（B1）· 示意装配\\nRev <generated>\\n未保存草稿\\nV3 · B1 批次\\n新建项目\\n打开项目\\n保存\\n另存为…\\n导入 V2 备份…\\n关闭窗口\\n导入资料\\n资料导入本批次未实现\\n预览变更\\n导出 PDF ▾\\n当前会话已载入；绑定来源不等于\"}"
+      "detail": "{\"href\":\"file:///Users/aston/DSH/wt/dsh-v3-a4c/out/%E5%AF%B8%E9%93%BE-darwin-arm64/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html\",\"body\":\"寸链 · 轴系示例（B1）· 示意装配\\nRev rev-4024b5ec-eb57-4b14-8860-a22e22d57655\\n未保存草稿\\nV3 · B1 批次\\n新建项目\\n打开项目\\n保存\\n另存为…\\n导入 V2 备份…\\n关闭窗口\\n导入资料\\n资料导入本批次未实现\\n预览变更\\n导出 PDF ▾\\n当前会话已载入；绑定来源不等于\"}"
     },
     {
       "name": "阻断远程请求下 3D chunk 仍加载并渲染（无网络兜底）",
@@ -250,7 +250,7 @@
       "pressed": "true",
       "heading": "属性 · 隔套",
       "props": [
-        "<generated>",
+        "rev-4024b5ec-eb57-4b14-8860-a22e22d57655",
         "内置示意部件（只读）",
         "-6.0000 … 6.0000 mm",
         "0.0 mm（X）",
@@ -608,8 +608,8 @@
     "reloadWithBlockedHttp": {
       "hasStart": false,
       "hasWorkbench": true,
-      "href": "file:out/%E5%AF%B8%E9%93%BE-darwin-arm64/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html",
-      "body": "寸链 · 轴系示例（B1）· 示意装配\nRev <generated>\n未保存草稿\nV3 · B1 批次\n新建项目\n打开项目\n保存\n另存为…\n导入 V2 备份…\n关闭窗口\n导入资料\n资料导入本批次未实现\n预览变更\n导出 PDF ▾\n当前会话已载入；绑定来源不等于"
+      "href": "file:///Users/aston/DSH/wt/dsh-v3-a4c/out/%E5%AF%B8%E9%93%BE-darwin-arm64/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html",
+      "body": "寸链 · 轴系示例（B1）· 示意装配\nRev rev-4024b5ec-eb57-4b14-8860-a22e22d57655\n未保存草稿\nV3 · B1 批次\n新建项目\n打开项目\n保存\n另存为…\n导入 V2 备份…\n关闭窗口\n导入资料\n资料导入本批次未实现\n预览变更\n导出 PDF ▾\n当前会话已载入；绑定来源不等于"
     },
     "offlineScene": {
       "state": "ready",
@@ -663,13 +663,6 @@
   "notes": [
     "页内 drawImage 采样（受 preserveDrawingBuffer=false 影响，仅作参考）：{\"distinctColors\":133,\"transparentRatio\":0,\"sample\":[\"245,247,250,255\",\"179,193,210,255\",\"179,192,209,255\",\"177,191,207,255\",\"176,189,206,255\",\"173,187,203,255\"],\"backingStore\":[884,481],\"cssSize\":[884,481]}"
   ],
-  "finishedAt": "<generated>",
-  "result": "PASS",
-  "reproduction": {
-    "kind": "historical-capture-reserialization",
-    "sourceCommit": "9fe22fdaac6cdfc2a7c7bbf254cded61e4e73d13",
-    "sourceFile": "docs/evidence/V3-B1/b1-electron-report.json"
-  },
-  "generatedValueKind": "<generated> denotes an automatically generated identifier or run-time timestamp; not product data",
-  "generatedAtKind": "run-time"
+  "finishedAt": "2026-11-09T12:15:19.479Z",
+  "result": "PASS"
 }

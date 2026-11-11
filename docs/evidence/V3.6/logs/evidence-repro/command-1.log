@@ -8,12 +8,12 @@ $ npm test
 
 
  Test Files  93 passed (93)
-      Tests  958 passed (958)
-   Start at  19:37:48
-   Duration  17.71s (tests 63%, environment 16%, import 9%, setup 8%, transform 3%, worker 1%)
+      Tests  959 passed (959)
+   Start at  19:44:00
+   Duration  17.46s (tests 63%, environment 17%, import 9%, setup 8%, transform 3%, worker 1%)
 
-    Isolate  93 workers spawned · ~217ms startup each (spawn + environment, per file)
-             at least ~2.03s faster with isolate: false — reuses workers across files instead of one per file
+    Isolate  93 workers spawned · ~223ms startup each (spawn + environment, per file)
+             at least ~2.08s faster with isolate: false — reuses workers across files instead of one per file
 
 Not implemented: navigation to another Document
 Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package

@@ -1,6 +1,6 @@
 {
   "savedState": {
-    "path": "E2E-V36-run.cunlian",
+    "path": "/Users/aston/DSH/tmp/cunlian-v36/E2E-V36-run.cunlian",
     "savedSeq": 3,
     "editSeq": 3,
     "drafts": 1,
@@ -42,7 +42,7 @@
     "savedSeq": 3
   },
   "reopened": {
-    "path": "E2E-V36-run.cunlian",
+    "path": "/Users/aston/DSH/tmp/cunlian-v36/E2E-V36-run.cunlian",
     "drafts": 1,
     "candidates": 7,
     "statuses": [
@@ -82,12 +82,5 @@
     ],
     "editSeq": 0,
     "savedSeq": 0
-  },
-  "reproduction": {
-    "kind": "historical-capture-reserialization",
-    "sourceCommit": "9fe22fdaac6cdfc2a7c7bbf254cded61e4e73d13",
-    "sourceFile": "docs/evidence/V3.6/stage2-e2e.json"
-  },
-  "generatedValueKind": "<generated> denotes an automatically generated identifier or run-time timestamp; not product data",
-  "generatedAtKind": "run-time"
+  }
 }

@@ -1,9 +1,9 @@
-$ shasum -a 256 docs/evidence/V3-B1/b1-electron-report.json docs/evidence/V3-B2/fix-refit/before-report.json docs/evidence/V3-B2/fix-refit/after-report.json docs/evidence/V3.6/1110-extraction.json docs/evidence/V3.6/stage2-e2e.json docs/evidence/V3.6/ambiguous-e2e.json
-12ba00bbddda7e0fc93b7ad9802373538ce9248a89b4c3c25b32cb7f1f73968d  docs/evidence/V3-B1/b1-electron-report.json
-a6313997ba5874b1e5555967e026b3ea48ea17fcdf2d40553662eb7c29b9a0c9  docs/evidence/V3-B2/fix-refit/before-report.json
-def6580b3388c6fa0159a0976f783b605b7bbb5957aca4aa6155746ba7f648e8  docs/evidence/V3-B2/fix-refit/after-report.json
-b9caa5123be33ef1ce3ac152e9017723f6073a7219943caf576089522d4cac00  docs/evidence/V3.6/1110-extraction.json
-3441734910da9fa0a90cf6f02d6b652d470783cd7bcdb90a78b45f2c58cb85c7  docs/evidence/V3.6/stage2-e2e.json
-ee0c382bef7f06b88bbff51753ec85ba63e35206a2f1d1d1b38e165d4cccf923  docs/evidence/V3.6/ambiguous-e2e.json
+$ shasum -a 256 node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3-B1/b1-electron-report.json node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3-B2/fix-refit/before-report.json node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3-B2/fix-refit/after-report.json node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3.6/1110-extraction.json node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3.6/stage2-e2e.json node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3.6/ambiguous-e2e.json
+e9509ea2ea5cef2b27238925b9adc98661f52d7d9267b5fbc39d0bd3c2a05016  node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3-B1/b1-electron-report.json
+d1cba38e0e1eeeaa9a604a8885d36bbc342a8c361a415ade9c3703d380134019  node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3-B2/fix-refit/before-report.json
+672d387a8c30a33e222ddb994785d440a449c911013fc2fa5fd3cac2d0027008  node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3-B2/fix-refit/after-report.json
+7741c5ba1ae5556be7d6fd8084aff6ffbe1a024367164db176aaccb8e9c5f144  node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3.6/1110-extraction.json
+f33c2ede6f05ab571d4ef9ff2ccea3d5b5094268f870495d9012da829e8084da  node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3.6/stage2-e2e.json
+a66bca7e5211d5e71b3e1fcdc23d3cdf9afbf871871e26ee5e6524b68d2c093a  node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3.6/ambiguous-e2e.json
 
 EXIT 0
