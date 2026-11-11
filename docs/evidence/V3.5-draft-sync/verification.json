@@ -1,0 +1,78 @@
+{
+  "version": "0.0.5-beta",
+  "platform": "darwin-arm64",
+  "commands": [
+    {
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "signal": null,
+      "log": "logs/typecheck.log"
+    },
+    {
+      "command": "npm run typecheck:desktop",
+      "exitCode": 0,
+      "signal": null,
+      "log": "logs/typecheck-desktop.log"
+    },
+    {
+      "command": "npm run lint",
+      "exitCode": 0,
+      "signal": null,
+      "log": "logs/lint.log"
+    },
+    {
+      "command": "npm run test",
+      "exitCode": 0,
+      "signal": null,
+      "log": "logs/test.log"
+    },
+    {
+      "command": "npm run test:desktop",
+      "exitCode": 0,
+      "signal": null,
+      "log": "logs/test-desktop.log"
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0,
+      "signal": null,
+      "log": "logs/build.log"
+    },
+    {
+      "command": "npm run package:desktop",
+      "exitCode": 0,
+      "signal": null,
+      "log": "logs/package-desktop.log"
+    }
+  ],
+  "hashes": [
+    {
+      "file": "out/寸链-darwin-arm64/寸链.app/Contents/Resources/app.asar",
+      "byteSize": 5472954,
+      "sha256": "bf2f6315228f021126fd89e91b97702937ae886b0755f9847e11894527b5b5c3"
+    },
+    {
+      "file": "out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链",
+      "byteSize": 33968,
+      "sha256": "cd2d9352400dc818a8ee9a98dfc1d192e9b5ac549ef887ea1f52029418f8e165"
+    },
+    {
+      "file": "saved-after-12.05.cunlian",
+      "byteSize": 262479,
+      "sha256": "024df419014bbdcbfc081f24b4c91be65833f8bda047941cb1fe70b04d32a941"
+    },
+    {
+      "file": "docs/evidence/V3.5-draft-sync/fixtures/legacy-stale.cunlian",
+      "byteSize": 262479,
+      "sha256": "024df419014bbdcbfc081f24b4c91be65833f8bda047941cb1fe70b04d32a941"
+    },
+    {
+      "file": "baseline.cunlian.pre-v35.ded17783b6b540d8.cunlian",
+      "byteSize": 249801,
+      "sha256": "50f74124e2b2ef396d1df615e57e69452fdd98d591ff54466a0d1d2c2cd91ef2"
+    }
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

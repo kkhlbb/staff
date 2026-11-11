@@ -1,0 +1,20 @@
+
+> staff@0.0.5-beta test:desktop
+> vitest run --config vitest.desktop.config.ts desktop/tests/draftSyncLegacy.test.ts desktop/tests/draftSyncTransactions.test.ts --reporter=verbose
+
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+stderr | desktop/tests/draftSyncTransactions.test.ts
+Warning: Please use the `legacy` build in Node.js environments.
+
+ ✓ desktop/tests/draftSyncLegacy.test.ts > FIX-05/09: actual independent legacy file and frozen references; prepare isolated UI seed 54ms
+ ✓ desktop/tests/draftSyncTransactions.test.ts > FIX-06/07/08 main transactions with rendered calculation > FIX-06: independent editing survives a successful commit and can be reopened from disk 120ms
+ ✓ desktop/tests/draftSyncTransactions.test.ts > FIX-06/07/08 main transactions with rendered calculation > FIX-07: failed commit and failed save preserve official data, frozen history and invalid user input 63ms
+ ✓ desktop/tests/draftSyncTransactions.test.ts > FIX-06/07/08 main transactions with rendered calculation > FIX-08: original target outside while taskbook satisfied; both use committed 12.05 75ms
+
+ Test Files  2 passed (2)
+      Tests  4 passed (4)
+   Start at  22:36:01
+   Duration  425ms (tests 66%, import 25%, transform 7%, worker 1%)
+

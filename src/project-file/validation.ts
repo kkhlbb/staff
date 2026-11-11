@@ -731,6 +731,7 @@ const projectV6Schema = projectV5Schema
 
 const draftSchema = z
   .object({
+    basisRelationRevision: nonNegativeInt.optional(),
     terms: z.array(z.record(z.string(), z.unknown())).max(200),
     targetMin: z.string(),
     targetMax: z.string(),

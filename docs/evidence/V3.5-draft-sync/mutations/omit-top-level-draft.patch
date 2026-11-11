@@ -1,0 +1,13 @@
+diff --git a/src/revisions/commit.ts b/src/revisions/commit.ts
+--- a/src/revisions/commit.ts
++++ b/src/revisions/commit.ts
+@@ -368,7 +368,8 @@ export function buildCommitCandidate(
+     snapshot: {
+       ...base,
+       project: nextProject,
+-      draft: draftAfterCommit(base, computation.chain, nextRevision),
++      // MUTATION: omit top-level draft synchronization.
++      draft: base.draft,
+       events: [...base.events, ...events],
+       analysisSnapshots: [...base.analysisSnapshots, analysisSnapshot],
+       fileRevisions: [...base.fileRevisions, revision],

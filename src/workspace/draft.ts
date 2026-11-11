@@ -24,6 +24,8 @@ export interface TermDraft {
 }
 
 export interface WorkspaceDraft {
+  /** Independent edits retain their official basis across later commits. */
+  basisRelationRevision?: number
   terms: TermDraft[]
   /** 空字符串表示未设置目标区间。 */
   targetMin: string

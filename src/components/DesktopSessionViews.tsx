@@ -3,7 +3,8 @@ import type { SnapshotDto } from '../../desktop/shared/contracts'
 import type { RequirementRevisionHistoryEntry, RequirementSourceLocation } from '../requirements/history'
 import { calculateChain } from '../domain/calculate'
 import { formatMm } from '../domain/units'
-import { chainToDraft, draftToChain, type WorkspaceAction } from '../workspace/draft'
+import { draftToChain, type WorkspaceAction } from '../workspace/draft'
+import { officialDraft, resolveDraft } from '../workspace/draftSync'
 import type { SourceRevision } from '../sources/types'
 import { ChainExpression } from './ChainExpression'
 import { PdfViewer } from './PdfViewer'
@@ -14,12 +15,21 @@ const statusLabel = { within: '满足目标（非审查结论）', outside: '超
 export function DesktopChainView({ snapshot, edit, disabled }: {
   snapshot: SnapshotDto; edit: (action: WorkspaceAction) => void; disabled: boolean
 }) {
-  const draft = snapshot.draft ?? chainToDraft(snapshot.project.dimensionChain)
+  const resolved = resolveDraft(snapshot)
+  const draft = resolved.draft
   const parsed = draftToChain(draft)
   const errors = parsed.ok ? {} : parsed.cellErrors
   const result = parsed.ok ? calculateChain(parsed.chain) : null
   return <div className="desktop-workspace__content">
     <h2>当前尺寸链</h2>
+    {resolved.message && <section role="status" aria-label="草稿版本状态"><p>{resolved.message}</p>
+      {resolved.kind === 'edited' && <>
+        <button disabled={disabled} onClick={() => {
+          if (window.confirm('按正式重算将替换当前草稿编辑；取消可保留我的编辑。')) edit({ type: 'replaceDraft', draft: officialDraft(snapshot.project.dimensionChain, snapshot.project.relationRevision) })
+        }}>按正式重算</button>
+        <button disabled={disabled} onClick={() => edit({ type: 'replaceDraft', draft: { ...draft, basisRelationRevision: resolved.basis } })}>保留我的编辑</button>
+      </>}
+    </section>}
     <p>当前会话快照 · 数值单位 mm · 编辑经 stageDraft 提交，不等于正式保存或审查完成。</p>
     <ChainExpression draft={draft} />
     <div className="desktop-workspace__table-scroll" role="region" aria-label="组成环表横向滚动区域" tabIndex={0}>

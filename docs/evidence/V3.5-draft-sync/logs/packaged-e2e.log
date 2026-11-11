@@ -1,0 +1,10 @@
+PASS FIX-01 {"formalQ":120400,"draft":"12.0400","interval":"0.1100 至 0.2100","check":"satisfied"}
+PASS FIX-03 {"formalQ":120500,"draft":"12.0500","interval":"0.1000 至 0.2000","check":"satisfied"}
+PROCESS EXIT { code: null, signal: 'SIGKILL' }
+PASS FIX-04 {"formalQ":120500,"draft":"12.0500","interval":"0.1000 至 0.2000","check":"satisfied"}
+PROCESS EXIT { code: null, signal: 'SIGKILL' }
+PASS FIX-05 {"formalQ":120500,"draft":"12.00","interval":"0.1000 至 0.2000","check":"satisfied"}
+PROCESS EXIT { code: null, signal: 'SIGKILL' }
+PASS FIX-09 {"formalQ":120000,"draft":"12.00","interval":"0.1500 至 0.2500"}
+PROCESS EXIT { code: null, signal: 'SIGKILL' }
+PASS packaged FIX-01/02/03/04/05/09
