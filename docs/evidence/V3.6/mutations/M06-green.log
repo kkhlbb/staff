@@ -1,0 +1,12 @@
+$ npx vitest run src/test/evidenceRepro.test.ts
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+
+ Test Files  1 passed (1)
+      Tests  18 passed (18)
+   Start at  19:37:48
+   Duration  173ms (tests 65%, setup 29%, transform 3%, import 2%, worker 1%)
+
+
+EXIT 0

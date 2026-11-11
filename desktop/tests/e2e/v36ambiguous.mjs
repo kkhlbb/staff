@@ -14,6 +14,7 @@
 import { spawn, execFileSync } from 'node:child_process'
 import { existsSync, promises as fsp } from 'node:fs'
 import path from 'node:path'
+import { serializeEvidence } from '../../../scripts/evidence-json.ts'
 
 const appExecutable =
   process.argv[2] ??
@@ -304,7 +305,7 @@ const summary = {
   persisted,
   shots: ['v36-11-ambiguous-candidates.png', 'v36-11b-group-mutex.png', 'v36-11c-after-revoke.png'],
 }
-await fsp.writeFile(SUMMARY, JSON.stringify(summary, null, 2))
+await fsp.writeFile(SUMMARY, serializeEvidence(summary))
 console.log(`SUMMARY ${SUMMARY}`)
 
 const a0Rows = afterConfirm

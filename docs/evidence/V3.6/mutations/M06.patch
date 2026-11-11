@@ -1,0 +1,9 @@
+diff --git a/docs/evidence/V3.6/1110-extraction.json b/docs/evidence/V3.6/1110-extraction.json
+--- a/docs/evidence/V3.6/1110-extraction.json
++++ b/docs/evidence/V3.6/1110-extraction.json
+@@ -1,4 +1,5 @@
+ {
++  "target": "/Users/aston/DSH/staff/src/document-extraction/__fixtures__/taskbook-TB-2026-1110.pdf",
+   "fixture": "src/document-extraction/__fixtures__/taskbook-TB-2026-1110.pdf",
+   "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+   "draft": {

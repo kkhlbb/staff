@@ -1,0 +1,9 @@
+$ shasum -a 256 docs/evidence/V3-B1/b1-electron-report.json docs/evidence/V3-B2/fix-refit/before-report.json docs/evidence/V3-B2/fix-refit/after-report.json docs/evidence/V3.6/1110-extraction.json docs/evidence/V3.6/stage2-e2e.json docs/evidence/V3.6/ambiguous-e2e.json
+12ba00bbddda7e0fc93b7ad9802373538ce9248a89b4c3c25b32cb7f1f73968d  docs/evidence/V3-B1/b1-electron-report.json
+a6313997ba5874b1e5555967e026b3ea48ea17fcdf2d40553662eb7c29b9a0c9  docs/evidence/V3-B2/fix-refit/before-report.json
+def6580b3388c6fa0159a0976f783b605b7bbb5957aca4aa6155746ba7f648e8  docs/evidence/V3-B2/fix-refit/after-report.json
+b9caa5123be33ef1ce3ac152e9017723f6073a7219943caf576089522d4cac00  docs/evidence/V3.6/1110-extraction.json
+3441734910da9fa0a90cf6f02d6b652d470783cd7bcdb90a78b45f2c58cb85c7  docs/evidence/V3.6/stage2-e2e.json
+ee0c382bef7f06b88bbff51753ec85ba63e35206a2f1d1d1b38e165d4cccf923  docs/evidence/V3.6/ambiguous-e2e.json
+
+EXIT 0

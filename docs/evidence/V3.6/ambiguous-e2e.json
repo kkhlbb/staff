@@ -1,7 +1,7 @@
 {
-  "app": "/Users/aston/DSH/staff/out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链",
-  "seed": "/Users/aston/DSH/tmp/cunlian-v36/AMB-V36.cunlian",
-  "work": "/Users/aston/DSH/tmp/cunlian-v36/AMB-V36-run.cunlian",
+  "app": "out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链",
+  "seed": "AMB-V36.cunlian",
+  "work": "AMB-V36-run.cunlian",
   "initial": [
     {
       "title": "组成环 · A0",
@@ -126,5 +126,12 @@
     "v36-11-ambiguous-candidates.png",
     "v36-11b-group-mutex.png",
     "v36-11c-after-revoke.png"
-  ]
+  ],
+  "reproduction": {
+    "kind": "historical-capture-reserialization",
+    "sourceCommit": "9fe22fdaac6cdfc2a7c7bbf254cded61e4e73d13",
+    "sourceFile": "docs/evidence/V3.6/ambiguous-e2e.json"
+  },
+  "generatedValueKind": "<generated> denotes an automatically generated identifier or run-time timestamp; not product data",
+  "generatedAtKind": "run-time"
 }
