@@ -91,6 +91,7 @@ export interface ExtractionChannelDeps {
   guard: SenderGuard
   controller: SessionController
   service: ExtractionService
+  issuePlanToken?: (windowId: number, draftId: string) => Promise<string | null>
   log?: IpcDeps['log']
 }
 
@@ -135,7 +136,13 @@ export function registerExtractionChannels(
       schema: extractionSchemas.decide,
       handle: async ({ sender }, params): Promise<ExtractionDecideValue> => {
         requireActive(sender.webContentsId, params.sessionId)
-        return unwrap(await deps.service.decide(params))
+        const value = unwrap(await deps.service.decide(params))
+        if (params.action === 'confirm' && deps.issuePlanToken !== undefined) {
+          const token = await deps.issuePlanToken(sender.webContentsId, params.draftId)
+          if (token !== null) value.planToken = token
+          else value.warning = '决定尚未持久化，应用计划凭据未签发；请重试确认'
+        }
+        return value
       },
     },
     ipcDeps,

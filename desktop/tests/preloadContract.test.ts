@@ -57,6 +57,9 @@ const ADDED_FUNCTIONS = [
   'cancelExtraction',
   // V3.6 多草稿：删除被取代的旧规则版本草稿（仍只增不改旧函数）。
   'deleteExtractionDraft',
+  // V4 stage 1: only specific tool functions, no generic invoke escape.
+  'getProjectContext', 'getConfirmedInputs', 'applyConfirmedInputs',
+  'stageParameterChange', 'previewAndCheck',
 ] as const
 
 describe('B2/C preload 契约', () => {

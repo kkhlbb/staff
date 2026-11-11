@@ -1,0 +1,59 @@
+$ mutation M08
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 01 A40-01：真实 PDF → 逐条界面决定 → 草稿，参数/环/公式/绑定/条款/图纸/3D 同源
+ × desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 02 伪造 confirmed/user/approvedBy：未确认候选不得入草稿（M08） 191ms
+   → expected { ok: true, data: { …(16) }, …(2) } to match object { ok: false, …(2) }
+(19 matching properties omitted from actual)
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 03 基准过期：STALE_BASE，磁盘/项目/来源不变（M09）
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 04 来源换版：SOURCE_CHANGED，既有工程草稿与来源字节不变
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 05 幂等：同 token 同基准并发重复只建一个草稿，两次 ID 与字节相同
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 06 注入 ENOSPC：项目/已有草稿/恢复记录/附件字节深比较不变
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 07 缺长度：NEEDS_CLARIFICATION，missing 包含具体长度用途且零写入
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 08 冲突组：磁盘已有同符号两条确认 → CONSTRAINT_VIOLATED，零写入
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 09 五工具统一信封：成功/参数错/窗口错/业务错都有 requestId、objectVersion
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 10 同版本独立编辑也使旧计划与预览过期；context 标记 stale
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 11 几何完整但无装配关系：仅几何草稿并列出具体缺项，不冒充完整任务
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 12 token不可伪造；界面撤销确认后旧计划凭据失效
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 13 已确认公式不属于登记链 → UNSUPPORTED_SCOPE，失败零写入
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 14 幂等跨其它计划仍返回原ID；同凭据换映射拒绝；锁定及非法几何零写入
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 15 正常保存清理恢复副本后，从正式项目文件重读已有决定仍可建草稿
+ ↓ desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 16 非样例基线也按确认值映射，原target不被条款区间覆盖
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 15 skipped (16)
+   Start at  00:45:20
+   Duration  445ms (tests 50%, import 38%, transform 12%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  desktop/tests/agentTools.test.ts > V4.0 阶段1：状态级九项验收 > 02 伪造 confirmed/user/approvedBy：未确认候选不得入草稿（M08）
+AssertionError: expected { ok: true, data: { …(16) }, …(2) } to match object { ok: false, …(2) }
+(19 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "NOT_CONFIRMED",
+-   "details": {
+-     "causeCode": "NOT_CONFIRMED",
+-   },
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ desktop/tests/agentTools.test.ts:141:20
+    139|     const s = await setup(false); const before = await s.disk()
+    140|     const result = await s.apply({ ...s.request, confirmed: true, user…
+    141|     expect(result).toMatchObject({ ok: false, code: 'NOT_CONFIRMED', d…
+       |                    ^
+    142|     expect(await s.disk()).toEqual(before)
+    143|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+exitCode=1

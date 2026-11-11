@@ -1,0 +1,15 @@
+Warning: Cannot access the `require` function: "TypeError [ERR_INVALID_ARG_VALUE]: The argument 'filename' must be a file URL object, file URL string, or absolute path string. Received undefined".
+Warning: Cannot polyfill `DOMMatrix`, rendering may be broken.
+Warning: Cannot polyfill `Path2D`, rendering may be broken.
+
+DevTools listening on ws://127.0.0.1:9341/devtools/browser/ced5d335-c5cd-44b7-aab7-7d7a07a10ef2
+Warning: Cannot access the `require` function: "TypeError [ERR_INVALID_ARG_VALUE]: The argument 'filename' must be a file URL object, file URL string, or absolute path string. Received undefined".
+Warning: Cannot polyfill `DOMMatrix`, rendering may be broken.
+Warning: Cannot polyfill `Path2D`, rendering may be broken.
+
+DevTools listening on ws://127.0.0.1:9341/devtools/browser/3628c950-8ffb-470e-8721-6aff6d074d83
+Warning: Cannot access the `require` function: "TypeError [ERR_INVALID_ARG_VALUE]: The argument 'filename' must be a file URL object, file URL string, or absolute path string. Received undefined".
+Warning: Cannot polyfill `DOMMatrix`, rendering may be broken.
+Warning: Cannot polyfill `Path2D`, rendering may be broken.
+
+DevTools listening on ws://127.0.0.1:9341/devtools/browser/075a4fa6-c850-4d86-81d5-b2e65fc8c72f

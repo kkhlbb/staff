@@ -221,6 +221,11 @@ const api: CunlianApi = {
     ipcRenderer.invoke(IPC_CHANNELS.extractionCancel, request) as Promise<
       IpcResult<ExtractionCancelValue>
     >,
+  getProjectContext: () => ipcRenderer.invoke(IPC_CHANNELS.agentContext),
+  getConfirmedInputs: (request) => ipcRenderer.invoke(IPC_CHANNELS.agentConfirmedInputs, request),
+  applyConfirmedInputs: (request) => ipcRenderer.invoke(IPC_CHANNELS.agentApplyConfirmed, request),
+  stageParameterChange: (request) => ipcRenderer.invoke(IPC_CHANNELS.changeStage, request),
+  previewAndCheck: (request) => ipcRenderer.invoke(IPC_CHANNELS.changePreview, request),
   deleteExtractionDraft: (request) =>
     ipcRenderer.invoke(IPC_CHANNELS.extractionDeleteDraft, request) as Promise<
       IpcResult<ExtractionDeleteDraftValue>

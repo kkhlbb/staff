@@ -1,0 +1,30 @@
+{
+  "artifacts": [
+    {
+      "path": "out/寸链-darwin-arm64/寸链.app/Contents/Resources/app.asar",
+      "byteSize": 5496123,
+      "sha256": "bf13cdcf2d43d615416af3a36dc085cfe59b2971d217da705967c869bed6ca7a"
+    },
+    {
+      "path": "out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链",
+      "byteSize": 33968,
+      "sha256": "cd2d9352400dc818a8ee9a98dfc1d192e9b5ac549ef887ea1f52029418f8e165"
+    },
+    {
+      "path": "docs/evidence/v40-stage1/fixtures/a40-01-seed.cunlian",
+      "byteSize": 48723,
+      "sha256": "8f9b91d1842203059f3de9b4015a2cb0b1054db39a7ac83fa788382d7f77354d"
+    },
+    {
+      "path": "src/document-extraction/__fixtures__/taskbook-TB-2026-1110.pdf",
+      "byteSize": 42223,
+      "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff"
+    }
+  ],
+  "generatedAt": "2026-11-11T08:51:41.881Z",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": [
+    "generatedAt"
+  ]
+}

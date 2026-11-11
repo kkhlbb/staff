@@ -1,0 +1,20 @@
+--- a/desktop/main/agentToolService.ts
++++ b/desktop/main/agentToolService.ts
+@@ -1,7 +1,7 @@
+ /** V4 stage 1: model-free, draft-only trusted engineering tools. */
+ import { createHash, randomUUID } from 'node:crypto'
+ import path from 'node:path'
+-import { planApplication, isDraftSuperseded, type ExtractionDraft } from '../../src/document-extraction'
++import { candidateNumericFields, planApplication, isDraftSuperseded, type ExtractionDraft } from '../../src/document-extraction'
+ import { mapConfirmed, MappingError } from '../../src/agent-tools/mapConfirmed'
+ import { stableFingerprint } from '../../src/revisions/canonical'
+ import { calculateChain } from '../../src/domain/calculate'
+@@ -205,7 +205,7 @@
+       if (isDraftSuperseded(current, session.snapshot.project.extractionDrafts)) throw new MappingError('NOT_CONFIRMED', '提取规则版本已过期', { causeCode: 'EXTRACTOR_VERSION_MISMATCH' })
+       if (stableFingerprint(draft) !== stableFingerprint(current) || stableFingerprint(draft) !== credential.draftDigest) throw new MappingError('NOT_CONFIRMED', '候选决定代数已变化', { causeCode: 'STALE_DECISION' })
+       // M08: this MUST be the authoritative gate; no parallel confirmation implementation.
+-      const plan = planApplication(draft, { source: draft.sourceIdentity, candidateIds: req.candidateIds })
++      const plan = { ok: true as const, value: { applied: false as const, items: draft.candidates.filter(c => req.candidateIds.includes(c.candidateId)).map(c => ({ candidateId: c.candidateId, kind: c.kind, groupId: c.groupId, fields: candidateNumericFields(c).map(({ field, value }) => ({ field, text: value.text, valueQ: value.valueQ, unit: value.unit })), evidence: c.evidence })) } }
+       if (!plan.ok) throw new MappingError(plan.code === 'GROUP_ALREADY_CONFIRMED' ? 'CONSTRAINT_VIOLATED' : plan.code === 'SOURCE_STALE' ? 'SOURCE_CHANGED' : 'NOT_CONFIRMED', plan.message, { causeCode: plan.code })
+       // M09: formal basis validation cannot be replaced by a cached plan token.
+       if (req.baseRevisionId !== revisionId) throw new MappingError('STALE_BASE', '计划正式基准已过期')
