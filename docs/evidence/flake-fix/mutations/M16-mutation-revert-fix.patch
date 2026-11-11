@@ -1,0 +1,210 @@
+diff --git b/src/pages/Workspace.test.tsx a/src/pages/Workspace.test.tsx
+index 2c506ab..664a3c2 100644
+--- b/src/pages/Workspace.test.tsx
++++ a/src/pages/Workspace.test.tsx
+@@ -17,20 +17,10 @@ import {
+ import { importSourceRevision } from '../sources/revisions'
+ import { buildSyntheticPdf } from '../test/pdfFixtures'
+ import { deleteProjectDatabase } from '../test/projectDb'
+-import {
+-  PROJECT_STORE_NAME,
+-  SOURCE_DOCUMENT_STORE_NAME,
+-  transactionDone,
+-  withDatabase,
+-} from '../storage/db'
++import { PROJECT_STORE_NAME, transactionDone, withDatabase } from '../storage/db'
+ import type { WorkspaceDraft } from '../workspace/draft'
+ import { Workspace } from './Workspace'
+ 
+-// 本文件大量逐格输入（userEvent 按真实事件节奏驱动），在并行负载下单个用例实测可超 3s，
+-// 默认 5s 会被挤爆成偶发红（现场见 docs/evidence/flake-fix/）。给足显式余量，断言强度不变。
+-// 同时对 userEvent 使用 delay: null：省掉每次按键之间的真实计时器等待，直接缩短用例时间。
+-vi.setConfig({ testTimeout: 15000, hookTimeout: 15000 })
+-
+ beforeEach(async () => {
+   await deleteProjectDatabase()
+ })
+@@ -173,7 +163,7 @@ function confirmationCheckbox(): HTMLElement {
+ 
+ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () => {
+   it('逐格输入案例 A 后确认判定为不满足，改到 B 时确认被清除、重新确认后判定为满足', async () => {
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     render(<Workspace />)
+ 
+     // 加载完成前只显示加载状态，不能先渲染空项目。
+@@ -272,7 +262,7 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () =>
+   })
+ 
+   it('F-01 目标下限大于上限时允许区间、裕量和目标图不套用上次有效目标', async () => {
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     await renderWorkspace()
+ 
+     await buildCaseA(user)
+@@ -317,7 +307,7 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () =>
+   })
+ 
+   it('F-02 改回合法目标后允许区间、裕量与判定恢复，快照入口重新可用', async () => {
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     await renderWorkspace()
+ 
+     await buildCaseA(user)
+@@ -345,7 +335,7 @@ describe('Workspace：从空项目建立案例 A，再修改为案例 B', () =>
+   })
+ 
+   it('编辑清除确认状态时显示重新核对提示，重新勾选后提示消失', async () => {
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     await renderWorkspace()
+ 
+     await buildCaseA(user)
+@@ -409,7 +399,7 @@ describe('Workspace：按 projectId 打开与返回列表', () => {
+     }
+ 
+     const onBackToList = vi.fn()
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     render(
+       <Workspace
+         projectId={first.value.id}
+@@ -432,7 +422,7 @@ describe('Workspace：按 projectId 打开与返回列表', () => {
+   it('指定不存在的 projectId 时显示错误和返回项目列表，而不是打开其它项目', async () => {
+     await createEmptyProject('项目一')
+     const onBackToList = vi.fn()
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     render(
+       <Workspace projectId="missing-project" onBackToList={onBackToList} />,
+     )
+@@ -463,7 +453,7 @@ describe('Workspace：按 projectId 打开与返回列表', () => {
+       },
+     )
+ 
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     render(<Workspace onBackToList={() => undefined} />)
+ 
+     const alert = await screen.findByRole('alert')
+@@ -515,7 +505,7 @@ describe('Workspace：按 projectId 打开与返回列表', () => {
+       return originalOpen(name, version)
+     })
+ 
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     render(<Workspace projectId={created.value.id} />)
+     const alert = await screen.findByRole('alert')
+     expect(alert).toHaveTextContent('本地存储不可用')
+@@ -543,30 +533,20 @@ describe('Workspace：按 projectId 打开与返回列表', () => {
+       throw new Error(created.error.message)
+     }
+ 
+-    // 确定性故障注入：按“本次事务要读哪个 object store”决定是否失败，而不按 open 调用序号。
+-    // 页面里还有自动保存、草稿恢复等后台读库，它们的 open 会挤掉序号（并行负载下顺序不定），
+-    // 旧写法（第 1、3 次 open 抛错）会打偏，导致本用例在负载下偶发走到“普通备份”分支。
+-    // 阶段一（引导）：所有事务失败 → 进入“本地存储不可用”。
+-    // 阶段二（应急导出）：只有读来源元数据的事务失败 → 必须走降级备份分支。
+-    let allowProjectReads = false
+-    const originalTransaction = IDBDatabase.prototype.transaction
+-    vi.spyOn(IDBDatabase.prototype, 'transaction').mockImplementation(function (
+-      this: IDBDatabase,
+-      storeNames: string | string[],
+-      mode?: IDBTransactionMode,
+-    ) {
+-      const requested = Array.isArray(storeNames) ? storeNames : [storeNames]
+-      const touchesSources = requested.includes(SOURCE_DOCUMENT_STORE_NAME)
+-      if (!allowProjectReads || touchesSources) {
++    const originalOpen = indexedDB.open.bind(indexedDB)
++    let openCount = 0
++    vi.spyOn(IDBFactory.prototype, 'open').mockImplementation((name, version) => {
++      openCount += 1
++      // 1：引导失败；2：应急导出重新读取项目成功；3：读取来源元数据失败。
++      if (openCount === 1 || openCount === 3) {
+         throw new Error('模拟打开失败')
+       }
+-      return originalTransaction.call(this, storeNames, mode)
+-    } as typeof IDBDatabase.prototype.transaction)
++      return originalOpen(name, version)
++    })
+ 
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     render(<Workspace projectId={created.value.id} />)
+     const alert = await screen.findByRole('alert')
+-    allowProjectReads = true
+ 
+     await user.click(within(alert).getByRole('button', { name: '导出 JSON 备份' }))
+     const notice = await screen.findByText(/已导出降级备份/)
+@@ -576,7 +556,7 @@ describe('Workspace：按 projectId 打开与返回列表', () => {
+ 
+ describe('Workspace：自动保存与刷新恢复', () => {
+   it('建立案例 A 后卸载并重新挂载，输入、确认状态和结果一致', async () => {
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     const first = render(<Workspace />)
+     await screen.findByRole('button', { name: '增加行' })
+ 
+@@ -608,7 +588,7 @@ describe('Workspace：自动保存与刷新恢复', () => {
+   })
+ 
+   it('无效草稿刷新后仍然保留，并显示上一次有效结果和待修正状态', async () => {
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     const first = render(<Workspace />)
+     await screen.findByRole('button', { name: '增加行' })
+ 
+@@ -705,7 +685,7 @@ describe('Workspace：自动保存与刷新恢复', () => {
+     )
+     saveMock.mockRejectedValueOnce(new Error('模拟第一次写入失败'))
+ 
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     render(<Workspace saveDraft={saveMock} />)
+     await screen.findByRole('button', { name: '增加行' })
+ 
+@@ -791,7 +771,7 @@ describe('Workspace：自动保存与刷新恢复', () => {
+ 
+ describe('Workspace：基线、方案对比与恢复', () => {
+   it('保存案例 A 为基线，改到 B 后显示 Cmin/Cmax/Tc 与判定变化，恢复后回到 A 且清除确认', async () => {
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     const first = render(<Workspace />)
+     await screen.findByRole('button', { name: '增加行' })
+ 
+@@ -898,7 +878,7 @@ describe('Workspace：基线、方案对比与恢复', () => {
+   })
+ 
+   it('当前草稿无效时“保存为基线”不可点击', async () => {
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     await renderWorkspace()
+ 
+     await buildCaseA(user)
+@@ -918,7 +898,7 @@ describe('Workspace：基线、方案对比与恢复', () => {
+   })
+ 
+   it('确认覆盖后基线更新为当前方案', async () => {
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     await renderWorkspace()
+ 
+     await buildCaseA(user)
+@@ -1014,7 +994,7 @@ function installBackupDownloadMock(): BackupDownloadMock {
+ 
+ describe('Workspace：保存失败时的备份导出', () => {
+   it('草稿有效时导出当前有效链，草稿无效时导出最后一次有效链，并提示不含未通过校验的修改', async () => {
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     const backupMock = installBackupDownloadMock()
+     const saveMock = vi.fn(
+       async (
+@@ -1202,7 +1182,7 @@ describe('Workspace：本地 V1 项目升级提示', () => {
+ 
+ describe('Workspace：改后改回不恢复关系确认', () => {
+   it('数值改后改回、非法中间草稿后改回，刷新仍不恢复确认', async () => {
+-    const user = userEvent.setup({ delay: null })
++    const user = userEvent.setup()
+     const first = render(<Workspace />)
+     await screen.findByRole('button', { name: '增加行' })
+ 
