@@ -314,7 +314,9 @@ describe('AnalysisSnapshot：创建时冻结', () => {
       events.some(
         (event) =>
           event.type === 'analysis_snapshot_created' &&
-          event.id === `analysis_snapshot_created:${created.value.id}`,
+          // 事件 ID = 业务键 `changeEventId(type, snapshot.id)` + 追加写入序号；
+          // 这里只验证业务键前缀，追加序号由 addChangeEvent 统一分配（见 events.idCollision.test.ts）。
+          event.id.startsWith(`analysis_snapshot_created:${created.value.id}`),
       ),
     ).toBe(true)
   })
