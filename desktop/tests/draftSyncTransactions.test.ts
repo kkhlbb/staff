@@ -51,13 +51,13 @@ describe('FIX-06/07/08 main transactions with rendered calculation', () => {
       expect(after.draft).toEqual(draft)
       expect(resolveDraft(after).kind).toBe('edited')
       const html = visible(after)
-      expect(html).toContain('0.1500 至 0.2500')
+      expect(html).toContain('0.150 至 0.250')
       expect(html).toContain(`草稿基于关系版本 ${basis}，正式已是 ${after.project.relationRevision}`)
       const reopened = await ctx.h.projectService.openFile(ctx.opened.path!)
       if (!reopened.ok) throw new Error(reopened.error.message)
       const restored = ctx.h.projectService.getSession(reopened.value.sessionId)!.snapshot
       expect(restored.draft).toEqual(draft)
-      expect(visible(restored)).toContain('0.1500 至 0.2500')
+      expect(visible(restored)).toContain('0.150 至 0.250')
     } finally { await ctx.h.dispose() }
   })
   it('FIX-07: failed commit and failed save preserve official data, frozen history and invalid user input', async () => {
@@ -96,7 +96,7 @@ describe('FIX-06/07/08 main transactions with rendered calculation', () => {
       expect(calculateChain(parsed.chain)).toMatchObject({ status: 'outside', minQ: 1000, maxQ: 2000 })
       expect(s.project.currentRequirementCheck).toMatchObject({ status: 'satisfied', resultInterval: { minQ: 1000, maxQ: 2000 } })
       expect(visible(s)).toContain('超出目标')
-      expect(visible(s)).toContain('0.1000 至 0.2000')
+      expect(visible(s)).toContain('0.100 至 0.200')
       expect(s.project.dimensionChain.target).toEqual({ minQ: 1800, maxQ: 3000 })
     } finally { await ctx.h.dispose() }
   })

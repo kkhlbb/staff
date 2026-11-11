@@ -538,9 +538,9 @@ describe('ProjectList：JSON 导出再导入', () => {
       })
       expect(importedCheckbox).not.toBeChecked()
       expect(resultStatus()).toBe('待确认（预览）')
-      expect(resultValue('result-min')).toBe('0.1500')
-      expect(resultValue('result-max')).toBe('0.3900')
-      expect(resultValue('result-target')).toBe('0.1000 ~ 0.3000')
+      expect(resultValue('result-min')).toBe('0.150')
+      expect(resultValue('result-max')).toBe('0.390')
+      expect(resultValue('result-target')).toBe('0.100 ~ 0.300')
 
       await user.click(importedCheckbox)
       expect(importedCheckbox).toBeChecked()
@@ -643,7 +643,7 @@ describe('ProjectList：内置演示案例', () => {
     await screen.findByRole('button', { name: '增加行' })
     expect(screen.getByText(/演示案例 A：不满足目标的轴向间隙/)).toBeInTheDocument()
     expect(resultStatus()).toBe('待确认（预览）')
-    expect(screen.getByTestId('result-max')).toHaveTextContent('0.3900')
+    expect(screen.getByTestId('result-max')).toHaveTextContent('0.390')
 
     await user.click(
       screen.getByRole('checkbox', { name: '已核对尺寸关系与作用方向' }),

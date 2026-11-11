@@ -182,13 +182,13 @@ describe('DimensionTable：字段与只读极限尺寸', () => {
     expect(screen.getByRole('textbox', { name: 'H 代号' })).toHaveValue('H')
     expect(screen.getByRole('textbox', { name: 'H 名称' })).toHaveValue('机架')
     expect(screen.getByRole('textbox', { name: 'H 基本尺寸' })).toHaveValue(
-      '100.0000',
+      '100.000',
     )
     expect(screen.getByRole('textbox', { name: 'H 下偏差' })).toHaveValue(
-      '0.0000',
+      '0.000',
     )
     expect(screen.getByRole('textbox', { name: 'H 上偏差' })).toHaveValue(
-      '0.1000',
+      '0.100',
     )
     expect(screen.getByRole('textbox', { name: 'B1 来源备注' })).toHaveValue(
       '图纸 A-01',
@@ -205,22 +205,22 @@ describe('DimensionTable：字段与只读极限尺寸', () => {
 
     expect(
       screen.getByRole('cell', { name: 'H 下极限尺寸' }),
-    ).toHaveTextContent('100.0000')
+    ).toHaveTextContent('100.000')
     expect(
       screen.getByRole('cell', { name: 'H 上极限尺寸' }),
-    ).toHaveTextContent('100.1000')
+    ).toHaveTextContent('100.100')
     expect(
       screen.getByRole('cell', { name: 'B1 下极限尺寸' }),
-    ).toHaveTextContent('19.9800')
+    ).toHaveTextContent('19.980')
     expect(
       screen.getByRole('cell', { name: 'B1 上极限尺寸' }),
-    ).toHaveTextContent('20.0000')
+    ).toHaveTextContent('20.000')
     expect(
       screen.getByRole('cell', { name: 'S 下极限尺寸' }),
-    ).toHaveTextContent('59.7500')
+    ).toHaveTextContent('59.750')
     expect(
       screen.getByRole('cell', { name: 'S 上极限尺寸' }),
-    ).toHaveTextContent('59.8500')
+    ).toHaveTextContent('59.850')
 
     expect(screen.getByTestId('relation-confirmed')).toHaveTextContent('true')
   })
@@ -357,7 +357,7 @@ describe('DimensionTable：方向、重排与确认状态', () => {
     const upper = screen.getByRole('textbox', { name: 'H 上偏差' })
     fireEvent.change(upper, { target: { value: '0.0300' } })
 
-    expect(upper).toHaveValue('0.0300')
+    expect(upper).toHaveValue('0.030')
     expect(screen.getByTestId('relation-confirmed')).toHaveTextContent('false')
     expect(screen.getByTestId('stale')).toHaveTextContent('false')
 
@@ -425,7 +425,7 @@ describe('DimensionTable：受控边界', () => {
       screen.getByRole('cell', { name: 'H 下极限尺寸' }),
     ).toHaveTextContent('—')
     expect(screen.getByRole('textbox', { name: 'H 基本尺寸' })).toHaveValue(
-      '100.0000',
+      '100.000',
     )
   })
 

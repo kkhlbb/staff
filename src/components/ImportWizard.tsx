@@ -1,3 +1,4 @@
+import { MmInput } from './MmInput'
 import {
   useEffect,
   useId,
@@ -959,7 +960,7 @@ export function ImportWizard({
                         </label>
                         <label>
                           基本尺寸
-                          <input
+                          <MmInput
                             type="text"
                             inputMode="decimal"
                             aria-label={`第 ${row.rowNumber} 行 基本尺寸`}
@@ -974,7 +975,7 @@ export function ImportWizard({
                         </label>
                         <label>
                           下偏差
-                          <input
+                          <MmInput
                             type="text"
                             inputMode="decimal"
                             aria-label={`第 ${row.rowNumber} 行 下偏差`}
@@ -988,7 +989,7 @@ export function ImportWizard({
                         </label>
                         <label>
                           上偏差
-                          <input
+                          <MmInput
                             type="text"
                             inputMode="decimal"
                             aria-label={`第 ${row.rowNumber} 行 上偏差`}

@@ -157,8 +157,8 @@ describe('失效矩阵：声明与实现一致', () => {
     expect(changed[0]).toMatchObject({
       termId: 't-h',
       numeric: { field: 'nominal', beforeQ: parseMm('100'), afterQ: parseMm('100.1') },
-      before: '基本尺寸 100.0000 mm',
-      after: '基本尺寸 100.1000 mm',
+      before: '基本尺寸 100.000 mm',
+      after: '基本尺寸 100.100 mm',
     })
     expect(changed[0].reason).toBeUndefined()
 
@@ -222,8 +222,8 @@ describe('失效矩阵：声明与实现一致', () => {
     const events = await listEvents()
     const targetEvent = events.find((event) => event.type === 'target_changed')
     expect(targetEvent).toMatchObject({
-      before: '0.0100 … 0.2000 mm',
-      after: '0.0200 … 0.3000 mm',
+      before: '0.010 … 0.200 mm',
+      after: '0.020 … 0.300 mm',
     })
   })
 

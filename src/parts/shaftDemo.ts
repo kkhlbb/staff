@@ -190,10 +190,10 @@ export function explodeTFromSlider(raw: string | number): number | null {
   return Math.min(1, Math.max(0, value / 100))
 }
 
-/** 带符号 mm 显示；-0 归一成 0.0，避免出现 “-0.0”。 */
+/** 带符号 mm 显示；-0 归一成 0.000，避免负零。 */
 function signedExplodeMm(value: number): string {
   const normalized = value === 0 ? 0 : value
-  return `${normalized > 0 ? '+' : ''}${normalized.toFixed(1)} mm（X）`
+  return `${formatMm(Math.round(normalized * Q_PER_MM), { signed: normalized > 0 })} mm（X）`
 }
 
 /**
@@ -209,16 +209,16 @@ export function partPropertyRows(id: BuiltinPartId, explodeT = 0): [string, stri
   const rows: [string, string][] = [
     ['类型', '内置示意部件（只读）'],
     ['装配 X 区间', `${formatMm(Math.round(from * Q_PER_MM))} … ${formatMm(Math.round(to * Q_PER_MM))} mm`],
-    ['爆炸位移（当前）', fixed ? '0.0 mm（X）' : signedExplodeMm(t * def.explodeX)],
+    ['爆炸位移（当前）', fixed ? signedExplodeMm(0) : signedExplodeMm(t * def.explodeX)],
     ['设计最大位移（上限）', `${signedExplodeMm(def.explodeX)}${fixed ? '（装配基准，不参与爆炸）' : ''}`],
   ]
   if (def.shape.kind === 'ring') {
     rows.push(
-      ['内半径', `${def.shape.innerRadius.toFixed(4)} mm`],
-      ['外半径', `${def.shape.outerRadius.toFixed(4)} mm`],
+      ['内半径', `${formatMm(Math.round(def.shape.innerRadius * Q_PER_MM))} mm`],
+      ['外半径', `${formatMm(Math.round(def.shape.outerRadius * Q_PER_MM))} mm`],
     )
   } else {
-    rows.push(['径向台阶', 'r8 / r10 / r14 / r8 mm'])
+    rows.push(['径向台阶', `${[80000, 100000, 140000, 80000].map(q => `r${formatMm(q)}`).join(' / ')} mm`])
   }
   if (id === 'builtin:shaft-demo:spacer') {
     rows.push(

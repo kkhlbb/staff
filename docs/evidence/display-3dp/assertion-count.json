@@ -1,0 +1,352 @@
+{
+  "basis": "9f437b9",
+  "definition": "Existing matcher call sites, including inline callbacks; external expectation-table consumer sites counted once, not each row/iteration. Excludes symbol-only rename and DOM query. New MmInput assertions are additional, not migration.",
+  "total": 211,
+  "files": [
+    {
+      "file": "desktop/tests/draftSyncTransactions.test.ts",
+      "count": 3,
+      "changedLines": [
+        54,
+        60,
+        99
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "desktop/tests/drawingChannels.test.ts",
+      "count": 2,
+      "changedLines": [
+        158,
+        159
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/components/ChainDiagram.test.tsx",
+      "count": 5,
+      "changedLines": [
+        171,
+        302,
+        324,
+        325
+      ],
+      "externalExpectedTableConsumers": [
+        149
+      ]
+    },
+    {
+      "file": "src/components/ContributionTable.test.tsx",
+      "count": 2,
+      "changedLines": [
+        68,
+        122
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/components/DimensionTable.test.tsx",
+      "count": 11,
+      "changedLines": [
+        184,
+        187,
+        190,
+        206,
+        209,
+        212,
+        215,
+        218,
+        221,
+        360,
+        427
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/components/RequirementRevisionHistory.test.tsx",
+      "count": 1,
+      "changedLines": [
+        22
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/components/ResultPanel.test.tsx",
+      "count": 38,
+      "changedLines": [
+        254,
+        255,
+        256,
+        257,
+        258,
+        259,
+        260,
+        262,
+        263,
+        269,
+        270,
+        271,
+        272,
+        273,
+        274,
+        275,
+        277,
+        278,
+        284,
+        285,
+        286,
+        287,
+        288,
+        289,
+        290,
+        292,
+        293,
+        349,
+        350,
+        351,
+        352,
+        373,
+        374,
+        375,
+        409,
+        439,
+        440,
+        441
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/components/ScenarioCompare.test.tsx",
+      "count": 13,
+      "changedLines": [
+        73,
+        76,
+        79,
+        82,
+        85,
+        88,
+        91,
+        107,
+        108,
+        113,
+        114,
+        119,
+        120
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/domain/units.test.ts",
+      "count": 2,
+      "changedLines": [],
+      "externalExpectedTableConsumers": [
+        89,
+        90
+      ]
+    },
+    {
+      "file": "src/drawing/dependencyBoundary.test.ts",
+      "count": 1,
+      "changedLines": [
+        84
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/drawing/spacerDrawing.test.ts",
+      "count": 9,
+      "changedLines": [
+        109,
+        110,
+        178,
+        194,
+        215,
+        216,
+        261,
+        262,
+        263
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/pages/DesktopWorkspace.test.tsx",
+      "count": 29,
+      "changedLines": [
+        453,
+        459,
+        555,
+        569,
+        594,
+        649,
+        650,
+        651,
+        685,
+        686,
+        688,
+        690,
+        692,
+        694,
+        695,
+        937,
+        938,
+        943,
+        956,
+        961,
+        971,
+        985,
+        1016,
+        1023,
+        1032,
+        1053,
+        1154,
+        1166,
+        1337
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/pages/PrintReport.test.tsx",
+      "count": 21,
+      "changedLines": [
+        289,
+        298,
+        307,
+        320,
+        325,
+        326,
+        327,
+        328,
+        329,
+        330,
+        331,
+        336,
+        337,
+        346,
+        374,
+        375,
+        376,
+        377,
+        411,
+        412,
+        446
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/pages/ProjectList.test.tsx",
+      "count": 4,
+      "changedLines": [
+        541,
+        542,
+        543,
+        646
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/pages/Workspace.sources.test.tsx",
+      "count": 1,
+      "changedLines": [
+        240
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/pages/Workspace.test.tsx",
+      "count": 48,
+      "changedLines": [
+        202,
+        203,
+        210,
+        211,
+        212,
+        213,
+        214,
+        215,
+        216,
+        217,
+        218,
+        248,
+        249,
+        250,
+        251,
+        252,
+        253,
+        254,
+        255,
+        261,
+        271,
+        287,
+        288,
+        306,
+        327,
+        328,
+        329,
+        568,
+        569,
+        576,
+        579,
+        582,
+        583,
+        586,
+        587,
+        623,
+        624,
+        625,
+        806,
+        809,
+        812,
+        826,
+        854,
+        857,
+        860,
+        873,
+        1177,
+        1217
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/parts/shaftDemo.test.ts",
+      "count": 16,
+      "changedLines": [
+        133,
+        134,
+        135,
+        136,
+        137,
+        145,
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153,
+        155,
+        156
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/review/invalidation.test.ts",
+      "count": 2,
+      "changedLines": [
+        157,
+        224
+      ],
+      "externalExpectedTableConsumers": []
+    },
+    {
+      "file": "src/workspace/draftSync.test.tsx",
+      "count": 3,
+      "changedLines": [
+        32,
+        33,
+        76
+      ],
+      "externalExpectedTableConsumers": []
+    }
+  ]
+}

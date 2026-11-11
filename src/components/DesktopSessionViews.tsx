@@ -1,3 +1,4 @@
+import { MmInput } from './MmInput'
 import { useCallback, useState } from 'react'
 import type { SnapshotDto } from '../../desktop/shared/contracts'
 import type { RequirementRevisionHistoryEntry, RequirementSourceLocation } from '../requirements/history'
@@ -39,7 +40,7 @@ export function DesktopChainView({ snapshot, edit, disabled }: {
           {(['nominal', 'lower', 'upper'] as const).map((field, column) => {
             const error = errors[`${term.id}.${field}`]
             const id = `desktop-term-${index}-${field}`
-            return <td key={field}><input aria-label={`第 ${index + 1} 行 ${term.symbol} ${['基本尺寸', '下偏差', '上偏差'][column]}`} inputMode="decimal" value={term[field]} disabled={disabled}
+            return <td key={field}><MmInput aria-label={`第 ${index + 1} 行 ${term.symbol} ${['基本尺寸', '下偏差', '上偏差'][column]}`} inputMode="decimal" value={term[field]} disabled={disabled}
               aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined}
               onChange={event => edit({ type: 'updateField', termId: term.id, field, value: event.target.value })} />
               {error && <p id={`${id}-error`} className="desktop-workspace__error">{error}</p>}</td>
@@ -52,7 +53,7 @@ export function DesktopChainView({ snapshot, edit, disabled }: {
       {(['min', 'max'] as const).map(side => {
         const key = side === 'min' ? 'targetMin' : 'targetMax'
         const error = errors[`target.${side}`]
-        return <label key={side}>目标{side === 'min' ? '下限' : '上限'}<input value={draft[key]} inputMode="decimal" aria-invalid={error ? true : undefined} aria-describedby={error ? `desktop-target-${side}-error` : undefined}
+        return <label key={side}>目标{side === 'min' ? '下限' : '上限'}<MmInput value={draft[key]} inputMode="decimal" aria-invalid={error ? true : undefined} aria-describedby={error ? `desktop-target-${side}-error` : undefined}
           onChange={event => edit({ type: 'setTarget', targetMin: draft.targetMin, targetMax: draft.targetMax, [key]: event.target.value })} />
           {error && <span id={`desktop-target-${side}-error`} className="desktop-workspace__error">{error}</span>}</label>
       })}

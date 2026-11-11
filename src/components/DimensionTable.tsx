@@ -1,3 +1,4 @@
+import { MmInput } from './MmInput'
 import { useId, type Dispatch, type MouseEvent } from 'react'
 import { termLimits } from '../domain/calculate'
 import type { ChainDefinition } from '../domain/types'
@@ -75,10 +76,11 @@ function TextCell({
   disabled = false,
   onChange,
 }: TextCellProps) {
+  const Input = inputMode === 'decimal' ? MmInput : 'input'
   const hasError = error !== undefined && error !== ''
   return (
     <div className="dimension-table__field">
-      <input
+      <Input
         type="text"
         className="dimension-table__input"
         aria-label={label}

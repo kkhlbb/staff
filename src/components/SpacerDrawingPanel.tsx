@@ -1,3 +1,4 @@
+import { MmInput } from './MmInput'
 /**
  * 隔套图纸工作区（V3-C-03）：参数 → 唯一 DrawingData → 预览 / 导出。
  *
@@ -20,7 +21,7 @@ import {
   scaleKey as scaleText,
 } from '../drawing/types'
 import { rebuildDrawingFromProject } from '../drawing/rebuildDrawing'
-import { formatParameterValue } from '../drawing/formatDimension'
+import { formatQWithDecimals } from '../drawing/formatDimension'
 import { DEFAULT_SPACER_TEXTS } from '../parts/spacerParameters'
 import { DrawingCanvas } from './DrawingCanvas'
 import './SpacerDrawingPanel.css'
@@ -69,7 +70,8 @@ const EMPTY_FRAME: FrameState = {
 function textsFrom(parameters: ProjectFileSpacerParameter[]): Record<SpacerParameterKey, string> {
   const texts = { ...DEFAULT_SPACER_TEXTS }
   for (const parameter of parameters) {
-    texts[parameter.key] = formatParameterValue(parameter.valueQ, parameter.inputDecimals) ??
+    // 恢复原输入位数供提交使用；非编辑显示交给 MmInput → formatMm。
+    texts[parameter.key] = formatQWithDecimals(parameter.valueQ, parameter.inputDecimals) ??
       texts[parameter.key]
   }
   return texts
@@ -272,7 +274,7 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
           return (
             <label key={key} className={active ? 'is-located' : undefined}>
               <span>{SPACER_PARAMETER_LABELS[key]}</span>
-              <input
+              <MmInput
                 inputMode="decimal"
                 value={texts[key]}
                 maxLength={32}

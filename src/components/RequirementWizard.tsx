@@ -1,3 +1,4 @@
+import { MmInput } from './MmInput'
 /**
  * V3.5：任务书条款向导（复核区入口）。
  *
@@ -347,11 +348,11 @@ export function RequirementWizard(props: RequirementWizardProps) {
               </label>
               <label>
                 下限（mm）
-                <input aria-label="条款下限" value={lower} inputMode="decimal" onChange={(event) => { setLower(event.target.value); scheduleStage() }} />
+                <MmInput aria-label="条款下限" value={lower} inputMode="decimal" onChange={(event) => { setLower(event.target.value); scheduleStage() }} />
               </label>
               <label>
                 上限（mm）
-                <input aria-label="条款上限" value={upper} inputMode="decimal" onChange={(event) => { setUpper(event.target.value); scheduleStage() }} />
+                <MmInput aria-label="条款上限" value={upper} inputMode="decimal" onChange={(event) => { setUpper(event.target.value); scheduleStage() }} />
               </label>
             </section>
 
