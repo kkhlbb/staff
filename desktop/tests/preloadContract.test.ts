@@ -60,6 +60,10 @@ const ADDED_FUNCTIONS = [
   // V4 stage 1: only specific tool functions, no generic invoke escape.
   'getProjectContext', 'getConfirmedInputs', 'applyConfirmedInputs',
   'stageParameterChange', 'previewAndCheck',
+  // V4 stage 3: 任务侧栏、授权提交与来源定位（仍只增不改旧函数）。
+  'agentStart', 'agentCancel', 'agentResume', 'agentTaskState', 'agentProviderStatus',
+  'agentPreviewSummary', 'issueAgentApproval', 'commitApprovedDraft', 'locateEvidence',
+  'onAgentEvent',
 ] as const
 
 describe('B2/C preload 契约', () => {

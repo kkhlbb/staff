@@ -1,0 +1,48 @@
+$ npx vitest run --config vitest.desktop.config.ts desktop/tests/agentApproval.test.ts -t S3-04 --reporter=verbose
+# 允许同一 approvalId 重复消费（移除 reserve 的 consumedAt/claims/窗口/有效期门禁）
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ↓ desktop/tests/agentApproval.test.ts > V4.0 阶段3：一次性授权与重算提交 > S3-01 正常：预览 → 用户确认 → 提交，只新增一个正式版本并显示成功回执
+ ↓ desktop/tests/agentApproval.test.ts > V4.0 阶段3：一次性授权与重算提交 > S3-02 未授权直接提交：拒绝，项目字节不变
+ ↓ desktop/tests/agentApproval.test.ts > V4.0 阶段3：一次性授权与重算提交 > S3-03 伪造 / 过期 / 跨窗口 / 跨项目 / 跨草稿令牌分别拒绝
+ × desktop/tests/agentApproval.test.ts > V4.0 阶段3：一次性授权与重算提交 > S3-04 双击/重试同一令牌：只生成一个版本 244ms
+   → expected { ok: false, code: 'STALE_BASE', …(4) } to match object { code: 'INVALID_INPUT' }
+(6 matching properties omitted from actual)
+ ↓ desktop/tests/agentApproval.test.ts > V4.0 阶段3：一次性授权与重算提交 > S3-05 预览后改参数再提交：STALE_PREVIEW，必须重新预览确认
+ ↓ desktop/tests/agentApproval.test.ts > V4.0 阶段3：一次性授权与重算提交 > S3-06 提交写入注入 ENOSPC：无半提交，项目与历史字节不变；授权按策略已消费
+ ↓ desktop/tests/agentApproval.test.ts > V4.0 阶段3：一次性授权与重算提交 > S3-07 条款不满足时授权提交：拦截，正式版本不变
+ ↓ desktop/tests/agentApproval.test.ts > V4.0 阶段3：一次性授权与重算提交 > S3-08 locateEvidence 只读：定位成功且项目字节不变；无证据时 INVALID_INPUT
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 skipped (8)
+   Start at  01:52:16
+   Duration  485ms (tests 58%, import 34%, transform 7%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  desktop/tests/agentApproval.test.ts > V4.0 阶段3：一次性授权与重算提交 > S3-04 双击/重试同一令牌：只生成一个版本
+AssertionError: expected { ok: false, code: 'STALE_BASE', …(4) } to match object { code: 'INVALID_INPUT' }
+(6 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "INVALID_INPUT",
++   "code": "STALE_BASE",
+  }
+
+ ❯ desktop/tests/agentApproval.test.ts:203:49
+    201|     const results = [one, two]
+    202|     expect(results.filter(item => item.ok)).toHaveLength(1)
+    203|     expect(results.filter(item => !item.ok)[0]).toMatchObject({ code: …
+       |                                                 ^
+    204|     expect(s.h.projectService.getSession(s.sessionId)!.snapshot.fileRe…
+    205|     // 一次性语义的直接证据：已消费的 approvalId 不能再被占用（M13 锚点）。
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+exitCode=1

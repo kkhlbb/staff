@@ -1,0 +1,48 @@
+# 允许同一 approvalId 重复消费（移除 reserve 的 consumedAt/claims/窗口/有效期门禁）
+--- a/desktop/main/approvalStore.ts
++++ b/desktop/main/approvalStore.ts
+@@ -136,40 +136,11 @@
+    * 错误码口径：不存在/已消费/并发重复 → INVALID_INPUT；过期/窗口不符 → NOT_CONFIRMED。
+    */
+   async reserve(approvalId: string, windowId: number): Promise<ApprovalLookup> {
++    // M13: 一次性消费/占用检查被人为移除，同一 approvalId 可再次通过。
++    void windowId
+     const cached = this.cache.get(approvalId)
+-    if (cached !== undefined && cached.consumedAt !== null) {
+-      return { ok: false, code: 'INVALID_INPUT', message: '授权已使用，不能重复提交', causeCode: 'APPROVAL_CONSUMED' }
+-    }
+-    if (this.claims.has(approvalId)) {
+-      return { ok: false, code: 'INVALID_INPUT', message: '授权正在使用中，不能重复提交', causeCode: 'APPROVAL_IN_USE' }
+-    }
+-    this.claims.add(approvalId)
+-    let loaded: ApprovalLookup
+-    try {
+-      loaded = cached === undefined ? await this.load(approvalId) : { ok: true, record: cached }
+-    } catch {
+-      this.claims.delete(approvalId)
+-      return { ok: false, code: 'INVALID_INPUT', message: '授权记录无法读取', causeCode: 'UNKNOWN_APPROVAL' }
+-    }
+-    if (!loaded.ok) {
+-      this.claims.delete(approvalId)
+-      return loaded
+-    }
+-    const record = loaded.record
+-    if (record.consumedAt !== null) {
+-      this.claims.delete(approvalId)
+-      return { ok: false, code: 'INVALID_INPUT', message: '授权已使用，不能重复提交', causeCode: 'APPROVAL_CONSUMED' }
+-    }
+-    if (record.windowId !== windowId) {
+-      this.claims.delete(approvalId)
+-      return { ok: false, code: 'NOT_CONFIRMED', message: '授权不属于当前窗口', causeCode: 'WINDOW_MISMATCH' }
+-    }
+-    const expires = Date.parse(record.expiresAt)
+-    if (!Number.isFinite(expires) || expires <= this.nowMs()) {
+-      this.claims.delete(approvalId)
+-      return { ok: false, code: 'NOT_CONFIRMED', message: '授权已过期，请重新预览并确认', causeCode: 'APPROVAL_EXPIRED' }
+-    }
+-    return { ok: true, record }
++    if (cached !== undefined) return { ok: true, record: cached }
++    return this.load(approvalId)
+   }
+ 
+   /** 释放占用（校验或写盘失败、且没有提交时）。 */

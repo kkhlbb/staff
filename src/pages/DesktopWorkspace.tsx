@@ -18,6 +18,8 @@ import { RequirementWizard } from '../components/RequirementWizard'
 import { RequirementStatusPanel } from '../components/RequirementStatusPanel'
 import { RequirementRevisionHistory } from '../components/RequirementRevisionHistory'
 import { ExtractionReviewPanel } from '../components/ExtractionReviewPanel'
+import { AgentSidebar } from '../components/AgentSidebar'
+import { readAgentPanelOpen, writeAgentPanelOpen } from '../components/agentPanel'
 import {
   countPendingExtractionCandidates,
   pendingExtractionBadgeLabel,
@@ -38,6 +40,7 @@ import { isVisualReferenceLink } from '../project-file/types'
 import { REQUIREMENT_STATUS_LABEL } from '../requirements/types'
 import './Workspace.css'
 import './DesktopWorkspace.css'
+import '../components/AgentSidebar.css'
 
 const tabs = ['工程图', '3D', '来源 PDF', '尺寸链', '历史报告', '任务书提取'] as const
 const groups = ['零件', '工程图', '尺寸链', '来源资料', '版本历史'] as const
@@ -100,6 +103,27 @@ export function DesktopWorkspace() {
     if (activeRequirement === null) return
     locateRequirementRevision(activeRequirement.revisionId)
   }
+  function locateFromAgent(value: import('../../desktop/shared/contracts').LocateEvidenceValue): void {
+    if (value.kind === 'parameter') {
+      setSelection(`param:${value.parameterId}`)
+      setTab(0)
+      return
+    }
+    locateNonce.current += 1
+    setLocateError(null)
+    setLocate({
+      requirementRevisionId: value.requirementRevisionId,
+      revisionId: value.revisionId,
+      page: value.page,
+      rectPdf: value.rectPdf,
+      pageBoxPdf: value.pageBoxPdf,
+      label: value.label,
+      sourceFileName: value.sourceFileName,
+      issue: null,
+      locateNonce: locateNonce.current,
+    })
+    setTab(2)
+  }
   const drawingRebuilt = useMemo(
     () => (project ? rebuildDrawingFromProject(project) : null),
     [project],
@@ -132,6 +156,7 @@ export function DesktopWorkspace() {
   >(null)
   const [leftOpen, setLeftOpen] = useState(() => !window.matchMedia?.('(max-width: 600px)').matches)
   const [rightOpen, setRightOpen] = useState(() => !window.matchMedia?.('(max-width: 1100px)').matches)
+  const [agentOpen, setAgentOpen] = useState(readAgentPanelOpen)
   const [leftWidth, setLeftWidth] = useState(232)
   const [rightWidth, setRightWidth] = useState(312)
   const [reviewOpen, setReviewOpen] = useState(false)
@@ -377,6 +402,11 @@ export function DesktopWorkspace() {
       <button aria-expanded={leftOpen} aria-controls="desktop-tree" onClick={() => setLeftOpen(!leftOpen)}>{leftOpen ? '收起' : '展开'}项目树</button>
       <span>选择对象后查看属性</span>
       <button aria-expanded={rightOpen} aria-controls="desktop-properties" onClick={() => setRightOpen(!rightOpen)}>{rightOpen ? '收起' : '展开'}属性栏</button>
+      <button aria-expanded={agentOpen} aria-controls="agent-sidebar-panel" onClick={() => {
+        const next = !agentOpen
+        setAgentOpen(next)
+        writeAgentPanelOpen(next)
+      }}>{agentOpen ? '收起' : '展开'}任务侧栏</button>
     </nav>
     <div className="desktop-workspace__body">
       <aside id="desktop-tree" className="desktop-workspace__tree" aria-label="项目树" hidden={!leftOpen}>
@@ -583,6 +613,17 @@ export function DesktopWorkspace() {
       onConfirm={session.confirmRequirement}
       onClose={() => { void session.stageRequirementEdit(null); setRequirementOpen(false) }}
     />}
+    <AgentSidebar
+      open={agentOpen}
+      onToggle={() => {
+        const next = !agentOpen
+        setAgentOpen(next)
+        writeAgentPanelOpen(next)
+      }}
+      projectName={project.name}
+      revisionId={project.currentRevisionId}
+      onLocate={locateFromAgent}
+    />
     {dialogs}
   </main>
 }

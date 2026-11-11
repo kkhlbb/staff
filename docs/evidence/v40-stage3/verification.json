@@ -1,0 +1,109 @@
+{
+  "baseline": "b4f2a53",
+  "branch": "agent/v40-stage3",
+  "results": [
+    {
+      "step": "s3-tests",
+      "command": "npm exec -- vitest run --config vitest.desktop.config.ts desktop/tests/agentApproval.test.ts --reporter=verbose",
+      "exitCode": 0,
+      "startedAt": "2026-11-11T09:52:23.155Z",
+      "finishedAt": "2026-11-11T09:52:24.894Z",
+      "log": "docs/evidence/v40-stage3/logs/s3-tests.log"
+    },
+    {
+      "step": "s3-ui-tests",
+      "command": "npm exec -- vitest run src/components/AgentSidebar.test.tsx --reporter=verbose",
+      "exitCode": 0,
+      "startedAt": "2026-11-11T09:52:24.894Z",
+      "finishedAt": "2026-11-11T09:52:25.531Z",
+      "log": "docs/evidence/v40-stage3/logs/s3-ui-tests.log"
+    },
+    {
+      "step": "typecheck",
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "startedAt": "2026-11-11T09:52:25.531Z",
+      "finishedAt": "2026-11-11T09:52:28.758Z",
+      "log": "docs/evidence/v40-stage3/logs/typecheck.log"
+    },
+    {
+      "step": "typecheck-desktop",
+      "command": "npm run typecheck:desktop",
+      "exitCode": 0,
+      "startedAt": "2026-11-11T09:52:28.758Z",
+      "finishedAt": "2026-11-11T09:52:31.267Z",
+      "log": "docs/evidence/v40-stage3/logs/typecheck-desktop.log"
+    },
+    {
+      "step": "lint",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "startedAt": "2026-11-11T09:52:31.267Z",
+      "finishedAt": "2026-11-11T09:52:35.951Z",
+      "log": "docs/evidence/v40-stage3/logs/lint.log"
+    },
+    {
+      "step": "test",
+      "command": "npm run test",
+      "exitCode": 0,
+      "startedAt": "2026-11-11T09:52:35.951Z",
+      "finishedAt": "2026-11-11T09:52:53.727Z",
+      "log": "docs/evidence/v40-stage3/logs/test.log"
+    },
+    {
+      "step": "test-desktop",
+      "command": "npm run test:desktop",
+      "exitCode": 0,
+      "startedAt": "2026-11-11T09:52:53.727Z",
+      "finishedAt": "2026-11-11T09:53:00.532Z",
+      "log": "docs/evidence/v40-stage3/logs/test-desktop.log"
+    },
+    {
+      "step": "build",
+      "command": "npm run build",
+      "exitCode": 0,
+      "startedAt": "2026-11-11T09:53:00.532Z",
+      "finishedAt": "2026-11-11T09:53:04.005Z",
+      "log": "docs/evidence/v40-stage3/logs/build.log"
+    },
+    {
+      "step": "package-desktop",
+      "command": "npm run package:desktop",
+      "exitCode": 0,
+      "startedAt": "2026-11-11T09:53:04.005Z",
+      "finishedAt": "2026-11-11T09:53:13.406Z",
+      "log": "docs/evidence/v40-stage3/logs/package-desktop.log"
+    },
+    {
+      "step": "seed",
+      "command": "npx vitest run --config vitest.v40stage3fixture.config.ts",
+      "exitCode": 0,
+      "log": "docs/evidence/v40-stage3/logs/seed.log"
+    },
+    {
+      "step": "e2e-packaged",
+      "command": "node desktop/tests/e2e/v40stage3.mjs",
+      "exitCode": 0,
+      "log": "docs/evidence/v40-stage3/logs/e2e-packaged.log"
+    }
+  ],
+  "guards": [
+    {
+      "file": "docs/evidence/v40-stage3/e2e-result.json",
+      "violations": []
+    }
+  ],
+  "screenshots": [
+    "v40-stage3-01-sidebar-expanded.png",
+    "v40-stage3-02-pending-question.png",
+    "v40-stage3-03-tool-failure.png",
+    "v40-stage3-04-commit-success.png",
+    "v40-stage3-05-960x640.png"
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": [
+    "finishedAt",
+    "startedAt"
+  ]
+}

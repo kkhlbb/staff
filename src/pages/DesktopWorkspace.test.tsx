@@ -95,6 +95,17 @@ beforeEach(async () => {
     applyConfirmedInputs: vi.fn(async () => ({ ok: false as const, code: 'TOOL_FAILED' as const, message: '此 UI 用例不调用 Agent', requestId: 'mock-tool', objectVersion: 'mock' })),
     stageParameterChange: vi.fn(async () => ({ ok: false as const, code: 'TOOL_FAILED' as const, message: '此 UI 用例不调用 Agent', requestId: 'mock-tool', objectVersion: 'mock' })),
     previewAndCheck: vi.fn(async () => ({ ok: false as const, code: 'TOOL_FAILED' as const, message: '此 UI 用例不调用 Agent', requestId: 'mock-tool', objectVersion: 'mock' })),
+    // V4 阶段 3：侧栏存在时的最小桥；本文件不驱动演示任务。
+    agentStart: vi.fn(async () => ({ ok: false as const, code: 'INVALID_INPUT' as const, message: '此 UI 用例不启动 Agent', requestId: 'mock-agent', objectVersion: 'mock' })),
+    agentCancel: vi.fn(async () => ({ ok: false as const, code: 'INVALID_INPUT' as const, message: '无任务', requestId: 'mock-agent', objectVersion: 'mock' })),
+    agentResume: vi.fn(async () => ({ ok: false as const, code: 'INVALID_INPUT' as const, message: '无任务', requestId: 'mock-agent', objectVersion: 'mock' })),
+    agentTaskState: vi.fn(async () => ({ ok: false as const, code: 'INVALID_INPUT' as const, message: '无任务', requestId: 'mock-agent', objectVersion: 'mock' })),
+    agentProviderStatus: vi.fn(async () => ({ ok: true as const, data: { real: { configured: false, provider: null }, demo: { available: true as const, modelId: 'fake-1' as const, label: '离线演示（假模型，不联网）' } }, requestId: 'mock-agent', objectVersion: 'n/a' })),
+    agentPreviewSummary: vi.fn(async () => ({ ok: true as const, data: null, requestId: 'mock-agent', objectVersion: 'n/a' })),
+    issueAgentApproval: vi.fn(async () => ({ ok: false as const, code: 'NOT_CONFIRMED' as const, message: '无预览', requestId: 'mock-agent', objectVersion: 'mock' })),
+    commitApprovedDraft: vi.fn(async () => ({ ok: false as const, code: 'INVALID_INPUT' as const, message: '无授权', requestId: 'mock-agent', objectVersion: 'mock' })),
+    locateEvidence: vi.fn(async () => ({ ok: false as const, code: 'INVALID_INPUT' as const, message: '无证据', requestId: 'mock-agent', objectVersion: 'mock' })),
+    onAgentEvent: vi.fn(() => () => undefined),
     newProject: vi.fn(async () => ({ ok: true as const, value: opened })),
     openProject: vi.fn(async () => ({ ok: true as const, value: opened })),
     saveProject: vi.fn(async () => ({ ok: true as const, value: { path: '/project.cunlian', fingerprint: 'hash', savedSeq: 0, warnings: [] } })),
@@ -598,7 +609,8 @@ describe('A-04c 实质页面', () => {
     expect(screen.getByText('导入的历史记录/冻结结果，不代表当前已确认')).toBeInTheDocument()
     expect(screen.getByText('0.1234 至 0.250 mm')).toBeInTheDocument()
     expect(screen.getByText('未冻结')).toBeInTheDocument()
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    // 只检查历史报告面板本身没有输入框；任务侧栏的输入框不属于该面板。
+    expect(within(screen.getByRole('tabpanel', { name: '历史报告' })).queryByRole('textbox')).not.toBeInTheDocument()
     expect(api.stageDraft).not.toHaveBeenCalled()
   })
 })

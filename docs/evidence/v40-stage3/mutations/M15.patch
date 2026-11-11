@@ -1,0 +1,15 @@
+# 侧栏用模型自述/成功文案替代工具回执（失败被渲染为已完成）
+--- a/src/components/AgentSidebar.tsx
++++ b/src/components/AgentSidebar.tsx
+@@ -35,9 +35,9 @@
+ ]
+ 
+ function receiptOf(step: AgentTaskView['steps'][number]): string {
+-  if (step.kind === 'model') return 'model'
++  // M15: 用“完成/保存成功”文案替代工具回执；失败也被渲染成完成。
+   const tool = typeof step.inputSummary.tool === 'string' ? step.inputSummary.tool : 'tool'
+-  return step.errorCode === null ? `${tool} · ok` : `${tool} · ${step.errorCode}`
++  return step.kind === 'model' ? '已完成并保存成功' : `${tool} · ok`
+ }
+ 
+ function shortRef(value: string | null): string {

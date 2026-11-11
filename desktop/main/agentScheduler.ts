@@ -89,6 +89,8 @@ export interface AgentSchedulerDeps {
   activeProjectId: string
   now?: () => number
   budget?: Partial<AgentBudget>
+  /** 阶段 3：任务/步骤落盘后通知侧栏；不参与调度判定。 */
+  onUpdate?: (taskId: string) => void
 }
 
 interface TaskEntry {
@@ -568,6 +570,7 @@ export class AgentScheduler {
 
   private async persist(entry: TaskEntry): Promise<void> {
     await this.deps.store.save(entry.task, entry.steps)
+    try { this.deps.onUpdate?.(entry.task.taskId) } catch { /* UI 通知失败不影响任务记录 */ }
   }
 
   private releaseLock(entry: TaskEntry): void {
