@@ -1,0 +1,15 @@
+diff --git a/src/history/events.ts b/src/history/events.ts
+index 81ad126..22ae36f 100644
+--- a/src/history/events.ts
++++ b/src/history/events.ts
+@@ -150,9 +150,7 @@ export function addChangeEvent(
+   transaction: IDBTransaction,
+   event: ChangeEvent,
+ ): IDBRequest<IDBValidKey> {
+-  return transaction
+-    .objectStore(EVENT_STORE_NAME)
+-    .add({ ...event, id: uniqueChangeEventId(event.id) })
++  return transaction.objectStore(EVENT_STORE_NAME).add(event)
+ }
+ 
+ /** 在调用方现有事务内写入/覆盖事件（用于同一业务键的幂等事件）。 */

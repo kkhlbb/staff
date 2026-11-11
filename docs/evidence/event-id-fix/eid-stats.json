@@ -1,0 +1,277 @@
+{
+  "task": "EID: 变更事件 ID 毫秒碰撞",
+  "branch": "agent/fix-event-id-collision",
+  "baseCommit": "ae3e89e",
+  "fixCommit": "4bc6aba",
+  "invalidation": {
+    "fixed": {
+      "rounds": [
+        {
+          "name": "invalidation-fixed",
+          "round": 1,
+          "log": "docs/evidence/event-id-fix/logs/round-01.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 8 passed (8)",
+          "duration": "Duration 201ms (tests 35%, import 27%, setup 24%, transform 12%, worker 1%)",
+          "failures": [],
+          "passed": true
+        },
+        {
+          "name": "invalidation-fixed",
+          "round": 2,
+          "log": "docs/evidence/event-id-fix/logs/round-02.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 8 passed (8)",
+          "duration": "Duration 188ms (tests 34%, import 28%, setup 26%, transform 12%, worker 1%)",
+          "failures": [],
+          "passed": true
+        },
+        {
+          "name": "invalidation-fixed",
+          "round": 3,
+          "log": "docs/evidence/event-id-fix/logs/round-03.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 8 passed (8)",
+          "duration": "Duration 187ms (tests 34%, import 28%, setup 25%, transform 12%, worker 1%)",
+          "failures": [],
+          "passed": true
+        },
+        {
+          "name": "invalidation-fixed",
+          "round": 4,
+          "log": "docs/evidence/event-id-fix/logs/round-04.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 8 passed (8)",
+          "duration": "Duration 187ms (tests 34%, import 28%, setup 26%, transform 12%, worker 1%)",
+          "failures": [],
+          "passed": true
+        },
+        {
+          "name": "invalidation-fixed",
+          "round": 5,
+          "log": "docs/evidence/event-id-fix/logs/round-05.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 8 passed (8)",
+          "duration": "Duration 187ms (tests 34%, import 28%, setup 26%, transform 12%, worker 1%)",
+          "failures": [],
+          "passed": true
+        },
+        {
+          "name": "invalidation-fixed",
+          "round": 6,
+          "log": "docs/evidence/event-id-fix/logs/round-06.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 8 passed (8)",
+          "duration": "Duration 195ms (tests 32%, import 28%, setup 26%, transform 12%, worker 1%)",
+          "failures": [],
+          "passed": true
+        },
+        {
+          "name": "invalidation-fixed",
+          "round": 7,
+          "log": "docs/evidence/event-id-fix/logs/round-07.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 8 passed (8)",
+          "duration": "Duration 192ms (tests 33%, import 28%, setup 25%, transform 12%, worker 1%)",
+          "failures": [],
+          "passed": true
+        },
+        {
+          "name": "invalidation-fixed",
+          "round": 8,
+          "log": "docs/evidence/event-id-fix/logs/round-08.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 8 passed (8)",
+          "duration": "Duration 189ms (tests 34%, import 28%, setup 26%, transform 12%, worker 1%)",
+          "failures": [],
+          "passed": true
+        },
+        {
+          "name": "invalidation-fixed",
+          "round": 9,
+          "log": "docs/evidence/event-id-fix/logs/round-09.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 8 passed (8)",
+          "duration": "Duration 188ms (tests 34%, import 28%, setup 25%, transform 12%, worker 1%)",
+          "failures": [],
+          "passed": true
+        },
+        {
+          "name": "invalidation-fixed",
+          "round": 10,
+          "log": "docs/evidence/event-id-fix/logs/round-10.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 8 passed (8)",
+          "duration": "Duration 189ms (tests 34%, import 28%, setup 25%, transform 12%, worker 1%)",
+          "failures": [],
+          "passed": true
+        }
+      ],
+      "greenCount": 10,
+      "total": 10
+    },
+    "unfixedBaseline": {
+      "rounds": [
+        {
+          "name": "invalidation-unfixed",
+          "round": 1,
+          "log": "docs/evidence/event-id-fix/repro/unfixed-round-01.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 8 passed (8)",
+          "duration": "Duration 187ms (tests 33%, import 27%, setup 26%, transform 13%, worker 1%)",
+          "failures": [],
+          "passed": true
+        },
+        {
+          "name": "invalidation-unfixed",
+          "round": 2,
+          "log": "docs/evidence/event-id-fix/repro/unfixed-round-02.log",
+          "files": "Test Files 1 failed (1)",
+          "tests": "Tests 1 failed | 7 passed (8)",
+          "duration": "Duration 190ms (tests 35%, import 27%, setup 25%, transform 12%, worker 1%)",
+          "failures": [
+            "src/review/invalidation.test.ts > 失效矩阵：声明与实现一致 > 修改绑定区域：只清该绑定核对，其他绑定保留"
+          ],
+          "passed": false
+        },
+        {
+          "name": "invalidation-unfixed",
+          "round": 3,
+          "log": "docs/evidence/event-id-fix/repro/unfixed-round-03.log",
+          "files": "Test Files 1 failed (1)",
+          "tests": "Tests 1 failed | 7 passed (8)",
+          "duration": "Duration 190ms (tests 35%, import 27%, setup 25%, transform 12%, worker 1%)",
+          "failures": [
+            "src/review/invalidation.test.ts > 失效矩阵：声明与实现一致 > 修改绑定区域：只清该绑定核对，其他绑定保留"
+          ],
+          "passed": false
+        },
+        {
+          "name": "invalidation-unfixed",
+          "round": 4,
+          "log": "docs/evidence/event-id-fix/repro/unfixed-round-04.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 8 passed (8)",
+          "duration": "Duration 186ms (tests 34%, import 27%, setup 25%, transform 12%, worker 1%)",
+          "failures": [],
+          "passed": true
+        },
+        {
+          "name": "invalidation-unfixed",
+          "round": 5,
+          "log": "docs/evidence/event-id-fix/repro/unfixed-round-05.log",
+          "files": "Test Files 1 failed (1)",
+          "tests": "Tests 1 failed | 7 passed (8)",
+          "duration": "Duration 191ms (tests 35%, import 27%, setup 25%, transform 12%, worker 1%)",
+          "failures": [
+            "src/review/invalidation.test.ts > 失效矩阵：声明与实现一致 > 修改绑定区域：只清该绑定核对，其他绑定保留"
+          ],
+          "passed": false
+        },
+        {
+          "name": "invalidation-unfixed",
+          "round": 6,
+          "log": "docs/evidence/event-id-fix/repro/unfixed-round-06.log",
+          "files": "Test Files 1 failed (1)",
+          "tests": "Tests 1 failed | 7 passed (8)",
+          "duration": "Duration 191ms (tests 35%, import 27%, setup 25%, transform 12%, worker 1%)",
+          "failures": [
+            "src/review/invalidation.test.ts > 失效矩阵：声明与实现一致 > 修改绑定区域：只清该绑定核对，其他绑定保留"
+          ],
+          "passed": false
+        }
+      ],
+      "redCount": 4,
+      "total": 6
+    }
+  },
+  "eidTests": {
+    "log": "docs/evidence/event-id-fix/logs/eid-tests.log",
+    "files": "Test Files 1 passed (1)",
+    "tests": "Tests 5 passed (5)",
+    "duration": "Duration 203ms (tests 42%, import 24%, setup 23%, transform 10%, worker 1%)",
+    "failures": []
+  },
+  "mutationM17": {
+    "red": {
+      "rounds": [
+        {
+          "name": "M17-mutation",
+          "round": 1,
+          "log": "docs/evidence/event-id-fix/mutations/logs/M17-red-attempt-01.log",
+          "files": "Test Files 1 failed (1)",
+          "tests": "Tests 3 failed | 2 passed (5)",
+          "duration": "Duration 215ms (tests 40%, import 23%, setup 22%, transform 14%, worker 1%)",
+          "failures": [
+            "src/history/events.idCollision.test.ts > 事件 ID 唯一性（EID） > EID-01 同一绑定、同一注入时刻连续核对两次：两次都成功，事件 2 条，id 不同",
+            "src/history/events.idCollision.test.ts > 事件 ID 唯一性（EID） > EID-02 同一时刻连续 100 次同类操作：全部成功，无 ConstraintError，id 全不同",
+            "src/history/events.idCollision.test.ts > 事件 ID 唯一性（EID） > EID-04 事件顺序与 createdAt：同毫秒写入仍按操作顺序稳定排序"
+          ],
+          "passed": false
+        },
+        {
+          "name": "M17-mutation",
+          "round": 2,
+          "log": "docs/evidence/event-id-fix/mutations/logs/M17-red-attempt-02.log",
+          "files": "Test Files 1 failed (1)",
+          "tests": "Tests 3 failed | 2 passed (5)",
+          "duration": "Duration 205ms (tests 43%, import 24%, setup 22%, transform 10%, worker 1%)",
+          "failures": [
+            "src/history/events.idCollision.test.ts > 事件 ID 唯一性（EID） > EID-01 同一绑定、同一注入时刻连续核对两次：两次都成功，事件 2 条，id 不同",
+            "src/history/events.idCollision.test.ts > 事件 ID 唯一性（EID） > EID-02 同一时刻连续 100 次同类操作：全部成功，无 ConstraintError，id 全不同",
+            "src/history/events.idCollision.test.ts > 事件 ID 唯一性（EID） > EID-04 事件顺序与 createdAt：同毫秒写入仍按操作顺序稳定排序"
+          ],
+          "passed": false
+        },
+        {
+          "name": "M17-mutation",
+          "round": 3,
+          "log": "docs/evidence/event-id-fix/mutations/logs/M17-red-attempt-03.log",
+          "files": "Test Files 1 failed (1)",
+          "tests": "Tests 3 failed | 2 passed (5)",
+          "duration": "Duration 206ms (tests 43%, import 24%, setup 22%, transform 10%, worker 1%)",
+          "failures": [
+            "src/history/events.idCollision.test.ts > 事件 ID 唯一性（EID） > EID-01 同一绑定、同一注入时刻连续核对两次：两次都成功，事件 2 条，id 不同",
+            "src/history/events.idCollision.test.ts > 事件 ID 唯一性（EID） > EID-02 同一时刻连续 100 次同类操作：全部成功，无 ConstraintError，id 全不同",
+            "src/history/events.idCollision.test.ts > 事件 ID 唯一性（EID） > EID-04 事件顺序与 createdAt：同毫秒写入仍按操作顺序稳定排序"
+          ],
+          "passed": false
+        }
+      ],
+      "failingCases": [
+        "src/history/events.idCollision.test.ts > 事件 ID 唯一性（EID） > EID-01 同一绑定、同一注入时刻连续核对两次：两次都成功，事件 2 条，id 不同",
+        "src/history/events.idCollision.test.ts > 事件 ID 唯一性（EID） > EID-02 同一时刻连续 100 次同类操作：全部成功，无 ConstraintError，id 全不同",
+        "src/history/events.idCollision.test.ts > 事件 ID 唯一性（EID） > EID-04 事件顺序与 createdAt：同毫秒写入仍按操作顺序稳定排序"
+      ],
+      "total": 3
+    },
+    "restored": {
+      "rounds": [
+        {
+          "name": "M17-restored",
+          "round": 1,
+          "log": "docs/evidence/event-id-fix/mutations/logs/M17-green-restored-01.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 5 passed (5)",
+          "duration": "Duration 205ms (tests 42%, import 24%, setup 23%, transform 10%, worker 1%)",
+          "failures": [],
+          "passed": true
+        },
+        {
+          "name": "M17-restored",
+          "round": 2,
+          "log": "docs/evidence/event-id-fix/mutations/logs/M17-green-restored-02.log",
+          "files": "Test Files 1 passed (1)",
+          "tests": "Tests 5 passed (5)",
+          "duration": "Duration 202ms (tests 42%, import 24%, setup 23%, transform 10%, worker 1%)",
+          "failures": [],
+          "passed": true
+        }
+      ],
+      "total": 2
+    }
+  },
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}
