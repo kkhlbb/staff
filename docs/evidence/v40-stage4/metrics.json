@@ -1,0 +1,155 @@
+{
+  "toolCalls": {
+    "total": 36,
+    "ok": 35,
+    "failed": 1,
+    "successRate": 0.9722
+  },
+  "modelCalls": 43,
+  "userSupplements": 1,
+  "manualBackfill": 0,
+  "failureRecoveries": 1,
+  "byItem": [
+    {
+      "item": "A40-01",
+      "attempts": 3,
+      "pass": 3,
+      "durationsMs": [
+        6029,
+        6074,
+        5935
+      ],
+      "states": [
+        "ready-to-commit",
+        "ready-to-commit",
+        "ready-to-commit"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-04",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        5838
+      ],
+      "states": [
+        "ready-to-commit"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-05",
+      "attempts": 3,
+      "pass": 3,
+      "durationsMs": [
+        4933,
+        6154,
+        5099
+      ],
+      "states": [
+        "ready-to-commit",
+        "ready-to-commit",
+        "ready-to-commit"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-06",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        3368
+      ],
+      "states": [
+        "completed"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-02",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        5326
+      ],
+      "states": [
+        "failed/NOT_CONFIRMED"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-03",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        4593
+      ],
+      "states": [
+        "completed"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-07",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        4819
+      ],
+      "states": [
+        "ready-to-commit"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-08",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        6906
+      ],
+      "states": [
+        "ready-to-commit"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-09",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        0
+      ],
+      "states": [
+        "null"
+      ],
+      "failures": []
+    }
+  ],
+  "cost": {
+    "promptTokens": 167268,
+    "completionTokens": 7757,
+    "cacheHitTokens": 110464,
+    "cacheMissTokens": 56804,
+    "estimatedUsd": 0.013506
+  },
+  "pricing": {
+    "currency": "USD",
+    "period": "off-peak",
+    "inputCacheMissPerMillion": 0.15,
+    "inputCacheHitPerMillion": 0.003,
+    "outputPerMillion": 0.6,
+    "source": "https://api-docs.deepseek.com/quick_start/pricing（deepseek-flash 列，off-peak 价）"
+  },
+  "providerProbe": {
+    "ok": true,
+    "model": "deepseek-flash",
+    "latencyMs": 915,
+    "message": "连接成功"
+  },
+  "note": "人工回填 = 交付方手工填写工程数值的次数；本次为 0（所有数值来自提取候选或用户确认）。",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

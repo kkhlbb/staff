@@ -20,15 +20,17 @@ const valid: Record<string, unknown> = {
     lockedKeys: ['innerDiameter', 'outerDiameter'],
   },
   preview: { toolMode: 'agent', draftId: 'draft-1', baseRevisionId: 'rev-1' },
+  export: { format: 'svg' },
 }
 
 describe('Agent 工具参数 JSON Schema 与状态机', () => {
-  it('五个工具的合法参数都接受，未知工具拒绝', () => {
+  it('六个工具的合法参数都接受，未知工具拒绝', () => {
     for (const [name, value] of Object.entries(valid)) {
       expect(validateToolArguments(name, value), name).toEqual({ ok: true, value })
     }
     expect(validateToolArguments('commitApprovedDraft', {})).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
-    expect(Object.keys(AGENT_TOOL_SCHEMAS)).toEqual(['context', 'confirmed', 'apply', 'stage', 'preview'])
+    expect(validateToolArguments('export', { format: 'dwg' })).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
+    expect(Object.keys(AGENT_TOOL_SCHEMAS)).toEqual(['context', 'confirmed', 'apply', 'stage', 'preview', 'export'])
   })
 
   it('拒绝缺字段、未声明字段、类型错与 valueMm/deltaMm 冲突', () => {

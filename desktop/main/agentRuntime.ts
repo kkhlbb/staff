@@ -8,7 +8,7 @@ import type { AgentBudget } from '../../src/agent/types'
 import { AgentScheduler, type AgentToolDispatcher } from './agentScheduler'
 import { AgentTaskStore } from './agentTaskStore'
 import type { AgentToolService } from './agentToolService'
-import { ModelAdapterRegistry, ModelConfig, type ProviderStatus } from './modelAdapter'
+import { ModelAdapterRegistry, UnconfiguredModelProvider, type ProviderStatus } from './modelAdapter'
 
 export interface AgentRuntimeDeps {
   service: AgentToolService
@@ -34,7 +34,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentScheduler {
     store: new AgentTaskStore({ rootDir: deps.rootDir }),
     dispatch: createAgentToolDispatcher(deps.service, deps.windowId),
     adapters: deps.adapters ?? new ModelAdapterRegistry(),
-    provider: deps.provider ?? new ModelConfig(),
+    provider: deps.provider ?? new UnconfiguredModelProvider(),
     activeProjectId: deps.activeProjectId,
     ...(deps.budget === undefined ? {} : { budget: deps.budget }),
     ...(deps.now === undefined ? {} : { now: deps.now }),

@@ -63,6 +63,8 @@ const ADDED_FUNCTIONS = [
   // V4 stage 3: 任务侧栏、授权提交与来源定位（仍只增不改旧函数）。
   'agentStart', 'agentCancel', 'agentResume', 'agentTaskState', 'agentProviderStatus',
   'agentPreviewSummary', 'issueAgentApproval', 'commitApprovedDraft', 'locateEvidence',
+  // V4 stage 4: 真实供应商配置（只写 Keychain）、连接测试与受控导出（仍只增不改）。
+  'saveAgentProvider', 'testAgentProvider', 'clearAgentProviderKey', 'exportApprovedVersion',
   'onAgentEvent',
 ] as const
 

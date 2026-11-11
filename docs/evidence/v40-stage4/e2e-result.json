@@ -1,0 +1,69 @@
+{
+  "app": {
+    "bundle": "寸链.app",
+    "model": "deepseek-chat",
+    "adapter": "openai-compatible-1"
+  },
+  "project": "stage4-run-5260.cunlian",
+  "checks": [
+    {
+      "id": "provider-configured",
+      "ok": true,
+      "providerText": "openai-compatible-1:deepseek-chat"
+    },
+    {
+      "id": "provider-test",
+      "ok": true,
+      "text": "连接成功 · deepseek-flash · 947 ms（合成文本，未发送项目资料）"
+    },
+    {
+      "id": "preview-12.04",
+      "ok": true,
+      "text": " 20.0000 mm、外径 32.0000 mm 保持原值并锁定，重算无异常。\n\n复核结果：\n- 封闭环计算区间：[0.1100, 0.2100] mm（公差 0.1000 mm）\n- 相对条款区间的裕量：下裕量 0.0100 mm，上裕量 0.0900 mm，状态 within\n- 各环公差贡献：总长 H 0.0400 mm，左轴承 B1 0.0200 mm，隔套 S 0.0200 mm，右轴承 B2 0.0200 mm\n- 条款检查状态为 unchecked（原因 NO_REQUIREMENT，当前无关联条款可校核）\n\n这些只是草稿上的未保存修改（draftRevision 2，基于 rev-cfg-1），正式版本尚未变更。确认候选、签发/提交版本与导出需你在界面操作。待答问题暂无待答问题。最近工具结果（回执）preview · oktool:47d5a1b5-0e88-401e-8…stage · oktool:65d4d71b-3a14-4d77-8…预览与确认结果区间0.110 ～ 0.210 mm参数内径 20.000 · 外径 32.000 · 长度 12.040预览指纹98b471e1a651c1df…有效期至08:04:52活动条款检查：satisfied · WITHIN_REQUIREMENT裕量 下 0.010 / 上 0.090 mm确认保存定位条款来源"
+    },
+    {
+      "id": "commit",
+      "ok": true,
+      "receipt": "已提交（工具回执） · 版本 rev-a-<generated>"
+    },
+    {
+      "id": "over-limit-blocked",
+      "ok": true,
+      "confirmDisabled": true,
+      "text": "满足条款（原值 12.0400 mm 时区间为 [0.1100, 0.2100] mm，恰好贴下限）。\n\n原因很直接：隔套加长 0.06 mm，间隙区间整体左移。若需保持合规，隔套长度大约需 ≤ 12.04 mm 区间内的对应位置，或放宽条款。需要我把长度调回去，或按某个具体值再算一版吗？确认候选、签发授权、提交版本和导出需由界面操作。待答问题暂无待答问题。最近工具结果（回执）preview · oktool:0299bb3b-1af9-4ceb-8…stage · oktool:2ca918b2-3faf-42eb-b…context · oktool:9bef7eca-865e-4b6b-8…预览与确认结果区间0.050 ～ 0.150 mm参数内径 20.000 · 外径 32.000 · 长度 12.100预览指纹fa81e5df040424f4…有效期至08:04:58活动条款检查：unsatisfied · LOWER_VIOLATED裕量 下 -0.050 / 上 0.150 mm确认保存定位条款来源条款检查不是 satisfied；确认保存已禁用，提交也会被主进程拦截。"
+    },
+    {
+      "id": "export-dialog",
+      "ok": false,
+      "blocked": true,
+      "reason": "native-save-dialog-not-automatable: System Events 报 0 windows；AppleScript 无法激活该 ad-hoc 应用；Escape 未投递"
+    },
+    {
+      "id": "clarification",
+      "ok": true,
+      "text": " · 947 ms（合成文本，未发送项目资料）任务真实模型已配置（openai-compatible-1:deepseek-chat）；下面第一个按钮走真实供应商，其余只运行离线假模型。真实模型执行正常改图（+0.04 mm）需要补充（锁定参数）工具失败（非法数值）已启动真实模型 · openai-compatible-1导出已保存版本 SVG导出 PDF执行步骤completedmodel963 ms模型回复（自然语言，不是回执）我需要先确认隔套要改成什么。请提供具体参数：是内径、外径还是长度，以及目标值（mm）。其他参数我会保持锁定不动。待答问题暂无待答问题。最近工具结果（回执）暂无工具回执。预览与确认结果区间0.050 ～ 0.150 mm参数内径 20.000 · 外径 32.000 · 长度 12.100预览指纹fa81e5df040424f4…有效期至08:04:58活动条款检查：unsatisfied · LOWER_VIOLATED裕量 下 -0.050 / 上 0.150 mm确认保存定位条款来源条款检查不是 satisfied；确认保存已禁用，提交也会被主进程拦截。"
+    },
+    {
+      "id": "reopen-recap",
+      "ok": true,
+      "text": "是 rev-cfg-1“建立任务书条款”）只改动了一个参数：\n\n- 隔套 length：12.0000 mm 改为 **12.04 mm**（120000 q 改为 120400 q）。\n- innerDiameter 保持 20.0000 mm，outerDiameter 保持 32.0000 mm，均未变。\n\n这是该版本与前一版本之间唯一的参数差异；条款 rev-1（轴向装配间隙 C 应为 0.1000～0.3000 mm，含两端）本身未被修改。\n\n**当前检查结果**（已保存版本 rev-a-fdc57237… 上的 committed 校核，依据 reqrev-1）：\n\n- 结论：**satisfied**（WITHIN_REQUIREMENT）。\n- 结果区间：[0.1100, 0.2100] mm。\n- 相对条款 [0.1000, 0.3000] mm 的裕量：下裕量 **0.0100 mm**，上裕量 **0.0900 mm**。\n- 条款区间：下限 0.1000 mm，上限 0.3000 mm。\n\n**需要注意：工作区里还有一份未保存草稿**（agent-draft-88e00955…，未标记 stale，但它不是当前正式版本），其中 length 已改为 12.1 mm。该草稿自身预计算的名义间隙为 0.1000 mm，区间 [0.0500, 0.1500] mm，状态 outside，下裕量 -0.0500 mm；并且尚未做条款检查（NO_REQUIREMENT）。\n\n需要我针对这份草稿正式跑一次 preview 复核，还是先把它丢弃、保持以已保存版本为准？"
+    }
+  ],
+  "blocked": [
+    "export-dialog"
+  ],
+  "screenshots": [
+    "docs/evidence/v40-stage4/screenshots/v40-stage4-01-provider-configured.png",
+    "docs/evidence/v40-stage4/screenshots/v40-stage4-02-provider-test.png",
+    "docs/evidence/v40-stage4/screenshots/v40-stage4-03-preview-margins.png",
+    "docs/evidence/v40-stage4/screenshots/v40-stage4-04-commit.png",
+    "docs/evidence/v40-stage4/screenshots/v40-stage4-05-over-limit-blocked.png",
+    "docs/evidence/v40-stage4/screenshots/v40-stage4-06-export-blocked.png",
+    "docs/evidence/v40-stage4/screenshots/v40-stage4-08-clarification.png",
+    "docs/evidence/v40-stage4/screenshots/v40-stage4-09-reopen-recap.png"
+  ],
+  "passed": true,
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

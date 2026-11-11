@@ -93,6 +93,11 @@ export const IPC_CHANNELS = {
   agentIssueApproval: 'agent:issue-approval',
   agentCommitApprovedDraft: 'agent:commit-approved-draft',
   agentLocateEvidence: 'agent:locate-evidence',
+  /** V4.0 阶段 4：真实供应商配置、连接测试与受控导出。 */
+  agentProviderSave: 'agent:provider-save',
+  agentProviderTest: 'agent:provider-test',
+  agentProviderClearKey: 'agent:provider-clear-key',
+  agentExportApprovedVersion: 'agent:export-approved-version',
 } as const
 
 export type IpcChannelName = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
@@ -908,14 +913,62 @@ export interface AgentDraftValue extends importAgentMappedInputs {
 }
 type importAgentMappedInputs = import('../../src/agent-tools/mapConfirmed').MappedInputs
 
+export interface ConfirmedCandidateView {
+  candidateId: string
+  kind: 'ring' | 'interval' | 'formula' | 'part-dimension'
+  status: string
+  /** 提取器给出的原因码（例如 FORMULA_UNRESOLVED_OPERAND）；模型据此说明缺什么。 */
+  reasonCodes: string[]
+  editRevision: number
+  page: number
+  /** 原文片段，截到 160 字，只用于让模型核对，不构成授权。 */
+  rawText: string
+  summary: Record<string, string | null>
+}
+
+/**
+ * `confirmed` 工具的模型视图：只给映射需要的候选字段，不带选区几何与全文，
+ * 避免把整份草稿塞进上下文。完整草稿仍只在主进程内使用。
+ */
+export interface ConfirmedInputsView {
+  draftId: string
+  draftRevision: number
+  pageRange: { from: number; to: number }
+  extractorVersion: string
+  issues: { code: string; severity: string; message: string }[]
+  candidates: ConfirmedCandidateView[]
+  sourceExcerpt: { pages: { page: number; text: string }[]; truncated: boolean } | null
+}
+
+/** 模型视图的工程草稿：去掉图纸/差分等大字段，只留复核与映射需要的内容。 */
+export interface AgentDraftView {
+  draftId: string
+  draftRevision: number
+  baseRevisionId: string
+  stale: boolean
+  parameters: { key: string; valueQ: number; valueMm?: string; inputDecimals: number; reviewStatus: string }[]
+  geometry: { innerDiameterQ: number; outerDiameterQ: number; lengthQ: number }
+  issues: { code: string; missing: { field: string; purpose: string }[] }[]
+  requirementPreview: { status: string; reasonCodes: string[] }
+  result: ChainResult | null
+  chainTerms: { symbol: string; nominalQ: number; lowerDeviationQ: number; upperDeviationQ: number; sign: number }[]
+}
+
 export interface AgentContextValue {
   projectId: string
   revisionId: string
-  draft: AgentDraftValue | null
-  parameters: ProjectFileSpacerParameter[]
+  draft: AgentDraftView | null
+  parameters: (ProjectFileSpacerParameter & { valueMm?: string })[]
   bindings: ProjectFileSnapshot['project']['dimensionLinks']
   requirements: RequirementRevision[]
   check: RequirementCheck | null
+  /** 最近保存的版本（含当时参数），供“上次改了什么”这类续问使用；不含模型自述。 */
+  recentRevisions?: {
+    revisionId: string
+    createdAt: string
+    reason: string
+    parameters: { key: string; valueQ: number; valueMm?: string; inputDecimals: number }[]
+  }[]
 }
 
 export interface AgentParameterChangeRequest {
@@ -956,9 +1009,19 @@ export interface ApprovalRecord {
 /** 侧栏演示场景；全部由阶段 2 的 FakeModelAdapter 驱动，不联网。 */
 export type AgentDemoScenario = 'normal' | 'ask' | 'failure'
 
+/** 侧栏模式：demo 由阶段 2 假模型驱动；real 走已配置的真实供应商。 */
+export type AgentRunMode = 'demo' | 'real'
+
 export interface AgentStartRequest {
   goal: string
+  /** 兼容阶段 3：demo 模式的具体场景。 */
   demo: AgentDemoScenario
+  /** 缺省为 demo（保持阶段 3 行为）。 */
+  mode?: AgentRunMode
+  /** real 模式建项：界面已确认提取候选后拿到的计划凭据。 */
+  planToken?: string
+  /** real 模式建项：来源提取草稿 ID。 */
+  extractionDraftId?: string
 }
 
 export interface AgentStartValue {
@@ -978,13 +1041,57 @@ export interface AgentTaskView {
   task: import('../../src/agent/types').AgentTaskRecord
   steps: import('../../src/agent/types').AgentStepRecord[]
   questions: AgentQuestionView[]
+  /** 模型自然语言回复（多轮用换行连接）；只读展示，不参与任何结论位。 */
+  assistantText?: string
 }
 
 export interface AgentProviderStatusValue {
-  /** 真实模型（阶段 4）；本阶段固定未配置。 */
-  real: { configured: boolean; provider: string | null }
+  /** 真实模型（阶段 4）。configured 只表示配置与密钥齐备，不代表连接可用。 */
+  real: {
+    configured: boolean
+    provider: string | null
+    adapterId?: string | null
+    model?: string | null
+    host?: string | null
+    keyPresent?: boolean
+    keySource?: 'keychain' | 'keychain-or-env'
+    keyEnvVar?: string
+    /** 非敏感配置回显，用于设置表单预填；不含密钥。 */
+    baseUrl?: string | null
+  }
   /** 显式标注的离线演示：阶段 2 的 fake-1。 */
   demo: { available: true; modelId: 'fake-1'; label: string }
+}
+
+/** 保存配置：只把 apiKey 写进钥匙串，不落盘、不回显。 */
+export interface AgentProviderSaveRequest {
+  baseUrl: string
+  model: string
+  apiKey?: string
+  keySource?: 'keychain' | 'keychain-or-env'
+  keyEnvVar?: string
+}
+
+export interface AgentProviderTestValue {
+  ok: boolean
+  code: string | null
+  model: string | null
+  latencyMs: number
+  message: string
+}
+
+/** §6 exportApprovedVersion：经系统对话框导出已保存版本，返回真实文件事实。 */
+export interface AgentExportRequest {
+  format: 'pdf' | 'svg'
+}
+
+export interface AgentExportValue {
+  /** 用户取消系统对话框时为 CANCELLED，不产生文件、不返回假路径。 */
+  status: 'EXPORTED' | 'CANCELLED'
+  fileName: string | null
+  byteSize: number | null
+  sha256: string | null
+  revisionId: string | null
 }
 
 export interface AgentPreviewSummary {
@@ -995,12 +1102,12 @@ export interface AgentPreviewSummary {
   baseRevisionId: string
   requirementRevisionId: string | null
   parameters: { key: string; valueQ: number; inputDecimals: number }[]
-  result: { minQ: number; maxQ: number; status: string }
+  result: { minQ: number; maxQ: number; minMm?: string; maxMm?: string; status: string }
   requirement: {
     status: string
     reasonCodes: string[]
     resultInterval: { minQ: number; maxQ: number } | null
-    margins: { lowerQ: number; upperQ: number } | null
+    margins: { lowerQ: number; upperQ: number; lowerMm?: string; upperMm?: string } | null
   } | null
   /** Agent 草稿里的条款提案未确认；它不参与本次提交门禁。 */
   requirementProposalPending: boolean
@@ -1063,7 +1170,7 @@ export type LocateEvidenceValue =
 
 export interface CunlianApi {
   getProjectContext(): Promise<ToolResult<AgentContextValue>>
-  getConfirmedInputs(request: { draftId: string }): Promise<ToolResult<import('../../src/document-extraction').ExtractionDraft>>
+  getConfirmedInputs(request: { draftId: string }): Promise<ToolResult<ConfirmedInputsView>>
   applyConfirmedInputs(request: ApplyConfirmedInputsRequest): Promise<ToolResult<AgentDraftValue>>
   stageParameterChange(request: AgentParameterChangeRequest): Promise<ToolResult<AgentDraftValue>>
   previewAndCheck(request: AgentPreviewRequest): Promise<ToolResult<AgentDraftValue>>
@@ -1236,6 +1343,11 @@ export interface CunlianApi {
     request: CommitApprovedDraftRequest,
   ): Promise<ToolResult<CommitApprovedDraftValue>>
   locateEvidence?(request: LocateEvidenceRequest): Promise<ToolResult<LocateEvidenceValue>>
+  /* ---- V4.0 阶段 4：真实供应商配置与导出（可选） ---- */
+  saveAgentProvider?(request: AgentProviderSaveRequest): Promise<ToolResult<AgentProviderStatusValue>>
+  testAgentProvider?(): Promise<ToolResult<AgentProviderTestValue>>
+  clearAgentProviderKey?(): Promise<ToolResult<AgentProviderStatusValue>>
+  exportApprovedVersion?(request: AgentExportRequest): Promise<ToolResult<AgentExportValue>>
   /** 订阅任务/步骤快照；返回取消订阅函数。 */
   onAgentEvent?(listener: (payload: AgentTaskView) => void): () => void
 }

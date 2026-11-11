@@ -115,10 +115,10 @@ export interface ProviderStatus {
 }
 
 /**
- * 阶段 2 的真实供应商状态：未配置。
+ * 未配置供应商：没有真实适配器时的显式状态（阶段 2 语义，阶段 4 仍作为兜底）。
  * 不返回模型 ID、不返回密钥片段，也不尝试联网，避免“看起来可用”。
  */
-export class ModelConfig {
+export class UnconfiguredModelProvider {
   getProviderStatus(): ProviderStatus {
     return { configured: false, provider: null }
   }

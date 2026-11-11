@@ -6,7 +6,7 @@
  * 1. 合法草稿 12.04 自动预览后，二维图纸标注/图形与属性按候选参数重画；
  *    12.00 与 12.04 各截一张画布图，并记录实际标注文本。
  * 2. 条款不满足（12.10）时「确认提交」按钮 disabled，原因文字仍可见。
- * 3. 顶栏批次标签为「V3.5 · Beta」。
+ * 3. 顶栏批次标签为「V4.0 · Beta」（V4.0 起由 V3.5 改名）。
  * 4. 已确认条款的项目打开后，参数绑定行仍为「已确认生效」，不出现
  *    「来源基准与确认时不一致」。
  *
@@ -196,9 +196,9 @@ await waitFor(
   25000,
 )
 
-// 批次标签（第 3 处缺陷）
+// 批次标签（第 3 处缺陷）；V4.0 起顶栏标识改为 V4.0 · Beta。
 const batch = await evaluate(`document.querySelector('.desktop-workspace__batch')?.textContent ?? null`)
-check('批次标签', batch === 'V3.5 · Beta', JSON.stringify(batch))
+check('批次标签', batch === 'V4.0 · Beta', JSON.stringify(batch))
 await shot('v35fix-00-workspace')
 
 // 项目里已有活动条款；绑定行不应因任务书 PDF 被误判待核（第 4 项疑点）。

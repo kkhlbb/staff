@@ -14,11 +14,18 @@ import type { ChangeComputation } from '../../src/revisions/types'
 import { tryParseMm } from '../../src/domain/units'
 import { SPACER_PARAMETER_KEYS } from '../../src/drawing/types'
 import { rebuildDrawingFromProject } from '../../src/drawing/rebuildDrawing'
+import { renderDrawingSvg, validateDrawingSvgMarkup } from '../../src/drawing/renderDrawingSvg'
+import { formatQWithDecimals } from '../../src/drawing/formatDimension'
+import type { DrawingData } from '../../src/drawing/types'
+import { DrawingExportStore } from './drawingExportStore'
+import { extractPdfTextPages } from './pdfTextExtract'
 import { decodeProjectFile } from '../../src/project-file/codec'
 import type { ProjectFileSnapshot } from '../../src/project-file/types'
 import type {
   AgentContextValue,
   AgentDraftValue,
+  AgentDraftView,
+  AgentExportValue,
   AgentParameterChangeRequest,
   AgentPreviewRequest,
   AgentPreviewSummary,
@@ -72,6 +79,65 @@ interface AgentPreviewRecord {
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000
 
+/** 候选摘要：只保留映射需要的字段，值一律是任务书里的原文本。 */
+function candidateSummary(candidate: ExtractionDraft['candidates'][number]): Record<string, string | null> {
+  const text = (value: { text: string } | null): string | null => value?.text ?? null
+  switch (candidate.kind) {
+    case 'ring':
+      return { symbol: candidate.data.symbol, name: candidate.data.name, nominal: text(candidate.data.nominal), upperDeviation: text(candidate.data.upperDeviation), lowerDeviation: text(candidate.data.lowerDeviation) }
+    case 'interval':
+      return { outputSymbol: candidate.data.outputSymbol, lower: text(candidate.data.lower), upper: text(candidate.data.upper), lowerInclusive: candidate.data.lowerInclusive === null ? null : String(candidate.data.lowerInclusive), upperInclusive: candidate.data.upperInclusive === null ? null : String(candidate.data.upperInclusive) }
+    case 'formula':
+      return { outputSymbol: candidate.data.outputSymbol, expression: candidate.data.expression ?? candidate.data.rawExpression, conflict: String(candidate.data.conflict), operands: candidate.data.operands.map((operand) => `${operand.sign > 0 ? '+' : '-'}${operand.symbol}`).join(' ') }
+    case 'part-dimension':
+      return { partName: candidate.data.partName, innerDiameter: text(candidate.data.innerDiameter), outerDiameter: text(candidate.data.outerDiameter), length: text(candidate.data.length) }
+  }
+}
+
+function compactDraft(draft: ExtractionDraft) {
+  // 公式操作数里没有任何 ring 候选（或 ring 缺公称值）的符号：直接告诉模型缺哪一项。
+  const ringNominals = new Map(
+    draft.candidates
+      .filter((candidate): candidate is Extract<typeof candidate, { kind: 'ring' }> => candidate.kind === 'ring')
+      .map((candidate) => [candidate.data.symbol, candidate.data.nominal?.text ?? null]),
+  )
+  return {
+    draftId: draft.draftId,
+    draftRevision: draft.draftRevision,
+    pageRange: { from: draft.pageRange.from, to: draft.pageRange.to },
+    extractorVersion: draft.extractorVersion,
+    issues: draft.issues.map((issue) => ({ code: issue.code, severity: issue.severity, message: issue.message })),
+    candidates: draft.candidates.map((candidate) => {
+      const summary = candidateSummary(candidate)
+      if (candidate.kind === 'formula') {
+        summary.unresolvedOperands = candidate.data.operands
+          .map((operand) => operand.symbol)
+          .filter((symbol) => (ringNominals.get(symbol) ?? null) === null)
+          .join(',')
+      }
+      return {
+        candidateId: candidate.candidateId,
+        kind: candidate.kind,
+        status: candidate.status,
+        reasonCodes: [...candidate.reasonCodes],
+        editRevision: candidate.editRevision,
+        page: candidate.page,
+        rawText: candidate.rawText.slice(0, 160),
+        summary,
+      }
+    }),
+  }
+}
+
+export interface AgentExportPorts {
+  /** 系统保存对话框；返回 null 表示用户取消。 */
+  pickTarget: (windowId: number, suggestedName: string) => Promise<string | null>
+  /** 已保存版本的 PDF 渲染（Electron printToPDF）；缺省时 PDF 导出不可用。 */
+  renderPdf?: (windowId: number, svg: string, drawing: DrawingData) => Promise<Uint8Array>
+  /** 原子落盘；测试可注入内存实现。默认 DrawingExportStore。 */
+  store?: DrawingExportStore
+}
+
 export interface AgentToolDeps {
   controller: SessionController
   projectService: ProjectService
@@ -80,6 +146,8 @@ export interface AgentToolDeps {
   ops?: WorkspaceOps
   /** 阶段 3 才有；阶段 1/2 的只读工具路径不依赖它。 */
   approvals?: ApprovalStore
+  /** 阶段 4：exportApprovedVersion 的系统对话框与落盘端口。 */
+  exportPorts?: AgentExportPorts
 }
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 const engineeringBasis = (snapshot: ProjectFileSnapshot) => {
@@ -145,6 +213,7 @@ export class AgentToolService {
   private readonly credentials = new Map<string, PlanCredential>()
   private readonly queues = new Map<string, Promise<unknown>>()
   private readonly previews = new Map<string, AgentPreviewRecord>()
+  private readonly excerpts = new Map<string, { pages: { page: number; text: string }[]; truncated: boolean }>()
   private readonly latestPreviewBySession = new Map<string, string>()
   private readonly ops: WorkspaceOps
   private readonly deps: AgentToolDeps
@@ -257,6 +326,7 @@ export class AgentToolService {
 
   private summaryOf(record: AgentPreviewRecord): AgentPreviewSummary {
     const check = record.check
+    const mm = (valueQ: number): string => formatQWithDecimals(valueQ, 4) ?? String(valueQ)
     return {
       previewId: record.previewId,
       previewFingerprint: record.previewFingerprint,
@@ -265,12 +335,12 @@ export class AgentToolService {
       baseRevisionId: record.baseRevisionId,
       requirementRevisionId: record.requirementRevisionId,
       parameters: record.computation.parameters.map(parameter => ({ key: parameter.key, valueQ: parameter.valueQ, inputDecimals: parameter.inputDecimals })),
-      result: { minQ: record.computation.result.minQ, maxQ: record.computation.result.maxQ, status: record.computation.result.status },
+      result: { minQ: record.computation.result.minQ, maxQ: record.computation.result.maxQ, minMm: mm(record.computation.result.minQ), maxMm: mm(record.computation.result.maxQ), status: record.computation.result.status },
       requirement: record.requirementRevisionId === null ? null : {
         status: check.status,
         reasonCodes: [...check.reasonCodes],
         resultInterval: check.resultInterval === null ? null : { ...check.resultInterval },
-        margins: check.margins === null ? null : { ...check.margins },
+        margins: check.margins === null ? null : { ...check.margins, lowerMm: mm(check.margins.lowerQ), upperMm: mm(check.margins.upperQ) },
       },
       requirementProposalPending: record.requirementProposalPending,
       expiresAt: record.expiresAt,
@@ -532,6 +602,83 @@ export class AgentToolService {
     }
   }
 
+  /**
+   * §6 exportApprovedVersion：导出**当前已保存版本**的图纸。
+   * 文件名、大小、哈希都取自实际落盘结果；用户取消返回 CANCELLED，绝不返回假路径。
+   */
+  async exportApprovedVersion(windowId: number, format: 'pdf' | 'svg'): Promise<ToolResult<AgentExportValue>> {
+    const requestId = randomUUID()
+    const session = this.deps.controller.sessionFor(windowId)
+    const objectVersion = session?.snapshot.project.currentRevisionId ?? 'unavailable'
+    if (session === null) return { ok: false, code: 'STALE_BASE', message: '没有活动项目', requestId, objectVersion }
+    const ports = this.deps.exportPorts
+    if (ports === undefined) return { ok: false, code: 'UNSUPPORTED_SCOPE', message: '导出端口未装配', requestId, objectVersion }
+    if (session.path === null) {
+      return { ok: false, code: 'SAVE_FAILED', message: '当前项目尚未保存到磁盘，只能导出已保存版本', requestId, objectVersion }
+    }
+    const task = async (): Promise<ToolResult<AgentExportValue>> => {
+      const current = this.deps.controller.sessionFor(windowId)
+      if (current !== session) return { ok: false, code: 'STALE_BASE', message: '活动项目已切换', requestId, objectVersion }
+      const revisionId = session.snapshot.project.currentRevisionId
+      const rebuilt = rebuildDrawingFromProject(session.snapshot.project)
+      if (!rebuilt.ok) {
+        return { ok: false, code: 'TOOL_FAILED', message: `图纸无法重建：${rebuilt.message}`, requestId, objectVersion: revisionId }
+      }
+      const drawing = rebuilt.data
+      const svg = renderDrawingSvg(drawing)
+      let bytes: Uint8Array
+      if (format === 'svg') {
+        bytes = new TextEncoder().encode(svg)
+      } else {
+        if (ports.renderPdf === undefined) {
+          return { ok: false, code: 'UNSUPPORTED_SCOPE', message: 'PDF 渲染端口未装配，改用 svg', requestId, objectVersion: revisionId }
+        }
+        try {
+          bytes = await ports.renderPdf(windowId, svg, drawing)
+        } catch {
+          return { ok: false, code: 'TOOL_FAILED', message: 'PDF 渲染失败，未产生文件', requestId, objectVersion: revisionId }
+        }
+      }
+      const suggested = `${session.snapshot.project.name}-${revisionId.slice(0, 8)}.${format}`
+      const target = await ports.pickTarget(windowId, suggested)
+      if (target === null) {
+        return { ok: false, code: 'CANCELLED', message: '已在系统对话框中取消导出；没有产生文件', requestId, objectVersion: revisionId }
+      }
+      const store = ports.store ?? new DrawingExportStore()
+      const existing = await store.fingerprint(target)
+      const saved = await store.save({
+        targetPath: target,
+        kind: format,
+        bytes,
+        expectedFingerprint: existing,
+        verify: async (written) => {
+          if (format === 'svg') {
+            const report = validateDrawingSvgMarkup(new TextDecoder().decode(written), drawing)
+            return report.ok ? { ok: true } : { ok: false, message: report.errors.join('；') }
+          }
+          const head = new TextDecoder().decode(written.slice(0, 5))
+          return head === '%PDF-' ? { ok: true } : { ok: false, message: '导出内容不是 PDF' }
+        },
+      })
+      if (!saved.ok) {
+        return { ok: false, code: 'SAVE_FAILED', message: `${saved.error.message}（${saved.error.code}）`, requestId, objectVersion: revisionId }
+      }
+      return {
+        ok: true,
+        data: {
+          status: 'EXPORTED',
+          fileName: path.basename(target),
+          byteSize: bytes.byteLength,
+          sha256: saved.value.fingerprint,
+          revisionId,
+        },
+        requestId,
+        objectVersion: revisionId,
+      }
+    }
+    return this.enqueue(session.sessionId, task)
+  }
+
   /** 与 run 相同的串行队列；新写路径不能绕过它。 */
   private enqueue<T>(sessionId: string, task: () => Promise<T>): Promise<T> {
     const previous = this.queues.get(sessionId) ?? Promise.resolve()
@@ -593,11 +740,19 @@ export class AgentToolService {
   }
 
   /** All calls, including reads, are serialized per project session. */
-  async run(windowId: number, command: 'context' | 'confirmed' | 'apply' | 'stage' | 'preview', input: unknown): Promise<ToolResult<unknown>> {
+  async run(windowId: number, command: 'context' | 'confirmed' | 'apply' | 'stage' | 'preview' | 'export', input: unknown): Promise<ToolResult<unknown>> {
     const requestId = randomUUID()
     const session = this.deps.controller.sessionFor(windowId)
     const objectVersion = session?.snapshot.project.currentRevisionId ?? 'unavailable'
     if (session === null) return { ok: false, code: 'STALE_BASE', message: '没有活动项目', requestId, objectVersion }
+    // 导出走独立串行队列（会等待系统对话框），不能嵌进本函数的 enqueue。
+    if (command === 'export') {
+      const format = (input as { format?: unknown }).format
+      if (format !== 'pdf' && format !== 'svg') {
+        return { ok: false, code: 'INVALID_INPUT', message: '导出格式只支持 pdf 或 svg', requestId, objectVersion }
+      }
+      return this.exportApprovedVersion(windowId, format)
+    }
     const task = async (): Promise<ToolResult<unknown>> => {
       try {
         if (this.deps.controller.sessionFor(windowId) !== session) throw new MappingError('STALE_BASE', '活动项目已切换')
@@ -615,6 +770,36 @@ export class AgentToolService {
     return next
   }
 
+  /**
+   * 来源页文本摘录（只读、有预算）：只用于让模型读到原文，不构成任何授权。
+   * 取不到字节或解析失败时返回 null，不猜测内容。
+   */
+  private async sourceExcerptOf(session: ProjectSession, draft: ExtractionDraft): Promise<{ pages: { page: number; text: string }[]; truncated: boolean } | null> {
+    const doc = session.snapshot.documents.find(d => d.id === draft.sourceIdentity.documentId)
+    const revision = session.snapshot.revisions.find(r => r.id === draft.sourceIdentity.revisionId)
+    if (!doc || !revision || revision.id !== draft.sourceIdentity.revisionId) return null
+    const bytes = session.snapshot.attachments.find(a => a.blobKey === revision.blobKey)?.bytes
+    if (!bytes) return null
+    const cached = this.excerpts.get(revision.sha256)
+    if (cached !== undefined) return cached
+    try {
+      const pages = await extractPdfTextPages(bytes, { from: draft.pageRange.from, to: draft.pageRange.to })
+      let budget = 6000
+      let truncated = false
+      const mapped = pages.map((page) => {
+        const text = page.items.map(item => item.str).join('\n')
+        if (text.length > budget) { truncated = true; const slice = text.slice(0, budget); budget = 0; return { page: page.page, text: slice } }
+        budget -= text.length
+        return { page: page.page, text }
+      })
+      const value = { pages: mapped, truncated }
+      this.excerpts.set(revision.sha256, value)
+      return value
+    } catch {
+      return null
+    }
+  }
+
   private async checkedSource(session: ProjectSession, draft: ExtractionDraft): Promise<void> {
     const doc = session.snapshot.documents.find(d => d.id === draft.sourceIdentity.documentId)
     const revision = session.snapshot.revisions.find(r => r.id === doc?.latestRevisionId)
@@ -629,7 +814,9 @@ export class AgentToolService {
     if (command === 'confirmed') {
       const draft = session.snapshot.project.extractionDrafts.find(d => d.draftId === (input as { draftId: string }).draftId)
       if (!draft) throw new MappingError('INVALID_INPUT', '提取草稿不存在')
-      return structuredClone(draft)
+      // §4.1：模型接收结构化候选 + 必要摘录。摘录只是任务资料，不是授权。
+      const sourceExcerpt = await this.sourceExcerptOf(session, draft)
+      return { ...compactDraft(draft), sourceExcerpt }
     }
     const stored = await this.read(session)
     if (command === 'context') {
@@ -642,7 +829,55 @@ export class AgentToolService {
         if (extraction) { try { await this.checkedSource(session, extraction) } catch { stale = true } }
         visibleDraft = { ...visibleDraft, stale }
       }
-      const context: AgentContextValue = { projectId: p.id, revisionId, draft: visibleDraft, parameters: p.parameters, bindings: p.dimensionLinks, requirements: p.requirementRevisions, check: p.currentRequirementCheck }
+      const draftView: AgentDraftView | null = visibleDraft === null ? null : {
+        draftId: visibleDraft.draftId,
+        draftRevision: visibleDraft.draftRevision,
+        baseRevisionId: visibleDraft.baseRevisionId,
+        stale: visibleDraft.stale,
+        parameters: visibleDraft.parameters.map((parameter) => ({
+          key: parameter.key,
+          valueQ: parameter.valueQ,
+          valueMm: formatQWithDecimals(parameter.valueQ, 4) ?? String(parameter.valueQ),
+          inputDecimals: parameter.inputDecimals,
+          reviewStatus: parameter.reviewStatus,
+        })),
+        geometry: visibleDraft.geometry,
+        issues: visibleDraft.issues.map((issue) => ({ code: issue.code, missing: issue.missing })),
+        requirementPreview: { status: visibleDraft.requirementPreview.status, reasonCodes: [...visibleDraft.requirementPreview.reasonCodes] },
+        result: visibleDraft.computation.result,
+        chainTerms: visibleDraft.chain.terms.map((term) => ({
+          symbol: term.symbol, nominalQ: term.nominalQ, lowerDeviationQ: term.lowerDeviationQ, upperDeviationQ: term.upperDeviationQ, sign: term.sign,
+        })),
+      }
+      const context: AgentContextValue = {
+        projectId: p.id,
+        revisionId,
+        draft: draftView,
+        parameters: p.parameters.map((parameter) => ({
+          ...parameter,
+          valueMm: formatQWithDecimals(parameter.valueQ, 4) ?? String(parameter.valueQ),
+        })),
+        bindings: p.dimensionLinks,
+        requirements: p.requirementRevisions.map((revision) => ({ ...revision, confirmedText: revision.confirmedText.slice(0, 300) })),
+        check: p.currentRequirementCheck,
+        // 版本历史只回放已保存的参数快照；旧 schema 版本缺 parameters 时跳过。
+        recentRevisions: session.snapshot.fileRevisions.slice(-5).map((revision) => {
+          const parameters = Array.isArray((revision.project as { parameters?: unknown }).parameters)
+            ? (revision.project as { parameters: typeof p.parameters }).parameters
+            : []
+          return {
+            revisionId: revision.revisionId,
+            createdAt: revision.createdAt,
+            reason: revision.reason,
+            parameters: parameters.map((parameter) => ({
+              key: parameter.key,
+              valueQ: parameter.valueQ,
+              valueMm: formatQWithDecimals(parameter.valueQ, 4) ?? String(parameter.valueQ),
+              inputDecimals: parameter.inputDecimals,
+            })),
+          }
+        }),
+      }
       return structuredClone(context)
     }
     const before = stamp(session.snapshot)

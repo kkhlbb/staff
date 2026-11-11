@@ -79,12 +79,28 @@ const preview: JsonObject = {
   additionalProperties: false,
 }
 
+const exportParams: JsonObject = {
+  type: 'object',
+  properties: { format: { enum: ['pdf', 'svg'] } },
+  required: ['format'],
+  additionalProperties: false,
+}
+
 export const AGENT_TOOL_SCHEMAS: Record<AgentToolCommand, ToolSchema> = {
-  context: { name: 'context', description: '读取当前项目、正式版本、工作草稿与条款状态。只读。', parameters: context },
-  confirmed: { name: 'confirmed', description: '读取指定提取草稿的已确认候选与来源。只读。', parameters: confirmed },
-  apply: { name: 'apply', description: '按用户已确认的候选建立工程草稿；模型只传映射意图。', parameters: apply },
-  stage: { name: 'stage', description: '在现有工程草稿上修改一个参数并重新计算。', parameters: stage },
-  preview: { name: 'preview', description: '重算草稿图纸、区间与条款检查，返回候选复核结果。', parameters: preview },
+  context: { name: 'context', description: '读取当前项目、正式版本、工作草稿、最近版本参数与条款状态。只读。', parameters: context },
+  confirmed: { name: 'confirmed', description: '读取提取草稿的已确认候选（紧凑视图：candidateId、kind、summary、原文摘录）与冲突问题。只读。', parameters: confirmed },
+  apply: {
+    name: 'apply',
+    description: '按用户已确认的候选建立工程草稿。mapping.formulaId 取 kind="formula" 候选的 candidateId；mapping.ringSymbols 是组成环符号顺序；linkLengthToSymbol 指隔套长度绑定的环。返回新建草稿的 draftId，后续 stage/preview 必须使用它。',
+    parameters: apply,
+  },
+  stage: { name: 'stage', description: '在现有工程草稿上修改一个参数并重新计算。parameter 只接受 innerDiameter/outerDiameter/length；锁定参数不得修改。', parameters: stage },
+  preview: { name: 'preview', description: '重算草稿图纸、区间与条款检查，返回候选复核结果（区间、裕量、条款状态）。', parameters: preview },
+  export: {
+    name: 'export',
+    description: '把当前已保存版本经系统对话框导出为 PDF 或 SVG；返回真实文件名、大小与哈希，取消返回 CANCELLED。',
+    parameters: exportParams,
+  },
 }
 
 export type ToolValidation =

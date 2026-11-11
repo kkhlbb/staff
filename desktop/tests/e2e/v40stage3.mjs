@@ -156,7 +156,7 @@ try {
     return button.getAttribute('aria-expanded')
   })()`)
   await waitFor(() => evaluate(`Boolean(document.querySelector('.agent-sidebar #agent-sidebar-panel, .agent-sidebar[aria-label="Agent 任务侧栏"]'))`), 'sidebar')
-  await waitFor(() => evaluate(`(document.querySelector('.agent-sidebar')?.textContent ?? '').includes('未配置（阶段 4）')`), 'provider status')
+  await waitFor(() => evaluate(`(document.querySelector('.agent-sidebar')?.textContent ?? '').includes('未配置')`), 'provider status')
   const projectName = await evaluate(`document.querySelector('.desktop-workspace__titlebar h1')?.textContent ?? ''`)
   checks.push({ id: 'sidebar-expanded', ok: true, projectName })
 
