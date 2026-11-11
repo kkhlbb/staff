@@ -7,6 +7,7 @@
  * 与坏样例判定写到 docs/evidence/V3.6/。不修改任何项目文件。
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
+import { serializeEvidence } from './evidence-json'
 import { it } from 'vitest'
 import {
   buildPdfTextLayer,
@@ -45,15 +46,11 @@ it('记录 V3.6 固定样例与坏样例证据', async () => {
   const fixed = await extract('taskbook-TB-2026-1110.pdf', 'fixed-1110')
   writeFileSync(
     `${OUT_DIR}/1110-extraction.json`,
-    JSON.stringify(
-      {
-        fixture: fixturePath('taskbook-TB-2026-1110.pdf'),
-        sha256: fixtureSha256('taskbook-TB-2026-1110.pdf'),
-        draft: fixed,
-      },
-      null,
-      2,
-    ),
+    serializeEvidence({
+      fixture: fixturePath('taskbook-TB-2026-1110.pdf'),
+      sha256: fixtureSha256('taskbook-TB-2026-1110.pdf'),
+      draft: fixed,
+    }),
   )
 
   const badNames = ['bad-no-text-layer.pdf', 'bad-formula-conflict.pdf', 'bad-inch-unit.pdf']

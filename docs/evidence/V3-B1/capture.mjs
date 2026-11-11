@@ -17,6 +17,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { inflateSync } from 'node:zlib'
+import { serializeEvidence } from '../../../scripts/evidence-json.ts'
 
 const appExecutable = process.argv[2] ?? path.join(process.cwd(), 'out', '寸链-darwin-arm64', '寸链.app', 'Contents', 'MacOS', '寸链')
 const port = Number(process.argv[3] ?? 9411)
@@ -661,7 +662,7 @@ try {
   await sleep(300)
   report.finishedAt = new Date().toISOString()
   report.result = failures.length === 0 ? 'PASS' : `FAIL(${failures.join(',')})`
-  writeFileSync(path.join(outDir, 'b1-electron-report.json'), JSON.stringify(report, null, 2))
+  writeFileSync(path.join(outDir, 'b1-electron-report.json'), serializeEvidence(report))
   console.log(`E2E_RESULT=${report.result}`)
   process.exit(failures.length === 0 ? 0 : 1)
 }

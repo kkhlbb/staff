@@ -12,6 +12,7 @@
 import { spawn, execFileSync } from 'node:child_process'
 import { existsSync, promises as fsp } from 'node:fs'
 import path from 'node:path'
+import { serializeEvidence } from '../../../scripts/evidence-json.ts'
 
 const appExecutable =
   process.argv[2] ??
@@ -419,7 +420,7 @@ await shot('v36-07-reopened-idempotent')
 
 await fsp.writeFile(
   SUMMARY,
-  `${JSON.stringify({ savedState, idempotent, reopened, idempotentAfterReopen }, null, 2)}\n`,
+  serializeEvidence({ savedState, idempotent, reopened, idempotentAfterReopen }),
 )
 console.log(`SUMMARY ${SUMMARY}`)
 console.log('DONE')

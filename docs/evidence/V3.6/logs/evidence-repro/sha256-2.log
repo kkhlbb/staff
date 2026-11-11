@@ -1,0 +1,9 @@
+$ shasum -a 256 node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3-B1/b1-electron-report.json node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3-B2/fix-refit/before-report.json node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3-B2/fix-refit/after-report.json node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3.6/1110-extraction.json node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3.6/stage2-e2e.json node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3.6/ambiguous-e2e.json
+e9509ea2ea5cef2b27238925b9adc98661f52d7d9267b5fbc39d0bd3c2a05016  node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3-B1/b1-electron-report.json
+d1cba38e0e1eeeaa9a604a8885d36bbc342a8c361a415ade9c3703d380134019  node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3-B2/fix-refit/before-report.json
+672d387a8c30a33e222ddb994785d440a449c911013fc2fa5fd3cac2d0027008  node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3-B2/fix-refit/after-report.json
+7741c5ba1ae5556be7d6fd8084aff6ffbe1a024367164db176aaccb8e9c5f144  node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3.6/1110-extraction.json
+f33c2ede6f05ab571d4ef9ff2ccea3d5b5094268f870495d9012da829e8084da  node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3.6/stage2-e2e.json
+a66bca7e5211d5e71b3e1fcdc23d3cdf9afbf871871e26ee5e6524b68d2c093a  node_modules/.tmp/evidence-repro/comparison/docs/evidence/V3.6/ambiguous-e2e.json
+
+EXIT 0

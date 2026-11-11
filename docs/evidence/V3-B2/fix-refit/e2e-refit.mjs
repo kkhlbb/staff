@@ -8,6 +8,7 @@
 // 其余导入/替换、IPC、STL 解析、three 渲染全部走打包产物真实代码；
 // 原生“未保存编辑”提示同理由测试替身选择“不保存”，避免用手动点击改变本机授权。
 import { mkdirSync, writeFileSync } from 'node:fs'
+import { serializeEvidence } from '../../../../scripts/evidence-json.ts'
 import WebSocket from '/Users/aston/DSH/wt/dsh-v3-A/node_modules/ws/index.js'
 
 const OUT = process.env.OUT_DIR ?? '/Users/aston/DSH/wt/dsh-v3-A/docs/evidence/V3-B2/fix-refit'
@@ -231,7 +232,7 @@ steps.push(await screenshotAndAnalyze('04-wrench-after-reset'))
 const report = { prefix: PREFIX, steps }
 const blank = steps.filter((step) => step.analysis?.coverage !== undefined && step.analysis.coverage < 0.005)
 report.verdict = blank.length === 0 ? 'PASS' : `FAIL: ${blank.map((s) => s.label).join(', ')} 覆盖率为 0`
-writeFileSync(`${OUT}/${PREFIX}-report.json`, JSON.stringify(report, null, 1))
+writeFileSync(`${OUT}/${PREFIX}-report.json`, serializeEvidence(report))
 console.log(JSON.stringify(report, null, 1))
 renderer.ws.close()
 main.ws.close()
