@@ -1,0 +1,16 @@
+$ npm exec -- vitest run src/components/AgentSidebar.test.tsx --reporter=verbose
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ✓ src/components/AgentSidebar.test.tsx > V4.0 阶段3：任务侧栏渲染契约 > S3-09 工具失败：显示失败码，不显示“已完成/已保存”，无预览时没有确认按钮 59ms
+ ✓ src/components/AgentSidebar.test.tsx > V4.0 阶段3：任务侧栏渲染契约 > S3-11 模型声称成功但工具失败：状态与按钮以回执为准 16ms
+ ✓ src/components/AgentSidebar.test.tsx > V4.0 阶段3：任务侧栏渲染契约 > S3-09/S3-01 提交回执成功才显示“已提交”，且显示真实版本号 11ms
+ ✓ src/components/AgentSidebar.test.tsx > V4.0 阶段3：任务侧栏渲染契约 > S3-10 折叠状态：可展开/收起并写入 localStorage，重新读取保持 5ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  01:52:25
+   Duration  372ms (environment 56%, tests 30%, setup 11%, transform 2%, import 1%)
+
+
+exitCode=0

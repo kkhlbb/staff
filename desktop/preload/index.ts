@@ -41,6 +41,18 @@ import {
   type ExtractionDecideValue,
   type ExtractionCancelValue,
   type ExtractionDeleteDraftValue,
+  type AgentStartRequest,
+  type AgentStartValue,
+  type AgentTaskView,
+  type AgentProviderStatusValue,
+  type AgentPreviewSummary,
+  type AgentIssueApprovalRequest,
+  type AgentIssueApprovalValue,
+  type CommitApprovedDraftRequest,
+  type CommitApprovedDraftValue,
+  type LocateEvidenceRequest,
+  type LocateEvidenceValue,
+  type ToolResult,
 } from '../shared/contracts'
 
 /**
@@ -230,6 +242,25 @@ const api: CunlianApi = {
     ipcRenderer.invoke(IPC_CHANNELS.extractionDeleteDraft, request) as Promise<
       IpcResult<ExtractionDeleteDraftValue>
     >,
+  agentStart: (request: AgentStartRequest) =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentStart, request) as Promise<ToolResult<AgentStartValue>>,
+  agentCancel: (request: { taskId: string }) =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentCancel, request) as Promise<ToolResult<{ cancelled: boolean }>>,
+  agentResume: (request: { taskId: string }) =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentResume, request) as Promise<ToolResult<{ resumed: boolean }>>,
+  agentTaskState: (request: { taskId: string }) =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentTaskState, request) as Promise<ToolResult<AgentTaskView>>,
+  agentProviderStatus: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentProviderStatus, {}) as Promise<ToolResult<AgentProviderStatusValue>>,
+  agentPreviewSummary: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentPreviewSummary, {}) as Promise<ToolResult<AgentPreviewSummary | null>>,
+  issueAgentApproval: (request: AgentIssueApprovalRequest) =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentIssueApproval, request) as Promise<ToolResult<AgentIssueApprovalValue>>,
+  commitApprovedDraft: (request: CommitApprovedDraftRequest) =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentCommitApprovedDraft, request) as Promise<ToolResult<CommitApprovedDraftValue>>,
+  locateEvidence: (request: LocateEvidenceRequest) =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentLocateEvidence, request) as Promise<ToolResult<LocateEvidenceValue>>,
+  onAgentEvent: (listener) => subscribe<AgentTaskView>(IPC_EVENTS.agentEvent, listener),
 }
 
 contextBridge.exposeInMainWorld('cunlian', api)

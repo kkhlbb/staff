@@ -50,6 +50,8 @@ import { ExtractionService } from './extractionService'
 import { ChangeService } from './changeService'
 import { AgentToolService } from './agentToolService'
 import { registerAgentToolChannels, agentChangeRouter } from './agentToolChannels'
+import { registerAgentSessionChannels } from './agentSessionChannels'
+import { ApprovalStore } from './approvalStore'
 import { inspectSourcePdf } from './pdfSourceInspect'
 import { DrawingExportStore, type DrawingExportKind } from './drawingExportStore'
 import { printDrawingToPdf } from './drawingPdf'
@@ -502,8 +504,22 @@ function installIpcHandlers(): void {
     pickSaveTarget: (suggestedName) => pickSaveTargetFor(sanitizeFileName(suggestedName)),
     confirmOverwrite: confirmProjectOverwrite,
   })
-  const agentTools = new AgentToolService({ projectService, recovery, controller, rootDir: path.join(app.getPath('userData'), 'workspace') })
+  const approvals = new ApprovalStore({ rootDir: WORKSPACE_ROOT })
+  const agentTools = new AgentToolService({ projectService, recovery, controller, rootDir: path.join(app.getPath('userData'), 'workspace'), approvals })
   registerAgentToolChannels(ipc, { guard, service: agentTools })
+  registerAgentSessionChannels(ipc, {
+    guard,
+    controller,
+    service: agentTools,
+    approvals,
+    rootDir: WORKSPACE_ROOT,
+    emit: (windowId, view) => {
+      const handle = windows.get(windowId)
+      if (handle !== undefined && !handle.window.isDestroyed()) {
+        handle.window.webContents.send(IPC_EVENTS.agentEvent, view)
+      }
+    },
+  })
   registerChangeChannels(agentChangeRouter(ipc, { guard, service: agentTools }), {
     guard,
     controller,

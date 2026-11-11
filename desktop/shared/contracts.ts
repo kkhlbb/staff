@@ -83,6 +83,16 @@ export const IPC_CHANNELS = {
   agentContext: 'agent:context',
   agentConfirmedInputs: 'agent:confirmed-inputs',
   agentApplyConfirmed: 'agent:apply-confirmed',
+  /** V4.0 阶段 3：任务侧栏、一次性授权、重算提交与来源定位。 */
+  agentStart: 'agent:start',
+  agentCancel: 'agent:cancel',
+  agentResume: 'agent:resume',
+  agentTaskState: 'agent:task-state',
+  agentProviderStatus: 'agent:provider-status',
+  agentPreviewSummary: 'agent:preview-summary',
+  agentIssueApproval: 'agent:issue-approval',
+  agentCommitApprovedDraft: 'agent:commit-approved-draft',
+  agentLocateEvidence: 'agent:locate-evidence',
 } as const
 
 export type IpcChannelName = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
@@ -92,6 +102,8 @@ export const IPC_EVENTS = {
   menuAction: 'menu:action',
   editorFlush: 'editor:flush',
   editorFlushed: 'editor:flushed',
+  /** 主进程推送任务/步骤快照；侧栏据此显示工具回执。 */
+  agentEvent: 'agent:event',
 } as const
 
 export type MenuAction = 'new' | 'open' | 'save' | 'saveAs' | 'importV2' | 'close'
@@ -890,6 +902,9 @@ export interface AgentDraftValue extends importAgentMappedInputs {
   issues: { code: ToolErrorCode; missing: { field: string; purpose: string }[] }[]
   geometry: { innerDiameterQ: number; outerDiameterQ: number; lengthQ: number }
   diff: { before: ChainDefinition; after: ChainDefinition; parameters: ParameterDiffRow[] }
+  /** previewAndCheck 才返回：主进程侧的预览身份与指纹（确认提交的唯一依据）。 */
+  previewId?: string
+  previewFingerprint?: string
 }
 type importAgentMappedInputs = import('../../src/agent-tools/mapConfirmed').MappedInputs
 
@@ -917,6 +932,134 @@ export interface AgentPreviewRequest {
   draftId: string
   baseRevisionId: string
 }
+
+/* ---- V4.0 阶段 3：一次性授权、重算提交、来源定位与任务侧栏 ---------- */
+
+/**
+ * 主进程签发的一次性授权。只存应用工作区，不写项目文件、不下发模型。
+ * `baseRevisionId` 是阶段 3 为 STALE_BASE 判定增加的审计字段。
+ */
+export interface ApprovalRecord {
+  approvalId: string
+  windowId: number
+  projectId: string
+  draftId: string
+  draftRevision: number
+  requirementRevisionId: string | null
+  previewFingerprint: string
+  baseRevisionId: string
+  createdAt: string
+  expiresAt: string
+  consumedAt: string | null
+}
+
+/** 侧栏演示场景；全部由阶段 2 的 FakeModelAdapter 驱动，不联网。 */
+export type AgentDemoScenario = 'normal' | 'ask' | 'failure'
+
+export interface AgentStartRequest {
+  goal: string
+  demo: AgentDemoScenario
+}
+
+export interface AgentStartValue {
+  taskId: string
+  demo: AgentDemoScenario
+  modelId: string
+}
+
+/** 待答问题只从工具回执派生，不取模型的自然语言。 */
+export interface AgentQuestionView {
+  code: string
+  tool: string
+  message: string
+}
+
+export interface AgentTaskView {
+  task: import('../../src/agent/types').AgentTaskRecord
+  steps: import('../../src/agent/types').AgentStepRecord[]
+  questions: AgentQuestionView[]
+}
+
+export interface AgentProviderStatusValue {
+  /** 真实模型（阶段 4）；本阶段固定未配置。 */
+  real: { configured: boolean; provider: string | null }
+  /** 显式标注的离线演示：阶段 2 的 fake-1。 */
+  demo: { available: true; modelId: 'fake-1'; label: string }
+}
+
+export interface AgentPreviewSummary {
+  previewId: string
+  previewFingerprint: string
+  draftId: string
+  draftRevision: number
+  baseRevisionId: string
+  requirementRevisionId: string | null
+  parameters: { key: string; valueQ: number; inputDecimals: number }[]
+  result: { minQ: number; maxQ: number; status: string }
+  requirement: {
+    status: string
+    reasonCodes: string[]
+    resultInterval: { minQ: number; maxQ: number } | null
+    margins: { lowerQ: number; upperQ: number } | null
+  } | null
+  /** Agent 草稿里的条款提案未确认；它不参与本次提交门禁。 */
+  requirementProposalPending: boolean
+  expiresAt: string
+}
+
+export interface AgentIssueApprovalRequest {
+  previewId: string
+}
+
+export interface AgentIssueApprovalValue {
+  approvalId: string
+  expiresAt: string
+}
+
+export interface CommitApprovedDraftRequest {
+  approvalId: string
+  draftId: string
+  previewFingerprint: string
+}
+
+export interface CommitApprovedDraftValue {
+  revisionId: string
+  acceptedSeq: number
+  path: string
+  fingerprint: string
+  analysisSnapshotId: string
+  requirementStatus: string | null
+  warnings: string[]
+}
+
+export interface LocateEvidenceRequest {
+  /** 三者恰一；全部缺失或传入多个 → INVALID_INPUT。 */
+  requirementRevisionId?: string
+  checkId?: string
+  parameterId?: string
+}
+
+export type LocateEvidenceValue =
+  | {
+      kind: 'requirement-source'
+      requirementRevisionId: string
+      checkId: string | null
+      revisionId: string
+      page: number
+      rectPdf: import('../../src/sources/pdfCoordinates').PdfRect
+      pageBoxPdf: import('../../src/sources/pdfCoordinates').PdfPageBox
+      label: string
+      sourceFileName: string | null
+    }
+  | {
+      kind: 'parameter'
+      parameterId: string
+      key: string
+      valueQ: number
+      termIds: string[]
+      annotationIds: string[]
+      drawingId: string | null
+    }
 
 export interface CunlianApi {
   getProjectContext(): Promise<ToolResult<AgentContextValue>>
@@ -1078,6 +1221,23 @@ export interface CunlianApi {
   deleteExtractionDraft(
     request: ExtractionDeleteDraftRequest,
   ): Promise<IpcResult<ExtractionDeleteDraftValue>>
+
+  /* ---- V4.0 阶段 3：任务侧栏与授权提交（可选，旧 preload 不提供时 UI 显示未装配） */
+  agentStart?(request: AgentStartRequest): Promise<ToolResult<AgentStartValue>>
+  agentCancel?(request: { taskId: string }): Promise<ToolResult<{ cancelled: boolean }>>
+  agentResume?(request: { taskId: string }): Promise<ToolResult<{ resumed: boolean }>>
+  agentTaskState?(request: { taskId: string }): Promise<ToolResult<AgentTaskView>>
+  agentProviderStatus?(): Promise<ToolResult<AgentProviderStatusValue>>
+  agentPreviewSummary?(): Promise<ToolResult<AgentPreviewSummary | null>>
+  issueAgentApproval?(
+    request: AgentIssueApprovalRequest,
+  ): Promise<ToolResult<AgentIssueApprovalValue>>
+  commitApprovedDraft?(
+    request: CommitApprovedDraftRequest,
+  ): Promise<ToolResult<CommitApprovedDraftValue>>
+  locateEvidence?(request: LocateEvidenceRequest): Promise<ToolResult<LocateEvidenceValue>>
+  /** 订阅任务/步骤快照；返回取消订阅函数。 */
+  onAgentEvent?(listener: (payload: AgentTaskView) => void): () => void
 }
 
 /** 应用与 IPC 协议的稳定标识，测试与契约文档共用。 */

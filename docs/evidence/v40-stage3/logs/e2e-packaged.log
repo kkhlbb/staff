@@ -1,0 +1,9 @@
+$ node desktop/tests/e2e/v40stage3.mjs
+SHOT /Users/aston/DSH/staff/docs/evidence/v40-stage3/screenshots/v40-stage3-01-sidebar-expanded.png
+SHOT /Users/aston/DSH/staff/docs/evidence/v40-stage3/screenshots/v40-stage3-04-commit-success.png
+SHOT /Users/aston/DSH/staff/docs/evidence/v40-stage3/screenshots/v40-stage3-02-pending-question.png
+SHOT /Users/aston/DSH/staff/docs/evidence/v40-stage3/screenshots/v40-stage3-03-tool-failure.png
+SHOT /Users/aston/DSH/staff/docs/evidence/v40-stage3/screenshots/v40-stage3-05-960x640.png
+RESULT /Users/aston/DSH/staff/docs/evidence/v40-stage3/e2e-result.json
+
+exitCode=0

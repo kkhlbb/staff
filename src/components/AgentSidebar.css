@@ -1,0 +1,247 @@
+/*
+ * V4.0 阶段 3 任务侧栏。覆盖式抽屉：不改变中央画布列宽，960×640 下仍可操作。
+ * 颜色/圆角/字号沿用 DesktopWorkspace 的 CSS 变量与既有组件语言。
+ */
+.agent-sidebar {
+  position: fixed;
+  z-index: 30;
+  top: 104px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: min(380px, 46vw);
+  min-width: 300px;
+  overflow: auto;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #d9e0e9);
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgb(15 23 42 / 18%);
+  color: var(--text, #172033);
+}
+
+.agent-sidebar--collapsed {
+  top: 40%;
+  bottom: auto;
+  width: auto;
+  min-width: 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.agent-sidebar__rail {
+  writing-mode: vertical-rl;
+  letter-spacing: 1px;
+  padding: 10px 6px;
+  min-height: 96px;
+  background: var(--accent, #3730a3);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.agent-sidebar__header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface, #fff);
+  border-bottom: 1px solid var(--border, #d9e0e9);
+}
+
+.agent-sidebar__header h2 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.agent-sidebar__section {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border, #d9e0e9);
+}
+
+.agent-sidebar__section h3 {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.agent-sidebar__section dl {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.agent-sidebar__section dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agent-sidebar__section dt {
+  color: var(--muted, #526075);
+}
+
+.agent-sidebar__section dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.agent-sidebar__section input {
+  width: 100%;
+  min-height: 30px;
+  margin-top: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--border, #d9e0e9);
+  border-radius: 4px;
+  color: var(--text, #172033);
+  background: #fff;
+}
+
+.agent-sidebar__section label {
+  display: grid;
+  gap: 2px;
+  color: var(--muted, #526075);
+}
+
+.agent-sidebar__hint,
+.agent-sidebar__muted {
+  margin: 0;
+  color: var(--muted, #526075);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.agent-sidebar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.agent-sidebar__actions button {
+  min-height: 28px;
+  padding: 3px 10px;
+}
+
+.agent-sidebar__primary {
+  background: var(--accent, #3730a3);
+  border-color: var(--accent, #3730a3);
+  color: #fff;
+}
+
+.agent-sidebar__state {
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--accent-bg, #eef2ff);
+  color: var(--accent, #3730a3);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.agent-sidebar__steps {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-sidebar__step {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 6px;
+  border: 1px solid var(--border, #d9e0e9);
+  border-radius: 4px;
+  background: var(--bg, #f5f7fa);
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.agent-sidebar__step--failed {
+  border-color: #f3c7c7;
+  background: var(--danger-bg, #fdebec);
+  color: var(--danger, #a61b1b);
+}
+
+.agent-sidebar__questions {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-sidebar__questions li {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid #f0d9a8;
+  border-radius: 4px;
+  background: var(--pending-bg, #fff4dd);
+  color: var(--pending, #92400e);
+  font-size: 0.76rem;
+  overflow-wrap: anywhere;
+}
+
+.agent-sidebar__requirement {
+  padding: 6px 8px;
+  border: 1px solid var(--border, #d9e0e9);
+  border-radius: 4px;
+  background: var(--normal-bg, #eaf7ef);
+  font-size: 0.76rem;
+}
+
+.agent-sidebar__requirement p {
+  margin: 0;
+}
+
+.agent-sidebar__requirement--blocked {
+  background: var(--danger-bg, #fdebec);
+  border-color: #f3c7c7;
+  color: var(--danger, #a61b1b);
+}
+
+.agent-sidebar__blocked {
+  margin: 0;
+  color: var(--danger, #a61b1b);
+  font-size: 0.76rem;
+}
+
+.agent-sidebar__ok {
+  margin: 0;
+  color: var(--normal, #14633d);
+  font-size: 0.8rem;
+}
+
+.agent-sidebar__mono {
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 1000px) {
+  .agent-sidebar {
+    width: min(320px, 40vw);
+    min-width: 280px;
+  }
+}
+
+@media (max-width: 700px) {
+  .agent-sidebar {
+    left: 12px;
+    width: auto;
+    min-width: 0;
+  }
+}
