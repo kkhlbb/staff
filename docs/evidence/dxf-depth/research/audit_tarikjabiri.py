@@ -3,7 +3,7 @@ import sys, pathlib
 import ezdxf
 from ezdxf import recover
 
-p = pathlib.Path('/Users/aston/.hermes/profiles/daedalus/cache/scratch/libprobe/probe/lib-dimension.dxf')
+p = pathlib.Path(__file__).with_name('lib-dimension-tarikjabiri.dxf')
 print("file:", p, p.stat().st_size, "bytes")
 try:
     doc = ezdxf.readfile(str(p))

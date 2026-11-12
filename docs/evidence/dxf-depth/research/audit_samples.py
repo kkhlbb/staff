@@ -2,7 +2,7 @@
 import pathlib, sys
 import ezdxf
 
-base = pathlib.Path('/Users/aston/DSH/staff/docs/evidence/dxf-depth/samples')
+base = pathlib.Path(__file__).parent.parent / 'samples'
 files = sorted(base.glob('*.dxf'))
 
 for f in files:

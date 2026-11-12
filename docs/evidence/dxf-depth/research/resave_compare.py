@@ -2,8 +2,8 @@
 import pathlib
 import ezdxf
 
-src = pathlib.Path('/Users/aston/DSH/staff/docs/evidence/dxf-depth/samples/spacer-20x32x12.05-dxf-2000-1x2.dxf')
-out = pathlib.Path('/Users/aston/.hermes/profiles/daedalus/cache/scratch/dxfwork/resaved-2000.dxf')
+src = pathlib.Path(__file__).parent.parent / 'samples' / 'spacer-20x32x12.05-dxf-2000-1x2.dxf'
+out = pathlib.Path('/tmp/resaved-2000.dxf')
 
 doc = ezdxf.readfile(str(src))
 print("read ok:", doc.dxfversion)

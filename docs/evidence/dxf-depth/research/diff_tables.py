@@ -27,8 +27,8 @@ def records(pairs, section):
         i += 1
     return out
 
-mine = load('/Users/aston/DSH/staff/docs/evidence/dxf-depth/samples/spacer-20x32x12.05-dxf-2000-1x1.dxf')
-theirs = load('/Users/aston/.hermes/profiles/daedalus/cache/scratch/dxfwork/resaved-2000.dxf')
+mine = load(str(pathlib.Path(__file__).parent.parent / 'samples' / 'spacer-20x32x12.05-dxf-2000-1x1.dxf'))
+theirs = load(str(pathlib.Path(__file__).with_name('resaved-2000.dxf')))
 
 for section in ('TABLES', 'BLOCKS'):
     m = records(mine, section)

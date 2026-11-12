@@ -31,8 +31,8 @@ def entities(pairs, section='ENTITIES'):
         i += 1
     return out
 
-mine = entities(load('/Users/aston/DSH/staff/docs/evidence/dxf-depth/samples/spacer-20x32x12.05-dxf-2000-1x1.dxf'))
-theirs = entities(load('/Users/aston/.hermes/profiles/daedalus/cache/scratch/dxfwork/resaved-2000.dxf'))
+mine = entities(load(str(pathlib.Path(__file__).parent.parent / 'samples' / 'spacer-20x32x12.05-dxf-2000-1x1.dxf')))
+theirs = entities(load(str(pathlib.Path(__file__).with_name('resaved-2000.dxf'))))
 
 print("mine ENTITIES:", len(mine), [t for t, _ in mine])
 print("ezdxf ENTITIES:", len(theirs), [t for t, _ in theirs])

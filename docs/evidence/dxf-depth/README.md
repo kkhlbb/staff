@@ -31,6 +31,20 @@
 
 研究阶段**没改任何产品代码**（本目录先落研究文件，实现是第 2 步）。
 
+研究脚本都可重跑（只需一个装了 `ezdxf` 的临时 venv，脚本内路径全部相对本目录）：
+
+```bash
+python3 -m venv /tmp/venv-dxf && /tmp/venv-dxf/bin/pip install ezdxf
+cd docs/evidence/dxf-depth/research
+/tmp/venv-dxf/bin/python audit_samples.py      # 5 份样本 ezdxf 读回 + audit
+/tmp/venv-dxf/bin/python audit_tarikjabiri.py  # 路线 B 的 DIMENSION 为什么不能用
+/tmp/venv-dxf/bin/python diff_entities.py      # 我的实体 vs ezdxf 规范化后的组码差
+/tmp/venv-dxf/bin/python diff_tables.py        # 符号表/块的组码差
+/tmp/venv-dxf/bin/python resave_compare.py     # 用 ezdxf 另存后对比结构清单
+/tmp/venv-dxf/bin/python dump_vport.py         # 参考样本的 VPORT 表记录
+```
+
+
 ### 1.1 研究里踩到的两个坑（都写进 `research.md` §5）
 
 - **ezdxf `audit()` 0 错误 ≠ 文件能被 CAD 打开**。第一版 R2000 在 QCAD 3.33.1 里

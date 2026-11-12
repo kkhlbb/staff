@@ -1,5 +1,5 @@
 import pathlib
-raw = pathlib.Path('/Users/aston/DSH/staff/docs/evidence/dxf-depth/research/ref-r2000.dxf').read_bytes()
+raw = pathlib.Path(__file__).with_name('ref-r2000.dxf').read_bytes()
 text = raw.decode('utf-8', errors='replace')
 lines = text.split('\n')
 pairs = [(lines[i].strip(), lines[i+1].rstrip()) for i in range(0, len(lines)-1, 2)]
