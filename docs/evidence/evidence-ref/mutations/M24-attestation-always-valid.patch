@@ -1,0 +1,14 @@
+diff --git a/src/document-extraction/draft.ts b/src/document-extraction/draft.ts
+index d3fddfe..fa70d98 100644
+--- a/src/document-extraction/draft.ts
++++ b/src/document-extraction/draft.ts
+@@ -753,7 +753,9 @@ function attestationMatchesSession(
+   ref: EvidenceRef,
+   session: PlanSession | undefined,
+ ): boolean {
++  // M24 变异：user-attestation 一律视为“总是有效”，跳过会话一致性校验。
+   if (evidenceRefKind(ref) !== 'user-attestation') return true
++  return true
+   if (session === undefined) return false
+   const attestation = ref as UserAttestation
+   return (
