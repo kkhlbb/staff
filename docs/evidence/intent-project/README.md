@@ -196,7 +196,8 @@ DEEPSEEK_API_KEY=... V40_REAL_MODEL=1 npx vitest run --config vitest.desktop.con
   - 条款来源联合新增 `user-attestation`（不伪造页码/哈希）；检查证据引用同步接受
   - 提取草稿新增可选 `intentBindings`
   - 图纸 `frameFields.basis?`（空 = 有来源项目，不新增行）
-- `PROJECT_DB_VERSION` **保持 7**（IndexedDB store 结构没变；仓库既有约定是两者分开）
+- `PROJECT_DB_VERSION` **保持 7**、IndexedDB 记录 `PROJECT_SCHEMA_VERSION` **保持 2**（store 结构与记录形状都没变；
+  三者分开处理：项目文件 JSON schema 才升到 10）
 - schema 9 读入：`adaptProjectV9` 固定补 `sourceKind='pdf'`、`actorId=null`、`sessionSeq=0`、空账本；
   **不重算、不改值**；保存时才写 10。
   用例 `src/project-file/schema10.test.ts`（4 条）验证链/参数/图纸/`calculateChain` 与预算一致。
