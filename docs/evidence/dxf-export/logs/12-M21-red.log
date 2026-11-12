@@ -1,0 +1,48 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ↓ src/drawing/dxfExport.test.ts > D-01 1:1 隔套 20×32×12.05：R12 与 2000 都能回读，外廓 = 真实尺寸 > R12 实体数/外廓/文字均与 DrawingData 一致
+ ↓ src/drawing/dxfExport.test.ts > D-01 1:1 隔套 20×32×12.05：R12 与 2000 都能回读，外廓 = 真实尺寸 > 2000 实体数/外廓/文字均与 DrawingData 一致
+ ↓ src/drawing/dxfExport.test.ts > D-01 1:1 隔套 20×32×12.05：R12 与 2000 都能回读，外廓 = 真实尺寸 > 两条样本版本头分别是 AC1009 / AC1015，且 2000 有 $INSUNITS=4
+ ↓ src/drawing/dxfExport.test.ts > D-02 1:2 图纸：模型空间是纸面的 2 倍，文字高度同步放大 > k = 2，模型空间仍是真实尺寸 12.05 × 32，纸面只有一半
+ ↓ src/drawing/dxfExport.test.ts > D-02 1:2 图纸：模型空间是纸面的 2 倍，文字高度同步放大 > 标注文字 3.5 → 7，标题栏文字 3.0 → 6.0；虚线节距也乘 2
+ ↓ src/drawing/dxfExport.test.ts > D-02 1:2 图纸：模型空间是纸面的 2 倍，文字高度同步放大 > 1:2 的外廓就是纸面坐标 ×2 的结果（不是直接抄纸面）
+ × src/drawing/dxfExport.test.ts > D-03 R12 实体白名单 > 文件文本里 LWPOLYLINE / MTEXT / SPLINE / HATCH 出现次数为 0 4ms
+   → expected { token: 'LWPOLYLINE', occurrences: 1 } to deeply equal { Object (token, occurrences) }
+ ↓ src/drawing/dxfExport.test.ts > D-04 图层与颜色 > 五个图层齐全、颜色符合约定、每层都有实体引用
+ ↓ src/drawing/dxfExport.test.ts > D-05 中文与 GBK 编码 > GBK 解码后中文完整、无替换字符；层名/图框/技术要求都对
+ ↓ src/drawing/dxfExport.test.ts > D-05 中文与 GBK 编码 > ASCII 保持单字节，非 ASCII 走 GBK 双字节
+ ↓ src/drawing/dxfExport.test.ts > D-08 空/异常 DrawingData 明确报错，不产生半截文件 > 空图元 / 非有限坐标 / 零分母 / 未知版本 / 表外字符 全部拒绝
+ ↓ src/drawing/dxfExport.test.ts > D-08 空/异常 DrawingData 明确报错，不产生半截文件 > 几何坐标保留 q 精度，不取整到 0.01
+ ↓ src/drawing/dxfExport.test.ts > D-08 空/异常 DrawingData 明确报错，不产生半截文件 > 标注数字按既有显示规则（3 位小数，第 4 位非零保留 4 位）
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/drawing/dxfExport.test.ts > D-03 R12 实体白名单 > 文件文本里 LWPOLYLINE / MTEXT / SPLINE / HATCH 出现次数为 0
+AssertionError: expected { token: 'LWPOLYLINE', occurrences: 1 } to deeply equal { Object (token, occurrences) }
+
+- Expected
++ Received
+
+  {
+-   "occurrences": 0,
++   "occurrences": 1,
+    "token": "LWPOLYLINE",
+  }
+
+ ❯ src/drawing/dxfExport.test.ts:260:38
+    258|     for (const token of ['LWPOLYLINE', 'MTEXT', 'SPLINE', 'HATCH']) {
+    259|       const occurrences = build.text.split(token).length - 1
+    260|       expect({ token, occurrences }).toEqual({ token, occurrences: 0 })
+       |                                      ^
+    261|     }
+    262|     const types = new Set(parse(build).entities.map((entity) => entity…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  22:32:38
+   Duration  145ms (setup 40%, transform 26%, import 26%, tests 6%, worker 2%)
+

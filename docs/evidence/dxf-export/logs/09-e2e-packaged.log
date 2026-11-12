@@ -1,0 +1,7 @@
+PASS 打开内置示例 {}
+PASS 点击「生成图纸」 {}
+PASS DXF 按钮可见 {"buttons":[{"text":"导出 PDF（矢量）","disabled":false},{"text":"导出 SVG","disabled":false},{"text":"导出 DXF（R12）","disabled":false},{"text":"导出 DXF（2000）","disabled":false}]}
+FAIL 辅助功能权限探测 {"available":false,"detail":"processes=Finder, Notion, clash-verge, DeepSeek Harness, Hermes, Terminal, Grok Bot, ChatGPT, NapCatInstaller, QQ, System Settings, Google Chrome, 寸链","windows":0}
+PASS 点击「导出 DXF（R12）」后进入系统保存对话框（IPC 挂起） {"status":"BLOCKED","reason":"no-accessibility-permission","probe":{"available":false,"detail":"processes=Finder, Notion, clash-verge, DeepSeek Harness, Hermes, Terminal, Grok Bot, ChatGPT, NapCatInstaller, QQ, System Settings, Google Chrome, 寸链","windows":0},"clicked":{"ok":true,"disabled":false},"
+FAIL 打包应用导出 2000 并取消 {"blocked":true}
+{"blocked":true,"failed":["辅助功能权限探测"],"checks":6,"screenshots":["docs/evidence/dxf-export/screenshots/dxf-01-buttons.png","docs/evidence/dxf-export/screenshots/dxf-02-dialog-pending-no-ax.png"]}

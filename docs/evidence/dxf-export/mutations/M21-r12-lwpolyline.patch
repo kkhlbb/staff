@@ -1,0 +1,11 @@
+--- a/src/drawing/dxfExport.ts
++++ b/src/drawing/dxfExport.ts
+@@ -687,6 +687,8 @@
+ 
+   pair(state, 0, 'SECTION')
+   pair(state, 2, 'ENTITIES')
++  // M21 变异：在 R12 输出里插入一条 LWPOLYLINE（R12 不认，应该让 D-03 变红）。
++  if (version === 'r12') pair(state, 0, 'LWPOLYLINE')
+   for (const entity of entities) serializeEntity(state, entity)
+   pair(state, 0, 'ENDSEC')
+   pair(state, 0, 'EOF')
