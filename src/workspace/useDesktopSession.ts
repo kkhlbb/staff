@@ -67,7 +67,7 @@ export interface ChangeUiState {
 }
 
 /** 仅持有适配器发布的会话快照；dirty gate 与文件事务始终由 main 执行。 */
-export function useDesktopSession() {
+export function useDesktopSession(options: { onOpenDxf?: () => void } = {}) {
   const [state, setState] = useState<DesktopSessionState | null>(null)
   const [recent, setRecent] = useState<RecentProjectItem[]>([])
 
@@ -115,12 +115,16 @@ export function useDesktopSession() {
   function action(action: MenuAction) {
     if (action === 'new') { setNewOpen(true); return }
     if (action === 'importV2') { setImportOpen(true); return }
+    // 看图与项目会话无关：不跑 dirty gate、不切换项目，交给外层面板。
+    if (action === 'openDxf') { openDxfRef.current?.(); return }
     void run(async session => {
       report(await (action === 'open' ? session.openProject() : action === 'save' ? session.saveProject() : action === 'saveAs' ? session.saveProjectAs() : session.close()))
     })
   }
   const actionRef = useRef(action)
   useEffect(() => { actionRef.current = action })
+  const openDxfRef = useRef(options.onOpenDxf)
+  useEffect(() => { openDxfRef.current = options.onOpenDxf }, [options.onOpenDxf])
   useEffect(() => {
     const api = window.cunlian
     if (!api) return

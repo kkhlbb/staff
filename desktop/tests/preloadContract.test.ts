@@ -68,6 +68,8 @@ const ADDED_FUNCTIONS = [
   'onAgentEvent',
   // DXF 导出 v1：R12 / 2000（仍只增不改旧函数）。
   'exportDrawingDxfR12', 'exportDrawingDxf2000',
+  // 内置 DXF 看图（只读）：对话框选文件与启动参数排队文件（仍只增不改旧函数）。
+  'openDxf', 'takePendingDxf',
   // ADR-001 第 3 步：无任务书入口（用户界面触发；仍只增不改旧函数）。
   'intentCreateProject', 'intentState', 'intentApply', 'intentPreview',
   'intentConfirmCandidate', 'intentIssueApproval',

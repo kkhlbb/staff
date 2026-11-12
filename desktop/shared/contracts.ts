@@ -65,6 +65,9 @@ export const IPC_CHANNELS = {
   /** DXF 导出 v1：R12（默认）/ 2000。 */
   drawingExportDxfR12: 'drawing:export-dxf-r12',
   drawingExportDxf2000: 'drawing:export-dxf-2000',
+  /** 内置 DXF 看图（只读）：系统对话框选 .dxf 与启动参数排队文件。 */
+  dxfOpen: 'dxf:open',
+  dxfPending: 'dxf:pending',
   /** D：参数联动（草稿/预览/确认/绑定/对比/恢复）。 */
   changeStage: 'change:stage',
   changePreview: 'change:preview',
@@ -121,7 +124,7 @@ export const IPC_EVENTS = {
   agentEvent: 'agent:event',
 } as const
 
-export type MenuAction = 'new' | 'open' | 'save' | 'saveAs' | 'importV2' | 'close'
+export type MenuAction = 'new' | 'open' | 'save' | 'saveAs' | 'importV2' | 'close' | 'openDxf'
 
 export interface MenuActionPayload {
   action: MenuAction
@@ -450,6 +453,16 @@ export interface ModelReadValue {
   sha256: string
   fileName: string
   byteSize: number
+}
+
+/**
+ * 内置 DXF 看图的只读文件内容：main 选文件并读字节，renderer 只拿到字节与文件名。
+ * 不接受 renderer 传路径；大文件在这里按上限拒绝。
+ */
+export interface DxfOpenValue {
+  fileName: string
+  byteSize: number
+  bytes: Uint8Array
 }
 
 export interface ModelCommitValue {
@@ -1367,6 +1380,12 @@ export interface CunlianApi {
   exportDrawingDxf2000(
     request: DrawingExportRequest,
   ): Promise<IpcResult<DrawingExportValue>>
+
+  /* ---- 内置 DXF 看图（新增，旧函数不变） ------------------------------ */
+  /** 系统对话框选一个 .dxf，main 读字节返回；renderer 不传路径。 */
+  openDxf(): Promise<IpcResult<DxfOpenValue>>
+  /** 取启动参数 `--open-dxf=<path>` 排队的文件；没有则返回 null（只读，消费一次）。 */
+  takePendingDxf(): Promise<IpcResult<DxfOpenValue | null>>
 
   /* ---- D：参数联动（新增，旧函数不变） ------------------------------- */
   /** 建立/更新参数草稿；不写正式链/参数/图纸。 */

@@ -1,0 +1,19 @@
+
+> staff@0.4.0-beta test
+> vitest run
+
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+Not implemented: navigation to another Document
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: navigation to another Document
+
+ Test Files  110 passed (110)
+      Tests  1219 passed (1219)
+   Start at  05:27:45
+   Duration  20.32s (tests 61%, environment 17%, import 10%, setup 9%, transform 3%)
+
+    Isolate  110 workers spawned · ~257ms startup each (spawn + environment, per file)
+             at least ~2.88s faster with isolate: false — reuses workers across files instead of one per file
+

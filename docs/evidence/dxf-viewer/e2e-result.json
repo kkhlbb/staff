@@ -1,0 +1,282 @@
+{
+  "schema": "dxf-viewer-e2e-v1",
+  "app": "out/寸链-darwin-arm64/寸链.app",
+  "mode": "arm64 打包产物；--open-dxf 启动参数；CDP 真实鼠标/滚轮",
+  "readOnly": "不写回文件、不保存项目、不联网",
+  "samples": [
+    {
+      "key": "2000-1x2",
+      "fileName": "spacer-20x32x12.05-dxf-2000-1x2.dxf",
+      "meta": "DXF 2000编码 GBK（ANSI_936）单位 mm（$INSUNITS=4）5 个图层55 个已渲染实体",
+      "layerCount": 5,
+      "entities": 55,
+      "encodingWarning": "",
+      "unsupported": "全部实体均已渲染（0 个未支持）。"
+    },
+    {
+      "key": "2000-1x2-userinput",
+      "fileName": "spacer-20x32x12.05-dxf-2000-1x2-userinput.dxf",
+      "meta": "DXF 2000编码 GBK（ANSI_936）单位 mm（$INSUNITS=4）5 个图层55 个已渲染实体",
+      "layerCount": 5,
+      "entities": 55,
+      "encodingWarning": "",
+      "unsupported": "全部实体均已渲染（0 个未支持）。"
+    },
+    {
+      "key": "r12-1x1",
+      "fileName": "spacer-20x32x12.05-dxf-r12-1x1.dxf",
+      "meta": "DXF R12编码 GBK（ANSI_936）单位未声明（按图纸单位）5 个图层65 个已渲染实体",
+      "layerCount": 5,
+      "entities": 65,
+      "encodingWarning": "",
+      "unsupported": "全部实体均已渲染（0 个未支持）。"
+    },
+    {
+      "key": "unsupported-fixture",
+      "fileName": "unsupported.dxf",
+      "meta": "DXF 2000编码 UTF-8（UTF-8）单位 mm（$INSUNITS=4）3 个图层6 个已渲染实体",
+      "layerCount": 3,
+      "entities": 6,
+      "encodingWarning": "",
+      "unsupported": "未渲染 1 个 HATCH（不支持）未渲染 1 个 INSERT（不支持）未渲染 1 个 SOLID（不支持）未渲染 1 个 SPLINE（不支持）"
+    },
+    {
+      "key": "broken-gbk-fixture",
+      "fileName": "broken-gbk.dxf",
+      "meta": "DXF 2000编码 UNKNOWN（ANSI_936）单位 mm（$INSUNITS=4）5 个图层55 个已渲染实体",
+      "layerCount": 5,
+      "entities": 55,
+      "encodingWarning": "本文件编码未识别，文字可能不正确。文件编码未识别（代码页 ANSI_936）；已按单字节兜底显示，文字可能不正确。",
+      "unsupported": "全部实体均已渲染（0 个未支持）。"
+    }
+  ],
+  "checks": [
+    {
+      "id": "2000-1x2 文件名",
+      "ok": true,
+      "fileName": "spacer-20x32x12.05-dxf-2000-1x2.dxf"
+    },
+    {
+      "id": "2000-1x2 图层 5 个",
+      "ok": true,
+      "layerCount": 5
+    },
+    {
+      "id": "2000-1x2 未支持实体为 0",
+      "ok": true,
+      "unsupported": "全部实体均已渲染（0 个未支持）。"
+    },
+    {
+      "id": "2000-1x2 无编码警告",
+      "ok": true,
+      "encodingWarning": ""
+    },
+    {
+      "id": "2000-1x2 界面文字：A3 横向 · 第三角",
+      "ok": true
+    },
+    {
+      "id": "2000-1x2 界面文字：1:2 · mm",
+      "ok": true
+    },
+    {
+      "id": "2000-1x2 界面文字：12.050",
+      "ok": true
+    },
+    {
+      "id": "2000-1x2 界面文字：⌀20.000",
+      "ok": true
+    },
+    {
+      "id": "2000-1x2 界面文字：⌀32.000",
+      "ok": true
+    },
+    {
+      "id": "2000-1x2 界面文字：依据：本图档未记录来源文档名/页。",
+      "ok": true
+    },
+    {
+      "id": "量距按钮可点",
+      "ok": true
+    },
+    {
+      "id": "量距 400.00 mm",
+      "ok": true,
+      "measure": "400.00 mm"
+    },
+    {
+      "id": "点选命中 POLYLINE",
+      "ok": true,
+      "type": "POLYLINE"
+    },
+    {
+      "id": "属性面板含图框图层与坐标",
+      "ok": true,
+      "inspector": "类型POLYLINE图层图框空间图纸空间关键坐标首点 (10, 10)"
+    },
+    {
+      "id": "放大到零件细节（≥200%）",
+      "ok": true,
+      "zoom": "220%",
+      "viewBox": "163.35711039183474 -232.22315515801944 191.09194722163286 135.12930553529753"
+    },
+    {
+      "id": "图层开关隐藏/恢复实体",
+      "ok": true,
+      "before": 3,
+      "hidden": 0,
+      "restored": 3
+    },
+    {
+      "id": "滚轮缩放是真 viewBox 变换",
+      "ok": true,
+      "beforeZoom": "163.35711039183474 -232.22315515801944 191.09194722163286 135.12930553529753",
+      "after": {
+        "viewBox": "194.3437063281511 -213.61648505919118 133.3203276793482 94.27651743039623",
+        "zoom": "315%"
+      }
+    },
+    {
+      "id": "缩放百分比更新",
+      "ok": true,
+      "zoom": "315%"
+    },
+    {
+      "id": "2000-1x2-userinput 文件名",
+      "ok": true,
+      "fileName": "spacer-20x32x12.05-dxf-2000-1x2-userinput.dxf"
+    },
+    {
+      "id": "2000-1x2-userinput 图层 5 个",
+      "ok": true,
+      "layerCount": 5
+    },
+    {
+      "id": "2000-1x2-userinput 未支持实体为 0",
+      "ok": true,
+      "unsupported": "全部实体均已渲染（0 个未支持）。"
+    },
+    {
+      "id": "2000-1x2-userinput 无编码警告",
+      "ok": true,
+      "encodingWarning": ""
+    },
+    {
+      "id": "2000-1x2-userinput 界面文字：依据：用户输入，无外部原文件",
+      "ok": true
+    },
+    {
+      "id": "2000-1x2-userinput 界面文字：6. 依据：用户输入，无外部原文件。",
+      "ok": true
+    },
+    {
+      "id": "r12-1x1 文件名",
+      "ok": true,
+      "fileName": "spacer-20x32x12.05-dxf-r12-1x1.dxf"
+    },
+    {
+      "id": "r12-1x1 图层 5 个",
+      "ok": true,
+      "layerCount": 5
+    },
+    {
+      "id": "r12-1x1 未支持实体为 0",
+      "ok": true,
+      "unsupported": "全部实体均已渲染（0 个未支持）。"
+    },
+    {
+      "id": "r12-1x1 无编码警告",
+      "ok": true,
+      "encodingWarning": ""
+    },
+    {
+      "id": "r12-1x1 界面文字：1:1 · mm",
+      "ok": true
+    },
+    {
+      "id": "r12-1x1 界面文字：寸链 · 待复核草稿",
+      "ok": true
+    },
+    {
+      "id": "r12-1x1 界面文字：第三角投影：右端视图置于主视图右侧",
+      "ok": true
+    },
+    {
+      "id": "unsupported-fixture 文件名",
+      "ok": true,
+      "fileName": "unsupported.dxf"
+    },
+    {
+      "id": "unsupported-fixture 图层 3 个",
+      "ok": true,
+      "layerCount": 3
+    },
+    {
+      "id": "unsupported-fixture 未渲染计数：未渲染 1 个 SPLINE（不支持）",
+      "ok": true,
+      "unsupported": "未渲染 1 个 HATCH（不支持）未渲染 1 个 INSERT（不支持）未渲染 1 个 SOLID（不支持）未渲染 1 个 SPLINE（不支持）"
+    },
+    {
+      "id": "unsupported-fixture 未渲染计数：未渲染 1 个 HATCH（不支持）",
+      "ok": true,
+      "unsupported": "未渲染 1 个 HATCH（不支持）未渲染 1 个 INSERT（不支持）未渲染 1 个 SOLID（不支持）未渲染 1 个 SPLINE（不支持）"
+    },
+    {
+      "id": "unsupported-fixture 未渲染计数：未渲染 1 个 INSERT（不支持）",
+      "ok": true,
+      "unsupported": "未渲染 1 个 HATCH（不支持）未渲染 1 个 INSERT（不支持）未渲染 1 个 SOLID（不支持）未渲染 1 个 SPLINE（不支持）"
+    },
+    {
+      "id": "unsupported-fixture 未渲染计数：未渲染 1 个 SOLID（不支持）",
+      "ok": true,
+      "unsupported": "未渲染 1 个 HATCH（不支持）未渲染 1 个 INSERT（不支持）未渲染 1 个 SOLID（不支持）未渲染 1 个 SPLINE（不支持）"
+    },
+    {
+      "id": "unsupported-fixture 无编码警告",
+      "ok": true,
+      "encodingWarning": ""
+    },
+    {
+      "id": "unsupported-fixture 界面文字：未支持实体计数：SPLINE / HATCH / INSERT / SOLID",
+      "ok": true
+    },
+    {
+      "id": "broken-gbk-fixture 文件名",
+      "ok": true,
+      "fileName": "broken-gbk.dxf"
+    },
+    {
+      "id": "broken-gbk-fixture 图层 5 个",
+      "ok": true,
+      "layerCount": 5
+    },
+    {
+      "id": "broken-gbk-fixture 未支持实体为 0",
+      "ok": true,
+      "unsupported": "全部实体均已渲染（0 个未支持）。"
+    },
+    {
+      "id": "broken-gbk-fixture 编码警告",
+      "ok": true,
+      "encodingWarning": "本文件编码未识别，文字可能不正确。文件编码未识别（代码页 ANSI_936）；已按单字节兜底显示，文字可能不正确。"
+    }
+  ],
+  "screenshots": [
+    "docs/evidence/dxf-viewer/screenshots/viewer-2000-1x2-paper.png",
+    "docs/evidence/dxf-viewer/screenshots/viewer-2000-1x2-measure.png",
+    "docs/evidence/dxf-viewer/screenshots/viewer-2000-1x2-selected.png",
+    "docs/evidence/dxf-viewer/screenshots/viewer-2000-1x2-zoom.png",
+    "docs/evidence/dxf-viewer/screenshots/viewer-2000-1x2-model.png",
+    "docs/evidence/dxf-viewer/screenshots/viewer-2000-1x2-userinput.png",
+    "docs/evidence/dxf-viewer/screenshots/viewer-r12-1x1-model.png",
+    "docs/evidence/dxf-viewer/screenshots/viewer-unsupported-fixture.png",
+    "docs/evidence/dxf-viewer/screenshots/viewer-broken-gbk-fixture.png"
+  ],
+  "summary": {
+    "total": 43,
+    "failed": 0
+  },
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

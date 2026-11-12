@@ -19,6 +19,7 @@ import {
   type ModelReadValue,
   type DrawingExportValue,
   type DrawingUpdateValue,
+  type DxfOpenValue,
   type ChangeApplyValue,
   type ChangeCompareValueResponse,
   type ChangeDraftValue,
@@ -195,6 +196,12 @@ const api: CunlianApi = {
   exportDrawingDxf2000: (request) =>
     ipcRenderer.invoke(IPC_CHANNELS.drawingExportDxf2000, request) as Promise<
       IpcResult<DrawingExportValue>
+    >,
+  openDxf: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.dxfOpen, {}) as Promise<IpcResult<DxfOpenValue>>,
+  takePendingDxf: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.dxfPending, {}) as Promise<
+      IpcResult<DxfOpenValue | null>
     >,
   stageChangeDraft: (request) =>
     ipcRenderer.invoke(IPC_CHANNELS.changeStage, request) as Promise<

@@ -42,6 +42,7 @@ export function buildApplicationMenu(options: ApplicationMenuOptions): Menu {
       submenu: [
         { label: '新建项目…', accelerator: 'Command+N', click: send('new') },
         { label: '打开项目…', accelerator: 'Command+O', click: send('open') },
+        { label: '打开 DXF 看图…', click: send('openDxf') },
         { type: 'separator' },
         { label: '保存', accelerator: 'Command+S', click: send('save') },
         { label: '另存为…', accelerator: 'Command+Shift+S', click: send('saveAs') },
