@@ -149,13 +149,13 @@
     "M25": {
       "description": "删掉 setRequirement 的用户原话/数值校验",
       "domain": "1 failed | 6 passed (7)",
-      "desktop": "1 failed | 5 skipped (6)",
+      "desktop": "1 failed | 5 passed (6)",
       "restored": "7 passed (7)"
     },
     "M26": {
       "description": "去掉图纸“依据：用户输入，无外部原文件”标记",
-      "desktop": "1 failed | 5 skipped (6)",
-      "restored": "6 passed (6)"
+      "desktop": "2 failed | 5 passed (7)",
+      "restored": "7 passed (7)"
     }
   },
   "e2e": {
@@ -222,7 +222,7 @@
     "typecheck": true,
     "typecheckDesktop": true,
     "lint": true,
-    "test": "1154 passed (1154)",
+    "test": "1155 passed (1155)",
     "testDesktop": "285 passed | 14 skipped (299)",
     "intentDesktop": "7 passed (7)",
     "build": true,

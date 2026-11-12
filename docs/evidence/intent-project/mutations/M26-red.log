@@ -1,11 +1,33 @@
 
  RUN  v5.1.0 /Users/aston/DSH/staff
 
- ❯ desktop/tests/intentProject.test.ts (6 tests | 1 failed | 5 skipped) 140ms
+ ❯ desktop/tests/intentExport.test.ts (1 test | 1 failed) 162ms
+   ❯ 无任务书项目导出：文件名后缀与文件头标记 (1)
+     × DXF/SVG 建议文件名带 -userinput，DXF 999 注释与 SVG 注释都含依据 161ms
+ ❯ desktop/tests/intentProject.test.ts (6 tests | 1 failed) 445ms
    ❯ 无任务书入口：建项 → 对话写草稿 → 确认 → 预览 → 勾选 → 提交 (6)
-     × 未勾选“这些尺寸由我提供”→ 不签发授权；勾选后提交成功并冻结条款/依据 139ms
+     × 未勾选“这些尺寸由我提供”→ 不签发授权；勾选后提交成功并冻结条款/依据 123ms
 
-⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  desktop/tests/intentExport.test.ts > 无任务书项目导出：文件名后缀与文件头标记 > DXF/SVG 建议文件名带 -userinput，DXF 999 注释与 SVG 注释都含依据
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ desktop/tests/intentExport.test.ts:136:73
+    134|     expect(dxf.ok, JSON.stringify(dxf)).toBe(true)
+    135|     if (!dxf.ok) return
+    136|     expect(picked[0]!.suggestedName.endsWith('-userinput-DXF-R12.dxf')…
+       |                                                                         ^
+    137|     expect(dxf.value.fileName.endsWith('-userinput-DXF-R12.dxf')).toBe…
+    138|     const bytes = await fsp.readFile(picked[0]!.target)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
 
  FAIL  desktop/tests/intentProject.test.ts > 无任务书入口：建项 → 对话写草稿 → 确认 → 预览 → 勾选 → 提交 > 未勾选“这些尺寸由我提供”→ 不签发授权；勾选后提交成功并冻结条款/依据
 AssertionError: expected '' to be '依据：用户输入，无外部原文件' // Object.is equality
@@ -23,12 +45,12 @@ AssertionError: expected '' to be '依据：用户输入，无外部原文件' /
     329|     const rebuilt = rebuildDrawingFromProject(project)
     330|     expect(rebuilt.ok, JSON.stringify(rebuilt)).toBe(true)
 
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
 
 
- Test Files  1 failed (1)
-      Tests  1 failed | 5 skipped (6)
-   Start at  02:09:29
-   Duration  395ms (import 46%, tests 42%, transform 12%)
+ Test Files  2 failed (2)
+      Tests  2 failed | 5 passed (7)
+   Start at  02:27:56
+   Duration  697ms (tests 63%, import 33%, transform 4%)
 
 EXIT=1

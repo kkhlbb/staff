@@ -12,7 +12,7 @@
 | 项目文件 schema | `PROJECT_FILE_SCHEMA_VERSION` 9 → **10**（纯加法） |
 | IndexedDB | `PROJECT_DB_VERSION` **未变**（store 结构未动；与项目 JSON schema 分开处理） |
 | 新增工具 | `createProject` / `setChain` / `setRequirement` / `setBinding`（只产草稿，没有提交能力） |
-| 新增用例 | schema10 迁移 4、意图门禁 7、主进程全链路 6、导出 1、侧栏守卫 2、工作台守卫 1 |
+| 新增用例 | schema10 迁移 4、意图门禁 7、主进程全链路 6、导出 1（DXF+SVG）、侧栏守卫 2、工作台守卫 1 |
 | 真实语料 | 候选 **138**、pending **58**、r4 **7**；候选身份与第 2 步基线**逐字节一致** |
 | 变异 | M25 红 → 绿；M26 红 → 绿 |
 | 真实模型 3 条 | **BLOCKED**（本机无密钥；见第七节，不记为通过） |
@@ -122,8 +122,8 @@ cmp docs/evidence/intent-project/real-docs-candidates-after.json docs/evidence/e
 
 | 变异 | 红 | 绿（恢复后） |
 |---|---|---|
-| **M25**：删掉 `setRequirement` 的用户原话/数值校验 | 领域 `1 failed / 6 passed`（`M25-red.log`）；主进程 `1 failed / 5 skipped`（`M25-desktop-red.log`） | 领域 `7 passed`（`M25-green.log`） |
-| **M26**：去掉图纸依据标记 | 主进程 `1 failed / 5 skipped`，失败点 `expected '' to be '依据：用户输入，无外部原文件'`（`M26-red.log`） | 主进程 `6 passed`（`M26-green.log`） |
+| **M25**：删掉 `setRequirement` 的用户原话/数值校验 | 领域 `1 failed / 6 passed (7)`（`M25-red.log`）；主进程 `1 failed / 5 passed (6)`（`M25-desktop-red.log`） | 领域 `7 passed`（`M25-green.log`） |
+| **M26**：去掉图纸依据标记 | 主进程 + 导出 `2 failed / 5 passed (7)`：提交后标题栏/文件头/文件名后缀的标记断言全红（`M26-red.log`） | 同一个套件 `7 passed`（`M26-green.log`） |
 
 红的正是对应断言，不是整套一起红。
 
@@ -214,7 +214,7 @@ DEEPSEEK_API_KEY=... V40_REAL_MODEL=1 npx vitest run --config vitest.desktop.con
 | 1 | `npm run typecheck` | exit 0 | `logs/20-typecheck.log` |
 | 2 | `npm run typecheck:desktop` | exit 0 | `logs/21-typecheck-desktop.log` |
 | 3 | `npm run lint` | exit 0（无输出） | `logs/22-lint.log` |
-| 4 | `npm test` | **107 文件 / 1154 用例全过** | `logs/23-test.log` |
+| 4 | `npm test` | **107 文件 / 1155 用例全过** | `logs/23-test.log` |
 | 5 | `npm run test:desktop` | **41 文件通过 + 1 跳过；285 通过 + 14 跳过** | `logs/24-test-desktop.log` |
 | 6 | `npm run build` | `✓ built in …` | `logs/10-build.log` |
 | 7 | `npm run package:desktop -- --arch=arm64` | `RESULT PASS 打包产物中的 pdf worker 可被 main.cjs 运行时加载` | `logs/11-package.log` |
