@@ -86,7 +86,7 @@ function setManifestSchema(parts: Map<string, Uint8Array>, schema: number): void
   })
 }
 
-/** 把当前 schema8 容器降级为旧 schema（并删除旧格式不允许的新字段）。 */
+/** 把当前 schema9 容器降级为旧 schema（并删除旧格式不允许的新字段）。 */
 async function downgradeTo(schema: 4 | 5 | 6, bytes: Uint8Array): Promise<Uint8Array> {
   return rebuildArchive(bytes, (parts) => {
     patchAllProjects(parts, (project) => {
@@ -119,14 +119,14 @@ async function downgradeTo(schema: 4 | 5 | 6, bytes: Uint8Array): Promise<Uint8A
   })
 }
 
-describe('V3.5 schema7 迁移矩阵：旧 3/4/5/6 默认无条款（工作形状升到 schema8）', () => {
-  it('schema3（真实 B1 产物）读入：工作形状 8、无条款、旧历史 3 原样', async () => {
+describe('V3.5 schema7 迁移矩阵：旧 3/4/5/6 默认无条款（工作形状升到 schema9）', () => {
+  it('schema3（真实 B1 产物）读入：工作形状 9、无条款、旧历史 3 原样', async () => {
     const decoded = await decodeProjectFile(new Uint8Array(readFileSync(B1_FIXTURE)))
     expect(decoded.ok).toBe(true)
     if (!decoded.ok) return
     const project = decoded.value.snapshot.project
     expect(decoded.value.manifest.project.projectSchemaVersion).toBe(3)
-    expect(project.schemaVersion).toBe(8)
+    expect(project.schemaVersion).toBe(9)
     expect(project.requirementRevisions).toEqual([])
     expect(project.activeRequirementRevisionId).toBeNull()
     expect(project.currentRequirementCheck).toBeNull()
@@ -149,7 +149,7 @@ describe('V3.5 schema7 迁移矩阵：旧 3/4/5/6 默认无条款（工作形状
       if (!decoded.ok) return
       const project = decoded.value.snapshot.project
       expect(decoded.value.manifest.project.projectSchemaVersion).toBe(schema)
-      expect(project.schemaVersion).toBe(8)
+      expect(project.schemaVersion).toBe(9)
       expect(project.requirementRevisions).toEqual([])
       expect(project.activeRequirementRevisionId).toBeNull()
       expect(project.currentRequirementCheck).toBeNull()
@@ -166,19 +166,19 @@ describe('V3.5 schema7 迁移矩阵：旧 3/4/5/6 默认无条款（工作形状
       })
       expect(upgraded.upgraded).toBe(true)
       expect(upgraded.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(schema)
-      expect(upgraded.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(8)
+      expect(upgraded.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(9)
       const reopened = await encodeProjectFile(upgraded.snapshot)
       expect(reopened.ok, reopened.ok ? '' : reopened.error.message).toBe(true)
     })
   }
 
-  it('schema8 正常读写：条款版本/活动指针/检查逐字段保留', async () => {
+  it('schema9 正常读写：条款版本/活动指针/检查逐字段保留', async () => {
     const { createRequirementProject } = await import('../requirements/__fixtures__/requirementFixture')
     const project = await createRequirementProject()
     const encoded = await encodeProjectFile(project.snapshot)
     expect(encoded.ok).toBe(true)
     if (!encoded.ok) return
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(8)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(9)
 
     const decoded = await decodeProjectFile(encoded.value.bytes)
     expect(decoded.ok).toBe(true)
@@ -194,14 +194,14 @@ describe('V3.5 schema7 迁移矩阵：旧 3/4/5/6 默认无条款（工作形状
 })
 
 describe('V3.5 schema7 严格校验', () => {
-  it('schema9 明确拒绝（UNSUPPORTED_VERSION），不猜', async () => {
+  it('schema10 明确拒绝（UNSUPPORTED_VERSION），不猜', async () => {
     const base = await createSampleSnapshot()
     const encoded = await encodeProjectFile(base)
     if (!encoded.ok) throw new Error('encode failed')
     const bytes = await rebuildArchive(encoded.value.bytes, (parts) => {
-      setManifestSchema(parts, 9)
+      setManifestSchema(parts, 10)
       patchJson(parts, 'project/project.json', (project) => {
-        project.schemaVersion = 9
+        project.schemaVersion = 10
       })
     })
     const decoded = await decodeProjectFile(bytes)

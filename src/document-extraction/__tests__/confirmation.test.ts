@@ -372,13 +372,15 @@ describe('V3.6 应用计划门禁（M01/M02 目标）', () => {
 
   it('M02：有数值但出处为空 → 不能确认，也不能进入应用计划', () => {
     const h = ring('H')
+    // ADR-001：provenance 是唯一权威出处集合；旧字段 evidence 保留为 pdf-text 镜像。
+    // “出处为空”必须把两者同时清空（解析器写出时二者同源，真实链路不会只空一半）。
     const stripped = replaceCandidate(draft, h.candidateId, (candidate) => {
       if (candidate.kind !== 'ring' || !candidate.data.nominal) return candidate
       return {
         ...candidate,
         data: {
           ...candidate.data,
-          nominal: { ...candidate.data.nominal, evidence: [] },
+          nominal: { ...candidate.data.nominal, evidence: [], provenance: [] },
         },
       }
     })

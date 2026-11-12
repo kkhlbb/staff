@@ -304,7 +304,11 @@ export async function measureCorpus({ manifestPath, corpusDir, pageRangeProbePag
   for (const entry of verified) {
     const measured = await measureDocument(entry, modules)
     rows.push(measured.row)
-    if (measured.row.pageLimit === null) continue
+    // 1-20 页探针的对象：页跨度超过上限、确实会被切块的文档（当前为 r4，170 页）。
+    // 旧口径按“出现 PAGE_LIMIT 的文档”触发；document-extractor-6 起不再产生 PAGE_LIMIT，
+    // 因此改为按“是否切块”判定。探针本身（前 20 页单独扫一次）保持原样，
+    // 用来证明同一页范围的子集扫描与切块后的整份扫描给出同样的候选。
+    if (measured.pages <= modules.MAX_EXTRACTION_PAGES) continue
     const to = Math.min(pageRangeProbePages, measured.pages)
     const probeDraft = modules.buildExtractionDraft({
       projectId: 'real-doc-baseline',

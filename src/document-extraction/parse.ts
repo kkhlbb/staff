@@ -45,8 +45,10 @@ import {
   MAX_EXTRACTION_ISSUES,
   MAX_EXTRACTION_PAGES,
   evidenceKey,
-  isEvidenceComplete,
+  isProvenanceCompleteness,
   uniqueEvidence,
+  uniqueProvenance,
+  valueProvenance,
   type CandidateStatus,
   type ConfidenceLevel,
   type ExtractionCandidate,
@@ -137,7 +139,7 @@ export function evidenceFromSpan(
       (left, right) => left - right,
     ),
   }
-  return isEvidenceComplete(evidence) ? evidence : null
+  return isProvenanceCompleteness(evidence) ? evidence : null
 }
 
 function decimalCount(text: string): number {
@@ -170,7 +172,7 @@ function buildQuantity(input: {
   readonly inheritance?: UnitResolution | null
 }): QuantityOutcome {
   const evidence = input.evidence
-  if (!evidence || !isEvidenceComplete(evidence)) {
+  if (!evidence || !isProvenanceCompleteness(evidence)) {
     // M02：缺出处 → 数值不进候选，只留 issue。
     return { value: null, reason: 'SOURCE_UNRESOLVED', unitBasis: null }
   }
@@ -186,19 +188,19 @@ function buildQuantity(input: {
     unit = inheritance.unit
     unitBasis = inheritedUnitBasis(inheritance)
     for (const declaration of inheritance.declarations) {
-      if (isEvidenceComplete(declaration.evidence)) inheritedEvidence.push(declaration.evidence)
+      if (isProvenanceCompleteness(declaration.evidence)) inheritedEvidence.push(declaration.evidence)
     }
   }
   const conflict = inheritance?.status === 'conflict'
   if (conflict) {
     for (const declaration of inheritance?.declarations ?? []) {
-      if (isEvidenceComplete(declaration.evidence)) inheritedEvidence.push(declaration.evidence)
+      if (isProvenanceCompleteness(declaration.evidence)) inheritedEvidence.push(declaration.evidence)
     }
   }
 
   const evidenceList = uniqueEvidence([
     evidence,
-    ...(input.extraEvidence ?? []).filter((item) => isEvidenceComplete(item)),
+    ...(input.extraEvidence ?? []).filter((item) => isProvenanceCompleteness(item)),
     ...inheritedEvidence,
   ])
   const base = {
@@ -207,6 +209,8 @@ function buildQuantity(input: {
     // 单位串：显式写的就用原文；继承来的写声明里的那个单位串（出处里带声明选区，可核对）。
     unitText: unit.text,
     evidence: evidenceList,
+    // ADR-001：与 evidence 同源，pdf-text 分支逐字节一致（I5）。
+    provenance: evidenceList,
   }
   if (!parsed.ok) {
     return {
@@ -237,6 +241,7 @@ function mergeQuantity(values: readonly QuantityValue[]): QuantityValue | null {
   return {
     ...first,
     evidence: uniqueEvidence(values.flatMap((value) => value.evidence)),
+    provenance: uniqueProvenance(values.flatMap((value) => valueProvenance(value))),
   }
 }
 
@@ -944,6 +949,7 @@ function resolveRings(
         ],
         reasonCodes,
         evidence,
+        provenance: evidence,
         editRevision: 0,
         occurrence,
         data,
@@ -1064,6 +1070,7 @@ function parsePartLine(
     ],
     reasonCodes,
     evidence: uniqueEvidence(evidenceList),
+    provenance: uniqueEvidence(evidenceList),
     editRevision: 0,
     data,
   }
@@ -1164,6 +1171,7 @@ function parseIntervalLine(
     ],
     reasonCodes,
     evidence,
+    provenance: evidence,
     editRevision: 0,
     data,
   }
@@ -1211,6 +1219,7 @@ function parseFormulaLine(
       confidenceBasis: ['RULE_FORMULA_UNSUPPORTED'],
       reasonCodes: ['FORMULA_UNSUPPORTED'],
       evidence: span ? [span] : [],
+      provenance: span ? [span] : [],
       editRevision: 0,
       data,
     }
@@ -1241,6 +1250,7 @@ function parseFormulaLine(
     confidenceBasis: ['RULE_LINEAR_FORMULA'],
     reasonCodes: [],
     evidence: span ? [span] : [],
+    provenance: span ? [span] : [],
     editRevision: 0,
     data,
   }

@@ -29,6 +29,7 @@ import {
   PROJECT_FILE_SCHEMA_VERSION,
   REVISION_EXTENSION,
   V35_PROJECT_FILE_SCHEMA_VERSION,
+  V36_PROJECT_FILE_SCHEMA_VERSION,
   REVISION_PATH_PREFIX,
   type ProjectFileDecoded,
   type ProjectFileError,
@@ -352,6 +353,7 @@ export async function decodeProjectFile(
           C_PROJECT_FILE_SCHEMA_VERSION,
           D_PROJECT_FILE_SCHEMA_VERSION,
           V35_PROJECT_FILE_SCHEMA_VERSION,
+          V36_PROJECT_FILE_SCHEMA_VERSION,
           PROJECT_FILE_SCHEMA_VERSION,
         ]
   const rawProject = rawRecord.project

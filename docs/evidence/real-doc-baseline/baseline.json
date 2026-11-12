@@ -389,9 +389,52 @@
         "timeoutMs": 300000
       }
     },
-    "pageRangeProbe": []
+    "pageRangeProbe": [
+      {
+        "id": "r4@1-20",
+        "forDocument": "r4",
+        "pageRange": {
+          "from": 1,
+          "to": 20
+        },
+        "candidates": {
+          "total": 1,
+          "pending": 0,
+          "blocked": 1,
+          "confirmed": 0,
+          "byKind": [
+            {
+              "code": "ring",
+              "count": 1
+            }
+          ]
+        },
+        "blockedReasonCodes": [
+          {
+            "code": "UNKNOWN_UNIT",
+            "count": 1
+          }
+        ],
+        "issues": {
+          "total": 3,
+          "blocked": 3,
+          "warning": 0,
+          "byCode": [
+            {
+              "code": "NO_TEXT_LAYER",
+              "count": 3
+            }
+          ],
+          "noTextLayerPages": [
+            1,
+            2,
+            6
+          ]
+        }
+      }
+    ]
   },
-  "baselineReason": "document-extractor-6 大文档切块：r4（170 页）不再整份 PAGE_LIMIT，改为两块合并后出 7 条候选（pending 1 / blocked 6），问题码新增 CHUNK_PROCESSED×2、NO_TEXT_LAYER×3（页 1,2,6）；r4 不再是 PAGE_LIMIT 文档，故 1-20 页探针随之消失；其余 5 份候选/pending/blocked 逐个不变，仅规则版本串 5→6 变化。",
+  "baselineReason": "恢复 r4@1-20 页范围探针：探针触发条件由已废弃的 PAGE_LIMIT 改为“确实会被切块（页跨度>上限）”，只动证据脚本；探针数值与 v1 基线一致（1 候选/阻塞 1/UNKNOWN_UNIT×1/NO_TEXT_LAYER 页 1,2,6）",
   "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
   "generatedAtKind": "run-time",
   "runTimeFields": []

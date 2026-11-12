@@ -117,7 +117,7 @@ export interface ExtractionSourceIdentity {
 }
 
 /**
- * 每段出处必须齐全：确切版本 + 页码 + 未旋转 PDF 点选区 + 页框 + 原文片段。
+ * 每段 PDF 文本层出处必须齐全：确切版本 + 页码 + 未旋转 PDF 点选区 + 页框 + 原文片段。
  * textSnippet 保留 PDF 文本层原样（可能含康熙部首）；normalizedSnippet 是 NFKC 后的匹配文本。
  */
 export interface ExtractionEvidence {
@@ -134,40 +134,218 @@ export interface ExtractionEvidence {
 }
 
 /**
- * 出处完整性判据（唯一入口，M02 变异目标）。
- * 缺任何一项就返回 false：数值不得进入候选，只留 issue。
+ * ADR-001：出处从“单一 PDF 身份”泛化为 `EvidenceRef` 联合类型。
+ *
+ * `pdf-text` 就是现有的 `ExtractionEvidence`，**字段一个不动**（I5）。
+ * `kind` 可选：既有 evidence 没有该字段，读取方一律按 pdf-text 解释；
+ * 解析器写出时也保持旧形状，保证候选/出处 JSON 与改前逐字节一致。
  */
-export function isEvidenceComplete(evidence: ExtractionEvidence | null | undefined): boolean {
-  if (!evidence) return false
-  if (
-    evidence.documentId.trim() === '' ||
-    evidence.revisionId.trim() === '' ||
-    evidence.sha256.trim() === '' ||
-    evidence.blobKey.trim() === ''
-  ) {
-    return false
-  }
-  if (!Number.isSafeInteger(evidence.page) || evidence.page < 1) return false
-  if (evidence.textSnippet.trim() === '') return false
-  if (!evidence.textItemIndexes.every((index) => Number.isSafeInteger(index) && index >= 0)) {
-    return false
-  }
-  const rect = evidence.rectPdf
-  const box = evidence.pageBoxPdf
-  if (rect.length !== 4 || box.length !== 4) return false
-  if (!rect.every((value) => Number.isFinite(value))) return false
-  if (!box.every((value) => Number.isFinite(value))) return false
-  const [x0, y0, x1, y1] = rect
-  if (!(x1 > x0) || !(y1 > y0)) return false
-  const [bx0, by0, bx1, by1] = box
-  if (!(bx1 > bx0) || !(by1 > by0)) return false
-  const epsilon = 1e-6
-  if (x0 < bx0 - epsilon || y0 < by0 - epsilon) return false
-  if (x1 > bx1 + epsilon || y1 > by1 + epsilon) return false
-  return true
+export interface PdfTextEvidence extends ExtractionEvidence {
+  readonly kind?: 'pdf-text'
 }
 
-export function evidenceKey(evidence: ExtractionEvidence): string {
+/** 扫描件 OCR 出处：仍以 PDF 版本 + 页 + 选区为锚，必须带置信度（不许静默采信低置信）。 */
+export interface PdfOcrEvidence {
+  readonly kind: 'pdf-ocr'
+  readonly documentId: string
+  readonly revisionId: string
+  readonly sha256: string
+  readonly blobKey: string
+  readonly page: number
+  readonly rectPdf: PdfRect
+  readonly pageBoxPdf: PdfPageBox
+  readonly textSnippet: string
+  readonly confidence: number
+}
+
+/** 草绘照片 / 样品照片出处：锚在图片本身（imageId + sha256），不挂 PDF 版本。 */
+export interface ImageOcrEvidence {
+  readonly kind: 'image-ocr'
+  readonly imageId: string
+  readonly sha256: string
+  readonly fileName: string
+  readonly rectPdf: PdfRect
+  readonly recognizedText: string
+  readonly confidence: number
+}
+
+/**
+ * 用户断言出处：回答“谁在哪一次输入里这么说的”。
+ *
+ * 按 ADR-001 §11：`actorId` 用户手输、`sessionSeq` 项目内自增、`sessionLabel` 备注，
+ * 不用 UUID（本地生成的 id 证明不了身份，只解决“这条记录归哪一次输入”）。
+ * 撤销只追加留痕字段，出处本身不被删除（I4 出处不可抹）。
+ *
+ * 注意：`provenance` 不是防伪机制；它回答“这个值当初从哪来”，不回答“这个值是真话吗”。
+ */
+export interface UserAttestation {
+  readonly kind: 'user-attestation'
+  /** 本机用户标识（手输，非姓名，不许自由文本）。 */
+  readonly actorId: string
+  /** ISO 时间。 */
+  readonly at: string
+  /** 项目内自增序号（1、2、3…），界面上显示为“第 3 次输入”。 */
+  readonly sessionSeq: number
+  /** 用户备注名（可空），例如「2026-11-12 复检」。 */
+  readonly sessionLabel: string | null
+  /** 用户原话，逐字保留。 */
+  readonly statement: string
+  /** 这话是在定哪个字段。 */
+  readonly fieldPath: string
+  /** 显式撤销留痕；撤销不删除出处。 */
+  readonly revokedAt?: string | null
+  readonly revokedBy?: string | null
+  readonly revokedStatement?: string | null
+}
+
+export type EvidenceRefKind = 'pdf-text' | 'pdf-ocr' | 'image-ocr' | 'user-attestation'
+
+/** 一个数值/候选/决定/应用计划项所依据的出处。 */
+export type EvidenceRef = PdfTextEvidence | PdfOcrEvidence | ImageOcrEvidence | UserAttestation
+
+/** 出处种类；缺省 `kind` 就是 pdf-text（兼容改前的 evidence 形状）。 */
+export function evidenceRefKind(ref: EvidenceRef): EvidenceRefKind | null {
+  const kind = (ref as { readonly kind?: unknown }).kind
+  if (kind === undefined) return 'pdf-text'
+  if (
+    kind === 'pdf-text' ||
+    kind === 'pdf-ocr' ||
+    kind === 'image-ocr' ||
+    kind === 'user-attestation'
+  ) {
+    return kind
+  }
+  return null
+}
+
+function isConfidence(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1
+}
+
+/**
+ * 出处完整性判据（**唯一入口**，M02 变异目标）。
+ *
+ * `pdf-text` 分支与改造前的 `isEvidenceComplete` 逐条等价：同样的字段检查、
+ * 同样的矩形包含容差 1e-6、缺任何一项都返回 false。禁止为任何新类型另写一份校验。
+ * 空数组/空值一律 false（I2：出处为空 = 非法）。
+ */
+export function isProvenanceCompleteness(ref: EvidenceRef | null | undefined): boolean {
+  if (!ref) return false
+  const kind = evidenceRefKind(ref)
+  if (kind === 'pdf-text') {
+    const evidence = ref as ExtractionEvidence
+    if (
+      evidence.documentId.trim() === '' ||
+      evidence.revisionId.trim() === '' ||
+      evidence.sha256.trim() === '' ||
+      evidence.blobKey.trim() === ''
+    ) {
+      return false
+    }
+    if (!Number.isSafeInteger(evidence.page) || evidence.page < 1) return false
+    if (evidence.textSnippet.trim() === '') return false
+    if (!evidence.textItemIndexes.every((index) => Number.isSafeInteger(index) && index >= 0)) {
+      return false
+    }
+    const rect = evidence.rectPdf
+    const box = evidence.pageBoxPdf
+    if (rect.length !== 4 || box.length !== 4) return false
+    if (!rect.every((value) => Number.isFinite(value))) return false
+    if (!box.every((value) => Number.isFinite(value))) return false
+    const [x0, y0, x1, y1] = rect
+    if (!(x1 > x0) || !(y1 > y0)) return false
+    const [bx0, by0, bx1, by1] = box
+    if (!(bx1 > bx0) || !(by1 > by0)) return false
+    const epsilon = 1e-6
+    if (x0 < bx0 - epsilon || y0 < by0 - epsilon) return false
+    if (x1 > bx1 + epsilon || y1 > by1 + epsilon) return false
+    return true
+  }
+  if (kind === 'pdf-ocr') {
+    const ocr = ref as PdfOcrEvidence
+    if (
+      ocr.documentId.trim() === '' ||
+      ocr.revisionId.trim() === '' ||
+      ocr.sha256.trim() === '' ||
+      ocr.blobKey.trim() === ''
+    ) {
+      return false
+    }
+    if (!Number.isSafeInteger(ocr.page) || ocr.page < 1) return false
+    if (ocr.textSnippet.trim() === '') return false
+    if (!isConfidence(ocr.confidence)) return false
+    const rect = ocr.rectPdf
+    const box = ocr.pageBoxPdf
+    if (rect.length !== 4 || box.length !== 4) return false
+    if (!rect.every((value) => Number.isFinite(value))) return false
+    if (!box.every((value) => Number.isFinite(value))) return false
+    const [x0, y0, x1, y1] = rect
+    if (!(x1 > x0) || !(y1 > y0)) return false
+    const [bx0, by0, bx1, by1] = box
+    if (!(bx1 > bx0) || !(by1 > by0)) return false
+    const epsilon = 1e-6
+    if (x0 < bx0 - epsilon || y0 < by0 - epsilon) return false
+    if (x1 > bx1 + epsilon || y1 > by1 + epsilon) return false
+    return true
+  }
+  if (kind === 'image-ocr') {
+    const image = ref as ImageOcrEvidence
+    if (
+      image.imageId.trim() === '' ||
+      image.sha256.trim() === '' ||
+      image.fileName.trim() === '' ||
+      image.recognizedText.trim() === ''
+    ) {
+      return false
+    }
+    if (!isConfidence(image.confidence)) return false
+    const rect = image.rectPdf
+    if (rect.length !== 4 || !rect.every((value) => Number.isFinite(value))) return false
+    const [x0, y0, x1, y1] = rect
+    return x1 > x0 && y1 > y0
+  }
+  if (kind === 'user-attestation') {
+    const attestation = ref as UserAttestation
+    if (
+      attestation.actorId.trim() === '' ||
+      attestation.fieldPath.trim() === '' ||
+      attestation.statement.trim() === ''
+    ) {
+      return false
+    }
+    if (attestation.at.trim() === '' || Number.isNaN(Date.parse(attestation.at))) return false
+    if (!Number.isSafeInteger(attestation.sessionSeq) || attestation.sessionSeq < 1) return false
+    if (attestation.sessionLabel !== null && typeof attestation.sessionLabel !== 'string') {
+      return false
+    }
+    return true
+  }
+  return false
+}
+
+/**
+ * 改造前的名字保留为**别名**（不是第二份实现）：旧调用方与旧用例继续可用，
+ * 但唯一实现只有 `isProvenanceCompleteness`。新代码一律用新名字。
+ */
+export function isEvidenceComplete(
+  evidence: ExtractionEvidence | null | undefined,
+): boolean {
+  return isProvenanceCompleteness(evidence)
+}
+
+/** evidenceKey 只需文本锚点四要素；pdf-ocr 复用同一格式，避免第二套 key。 */
+interface TextAnchorEvidence {
+  readonly revisionId: string
+  readonly page: number
+  readonly rectPdf: PdfRect
+  readonly textSnippet: string
+}
+
+/**
+ * PDF 文本层出处的去重身份。**输出字符串与改造前逐字节一致**（I5）：
+ * `revisionId#page#x0#y0#x1#y1#textSnippet`。
+ */
+export function evidenceKey(evidence: TextAnchorEvidence): string {
   const [x0, y0, x1, y1] = evidence.rectPdf
   return [
     evidence.revisionId,
@@ -180,19 +358,115 @@ export function evidenceKey(evidence: ExtractionEvidence): string {
   ].join('#')
 }
 
-export function uniqueEvidence(
-  evidence: readonly ExtractionEvidence[],
-): readonly ExtractionEvidence[] {
+/**
+ * 按 kind 生成出处身份：pdf-text 分支直接委托 `evidenceKey`（不重写格式），
+ * 其它种类追加种类后缀，保证不同 kind 的同坐标出处不会撞在一起。
+ */
+export function provenanceKey(ref: EvidenceRef): string {
+  const kind = evidenceRefKind(ref)
+  if (kind === 'pdf-text') return evidenceKey(ref as PdfTextEvidence)
+  if (kind === 'pdf-ocr') return `${evidenceKey(ref as PdfOcrEvidence)}#pdf-ocr`
+  if (kind === 'image-ocr') {
+    const image = ref as ImageOcrEvidence
+    const [x0, y0, x1, y1] = image.rectPdf
+    return [
+      image.imageId,
+      image.sha256,
+      x0.toFixed(2),
+      y0.toFixed(2),
+      x1.toFixed(2),
+      y1.toFixed(2),
+      image.recognizedText,
+      'image-ocr',
+    ].join('#')
+  }
+  if (kind === 'user-attestation') {
+    const attestation = ref as UserAttestation
+    return [
+      attestation.actorId,
+      attestation.sessionSeq,
+      attestation.fieldPath,
+      attestation.statement,
+      'user-attestation',
+    ].join('#')
+  }
+  throw new Error('未知出处种类：无法生成 provenanceKey')
+}
+
+/** 按 kind 去重（保持首次出现顺序）；pdf 分支的 key 与改前一致。 */
+export function uniqueProvenance(refs: readonly EvidenceRef[]): readonly EvidenceRef[] {
   const seen = new Set<string>()
-  const out: ExtractionEvidence[] = []
-  for (const item of evidence) {
-    const key = evidenceKey(item)
+  const out: EvidenceRef[] = []
+  for (const item of refs) {
+    const key = provenanceKey(item)
     if (seen.has(key)) continue
     seen.add(key)
     out.push(item)
   }
   return out
 }
+
+/** pdf-text 分支的旧名字：唯一实现是 uniqueProvenance。 */
+export function uniqueEvidence(
+  evidence: readonly ExtractionEvidence[],
+): readonly ExtractionEvidence[] {
+  return uniqueProvenance(evidence) as readonly ExtractionEvidence[]
+}
+
+/**
+ * 出处失效判定（I3，按 kind 分开）：
+ * - pdf-text / pdf-ocr：所属 revision 的 sha256 变了（或版本不再可用）→ stale；
+ * - image-ocr：图片 sha256 变了（或图片不再可用）→ stale；
+ * - user-attestation：**不因文件变化 stale**，只能被显式撤销（revoked 与 stale 分开报）。
+ */
+export type ProvenanceValidity = 'valid' | 'stale' | 'revoked'
+
+export interface ProvenanceSourceState {
+  /** 当前仍可用的 PDF 版本与其哈希。 */
+  readonly revisions: readonly { readonly revisionId: string; readonly sha256: string }[]
+  /** 当前仍可用的图片与其哈希。 */
+  readonly images?: readonly { readonly imageId: string; readonly sha256: string }[]
+}
+
+export function provenanceValidity(
+  ref: EvidenceRef,
+  state: ProvenanceSourceState,
+): ProvenanceValidity {
+  const kind = evidenceRefKind(ref)
+  if (kind === 'pdf-text' || kind === 'pdf-ocr') {
+    const anchor = ref as PdfTextEvidence
+    const current = state.revisions.find((item) => item.revisionId === anchor.revisionId)
+    return current !== undefined && current.sha256 === anchor.sha256 ? 'valid' : 'stale'
+  }
+  if (kind === 'image-ocr') {
+    const image = ref as ImageOcrEvidence
+    const current = (state.images ?? []).find((item) => item.imageId === image.imageId)
+    return current !== undefined && current.sha256 === image.sha256 ? 'valid' : 'stale'
+  }
+  if (kind === 'user-attestation') {
+    const attestation = ref as UserAttestation
+    return (attestation.revokedAt ?? null) === null ? 'valid' : 'revoked'
+  }
+  return 'stale'
+}
+
+/** 用户断言只能被显式撤销：追加撤销留痕，不删出处、不改原话。 */
+export function revokeAttestation(
+  attestation: UserAttestation,
+  revoke: { readonly by: string; readonly at: string; readonly statement: string },
+): UserAttestation {
+  return {
+    ...attestation,
+    revokedBy: revoke.by,
+    revokedAt: revoke.at,
+    revokedStatement: reviveStatement(revoke.statement),
+  }
+}
+
+function reviveStatement(statement: string): string {
+  return statement.trim() === '' ? '（未填写撤销说明）' : statement
+}
+
 
 /** 单个数值字段：原文十进制字符串 + 原始位数 + 精确 q（只在 mm 且格式合法时有值）。 */
 export interface QuantityValue {
@@ -206,6 +480,12 @@ export interface QuantityValue {
   /** 只接受 'mm'；inch 等一律 null，由 reasonCodes 标明。 */
   readonly unit: 'mm' | null
   readonly evidence: readonly ExtractionEvidence[]
+  /**
+   * ADR-001：该数值的出处集合（I2：至少一条，空数组等同非法）。
+   * 可选以读旧草稿/旧项目；缺省时由 `evidence` 逐条映射为 pdf-text 出处，值不改、不重算。
+   * 解析器写出时与 `evidence` 同源，pdf-text 分支逐字节一致（I5）。
+   */
+  readonly provenance?: readonly EvidenceRef[]
 }
 
 export interface RingCandidateData {
@@ -275,6 +555,11 @@ interface CandidateBase {
   readonly confidenceBasis: readonly string[]
   readonly reasonCodes: readonly ExtractionReasonCode[]
   readonly evidence: readonly ExtractionEvidence[]
+  /**
+   * ADR-001：候选级出处集合（公式表达式等候选级依据）。
+   * 可选以读旧草稿；缺省时由 `evidence` 逐条映射为 pdf-text 出处。
+   */
+  readonly provenance?: readonly EvidenceRef[]
   /** 人工编辑代数；每次编辑 +1，旧确认随之失效。 */
   readonly editRevision: number
   /**
@@ -330,6 +615,8 @@ export interface ExtractionDecision {
   /** 决定时的数值快照（JSON 字符串），防止事后篡改。 */
   readonly valueSnapshot: string
   readonly evidence: readonly ExtractionEvidence[]
+  /** ADR-001：决定时的出处集合；旧决定缺省时由 evidence 映射。 */
+  readonly provenance?: readonly EvidenceRef[]
   readonly invalidatedByEditRevision: number | null
 }
 
@@ -373,6 +660,10 @@ export type ExtractionErrorCode =
   | 'SOURCE_STALE'
   | 'SOURCE_IDENTITY_MISMATCH'
   | 'EXTRACTOR_VERSION_MISMATCH'
+  /** user-attestation 的 actorId/sessionSeq 与当前会话不一致（跨会话伪造）。 */
+  | 'ATTESTATION_SESSION_MISMATCH'
+  /** user-attestation 已被显式撤销：出处仍在，但不再有效。 */
+  | 'PROVENANCE_REVOKED'
 
 export type ExtractionResult<T> =
   | { readonly ok: true; readonly value: T }
@@ -426,4 +717,26 @@ export function candidateValueSnapshot(candidate: ExtractionCandidate): string {
       valueQ: value.valueQ,
     })),
   )
+}
+
+/**
+ * 数值的出处集合（**唯一映射入口**）：优先取显式 `provenance`；
+ * 旧草稿/旧项目缺省时把 `evidence` 逐条解释为 pdf-text（字段原样，不补造、不改值）。
+ * 显式给出空数组表示“没有出处”，不会再回退到 evidence —— 空 = 非法（I2）。
+ */
+export function valueProvenance(value: QuantityValue): readonly EvidenceRef[] {
+  if (value.provenance !== undefined) return value.provenance
+  return value.evidence.map((evidence) => evidence as PdfTextEvidence)
+}
+
+/** 候选级出处集合（公式表达式等）；语义同 `valueProvenance`。 */
+export function candidateProvenance(candidate: ExtractionCandidate): readonly EvidenceRef[] {
+  if (candidate.provenance !== undefined) return candidate.provenance
+  return candidate.evidence.map((evidence) => evidence as PdfTextEvidence)
+}
+
+/** 决定的出处集合；语义同 `valueProvenance`。 */
+export function decisionProvenance(decision: ExtractionDecision): readonly EvidenceRef[] {
+  if (decision.provenance !== undefined) return decision.provenance
+  return decision.evidence.map((evidence) => evidence as PdfTextEvidence)
 }

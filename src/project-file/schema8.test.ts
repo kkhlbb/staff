@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * V3.6 schema8：提取草稿随 project.json 持久化。
+ * V3.6 起 schema8 / ADR-001 起 schema9：提取草稿随 project.json 持久化。
  *
  * 证明：
  * - 候选/出处/决定逐字段往返；
@@ -63,8 +63,8 @@ function findRing(snapshot: ProjectFileSnapshot, symbol: string) {
   return { draft, candidate: found }
 }
 
-describe('V3.6 schema8：提取草稿持久化与严格校验', () => {
-  it('候选/出处/决定往返：schema8 编码解码逐字段保留', async () => {
+describe('schema8→9：提取草稿持久化与严格校验', () => {
+  it('候选/出处/决定往返：schema9 编码解码逐字段保留', async () => {
     const snapshot = await snapshotWithDrafts()
     const { draft } = findRing(snapshot, 'H')
     const decided = confirmCandidate(draft, {
@@ -93,7 +93,7 @@ describe('V3.6 schema8：提取草稿持久化与严格校验', () => {
     const encoded = await encodeProjectFile(withDecision)
     expect(encoded.ok, encoded.ok ? '' : `${encoded.error.code}: ${encoded.error.message}`).toBe(true)
     if (!encoded.ok) return
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(8)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(9)
 
     const decoded = await decodeProjectFile(encoded.value.bytes)
     expect(decoded.ok).toBe(true)
@@ -194,7 +194,7 @@ describe('V3.6 schema8：提取草稿持久化与严格校验', () => {
     const decoded = await decodeProjectFile(legacy)
     expect(decoded.ok, decoded.ok ? '' : `${decoded.error.code}: ${decoded.error.message}`).toBe(true)
     if (!decoded.ok) return
-    expect(decoded.value.snapshot.project.schemaVersion).toBe(8)
+    expect(decoded.value.snapshot.project.schemaVersion).toBe(9)
     expect(decoded.value.snapshot.project.extractionDrafts).toEqual([])
   })
 

@@ -12,11 +12,18 @@ import { tryParseMm } from '../domain/units'
 import { stableId } from './ids'
 import {
   candidateNumericFields,
+  candidateProvenance,
   candidateValueSnapshot,
   extractionFailure,
   extractionSuccess,
-  isEvidenceComplete,
+  evidenceRefKind,
+  isProvenanceCompleteness,
+  provenanceValidity,
+  uniqueProvenance,
+  valueProvenance,
   type CandidateStatus,
+  type EvidenceRef,
+  type ExtractionErrorCode,
   type ExtractionCandidate,
   type ExtractionDecision,
   type ExtractionDraft,
@@ -26,6 +33,7 @@ import {
   type ExtractionReasonCode,
   type ExtractionResult,
   type QuantityValue,
+  type UserAttestation,
 } from './types'
 
 /** 编辑数值后仍然成立的原因码（值本身已由人工改过，值类原因随之失效）。 */
@@ -71,19 +79,24 @@ function candidateWithStatus(
   return { ...candidate, status, reasonCodes }
 }
 
-/** 数值字段出处必须逐项齐全；缺一项就不能确认/应用。 */
-function evidenceMissing(candidate: ExtractionCandidate): string | null {
-  const fields = candidateNumericFields(candidate)
-  for (const { field, value } of fields) {
-    if (value.evidence.length === 0) return field
-    for (const evidence of value.evidence) {
-      if (!isEvidenceComplete(evidence)) return field
+/**
+ * 出处校验（唯一判据 `isProvenanceCompleteness`；这里只管“有没有 + 齐不齐”）。
+ * 空出处 = 非法（I2），等同改前的 `isEvidenceComplete(null) === false`。
+ * pdf-text 分支与改前逐条等价；M02 变异目标。
+ */
+function provenanceMissing(candidate: ExtractionCandidate): string | null {
+  for (const { field, value } of candidateNumericFields(candidate)) {
+    const refs = valueProvenance(value)
+    if (refs.length === 0) return field
+    for (const ref of refs) {
+      if (!isProvenanceCompleteness(ref)) return field
     }
   }
   if (candidate.kind === 'formula') {
-    if (candidate.evidence.length === 0) return 'expression'
-    for (const evidence of candidate.evidence) {
-      if (!isEvidenceComplete(evidence)) return 'expression'
+    const refs = candidateProvenance(candidate)
+    if (refs.length === 0) return 'expression'
+    for (const ref of refs) {
+      if (!isProvenanceCompleteness(ref)) return 'expression'
     }
   }
   return null
@@ -180,7 +193,7 @@ export function confirmCandidate(
       `候选处于阻塞状态（${candidate.reasonCodes.join(', ') || '无原因码'}），不能确认`,
     )
   }
-  const missing = evidenceMissing(candidate)
+  const missing = provenanceMissing(candidate)
   if (missing) {
     return extractionFailure(
       'EVIDENCE_REQUIRED',
@@ -227,6 +240,9 @@ export function confirmCandidate(
     reason: request.reason ?? null,
     valueSnapshot: candidateValueSnapshot(candidate),
     evidence: candidateNumericFields(candidate).flatMap(({ value }) => value.evidence),
+    provenance: uniqueProvenance(
+      candidateNumericFields(candidate).flatMap(({ value }) => valueProvenance(value)),
+    ),
     invalidatedByEditRevision: null,
   }
 
@@ -281,6 +297,9 @@ export function rejectCandidate(
     reason: request.reason,
     valueSnapshot: candidateValueSnapshot(candidate),
     evidence: candidateNumericFields(candidate).flatMap(({ value }) => value.evidence),
+    provenance: uniqueProvenance(
+      candidateNumericFields(candidate).flatMap(({ value }) => valueProvenance(value)),
+    ),
     invalidatedByEditRevision: null,
   }
 
@@ -347,6 +366,9 @@ export function revokeConfirmation(
     reason: request.reason ?? '撤销确认',
     valueSnapshot: candidateValueSnapshot(candidate),
     evidence: candidateNumericFields(candidate).flatMap(({ value }) => value.evidence),
+    provenance: uniqueProvenance(
+      candidateNumericFields(candidate).flatMap(({ value }) => valueProvenance(value)),
+    ),
     invalidatedByEditRevision: null,
   }
 
@@ -408,7 +430,7 @@ function buildEditedQuantity(request: EditRequest): ExtractionResult<QuantityVal
   if (request.evidence.length === 0) {
     return extractionFailure('EVIDENCE_REQUIRED', '改后值必须带 PDF 证据，不能凭空补值')
   }
-  if (!request.evidence.every((item) => isEvidenceComplete(item))) {
+  if (!request.evidence.every((item) => isProvenanceCompleteness(item))) {
     return extractionFailure('EVIDENCE_REQUIRED', '改后值的出处不完整（版本/页/选区/原文）')
   }
   const parsed = tryParseMm(request.text)
@@ -425,6 +447,7 @@ function buildEditedQuantity(request: EditRequest): ExtractionResult<QuantityVal
     unitText: 'mm',
     unit: 'mm',
     evidence: request.evidence,
+    provenance: request.evidence,
   })
 }
 
@@ -505,6 +528,7 @@ export function editCandidateField(
     confidence: 'medium' as const,
     confidenceBasis: [...candidate.confidenceBasis, 'RULE_MANUAL_EDIT'],
     evidence: [...candidate.evidence, ...request.evidence],
+    provenance: uniqueProvenance([...candidateProvenance(candidate), ...request.evidence]),
   }
 
   const decisions = draft.decisions.map((decision) =>
@@ -556,6 +580,8 @@ export interface ApplicationPlanItem {
     readonly unit: 'mm' | null
   }[]
   readonly evidence: readonly ExtractionEvidence[]
+  /** ADR-001：本项所依据的出处集合（至少一条，且逐项有效）。 */
+  readonly provenance: readonly EvidenceRef[]
 }
 
 export interface ApplicationPlan {
@@ -564,15 +590,36 @@ export interface ApplicationPlan {
   readonly items: readonly ApplicationPlanItem[]
 }
 
+/** 当前会话：user-attestation 必须与它一致，跨会话伪造一律拒绝。 */
+export interface PlanSession {
+  readonly actorId: string
+  /** 项目内自增序号（不是 UUID）。 */
+  readonly sessionSeq: number
+}
+
 export interface PlanRequest {
   readonly candidateIds: readonly string[]
-  /** 调用方声明的来源身份；与草稿不一致即失效。 */
+  /**
+   * 调用方声明的 PDF 来源身份；与草稿不一致即失效。
+   * pdf-* 出处仍逐条比对 revisionId + sha256（I5：行为与改前等价）。
+   */
   readonly source: { readonly revisionId: string; readonly sha256: string }
+  /** 当前会话；缺省时任何 user-attestation 都视为无法核对。 */
+  readonly session?: PlanSession
+  /** 当前仍可用的图片（image-ocr 出处校验）；缺省视为没有可用图片。 */
+  readonly images?: readonly { readonly imageId: string; readonly sha256: string }[]
 }
 
 /**
  * “送入项目草稿”的计划：只接受逐条确认且决定未失效的候选。
  * M01（去掉人工确认直接写入）就在这里：删除下面的状态/决定检查，未确认候选会进入计划。
+ *
+ * ADR-001 §4：来源校验从“单条 PDF 身份”改为“出处集合完整 + 逐项有效”：
+ * 1) 草稿级 PDF 身份与请求声明一致（与改前同一错误码/文案）；
+ * 2) 每个数值字段的 provenance 非空，且每条都过唯一判据 isProvenanceCompleteness；
+ * 3) pdf-* 出处逐条比对 revisionId + sha256；image-ocr 比对图片 sha256；
+ * 4) user-attestation 校验 actorId/sessionSeq 与当前会话一致，跨会话伪造拒绝。
+ * M24 变异目标：把 user-attestation 当成“总是有效”。
  */
 export function planApplication(
   draft: ExtractionDraft,
@@ -587,6 +634,56 @@ export function planApplication(
       '来源 PDF 版本或哈希与草稿不一致，旧确认失效，需按新版本重新提取确认',
     )
   }
+  const state = {
+    revisions: [
+      { revisionId: draft.sourceIdentity.revisionId, sha256: draft.sourceIdentity.sha256 },
+    ],
+    images: request.images ?? [],
+  }
+  const checkRefs = (
+    candidateId: string,
+    field: string,
+    refs: readonly EvidenceRef[],
+  ): { code: ExtractionErrorCode; message: string } | null => {
+    if (refs.length === 0) {
+      return {
+        code: 'EVIDENCE_REQUIRED',
+        message: `候选 ${candidateId} 的字段 ${field} 缺少出处，不能送入项目草稿`,
+      }
+    }
+    for (const ref of refs) {
+      if (!isProvenanceCompleteness(ref)) {
+        return {
+          code: 'EVIDENCE_REQUIRED',
+          message: `候选 ${candidateId} 的字段 ${field} 出处不完整（版本/页/选区/原文），不能送入项目草稿`,
+        }
+      }
+    }
+    for (const ref of refs) {
+      const validity = provenanceValidity(ref, state)
+      if (validity === 'revoked') {
+        return {
+          code: 'PROVENANCE_REVOKED',
+          message: `候选 ${candidateId} 的字段 ${field} 出处已被用户显式撤销，不能再作为依据`,
+        }
+      }
+      if (validity === 'stale') {
+        return {
+          code: 'SOURCE_STALE',
+          message: `候选 ${candidateId} 的字段 ${field} 出处已失效（来源文件变化），需按新文件重新确认`,
+        }
+      }
+      const kind = evidenceRefKind(ref)
+      if (kind === 'user-attestation' && !attestationMatchesSession(ref, request.session)) {
+        return {
+          code: 'ATTESTATION_SESSION_MISMATCH',
+          message: `候选 ${candidateId} 的字段 ${field} 出处不属于当前会话（跨会话断言一律拒绝）`,
+        }
+      }
+    }
+    return null
+  }
+
   const ids = [...new Set(request.candidateIds)]
   if (ids.length === 0) {
     return extractionFailure('NOT_CONFIRMED', '未选择任何候选，不能生成应用计划')
@@ -622,12 +719,14 @@ export function planApplication(
     if (decision.valueSnapshot !== candidateValueSnapshot(candidate)) {
       return extractionFailure('STALE_DECISION', `候选 ${candidateId} 的数值在确认后被改动`)
     }
-    const missing = evidenceMissing(candidate)
-    if (missing) {
-      return extractionFailure(
-        'EVIDENCE_REQUIRED',
-        `候选 ${candidateId} 的字段 ${missing} 缺少完整出处`,
-      )
+    for (const { field, value } of candidateNumericFields(candidate)) {
+      const failure = checkRefs(candidateId, field, valueProvenance(value))
+      if (failure !== null) return extractionFailure(failure.code, failure.message)
+    }
+    const candidateRefs = candidateProvenance(candidate)
+    if (candidate.kind === 'formula') {
+      const failure = checkRefs(candidateId, 'expression', candidateRefs)
+      if (failure !== null) return extractionFailure(failure.code, failure.message)
     }
     items.push({
       candidateId: candidate.candidateId,
@@ -640,9 +739,27 @@ export function planApplication(
         unit: value.unit,
       })),
       evidence: candidate.evidence,
+      provenance: uniqueProvenance([
+        ...candidateNumericFields(candidate).flatMap(({ value }) => valueProvenance(value)),
+        ...candidateRefs,
+      ]),
     })
   }
   return extractionSuccess({ applied: false, items })
+}
+
+/** user-attestation 与当前会话一致性（M24 变异目标）。 */
+function attestationMatchesSession(
+  ref: EvidenceRef,
+  session: PlanSession | undefined,
+): boolean {
+  if (evidenceRefKind(ref) !== 'user-attestation') return true
+  if (session === undefined) return false
+  const attestation = ref as UserAttestation
+  return (
+    attestation.actorId === session.actorId &&
+    attestation.sessionSeq === session.sessionSeq
+  )
 }
 
 /**
