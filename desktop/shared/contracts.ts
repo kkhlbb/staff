@@ -62,6 +62,9 @@ export const IPC_CHANNELS = {
   drawingUpdateSpacer: 'drawing:update-spacer',
   drawingExportPdf: 'drawing:export-pdf',
   drawingExportSvg: 'drawing:export-svg',
+  /** DXF 导出 v1：R12（默认）/ 2000。 */
+  drawingExportDxfR12: 'drawing:export-dxf-r12',
+  drawingExportDxf2000: 'drawing:export-dxf-2000',
   /** D：参数联动（草稿/预览/确认/绑定/对比/恢复）。 */
   changeStage: 'change:stage',
   changePreview: 'change:preview',
@@ -1286,6 +1289,14 @@ export interface CunlianApi {
   ): Promise<IpcResult<DrawingExportValue>>
   /** 用同一权威 DrawingData 序列化 SVG；同一冻结指纹。 */
   exportDrawingSvg(
+    request: DrawingExportRequest,
+  ): Promise<IpcResult<DrawingExportValue>>
+  /** 同一权威 DrawingData → DXF R12（AC1009，切割/检具/老设备默认）。 */
+  exportDrawingDxfR12(
+    request: DrawingExportRequest,
+  ): Promise<IpcResult<DrawingExportValue>>
+  /** 同一权威 DrawingData → DXF 2000（AC1015）。 */
+  exportDrawingDxf2000(
     request: DrawingExportRequest,
   ): Promise<IpcResult<DrawingExportValue>>
 

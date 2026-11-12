@@ -1,5 +1,5 @@
 /**
- * 导出文件（PDF/SVG）的原子落盘（V3-C-04）。
+ * 导出文件（PDF/SVG/DXF）的原子落盘（V3-C-04，DXF 复用同一提交序列）。
  *
  * 与 fileStore 相同的提交序列：校验后缀/父目录/非常规文件 → 核对目标指纹 →
  * 同目录唯一临时文件 wx/0600 写满 + fsync → 回读哈希 + 结构校验 → rename 前
@@ -11,7 +11,14 @@ import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import { nodeFileOps, sha256Bytes, type FileOps, type SaveError } from './fileStore'
 
-export type DrawingExportKind = 'pdf' | 'svg'
+export type DrawingExportKind = 'pdf' | 'svg' | 'dxf-r12' | 'dxf-2000'
+
+export const DRAWING_EXPORT_EXTENSION: Record<DrawingExportKind, string> = {
+  pdf: '.pdf',
+  svg: '.svg',
+  'dxf-r12': '.dxf',
+  'dxf-2000': '.dxf',
+}
 
 export interface DrawingExportSaveOptions {
   targetPath: string
@@ -65,7 +72,7 @@ export class DrawingExportStore {
 
   async save(options: DrawingExportSaveOptions): Promise<DrawingExportSaveResult> {
     const ops = options.ops ?? this.ops
-    const expectedExtension = options.kind === 'pdf' ? '.pdf' : '.svg'
+    const expectedExtension = DRAWING_EXPORT_EXTENSION[options.kind]
     if (path.extname(options.targetPath).toLowerCase() !== expectedExtension) {
       return {
         ok: false,

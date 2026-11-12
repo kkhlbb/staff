@@ -1,0 +1,18 @@
+--- a/src/drawing/dxfExport.ts
++++ b/src/drawing/dxfExport.ts
+@@ -196,12 +196,12 @@
+ 
+ /** 纸面点（左上原点，y 向下）→ 模型点（1:1，y 向上）。 */
+ export function dxfPaperToModel(data: DrawingData, point: Point): Point {
+-  const k = dxfScaleFactorOf(data)
+   const height = finite(data.paper?.heightMm, 'paper.heightMm')
+   if (height <= 0) fail('INVALID_DRAWING', '纸张高度必须为正', String(height))
++  // M20 变异：直接写纸面坐标（不做缩放、不翻转 y）。
+   return {
+-    x: finite(point.x, 'point.x') * k,
+-    y: (height - finite(point.y, 'point.y')) * k,
++    x: finite(point.x, 'point.x'),
++    y: finite(point.y, 'point.y'),
+   }
+ }
+ 

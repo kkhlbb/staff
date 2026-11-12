@@ -1,0 +1,136 @@
+{
+  "schema": "dxf-export-e2e-v1",
+  "app": "out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链",
+  "port": 9393,
+  "checks": [
+    {
+      "id": "打开内置示例",
+      "ok": true
+    },
+    {
+      "id": "点击「生成图纸」",
+      "ok": true
+    },
+    {
+      "id": "DXF 按钮可见",
+      "ok": true,
+      "buttons": [
+        {
+          "text": "导出 PDF（矢量）",
+          "disabled": false
+        },
+        {
+          "text": "导出 SVG",
+          "disabled": false
+        },
+        {
+          "text": "导出 DXF（R12）",
+          "disabled": false
+        },
+        {
+          "text": "导出 DXF（2000）",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "辅助功能权限探测",
+      "ok": false,
+      "available": false,
+      "detail": "processes=Finder, Notion, clash-verge, DeepSeek Harness, Hermes, Terminal, Grok Bot, ChatGPT, NapCatInstaller, QQ, System Settings, Google Chrome, 寸链",
+      "windows": 0
+    },
+    {
+      "id": "点击「导出 DXF（R12）」后进入系统保存对话框（IPC 挂起）",
+      "ok": true,
+      "status": "BLOCKED",
+      "reason": "no-accessibility-permission",
+      "probe": {
+        "available": false,
+        "detail": "processes=Finder, Notion, clash-verge, DeepSeek Harness, Hermes, Terminal, Grok Bot, ChatGPT, NapCatInstaller, QQ, System Settings, Google Chrome, 寸链",
+        "windows": 0
+      },
+      "clicked": {
+        "ok": true,
+        "disabled": false
+      },
+      "rendererStateWhileDialogOpen": {
+        "buttons": [
+          {
+            "text": "导出 PDF（矢量）",
+            "disabled": true
+          },
+          {
+            "text": "导出 SVG",
+            "disabled": true
+          },
+          {
+            "text": "导出 DXF（R12）",
+            "disabled": true
+          },
+          {
+            "text": "导出 DXF（2000）",
+            "disabled": true
+          }
+        ],
+        "notice": "",
+        "error": ""
+      },
+      "fileOnDisk": false
+    },
+    {
+      "id": "打包应用导出 2000 并取消",
+      "ok": false,
+      "blocked": true
+    }
+  ],
+  "r12": {
+    "status": "BLOCKED",
+    "reason": "no-accessibility-permission",
+    "probe": {
+      "available": false,
+      "detail": "processes=Finder, Notion, clash-verge, DeepSeek Harness, Hermes, Terminal, Grok Bot, ChatGPT, NapCatInstaller, QQ, System Settings, Google Chrome, 寸链",
+      "windows": 0
+    },
+    "clicked": {
+      "ok": true,
+      "disabled": false
+    },
+    "rendererStateWhileDialogOpen": {
+      "buttons": [
+        {
+          "text": "导出 PDF（矢量）",
+          "disabled": true
+        },
+        {
+          "text": "导出 SVG",
+          "disabled": true
+        },
+        {
+          "text": "导出 DXF（R12）",
+          "disabled": true
+        },
+        {
+          "text": "导出 DXF（2000）",
+          "disabled": true
+        }
+      ],
+      "notice": "",
+      "error": ""
+    },
+    "fileOnDisk": false
+  },
+  "dxf2000": {
+    "status": "BLOCKED",
+    "reason": "no-accessibility-permission"
+  },
+  "screenshots": [
+    "docs/evidence/dxf-export/screenshots/dxf-01-buttons.png",
+    "docs/evidence/dxf-export/screenshots/dxf-02-dialog-pending-no-ax.png"
+  ],
+  "blocked": true,
+  "note": "系统保存对话框需要辅助功能权限；本会话探测失败，未自动点击，原因写在此处而不是谎称通过。",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

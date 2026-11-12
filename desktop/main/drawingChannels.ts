@@ -16,6 +16,7 @@ import type {
 import { IPC_CHANNELS } from '../shared/contracts'
 import { buildSpacerDrawing, DrawingBuildError } from '../../src/drawing/spacerDrawing'
 import { renderDrawingSvg, validateDrawingSvgMarkup } from '../../src/drawing/renderDrawingSvg'
+import { DxfExportError, buildDxfDocument, validateDxfBytes } from '../../src/drawing/dxfExport'
 import { SPACER_PART_ID, scaleKey, type DrawingData } from '../../src/drawing/types'
 import { parseSpacerParameters } from '../../src/parts/spacerParameters'
 import type { ProjectFileDrawingRecord } from '../../src/project-file/types'
@@ -299,10 +300,30 @@ export function registerDrawingChannels(ipc: IpcMainLike, deps: DrawingChannelDe
       reject('INVALID_DRAWING', '重建的图纸指纹与请求不一致')
     }
 
-    const svg = renderDrawingSvg(data)
-    const svgCheck = validateDrawingSvgMarkup(svg, data)
-    if (!svgCheck.ok) {
-      reject('INVALID_DRAWING', 'SVG 结构校验失败', svgCheck.errors.join('；'))
+    // DXF：在“选路径”之前就生成字节——数据非法时不会弹对话框，也不会留下半截文件。
+    const dxfVersion = kind === 'dxf-r12' ? 'r12' : kind === 'dxf-2000' ? '2000' : null
+    let dxfBytes: Uint8Array | null = null
+    if (dxfVersion !== null) {
+      try {
+        dxfBytes = buildDxfDocument(data, dxfVersion).bytes
+      } catch (error) {
+        if (error instanceof DxfExportError) {
+          reject(
+            error.code === 'UNSUPPORTED_VERSION' ? 'INVALID_PARAMETER' : 'INVALID_DRAWING',
+            `DXF 生成失败：${error.message}`,
+            error.detail,
+          )
+        }
+        throw error
+      }
+    }
+
+    const svg = dxfVersion === null ? renderDrawingSvg(data) : null
+    if (svg !== null) {
+      const svgCheck = validateDrawingSvgMarkup(svg, data)
+      if (!svgCheck.ok) {
+        reject('INVALID_DRAWING', 'SVG 结构校验失败', svgCheck.errors.join('；'))
+      }
     }
 
     busySessions.add(session.sessionId)
@@ -310,10 +331,12 @@ export function registerDrawingChannels(ipc: IpcMainLike, deps: DrawingChannelDe
       const baseName = sanitizeSuggestedName(
         `${record.frameFields.partName || '隔套'}-图纸-${scaleKey(record.scale).replace(':', '_')}`,
       )
+      const suffix =
+        kind === 'dxf-r12' ? '-DXF-R12.dxf' : kind === 'dxf-2000' ? '-DXF-2000.dxf' : `.${kind}`
       const target = await deps.pickExportPath(
         windowId,
         kind,
-        `${baseName}.${kind}`,
+        `${baseName}${suffix}`,
       )
       if (target === null) {
         reject('CANCELLED', '已取消选择导出位置')
@@ -328,7 +351,9 @@ export function registerDrawingChannels(ipc: IpcMainLike, deps: DrawingChannelDe
 
       let bytes: Uint8Array
       if (kind === 'svg') {
-        bytes = new TextEncoder().encode(svg)
+        bytes = new TextEncoder().encode(svg as string)
+      } else if (dxfVersion !== null) {
+        bytes = dxfBytes as Uint8Array
       } else {
         try {
           bytes = await deps.printPdf(data)
@@ -354,6 +379,10 @@ export function registerDrawingChannels(ipc: IpcMainLike, deps: DrawingChannelDe
               return { ok: false, message: report.errors.join('；') }
             }
             return { ok: true }
+          }
+          if (dxfVersion !== null) {
+            const report = validateDxfBytes(written, data, dxfVersion)
+            return report.ok ? { ok: true } : { ok: false, message: report.errors.join('；') }
           }
           const text = new TextDecoder().decode(written)
           const report = validateDrawingSvgMarkup(text, data)
@@ -392,6 +421,26 @@ export function registerDrawingChannels(ipc: IpcMainLike, deps: DrawingChannelDe
       channel: IPC_CHANNELS.drawingExportSvg,
       schema: drawingSchemas.exportDrawing,
       handle: async ({ sender }, params) => exportDrawing(sender.webContentsId, 'svg', params),
+    },
+    ipcDeps,
+  )
+
+  installChannel(
+    ipc,
+    {
+      channel: IPC_CHANNELS.drawingExportDxfR12,
+      schema: drawingSchemas.exportDrawing,
+      handle: async ({ sender }, params) => exportDrawing(sender.webContentsId, 'dxf-r12', params),
+    },
+    ipcDeps,
+  )
+
+  installChannel(
+    ipc,
+    {
+      channel: IPC_CHANNELS.drawingExportDxf2000,
+      schema: drawingSchemas.exportDrawing,
+      handle: async ({ sender }, params) => exportDrawing(sender.webContentsId, 'dxf-2000', params),
     },
     ipcDeps,
   )

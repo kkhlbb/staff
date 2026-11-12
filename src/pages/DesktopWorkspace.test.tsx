@@ -182,6 +182,8 @@ beforeEach(async () => {
     }),
     exportDrawingPdf: vi.fn(async () => ({ ok: false as const, error: { code: 'CANCELLED' as const, message: '取消' } })),
     exportDrawingSvg: vi.fn(async () => ({ ok: false as const, error: { code: 'CANCELLED' as const, message: '取消' } })),
+    exportDrawingDxfR12: vi.fn(async () => ({ ok: false as const, error: { code: 'CANCELLED' as const, message: '取消' } })),
+    exportDrawingDxf2000: vi.fn(async () => ({ ok: false as const, error: { code: 'CANCELLED' as const, message: '取消' } })),
     // D 新增：与真实契约同形状；只证明接线，不替代 main 原子性验收。
     stageChangeDraft: vi.fn<CunlianApi['stageChangeDraft']>(async request => {
       const parsed = parseSpacerParameters(request.inputs, request.sourceNotes)

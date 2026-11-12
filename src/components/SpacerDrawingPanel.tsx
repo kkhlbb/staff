@@ -175,7 +175,7 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
     }
   }
 
-  async function exportAs(kind: 'pdf' | 'svg') {
+  async function exportAs(kind: 'pdf' | 'svg' | 'dxf-r12' | 'dxf-2000') {
     if (props.sessionId === null || record === undefined || committedData === null) {
       setError('尚无有效图纸，无法导出')
       return
@@ -193,7 +193,11 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
       const result =
         kind === 'pdf'
           ? await window.cunlian.exportDrawingPdf(request)
-          : await window.cunlian.exportDrawingSvg(request)
+          : kind === 'svg'
+            ? await window.cunlian.exportDrawingSvg(request)
+            : kind === 'dxf-r12'
+              ? await window.cunlian.exportDrawingDxfR12(request)
+              : await window.cunlian.exportDrawingDxf2000(request)
       if (!result.ok) {
         setError(`${result.error.code}：${result.error.message}${result.error.detail ? `（${result.error.detail}）` : ''}`)
         return
@@ -396,11 +400,37 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
           >
             导出 SVG
           </button>
+          <button
+            type="button"
+            disabled={busy || committedData === null || !committedData.layout.fits || showingDraft}
+            title={
+              showingDraft
+                ? '候选草稿未提交；导出只使用正式图纸，请先确认提交'
+                : 'DXF R12（AC1009）：模型空间 1:1 mm，给切割/检具/老设备'
+            }
+            onClick={() => void exportAs('dxf-r12')}
+          >
+            导出 DXF（R12）
+          </button>
+          <button
+            type="button"
+            disabled={busy || committedData === null || !committedData.layout.fits || showingDraft}
+            title={
+              showingDraft
+                ? '候选草稿未提交；导出只使用正式图纸，请先确认提交'
+                : 'DXF 2000（AC1015）：需要更多实体或更好精度时用'
+            }
+            onClick={() => void exportAs('dxf-2000')}
+          >
+            导出 DXF（2000）
+          </button>
         </div>
       </footer>
       {notice !== '' && <p className="spacer-drawing__notice" role="status">{notice}</p>}
       <p className="spacer-drawing__disclaimer">
         导出的 SVG 是规范矢量文件，与预览一致；不承诺任何 CAD 软件可直接打开。PDF/SVG 不自动回灌为项目附件。
+        DXF 是纯文本 2D 交付：模型空间按真实尺寸 1:1（mm、y 向上），R12 给切割/检具/老设备；
+        尺寸是「几何 + TEXT」，<strong>没有 CAD 关联性——改图不会自动改数</strong>。
       </p>
     </section>
   )

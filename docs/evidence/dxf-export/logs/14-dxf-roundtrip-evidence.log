@@ -1,0 +1,13 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+stdout | scripts/dxf-export-evidence.ts > DXF 导出 v1 回环证据 > R12 + 2000 样本落盘、dxf-parser 读回、包围盒与文字全部对上
+DXF_ROUNDTRIP {"r12":{"sha256":"17eb16ec75bda446a69b57bfd00f19a675092a871bbaa4aa9ecdca08dfb8bbf7","bytes":8684},"dxf2000":{"sha256":"168514d599484b88a64374bfd285441c482dc23ff3985187044804710ee52f68","bytes":9552},"oneToTwoOutline":{"parsedWidth":12.050000000000011,"parsedHeight":32,"expectedWidth":12.05,"expectedHeight":32,"deviationMm":0}}
+
+ ✓ scripts/dxf-export-evidence.ts > DXF 导出 v1 回环证据 > R12 + 2000 样本落盘、dxf-parser 读回、包围盒与文字全部对上 17ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  22:33:03
+   Duration  111ms (transform 38%, tests 36%, import 24%, worker 3%)
+
