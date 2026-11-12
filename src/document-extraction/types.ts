@@ -18,8 +18,12 @@ import type { PdfPageBox, PdfRect } from '../sources/pdfCoordinates'
  * 3：单位允许从显式文字继承（同一表格表头 / 同一页「单位：」或图注 / 页范围第一页的
  *    文档级声明），继承必须带声明出处；同作用域两个不同单位 → UNIT_CONFLICT 阻塞。
  *    显式单位不被覆盖；没有声明时 UNKNOWN_UNIT 原义不变。语义变了 → 升版本。
+ * 4：表达式末尾单位只认三种明确形态（`X = 表达式 = 数值 单位`、`符号 = 数值 ± 偏差 单位`、
+ *    `符号 = 数值 单位`），单位出处写进 evidence；中间表达式只作原文字符串保留，不做算术求值；
+ *    多个等号结果不一致 → INCONSISTENT_REDUNDANT_VALUE 阻塞，不择优；单字母小写下标片段
+ *    （i=0 / i=1）不再当尺寸候选。语义变了 → 升版本。
  */
-export const EXTRACTOR_VERSION = 'document-extractor-3'
+export const EXTRACTOR_VERSION = 'document-extractor-4'
 
 export const MAX_EXTRACTION_PAGES = 100
 export const MAX_EXTRACTION_CANDIDATES = 200
@@ -50,6 +54,8 @@ export const EXTRACTION_REASON_CODES = [
   'AMBIGUOUS_ASSIGNMENT',
   'AMBIGUOUS_DEVIATION',
   'DEVIATION_SIGN_MISSING',
+  /** 同一赋值里多个等号的结果值互不一致（`A = 10 = 12 mm`）：阻塞整条，不挑一个。 */
+  'INCONSISTENT_REDUNDANT_VALUE',
   // 文本层与版面
   'NO_TEXT_LAYER',
   'PAGE_RANGE_INVALID',
