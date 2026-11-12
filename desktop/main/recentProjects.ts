@@ -29,6 +29,8 @@ export interface RecentProjectRecord {
   path: string
   lastOpenedAt: string
   fingerprint: string
+  /** 最近一次记录时的项目依据种类；旧索引没有该字段。 */
+  sourceKind?: 'pdf' | 'user-intent'
 }
 
 interface RecentIndexFile {
@@ -70,7 +72,10 @@ function isRecord(value: unknown): value is RecentProjectRecord {
     typeof record.lastOpenedAt === 'string' &&
     record.lastOpenedAt.length > 0 &&
     typeof record.fingerprint === 'string' &&
-    /^[0-9a-f]{64}$/.test(record.fingerprint)
+    /^[0-9a-f]{64}$/.test(record.fingerprint) &&
+    (record.sourceKind === undefined ||
+      record.sourceKind === 'pdf' ||
+      record.sourceKind === 'user-intent')
   )
 }
 
@@ -213,6 +218,7 @@ export class RecentProjectsStore {
     name: string
     path: string
     fingerprint: string
+    sourceKind?: 'pdf' | 'user-intent'
   }): Promise<IpcResult<null>> {
     return this.enqueue(async () => {
       const normalizedPath = normalizeProjectPath(input.path)
@@ -230,6 +236,7 @@ export class RecentProjectsStore {
         path: normalizedPath,
         lastOpenedAt: this.now().toISOString(),
         fingerprint: input.fingerprint,
+        sourceKind: input.sourceKind ?? 'pdf',
       }
       const items = [
         record,

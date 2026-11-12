@@ -96,6 +96,13 @@ export const IPC_CHANNELS = {
   agentIssueApproval: 'agent:issue-approval',
   agentCommitApprovedDraft: 'agent:commit-approved-draft',
   agentLocateEvidence: 'agent:locate-evidence',
+  /** ADR-001 第 3 步：无任务书入口（对话建件）；全部由用户界面触发。 */
+  intentCreate: 'intent:create',
+  intentState: 'intent:state',
+  intentApply: 'intent:apply',
+  intentPreview: 'intent:preview',
+  intentIssueApproval: 'intent:issue-approval',
+  intentConfirm: 'intent:confirm',
   /** V4.0 阶段 4：真实供应商配置、连接测试与受控导出。 */
   agentProviderSave: 'agent:provider-save',
   agentProviderTest: 'agent:provider-test',
@@ -359,6 +366,8 @@ export interface RecentProjectItem {
   name: string
   path: string
   lastOpenedAt: string
+  /** ADR-001 第 3 步：项目依据种类；旧索引没有该字段，按 'pdf' 显示。 */
+  sourceKind?: 'pdf' | 'user-intent'
   /** 索引里记录的文件已不存在、不是常规文件或不可读时为 true。 */
   missing: boolean
   /**
@@ -887,6 +896,12 @@ export type ToolErrorCode =
   | 'INVALID_INPUT' | 'NEEDS_CLARIFICATION' | 'UNSUPPORTED_SCOPE' | 'SOURCE_CHANGED'
   | 'NOT_CONFIRMED' | 'CONSTRAINT_VIOLATED' | 'STALE_BASE' | 'STALE_PREVIEW'
   | 'CANCELLED' | 'TIMEOUT' | 'TOOL_FAILED' | 'SAVE_FAILED'
+  /** 无任务书项目：条款区间只能来自用户原话（模型代填/引用标准等级一律拒绝）。 */
+  | 'REQUIREMENT_MUST_BE_USER_GIVEN'
+  /** 无任务书项目：工具给出的数值必须出现在本轮用户原话里。 */
+  | 'VALUE_MUST_BE_USER_GIVEN'
+  /** 无任务书项目：出处原话必须能在本轮用户输入里逐字找到。 */
+  | 'STATEMENT_NOT_USER_GIVEN'
 
 export type ToolResult<T> =
   | { ok: true; data: T; requestId: string; objectVersion: string }
@@ -1004,16 +1019,62 @@ export interface ApprovalRecord {
   requirementRevisionId: string | null
   previewFingerprint: string
   baseRevisionId: string
+  /** 用户是否勾选了“这些尺寸由我提供，无原文件可核对”（无任务书项目必需）。 */
+  userAttestationAcknowledged?: boolean
   createdAt: string
   expiresAt: string
   consumedAt: string | null
 }
 
 /** 侧栏演示场景；全部由阶段 2 的 FakeModelAdapter 驱动，不联网。 */
-export type AgentDemoScenario = 'normal' | 'ask' | 'failure'
+export type AgentDemoScenario = 'normal' | 'ask' | 'failure' | 'intent'
 
 /** 侧栏模式：demo 由阶段 2 假模型驱动；real 走已配置的真实供应商。 */
 export type AgentRunMode = 'demo' | 'real'
+
+/** 无任务书入口：建项请求（责任人由用户手输，不由模型提供）。 */
+export interface IntentCreateRequest {
+  name: string
+  actorId: string
+  sessionLabel?: string | null
+}
+
+export interface IntentCreateValue {
+  projectId: string
+  draftId: string
+  actorId: string
+  sessionSeq: number
+  sessionLabel: string | null
+}
+
+export interface IntentDraftCandidateView {
+  candidateId: string
+  kind: 'ring' | 'interval' | 'formula' | 'part-dimension'
+  status: string
+  editRevision: number
+  summary: Record<string, string | null>
+  /** 这条值出自哪句用户原话（逐字）与第几次输入。 */
+  statement: string | null
+  sessionSeq: number | null
+  sessionLabel: string | null
+}
+
+export interface IntentDraftView {
+  projectId: string
+  draftId: string
+  draftRevision: number
+  sourceKind: 'pdf' | 'user-intent'
+  actorId: string | null
+  sessionSeq: number
+  sessionLabel: string | null
+  candidates: IntentDraftCandidateView[]
+  pendingCount: number
+  confirmedCount: number
+  hasInterval: boolean
+  bindings: { parameter: string; symbol: string; text: string }[]
+  chainReady: boolean
+  hasFormula: boolean
+}
 
 export interface AgentStartRequest {
   goal: string
@@ -1025,6 +1086,11 @@ export interface AgentStartRequest {
   planToken?: string
   /** real 模式建项：来源提取草稿 ID。 */
   extractionDraftId?: string
+  /**
+   * 无任务书入口：责任人自述由用户界面手输，main 绑定到本轮任务。
+   * 模型拿不到也改不了它；工具调用只能使用这里注入的身份。
+   */
+  intent?: { actorId: string; sessionLabel?: string | null }
 }
 
 export interface AgentStartValue {
@@ -1119,6 +1185,8 @@ export interface AgentPreviewSummary {
 
 export interface AgentIssueApprovalRequest {
   previewId: string
+  /** 无任务书项目：提交前必须勾选“这些尺寸由我提供，无原文件可核对”。 */
+  userAttestationAcknowledged?: boolean
 }
 
 export interface AgentIssueApprovalValue {
@@ -1354,6 +1422,18 @@ export interface CunlianApi {
     request: CommitApprovedDraftRequest,
   ): Promise<ToolResult<CommitApprovedDraftValue>>
   locateEvidence?(request: LocateEvidenceRequest): Promise<ToolResult<LocateEvidenceValue>>
+  /** ADR-001 第 3 步：无任务书入口（用户界面触发，模型只写草稿）。 */
+  intentCreateProject?(request: IntentCreateRequest): Promise<ToolResult<IntentCreateValue>>
+  intentState?(): Promise<ToolResult<IntentDraftView | null>>
+  intentApply?(): Promise<ToolResult<AgentDraftValue>>
+  intentPreview?(): Promise<ToolResult<AgentDraftValue>>
+  intentConfirmCandidate?(request: {
+    candidateId: string
+    editRevision: number
+  }): Promise<ToolResult<IntentDraftView>>
+  intentIssueApproval?(
+    request: AgentIssueApprovalRequest,
+  ): Promise<ToolResult<AgentIssueApprovalValue>>
   /* ---- V4.0 阶段 4：真实供应商配置与导出（可选） ---- */
   saveAgentProvider?(request: AgentProviderSaveRequest): Promise<ToolResult<AgentProviderStatusValue>>
   testAgentProvider?(): Promise<ToolResult<AgentProviderTestValue>>

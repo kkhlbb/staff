@@ -10,9 +10,11 @@
  */
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import type {
+  AgentDraftValue,
   AgentPreviewSummary,
   AgentProviderStatusValue,
   AgentTaskView,
+  IntentDraftView,
   LocateEvidenceValue,
 } from '../../desktop/shared/contracts'
 import { formatMm } from '../domain/units'
@@ -30,6 +32,21 @@ import {
 } from './agentWording'
 
 const parameterLabel = (key: string): string => SPACER_PARAMETER_LABELS[key as keyof typeof SPACER_PARAMETER_LABELS] ?? key
+
+/** 意图候选的人话摘要：只显示用户给出的数值与原话，不推断。 */
+function intentCandidateLine(candidate: IntentDraftView['candidates'][number]): string {
+  const s = candidate.summary
+  if (candidate.kind === 'ring') {
+    return `组成环 ${s.symbol ?? '?'}：${s.nominal ?? '?'} mm（上 ${s.upperDeviation ?? '?'} / 下 ${s.lowerDeviation ?? '?'}）`
+  }
+  if (candidate.kind === 'interval') {
+    return `条款区间：${s.lower ?? '?'} ～ ${s.upper ?? '?'} mm（${s.endpoints ?? '端点未确认'}）`
+  }
+  if (candidate.kind === 'formula') {
+    return `装配式：${s.operands ?? '?'}`
+  }
+  return `隔套参数：内 ${s.innerDiameter ?? '?'} / 外 ${s.outerDiameter ?? '?'} / 长 ${s.length ?? '?'} mm`
+}
 
 const requirementStatusLabel = (status: string): string =>
   Object.hasOwn(REQUIREMENT_STATUS_LABEL, status)
@@ -49,6 +66,9 @@ export interface AgentSidebarProps {
   revisionId: string | null
   onLocate: (value: LocateEvidenceValue) => void
 }
+
+/** 无任务书演示的默认原话：每个数值都要能在句子里逐字找到（工具会核）。 */
+const INTENT_GOAL = '我要给 φ20 的轴配个隔套，外径 32，长 12.05；总长 52.25 偏差 0.02；两个轴承各 20 偏差 0.01；隔套 12.05 偏差 0.01；间隙 0.15 到 0.25'
 
 const DEMOS: { scenario: 'normal' | 'ask' | 'failure'; label: string; hint: string }[] = [
   { scenario: 'normal', label: '正常改图（+0.04 mm）', hint: '会先改长度参数、再算一遍；算完要你点头才落盘' },
@@ -75,6 +95,15 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
   const [notice, setNotice] = useState<string | null>(null)
   const [locateNote, setLocateNote] = useState<string | null>(null)
   const [commit, setCommit] = useState<{ ok: boolean; code: string | null; message: string } | null>(null)
+  const [intent, setIntent] = useState<IntentDraftView | null>(null)
+  const [intentName, setIntentName] = useState('φ20 轴隔套')
+  const [actorId, setActorId] = useState('')
+  const [sessionLabel, setSessionLabel] = useState('')
+  const [intentGoal, setIntentGoal] = useState(INTENT_GOAL)
+  const [intentNote, setIntentNote] = useState<string | null>(null)
+  const [intentDraft, setIntentDraft] = useState<AgentDraftValue | null>(null)
+  const [acknowledged, setAcknowledged] = useState(false)
+  const [intentCommit, setIntentCommit] = useState<{ ok: boolean; message: string } | null>(null)
   const taskIdRef = useRef<string | null>(null)
   useEffect(() => { taskIdRef.current = taskId }, [taskId])
 
@@ -126,7 +155,8 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     const result = await api.agentStart({ goal: goal.trim() === '' ? '把隔套加厚 0.10 mm 并检查间隙' : goal.trim(), demo: scenario })
     if (result.ok) {
       setTaskId(result.data.taskId)
-      setNotice(`已启动离线演示 · ${result.data.modelId} · ${result.data.taskId.slice(0, 8)}`)
+      // 界面只说人话：内部模型 id 与任务实例号只进日志，不进界面。
+      setNotice('已启动离线演示（本机假模型）')
     } else {
       setNotice(`启动没有成功：${result.message}`)
     }
@@ -244,8 +274,120 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     setBusy(false)
   }
 
+  useEffect(() => {
+    if (api?.intentState === undefined) return undefined
+    let alive = true
+    void api.intentState().then(result => {
+      if (alive && result.ok) setIntent(result.data)
+    })
+    return () => { alive = false }
+  }, [api, open])
+
+  const refreshIntent = async (): Promise<void> => {
+    if (api?.intentState === undefined) return
+    const result = await api.intentState()
+    if (result.ok) setIntent(result.data)
+  }
+
+  const createIntent = async (): Promise<void> => {
+    if (api?.intentCreateProject === undefined) return
+    setBusy(true); setIntentNote(null); setIntentCommit(null)
+    const result = await api.intentCreateProject({
+      name: intentName.trim() === '' ? '无任务书项目' : intentName.trim(),
+      actorId: actorId.trim(),
+      ...(sessionLabel.trim() === '' ? {} : { sessionLabel: sessionLabel.trim() }),
+    })
+    if (result.ok) {
+      setIntentNote(`已建立无任务书项目：责任人 ${result.data.actorId} · 第 ${result.data.sessionSeq} 次输入`)
+      await refreshIntent()
+    } else {
+      setIntentNote(`建项没有成功：${result.message}`)
+    }
+    setBusy(false)
+  }
+
+  const startIntentDemo = async (): Promise<void> => {
+    if (!installed || api?.agentStart === undefined) return
+    if (actorId.trim() === '') { setIntentNote('先在“你的称呼”里填一个名字：出处要写清是谁说的'); return }
+    setBusy(true); setIntentNote(null); setIntentCommit(null); setIntentDraft(null); setAcknowledged(false)
+    const result = await api.agentStart({
+      goal: intentGoal.trim() === '' ? INTENT_GOAL : intentGoal.trim(),
+      demo: 'intent',
+      intent: { actorId: actorId.trim(), ...(sessionLabel.trim() === '' ? {} : { sessionLabel: sessionLabel.trim() }) },
+    })
+    if (result.ok) {
+      setTaskId(result.data.taskId)
+      setIntentNote('已启动离线演示（本机假模型）：它只把你说过的数字写进草稿')
+      await refreshIntent()
+    } else {
+      setIntentNote(`启动没有成功：${result.message}`)
+    }
+    setBusy(false)
+  }
+
+  const confirmIntentCandidate = async (candidateId: string, editRevision: number): Promise<void> => {
+    if (api?.intentConfirmCandidate === undefined) return
+    setBusy(true)
+    const result = await api.intentConfirmCandidate({ candidateId, editRevision })
+    if (result.ok) setIntent(result.data)
+    else setIntentNote(`确认没有成功：${result.message}`)
+    setBusy(false)
+  }
+
+  const applyIntent = async (): Promise<void> => {
+    if (api?.intentApply === undefined) return
+    setBusy(true); setIntentCommit(null)
+    const result = await api.intentApply()
+    setIntentNote(result.ok ? '已按你确认的数值生成工程草稿（还没有保存）' : `生成草稿没有成功：${result.message}`)
+    setBusy(false)
+  }
+
+  const previewIntent = async (): Promise<void> => {
+    if (api?.intentPreview === undefined) return
+    setBusy(true); setIntentCommit(null)
+    const result = await api.intentPreview()
+    if (result.ok) {
+      setIntentDraft(result.data)
+      setIntentNote('已算完：请在下方核对结果与条款，再勾选确认')
+      await refreshPreview()
+    } else {
+      setIntentNote(`算一遍没有成功：${result.message}`)
+    }
+    setBusy(false)
+  }
+
+  const commitIntent = async (): Promise<void> => {
+    if (api?.intentIssueApproval === undefined || api.commitApprovedDraft === undefined) return
+    if (!acknowledged) { setIntentCommit({ ok: false, message: '先勾选“这些尺寸由我提供，无原文件可核对”' }); return }
+    if (intentPreviewValue === null) { setIntentCommit({ ok: false, message: '先算一遍，拿到预览回执再保存' }); return }
+    setBusy(true); setIntentCommit(null)
+    const issued = await api.intentIssueApproval({
+      previewId: intentPreviewValue.previewId,
+      userAttestationAcknowledged: true,
+    })
+    if (!issued.ok) {
+      setIntentCommit({ ok: false, message: issued.message })
+      setBusy(false)
+      return
+    }
+    const committed = await api.commitApprovedDraft({
+      approvalId: issued.data.approvalId,
+      draftId: intentPreviewValue.draftId,
+      previewFingerprint: intentPreviewValue.previewFingerprint,
+    })
+    setIntentCommit(committed.ok
+      ? { ok: true, message: `已保存为新版本（工具回执） · ${committed.data.revisionId}` }
+      : { ok: false, message: committed.message })
+    if (committed.ok) { setAcknowledged(false); setIntentDraft(null) }
+    setBusy(false)
+  }
+
   const toolSteps = (view?.steps ?? []).filter(step => step.kind === 'tool')
   const recent = toolSteps.slice(-3).reverse()
+  const intentPreviewValue = intentDraft !== null && intentDraft.previewId !== undefined &&
+    intentDraft.previewFingerprint !== undefined
+    ? { previewId: intentDraft.previewId, previewFingerprint: intentDraft.previewFingerprint, draftId: intentDraft.draftId }
+    : (preview !== null ? { previewId: preview.previewId, previewFingerprint: preview.previewFingerprint, draftId: preview.draftId } : null)
   const requirementBlocked = preview !== null && preview.requirement !== null && preview.requirement.status !== 'satisfied'
   const previewReasonText = preview === null || preview.requirement === null ? '' : requirementReasonText(preview.requirement.reasonCodes)
   const running = view !== null && !['completed', 'failed', 'cancelled', 'ready-to-commit'].includes(view.task.state)
@@ -299,6 +441,75 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
       )}
     </section>
 
+    <section className="agent-sidebar__section" aria-label="无任务书建项">
+      <h3>无任务书建项（对话）</h3>
+      <p className="agent-sidebar__hint">
+        客户只有一句话、没有任务书时用这里。数值必须由你说出来；条款区间只认你的原话，
+        模型自己填的数、引用标准等级或推算默认值都会被主进程拒绝。
+      </p>
+      <label>项目名
+        <input value={intentName} maxLength={80} onChange={event => setIntentName(event.target.value)} aria-label="无任务书项目名" />
+      </label>
+      <label>你的称呼（责任人，必填）
+        <input value={actorId} maxLength={40} onChange={event => setActorId(event.target.value)} aria-label="责任人称呼" placeholder="例如 老王" />
+      </label>
+      <label>备注（可空）
+        <input value={sessionLabel} maxLength={120} onChange={event => setSessionLabel(event.target.value)} aria-label="输入会话备注" placeholder="例如 2026-11-12 复检" />
+      </label>
+      <label>你要的零件（原话）
+        <textarea value={intentGoal} maxLength={2000} rows={3} onChange={event => setIntentGoal(event.target.value)} aria-label="无任务书原话" />
+      </label>
+      <div className="agent-sidebar__actions">
+        <button type="button" disabled={busy || !installed || actorId.trim() === ''} onClick={() => void createIntent()}>建立无任务书项目</button>
+        <button type="button" disabled={busy || !installed || actorId.trim() === ''} title="假模型只把你说过的数字写进草稿；确认与提交仍由你完成" onClick={() => void startIntentDemo()}>对话建件（离线演示）</button>
+      </div>
+      {intentNote !== null && <p role="status" className="agent-sidebar__hint" data-testid="intent-note">{intentNote}</p>}
+      {intent !== null && (
+        <div className="agent-sidebar__intent" data-testid="intent-draft">
+          <p className="agent-sidebar__muted">
+            依据：用户输入，无外部原文件 · {intent.actorId ?? '未填责任人'} · 第 {intent.sessionSeq} 次输入
+            {intent.sessionLabel === null ? '' : ` · ${intent.sessionLabel}`}
+          </p>
+          <p role="status" data-testid="intent-counts">
+            待确认 {intent.pendingCount} · 已确认 {intent.confirmedCount}
+            {intent.chainReady ? ' · 组成环与装配式齐' : ' · 还缺组成环或装配式'}
+            {intent.hasInterval ? ' · 条款区间已给' : ' · 还没有条款区间'}
+          </p>
+          <ul className="agent-sidebar__steps">
+            {intent.candidates.map(candidate => (
+              <li key={candidate.candidateId} className="agent-sidebar__step">
+                <span>
+                  {intentCandidateLine(candidate)}
+                  <span className="agent-sidebar__muted"> · 原话「{candidate.statement ?? '—'}」（第 {candidate.sessionSeq ?? '—'} 次）</span>
+                </span>
+                {candidate.status === 'confirmed'
+                  ? <span className="agent-sidebar__ok">已确认</span>
+                  : <button type="button" disabled={busy} onClick={() => void confirmIntentCandidate(candidate.candidateId, candidate.editRevision)}>确认这条</button>}
+              </li>
+            ))}
+          </ul>
+          <div className="agent-sidebar__actions">
+            <button type="button" disabled={busy || intent.pendingCount > 0} onClick={() => void applyIntent()}>生成工程草稿</button>
+            <button type="button" disabled={busy} onClick={() => void previewIntent()}>算一遍（重算条款）</button>
+          </div>
+          {intentDraft !== null && (
+            <dl>
+              <div><dt>结果区间</dt><dd>{formatMm(intentDraft.computation.result.minQ)} ～ {formatMm(intentDraft.computation.result.maxQ)} mm</dd></div>
+              <div><dt>条款</dt><dd>{preview?.requirement === null || preview === null ? '待检查' : `${requirementStatusLabel(preview.requirement.status)}${previewReasonText === '' ? '' : ` · ${previewReasonText}`}`}</dd></div>
+            </dl>
+          )}
+          <label className="agent-sidebar__ack">
+            <input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} aria-label="这些尺寸由我提供" />
+            这些尺寸由我提供，无原文件可核对
+          </label>
+          <div className="agent-sidebar__actions">
+            <button type="button" className="agent-sidebar__primary" disabled={busy || !acknowledged} onClick={() => void commitIntent()}>确认并保存为新版本</button>
+          </div>
+          {intentCommit !== null && <p role={intentCommit.ok ? 'status' : 'alert'} data-testid="intent-commit-result" className={intentCommit.ok ? 'agent-sidebar__ok' : 'agent-sidebar__blocked'}>{intentCommit.message}</p>}
+        </div>
+      )}
+    </section>
+
     <section className="agent-sidebar__section" aria-label="任务输入">
       <label>任务
         <input value={goal} maxLength={500} onChange={event => setGoal(event.target.value)} aria-label="Agent 任务输入" />
@@ -317,7 +528,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
         {running && <button type="button" disabled={busy} onClick={() => void cancel()}>取消</button>}
         {view !== null && (view.task.state === 'failed' || view.task.state === 'awaiting-input') && <button type="button" disabled={busy} onClick={() => void resume()}>继续</button>}
       </div>
-      {notice !== null && <p role="status" className="agent-sidebar__hint">{notice}</p>}
+      {notice !== null && <p role="status" data-testid="agent-notice" className="agent-sidebar__hint">{notice}</p>}
       {api?.exportApprovedVersion !== undefined && (
         <div className="agent-sidebar__actions">
           <button type="button" disabled={busy || revisionId === null} onClick={() => void exportSaved('svg')}>导出已保存版本 SVG</button>

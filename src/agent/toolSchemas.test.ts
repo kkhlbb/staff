@@ -21,16 +21,27 @@ const valid: Record<string, unknown> = {
   },
   preview: { toolMode: 'agent', draftId: 'draft-1', baseRevisionId: 'rev-1' },
   export: { format: 'svg' },
+  createProject: { name: 'φ20 轴隔套', partType: 'spacer' },
+  setChain: {
+    statement: '总长 52.25，偏差 0.02',
+    rings: [{ symbol: 'H', nominalMm: '52.25', upperDeviationMm: '0.02', lowerDeviationMm: '-0.02' }],
+    formula: 'H',
+  },
+  setRequirement: { statement: '间隙 0.15 到 0.25', lowerMm: '0.15', upperMm: '0.25', lowerInclusive: true, upperInclusive: true },
+  setBinding: { statement: '外径 32', parameters: [{ parameter: 'outerDiameter', mm: '32' }] },
 }
 
 describe('Agent 工具参数 JSON Schema 与状态机', () => {
-  it('六个工具的合法参数都接受，未知工具拒绝', () => {
+  it('十个工具的合法参数都接受，未知工具拒绝', () => {
     for (const [name, value] of Object.entries(valid)) {
       expect(validateToolArguments(name, value), name).toEqual({ ok: true, value })
     }
     expect(validateToolArguments('commitApprovedDraft', {})).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
     expect(validateToolArguments('export', { format: 'dwg' })).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
-    expect(Object.keys(AGENT_TOOL_SCHEMAS)).toEqual(['context', 'confirmed', 'apply', 'stage', 'preview', 'export'])
+    expect(Object.keys(AGENT_TOOL_SCHEMAS)).toEqual([
+      'createProject', 'setChain', 'setRequirement', 'setBinding',
+      'context', 'confirmed', 'apply', 'stage', 'preview', 'export',
+    ])
   })
 
   it('拒绝缺字段、未声明字段、类型错与 valueMm/deltaMm 冲突', () => {
@@ -40,6 +51,9 @@ describe('Agent 工具参数 JSON Schema 与状态机', () => {
       ['confirmed', { draftId: 42 }],
       ['stage', { ...(valid.stage as object), valueMm: '12.04' }],
       ['apply', { ...(valid.apply as object), candidateIds: [] }],
+      ['setChain', { ...(valid.setChain as object), rings: [] }],
+      ['setRequirement', { ...(valid.setRequirement as object), lowerMm: undefined }],
+      ['createProject', { name: 'x' }],
       ['context', []],
     ] as [string, unknown][]) {
       expect(validateToolArguments(name, value), `${name} ${JSON.stringify(value)}`).toMatchObject({ ok: false, code: 'INVALID_INPUT' })

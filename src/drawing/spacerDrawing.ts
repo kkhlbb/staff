@@ -204,6 +204,7 @@ function buildFrame(
   })
 
   // 标题栏：表头 4mm + 9 行 × 4mm。
+  const basis = typeof fields.basis === 'string' ? fields.basis.trim() : ''
   const rows: [string, string][] = [
     ['零件名', partName],
     ['图号', drawingNumber],
@@ -214,6 +215,7 @@ function buildFrame(
     ['制图人/日期', `${drafter} / ${date}`],
     ['比例/单位', `${scaleKey(scale)} · mm`],
     ['纸张/投影', `A4 横向 · 第三角`],
+    ...(basis === '' ? [] : ([['依据', basis]] as [string, string][])),
   ]
   const headerBottom = SHEET_LAYOUT.titleBlock.y1 + 4
   cells.push(
@@ -267,6 +269,7 @@ function buildFrame(
     '3. 材料、图号、制图人/日期：待补充。',
     '4. 不声明符合 GB/ISO 等制图标准。',
     '5. 单位 mm；比例只作用于视图几何。',
+    ...(basis === '' ? [] : [`6. ${basis}。`]),
   ]
   techLines.forEach((text, index) => {
     cells.push(
@@ -317,6 +320,7 @@ function buildFrame(
       paper: 'A4 横向',
       projection: '第三角',
       status: DRAFT_STATUS_TEXT,
+      ...(basis === '' ? {} : { basis }),
     },
     missingFields,
     status,

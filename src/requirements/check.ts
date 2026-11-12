@@ -29,7 +29,8 @@ import type {
   RequirementReasonCode,
   RequirementRevision,
 } from './types'
-import { REQUIREMENT_RULES_VERSION } from './types'
+import { REQUIREMENT_RULES_VERSION, isPdfRequirementSource } from './types'
+import { provenanceValidity } from '../document-extraction/types'
 import {
   bindingBasisDigest,
   buildRequirementFingerprintInput,
@@ -216,11 +217,20 @@ function sourceProblems(
   requirement: RequirementRevision,
 ): RequirementReasonCode[] {
   const codes: RequirementReasonCode[] = []
+  // 无任务书项目：来源是用户断言，没有文件可换版；撤销由 provenanceValidity 判定。
+  if (!isPdfRequirementSource(requirement.source)) {
+    const validity = provenanceValidity(requirement.source.attestation, {
+      revisions: snapshot.revisions.map((item) => ({ revisionId: item.id, sha256: item.sha256 })),
+    })
+    if (validity === 'revoked') codes.push('SOURCE_VERSION_CHANGED')
+    return codes
+  }
+  const source = requirement.source
   const document = snapshot.documents.find(
-    (item) => item.id === requirement.source.documentId,
+    (item) => item.id === source.documentId,
   )
   const revision = snapshot.revisions.find(
-    (item) => item.id === requirement.source.revisionId,
+    (item) => item.id === source.revisionId,
   )
   if (document === undefined || revision === undefined) {
     codes.push('SOURCE_UNREADABLE')
@@ -235,12 +245,12 @@ function sourceProblems(
     snapshot.missingAttachments.every((item) => item.blobKey !== revision.blobKey)
   if (!readable || blob === undefined) {
     codes.push('SOURCE_UNREADABLE')
-  } else if (blob.sha256 !== requirement.source.sha256) {
+  } else if (blob.sha256 !== source.sha256) {
     codes.push('SOURCE_HASH_MISMATCH')
   }
   if (
-    requirement.source.page > revision.pageCount ||
-    validateBindingRegion(requirement.source.pageBoxPdf, requirement.source.rectPdf) !== null
+    source.page > revision.pageCount ||
+    validateBindingRegion(source.pageBoxPdf, source.rectPdf) !== null
   ) {
     codes.push('SOURCE_UNREADABLE')
   }

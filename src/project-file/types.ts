@@ -13,7 +13,7 @@ import type { ChainDefinition, Project, RelationReview, ProjectMigration } from 
 import type { ChangeEvent } from '../history/events'
 import type { AnalysisSnapshot } from '../history/snapshots'
 import type { RequirementCheck, RequirementRevision } from '../requirements/types'
-import type { ExtractionDraft } from '../document-extraction/types'
+import type { ExtractionDraft, UserAttestation } from '../document-extraction/types'
 import type { SourceBinding } from '../sources/bindings'
 import type { SourceDocument, SourceRevision } from '../sources/types'
 import type { WorkspaceDraft } from '../workspace/draft'
@@ -26,7 +26,10 @@ export const PROJECT_FILE_FORMAT = 'cunlian-project'
 /** B2 起写出的格式版本：formatVersion=2，project.schemaVersion=4/5。 */
 export const PROJECT_FILE_FORMAT_VERSION = 2
 /**
- * 当前写端项目 schema（ADR-001 起为 9）：
+ * 当前写端项目 schema（ADR-001 第 3 步起为 10）：
+ * - 10：无任务书入口的加法字段：`sourceKind`（pdf | user-intent）、`actorId`/
+ *   `sessionSeq`/`sessionLabel` 与项目级 `attestations` 集合；提取草稿新增可选
+ *   `intentBindings`。schema 9 读入时 `sourceKind='pdf'`，**不重算、不改值**；
  * - 9：出处泛化为 `EvidenceRef` 联合类型（pdf-text / pdf-ocr / image-ocr / user-attestation），
  *   提取草稿的数值/候选/决定新增纯加法字段 `provenance`；尺寸链、参数、条款、判据一律未动；
  * - 8：任务书 PDF 提取草稿（候选/出处/逐条决定）随项目持久化；
@@ -37,12 +40,14 @@ export const PROJECT_FILE_FORMAT_VERSION = 2
  * - 3：B1 及更早（仍可读）。
  * `formatVersion` 保持 2：容器布局未变，只扩展 project.json 的 schema 与版本配对。
  */
-export const PROJECT_FILE_SCHEMA_VERSION = 9
-/** V3.6 的 schema8；仍可读，保存时显式升级为 9（读入时按原 evidence 补 provenance，不重算）。 */
+export const PROJECT_FILE_SCHEMA_VERSION = 10
+/** ADR-001 第 2 步的 schema9；仍可读，保存时显式升级为 10（读入时补 sourceKind='pdf'）。 */
+export const V9_PROJECT_FILE_SCHEMA_VERSION = 9
+/** V3.6 的 schema8；仍可读，保存时显式升级为 10（读入时按原 evidence 补 provenance，不重算）。 */
 export const V36_PROJECT_FILE_SCHEMA_VERSION = 8
-/** V3.5 的 schema7；仍可读，保存时显式升级为 9。 */
+/** V3.5 的 schema7；仍可读，保存时显式升级为 10。 */
 export const V35_PROJECT_FILE_SCHEMA_VERSION = 7
-/** D 的 schema6；仍可读，保存时显式升级为 9。 */
+/** D 的 schema6；仍可读，保存时显式升级为 10。 */
 export const D_PROJECT_FILE_SCHEMA_VERSION = 6
 export const C_PROJECT_FILE_SCHEMA_VERSION = 5
 export const B2_PROJECT_FILE_SCHEMA_VERSION = 4
@@ -114,8 +119,8 @@ export interface ProjectFileWriter {
 export interface ProjectFileManifestProject {
   id: string
   name: string
-  /** 旧文件为 3，B2 为 4，C 为 5，D 写 6，V3.5 写 7，V3.6 写 8；读取时按伴随的 formatVersion 校验配对。 */
-  projectSchemaVersion: 3 | 4 | 5 | 6 | 7 | 8 | 9
+  /** 旧文件为 3，B2 为 4，C 为 5，D 写 6，V3.5 写 7，V3.6 写 8，ADR-001 写 9，本步写 10；读取时按伴随的 formatVersion 校验配对。 */
+  projectSchemaVersion: 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
   dimensionChainSchemaVersion: typeof DIMENSION_CHAIN_SCHEMA_VERSION
   currentRevisionId: string
 }
@@ -353,6 +358,12 @@ export interface ProjectFileDrawingRecord {
     surface: string
     drafter: string
     date: string
+    /**
+     * 依据栏（schema 10）。无外部来源项目固定写
+     * 「依据：用户输入，无外部原文件」，使标题栏与导出物自带标记；
+     * 有来源项目为空字符串，标题栏不新增任何行（图纸字节与改前一致）。
+     */
+    basis?: string
   }
   status: 'pending-review-draft'
   /** 由参数 + 模板重建出的 DrawingData 内容哈希。 */
@@ -374,7 +385,11 @@ export interface ProjectFileDrawingRecord {
  * D：schemaVersion=6，参数绑定与单调 parameterRevision。
  * V3.5：schemaVersion=7，Beta 任务书条款。
  * V3.6：schemaVersion=8，任务书 PDF 提取草稿（候选、出处、逐条决定）。
+ * ADR-001：schemaVersion=9，出处泛化为 EvidenceRef（纯加法 provenance）。
+ * ADR-001 第 3 步：schemaVersion=10，无任务书入口的出处与身份（见下）。
  */
+export type ProjectSourceKind = 'pdf' | 'user-intent'
+
 export interface ProjectFileProject {
   id: string
   schemaVersion: typeof PROJECT_FILE_SCHEMA_VERSION
@@ -408,13 +423,56 @@ export interface ProjectFileProject {
    * 未确认候选不会进入尺寸链、参数、条款或计算；本字段只是审计与恢复来源。
    */
   extractionDrafts: ExtractionDraft[]
+
+  /* ------------------------------------------------------------------ */
+  /* ADR-001 第 3 步（schema 10）：无任务书入口                            */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * 项目依据的种类。schema 9 及更早读入时固定为 'pdf'（不重算、不改值）；
+   * 只有 `createProject` 工具建立的无任务书项目才是 'user-intent'。
+   */
+  sourceKind: ProjectSourceKind
+  /**
+   * 责任人自述（用户首次建项时手输）。不是账号体系，不做唯一性校验；
+   * 只用于显示与追溯。schema 9 及更早为 null。
+   */
+  actorId: string | null
+  /** 项目内自增的输入会话序号（1..n）；0 表示旧项目没有记录。 */
+  sessionSeq: number
+  /** 用户备注名（可空）。 */
+  sessionLabel: string | null
+  /**
+   * 用户断言账本：所有由人给出的数值/条款都在这里留一条（原话逐字）。
+   * 出处不可抹：只追加，不删除；撤销走 `revokeAttestation` 的追加字段。
+   * 提取草稿的 provenance 引用同一批断言（内容相同）；账本用于审计与
+   * “跨会话伪造”校验，提交时随版本一起冻结。
+   */
+  attestations: UserAttestation[]
+}
+
+/**
+ * ADR-001 第 2 步的 schema9 记录：与 schema10 同字段形状，但没有
+ * `sourceKind`/`actorId`/`sessionSeq`/`sessionLabel`/`attestations`（读出时补）。
+ * 只用于读时兼容与旧历史原样保留。
+ */
+export type ProjectFileProjectV9 = Omit<
+  ProjectFileProject,
+  | 'schemaVersion'
+  | 'sourceKind'
+  | 'actorId'
+  | 'sessionSeq'
+  | 'sessionLabel'
+  | 'attestations'
+> & {
+  schemaVersion: typeof V9_PROJECT_FILE_SCHEMA_VERSION
 }
 
 /**
  * V3.6 的 schema8 记录：与 schema9 同字段形状，但没有 `provenance`（读出时补）。
  * 只用于读时兼容与旧历史原样保留。
  */
-export type ProjectFileProjectV8 = Omit<ProjectFileProject, 'schemaVersion'> & {
+export type ProjectFileProjectV8 = Omit<ProjectFileProjectV9, 'schemaVersion'> & {
   schemaVersion: typeof V36_PROJECT_FILE_SCHEMA_VERSION
 }
 
@@ -423,7 +481,7 @@ export type ProjectFileProjectV8 = Omit<ProjectFileProject, 'schemaVersion'> & {
  * 只用于读时兼容与旧历史原样保留。
  */
 export type ProjectFileProjectV7 = Omit<
-  ProjectFileProject,
+  ProjectFileProjectV9,
   | 'schemaVersion'
   | 'extractionDrafts'
 > & {
@@ -435,7 +493,7 @@ export type ProjectFileProjectV7 = Omit<
  * 只用于读时兼容与旧历史原样保留。
  */
 export type ProjectFileProjectV6 = Omit<
-  ProjectFileProject,
+  ProjectFileProjectV9,
   | 'schemaVersion'
   | 'requirementRevisions'
   | 'activeRequirementRevisionId'
@@ -450,7 +508,7 @@ export type ProjectFileProjectV6 = Omit<
  * 只用于读时兼容与旧历史原样保留。
  */
 export type ProjectFileProjectV5 = Omit<
-  ProjectFileProject,
+  ProjectFileProjectV9,
   | 'schemaVersion'
   | 'parameters'
   | 'dimensionLinks'
@@ -468,7 +526,7 @@ export type ProjectFileProjectV5 = Omit<
 
 /** B2 的 schema4 记录：模型/关联有严格类型，parameters/drawings 必须为空。 */
 export type ProjectFileProjectV2 = Omit<
-  ProjectFileProject,
+  ProjectFileProjectV9,
   | 'schemaVersion'
   | 'parameters'
   | 'drawings'
@@ -486,7 +544,7 @@ export type ProjectFileProjectV2 = Omit<
 
 /** 旧 schema3 项目记录：数组为空，无 sourceFormatVersion。只用于读时兼容。 */
 export type ProjectFileProjectV1 = Omit<
-  ProjectFileProject,
+  ProjectFileProjectV9,
   | 'schemaVersion'
   | 'sourceFormatVersion'
   | 'parts'
@@ -538,11 +596,12 @@ export interface ProjectFileRevision {
   createdAt: string
   reason: string
   /**
-   * 旧归档快照保留原 schema（3/4/5/6/7/8）原样（不可变历史）；新快照为当前 schema 9。
+   * 旧归档快照保留原 schema（3/4/5/6/7/8/9）原样（不可变历史）；新快照为当前 schema 10。
    * 读取按版本化联合解析，保存时不会把旧历史改写成新内容。
    */
   project:
     | ProjectFileProject
+    | ProjectFileProjectV9
     | ProjectFileProjectV8
     | ProjectFileProjectV7
     | ProjectFileProjectV6

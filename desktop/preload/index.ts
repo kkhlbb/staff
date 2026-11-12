@@ -56,6 +56,9 @@ import {
   type AgentProviderTestValue,
   type AgentExportRequest,
   type AgentExportValue,
+  type IntentCreateValue,
+  type IntentDraftView,
+  type AgentDraftValue,
   type ToolResult,
 } from '../shared/contracts'
 
@@ -281,6 +284,18 @@ const api: CunlianApi = {
   exportApprovedVersion: (request: AgentExportRequest) =>
     ipcRenderer.invoke(IPC_CHANNELS.agentExportApprovedVersion, request) as Promise<ToolResult<AgentExportValue>>,
   onAgentEvent: (listener) => subscribe<AgentTaskView>(IPC_EVENTS.agentEvent, listener),
+  intentCreateProject: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.intentCreate, request) as Promise<ToolResult<IntentCreateValue>>,
+  intentState: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.intentState, {}) as Promise<ToolResult<IntentDraftView | null>>,
+  intentApply: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.intentApply, {}) as Promise<ToolResult<AgentDraftValue>>,
+  intentPreview: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.intentPreview, {}) as Promise<ToolResult<AgentDraftValue>>,
+  intentConfirmCandidate: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.intentConfirm, request) as Promise<ToolResult<IntentDraftView>>,
+  intentIssueApproval: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.intentIssueApproval, request) as Promise<ToolResult<AgentIssueApprovalValue>>,
 }
 
 contextBridge.exposeInMainWorld('cunlian', api)

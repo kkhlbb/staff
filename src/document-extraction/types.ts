@@ -192,6 +192,11 @@ export interface UserAttestation {
   readonly statement: string
   /** 这话是在定哪个字段。 */
   readonly fieldPath: string
+  /**
+   * 哪一轮对话（任务/输入）说的。由 main 绑定当前 Agent 任务 ID，不由模型提供；
+   * 旧断言没有该字段（按 null 读），不重算、不改值。
+   */
+  readonly turnId?: string | null
   /** 显式撤销留痕；撤销不删除出处。 */
   readonly revokedAt?: string | null
   readonly revokedBy?: string | null
@@ -638,6 +643,16 @@ export interface ExtractionDraft {
   readonly candidates: readonly ExtractionCandidate[]
   readonly issues: readonly ExtractionIssue[]
   readonly decisions: readonly ExtractionDecision[]
+  /**
+   * ADR-001 第 3 步（schema 10）：无任务书草稿的“参数 ↔ 组成环”绑定意图。
+   * 参数值仍取自用户给出的基本尺寸；有来源的 PDF 草稿不写该字段。
+   */
+  readonly intentBindings?: readonly {
+    readonly parameter: 'innerDiameter' | 'outerDiameter' | 'length'
+    readonly symbol: string
+    readonly valueQ: number
+    readonly text: string
+  }[]
 }
 
 export type ExtractionErrorCode =

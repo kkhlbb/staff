@@ -173,8 +173,10 @@ export function renderDrawingSvg(data: DrawingData, options: SvgRenderOptions = 
       parameterIds: data.parameterSnapshot.map((item) => item.parameterId),
     }),
   )
+  const basis = typeof data.frame.fields.basis === 'string' ? data.frame.fields.basis : ''
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
+    ...(basis === '' ? [] : [`<!-- ${basis} -->`]),
     `<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210" version="1.1" data-drawing-id="${escapeXml(data.drawingId)}" data-drawing-fingerprint="${escapeXml(data.fingerprint)}">`,
     `<metadata id="drawing-metadata">${metadata}</metadata>`,
     '<defs>',

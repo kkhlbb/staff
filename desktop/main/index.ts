@@ -524,6 +524,8 @@ function installIpcHandlers(): void {
     controller,
     rootDir: path.join(app.getPath('userData'), 'workspace'),
     approvals,
+    appVersion: app.getVersion(),
+    electronVersion: process.versions.electron ?? 'unknown',
     exportPorts: {
       // 路径只来自系统对话框；后缀由 format 决定（suggestedName 由工具层生成）。
       pickTarget: (windowId, suggestedName) => pickDrawingExportPath(

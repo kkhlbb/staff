@@ -47,15 +47,20 @@ const id = z.string().min(1).max(240)
 const schemas = {
   start: z.object({
     goal: z.string().min(1).max(2000),
-    demo: z.enum(['normal', 'ask', 'failure']).optional(),
+    demo: z.enum(['normal', 'ask', 'failure', 'intent']).optional(),
     mode: z.enum(['demo', 'real']).optional(),
     planToken: z.string().min(1).max(240).optional(),
     extractionDraftId: z.string().min(1).max(240).optional(),
+    /** 无任务书入口：责任人自述由用户界面手输；不是模型参数。 */
+    intent: z.object({
+      actorId: z.string().min(1).max(200),
+      sessionLabel: z.string().max(200).nullable().optional(),
+    }).strict().optional(),
   }).strict(),
   cancel: z.object({ taskId: id }).strict(),
   resume: z.object({ taskId: id }).strict(),
   taskState: z.object({ taskId: id }).strict(),
-  issueApproval: z.object({ previewId: id }).strict(),
+  issueApproval: z.object({ previewId: id, userAttestationAcknowledged: z.boolean().optional() }).strict(),
   commit: z.object({ approvalId: id, draftId: id, previewFingerprint: z.string().min(8).max(128) }).strict(),
   locate: z.object({ requirementRevisionId: id.optional(), checkId: id.optional(), parameterId: id.optional() }).strict(),
   providerSave: z.object({
@@ -117,6 +122,61 @@ export function realTaskSystemPrompt(input: {
 
 function fail(code: ToolErrorCode, message: string, details?: unknown): ToolResult<never> {
   return { ok: false, code, message, requestId: randomUUID(), objectVersion: 'unavailable', ...(details === undefined ? {} : { details }) }
+}
+
+/**
+ * 无任务书演示：四个工具一次走完，所有数值都刻意写成用户原话里能逐字找到的数。
+ * 这是假模型的固定脚本，不是“AI 自己会说的数”；换成真模型时由它按用户原话填。
+ */
+function intentDemoScript(goal: string): FakeModelStep[] {
+  const statement = goal
+  return [
+    { kind: 'tool_calls', calls: [{ name: 'createProject', argumentsJson: JSON.stringify({ name: 'φ20 轴隔套', partType: 'spacer' }) }] },
+    {
+      kind: 'tool_calls',
+      calls: [{
+        name: 'setChain',
+        argumentsJson: JSON.stringify({
+          statement,
+          rings: [
+            { symbol: 'H', nominalMm: '52.20', upperDeviationMm: '0.02', lowerDeviationMm: '-0.02' },
+            { symbol: 'B1', nominalMm: '20', upperDeviationMm: '0.01', lowerDeviationMm: '-0.01' },
+            { symbol: 'S', nominalMm: '12.05', upperDeviationMm: '0.01', lowerDeviationMm: '-0.01' },
+            { symbol: 'B2', nominalMm: '20', upperDeviationMm: '0.01', lowerDeviationMm: '-0.01' },
+          ],
+          formula: 'H - B1 - S - B2',
+        }),
+      }],
+    },
+    {
+      kind: 'tool_calls',
+      calls: [{
+        name: 'setRequirement',
+        argumentsJson: JSON.stringify({
+          statement,
+          lowerMm: '0.15',
+          upperMm: '0.25',
+          lowerInclusive: true,
+          upperInclusive: true,
+        }),
+      }],
+    },
+    {
+      kind: 'tool_calls',
+      calls: [{
+        name: 'setBinding',
+        argumentsJson: JSON.stringify({
+          statement,
+          parameters: [
+            { parameter: 'innerDiameter', mm: '20' },
+            { parameter: 'outerDiameter', mm: '32' },
+            { parameter: 'length', mm: '12.05', symbol: 'S' },
+          ],
+        }),
+      }],
+    },
+    { kind: 'text', text: '草稿已建好：请逐条核对数值与出处，确认后再生成工程草稿。' },
+  ]
 }
 
 /** 演示脚本只包含工具调用与一段模型文本；文本不进入任何结论位。 */
@@ -214,7 +274,13 @@ export function registerAgentSessionChannels(ipc: IpcMainLike, deps: AgentSessio
     registry.register(new FakeModelAdapter(FAKE_MODEL_ID, []))
     const scheduler = new AgentScheduler({
       store: new AgentTaskStore({ rootDir: deps.rootDir }),
-      dispatch: { dispatch: call => deps.service.run(windowId, call.command, call.arguments) },
+      dispatch: {
+        dispatch: call => deps.service.run(windowId, call.command, call.arguments, {
+          userText: call.userText,
+          turnId: call.taskId,
+          ...(call.intentIdentity === undefined ? {} : { intentIdentity: call.intentIdentity }),
+        }),
+      },
       adapters: registry,
       // 阶段 3 唯一可执行模型是显式标注的 fake-1；真实供应商状态单独在 agentProviderStatus 展示。
       provider: { getProviderStatus: () => ({ configured: true, provider: FAKE_MODEL_ID }) },
@@ -336,6 +402,14 @@ export function registerAgentSessionChannels(ipc: IpcMainLike, deps: AgentSessio
         writes: true,
         systemPrompt: context,
         messages: [{ role: 'user', content: request.goal }],
+        ...(request.intent === undefined
+          ? {}
+          : {
+              intentIdentity: {
+                actorId: request.intent.actorId,
+                sessionLabel: request.intent.sessionLabel ?? null,
+              },
+            }),
       })
       if (!started.ok) return fail(started.code === 'MODEL_NOT_CONFIGURED' ? 'INVALID_INPUT' : started.code, started.message)
       void started.completion.catch(() => undefined)
@@ -346,6 +420,30 @@ export function registerAgentSessionChannels(ipc: IpcMainLike, deps: AgentSessio
 
     // 离线演示：阶段 3 行为不变，显式标注假模型。
     const scenario = request.demo ?? 'normal'
+    if (scenario === 'intent') {
+      // 无任务书演示：不需要工程草稿；四个工具从空项目开始写意图草稿。
+      registry.register(new FakeModelAdapter(FAKE_MODEL_ID, intentDemoScript(request.goal)))
+      const started = await scheduler.startTask({
+        projectId,
+        baseRevisionId,
+        goal: request.goal,
+        modelId: FAKE_MODEL_ID,
+        writes: true,
+        ...(request.intent === undefined
+          ? {}
+          : {
+              intentIdentity: {
+                actorId: request.intent.actorId,
+                sessionLabel: request.intent.sessionLabel ?? null,
+              },
+            }),
+      })
+      if (!started.ok) return fail(started.code === 'MODEL_NOT_CONFIGURED' ? 'INVALID_INPUT' : started.code, started.message)
+      void started.completion.catch(() => undefined)
+      notify(windowId, started.taskId)
+      const value: AgentStartValue = { taskId: started.taskId, demo: scenario, modelId: FAKE_MODEL_ID }
+      return { ok: true, data: value, requestId: randomUUID(), objectVersion: baseRevisionId }
+    }
     // 演示草稿只写应用工作区；失败时不启动任务。
     const draft = await deps.service.prepareDemoDraft(windowId)
     if (!draft.ok) return fail(draft.code, draft.message)
@@ -356,6 +454,14 @@ export function registerAgentSessionChannels(ipc: IpcMainLike, deps: AgentSessio
       goal: request.goal,
       modelId: FAKE_MODEL_ID,
       writes: true,
+      ...(request.intent === undefined
+        ? {}
+        : {
+            intentIdentity: {
+              actorId: request.intent.actorId,
+              sessionLabel: request.intent.sessionLabel ?? null,
+            },
+          }),
     })
     if (!started.ok) return fail(started.code === 'MODEL_NOT_CONFIGURED' ? 'INVALID_INPUT' : started.code, started.message)
     // 不等待完成：状态与步骤通过 onUpdate 推送；界面另可轮询 task-state。
@@ -391,7 +497,38 @@ export function registerAgentSessionChannels(ipc: IpcMainLike, deps: AgentSessio
 
   install(IPC_CHANNELS.agentPreviewSummary, z.object({}).strict(), (windowId) => deps.service.previewSummary(windowId))
 
-  install(IPC_CHANNELS.agentIssueApproval, schemas.issueApproval, (windowId, request) => deps.service.issueApproval(windowId, request.previewId))
+  install(IPC_CHANNELS.agentIssueApproval, schemas.issueApproval, (windowId, request) =>
+    deps.service.issueApproval(windowId, request.previewId, {
+      ...(request.userAttestationAcknowledged === undefined
+        ? {}
+        : { userAttestationAcknowledged: request.userAttestationAcknowledged }),
+    }),
+  )
+
+  // ADR-001 第 3 步：无任务书入口（用户界面触发）。
+  install(IPC_CHANNELS.intentCreate, z.object({
+    name: z.string().min(1).max(80),
+    actorId: z.string().min(1).max(200),
+    sessionLabel: z.string().max(200).nullable().optional(),
+  }).strict(), (windowId, request) =>
+    deps.service.createIntentProject(windowId, {
+      name: request.name,
+      actorId: request.actorId,
+      sessionLabel: request.sessionLabel ?? null,
+    }),
+  )
+  install(IPC_CHANNELS.intentState, z.object({}).strict(), (windowId) => deps.service.intentState(windowId))
+  install(IPC_CHANNELS.intentApply, z.object({}).strict(), (windowId) => deps.service.applyIntentDraft(windowId))
+  install(IPC_CHANNELS.intentPreview, z.object({}).strict(), (windowId) => deps.service.previewLatestDraft(windowId))
+  install(IPC_CHANNELS.intentConfirm, z.object({
+    candidateId: z.string().min(1).max(240),
+    editRevision: z.number().int().positive(),
+  }).strict(), (windowId, request) => deps.service.confirmIntentCandidate(windowId, request))
+  install(IPC_CHANNELS.intentIssueApproval, schemas.issueApproval, (windowId, request) =>
+    deps.service.issueApproval(windowId, request.previewId, {
+      userAttestationAcknowledged: request.userAttestationAcknowledged === true,
+    }),
+  )
 
   install(IPC_CHANNELS.agentCommitApprovedDraft, schemas.commit, (windowId, request) => deps.service.commitApprovedDraft(windowId, request))
 

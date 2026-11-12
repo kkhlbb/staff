@@ -480,6 +480,18 @@ describe('A-04b 会话接线', () => {
     fireEvent.click(screen.getByRole('button', { name: opened.snapshot.documents[0].title }))
     expect(screen.getByText('有元数据，未读取附件')).toBeInTheDocument()
   })
+  it('无任务书项目：标题栏标清“依据：用户输入，无外部原文件”', async () => {
+    opened = {
+      ...opened,
+      snapshot: {
+        ...opened.snapshot,
+        project: { ...opened.snapshot.project, sourceKind: 'user-intent', actorId: '老王', sessionSeq: 1 },
+      },
+    }
+    await openExample()
+    expect(screen.getByTestId('project-source-note').textContent).toBe('依据：用户输入，无外部原文件')
+  })
+
   it('菜单 save/saveAs/open/close 真实转交，屏障回复当前会话；失败不更换 UI 快照', async () => {
     await openExample()
     act(() => menu({ action: 'save' }))

@@ -64,7 +64,7 @@ function findRing(snapshot: ProjectFileSnapshot, symbol: string) {
 }
 
 describe('schema8→9：提取草稿持久化与严格校验', () => {
-  it('候选/出处/决定往返：schema9 编码解码逐字段保留', async () => {
+  it('候选/出处/决定往返：schema10 编码解码逐字段保留', async () => {
     const snapshot = await snapshotWithDrafts()
     const { draft } = findRing(snapshot, 'H')
     const decided = confirmCandidate(draft, {
@@ -93,7 +93,7 @@ describe('schema8→9：提取草稿持久化与严格校验', () => {
     const encoded = await encodeProjectFile(withDecision)
     expect(encoded.ok, encoded.ok ? '' : `${encoded.error.code}: ${encoded.error.message}`).toBe(true)
     if (!encoded.ok) return
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(9)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(10)
 
     const decoded = await decodeProjectFile(encoded.value.bytes)
     expect(decoded.ok).toBe(true)
@@ -170,6 +170,11 @@ describe('schema8→9：提取草稿持久化与严格校验', () => {
       const strip = (project: Record<string, unknown>): void => {
         project.schemaVersion = 7
         delete project.extractionDrafts
+        delete project.sourceKind
+        delete project.actorId
+        delete project.sessionSeq
+        delete project.sessionLabel
+        delete project.attestations
       }
       for (const [path, bytes] of parts) {
         if (path === 'project/project.json') {
@@ -194,7 +199,7 @@ describe('schema8→9：提取草稿持久化与严格校验', () => {
     const decoded = await decodeProjectFile(legacy)
     expect(decoded.ok, decoded.ok ? '' : `${decoded.error.code}: ${decoded.error.message}`).toBe(true)
     if (!decoded.ok) return
-    expect(decoded.value.snapshot.project.schemaVersion).toBe(9)
+    expect(decoded.value.snapshot.project.schemaVersion).toBe(10)
     expect(decoded.value.snapshot.project.extractionDrafts).toEqual([])
   })
 

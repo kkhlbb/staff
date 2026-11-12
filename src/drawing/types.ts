@@ -206,6 +206,14 @@ export const DRAWING_STYLES: DrawingStyles = {
   arrow: { lengthMm: 2.5, widthMm: 0.8 },
 }
 
+/**
+ * 无任务书项目的固定依据栏。写进标题栏、技术要求区、导出文件头与文件名后缀，
+ * 让“这些数字由人给出、没有原文件”在任何下游产物里都看得见。
+ */
+export const USER_INPUT_BASIS = '依据：用户输入，无外部原文件'
+/** 文件名后缀：默认加；用户改名后标记仍在项目内。 */
+export const USER_INPUT_FILE_SUFFIX = '-userinput'
+
 /** 标题栏/技术要求区的技术字段；空值统一按“待补充”，不伪造。 */
 export interface DrawingFrameFields {
   partName: string
@@ -216,6 +224,8 @@ export interface DrawingFrameFields {
   surface: string
   drafter: string
   date: string
+  /** 依据栏；空/缺省 = 有外部来源，标题栏不新增任何行（字节与改前一致）。 */
+  basis?: string
 }
 
 export interface DrawingFrame {

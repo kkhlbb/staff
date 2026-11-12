@@ -32,6 +32,7 @@ import {
   REVISION_EXTENSION,
   V35_PROJECT_FILE_SCHEMA_VERSION,
   V36_PROJECT_FILE_SCHEMA_VERSION,
+  V9_PROJECT_FILE_SCHEMA_VERSION,
   REVISION_PATH_PREFIX,
   type ProjectFileAttachmentInput,
   type ProjectFileAttachmentRef,
@@ -48,6 +49,7 @@ import {
   type ProjectFileProjectV6,
   type ProjectFileProjectV7,
   type ProjectFileProjectV8,
+  type ProjectFileProjectV9,
   type ProjectFileResult,
   type ProjectFileRevision,
   type ProjectFileSnapshot,
@@ -284,6 +286,8 @@ const drawingFrameFieldsSchema = z
     surface: z.string().max(200),
     drafter: z.string().max(200),
     date: z.string().max(200),
+    /** schema 10：依据栏；有来源项目为空/缺省，不新增标题栏行。 */
+    basis: z.string().max(200).optional(),
   })
   .strict()
 
@@ -338,6 +342,7 @@ const requirementChainRefSchema = z
 
 const requirementSourceRefSchema = z
   .object({
+    kind: z.literal('pdf').optional(),
     documentId: idSchema,
     revisionId: idSchema,
     sha256: sha256Schema,
@@ -382,7 +387,7 @@ const requirementBindingBasisSchema = z
   })
   .strict()
 
-const requirementRevisionSchema = z
+const requirementRevisionObject = z
   .object({
     requirementId: idSchema,
     revisionId: idSchema,
@@ -400,9 +405,11 @@ const requirementRevisionSchema = z
     bindingBasis: requirementBindingBasisSchema,
   })
   .strict()
-  .refine((value) => value.lowerQ <= value.upperQ, {
-    message: '条款下限必须不大于上限',
-  })
+
+const requirementRevisionSchema = requirementRevisionObject.refine(
+  (value) => value.lowerQ <= value.upperQ,
+  { message: '条款下限必须不大于上限' },
+)
 
 const requirementCheckBasisSchema = z.discriminatedUnion('kind', [
   z
@@ -422,43 +429,45 @@ const requirementCheckBasisSchema = z.discriminatedUnion('kind', [
     .strict(),
 ])
 
-const requirementEvidenceRefSchema = z
-  .object({
-    requirementId: idSchema,
-    requirementRevisionId: idSchema,
-    requirementRulesVersion: z.string().min(1),
-    source: requirementSourceRefSchema,
-    bindingBasisDigest: z.string().min(1).max(80),
-    analysisSnapshotId: idSchema.nullable(),
-    projectRevisionId: idSchema.nullable(),
-    drawingFingerprint: z.string().min(1).nullable(),
-  })
-  .strict()
+const requirementEvidenceRefFields = {
+  requirementId: idSchema,
+  requirementRevisionId: idSchema,
+  requirementRulesVersion: z.string().min(1),
+  source: requirementSourceRefSchema,
+  bindingBasisDigest: z.string().min(1).max(80),
+  analysisSnapshotId: idSchema.nullable(),
+  projectRevisionId: idSchema.nullable(),
+  drawingFingerprint: z.string().min(1).nullable(),
+} as const
+
+const requirementEvidenceRefSchema = z.object(requirementEvidenceRefFields).strict()
+
+const requirementCheckFields = {
+  checkId: idSchema,
+  projectId: idSchema,
+  requirementRevisionId: idSchema.nullable(),
+  chainRef: requirementChainRefSchema,
+  basis: requirementCheckBasisSchema,
+  engineVersion: z.string().min(1),
+  requirementRulesVersion: z.string().min(1),
+  inputFingerprint: z.string().min(1),
+  checkedAt: z.string().min(1),
+  status: z.enum(REQUIREMENT_CHECK_STATUSES),
+  reasonCodes: z.array(z.enum(REQUIREMENT_REASON_CODES)),
+  resultInterval: z
+    .object({ minQ: z.number().int(), maxQ: z.number().int() })
+    .strict()
+    .nullable(),
+  margins: z
+    .object({ lowerQ: z.number().int(), upperQ: z.number().int() })
+    .strict()
+    .nullable(),
+  evidenceRef: requirementEvidenceRefSchema.nullable(),
+  provenance: z.enum(['candidate', 'committed']),
+} as const
 
 const requirementCheckSchema = z
-  .object({
-    checkId: idSchema,
-    projectId: idSchema,
-    requirementRevisionId: idSchema.nullable(),
-    chainRef: requirementChainRefSchema,
-    basis: requirementCheckBasisSchema,
-    engineVersion: z.string().min(1),
-    requirementRulesVersion: z.string().min(1),
-    inputFingerprint: z.string().min(1),
-    checkedAt: z.string().min(1),
-    status: z.enum(REQUIREMENT_CHECK_STATUSES),
-    reasonCodes: z.array(z.enum(REQUIREMENT_REASON_CODES)),
-    resultInterval: z
-      .object({ minQ: z.number().int(), maxQ: z.number().int() })
-      .strict()
-      .nullable(),
-    margins: z
-      .object({ lowerQ: z.number().int(), upperQ: z.number().int() })
-      .strict()
-      .nullable(),
-    evidenceRef: requirementEvidenceRefSchema.nullable(),
-    provenance: z.enum(['candidate', 'committed']),
-  })
+  .object(requirementCheckFields)
   .strict()
   .refine(
     (check) =>
@@ -538,11 +547,54 @@ const userAttestationSchema = z
     sessionLabel: z.string().max(200).nullable(),
     statement: z.string().min(1).max(4000),
     fieldPath: z.string().min(1).max(400),
+    turnId: z.string().min(1).max(240).nullable().optional(),
     revokedAt: z.string().min(1).max(64).nullable().optional(),
     revokedBy: z.string().min(1).max(200).nullable().optional(),
     revokedStatement: z.string().min(1).max(2000).nullable().optional(),
   })
   .strict()
+
+/**
+ * schema 10：条款来源可以是用户断言（无任务书项目）。
+ * 不伪造页码/选区，也没有 PDF 可核对；完整性与撤销复用 attestation 判据。
+ */
+const attestedRequirementSourceRefSchema = z
+  .object({
+    kind: z.literal('user-attestation'),
+    attestation: userAttestationSchema,
+  })
+  .strict()
+
+/** schema 10：来源允许 PDF 或用户断言（版本、检查与证据引用三处一致）。 */
+const requirementSourceRefV10Schema = z.union([
+  requirementSourceRefSchema,
+  attestedRequirementSourceRefSchema,
+])
+
+const requirementRevisionV10Schema = requirementRevisionObject
+  .extend({ source: requirementSourceRefV10Schema })
+  .refine((value) => value.lowerQ <= value.upperQ, {
+    message: '条款下限必须不大于上限',
+  })
+
+const requirementEvidenceRefV10Schema = z
+  .object({ ...requirementEvidenceRefFields, source: requirementSourceRefV10Schema })
+  .strict()
+
+const requirementCheckV10Schema = z
+  .object({ ...requirementCheckFields, evidenceRef: requirementEvidenceRefV10Schema.nullable() })
+  .strict()
+  .refine(
+    (check) =>
+      check.status === 'unchecked'
+        ? check.resultInterval === null && check.margins === null
+        : true,
+    { message: '未检查不得携带当前有效结果区间/裕量' },
+  )
+  .refine(
+    (check) => (check.requirementRevisionId === null ? check.evidenceRef === null : true),
+    { message: '无条款的检查不得带条款证据引用' },
+  )
 
 /** pdf-text 出处：与 evidence 同形状，另接受显式 `kind: 'pdf-text'`（解析器不写）。 */
 const pdfTextProvenanceSchema = z
@@ -757,6 +809,23 @@ const extractionDraftSchema = z
     candidates: z.array(extractionCandidateSchema).max(200),
     issues: z.array(extractionIssueSchema).max(200),
     decisions: z.array(extractionDecisionSchema).max(5000),
+    /**
+     * schema 10：无任务书草稿的参数 ↔ 组成环绑定意图（参数取自用户给出的
+     * 基本尺寸）。有来源的 PDF 草稿不写该字段；缺省表示没有绑定意图。
+     */
+    intentBindings: z
+      .array(
+        z
+          .object({
+            parameter: z.enum(['innerDiameter', 'outerDiameter', 'length']),
+            symbol: z.string().min(1).max(40),
+            valueQ: z.number().int(),
+            text: z.string().min(1).max(64),
+          })
+          .strict(),
+      )
+      .max(3)
+      .optional(),
   })
   .strict()
 
@@ -824,11 +893,55 @@ const projectV6Schema = projectV5Schema
 /**
  * ADR-001：schema9，在 schema8 之上给提取草稿的数值/候选/决定加纯加法字段
  * `provenance`（出处联合类型）。旧 schema8 记录没有该字段，读取时经 adaptProjectV8
- * 按原 evidence 逐条补 pdf-text 出处（不重算、不改值），保存时才写 9。
+ * 按原 evidence 逐条补 pdf-text 出处（不重算、不改值），保存时才写 10。
  */
-const projectV7Schema = projectV6Schema
-  .extend({ schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION) })
+const projectV8Schema = projectV6Schema
+  .extend({ schemaVersion: z.literal(V9_PROJECT_FILE_SCHEMA_VERSION) })
   .strict()
+
+/**
+ * schema10：无任务书入口的加法字段。旧 schema9 记录没有这些字段，读取时经
+ * adaptProjectV9 补 `sourceKind='pdf'` 与空账本（不重算、不改值）。
+ */
+const projectV9Schema = projectV8Schema
+  .extend({
+    schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
+    sourceKind: z.enum(['pdf', 'user-intent']),
+    actorId: z.string().min(1).max(200).nullable(),
+    sessionSeq: z.number().int().min(0),
+    sessionLabel: z.string().max(200).nullable(),
+    attestations: z.array(userAttestationSchema).max(5000),
+    requirementRevisions: z.array(requirementRevisionV10Schema),
+    currentRequirementCheck: requirementCheckV10Schema.nullable(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.sourceKind !== 'user-intent') return
+    if (value.actorId === null || value.sessionSeq < 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['actorId'],
+        message: '无任务书项目必须有责任人自述与已发生的输入会话序号',
+      })
+      return
+    }
+    for (const [index, attestation] of value.attestations.entries()) {
+      if (attestation.actorId !== value.actorId) {
+        context.addIssue({
+          code: 'custom',
+          path: ['attestations', index, 'actorId'],
+          message: '断言的责任人与项目责任人不一致',
+        })
+      }
+      if (attestation.sessionSeq < 1 || attestation.sessionSeq > value.sessionSeq) {
+        context.addIssue({
+          code: 'custom',
+          path: ['attestations', index, 'sessionSeq'],
+          message: '断言的会话序号不在项目已发生的输入范围内',
+        })
+      }
+    }
+  })
 
 const draftSchema = z
   .object({
@@ -1116,6 +1229,7 @@ const manifestProjectV2Schema = z
       z.literal(D_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(V35_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(V36_PROJECT_FILE_SCHEMA_VERSION),
+      z.literal(V9_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(PROJECT_FILE_SCHEMA_VERSION),
     ]),
     dimensionChainSchemaVersion: z.literal(DIMENSION_CHAIN_SCHEMA_VERSION),
@@ -1175,7 +1289,8 @@ export type VersionedProject =
   | { version: 4; project: ProjectFileProjectV6 }
   | { version: 5; project: ProjectFileProjectV7 }
   | { version: 6; project: ProjectFileProjectV8 }
-  | { version: 7; project: ProjectFileProject }
+  | { version: 7; project: ProjectFileProjectV9 }
+  | { version: 8; project: ProjectFileProject }
 
 /** 校验工作链与基线链；两个 schema 版本共用。 */
 function validateProjectChains(
@@ -1305,8 +1420,8 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
       },
     })
   }
-  if (version === PROJECT_FILE_SCHEMA_VERSION) {
-    const parsed = projectV7Schema.safeParse(input)
+  if (version === V9_PROJECT_FILE_SCHEMA_VERSION) {
+    const parsed = projectV8Schema.safeParse(input)
     if (!parsed.success) {
       return fail('INVALID_RECORD', 'project.json 结构不合法（schema 9）', describeZodError(parsed.error))
     }
@@ -1314,6 +1429,22 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
     if (!chains.ok) return chains
     return ok({
       version: 7,
+      project: {
+        ...(parsed.data as unknown as ProjectFileProjectV9),
+        dimensionChain: chains.value.dimensionChain,
+        baseline: chains.value.baseline,
+      },
+    })
+  }
+  if (version === PROJECT_FILE_SCHEMA_VERSION) {
+    const parsed = projectV9Schema.safeParse(input)
+    if (!parsed.success) {
+      return fail('INVALID_RECORD', 'project.json 结构不合法（schema 10）', describeZodError(parsed.error))
+    }
+    const chains = validateProjectChains(parsed.data)
+    if (!chains.ok) return chains
+    return ok({
+      version: 8,
       project: {
         ...(parsed.data as unknown as ProjectFileProject),
         dimensionChain: chains.value.dimensionChain,
@@ -1328,6 +1459,18 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
   )
 }
 
+/** schema 10 之前的记录没有来源种类/身份/断言账本：读入时按“有来源 PDF”补齐，不重算、不改值。 */
+const legacySourceFields = {
+  sourceKind: 'pdf',
+  actorId: null,
+  sessionSeq: 0,
+  sessionLabel: null,
+  attestations: [] as ProjectFileProject['attestations'],
+} satisfies Pick<
+  ProjectFileProject,
+  'sourceKind' | 'actorId' | 'sessionSeq' | 'sessionLabel' | 'attestations'
+>
+
 /**
  * 读时兼容：把 schema3 记录适配成当前工作形状（内存中，不改磁盘）。
  * 不制造模型，也不凭空确认任何关系；sourceFormatVersion=1 供首次保存升级使用。
@@ -1337,6 +1480,7 @@ export function adaptProjectV1(project: ProjectFileProjectV1): ProjectFileProjec
     ...project,
     schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
     sourceFormatVersion: 1,
+    ...legacySourceFields,
     parts: [],
     parameters: [],
     modelRevisions: [],
@@ -1354,6 +1498,7 @@ export function adaptProjectV2(project: ProjectFileProjectV2): ProjectFileProjec
   return {
     ...project,
     schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
+    ...legacySourceFields,
     parameters: [],
     drawings: [],
     requirementRevisions: [],
@@ -1368,6 +1513,7 @@ export function adaptProjectV3(project: ProjectFileProjectV5): ProjectFileProjec
   return {
     ...project,
     schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
+    ...legacySourceFields,
     parameters: project.parameters.map((parameter) => ({
       ...parameter,
       // C 没有参数修订号；首次读入按 1 起算。这是显式、可追溯的升级，
@@ -1390,6 +1536,7 @@ export function adaptProjectV6(project: ProjectFileProjectV6): ProjectFileProjec
   return {
     ...project,
     schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
+    ...legacySourceFields,
     requirementRevisions: [],
     activeRequirementRevisionId: null,
     currentRequirementCheck: null,
@@ -1405,6 +1552,7 @@ export function adaptProjectV7(project: ProjectFileProjectV7): ProjectFileProjec
   return {
     ...project,
     schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
+    ...legacySourceFields,
     extractionDrafts: [],
   }
 }
@@ -1463,6 +1611,7 @@ export function adaptProjectV8(project: ProjectFileProjectV8): ProjectFileProjec
   return {
     ...project,
     schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
+    ...legacySourceFields,
     extractionDrafts: project.extractionDrafts.map((draft) => ({
       ...draft,
       candidates: draft.candidates.map(withCandidateProvenance),
@@ -1474,7 +1623,19 @@ export function adaptProjectV8(project: ProjectFileProjectV8): ProjectFileProjec
   }
 }
 
-/** 严格解析 project/project.json（接受 schema3/4/5/6/7/8，统一返回当前工作形状）。 */
+/**
+ * schema9 → 当前工作形状（schema 10）：只补来源种类与空账本。
+ * 出处、候选、数值、判据与旧历史一律不重算、不改值。
+ */
+export function adaptProjectV9(project: ProjectFileProjectV9): ProjectFileProject {
+  return {
+    ...project,
+    schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
+    ...legacySourceFields,
+  }
+}
+
+/** 严格解析 project/project.json（接受 schema3/4/5/6/7/8/9，统一返回当前工作形状）。 */
 export function parseProject(
   input: unknown,
 ): ProjectFileResult<ProjectFileProject> {
@@ -1486,6 +1647,7 @@ export function parseProject(
   if (parsed.value.version === 4) return ok(adaptProjectV6(parsed.value.project))
   if (parsed.value.version === 5) return ok(adaptProjectV7(parsed.value.project))
   if (parsed.value.version === 6) return ok(adaptProjectV8(parsed.value.project))
+  if (parsed.value.version === 7) return ok(adaptProjectV9(parsed.value.project))
   return ok(parsed.value.project)
 }
 
@@ -1841,30 +2003,33 @@ export function validateExtractionDraftReferences(
     }
     idempotencyKeys.add(draft.idempotencyKey)
 
-    const source = draft.sourceIdentity
-    const revision = revisionById.get(source.revisionId)
-    if (revision === undefined || !documentIds.has(source.documentId)) {
-      return fail(
-        'MISSING_REFERENCE',
-        `提取草稿 ${draft.draftId} 引用的 PDF 版本不存在`,
-        source.revisionId,
-      )
-    }
-    if (revision.documentId !== source.documentId) {
-      return fail('MISSING_REFERENCE', `提取草稿 ${draft.draftId} 的文档与版本不一致`)
-    }
-    if (revision.sha256 !== source.sha256 || revision.blobKey !== source.blobKey) {
-      return fail('HASH_MISMATCH', `提取草稿 ${draft.draftId} 的版本哈希/blobKey 与来源不一致`)
-    }
-    if (source.pageCount !== revision.pageCount) {
-      return fail('INVALID_RECORD', `提取草稿 ${draft.draftId} 的页数与来源版本不一致`)
-    }
-    if (draft.pageRange.to > revision.pageCount) {
-      return fail(
-        'INVALID_RECORD',
-        `提取草稿 ${draft.draftId} 的页范围越界`,
-        `to=${draft.pageRange.to}, pageCount=${revision.pageCount}`,
-      )
+    const intentDraft = snapshot.project.sourceKind === 'user-intent'
+    if (!intentDraft) {
+      const source = draft.sourceIdentity
+      const revision = revisionById.get(source.revisionId)
+      if (revision === undefined || !documentIds.has(source.documentId)) {
+        return fail(
+          'MISSING_REFERENCE',
+          `提取草稿 ${draft.draftId} 引用的 PDF 版本不存在`,
+          source.revisionId,
+        )
+      }
+      if (revision.documentId !== source.documentId) {
+        return fail('MISSING_REFERENCE', `提取草稿 ${draft.draftId} 的文档与版本不一致`)
+      }
+      if (revision.sha256 !== source.sha256 || revision.blobKey !== source.blobKey) {
+        return fail('HASH_MISMATCH', `提取草稿 ${draft.draftId} 的版本哈希/blobKey 与来源不一致`)
+      }
+      if (source.pageCount !== revision.pageCount) {
+        return fail('INVALID_RECORD', `提取草稿 ${draft.draftId} 的页数与来源版本不一致`)
+      }
+      if (draft.pageRange.to > revision.pageCount) {
+        return fail(
+          'INVALID_RECORD',
+          `提取草稿 ${draft.draftId} 的页范围越界`,
+          `to=${draft.pageRange.to}, pageCount=${revision.pageCount}`,
+        )
+      }
     }
 
     const candidateById = new Map<string, ExtractionCandidate>()
@@ -2307,43 +2472,53 @@ export function validateSnapshotReferences(
         )
       }
     }
-    const sourceDocument = documentById.get(requirement.source.documentId)
-    const sourceRevision = revisionById.get(requirement.source.revisionId)
-    if (sourceDocument === undefined || sourceRevision === undefined) {
-      return fail(
-        'MISSING_REFERENCE',
-        `条款 ${requirement.revisionId} 引用的任务书版本不存在`,
+    // 用户断言来源没有 PDF 可核：完整性由 attestation 判据与项目账本负责。
+    if (requirement.source.kind === 'user-attestation') {
+      if (!isProvenanceCompleteness(requirement.source.attestation)) {
+        return fail(
+          'INVALID_RECORD',
+          `条款 ${requirement.revisionId} 的用户断言出处不完整`,
+        )
+      }
+    } else {
+      const sourceDocument = documentById.get(requirement.source.documentId)
+      const sourceRevision = revisionById.get(requirement.source.revisionId)
+      if (sourceDocument === undefined || sourceRevision === undefined) {
+        return fail(
+          'MISSING_REFERENCE',
+          `条款 ${requirement.revisionId} 引用的任务书版本不存在`,
+        )
+      }
+      if (sourceRevision.documentId !== sourceDocument.id) {
+        return fail(
+          'MISSING_REFERENCE',
+          `条款 ${requirement.revisionId} 的文档与版本不一致`,
+        )
+      }
+      if (sourceRevision.sha256 !== requirement.source.sha256) {
+        return fail(
+          'HASH_MISMATCH',
+          `条款 ${requirement.revisionId} 的 PDF 哈希与来源版本不一致`,
+        )
+      }
+      if (requirement.source.page > sourceRevision.pageCount) {
+        return fail(
+          'INVALID_RECORD',
+          `条款 ${requirement.revisionId} 的页码越界`,
+          `page=${requirement.source.page}, pageCount=${sourceRevision.pageCount}`,
+        )
+      }
+      const regionError = validateBindingRegion(
+        requirement.source.pageBoxPdf,
+        requirement.source.rectPdf,
       )
-    }
-    if (sourceRevision.documentId !== sourceDocument.id) {
-      return fail(
-        'MISSING_REFERENCE',
-        `条款 ${requirement.revisionId} 的文档与版本不一致`,
-      )
-    }
-    if (sourceRevision.sha256 !== requirement.source.sha256) {
-      return fail(
-        'HASH_MISMATCH',
-        `条款 ${requirement.revisionId} 的 PDF 哈希与来源版本不一致`,
-      )
-    }
-    if (requirement.source.page > sourceRevision.pageCount) {
-      return fail(
-        'INVALID_RECORD',
-        `条款 ${requirement.revisionId} 的页码越界`,
-        `page=${requirement.source.page}, pageCount=${sourceRevision.pageCount}`,
-      )
-    }
-    const regionError = validateBindingRegion(
-      requirement.source.pageBoxPdf,
-      requirement.source.rectPdf,
-    )
-    if (regionError !== null) {
-      return fail(
-        'INVALID_RECORD',
-        `条款 ${requirement.revisionId} 的选区不合法`,
-        regionError,
-      )
+      if (regionError !== null) {
+        return fail(
+          'INVALID_RECORD',
+          `条款 ${requirement.revisionId} 的选区不合法`,
+          regionError,
+        )
+      }
     }
   }
   // Beta 只允许一个活动 requirementId，且活动版本必须存在。

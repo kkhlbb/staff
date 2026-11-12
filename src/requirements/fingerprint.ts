@@ -16,7 +16,7 @@ import { ENGINE_VERSION } from '../domain/calculate'
 import type { ProjectFileSnapshot } from '../project-file/types'
 import { canonicalJson, stableFingerprint } from '../revisions/canonical'
 import { sha256Hex } from '../sources/hash'
-import { REQUIREMENT_RULES_VERSION } from './types'
+import { REQUIREMENT_RULES_VERSION, isPdfRequirementSource } from './types'
 import type {
   RequirementBindingBasis,
   RequirementChainRef,
@@ -145,15 +145,24 @@ export async function computeRequirementInputFingerprint(
             confirmedAt: input.requirement.confirmedAt,
             confirmedAgainstLatestRevisionId:
               input.requirement.confirmedAgainstLatestRevisionId,
-            source: {
-              documentId: input.requirement.source.documentId,
-              revisionId: input.requirement.source.revisionId,
-              sha256: input.requirement.source.sha256,
-              blobKey: input.requirement.source.blobKey,
-              page: input.requirement.source.page,
-              rectPdf: input.requirement.source.rectPdf,
-              pageBoxPdf: input.requirement.source.pageBoxPdf,
-            },
+            source: isPdfRequirementSource(input.requirement.source)
+              ? {
+                  documentId: input.requirement.source.documentId,
+                  revisionId: input.requirement.source.revisionId,
+                  sha256: input.requirement.source.sha256,
+                  blobKey: input.requirement.source.blobKey,
+                  page: input.requirement.source.page,
+                  rectPdf: input.requirement.source.rectPdf,
+                  pageBoxPdf: input.requirement.source.pageBoxPdf,
+                }
+              : {
+                  // 用户断言来源：不伪造页码/哈希，只把“谁在第几次输入里说的原话”纳入指纹。
+                  kind: 'user-attestation',
+                  actorId: input.requirement.source.attestation.actorId,
+                  sessionSeq: input.requirement.source.attestation.sessionSeq,
+                  fieldPath: input.requirement.source.attestation.fieldPath,
+                  statement: input.requirement.source.attestation.statement,
+                },
             bindingBasis: input.requirement.bindingBasis.digest,
           },
     // target 纳入摘要：target 改变会使旧预览/旧候选过期；但判定不读它。

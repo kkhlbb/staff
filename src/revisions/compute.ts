@@ -13,6 +13,7 @@ import {
   SPACER_PARAMETER_LABELS,
   SPACER_PART_ID,
   SPACER_TEMPLATE_VERSION,
+  USER_INPUT_BASIS,
   type ParameterSnapshotItem,
 } from '../drawing/types'
 import { parseSpacerParameters, validateSpacerParameterSnapshot } from '../parts/spacerParameters'
@@ -59,6 +60,7 @@ export const DEFAULT_FRAME_FIELDS: ProjectFileDrawingRecord['frameFields'] = {
   surface: '',
   drafter: '',
   date: '',
+  basis: '',
 }
 
 export interface ComputeChangeOptions {
@@ -237,7 +239,9 @@ export function computeChange(
   })
 
   const baseRecord = snapshot.project.drawings[0] ?? null
-  const frameFields = baseRecord?.frameFields ?? { ...DEFAULT_FRAME_FIELDS }
+  const frameFields = { ...(baseRecord?.frameFields ?? DEFAULT_FRAME_FIELDS) }
+  // 无任务书项目：标题栏与技术要求的依据栏是强制标记，不由用户备注决定。
+  if (snapshot.project.sourceKind === 'user-intent') frameFields.basis = USER_INPUT_BASIS
   const scale = baseRecord?.scale ?? { numerator: 1, denominator: 1 }
   const drawingId = baseRecord?.drawingId ?? `drawing:${snapshot.project.id}:spacer`
 

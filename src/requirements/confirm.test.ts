@@ -17,6 +17,7 @@ import {
   REQUIREMENT_SOURCE,
   TASKBOOK_TEXT,
 } from './__fixtures__/requirementFixture'
+import type { PdfRequirementSource } from './types'
 
 function baseInput(snapshot: ProjectFileSnapshot): ConfirmRequirementInput {
   return {
@@ -72,7 +73,7 @@ describe('V3.5 条款确认：首版与不可变版本', () => {
       rectPdf: [10, 10, 110, 30],
       pageBoxPdf: [0, 0, 595, 842],
     })
-    expect(revision.source.sha256).toBe(snapshot.revisions[0]!.sha256)
+    expect((revision.source as PdfRequirementSource).sha256).toBe(snapshot.revisions[0]!.sha256)
     expect(revision.confirmedText).toBe(TASKBOOK_TEXT)
     expect(revision.confirmedAgainstLatestRevisionId).toBe('sr-1')
     expect(revision.ruleType).toBe('closed-interval-mm')
@@ -310,7 +311,7 @@ describe('V3.5 条款更新：新建不可变版本、单条限制', () => {
       snapshot.project.requirementRevisions[0],
     )
     // 旧条款仍指向旧 PDF 版本与旧选区。
-    expect(candidate.project.requirementRevisions[0]!.source.revisionId).toBe('sr-1')
+    expect((candidate.project.requirementRevisions[0]!.source as PdfRequirementSource).revisionId).toBe('sr-1')
     expect(activeRequirement(candidate).revisionId).toBe('reqrev-2')
   })
 })

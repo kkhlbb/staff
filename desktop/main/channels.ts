@@ -266,6 +266,7 @@ async function recordRecent(
     name: session.snapshot.project.name,
     path: session.path,
     fingerprint: session.fingerprint,
+    sourceKind: session.snapshot.project.sourceKind,
   })
   if (!recorded.ok) {
     warnings.push(`最近项目索引更新失败：${recorded.error.message}`)

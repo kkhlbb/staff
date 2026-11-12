@@ -57,7 +57,7 @@ describe('V3.5 迁移前副本：覆盖 PDF/模型/历史/草稿', () => {
       const opened = await harness.invoke<ProjectOpenValue>(IPC_CHANNELS.projectOpen, {})
       expect(opened.ok).toBe(true)
       if (!opened.ok) return
-      expect(opened.value.snapshot.project.schemaVersion).toBe(9)
+      expect(opened.value.snapshot.project.schemaVersion).toBe(10)
       const session = harness.projectService.getSession(opened.value.sessionId)!
       expect(session.sourceProjectSchemaVersion).toBe(6)
 
@@ -97,10 +97,10 @@ describe('V3.5 迁移前副本：覆盖 PDF/模型/历史/草稿', () => {
       const after = await decodeProjectFile(new Uint8Array(await fsp.readFile(target)))
       expect(after.ok).toBe(true)
       if (!after.ok) return
-      expect(after.value.manifest.project.projectSchemaVersion).toBe(9)
+      expect(after.value.manifest.project.projectSchemaVersion).toBe(10)
       expect(after.value.snapshot.fileRevisions).toHaveLength(modelSnapshot.fileRevisions.length + 1)
       expect(after.value.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(6)
-      expect(after.value.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(9)
+      expect(after.value.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(10)
 
       // 二次保存不再创建副本。
       const second = await harness.invoke<ProjectSaveValue>(IPC_CHANNELS.projectSave, {
@@ -213,7 +213,7 @@ describe('V3.5 另存升级与提交路径', () => {
       const decoded = await decodeProjectFile(new Uint8Array(await fsp.readFile(copy)))
       expect(decoded.ok).toBe(true)
       if (decoded.ok) {
-        expect(decoded.value.manifest.project.projectSchemaVersion).toBe(9)
+        expect(decoded.value.manifest.project.projectSchemaVersion).toBe(10)
       }
     } finally {
       await harness.dispose()

@@ -8,6 +8,7 @@
  */
 import type { ProjectFileSnapshot } from '../project-file/types'
 import type { PdfPageBox, PdfRect } from '../sources/pdfCoordinates'
+import { isPdfRequirementSource } from './types'
 import type { RequirementRevision } from './types'
 
 /** 只依赖快照中与定位有关的字段；SnapshotDto（无附件字节）也满足。 */
@@ -52,10 +53,14 @@ export interface RequirementRevisionHistoryEntry {
   confirmedAt: string
   lowerQ: number
   upperQ: number
-  sourceRevisionId: string
-  sourcePage: number
-  sourceRectPdf: PdfRect
+  /** 来源种类；缺省即 pdf（旧项目）。 */
+  sourceKind: 'pdf' | 'user-attestation'
+  sourceRevisionId: string | null
+  sourcePage: number | null
+  sourceRectPdf: PdfRect | null
   sourceFileName: string | null
+  /** 无任务书项目：条款由谁在第几次输入里给出（原话逐字）。 */
+  sourceStatement: string | null
   isActive: boolean
   issue: RequirementSourceIssue | null
 }
@@ -78,20 +83,24 @@ function inspectSource(
   snapshot: RequirementHistorySnapshot,
   revision: RequirementRevision,
 ): RequirementSourceIssue | null {
+  // 用户断言来源没有 PDF 版本/附件可核；撤销与完整性由出处判据负责，
+  // 这里不制造“缺页/缺附件”的假问题。
+  const source = revision.source
+  if (!isPdfRequirementSource(source)) return null
   const sourceRevision = snapshot.revisions.find(
-    (item) => item.id === revision.source.revisionId,
+    (item) => item.id === source.revisionId,
   )
   if (sourceRevision === undefined) {
     return issue(
       'SOURCE_REVISION_MISSING',
-      `条款版本 ${revision.revisionId} 引用的来源 PDF 版本 ${revision.source.revisionId} 不在项目文件中（可能已删除），无法定位。`,
+      `条款版本 ${revision.revisionId} 引用的来源 PDF 版本 ${source.revisionId} 不在项目文件中（可能已删除），无法定位。`,
     )
   }
 
   const declaredMissing = snapshot.missingAttachments.find(
     (item) =>
       item.revisionId === sourceRevision.id ||
-      item.blobKey === revision.source.blobKey,
+      item.blobKey === source.blobKey,
   )
   if (declaredMissing !== undefined) {
     return issue(
@@ -101,18 +110,18 @@ function inspectSource(
   }
 
   const blob = snapshot.blobs.find(
-    (item) => item.blobKey === revision.source.blobKey,
+    (item) => item.blobKey === source.blobKey,
   )
   if (blob === undefined) {
     return issue(
       'SOURCE_BLOB_MISSING',
-      `条款版本 ${revision.revisionId} 引用的来源附件 ${revision.source.blobKey} 不在项目文件中（可能已删除），无法打开 PDF。`,
+      `条款版本 ${revision.revisionId} 引用的来源附件 ${source.blobKey} 不在项目文件中（可能已删除），无法打开 PDF。`,
     )
   }
 
   if (
-    sourceRevision.sha256 !== revision.source.sha256 ||
-    blob.sha256 !== revision.source.sha256
+    sourceRevision.sha256 !== source.sha256 ||
+    blob.sha256 !== source.sha256
   ) {
     return issue(
       'SOURCE_HASH_MISMATCH',
@@ -121,13 +130,13 @@ function inspectSource(
   }
 
   if (
-    !Number.isInteger(revision.source.page) ||
-    revision.source.page < 1 ||
-    revision.source.page > sourceRevision.pageCount
+    !Number.isInteger(source.page) ||
+    source.page < 1 ||
+    source.page > sourceRevision.pageCount
   ) {
     return issue(
       'SOURCE_PAGE_OUT_OF_RANGE',
-      `条款版本 ${revision.revisionId} 保存的第 ${revision.source.page} 页超出 ${sourceRevision.id} 的页数（${sourceRevision.pageCount} 页），无法定位选区。`,
+      `条款版本 ${revision.revisionId} 保存的第 ${source.page} 页超出 ${sourceRevision.id} 的页数（${sourceRevision.pageCount} 页），无法定位选区。`,
     )
   }
 
@@ -157,18 +166,22 @@ export function resolveRequirementRevisionSource(
   }
 
   const sourceIssue = inspectSource(snapshot, revision)
+  const source = revision.source
+  if (!isPdfRequirementSource(source)) {
+    return { revision, issue: null, location: null }
+  }
   const sourceRevision = snapshot.revisions.find(
-    (item) => item.id === revision.source.revisionId,
+    (item) => item.id === source.revisionId,
   )
   return {
     revision,
     issue: sourceIssue,
     location: {
       requirementRevisionId: revision.revisionId,
-      revisionId: revision.source.revisionId,
-      page: revision.source.page,
-      rectPdf: revision.source.rectPdf,
-      pageBoxPdf: revision.source.pageBoxPdf,
+      revisionId: source.revisionId,
+      page: source.page,
+      rectPdf: source.rectPdf,
+      pageBoxPdf: source.pageBoxPdf,
       label: `条款 ${revision.revisionId}`,
       sourceFileName: sourceRevision?.fileName ?? null,
       issue: sourceIssue,
@@ -191,9 +204,10 @@ export function listRequirementRevisionHistory(
       stored.revisionId,
     )
     const effective = resolved.revision ?? stored
-    const sourceRevision = snapshot.revisions.find(
-      (item) => item.id === effective.source.revisionId,
-    )
+    const pdfSource = isPdfRequirementSource(effective.source) ? effective.source : null
+    const sourceRevision = pdfSource === null
+      ? undefined
+      : snapshot.revisions.find((item) => item.id === pdfSource.revisionId)
     return {
       revisionId: stored.revisionId,
       requirementId: stored.requirementId,
@@ -201,10 +215,15 @@ export function listRequirementRevisionHistory(
       confirmedAt: stored.confirmedAt,
       lowerQ: stored.lowerQ,
       upperQ: stored.upperQ,
-      sourceRevisionId: effective.source.revisionId,
-      sourcePage: effective.source.page,
-      sourceRectPdf: effective.source.rectPdf,
+      sourceKind: pdfSource === null ? 'user-attestation' : 'pdf',
+      sourceRevisionId: pdfSource?.revisionId ?? null,
+      sourcePage: pdfSource?.page ?? null,
+      sourceRectPdf: pdfSource?.rectPdf ?? null,
       sourceFileName: sourceRevision?.fileName ?? null,
+      sourceStatement:
+        effective.source.kind === 'user-attestation'
+          ? effective.source.attestation.statement
+          : null,
       isActive:
         stored.revisionId ===
         snapshot.project.activeRequirementRevisionId,

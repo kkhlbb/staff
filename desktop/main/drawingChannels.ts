@@ -17,6 +17,7 @@ import { IPC_CHANNELS } from '../shared/contracts'
 import { buildSpacerDrawing, DrawingBuildError } from '../../src/drawing/spacerDrawing'
 import { renderDrawingSvg, validateDrawingSvgMarkup } from '../../src/drawing/renderDrawingSvg'
 import { DxfExportError, buildDxfDocument, validateDxfBytes } from '../../src/drawing/dxfExport'
+import { USER_INPUT_BASIS, USER_INPUT_FILE_SUFFIX } from '../../src/drawing/types'
 import { SPACER_PART_ID, scaleKey, type DrawingData } from '../../src/drawing/types'
 import { parseSpacerParameters } from '../../src/parts/spacerParameters'
 import type { ProjectFileDrawingRecord } from '../../src/project-file/types'
@@ -330,7 +331,7 @@ export function registerDrawingChannels(ipc: IpcMainLike, deps: DrawingChannelDe
     try {
       const baseName = sanitizeSuggestedName(
         `${record.frameFields.partName || '隔套'}-图纸-${scaleKey(record.scale).replace(':', '_')}`,
-      )
+      ) + (record.frameFields.basis === USER_INPUT_BASIS ? USER_INPUT_FILE_SUFFIX : '')
       const suffix =
         kind === 'dxf-r12' ? '-DXF-R12.dxf' : kind === 'dxf-2000' ? '-DXF-2000.dxf' : `.${kind}`
       const target = await deps.pickExportPath(

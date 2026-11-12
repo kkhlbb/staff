@@ -95,6 +95,7 @@ export class ApprovalStore {
     requirementRevisionId: string | null
     previewFingerprint: string
     baseRevisionId: string
+    userAttestationAcknowledged?: boolean
   }): Promise<ApprovalLookup> {
     const createdAtMs = this.nowMs()
     const record: ApprovalRecord = {
@@ -106,6 +107,7 @@ export class ApprovalStore {
       requirementRevisionId: input.requirementRevisionId,
       previewFingerprint: input.previewFingerprint,
       baseRevisionId: input.baseRevisionId,
+      userAttestationAcknowledged: input.userAttestationAcknowledged === true,
       createdAt: this.iso(createdAtMs),
       expiresAt: this.iso(createdAtMs + this.ttlMs),
       consumedAt: null,

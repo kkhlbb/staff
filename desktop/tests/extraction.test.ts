@@ -170,7 +170,7 @@ describe('V3.6 main：从确切 PDF 版本提取', () => {
     try {
       const { open } = await openWithPdf(harness)
       const before = harness.projectService.getSession(open.sessionId)!.snapshot
-      expect(before.project.schemaVersion).toBe(9)
+      expect(before.project.schemaVersion).toBe(10)
       expect(before.project.extractionDrafts).toEqual([])
 
       const run = await harness.invoke<ExtractionRunValue>(IPC_CHANNELS.extractionRun, {
@@ -609,8 +609,8 @@ describe('V3.6 main：逐条决定、持久化与跨重开', () => {
       expect(decoded.ok).toBe(true)
       if (!decoded.ok) return
       const persisted = decoded.value.snapshot.project.extractionDrafts
-      expect(decoded.value.snapshot.project.schemaVersion).toBe(9)
-      expect(decoded.value.manifest.project.projectSchemaVersion).toBe(9)
+      expect(decoded.value.snapshot.project.schemaVersion).toBe(10)
+      expect(decoded.value.manifest.project.projectSchemaVersion).toBe(10)
       expect(persisted).toHaveLength(1)
       expect(persisted[0]!.candidates).toHaveLength(7)
       expect(

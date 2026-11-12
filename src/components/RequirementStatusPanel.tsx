@@ -7,7 +7,7 @@
 import type { RequirementPreviewValue } from '../../desktop/shared/contracts'
 import type { ChainResult } from '../domain/types'
 import { formatMm } from '../domain/units'
-import { REQUIREMENT_STATUS_LABEL } from '../requirements/types'
+import { REQUIREMENT_STATUS_LABEL, isPdfRequirementSource } from '../requirements/types'
 import './RequirementStatusPanel.css'
 
 const STATUS_CLASS: Record<string, string> = {
@@ -78,11 +78,18 @@ export function RequirementStatusPanel(props: {
       </div>
       <div className="requirement-panel__evidence">
         {revision !== null && (
-          <p>
-            条款版本 {revision.revisionId}（父 {revision.parentRevisionId ?? '无'}）· 来源{' '}
-            {revision.source.revisionId} 第 {revision.source.page} 页 · SHA-256{' '}
-            {revision.source.sha256.slice(0, 12)}…
-          </p>
+          isPdfRequirementSource(revision.source) ? (
+            <p>
+              条款版本 {revision.revisionId}（父 {revision.parentRevisionId ?? '无'}）· 来源{' '}
+              {revision.source.revisionId} 第 {revision.source.page} 页 · SHA-256{' '}
+              {revision.source.sha256.slice(0, 12)}…
+            </p>
+          ) : (
+            <p>
+              条款版本 {revision.revisionId}（父 {revision.parentRevisionId ?? '无'}）· 来源：用户输入（第{' '}
+              {revision.source.attestation.sessionSeq} 次）· 原话「{revision.source.attestation.statement}」
+            </p>
+          )
         )}
         <p>原因码：{check.reasonCodes.join('、') || '无'}</p>
         {check.reasonCodes.length > 0 && (
@@ -104,8 +111,14 @@ export function RequirementStatusPanel(props: {
         </p>
       )}
       <div className="requirement-panel__actions">
-        <button type="button" onClick={props.onLocate} disabled={props.locateDisabled || revision === null}>
-          定位任务书（同版本 / 第 {revision?.source.page ?? '—'} 页）
+        <button
+          type="button"
+          onClick={props.onLocate}
+          disabled={props.locateDisabled || revision === null || (revision !== null && !isPdfRequirementSource(revision.source))}
+        >
+          {revision !== null && !isPdfRequirementSource(revision.source)
+            ? '用户输入条款，没有 PDF 页可定位'
+            : `定位任务书（同版本 / 第 ${revision !== null && isPdfRequirementSource(revision.source) ? revision.source.page : '—'} 页）`}
         </button>
       </div>
     </section>
