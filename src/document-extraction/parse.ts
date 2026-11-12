@@ -14,7 +14,11 @@
  */
 import { tryParseMm } from '../domain/units'
 import type { PdfPageBox, PdfRect } from '../sources/pdfCoordinates'
-import { matchExpressionAssignment, type ExpressionFormMatch } from './expressionUnits'
+import {
+  lineMatchesAssignmentForm,
+  matchExpressionAssignment,
+  type ExpressionFormMatch,
+} from './expressionUnits'
 import { stableId } from './ids'
 import {
   itemRectPdf,
@@ -1570,6 +1574,21 @@ export function buildExtractionDraft(request: ExtractionRequest): ExtractionDraf
       }
       const formula = parseFormulaLine(line, page, request.source)
       if (formula) {
+        // P2：这一行原文里已经写出「符号 = 表达式 = 数值 单位」的显式结果值 → 它是赋值行，
+        // 不是“无法解析的公式”。交给赋值解析取那枚显式值（不计算中间式）；一个条目都取不到时
+        // 仍保留原来的 FORMULA_UNSUPPORTED 记录，不静默丢行。
+        if (
+          formula.kind === 'formula' &&
+          formula.data.unsupported &&
+          lineMatchesAssignmentForm(matchTextOf(line))
+        ) {
+          const entries = parseAssignmentLine(line, page, request.source, unitContext)
+          if (entries.length > 0) {
+            ringEntries.push(...entries)
+            index += 1
+            continue
+          }
+        }
         formulaCandidates.push(formula)
         index += 1
         continue

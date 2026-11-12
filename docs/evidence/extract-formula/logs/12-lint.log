@@ -1,0 +1,5 @@
+
+> staff@0.4.0-beta lint
+> eslint .
+
+lint exit=0
