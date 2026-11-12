@@ -26,9 +26,10 @@ export const PROJECT_FILE_FORMAT = 'cunlian-project'
 /** B2 起写出的格式版本：formatVersion=2，project.schemaVersion=4/5。 */
 export const PROJECT_FILE_FORMAT_VERSION = 2
 /**
- * 当前写端项目 schema（V3.6 起为 8）：
- * - 8：任务书 PDF 提取草稿（候选/出处/逐条决定）随项目持久化；本版本只新增
- *   project.json 的 `extractionDrafts` 字段，既不新增容器条目，也不改尺寸链 schema；
+ * 当前写端项目 schema（ADR-001 起为 9）：
+ * - 9：出处泛化为 `EvidenceRef` 联合类型（pdf-text / pdf-ocr / image-ocr / user-attestation），
+ *   提取草稿的数值/候选/决定新增纯加法字段 `provenance`；尺寸链、参数、条款、判据一律未动；
+ * - 8：任务书 PDF 提取草稿（候选/出处/逐条决定）随项目持久化；
  * - 7：Beta 任务书条款（RequirementRevision/RequirementCheck 与活动指针）；
  * - 6：参数绑定（parameter-binding）、单调 parameterRevision、Revision 证据引用；
  * - 5：三参数（q/有效位/来源备注）与图纸快照引用可持久化（仍可读）；
@@ -36,10 +37,12 @@ export const PROJECT_FILE_FORMAT_VERSION = 2
  * - 3：B1 及更早（仍可读）。
  * `formatVersion` 保持 2：容器布局未变，只扩展 project.json 的 schema 与版本配对。
  */
-export const PROJECT_FILE_SCHEMA_VERSION = 8
-/** V3.5 的 schema7；仍可读，保存时显式升级为 8。 */
+export const PROJECT_FILE_SCHEMA_VERSION = 9
+/** V3.6 的 schema8；仍可读，保存时显式升级为 9（读入时按原 evidence 补 provenance，不重算）。 */
+export const V36_PROJECT_FILE_SCHEMA_VERSION = 8
+/** V3.5 的 schema7；仍可读，保存时显式升级为 9。 */
 export const V35_PROJECT_FILE_SCHEMA_VERSION = 7
-/** D 的 schema6；仍可读，保存时显式升级为 8。 */
+/** D 的 schema6；仍可读，保存时显式升级为 9。 */
 export const D_PROJECT_FILE_SCHEMA_VERSION = 6
 export const C_PROJECT_FILE_SCHEMA_VERSION = 5
 export const B2_PROJECT_FILE_SCHEMA_VERSION = 4
@@ -112,7 +115,7 @@ export interface ProjectFileManifestProject {
   id: string
   name: string
   /** 旧文件为 3，B2 为 4，C 为 5，D 写 6，V3.5 写 7，V3.6 写 8；读取时按伴随的 formatVersion 校验配对。 */
-  projectSchemaVersion: 3 | 4 | 5 | 6 | 7 | 8
+  projectSchemaVersion: 3 | 4 | 5 | 6 | 7 | 8 | 9
   dimensionChainSchemaVersion: typeof DIMENSION_CHAIN_SCHEMA_VERSION
   currentRevisionId: string
 }
@@ -408,6 +411,14 @@ export interface ProjectFileProject {
 }
 
 /**
+ * V3.6 的 schema8 记录：与 schema9 同字段形状，但没有 `provenance`（读出时补）。
+ * 只用于读时兼容与旧历史原样保留。
+ */
+export type ProjectFileProjectV8 = Omit<ProjectFileProject, 'schemaVersion'> & {
+  schemaVersion: typeof V36_PROJECT_FILE_SCHEMA_VERSION
+}
+
+/**
  * V3.5 的 schema7 记录：没有提取草稿字段。
  * 只用于读时兼容与旧历史原样保留。
  */
@@ -527,11 +538,12 @@ export interface ProjectFileRevision {
   createdAt: string
   reason: string
   /**
-   * 旧归档快照保留原 schema（3/4/5/6/7）原样（不可变历史）；新快照为当前 schema 8。
+   * 旧归档快照保留原 schema（3/4/5/6/7/8）原样（不可变历史）；新快照为当前 schema 9。
    * 读取按版本化联合解析，保存时不会把旧历史改写成新内容。
    */
   project:
     | ProjectFileProject
+    | ProjectFileProjectV8
     | ProjectFileProjectV7
     | ProjectFileProjectV6
     | ProjectFileProjectV5

@@ -1,0 +1,3890 @@
+{
+  "probe": "evidence-ref-candidates",
+  "corpusDirKind": "REAL_DOC_CORPUS（本机路径不写入证据）",
+  "rules": {
+    "extractorVersion": "document-extractor-6",
+    "maxExtractionPages": 100,
+    "readBudget": {
+      "maxTextItems": 200000,
+      "timeoutMs": 300000
+    }
+  },
+  "totals": {
+    "documents": 6,
+    "candidates": 138
+  },
+  "documents": [
+    {
+      "id": "r1",
+      "file": "r1-assembly-course.pdf",
+      "pages": 74,
+      "draftId": "<generated>",
+      "idempotencyKey": "real-doc-baseline|real-doc-r1|real-doc-r1-fc6ad0216abf|fc6ad0216abf60e381d222cbdb84378acecdc799bd753a92baa318a8af1b607d|1|74|document-extractor-6",
+      "extractorVersion": "document-extractor-6",
+      "candidateCount": 15,
+      "candidateArraySha256": "2f00d76711de3f35fcbda08a4e8597d8e9f3105fe6965014d84e8acbba0b0df7",
+      "candidates": [
+        {
+          "candidateId": "ring-0bcf4ce29406b848",
+          "kind": "ring",
+          "groupId": "ring:A",
+          "page": 30,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#30#422.11#429.71#440.67#459.72#A",
+            "real-doc-r1-fc6ad0216abf#30#450.40#429.71#553.88#459.72#=12mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r1-fc6ad0216abf#30#450.40#429.71#553.88#459.72#=12mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-0fc1f387f31324b1",
+          "kind": "ring",
+          "groupId": "ring:A",
+          "page": 30,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#30#79.20#429.71#97.76#459.72#A",
+            "real-doc-r1-fc6ad0216abf#30#107.49#429.71#210.94#459.72#=34mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r1-fc6ad0216abf#30#107.49#429.71#210.94#459.72#=34mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-7cf8c40dd28d9c5b",
+          "kind": "ring",
+          "groupId": "ring:A",
+          "page": 30,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#30#246.39#429.71#264.95#459.72#A",
+            "real-doc-r1-fc6ad0216abf#30#274.79#429.71#378.25#459.72#=22mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r1-fc6ad0216abf#30#274.79#429.71#378.25#459.72#=22mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-2033bab4daad661e",
+          "kind": "ring",
+          "groupId": "ring:T",
+          "page": 30,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#30#176.20#266.78#192.09#295.91#T",
+            "real-doc-r1-fc6ad0216abf#30#201.40#266.78#326.90#295.91#=0.35mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r1-fc6ad0216abf#30#201.40#266.78#326.90#295.91#=0.35mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-37a84539c2471b2f",
+          "kind": "formula",
+          "groupId": null,
+          "page": 41,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#41#72.99#270.49#232.02#300.50#A=( A+ A)-"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-a6f19a15b99e48e7",
+          "kind": "formula",
+          "groupId": null,
+          "page": 41,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#41#72.99#243.39#251.06#273.40#( A+A+A)=0"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-715fafa49c8107ce",
+          "kind": "formula",
+          "groupId": null,
+          "page": 43,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#43#97.20#307.91#620.46#332.79#即 T= T- （ T+T+T+T） =0.5-0.2- 0.10-0.05-0.05"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-806411fa85dda078",
+          "kind": "ring",
+          "groupId": "ring:EIA",
+          "page": 43,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#43#367.00#196.94#406.24#221.81#-EIA",
+            "real-doc-r1-fc6ad0216abf#43#413.69#196.94#562.95#221.81#=0-0.20=-0.20"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r1-fc6ad0216abf#43#413.69#196.94#562.95#221.81#=0-0.20=-0.20"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-8362b6baadc6c528",
+          "kind": "ring",
+          "groupId": "ring:EIA",
+          "page": 43,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#43#160.89#158.33#192.95#183.20#EIA",
+            "real-doc-r1-fc6ad0216abf#43#200.41#158.33#274.99#183.20#=-0. 30"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r1-fc6ad0216abf#43#200.41#158.33#274.99#183.20#=-0. 30"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-6ef3630680c7cb08",
+          "kind": "ring",
+          "groupId": "ring:n",
+          "page": 61,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#61#295.99#464.41#349.87#494.42#n=4"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r1-fc6ad0216abf#61#295.99#464.41#349.87#494.42#n=4"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-5e705a38b90163ba",
+          "kind": "formula",
+          "groupId": null,
+          "page": 63,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#63#91.19#34.58#274.91#68.60#准件）， A=5"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-c32a844278a6d6a4",
+          "kind": "formula",
+          "groupId": null,
+          "page": 64,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#64#55.11#206.99#688.87#237.00#T=T=0.06 ， T=T=0.04 ， T=0.05 （ 标 准 件 不 能"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-567648164bd1f5dc",
+          "kind": "formula",
+          "groupId": null,
+          "page": 65,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#65#97.09#369.50#663.64#399.51#T=0.12 ， T=T=0.10 ， T=0.05 （标准件不能"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-e700b0fa8488b1dc",
+          "kind": "formula",
+          "groupId": null,
+          "page": 65,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#65#61.09#50.29#574.87#80.31#得： A=43.05 A=43.05±T/2=43.05±0.075= "
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-436b08335f246209",
+          "kind": "ring",
+          "groupId": "ring:EI",
+          "page": 66,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r1-fc6ad0216abf#66#120.81#139.50#143.50#169.51#EI",
+            "real-doc-r1-fc6ad0216abf#66#150.49#139.50#206.05#169.51#=0.20"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r1-fc6ad0216abf#66#150.49#139.50#206.05#169.51#=0.20"
+              ]
+            }
+          ]
+        }
+      ],
+      "issues": [
+        {
+          "issueId": "issue-b00fd203651bfca1",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 30,
+          "candidateIds": [
+            "ring-0fc1f387f31324b1",
+            "ring-7cf8c40dd28d9c5b",
+            "ring-0bcf4ce29406b848"
+          ]
+        },
+        {
+          "issueId": "issue-0ebfb9f68795dcac",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 30,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-954e7814bb089b0a",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 30,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-954e7814bb089b0a",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 30,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-aa56ebebebb5b5a9",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 30,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-5caf027e0db12768",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 34,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-948ee1a6ebc50f2c",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 39,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-948ee1a6ebc50f2c",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 39,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-cda1fb36f99f49d8",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 39,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-cda1fb36f99f49d8",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 39,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-ce18b7a97f74096f",
+          "code": "NO_TEXT_LAYER",
+          "severity": "blocked",
+          "page": 40,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-aff08f0eb001b644",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 41,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-23b48e4f2b1b98f9",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 42,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-bc7e13491cd8fe0f",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 43,
+          "candidateIds": [
+            "ring-806411fa85dda078",
+            "ring-8362b6baadc6c528"
+          ]
+        },
+        {
+          "issueId": "issue-2c8dd71ab2bce6e0",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 44,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-2c8dd71ab2bce6e0",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 44,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-2c8dd71ab2bce6e0",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 44,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-2c8dd71ab2bce6e0",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 44,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-03325b9967e1b59b",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 45,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-03325b9967e1b59b",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 45,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-03325b9967e1b59b",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 45,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-03325b9967e1b59b",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 45,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-03325b9967e1b59b",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 45,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-03325b9967e1b59b",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 45,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-f3dd643193da66d7",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 45,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-23fb06cb975067e1",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 53,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-f79f653a537019d4",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 53,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-f79f653a537019d4",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 53,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-f79f653a537019d4",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 53,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-0119aacb1c6c66a5",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 54,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-f10726579cb62269",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 54,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-d083de16f7944568",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 57,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-d083de16f7944568",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 57,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-b3804494cede9d42",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 58,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-b3804494cede9d42",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 58,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-c372041f7f31914d",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 58,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-c372041f7f31914d",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 58,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-0dbc0ed87c722b3e",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 60,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-0dbc0ed87c722b3e",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 60,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-7fa6474033f6b3ce",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 60,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-5c831f75fb39dc0b",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 61,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-2b50326c5609b086",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 63,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-6414375252c45f6c",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 63,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-7f891a2bc4578e0d",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 63,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-7f891a2bc4578e0d",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 63,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-0fde00c040783bc2",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 65,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-0fde00c040783bc2",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 65,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-0fde00c040783bc2",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 65,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-0fde00c040783bc2",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 65,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-a0ec9dd7bf92b3d9",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 65,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-3325a8ef8420dc45",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 66,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-84eff9a6b9dd0de8",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 66,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-16adf57a6762babc",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 67,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-855529db843235dd",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 67,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-855529db843235dd",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 67,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-580a19b693367854",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 68,
+          "candidateIds": []
+        }
+      ]
+    },
+    {
+      "id": "r2",
+      "file": "r2-tolerance-domain.pdf",
+      "pages": 5,
+      "draftId": "<generated>",
+      "idempotencyKey": "real-doc-baseline|real-doc-r2|real-doc-r2-c20d6b523e20|c20d6b523e20a0554b0f5c0c38bbb3c7b32a604505a0dd1b8eb8872483aea9e2|1|5|document-extractor-6",
+      "extractorVersion": "document-extractor-6",
+      "candidateCount": 22,
+      "candidateArraySha256": "7ca45c3da6dfb719c4a1f62d02fec7327eb0db337f1e240ee6ef4e45fe7641c0",
+      "candidates": [
+        {
+          "candidateId": "ring-2fbbfb176c26b9b5",
+          "kind": "ring",
+          "groupId": "ring:L0",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#2#451.29#511.01#464.45#523.33#L0",
+            "real-doc-r2-c20d6b523e20#2#424.90#269.49#438.06#281.81#L0",
+            "real-doc-r2-c20d6b523e20#2#465.04#511.05#484.83#523.18#=00",
+            "real-doc-r2-c20d6b523e20#2#484.74#511.05#512.49#523.18#mm,",
+            "real-doc-r2-c20d6b523e20#2#438.45#269.53#458.05#281.66#=00",
+            "real-doc-r2-c20d6b523e20#2#457.95#269.53#485.71#281.66#mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#2#465.04#511.05#484.83#523.18#=00",
+                "real-doc-r2-c20d6b523e20#2#484.74#511.05#512.49#523.18#mm,",
+                "real-doc-r2-c20d6b523e20#2#438.45#269.53#458.05#281.66#=00",
+                "real-doc-r2-c20d6b523e20#2#457.95#269.53#485.71#281.66#mm."
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-aaa79564254d179e",
+          "kind": "ring",
+          "groupId": "ring:L1",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#2#288.18#495.00#301.34#507.32#L1",
+            "real-doc-r2-c20d6b523e20#2#301.73#495.04#343.94#507.17#=1001",
+            "real-doc-r2-c20d6b523e20#2#343.74#495.04#362.18#507.17#mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#2#301.73#495.04#343.94#507.17#=1001",
+                "real-doc-r2-c20d6b523e20#2#343.74#495.04#362.18#507.17#mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-7534930ca39e6c92",
+          "kind": "ring",
+          "groupId": "ring:L2",
+          "page": 2,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#2#387.25#138.40#400.41#150.71#L2",
+            "real-doc-r2-c20d6b523e20#2#401.09#138.44#429.52#150.57#=100"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#2#401.09#138.44#429.52#150.57#=100"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-3bef447c525b2692",
+          "kind": "ring",
+          "groupId": "ring:Lb",
+          "page": 3,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#3#311.76#590.29#325.21#602.61#Lb",
+            "real-doc-r2-c20d6b523e20#3#325.31#590.33#342.87#602.46#=5"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#3#325.31#590.33#342.87#602.46#=5"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-bc2829c73be2b6cd",
+          "kind": "formula",
+          "groupId": null,
+          "page": 3,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#3#25.95#542.45#233.41#555.88#于100.0-0.1=99.9mm(即L的 基 本 尺 寸 "
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-e322b2910d756987",
+          "kind": "ring",
+          "groupId": "ring:b",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#3#372.37#340.27#377.70#346.94#b",
+            "real-doc-r2-c20d6b523e20#3#377.80#339.88#407.98#352.01#=5.20",
+            "real-doc-r2-c20d6b523e20#3#419.72#339.88#447.47#352.01#mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#3#377.80#339.88#407.98#352.01#=5.20",
+                "real-doc-r2-c20d6b523e20#3#419.72#339.88#447.47#352.01#mm."
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-c18611b6813b3978",
+          "kind": "ring",
+          "groupId": "ring:Zmax",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#3#296.04#261.54#316.67#273.85#Zmax",
+            "real-doc-r2-c20d6b523e20#3#387.51#261.57#423.41#273.70#9=0.4",
+            "real-doc-r2-c20d6b523e20#3#426.22#261.57#453.78#273.70#mm)",
+            "real-doc-r2-c20d6b523e20#3#316.77#261.57#412.93#273.70#=5.2+0.1-4.9=0"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#3#387.51#261.57#423.41#273.70#9=0.4",
+                "real-doc-r2-c20d6b523e20#3#426.22#261.57#453.78#273.70#mm)",
+                "real-doc-r2-c20d6b523e20#3#316.77#261.57#412.93#273.70#=5.2+0.1-4.9=0"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-9f65ce9937f4203f",
+          "kind": "ring",
+          "groupId": "ring:Zmin",
+          "page": 3,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#3#296.04#230.29#315.60#242.61#Zmin",
+            "real-doc-r2-c20d6b523e20#3#315.70#230.33#359.46#242.46#=5.2-5"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#3#315.70#230.33#359.46#242.46#=5.2-5"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-10d374cd80d0af87",
+          "kind": "ring",
+          "groupId": "ring:δL",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#3#345.91#10.80#358.04#23.11#δL",
+            "real-doc-r2-c20d6b523e20#3#363.05#10.83#425.25#22.96#=0.10mm,",
+            "real-doc-r2-c20d6b523e20#3#387.12#10.83#425.25#22.96#0mm,"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#3#363.05#10.83#425.25#22.96#=0.10mm,",
+                "real-doc-r2-c20d6b523e20#3#387.12#10.83#425.25#22.96#0mm,"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-55ec2055624ed467",
+          "kind": "ring",
+          "groupId": "ring:L3",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#3#67.33#8.86#80.49#21.17#L3",
+            "real-doc-r2-c20d6b523e20#3#82.23#8.41#107.56#21.02#=430",
+            "real-doc-r2-c20d6b523e20#3#118.33#8.89#146.76#21.02#mm;"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#3#82.23#8.41#107.56#21.02#=430",
+                "real-doc-r2-c20d6b523e20#3#118.33#8.89#146.76#21.02#mm;"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-de3447193bdd8c3b",
+          "kind": "ring",
+          "groupId": "ring:δL",
+          "page": 4,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#4#22.50#668.50#34.62#680.82#δL",
+            "real-doc-r2-c20d6b523e20#4#140.94#668.54#182.08#680.67#0=0.15",
+            "real-doc-r2-c20d6b523e20#4#185.09#668.54#212.84#680.67#mm)",
+            "real-doc-r2-c20d6b523e20#4#45.59#668.50#166.36#680.82#δL-δL=0.25-0.10=0"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#4#140.94#668.54#182.08#680.67#0=0.15",
+                "real-doc-r2-c20d6b523e20#4#185.09#668.54#212.84#680.67#mm)",
+                "real-doc-r2-c20d6b523e20#4#45.59#668.50#166.36#680.82#δL-δL=0.25-0.10=0"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-24c91653525ab4d5",
+          "kind": "formula",
+          "groupId": null,
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#4#137.54#652.33#492.79#665.10#-0.1.05-0.1.2-0.1Lb =43.100- (29.900+4.950+2.975-"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-102410fc391fc626",
+          "kind": "formula",
+          "groupId": null,
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#4#23.33#636.52#443.88#649.23#5.35-0.1 mm.0.225=5.050mm)"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-a3a72fa0f6795aae",
+          "kind": "ring",
+          "groupId": "ring:L",
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#4#284.48#603.12#289.82#609.90#L",
+            "real-doc-r2-c20d6b523e20#4#312.01#602.75#337.44#614.88#0.25"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#4#312.01#602.75#337.44#614.88#0.25"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-703ae0033623db45",
+          "kind": "ring",
+          "groupId": "ring:Lb",
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#4#327.48#555.55#340.93#567.87#Lb",
+            "real-doc-r2-c20d6b523e20#4#344.23#555.59#410.50#567.72#= 5.050 ∓ ("
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#4#344.23#555.59#410.50#567.72#= 5.050 ∓ ("
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-a51d99f79309cb75",
+          "kind": "ring",
+          "groupId": "ring:L",
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#4#303.89#458.73#309.23#465.51#L",
+            "real-doc-r2-c20d6b523e20#4#330.84#458.36#356.26#470.49#0.20"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#4#330.84#458.36#356.26#470.49#0.20"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-a563bfccb7148ee6",
+          "kind": "formula",
+          "groupId": null,
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#4#101.83#411.20#435.64#424.88#2220.304-0.250=0.054(mm)."
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-484c43c138e704e3",
+          "kind": "formula",
+          "groupId": null,
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#4#95.17#407.61#260.78#420.38#δL= δL+δL4)"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-301b8466eb8ac394",
+          "kind": "formula",
+          "groupId": null,
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#4#73.34#331.24#260.78#344.01#δL+δbi = δL+δb +δbi5)"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-f4ca727fddbba159",
+          "kind": "ring",
+          "groupId": "ring:i",
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#4#146.50#279.61#151.84#286.38#i",
+            "real-doc-r2-c20d6b523e20#4#155.11#279.63#160.44#286.30#1"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#4#155.11#279.63#160.44#286.30#1"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-4258ef69346310d3",
+          "kind": "formula",
+          "groupId": null,
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#4#49.18#156.78#260.78#169.54#δL=δL- δL= δL-δLi7)"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-567643956ece93d3",
+          "kind": "ring",
+          "groupId": "ring:i",
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r2-c20d6b523e20#4#114.28#150.07#119.62#156.84#i",
+            "real-doc-r2-c20d6b523e20#4#122.89#150.09#128.23#156.76#1",
+            "real-doc-r2-c20d6b523e20#4#165.81#150.07#171.15#156.84#i"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r2-c20d6b523e20#4#122.89#150.09#128.23#156.76#1",
+                "real-doc-r2-c20d6b523e20#4#165.81#150.07#171.15#156.84#i"
+              ]
+            }
+          ]
+        }
+      ],
+      "issues": [
+        {
+          "issueId": "issue-4eb5bdf814ad72de",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 2,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-a8cbf8a070dcc7ea",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 3,
+          "candidateIds": [
+            "ring-10d374cd80d0af87",
+            "ring-de3447193bdd8c3b"
+          ]
+        },
+        {
+          "issueId": "issue-b002ae0255ebb9c8",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 3,
+          "candidateIds": [
+            "ring-3bef447c525b2692",
+            "ring-703ae0033623db45"
+          ]
+        },
+        {
+          "issueId": "issue-f763a1fe601636d8",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 3,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-fff512acfdc90272",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 3,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-bb0fe354263daf3a",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 4,
+          "candidateIds": [
+            "ring-a3a72fa0f6795aae",
+            "ring-a51d99f79309cb75"
+          ]
+        },
+        {
+          "issueId": "issue-d81010fbd7010299",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 4,
+          "candidateIds": [
+            "ring-f4ca727fddbba159",
+            "ring-567643956ece93d3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "r3",
+      "file": "r3-rv-3dcs.pdf",
+      "pages": 4,
+      "draftId": "<generated>",
+      "idempotencyKey": "real-doc-baseline|real-doc-r3|real-doc-r3-458a68fdae94|458a68fdae943174b5edcf35df146ed90e6cb314be14d43d0cdff2b4a701e2d1|1|4|document-extractor-6",
+      "extractorVersion": "document-extractor-6",
+      "candidateCount": 3,
+      "candidateArraySha256": "b0d4c916da995dac99a76594a95da7682d7984d181f9f09dfe383de0dd7af18e",
+      "candidates": [
+        {
+          "candidateId": "formula-0e9b605d7048a3b7",
+          "kind": "formula",
+          "groupId": null,
+          "page": 2,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r3-458a68fdae94#2#337.75#599.37#536.91#612.22#x = ( rp+ lrp) sin - asin ( za ) + ( rrp+ lrrp) ×"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-8f1a35c0285ed77a",
+          "kind": "formula",
+          "groupId": null,
+          "page": 2,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r3-458a68fdae94#2#337.75#534.99#538.43#547.84#y = ( rp+ lrrp) cos - acos( za ) + ( rrp+ lrrp)×"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-6b0ff66dd87471f3",
+          "kind": "ring",
+          "groupId": "ring:K",
+          "page": 2,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r3-458a68fdae94#2#337.75#467.99#344.02#480.83#K",
+            "real-doc-r3-458a68fdae94#2#365.68#467.99#385.66#480.83#1 + ("
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r3-458a68fdae94#2#365.68#467.99#385.66#480.83#1 + ("
+              ]
+            }
+          ]
+        }
+      ],
+      "issues": []
+    },
+    {
+      "id": "r4",
+      "file": "r4-mtt1097.pdf",
+      "pages": 170,
+      "draftId": "<generated>",
+      "idempotencyKey": "real-doc-baseline|real-doc-r4|real-doc-r4-e18652688580|e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d|1|170|document-extractor-6",
+      "extractorVersion": "document-extractor-6",
+      "candidateCount": 7,
+      "candidateArraySha256": "98abced2d7f1ad0b3ea2772acf26a08a535de305ec35bc70e7c1267b16622587",
+      "candidates": [
+        {
+          "candidateId": "ring-ff82b331d5da4a07",
+          "kind": "ring",
+          "groupId": "ring:mn",
+          "page": 13,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r4-e18652688580#13#329.58#381.54#344.48#393.86#mn",
+            "real-doc-r4-e18652688580#13#344.58#381.58#385.72#393.71#=2~6,"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r4-e18652688580#13#344.58#381.58#385.72#393.71#=2~6,"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-5f89769b1dcaf4fd",
+          "kind": "formula",
+          "groupId": null,
+          "page": 22,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r4-e18652688580#22#78.57#135.34#175.60#146.12#注:Ac=g(sinθ+fcosθ)"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "part-dimension-027d5b24d72274ae",
+          "kind": "part-dimension",
+          "groupId": "part:口环",
+          "page": 29,
+          "status": "blocked",
+          "reasonCodes": [
+            "NUMBER_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r4-e18652688580#29#146.44#372.33#508.86#381.43#120150180220260290320",
+            "real-doc-r4-e18652688580#29#488.10#700.05#532.44#710.36#单位为毫米",
+            "real-doc-r4-e18652688580#29#488.10#405.35#532.44#415.66#单位为毫米"
+          ],
+          "fields": [
+            {
+              "field": "innerDiameter",
+              "evidenceKeys": [
+                "real-doc-r4-e18652688580#29#146.44#372.33#508.86#381.43#120150180220260290320",
+                "real-doc-r4-e18652688580#29#488.10#700.05#532.44#710.36#单位为毫米",
+                "real-doc-r4-e18652688580#29#488.10#405.35#532.44#415.66#单位为毫米"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "part-dimension-88a22be658652560",
+          "kind": "part-dimension",
+          "groupId": "part:环",
+          "page": 31,
+          "status": "blocked",
+          "reasonCodes": [
+            "NUMBER_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r4-e18652688580#31#146.44#185.15#508.86#194.25#120150180220260290320",
+            "real-doc-r4-e18652688580#31#488.10#622.03#532.44#632.34#单位为毫米",
+            "real-doc-r4-e18652688580#31#488.10#445.52#532.44#455.83#单位为毫米",
+            "real-doc-r4-e18652688580#31#488.10#308.03#532.44#318.34#单位为毫米",
+            "real-doc-r4-e18652688580#31#488.10#217.69#532.44#228.00#单位为毫米"
+          ],
+          "fields": [
+            {
+              "field": "innerDiameter",
+              "evidenceKeys": [
+                "real-doc-r4-e18652688580#31#146.44#185.15#508.86#194.25#120150180220260290320",
+                "real-doc-r4-e18652688580#31#488.10#622.03#532.44#632.34#单位为毫米",
+                "real-doc-r4-e18652688580#31#488.10#445.52#532.44#455.83#单位为毫米",
+                "real-doc-r4-e18652688580#31#488.10#308.03#532.44#318.34#单位为毫米",
+                "real-doc-r4-e18652688580#31#488.10#217.69#532.44#228.00#单位为毫米"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-9261177b48f068c5",
+          "kind": "ring",
+          "groupId": "ring:R",
+          "page": 108,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r4-e18652688580#108#73.65#125.27#83.36#137.59#R",
+            "real-doc-r4-e18652688580#108#84.00#125.31#112.04#137.44#=0.5",
+            "real-doc-r4-e18652688580#108#109.62#125.31#137.37#137.44#mm。"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r4-e18652688580#108#84.00#125.31#112.04#137.44#=0.5",
+                "real-doc-r4-e18652688580#108#109.62#125.31#137.37#137.44#mm。"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-86ae1d9bc528de11",
+          "kind": "formula",
+          "groupId": null,
+          "page": 170,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r4-e18652688580#170#173.47#143.13#436.14#153.39#力 1℉=9/5℃+32"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-8eb3df4ca9f41952",
+          "kind": "formula",
+          "groupId": null,
+          "page": 170,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r4-e18652688580#170#389.08#128.58#424.21#138.84#1℃=5/9"
+          ],
+          "fields": []
+        }
+      ],
+      "issues": [
+        {
+          "issueId": "issue-f526c053c92dcf41",
+          "code": "CHUNK_PROCESSED",
+          "severity": "warning",
+          "page": 1,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-e9d22d8f92c4d3fd",
+          "code": "NO_TEXT_LAYER",
+          "severity": "blocked",
+          "page": 1,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-303289bf782d9785",
+          "code": "NO_TEXT_LAYER",
+          "severity": "blocked",
+          "page": 2,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-bd7f8fbf5426088d",
+          "code": "NO_TEXT_LAYER",
+          "severity": "blocked",
+          "page": 6,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-d299fb628d9decd0",
+          "code": "CHUNK_PROCESSED",
+          "severity": "warning",
+          "page": 101,
+          "candidateIds": []
+        }
+      ]
+    },
+    {
+      "id": "r5",
+      "file": "r5-tolerance-analysis.pdf",
+      "pages": 8,
+      "draftId": "<generated>",
+      "idempotencyKey": "real-doc-baseline|real-doc-r5|real-doc-r5-e4f5c52b5259|e4f5c52b525948faa7c547458d07e66418241392d698ed892cd44cac1cc310c5|1|8|document-extractor-6",
+      "extractorVersion": "document-extractor-6",
+      "candidateCount": 4,
+      "candidateArraySha256": "eecbbff03bcff72b117c91cea483d7b4f356025b54e5ed20440d594338554588",
+      "candidates": [
+        {
+          "candidateId": "ring-a3b19a8dd1220837",
+          "kind": "ring",
+          "groupId": "ring:L1",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r5-e4f5c52b5259#2#495.60#712.26#555.32#724.78#L1 = 50 mm,",
+            "real-doc-r5-e4f5c52b5259#2#501.12#712.26#555.32#720.36#1 = 50 mm,"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r5-e4f5c52b5259#2#501.12#712.26#555.32#720.36#1 = 50 mm,"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-57535c85c6d3842b",
+          "kind": "ring",
+          "groupId": "ring:ryL2",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r5-e4f5c52b5259#2#59.64#700.74#379.01#713.28#The requirement is a value that represents the boundaryL2 = 27 mm and",
+            "real-doc-r5-e4f5c52b5259#2#318.72#700.74#379.01#708.84#2 = 27 mm and"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r5-e4f5c52b5259#2#318.72#700.74#379.01#708.84#2 = 27 mm and"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-83af23e5f7707feb",
+          "kind": "ring",
+          "groupId": "ring:ucti",
+          "page": 3,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r5-e4f5c52b5259#3#56.66#273.42#354.49#286.06#distribution of data answers the question of whether a producti",
+            "real-doc-r5-e4f5c52b5259#3#358.54#273.42#362.07#282.14#1"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r5-e4f5c52b5259#3#358.54#273.42#362.07#282.14#1"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-d8ffd6e888aa119a",
+          "kind": "ring",
+          "groupId": "ring:i",
+          "page": 3,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r5-e4f5c52b5259#3#359.45#235.42#361.42#244.17#i",
+            "real-doc-r5-e4f5c52b5259#3#442.75#200.52#444.72#209.24#i",
+            "real-doc-r5-e4f5c52b5259#3#365.49#235.42#369.02#244.17#1",
+            "real-doc-r5-e4f5c52b5259#3#448.77#200.52#452.30#209.24#1"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r5-e4f5c52b5259#3#365.49#235.42#369.02#244.17#1",
+                "real-doc-r5-e4f5c52b5259#3#448.77#200.52#452.30#209.24#1"
+              ]
+            }
+          ]
+        }
+      ],
+      "issues": []
+    },
+    {
+      "id": "r6",
+      "file": "r6-segments-assembly.pdf",
+      "pages": 8,
+      "draftId": "<generated>",
+      "idempotencyKey": "real-doc-baseline|real-doc-r6|real-doc-r6-fbe5db55db9b|fbe5db55db9b6bdf220e1ebef42c3f414580c8e1f360b7c739ab70e7c78d28be|1|8|document-extractor-6",
+      "extractorVersion": "document-extractor-6",
+      "candidateCount": 87,
+      "candidateArraySha256": "2eef7127b2e34009de782303df484f767314eebeb930df06a1609785dcd886c6",
+      "candidates": [
+        {
+          "candidateId": "ring-d7ffc11c9b01772e",
+          "kind": "ring",
+          "groupId": "ring:A",
+          "page": 1,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#1#56.70#296.22#64.03#311.22#A",
+            "real-doc-r6-fbe5db55db9b#1#64.02#296.22#366.77#311.22#=230±0.3mm high precision, as shown in Figure1, Dimensions"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#1#64.02#296.22#366.77#311.22#=230±0.3mm high precision, as shown in Figure1, Dimensions"
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#1#64.02#296.22#366.77#311.22#=230±0.3mm high precision, as shown in Figure1, Dimensions"
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#1#64.02#296.22#366.77#311.22#=230±0.3mm high precision, as shown in Figure1, Dimensions"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-43131c64f4c08186",
+          "kind": "ring",
+          "groupId": "ring:A1",
+          "page": 1,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#1#56.70#268.13#68.61#283.62#A1",
+            "real-doc-r6-fbe5db55db9b#2#135.36#229.97#147.27#245.46#A1",
+            "real-doc-r6-fbe5db55db9b#3#95.34#135.59#107.25#151.08#A1",
+            "real-doc-r6-fbe5db55db9b#1#69.24#268.62#130.56#283.62#=759.48mm,",
+            "real-doc-r6-fbe5db55db9b#2#147.90#230.46#230.82#245.46#=759.48±0.1mm,",
+            "real-doc-r6-fbe5db55db9b#3#107.88#136.08#190.86#151.08#=759.48±0.1mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#1#69.24#268.62#130.56#283.62#=759.48mm,",
+                "real-doc-r6-fbe5db55db9b#2#147.90#230.46#230.82#245.46#=759.48±0.1mm,",
+                "real-doc-r6-fbe5db55db9b#3#107.88#136.08#190.86#151.08#=759.48±0.1mm."
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#147.90#230.46#230.82#245.46#=759.48±0.1mm,",
+                "real-doc-r6-fbe5db55db9b#3#107.88#136.08#190.86#151.08#=759.48±0.1mm."
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#147.90#230.46#230.82#245.46#=759.48±0.1mm,",
+                "real-doc-r6-fbe5db55db9b#3#107.88#136.08#190.86#151.08#=759.48±0.1mm."
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-929b4d0999e5aa9b",
+          "kind": "ring",
+          "groupId": "ring:A2",
+          "page": 1,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#1#157.26#268.13#169.17#283.62#A2",
+            "real-doc-r6-fbe5db55db9b#1#169.80#268.62#231.24#283.62#=765.41mm,"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#1#169.80#268.62#231.24#283.62#=765.41mm,"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-d49b18054605b313",
+          "kind": "ring",
+          "groupId": "ring:A3",
+          "page": 1,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#1#257.94#268.13#269.85#283.62#A3",
+            "real-doc-r6-fbe5db55db9b#1#270.48#268.62#322.80#283.62#=1753mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#1#270.48#268.62#322.80#283.62#=1753mm."
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-55253a68c5b366f2",
+          "kind": "formula",
+          "groupId": null,
+          "page": 2,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#187.44#650.02#427.78#665.52#0=A3(A1+A2)=1753−(759.48+765.41)=228.11mm"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-f9637a253cc7acb3",
+          "kind": "formula",
+          "groupId": null,
+          "page": 2,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#250.74#622.42#363.78#637.92#0=+0.3−(−0.3)=0.6mm."
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-c426b928d5623e4e",
+          "kind": "ring",
+          "groupId": "ring:avA",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#213.84#581.02#227.17#591.00#avA",
+            "real-doc-r6-fbe5db55db9b#2#277.80#581.52#400.66#596.52#Ring Qyt.)=0.6/3=0.2mm",
+            "real-doc-r6-fbe5db55db9b#2#234.54#581.02#400.66#596.52#T0/m(m−Ring Qyt.)=0.6/3=0.2mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#277.80#581.52#400.66#596.52#Ring Qyt.)=0.6/3=0.2mm",
+                "real-doc-r6-fbe5db55db9b#2#234.54#581.02#400.66#596.52#T0/m(m−Ring Qyt.)=0.6/3=0.2mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-7dc49292c06724a0",
+          "kind": "ring",
+          "groupId": "ring:T2",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#389.34#553.42#400.59#568.92#T2",
+            "real-doc-r6-fbe5db55db9b#2#401.16#553.92#468.24#568.92#=0.2mm, then"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#401.16#553.92#468.24#568.92#=0.2mm, then"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-b438f13d46eda8ef",
+          "kind": "ring",
+          "groupId": "ring:T1",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#370.68#553.42#381.93#568.92#T1",
+            "real-doc-r6-fbe5db55db9b#2#401.16#553.92#468.24#568.92#=0.2mm, then"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#401.16#553.92#468.24#568.92#=0.2mm, then"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-4910fe730edf8d45",
+          "kind": "ring",
+          "groupId": "ring:T3",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#215.40#539.63#226.65#555.12#T3",
+            "real-doc-r6-fbe5db55db9b#2#333.42#540.12#391.80#555.12#0.2=0.2mm.",
+            "real-doc-r6-fbe5db55db9b#2#234.06#539.63#391.80#555.12#T0−T1−T2=0.6−0.2−0.2=0.2mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#333.42#540.12#391.80#555.12#0.2=0.2mm.",
+                "real-doc-r6-fbe5db55db9b#2#234.06#539.63#391.80#555.12#T0−T1−T2=0.6−0.2−0.2=0.2mm."
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-dd5566142970e986",
+          "kind": "ring",
+          "groupId": "ring:A0max",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#201.60#470.63#227.25#486.12#A0max",
+            "real-doc-r6-fbe5db55db9b#2#314.22#471.12#405.70#486.12#765.31=228.41mm",
+            "real-doc-r6-fbe5db55db9b#2#227.88#471.12#405.70#486.12#=1753.1−759.38−765.31=228.41mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#314.22#471.12#405.70#486.12#765.31=228.41mm",
+                "real-doc-r6-fbe5db55db9b#2#227.88#471.12#405.70#486.12#=1753.1−759.38−765.31=228.41mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-007db38d57e0d39b",
+          "kind": "ring",
+          "groupId": "ring:A0min",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#202.26#456.82#226.52#472.32#A0min",
+            "real-doc-r6-fbe5db55db9b#2#313.56#457.32#405.04#472.32#765.51=227.81mm",
+            "real-doc-r6-fbe5db55db9b#2#227.16#457.32#405.04#472.32#=1752.9−759.58−765.51=227.81mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#313.56#457.32#405.04#472.32#765.51=227.81mm",
+                "real-doc-r6-fbe5db55db9b#2#227.16#457.32#405.04#472.32#=1752.9−759.58−765.51=227.81mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-ce1aaac4a88d1d56",
+          "kind": "ring",
+          "groupId": "ring:A0",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#96.36#442.00#108.27#457.50#A0",
+            "real-doc-r6-fbe5db55db9b#2#108.90#442.50#188.86#457.50#=228.11±0.3mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#108.90#442.50#188.86#457.50#=228.11±0.3mm"
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#108.90#442.50#188.86#457.50#=228.11±0.3mm"
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#108.90#442.50#188.86#457.50#=228.11±0.3mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-a08719bb553e31c5",
+          "kind": "ring",
+          "groupId": "ring:T",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#457.68#133.92#464.35#148.92#T",
+            "real-doc-r6-fbe5db55db9b#2#467.34#133.92#538.68#148.92#=0.04mm, too"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#467.34#133.92#538.68#148.92#=0.04mm, too"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-7fe1503f1612f391",
+          "kind": "ring",
+          "groupId": "ring:B1",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#56.70#76.84#68.61#92.34#B1",
+            "real-doc-r6-fbe5db55db9b#3#258.60#379.37#270.51#394.86#B1",
+            "real-doc-r6-fbe5db55db9b#2#69.24#77.34#238.38#92.34#=(125×COS10°+230/2)=238.1mm,",
+            "real-doc-r6-fbe5db55db9b#3#271.14#379.86#354.12#394.86#=238.1±0.07mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#69.24#77.34#238.38#92.34#=(125×COS10°+230/2)=238.1mm,",
+                "real-doc-r6-fbe5db55db9b#3#271.14#379.86#354.12#394.86#=238.1±0.07mm."
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#271.14#379.86#354.12#394.86#=238.1±0.07mm."
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#271.14#379.86#354.12#394.86#=238.1±0.07mm."
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-bf14aa7d630e688f",
+          "kind": "ring",
+          "groupId": "ring:B3",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#401.28#76.84#413.19#92.34#B3",
+            "real-doc-r6-fbe5db55db9b#3#196.74#337.96#208.65#353.46#B3",
+            "real-doc-r6-fbe5db55db9b#2#413.82#77.34#510.24#92.34#=488.88mm (within",
+            "real-doc-r6-fbe5db55db9b#3#209.28#338.46#298.20#353.46#=488.88±0.05mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#413.82#77.34#510.24#92.34#=488.88mm (within",
+                "real-doc-r6-fbe5db55db9b#3#209.28#338.46#298.20#353.46#=488.88±0.05mm."
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#209.28#338.46#298.20#353.46#=488.88±0.05mm."
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#209.28#338.46#298.20#353.46#=488.88±0.05mm."
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-d40621d59164e0a7",
+          "kind": "ring",
+          "groupId": "ring:B2",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#252.00#76.84#263.91#92.34#B2",
+            "real-doc-r6-fbe5db55db9b#3#95.70#200.14#107.61#215.64#B2",
+            "real-doc-r6-fbe5db55db9b#2#264.54#77.34#387.60#92.34#=(33×COS10°)=32.5mm,",
+            "real-doc-r6-fbe5db55db9b#3#108.24#200.64#228.59#215.64#=32.5±0.03mm, and take"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#264.54#77.34#387.60#92.34#=(33×COS10°)=32.5mm,",
+                "real-doc-r6-fbe5db55db9b#3#108.24#200.64#228.59#215.64#=32.5±0.03mm, and take"
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#108.24#200.64#228.59#215.64#=32.5±0.03mm, and take"
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#108.24#200.64#228.59#215.64#=32.5±0.03mm, and take"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-830ddc2459d6daf6",
+          "kind": "ring",
+          "groupId": "ring:a1",
+          "page": 2,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#2#444.42#62.69#455.01#78.18#a1",
+            "real-doc-r6-fbe5db55db9b#2#455.64#63.18#538.56#78.18#=759.48±0.1mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#455.64#63.18#538.56#78.18#=759.48±0.1mm."
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#455.64#63.18#538.56#78.18#=759.48±0.1mm."
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#2#455.64#63.18#538.56#78.18#=759.48±0.1mm."
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-4b3b4c949d350142",
+          "kind": "formula",
+          "groupId": null,
+          "page": 3,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#249.18#701.26#365.32#716.76#0= + 0.1−(−0.1)=0.2mm"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-757798f7f08faa5d",
+          "kind": "ring",
+          "groupId": "ring:m",
+          "page": 3,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#284.11#671.19#292.78#686.19#m",
+            "real-doc-r6-fbe5db55db9b#3#305.68#671.19#326.09#686.19#0.2 /"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#305.68#671.19#326.09#686.19#0.2 /"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-488eb2538f5c6555",
+          "kind": "ring",
+          "groupId": "ring:T3",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#126.96#508.19#138.21#523.68#T3",
+            "real-doc-r6-fbe5db55db9b#3#138.84#508.68#188.22#523.68#=0.97mm,"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#138.84#508.68#188.22#523.68#=0.97mm,"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-a55ea798cf1c06aa",
+          "kind": "ring",
+          "groupId": "ring:T1",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#56.70#508.19#67.95#523.68#T1",
+            "real-doc-r6-fbe5db55db9b#3#68.58#508.68#123.96#523.68#=0.115mm,"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#68.58#508.68#123.96#523.68#=0.115mm,"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-91dc4eb7a8f7fe59",
+          "kind": "ring",
+          "groupId": "ring:T",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#160.09#489.89#166.77#504.89#T",
+            "real-doc-r6-fbe5db55db9b#3#391.05#489.89#418.05#504.89#0.132",
+            "real-doc-r6-fbe5db55db9b#3#420.00#490.33#436.33#503.46#mm",
+            "real-doc-r6-fbe5db55db9b#3#190.29#489.89#378.30#504.89#T − T − T= 0.22 − 0.1152 − 0.0972"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#391.05#489.89#418.05#504.89#0.132",
+                "real-doc-r6-fbe5db55db9b#3#420.00#490.33#436.33#503.46#mm",
+                "real-doc-r6-fbe5db55db9b#3#190.29#489.89#378.30#504.89#T − T − T= 0.22 − 0.1152 − 0.0972"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-7d6ca5d4f72ac32a",
+          "kind": "ring",
+          "groupId": "ring:T3",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#405.54#457.55#416.85#473.04#T3",
+            "real-doc-r6-fbe5db55db9b#3#420.48#458.04#472.80#473.04#= 0.10mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#420.48#458.04#472.80#473.04#= 0.10mm."
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-7c3a2688aa2aa6ea",
+          "kind": "ring",
+          "groupId": "ring:T",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#166.00#425.48#172.67#440.45#T",
+            "real-doc-r6-fbe5db55db9b#3#241.60#167.89#248.27#182.89#T",
+            "real-doc-r6-fbe5db55db9b#3#390.85#425.48#439.43#440.45#0.182mm.",
+            "real-doc-r6-fbe5db55db9b#3#196.09#425.48#378.11#440.45#T − T − T= 0.412 − 0.062 − 0.102",
+            "real-doc-r6-fbe5db55db9b#3#466.45#167.89#515.03#182.89#0.182mm.",
+            "real-doc-r6-fbe5db55db9b#3#271.69#167.89#453.71#182.89#T − T − T= 0.412 − 0.062 − 0.102"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#390.85#425.48#439.43#440.45#0.182mm.",
+                "real-doc-r6-fbe5db55db9b#3#196.09#425.48#378.11#440.45#T − T − T= 0.412 − 0.062 − 0.102",
+                "real-doc-r6-fbe5db55db9b#3#466.45#167.89#515.03#182.89#0.182mm.",
+                "real-doc-r6-fbe5db55db9b#3#271.69#167.89#453.71#182.89#T − T − T= 0.412 − 0.062 − 0.102"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-26a60e3972786e13",
+          "kind": "ring",
+          "groupId": "ring:T0",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#177.72#406.96#188.97#422.46#T0",
+            "real-doc-r6-fbe5db55db9b#3#192.54#407.46#238.92#422.46#= 0.2mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#192.54#407.46#238.92#422.46#= 0.2mm."
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-fca8c6c84e545e7a",
+          "kind": "ring",
+          "groupId": "ring:Δ0",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#244.02#310.37#255.63#325.86#Δ0",
+            "real-doc-r6-fbe5db55db9b#3#68.70#167.44#85.29#183.59#Δ0",
+            "real-doc-r6-fbe5db55db9b#4#68.70#78.34#80.31#93.84#Δ0",
+            "real-doc-r6-fbe5db55db9b#3#299.52#310.86#363.28#325.86#0.1)]/2=0mm",
+            "real-doc-r6-fbe5db55db9b#3#256.26#310.86#363.28#325.86#=[0.1+(−0.1)]/2=0mm",
+            "real-doc-r6-fbe5db55db9b#3#161.82#167.94#234.42#182.94#=0+0+0=0mm,",
+            "real-doc-r6-fbe5db55db9b#3#94.02#167.44#234.42#183.59#Δ1+Δ2+Δ3=0+0+0=0mm,",
+            "real-doc-r6-fbe5db55db9b#4#261.84#78.84#340.50#93.84#0.045)]/2=0mm,",
+            "real-doc-r6-fbe5db55db9b#4#87.72#78.34#340.50#93.84#Δ1+Δ2=[0.05+(−0.05)]/2+[0.045+(−0.045)]/2=0mm,"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#299.52#310.86#363.28#325.86#0.1)]/2=0mm",
+                "real-doc-r6-fbe5db55db9b#3#256.26#310.86#363.28#325.86#=[0.1+(−0.1)]/2=0mm",
+                "real-doc-r6-fbe5db55db9b#3#161.82#167.94#234.42#182.94#=0+0+0=0mm,",
+                "real-doc-r6-fbe5db55db9b#3#94.02#167.44#234.42#183.59#Δ1+Δ2+Δ3=0+0+0=0mm,",
+                "real-doc-r6-fbe5db55db9b#4#261.84#78.84#340.50#93.84#0.045)]/2=0mm,",
+                "real-doc-r6-fbe5db55db9b#4#87.72#78.34#340.50#93.84#Δ1+Δ2=[0.05+(−0.05)]/2+[0.045+(−0.045)]/2=0mm,"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-f4827e4602061724",
+          "kind": "ring",
+          "groupId": "ring:Δ1",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#238.02#296.56#249.63#312.06#Δ1",
+            "real-doc-r6-fbe5db55db9b#3#299.58#297.06#369.28#312.06#0.07)]/2=0mm",
+            "real-doc-r6-fbe5db55db9b#3#250.26#297.06#369.28#312.06#=[0.07+(−0.07)]/2=0mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#299.58#297.06#369.28#312.06#0.07)]/2=0mm",
+                "real-doc-r6-fbe5db55db9b#3#250.26#297.06#369.28#312.06#=[0.07+(−0.07)]/2=0mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-fa006873d4ff5ecd",
+          "kind": "ring",
+          "groupId": "ring:Δ3",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#238.02#282.76#249.63#298.26#Δ3",
+            "real-doc-r6-fbe5db55db9b#3#299.58#283.26#369.28#298.26#0.05)]/2=0mm",
+            "real-doc-r6-fbe5db55db9b#3#250.26#283.26#369.28#298.26#=[0.05+(−0.05)]/2=0mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#299.58#283.26#369.28#298.26#0.05)]/2=0mm",
+                "real-doc-r6-fbe5db55db9b#3#250.26#283.26#369.28#298.26#=[0.05+(−0.05)]/2=0mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-16b6e70418c544e2",
+          "kind": "ring",
+          "groupId": "ring:Δ2",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#262.68#268.96#274.29#284.46#Δ2",
+            "real-doc-r6-fbe5db55db9b#3#307.26#269.46#344.68#284.46#0=0mm",
+            "real-doc-r6-fbe5db55db9b#3#274.92#269.46#344.68#284.46#=0−0−0=0mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#307.26#269.46#344.68#284.46#0=0mm",
+                "real-doc-r6-fbe5db55db9b#3#274.92#269.46#344.68#284.46#=0−0−0=0mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-9b168c1049c9578a",
+          "kind": "formula",
+          "groupId": null,
+          "page": 3,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#224.76#241.37#370.56#256.86#ES2=Δ2+T2/2=0+0.06/2=0.03"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-0610667768013f45",
+          "kind": "formula",
+          "groupId": null,
+          "page": 3,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#220.86#213.76#374.46#229.26#EI2=Δ2− T2/2=0−0.06/2=−0.03"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-53e823707b27f1ae",
+          "kind": "ring",
+          "groupId": "ring:ES0",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#85.20#149.38#103.11#164.88#ES0",
+            "real-doc-r6-fbe5db55db9b#3#144.06#149.88#264.60#164.88#/2=0+0.182/2=0.091mm,",
+            "real-doc-r6-fbe5db55db9b#3#103.74#149.38#264.60#164.88#=Δ0+T0/2=0+0.182/2=0.091mm,"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#144.06#149.88#264.60#164.88#/2=0+0.182/2=0.091mm,",
+                "real-doc-r6-fbe5db55db9b#3#103.74#149.38#264.60#164.88#=Δ0+T0/2=0+0.182/2=0.091mm,"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-a53ada50a4f5b976",
+          "kind": "ring",
+          "groupId": "ring:EI0",
+          "page": 3,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#3#264.60#149.38#280.53#164.88#EI0",
+            "real-doc-r6-fbe5db55db9b#3#393.48#149.88#448.80#164.88#−0.091mm,",
+            "real-doc-r6-fbe5db55db9b#3#400.26#149.88#448.80#164.88#0.091mm,",
+            "real-doc-r6-fbe5db55db9b#3#281.16#149.38#393.47#164.88#=Δ0−T0/2=0−0.182/2="
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#3#393.48#149.88#448.80#164.88#−0.091mm,",
+                "real-doc-r6-fbe5db55db9b#3#400.26#149.88#448.80#164.88#0.091mm,",
+                "real-doc-r6-fbe5db55db9b#3#281.16#149.38#393.47#164.88#=Δ0−T0/2=0−0.182/2="
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-7003532e901228b0",
+          "kind": "ring",
+          "groupId": "ring:B",
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#389.94#685.56#397.27#700.56#B",
+            "real-doc-r6-fbe5db55db9b#4#397.20#685.56#538.60#700.56#=135; the second is the upper"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#397.20#685.56#538.60#700.56#=135; the second is the upper"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-b01a9fb04367e5ca",
+          "kind": "formula",
+          "groupId": null,
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#237.72#671.26#538.68#686.76#1on=250/2=125. Free roller tolerance and the same drive roller,"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-7dc47c5adab23990",
+          "kind": "ring",
+          "groupId": "ring:B1",
+          "page": 4,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#114.42#490.31#126.33#505.80#B1",
+            "real-doc-r6-fbe5db55db9b#4#322.92#358.06#334.83#373.56#B1",
+            "real-doc-r6-fbe5db55db9b#4#216.36#302.14#228.27#317.64#B1",
+            "real-doc-r6-fbe5db55db9b#4#126.90#490.80#538.67#505.80#=260±0.07mm of tolerance exploded onto the lower half of the roller assembly. The",
+            "real-doc-r6-fbe5db55db9b#4#335.46#358.56#406.42#373.56#=260±0.07mm",
+            "real-doc-r6-fbe5db55db9b#4#285.66#302.64#391.00#317.64#=135+250/2=260 mm",
+            "real-doc-r6-fbe5db55db9b#4#235.68#302.14#391.00#317.64#B1+B1under=135+250/2=260 mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#126.90#490.80#538.67#505.80#=260±0.07mm of tolerance exploded onto the lower half of the roller assembly. The",
+                "real-doc-r6-fbe5db55db9b#4#335.46#358.56#406.42#373.56#=260±0.07mm",
+                "real-doc-r6-fbe5db55db9b#4#285.66#302.64#391.00#317.64#=135+250/2=260 mm",
+                "real-doc-r6-fbe5db55db9b#4#235.68#302.14#391.00#317.64#B1+B1under=135+250/2=260 mm"
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#126.90#490.80#538.67#505.80#=260±0.07mm of tolerance exploded onto the lower half of the roller assembly. The",
+                "real-doc-r6-fbe5db55db9b#4#335.46#358.56#406.42#373.56#=260±0.07mm"
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#126.90#490.80#538.67#505.80#=260±0.07mm of tolerance exploded onto the lower half of the roller assembly. The",
+                "real-doc-r6-fbe5db55db9b#4#335.46#358.56#406.42#373.56#=260±0.07mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-15eec9f3d57675c9",
+          "kind": "formula",
+          "groupId": null,
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#68.58#409.40#451.92#424.44#3- mandrel: a large-diameter φ= 129h6（ ）, the small diameter φ=110f7(-0.071 ) ."
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "formula-e26f8591654bba67",
+          "kind": "formula",
+          "groupId": null,
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#68.58#390.39#470.88#405.42#4- bearing: bore φ= 180H7（ ）, the base surface to the hole center distance L=135."
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-46b43975d3c420b7",
+          "kind": "ring",
+          "groupId": "ring:T0",
+          "page": 4,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#234.48#274.55#245.73#290.04#T0",
+            "real-doc-r6-fbe5db55db9b#4#298.44#275.04#372.88#290.04#0.07)=0.14 mm",
+            "real-doc-r6-fbe5db55db9b#4#246.36#275.04#372.88#290.04#=+0.07−(−0.07)=0.14 mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#298.44#275.04#372.88#290.04#0.07)=0.14 mm",
+                "real-doc-r6-fbe5db55db9b#4#246.36#275.04#372.88#290.04#=+0.07−(−0.07)=0.14 mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-c2b4068e6690a1c0",
+          "kind": "ring",
+          "groupId": "ring:m",
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#279.89#244.44#288.56#259.44#m",
+            "real-doc-r6-fbe5db55db9b#4#301.46#244.44#327.86#259.44#0.14 /"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#301.46#244.44#327.86#259.44#0.14 /"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-7f738e3e023b6664",
+          "kind": "ring",
+          "groupId": "ring:T1",
+          "page": 4,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#69.66#212.14#80.91#227.64#T1",
+            "real-doc-r6-fbe5db55db9b#4#109.62#212.64#499.06#227.64#0.10 mm . Because under B1 chain size small, so the tolerance reassigned as:"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#109.62#212.64#499.06#227.64#0.10 mm . Because under B1 chain size small, so the tolerance reassigned as:"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-a9cab7502c31fe3e",
+          "kind": "ring",
+          "groupId": "ring:T2",
+          "page": 4,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#81.54#212.14#100.89#227.64#=T2",
+            "real-doc-r6-fbe5db55db9b#4#109.62#212.64#499.06#227.64#0.10 mm . Because under B1 chain size small, so the tolerance reassigned as:"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#109.62#212.64#499.06#227.64#0.10 mm . Because under B1 chain size small, so the tolerance reassigned as:"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-9bab8f3fb5b7d951",
+          "kind": "ring",
+          "groupId": "ring:T2",
+          "page": 4,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#81.30#198.34#92.55#213.84#T2",
+            "real-doc-r6-fbe5db55db9b#4#96.18#198.84#148.62#213.84#= 0.09mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#96.18#198.84#148.62#213.84#= 0.09mm."
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-0ce90dd50dc17e2f",
+          "kind": "ring",
+          "groupId": "ring:B1",
+          "page": 4,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#103.38#133.91#115.29#149.40#B1",
+            "real-doc-r6-fbe5db55db9b#5#137.22#728.87#149.13#744.36#B1",
+            "real-doc-r6-fbe5db55db9b#6#152.22#461.63#164.13#477.12#B1",
+            "real-doc-r6-fbe5db55db9b#4#115.86#134.40#189.84#149.40#=135±0.05mm.",
+            "real-doc-r6-fbe5db55db9b#5#149.76#729.36#491.94#744.36#=135±0.05mm decomposed into the lower half of the roller assembly,",
+            "real-doc-r6-fbe5db55db9b#6#172.03#462.09#190.03#477.09#135",
+            "real-doc-r6-fbe5db55db9b#6#211.50#462.12#233.16#477.12#mm,"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#115.86#134.40#189.84#149.40#=135±0.05mm.",
+                "real-doc-r6-fbe5db55db9b#5#149.76#729.36#491.94#744.36#=135±0.05mm decomposed into the lower half of the roller assembly,",
+                "real-doc-r6-fbe5db55db9b#6#172.03#462.09#190.03#477.09#135",
+                "real-doc-r6-fbe5db55db9b#6#211.50#462.12#233.16#477.12#mm,"
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#115.86#134.40#189.84#149.40#=135±0.05mm.",
+                "real-doc-r6-fbe5db55db9b#5#149.76#729.36#491.94#744.36#=135±0.05mm decomposed into the lower half of the roller assembly,"
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#115.86#134.40#189.84#149.40#=135±0.05mm.",
+                "real-doc-r6-fbe5db55db9b#5#149.76#729.36#491.94#744.36#=135±0.05mm decomposed into the lower half of the roller assembly,"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-8baca661a7f4aef7",
+          "kind": "ring",
+          "groupId": "ring:B1",
+          "page": 4,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#91.38#106.24#103.29#121.74#B1",
+            "real-doc-r6-fbe5db55db9b#6#237.42#461.63#249.33#477.12#B1",
+            "real-doc-r6-fbe5db55db9b#4#111.18#106.69#129.18#121.69#125",
+            "real-doc-r6-fbe5db55db9b#4#168.66#106.74#190.26#121.74#mm.",
+            "real-doc-r6-fbe5db55db9b#6#249.96#462.12#390.48#477.12#=125±0.045mm, closed loop",
+            "real-doc-r6-fbe5db55db9b#4#130.87#106.69#166.49#121.69#± 0.045"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#111.18#106.69#129.18#121.69#125",
+                "real-doc-r6-fbe5db55db9b#4#168.66#106.74#190.26#121.74#mm.",
+                "real-doc-r6-fbe5db55db9b#6#249.96#462.12#390.48#477.12#=125±0.045mm, closed loop"
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#130.87#106.69#166.49#121.69#± 0.045",
+                "real-doc-r6-fbe5db55db9b#6#249.96#462.12#390.48#477.12#=125±0.045mm, closed loop"
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#130.87#106.69#166.49#121.69#± 0.045",
+                "real-doc-r6-fbe5db55db9b#6#249.96#462.12#390.48#477.12#=125±0.045mm, closed loop"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-bd9e1978e6ee1d3e",
+          "kind": "ring",
+          "groupId": "ring:ES0",
+          "page": 4,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#367.86#60.59#385.77#76.08#ES0",
+            "real-doc-r6-fbe5db55db9b#6#209.28#378.40#227.19#393.90#ES0",
+            "real-doc-r6-fbe5db55db9b#4#424.02#61.08#538.56#76.08#/2=0+0.135/2=0.07mm,",
+            "real-doc-r6-fbe5db55db9b#4#393.18#60.59#538.56#76.08#Δ0+T0/2=0+0.135/2=0.07mm,",
+            "real-doc-r6-fbe5db55db9b#6#265.44#378.90#398.02#393.90#/2=0.002+0.135/2=0.07mm",
+            "real-doc-r6-fbe5db55db9b#6#234.60#378.40#398.02#393.90#Δ0+T0/2=0.002+0.135/2=0.07mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#424.02#61.08#538.56#76.08#/2=0+0.135/2=0.07mm,",
+                "real-doc-r6-fbe5db55db9b#4#393.18#60.59#538.56#76.08#Δ0+T0/2=0+0.135/2=0.07mm,",
+                "real-doc-r6-fbe5db55db9b#6#265.44#378.90#398.02#393.90#/2=0.002+0.135/2=0.07mm",
+                "real-doc-r6-fbe5db55db9b#6#234.60#378.40#398.02#393.90#Δ0+T0/2=0.002+0.135/2=0.07mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-96628f7ae78c8cb8",
+          "kind": "ring",
+          "groupId": "ring:T",
+          "page": 4,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#57.75#60.87#64.14#75.21#T",
+            "real-doc-r6-fbe5db55db9b#6#194.95#410.78#201.62#425.75#T",
+            "real-doc-r6-fbe5db55db9b#4#207.70#60.87#254.01#75.21#0.135mm,",
+            "real-doc-r6-fbe5db55db9b#4#86.56#60.87#190.62#75.21#T +T = 0.10 +0.09",
+            "real-doc-r6-fbe5db55db9b#6#351.60#410.78#378.60#425.75#0.135",
+            "real-doc-r6-fbe5db55db9b#6#379.86#410.82#401.46#425.82#mm,",
+            "real-doc-r6-fbe5db55db9b#6#225.04#410.78#333.75#425.75#T +T = 0.10 +0.09"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#4#207.70#60.87#254.01#75.21#0.135mm,",
+                "real-doc-r6-fbe5db55db9b#4#86.56#60.87#190.62#75.21#T +T = 0.10 +0.09",
+                "real-doc-r6-fbe5db55db9b#6#351.60#410.78#378.60#425.75#0.135",
+                "real-doc-r6-fbe5db55db9b#6#379.86#410.82#401.46#425.82#mm,",
+                "real-doc-r6-fbe5db55db9b#6#225.04#410.78#333.75#425.75#T +T = 0.10 +0.09"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-f6d08c4a4acd4368",
+          "kind": "formula",
+          "groupId": null,
+          "page": 4,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#4#56.70#42.53#538.60#58.02#EI0=Δ0−T0/2=0−0.135/2=−0.07mm.It can be seen B1=260±0.07 comply with B1=260±0.07mm"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-a5089f3973406adf",
+          "kind": "ring",
+          "groupId": "ring:B1upper",
+          "page": 5,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#429.54#756.47#459.75#771.96#B1upper",
+            "real-doc-r6-fbe5db55db9b#5#464.28#756.96#538.66#771.96#=135±0.05mm;"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#464.28#756.96#538.66#771.96#=135±0.05mm;"
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#464.28#756.96#538.66#771.96#=135±0.05mm;"
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#464.28#756.96#538.66#771.96#=135±0.05mm;"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-f8bcbf072565a071",
+          "kind": "ring",
+          "groupId": "ring:below",
+          "page": 5,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#64.62#742.66#88.21#752.64#1below",
+            "real-doc-r6-fbe5db55db9b#5#91.80#743.16#171.72#758.16#=125±0.045mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#91.80#743.16#171.72#758.16#=125±0.045mm."
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#91.80#743.16#171.72#758.16#=125±0.045mm."
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#91.80#743.16#171.72#758.16#=125±0.045mm."
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-bc964ac89789ceb2",
+          "kind": "ring",
+          "groupId": "ring:amax",
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#389.34#484.00#409.59#499.50#amax",
+            "real-doc-r6-fbe5db55db9b#5#410.22#484.50#432.36#499.50#=0/2"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#410.22#484.50#432.36#499.50#=0/2"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-23e4f3fc80bfc906",
+          "kind": "ring",
+          "groupId": "ring:amin",
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#56.70#468.28#75.69#483.78#amin",
+            "real-doc-r6-fbe5db55db9b#5#83.10#468.78#120.18#483.78#−0.02/2"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#83.10#468.78#120.18#483.78#−0.02/2"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-eff9680e7e7af360",
+          "kind": "ring",
+          "groupId": "ring:a0",
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#220.86#468.28#231.45#483.78#a0",
+            "real-doc-r6-fbe5db55db9b#5#240.46#468.75#246.46#483.79#0"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#240.46#468.75#246.46#483.79#0"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-d1787ec350738d51",
+          "kind": "ring",
+          "groupId": "ring:amax",
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#473.76#432.23#494.07#447.72#amax",
+            "real-doc-r6-fbe5db55db9b#5#494.70#432.72#531.84#447.72#=0.04/2"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#494.70#432.72#531.84#447.72#=0.04/2"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-9e949846972fcd8c",
+          "kind": "formula",
+          "groupId": null,
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#56.70#416.94#159.54#431.94#(−0.025/2)=0.0325, a"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-215d31cb32c90911",
+          "kind": "ring",
+          "groupId": "ring:a01",
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#233.34#416.44#247.95#431.94#a01",
+            "real-doc-r6-fbe5db55db9b#5#256.95#416.90#262.95#431.94#0"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#256.95#416.90#262.95#431.94#0"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-1c0389108888761e",
+          "kind": "ring",
+          "groupId": "ring:min",
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#160.20#416.44#172.53#426.42#min",
+            "real-doc-r6-fbe5db55db9b#5#173.16#416.94#230.40#431.94#=0/2-0/2=0,"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#173.16#416.94#230.40#431.94#=0/2-0/2=0,"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-81625b22484eaf28",
+          "kind": "ring",
+          "groupId": "ring:L",
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#248.22#399.78#254.89#414.78#L",
+            "real-doc-r6-fbe5db55db9b#5#266.68#399.74#284.68#414.74#135"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#266.68#399.74#284.68#414.74#135"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-64783021f1fa22ef",
+          "kind": "formula",
+          "groupId": null,
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#68.70#371.44#538.62#386.94#Closed loop a02=a5−(a0+a01) , amax=0.1−(0.008+0)=0.092, amin=−0.1−(0.0355+0.0325)=−0.168,"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-52467ec679c9dc04",
+          "kind": "ring",
+          "groupId": "ring:a02",
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#56.70#355.67#71.31#371.16#a02",
+            "real-doc-r6-fbe5db55db9b#5#211.56#234.64#226.11#250.14#a02",
+            "real-doc-r6-fbe5db55db9b#5#385.74#182.87#400.35#198.36#a02",
+            "real-doc-r6-fbe5db55db9b#7#381.18#680.33#395.79#695.82#a02",
+            "real-doc-r6-fbe5db55db9b#5#80.31#356.14#86.31#371.14#0",
+            "real-doc-r6-fbe5db55db9b#5#236.56#235.10#242.56#250.14#0",
+            "real-doc-r6-fbe5db55db9b#5#409.35#183.34#415.35#198.34#0",
+            "real-doc-r6-fbe5db55db9b#7#404.80#680.79#410.80#695.79#0"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#80.31#356.14#86.31#371.14#0",
+                "real-doc-r6-fbe5db55db9b#5#236.56#235.10#242.56#250.14#0",
+                "real-doc-r6-fbe5db55db9b#5#409.35#183.34#415.35#198.34#0",
+                "real-doc-r6-fbe5db55db9b#7#404.80#680.79#410.80#695.79#0"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-cb1e7f44b2050716",
+          "kind": "ring",
+          "groupId": "ring:L",
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#322.86#202.38#329.53#217.38#L",
+            "real-doc-r6-fbe5db55db9b#5#349.33#202.35#367.33#217.39#135",
+            "real-doc-r6-fbe5db55db9b#5#397.74#202.38#417.77#217.38#take"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#349.33#202.35#367.33#217.39#135",
+                "real-doc-r6-fbe5db55db9b#5#397.74#202.38#417.77#217.38#take"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-c13ba57216b21008",
+          "kind": "ring",
+          "groupId": "ring:amin",
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#202.02#182.87#221.01#198.36#amin",
+            "real-doc-r6-fbe5db55db9b#7#199.74#680.33#218.73#695.82#amin",
+            "real-doc-r6-fbe5db55db9b#5#221.64#183.36#249.42#198.36#=0.02",
+            "real-doc-r6-fbe5db55db9b#7#219.36#680.82#247.14#695.82#=0.02"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#221.64#183.36#249.42#198.36#=0.02",
+                "real-doc-r6-fbe5db55db9b#7#219.36#680.82#247.14#695.82#=0.02"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-8f11dd6e69e819a8",
+          "kind": "ring",
+          "groupId": "ring:amax",
+          "page": 5,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#56.70#182.87#77.01#198.36#amax",
+            "real-doc-r6-fbe5db55db9b#7#56.70#541.97#77.01#557.46#amax",
+            "real-doc-r6-fbe5db55db9b#5#77.64#183.36#105.42#198.36#=0.06",
+            "real-doc-r6-fbe5db55db9b#7#77.64#542.46#114.78#557.46#=0.06/2"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#77.64#183.36#105.42#198.36#=0.06",
+                "real-doc-r6-fbe5db55db9b#7#77.64#542.46#114.78#557.46#=0.06/2"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-3ca8426e83888494",
+          "kind": "ring",
+          "groupId": "ring:B1below",
+          "page": 5,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#100.44#163.84#131.83#179.34#B1below",
+            "real-doc-r6-fbe5db55db9b#5#135.42#164.34#420.11#179.34#=135±0.05 mm for meet, after adjustments ,take B1below=",
+            "real-doc-r6-fbe5db55db9b#5#420.63#164.30#438.65#179.34#135",
+            "real-doc-r6-fbe5db55db9b#5#460.14#164.34#481.74#179.34#mm."
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#135.42#164.34#420.11#179.34#=135±0.05 mm for meet, after adjustments ,take B1below=",
+                "real-doc-r6-fbe5db55db9b#5#420.63#164.30#438.65#179.34#135",
+                "real-doc-r6-fbe5db55db9b#5#460.14#164.34#481.74#179.34#mm."
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#135.42#164.34#420.11#179.34#=135±0.05 mm for meet, after adjustments ,take B1below="
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#135.42#164.34#420.11#179.34#=135±0.05 mm for meet, after adjustments ,take B1below="
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-22de8859b9c4df13",
+          "kind": "ring",
+          "groupId": "ring:upper",
+          "page": 5,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#5#166.02#147.30#492.71#162.30#upper=125±0.045mm into the upper half of the roller assembly, the"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#166.02#147.30#492.71#162.30#upper=125±0.045mm into the upper half of the roller assembly, the"
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#166.02#147.30#492.71#162.30#upper=125±0.045mm into the upper half of the roller assembly, the"
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#5#166.02#147.30#492.71#162.30#upper=125±0.045mm into the upper half of the roller assembly, the"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-5d2ef33c14c9413e",
+          "kind": "formula",
+          "groupId": null,
+          "page": 6,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#6#56.70#625.25#538.62#640.74#loop a03=a6−a7, amax=0.04/2−(−0.025/2)=0.0325, amin=0/2−(0/2)=0 , a03=0+0.03250 (assembly"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-b3d29ef18f8580af",
+          "kind": "ring",
+          "groupId": "ring:amax",
+          "page": 6,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#6#443.04#581.56#463.29#597.06#amax",
+            "real-doc-r6-fbe5db55db9b#6#463.92#582.06#495.06#597.06#=0.1/2"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#6#463.92#582.06#495.06#597.06#=0.1/2"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-534a84f8c39526ba",
+          "kind": "ring",
+          "groupId": "ring:a04",
+          "page": 6,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#6#241.56#565.78#256.17#581.28#a04",
+            "real-doc-r6-fbe5db55db9b#6#133.08#546.76#147.63#562.26#a04",
+            "real-doc-r6-fbe5db55db9b#6#426.48#496.13#441.09#511.62#a04",
+            "real-doc-r6-fbe5db55db9b#7#309.30#541.97#323.91#557.46#a04",
+            "real-doc-r6-fbe5db55db9b#6#289.25#566.25#295.25#581.29#0",
+            "real-doc-r6-fbe5db55db9b#6#156.66#547.24#162.66#562.24#0",
+            "real-doc-r6-fbe5db55db9b#6#454.85#496.59#460.84#511.59#0",
+            "real-doc-r6-fbe5db55db9b#7#324.54#542.46#368.04#557.46#=0+0. 03"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#6#289.25#566.25#295.25#581.29#0",
+                "real-doc-r6-fbe5db55db9b#6#156.66#547.24#162.66#562.24#0",
+                "real-doc-r6-fbe5db55db9b#6#454.85#496.59#460.84#511.59#0",
+                "real-doc-r6-fbe5db55db9b#7#324.54#542.46#368.04#557.46#=0+0. 03"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-7349c0572e082889",
+          "kind": "ring",
+          "groupId": "ring:amin",
+          "page": 6,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#6#56.70#565.78#75.69#581.28#amin",
+            "real-doc-r6-fbe5db55db9b#6#76.32#566.28#108.22#581.28#=−0.1/"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#6#76.32#566.28#108.22#581.28#=−0.1/"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-2e15671b55ebda31",
+          "kind": "ring",
+          "groupId": "ring:amin",
+          "page": 6,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#6#254.94#496.13#273.93#511.62#amin",
+            "real-doc-r6-fbe5db55db9b#6#281.34#496.62#324.48#511.62#−0.025/2"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#6#281.34#496.62#324.48#511.62#−0.025/2"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-61ff53a0dc65ec72",
+          "kind": "ring",
+          "groupId": "ring:amax",
+          "page": 6,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#6#144.42#496.13#164.73#511.62#amax",
+            "real-doc-r6-fbe5db55db9b#6#165.36#496.62#202.50#511.62#=0.09/2"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#6#165.36#496.62#202.50#511.62#=0.09/2"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-13c418563bb4c134",
+          "kind": "ring",
+          "groupId": "ring:on",
+          "page": 6,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#6#145.20#478.20#246.16#493.20#. on = 125±0.045mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#6#145.20#478.20#246.16#493.20#. on = 125±0.045mm"
+              ]
+            },
+            {
+              "field": "upperDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#6#145.20#478.20#246.16#493.20#. on = 125±0.045mm"
+              ]
+            },
+            {
+              "field": "lowerDeviation",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#6#145.20#478.20#246.16#493.20#. on = 125±0.045mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-f2fcfd1fc37ae9fd",
+          "kind": "ring",
+          "groupId": "ring:Δ0",
+          "page": 6,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#6#146.70#429.76#158.31#445.26#Δ0",
+            "real-doc-r6-fbe5db55db9b#6#351.84#430.26#448.54#445.26#0.045)]/2=0.002mm",
+            "real-doc-r6-fbe5db55db9b#6#165.72#429.76#448.54#445.26#Δ1+Δ2=[0.052+(−0.048)]/2+[0.045+(−0.045)]/2=0.002mm"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#6#351.84#430.26#448.54#445.26#0.045)]/2=0.002mm",
+                "real-doc-r6-fbe5db55db9b#6#165.72#429.76#448.54#445.26#Δ1+Δ2=[0.052+(−0.048)]/2+[0.045+(−0.045)]/2=0.002mm"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-c1d9aa2b063470ad",
+          "kind": "ring",
+          "groupId": "ring:EI0",
+          "page": 6,
+          "status": "pending",
+          "reasonCodes": [],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#6#206.88#364.61#222.81#380.10#EI0",
+            "real-doc-r6-fbe5db55db9b#6#354.06#365.10#400.48#380.10#−0.07mm",
+            "real-doc-r6-fbe5db55db9b#6#360.84#365.10#400.48#380.10#0.07mm",
+            "real-doc-r6-fbe5db55db9b#6#230.22#364.61#354.05#380.10#Δ0−T0/2=0.002−0.135/2="
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#6#354.06#365.10#400.48#380.10#−0.07mm",
+                "real-doc-r6-fbe5db55db9b#6#360.84#365.10#400.48#380.10#0.07mm",
+                "real-doc-r6-fbe5db55db9b#6#230.22#364.61#354.05#380.10#Δ0−T0/2=0.002−0.135/2="
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-d3b3d3352d2737fb",
+          "kind": "ring",
+          "groupId": "ring:max",
+          "page": 6,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#6#283.62#196.25#301.29#206.22#1max",
+            "real-doc-r6-fbe5db55db9b#6#301.98#196.74#425.04#211.74#=0.142+0.05+0.05=0.242"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#6#301.98#196.74#425.04#211.74#=0.142+0.05+0.05=0.242"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-39be8300add7f59e",
+          "kind": "ring",
+          "groupId": "ring:min",
+          "page": 6,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#6#195.12#180.47#211.46#190.44#1min",
+            "real-doc-r6-fbe5db55db9b#6#218.88#180.96#258.72#195.96#−0.2505"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#6#218.88#180.96#258.72#195.96#−0.2505"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-5a4e39d907316573",
+          "kind": "ring",
+          "groupId": "ring:a05",
+          "page": 7,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#7#71.70#740.75#86.31#756.24#a05",
+            "real-doc-r6-fbe5db55db9b#7#96.56#741.20#102.57#756.24#0",
+            "real-doc-r6-fbe5db55db9b#7#133.20#741.24#175.19#756.24#becomes"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#7#96.56#741.20#102.57#756.24#0",
+                "real-doc-r6-fbe5db55db9b#7#133.20#741.24#175.19#756.24#becomes"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-3fda3d0655275f1c",
+          "kind": "formula",
+          "groupId": null,
+          "page": 7,
+          "status": "blocked",
+          "reasonCodes": [
+            "FORMULA_UNSUPPORTED"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#7#68.70#696.11#538.62#711.60#①Base into the hole center distance L size chain a02: closed loop a02=a5−(a0+a01),"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-c6bd1ee30a0e41ad",
+          "kind": "ring",
+          "groupId": "ring:amax",
+          "page": 7,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#7#56.70#680.33#77.01#695.82#amax",
+            "real-doc-r6-fbe5db55db9b#7#77.64#680.82#105.42#695.82#=0.05"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#7#77.64#680.82#105.42#695.82#=0.05"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-815c15513acc1bd3",
+          "kind": "ring",
+          "groupId": "ring:amin",
+          "page": 7,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#7#167.34#541.97#186.21#557.46#amin",
+            "real-doc-r6-fbe5db55db9b#7#186.84#542.46#208.98#557.46#=0/2"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#7#186.84#542.46#208.98#557.46#=0/2"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-eec2436591400d7f",
+          "kind": "ring",
+          "groupId": "ring:amax",
+          "page": 7,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#7#419.34#528.16#439.59#543.66#amax",
+            "real-doc-r6-fbe5db55db9b#7#440.22#528.66#538.56#543.66#=0.042+0.03=0.072,"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#7#440.22#528.66#538.56#543.66#=0.042+0.03=0.072,"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-4e046365861b2803",
+          "kind": "ring",
+          "groupId": "ring:amin",
+          "page": 7,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#7#56.70#512.38#75.69#527.88#amin",
+            "real-doc-r6-fbe5db55db9b#7#83.10#512.88#127.66#527.88#−0.048+("
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#7#83.10#512.88#127.66#527.88#−0.048+("
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-dd4b1e4ce101a092",
+          "kind": "ring",
+          "groupId": "ring:a05",
+          "page": 7,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#7#223.98#512.38#238.59#527.88#a05",
+            "real-doc-r6-fbe5db55db9b#7#250.60#512.85#256.60#527.89#0"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#7#250.60#512.85#256.60#527.89#0"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "formula-ba5d366961317b3f",
+          "kind": "formula",
+          "groupId": "formula:A1",
+          "page": 7,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNSUPPORTED_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#7#264.78#467.75#342.57#483.24#A1=a05+a08+a07"
+          ],
+          "fields": []
+        },
+        {
+          "candidateId": "ring-2d965e75d106fbff",
+          "kind": "ring",
+          "groupId": "ring:max",
+          "page": 7,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#7#236.88#453.94#254.61#463.92#1max",
+            "real-doc-r6-fbe5db55db9b#7#255.24#454.44#378.36#469.44#=0.072+0.01+0.03=0.112"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#7#255.24#454.44#378.36#469.44#=0.072+0.01+0.03=0.112"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "ring-867fba7b2f3d38cd",
+          "kind": "ring",
+          "groupId": "ring:min",
+          "page": 7,
+          "status": "blocked",
+          "reasonCodes": [
+            "UNKNOWN_UNIT"
+          ],
+          "evidenceKeys": [
+            "real-doc-r6-fbe5db55db9b#7#224.76#440.14#241.10#450.12#1min",
+            "real-doc-r6-fbe5db55db9b#7#248.52#440.64#288.36#455.64#−0.0805"
+          ],
+          "fields": [
+            {
+              "field": "nominal",
+              "evidenceKeys": [
+                "real-doc-r6-fbe5db55db9b#7#248.52#440.64#288.36#455.64#−0.0805"
+              ]
+            }
+          ]
+        }
+      ],
+      "issues": [
+        {
+          "issueId": "issue-62ea2fe5c086aadb",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 2,
+          "candidateIds": [
+            "ring-7fe1503f1612f391",
+            "ring-7dc47c5adab23990",
+            "ring-0ce90dd50dc17e2f",
+            "ring-8baca661a7f4aef7"
+          ]
+        },
+        {
+          "issueId": "issue-6ec7b087fceab821",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 2,
+          "candidateIds": [
+            "ring-b438f13d46eda8ef",
+            "ring-a55ea798cf1c06aa",
+            "ring-7f738e3e023b6664"
+          ]
+        },
+        {
+          "issueId": "issue-6fc7b21a6b2758e0",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 2,
+          "candidateIds": [
+            "ring-7dc49292c06724a0",
+            "ring-a9cab7502c31fe3e",
+            "ring-9bab8f3fb5b7d951"
+          ]
+        },
+        {
+          "issueId": "issue-70c7b3adf113234b",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 2,
+          "candidateIds": [
+            "ring-4910fe730edf8d45",
+            "ring-488eb2538f5c6555",
+            "ring-7d6ca5d4f72ac32a"
+          ]
+        },
+        {
+          "issueId": "issue-a30fbd8c559c0292",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 2,
+          "candidateIds": [
+            "ring-a08719bb553e31c5",
+            "ring-91dc4eb7a8f7fe59",
+            "ring-7c3a2688aa2aa6ea",
+            "ring-96628f7ae78c8cb8"
+          ]
+        },
+        {
+          "issueId": "issue-7d59ea65c8ad3ed7",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 2,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-ca8c0d1ac30126e0",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 2,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-4fb514ac71176fbe",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 3,
+          "candidateIds": [
+            "ring-53e823707b27f1ae",
+            "ring-bd9e1978e6ee1d3e"
+          ]
+        },
+        {
+          "issueId": "issue-6dc7aef476feedb6",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 3,
+          "candidateIds": [
+            "ring-26a60e3972786e13",
+            "ring-46b43975d3c420b7"
+          ]
+        },
+        {
+          "issueId": "issue-cb7e2ae6bd3df234",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 3,
+          "candidateIds": [
+            "ring-a53ada50a4f5b976",
+            "ring-c1d9aa2b063470ad"
+          ]
+        },
+        {
+          "issueId": "issue-dc101747eeb02c45",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 3,
+          "candidateIds": [
+            "ring-757798f7f08faa5d",
+            "ring-c2b4068e6690a1c0"
+          ]
+        },
+        {
+          "issueId": "issue-e47ca534d35fa376",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 3,
+          "candidateIds": [
+            "ring-fca8c6c84e545e7a",
+            "ring-f2fcfd1fc37ae9fd"
+          ]
+        },
+        {
+          "issueId": "issue-27a562320ad5c128",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 3,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-badfc19a488be4cc",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 3,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-c369b3b15079454b",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 3,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-e995b58eccf171e8",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 3,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-fa934949d3539aa7",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 3,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-18bffd8ab2ac42d8",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 4,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-82a76c80621512b2",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 4,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-91e2a53c64a9dc66",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 4,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-2f0ab82b6ab07765",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 5,
+          "candidateIds": [
+            "ring-bc964ac89789ceb2",
+            "ring-d1787ec350738d51",
+            "ring-8f11dd6e69e819a8",
+            "ring-b3d29ef18f8580af",
+            "ring-61ff53a0dc65ec72",
+            "ring-c6bd1ee30a0e41ad",
+            "ring-eec2436591400d7f"
+          ]
+        },
+        {
+          "issueId": "issue-44f753154a4a2e6b",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 5,
+          "candidateIds": [
+            "ring-23e4f3fc80bfc906",
+            "ring-c13ba57216b21008",
+            "ring-7349c0572e082889",
+            "ring-2e15671b55ebda31",
+            "ring-815c15513acc1bd3",
+            "ring-4e046365861b2803"
+          ]
+        },
+        {
+          "issueId": "issue-8a00cd4cbba0222e",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 5,
+          "candidateIds": [
+            "ring-1c0389108888761e",
+            "ring-39be8300add7f59e",
+            "ring-867fba7b2f3d38cd"
+          ]
+        },
+        {
+          "issueId": "issue-bb0fe354263daf3a",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 5,
+          "candidateIds": [
+            "ring-81625b22484eaf28",
+            "ring-cb1e7f44b2050716"
+          ]
+        },
+        {
+          "issueId": "issue-97ed5b9ec457417c",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 6,
+          "candidateIds": [
+            "ring-d3b3d3352d2737fb",
+            "ring-2d965e75d106fbff"
+          ]
+        },
+        {
+          "issueId": "issue-498b404f9c667159",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 6,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-5837278c5c635482",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 6,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-9a43085e2f169618",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 6,
+          "candidateIds": []
+        },
+        {
+          "issueId": "issue-46473f9446a8bbda",
+          "code": "AMBIGUOUS_ASSIGNMENT",
+          "severity": "warning",
+          "page": 7,
+          "candidateIds": [
+            "ring-5a4e39d907316573",
+            "ring-dd4b1e4ce101a092"
+          ]
+        },
+        {
+          "issueId": "issue-fcd7d2f08160ec4a",
+          "code": "UNKNOWN_UNIT",
+          "severity": "blocked",
+          "page": 7,
+          "candidateIds": []
+        }
+      ]
+    }
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

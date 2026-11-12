@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs'
 import { it, expect } from 'vitest'
 import { decodeProjectFile, encodeProjectFile } from '../../src/project-file/codec'
+import { adaptProjectV8 } from '../../src/project-file/validation'
 import { officialDraft, resolveDraft } from '../../src/workspace/draftSync'
 import { calculateChain } from '../../src/domain/calculate'
 import { serializeEvidence } from '../../scripts/evidence-json'
@@ -18,7 +19,7 @@ it('FIX-05/09: actual independent legacy file and frozen references; prepare iso
   const old = snapshot.fileRevisions.find(x => x.project.schemaVersion === 8 && x.project.parameters.find(p => p.key === 'length')?.valueQ === 120000 && x.project.activeRequirementRevisionId != null)!
   expect(old).toBeDefined()
   if (old.project.schemaVersion !== 8) throw new Error('UI seed requires schema8 historical project')
-  const seed = { ...snapshot, project: old.project, draft: officialDraft(old.project.dimensionChain, old.project.relationRevision), fileRevisions: snapshot.fileRevisions.slice(0, snapshot.fileRevisions.indexOf(old) + 1) }
+  const seed = { ...snapshot, project: adaptProjectV8(old.project), draft: officialDraft(old.project.dimensionChain, old.project.relationRevision), fileRevisions: snapshot.fileRevisions.slice(0, snapshot.fileRevisions.indexOf(old) + 1) }
   const encoded = await encodeProjectFile(seed)
   if (!encoded.ok) throw new Error(encoded.error.message)
   expect(calculateChain(old.project.dimensionChain)).toMatchObject({ minQ: 1500, maxQ: 2500 })

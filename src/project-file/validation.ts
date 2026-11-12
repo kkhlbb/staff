@@ -31,6 +31,7 @@ import {
   PROJECT_FILE_SCHEMA_VERSION,
   REVISION_EXTENSION,
   V35_PROJECT_FILE_SCHEMA_VERSION,
+  V36_PROJECT_FILE_SCHEMA_VERSION,
   REVISION_PATH_PREFIX,
   type ProjectFileAttachmentInput,
   type ProjectFileAttachmentRef,
@@ -46,6 +47,7 @@ import {
   type ProjectFileProjectV5,
   type ProjectFileProjectV6,
   type ProjectFileProjectV7,
+  type ProjectFileProjectV8,
   type ProjectFileResult,
   type ProjectFileRevision,
   type ProjectFileSnapshot,
@@ -64,11 +66,13 @@ import {
   EXTRACTION_REASON_CODES,
   candidateNumericFields,
   candidateValueSnapshot,
-  isEvidenceComplete,
+  isProvenanceCompleteness,
+  valueProvenance,
   type ExtractionCandidate,
   type ExtractionDecision,
   type ExtractionDraft,
   type ExtractionEvidence,
+  type QuantityValue,
 } from '../document-extraction/types'
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/
@@ -468,21 +472,23 @@ const requirementCheckSchema = z
     { message: '无条款的检查不得带条款证据引用' },
   )
 
-/* ---- V3.6：任务书提取草稿（schema8） -------------------------------- */
+/* ---- V3.6：任务书提取草稿（schema8）；ADR-001：schema9 增加出处联合类型 ---- */
+
+const extractionEvidenceFields = {
+  documentId: idSchema,
+  revisionId: idSchema,
+  sha256: sha256Schema,
+  blobKey: idSchema,
+  page: z.number().int().min(1),
+  rectPdf: coords4Schema,
+  pageBoxPdf: coords4Schema,
+  textSnippet: z.string().min(1).max(4000),
+  normalizedSnippet: z.string().max(4000),
+  textItemIndexes: z.array(nonNegativeInt).max(64),
+} as const
 
 const extractionEvidenceSchema = z
-  .object({
-    documentId: idSchema,
-    revisionId: idSchema,
-    sha256: sha256Schema,
-    blobKey: idSchema,
-    page: z.number().int().min(1),
-    rectPdf: coords4Schema,
-    pageBoxPdf: coords4Schema,
-    textSnippet: z.string().min(1).max(4000),
-    normalizedSnippet: z.string().max(4000),
-    textItemIndexes: z.array(nonNegativeInt).max(64),
-  })
+  .object(extractionEvidenceFields)
   .strict()
   .refine(
     (evidence) =>
@@ -490,6 +496,72 @@ const extractionEvidenceSchema = z
       evidence.pageBoxPdf.every((value) => Number.isFinite(value)),
     { message: '提取出处的选区/页框必须是有限数值' },
   )
+
+/** ADR-001：扫描件 OCR 出处（仍锚在 PDF 版本 + 页 + 选区，必须带置信度）。 */
+const pdfOcrEvidenceSchema = z
+  .object({
+    ...extractionEvidenceFields,
+    kind: z.literal('pdf-ocr'),
+    confidence: z.number().min(0).max(1),
+  })
+  .strict()
+  .refine(
+    (evidence) =>
+      evidence.rectPdf.every((value) => Number.isFinite(value)) &&
+      evidence.pageBoxPdf.every((value) => Number.isFinite(value)),
+    { message: 'OCR 出处的选区/页框必须是有限数值' },
+  )
+
+/** ADR-001：图片 OCR 出处（锚在图片本身，不挂 PDF 版本）。 */
+const imageOcrEvidenceSchema = z
+  .object({
+    kind: z.literal('image-ocr'),
+    imageId: idSchema,
+    sha256: sha256Schema,
+    fileName: z.string().min(1).max(400),
+    rectPdf: coords4Schema,
+    recognizedText: z.string().min(1).max(4000),
+    confidence: z.number().min(0).max(1),
+  })
+  .strict()
+
+/**
+ * ADR-001：用户断言出处。按 §11 用 actorId + sessionSeq + sessionLabel（不用 UUID）。
+ * 撤销只追加留痕字段；出处本身不被删除。
+ */
+const userAttestationSchema = z
+  .object({
+    kind: z.literal('user-attestation'),
+    actorId: z.string().min(1).max(200),
+    at: z.string().min(1).max(64),
+    sessionSeq: z.number().int().min(1),
+    sessionLabel: z.string().max(200).nullable(),
+    statement: z.string().min(1).max(4000),
+    fieldPath: z.string().min(1).max(400),
+    revokedAt: z.string().min(1).max(64).nullable().optional(),
+    revokedBy: z.string().min(1).max(200).nullable().optional(),
+    revokedStatement: z.string().min(1).max(2000).nullable().optional(),
+  })
+  .strict()
+
+/** pdf-text 出处：与 evidence 同形状，另接受显式 `kind: 'pdf-text'`（解析器不写）。 */
+const pdfTextProvenanceSchema = z
+  .object({ ...extractionEvidenceFields, kind: z.literal('pdf-text').optional() })
+  .strict()
+  .refine(
+    (evidence) =>
+      evidence.rectPdf.every((value) => Number.isFinite(value)) &&
+      evidence.pageBoxPdf.every((value) => Number.isFinite(value)),
+    { message: '提取出处的选区/页框必须是有限数值' },
+  )
+
+/** 出处联合：pdf-text（旧 evidence 形状或无 kind）或带 kind 的其它三类。 */
+const provenanceRefSchema = z.union([
+  pdfTextProvenanceSchema,
+  pdfOcrEvidenceSchema,
+  imageOcrEvidenceSchema,
+  userAttestationSchema,
+])
 
 const extractionQuantitySchema = z
   .object({
@@ -499,6 +571,8 @@ const extractionQuantitySchema = z
     unitText: z.string().max(32).nullable(),
     unit: z.literal('mm').nullable(),
     evidence: z.array(extractionEvidenceSchema).max(16),
+    /** ADR-001（schema9，纯加法）：数值出处集合；读旧 schema8 时缺省。 */
+    provenance: z.array(provenanceRefSchema).max(16).optional(),
   })
   .strict()
 
@@ -562,6 +636,8 @@ const extractionCandidateBaseShape = {
   confidenceBasis: z.array(z.string().min(1).max(200)).max(16),
   reasonCodes: z.array(z.enum(EXTRACTION_REASON_CODES)).max(32),
   evidence: z.array(extractionEvidenceSchema).max(32),
+  /** ADR-001（schema9，纯加法）：候选级出处集合；读旧 schema8 时缺省。 */
+  provenance: z.array(provenanceRefSchema).max(32).optional(),
   editRevision: nonNegativeInt,
   /**
    * 同一符号多处赋值时的位置标记（V3.6 体验修订新增）。
@@ -619,6 +695,8 @@ const extractionDecisionSchema = z
     reason: z.string().max(2000).nullable(),
     valueSnapshot: z.string().max(8000),
     evidence: z.array(extractionEvidenceSchema).max(64),
+    /** ADR-001（schema9，纯加法）：决定时的出处集合；读旧 schema8 时缺省。 */
+    provenance: z.array(provenanceRefSchema).max(64).optional(),
     invalidatedByEditRevision: nonNegativeInt.nullable(),
   })
   .strict()
@@ -734,13 +812,22 @@ const projectV5Schema = z
 /**
  * V3.6：schema8，在 schema7 之上只增加提取草稿。
  * 旧 schema7 记录没有该字段，按严格 schema 会被拒绝；读取时经 adaptProjectV7
- * 补空数组，保存时才写 8。
+ * 补空数组，保存时才写 9。
  */
 const projectV6Schema = projectV5Schema
   .extend({
-    schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
+    schemaVersion: z.literal(V36_PROJECT_FILE_SCHEMA_VERSION),
     extractionDrafts: z.array(extractionDraftSchema).max(8),
   })
+  .strict()
+
+/**
+ * ADR-001：schema9，在 schema8 之上给提取草稿的数值/候选/决定加纯加法字段
+ * `provenance`（出处联合类型）。旧 schema8 记录没有该字段，读取时经 adaptProjectV8
+ * 按原 evidence 逐条补 pdf-text 出处（不重算、不改值），保存时才写 9。
+ */
+const projectV7Schema = projectV6Schema
+  .extend({ schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION) })
   .strict()
 
 const draftSchema = z
@@ -1028,6 +1115,7 @@ const manifestProjectV2Schema = z
       z.literal(C_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(D_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(V35_PROJECT_FILE_SCHEMA_VERSION),
+      z.literal(V36_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(PROJECT_FILE_SCHEMA_VERSION),
     ]),
     dimensionChainSchemaVersion: z.literal(DIMENSION_CHAIN_SCHEMA_VERSION),
@@ -1086,7 +1174,8 @@ export type VersionedProject =
   | { version: 3; project: ProjectFileProjectV5 }
   | { version: 4; project: ProjectFileProjectV6 }
   | { version: 5; project: ProjectFileProjectV7 }
-  | { version: 6; project: ProjectFileProject }
+  | { version: 6; project: ProjectFileProjectV8 }
+  | { version: 7; project: ProjectFileProject }
 
 /** 校验工作链与基线链；两个 schema 版本共用。 */
 function validateProjectChains(
@@ -1200,7 +1289,7 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
       },
     })
   }
-  if (version === PROJECT_FILE_SCHEMA_VERSION) {
+  if (version === V36_PROJECT_FILE_SCHEMA_VERSION) {
     const parsed = projectV6Schema.safeParse(input)
     if (!parsed.success) {
       return fail('INVALID_RECORD', 'project.json 结构不合法（schema 8）', describeZodError(parsed.error))
@@ -1209,6 +1298,22 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
     if (!chains.ok) return chains
     return ok({
       version: 6,
+      project: {
+        ...(parsed.data as unknown as ProjectFileProjectV8),
+        dimensionChain: chains.value.dimensionChain,
+        baseline: chains.value.baseline,
+      },
+    })
+  }
+  if (version === PROJECT_FILE_SCHEMA_VERSION) {
+    const parsed = projectV7Schema.safeParse(input)
+    if (!parsed.success) {
+      return fail('INVALID_RECORD', 'project.json 结构不合法（schema 9）', describeZodError(parsed.error))
+    }
+    const chains = validateProjectChains(parsed.data)
+    if (!chains.ok) return chains
+    return ok({
+      version: 7,
       project: {
         ...(parsed.data as unknown as ProjectFileProject),
         dimensionChain: chains.value.dimensionChain,
@@ -1293,7 +1398,7 @@ export function adaptProjectV6(project: ProjectFileProjectV6): ProjectFileProjec
 }
 
 /**
- * schema7 → 当前工作形状（schema 8）：老项目默认“无提取草稿”。
+ * schema7 → 当前工作形状（schema 9）：老项目默认“无提取草稿”。
  * 不补造候选或决定；旧历史 Revision 原样保留。
  */
 export function adaptProjectV7(project: ProjectFileProjectV7): ProjectFileProject {
@@ -1301,6 +1406,71 @@ export function adaptProjectV7(project: ProjectFileProjectV7): ProjectFileProjec
     ...project,
     schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
     extractionDrafts: [],
+  }
+}
+
+/** 旧 schema8 的数值：按其原 evidence 逐条补 pdf-text 出处；不重算、不改值。 */
+function withQuantityProvenance(value: QuantityValue | null): QuantityValue | null {
+  if (value === null || value.provenance !== undefined) return value
+  return { ...value, provenance: value.evidence }
+}
+
+function withCandidateProvenance(candidate: ExtractionCandidate): ExtractionCandidate {
+  const provenance = candidate.provenance ?? candidate.evidence
+  switch (candidate.kind) {
+    case 'ring':
+      return {
+        ...candidate,
+        provenance,
+        data: {
+          ...candidate.data,
+          nominal: withQuantityProvenance(candidate.data.nominal),
+          upperDeviation: withQuantityProvenance(candidate.data.upperDeviation),
+          lowerDeviation: withQuantityProvenance(candidate.data.lowerDeviation),
+        },
+      }
+    case 'interval':
+      return {
+        ...candidate,
+        provenance,
+        data: {
+          ...candidate.data,
+          lower: withQuantityProvenance(candidate.data.lower),
+          upper: withQuantityProvenance(candidate.data.upper),
+        },
+      }
+    case 'part-dimension':
+      return {
+        ...candidate,
+        provenance,
+        data: {
+          ...candidate.data,
+          innerDiameter: withQuantityProvenance(candidate.data.innerDiameter),
+          outerDiameter: withQuantityProvenance(candidate.data.outerDiameter),
+          length: withQuantityProvenance(candidate.data.length),
+        },
+      }
+    case 'formula':
+      return { ...candidate, provenance }
+  }
+}
+
+/**
+ * schema8 → 当前工作形状（schema 9）：按原 evidence 逐条补 pdf-text 出处。
+ * 只加 provenance 字段：候选身份、数值、q、判据、决定与快照一律不重算、不改值。
+ */
+export function adaptProjectV8(project: ProjectFileProjectV8): ProjectFileProject {
+  return {
+    ...project,
+    schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
+    extractionDrafts: project.extractionDrafts.map((draft) => ({
+      ...draft,
+      candidates: draft.candidates.map(withCandidateProvenance),
+      decisions: draft.decisions.map((decision) => ({
+        ...decision,
+        provenance: decision.provenance ?? decision.evidence,
+      })),
+    })),
   }
 }
 
@@ -1315,6 +1485,7 @@ export function parseProject(
   if (parsed.value.version === 3) return ok(adaptProjectV3(parsed.value.project))
   if (parsed.value.version === 4) return ok(adaptProjectV6(parsed.value.project))
   if (parsed.value.version === 5) return ok(adaptProjectV7(parsed.value.project))
+  if (parsed.value.version === 6) return ok(adaptProjectV8(parsed.value.project))
   return ok(parsed.value.project)
 }
 
@@ -1639,6 +1810,24 @@ export function validateExtractionDraftReferences(
     return evidence.page >= draft.pageRange.from && evidence.page <= draft.pageRange.to
   }
 
+  /**
+   * 出处是否仍指向草稿的 PDF 版本（I3）：
+   * - pdf-text / pdf-ocr：revisionId + sha256 + blobKey 全等（行为与改前一致）；
+   * - image-ocr：锚在图片自身，项目文件层无图片库可核对，只要求完整（下一步接图片存储）；
+   * - user-attestation：不因文件变化失效，但已显式撤销的出处不能再作为依据。
+   */
+  const provenanceMatchesDraft = (
+    ref: ExtractionEvidence | { readonly kind: 'pdf-ocr' | 'image-ocr' | 'user-attestation' } | { readonly kind?: 'pdf-text' },
+    draft: ExtractionDraft,
+  ): boolean => {
+    const kind = (ref as { readonly kind?: string }).kind
+    if (kind === 'image-ocr') return true
+    if (kind === 'user-attestation') {
+      return ((ref as { readonly revokedAt?: string | null }).revokedAt ?? null) === null
+    }
+    return evidenceMatchesSource(ref as ExtractionEvidence, draft)
+  }
+
   for (const draft of snapshot.project.extractionDrafts) {
     if (draft.projectId !== projectId) {
       return fail('MISSING_REFERENCE', `提取草稿 ${draft.draftId} 不属于当前项目`)
@@ -1701,20 +1890,21 @@ export function validateExtractionDraftReferences(
         }
       }
       for (const { field, value } of candidateNumericFields(candidate)) {
-        if (value.evidence.length === 0) {
+        const refs = valueProvenance(value)
+        if (refs.length === 0) {
           return fail(
             'INVALID_RECORD',
             `提取候选 ${candidate.candidateId} 的 ${field} 缺少出处`,
           )
         }
-        for (const evidence of value.evidence) {
-          if (!isEvidenceComplete(evidence)) {
+        for (const ref of refs) {
+          if (!isProvenanceCompleteness(ref)) {
             return fail(
               'INVALID_RECORD',
               `提取候选 ${candidate.candidateId} 的 ${field} 出处不完整`,
             )
           }
-          if (!evidenceMatchesSource(evidence, draft)) {
+          if (!provenanceMatchesDraft(ref, draft)) {
             return fail(
               'MISSING_REFERENCE',
               `提取候选 ${candidate.candidateId} 的 ${field} 出处指向其它版本`,

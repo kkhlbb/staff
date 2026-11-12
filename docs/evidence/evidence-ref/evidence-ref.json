@@ -1,0 +1,351 @@
+{
+  "adr": "ADR-001 第 2 步：EvidenceRef 泛化（PDF 路径零变化）",
+  "branch": "agent/evidence-ref",
+  "baselineCommit": "8fa7531",
+  "rules": {
+    "extractorVersion": "document-extractor-6",
+    "maxExtractionPages": 100,
+    "readBudget": {
+      "maxTextItems": 200000,
+      "timeoutMs": 300000
+    }
+  },
+  "totals": {
+    "documents": 6,
+    "candidatesBefore": 138,
+    "candidatesAfter": 138,
+    "pending": 58,
+    "blocked": 80
+  },
+  "documents": [
+    {
+      "id": "r1",
+      "file": "r1-assembly-course.pdf",
+      "pages": 74,
+      "candidates": 15,
+      "pending": 4,
+      "blocked": 11,
+      "idempotencyKey": {
+        "before": "real-doc-baseline|real-doc-r1|real-doc-r1-fc6ad0216abf|fc6ad0216abf60e381d222cbdb84378acecdc799bd753a92baa318a8af1b607d|1|74|document-extractor-6",
+        "after": "real-doc-baseline|real-doc-r1|real-doc-r1-fc6ad0216abf|fc6ad0216abf60e381d222cbdb84378acecdc799bd753a92baa318a8af1b607d|1|74|document-extractor-6"
+      },
+      "draftId": {
+        "before": "<generated>",
+        "after": "<generated>"
+      },
+      "candidateArraySha256": {
+        "before": "2f00d76711de3f35fcbda08a4e8597d8e9f3105fe6965014d84e8acbba0b0df7",
+        "after": "2f00d76711de3f35fcbda08a4e8597d8e9f3105fe6965014d84e8acbba0b0df7"
+      },
+      "identical": true,
+      "candidateIds": [
+        "ring-0bcf4ce29406b848",
+        "ring-0fc1f387f31324b1",
+        "ring-7cf8c40dd28d9c5b",
+        "ring-2033bab4daad661e",
+        "formula-37a84539c2471b2f",
+        "formula-a6f19a15b99e48e7",
+        "formula-715fafa49c8107ce",
+        "ring-806411fa85dda078",
+        "ring-8362b6baadc6c528",
+        "ring-6ef3630680c7cb08",
+        "formula-5e705a38b90163ba",
+        "formula-c32a844278a6d6a4",
+        "formula-567648164bd1f5dc",
+        "formula-e700b0fa8488b1dc",
+        "ring-436b08335f246209"
+      ]
+    },
+    {
+      "id": "r2",
+      "file": "r2-tolerance-domain.pdf",
+      "pages": 5,
+      "candidates": 22,
+      "pending": 7,
+      "blocked": 15,
+      "idempotencyKey": {
+        "before": "real-doc-baseline|real-doc-r2|real-doc-r2-c20d6b523e20|c20d6b523e20a0554b0f5c0c38bbb3c7b32a604505a0dd1b8eb8872483aea9e2|1|5|document-extractor-6",
+        "after": "real-doc-baseline|real-doc-r2|real-doc-r2-c20d6b523e20|c20d6b523e20a0554b0f5c0c38bbb3c7b32a604505a0dd1b8eb8872483aea9e2|1|5|document-extractor-6"
+      },
+      "draftId": {
+        "before": "<generated>",
+        "after": "<generated>"
+      },
+      "candidateArraySha256": {
+        "before": "7ca45c3da6dfb719c4a1f62d02fec7327eb0db337f1e240ee6ef4e45fe7641c0",
+        "after": "7ca45c3da6dfb719c4a1f62d02fec7327eb0db337f1e240ee6ef4e45fe7641c0"
+      },
+      "identical": true,
+      "candidateIds": [
+        "ring-2fbbfb176c26b9b5",
+        "ring-aaa79564254d179e",
+        "ring-7534930ca39e6c92",
+        "ring-3bef447c525b2692",
+        "formula-bc2829c73be2b6cd",
+        "ring-e322b2910d756987",
+        "ring-c18611b6813b3978",
+        "ring-9f65ce9937f4203f",
+        "ring-10d374cd80d0af87",
+        "ring-55ec2055624ed467",
+        "ring-de3447193bdd8c3b",
+        "formula-24c91653525ab4d5",
+        "formula-102410fc391fc626",
+        "ring-a3a72fa0f6795aae",
+        "ring-703ae0033623db45",
+        "ring-a51d99f79309cb75",
+        "formula-a563bfccb7148ee6",
+        "formula-484c43c138e704e3",
+        "formula-301b8466eb8ac394",
+        "ring-f4ca727fddbba159",
+        "formula-4258ef69346310d3",
+        "ring-567643956ece93d3"
+      ]
+    },
+    {
+      "id": "r3",
+      "file": "r3-rv-3dcs.pdf",
+      "pages": 4,
+      "candidates": 3,
+      "pending": 0,
+      "blocked": 3,
+      "idempotencyKey": {
+        "before": "real-doc-baseline|real-doc-r3|real-doc-r3-458a68fdae94|458a68fdae943174b5edcf35df146ed90e6cb314be14d43d0cdff2b4a701e2d1|1|4|document-extractor-6",
+        "after": "real-doc-baseline|real-doc-r3|real-doc-r3-458a68fdae94|458a68fdae943174b5edcf35df146ed90e6cb314be14d43d0cdff2b4a701e2d1|1|4|document-extractor-6"
+      },
+      "draftId": {
+        "before": "<generated>",
+        "after": "<generated>"
+      },
+      "candidateArraySha256": {
+        "before": "b0d4c916da995dac99a76594a95da7682d7984d181f9f09dfe383de0dd7af18e",
+        "after": "b0d4c916da995dac99a76594a95da7682d7984d181f9f09dfe383de0dd7af18e"
+      },
+      "identical": true,
+      "candidateIds": [
+        "formula-0e9b605d7048a3b7",
+        "formula-8f1a35c0285ed77a",
+        "ring-6b0ff66dd87471f3"
+      ]
+    },
+    {
+      "id": "r4",
+      "file": "r4-mtt1097.pdf",
+      "pages": 170,
+      "candidates": 7,
+      "pending": 1,
+      "blocked": 6,
+      "idempotencyKey": {
+        "before": "real-doc-baseline|real-doc-r4|real-doc-r4-e18652688580|e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d|1|170|document-extractor-6",
+        "after": "real-doc-baseline|real-doc-r4|real-doc-r4-e18652688580|e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d|1|170|document-extractor-6"
+      },
+      "draftId": {
+        "before": "<generated>",
+        "after": "<generated>"
+      },
+      "candidateArraySha256": {
+        "before": "98abced2d7f1ad0b3ea2772acf26a08a535de305ec35bc70e7c1267b16622587",
+        "after": "98abced2d7f1ad0b3ea2772acf26a08a535de305ec35bc70e7c1267b16622587"
+      },
+      "identical": true,
+      "candidateIds": [
+        "ring-ff82b331d5da4a07",
+        "formula-5f89769b1dcaf4fd",
+        "part-dimension-027d5b24d72274ae",
+        "part-dimension-88a22be658652560",
+        "ring-9261177b48f068c5",
+        "formula-86ae1d9bc528de11",
+        "formula-8eb3df4ca9f41952"
+      ]
+    },
+    {
+      "id": "r5",
+      "file": "r5-tolerance-analysis.pdf",
+      "pages": 8,
+      "candidates": 4,
+      "pending": 2,
+      "blocked": 2,
+      "idempotencyKey": {
+        "before": "real-doc-baseline|real-doc-r5|real-doc-r5-e4f5c52b5259|e4f5c52b525948faa7c547458d07e66418241392d698ed892cd44cac1cc310c5|1|8|document-extractor-6",
+        "after": "real-doc-baseline|real-doc-r5|real-doc-r5-e4f5c52b5259|e4f5c52b525948faa7c547458d07e66418241392d698ed892cd44cac1cc310c5|1|8|document-extractor-6"
+      },
+      "draftId": {
+        "before": "<generated>",
+        "after": "<generated>"
+      },
+      "candidateArraySha256": {
+        "before": "eecbbff03bcff72b117c91cea483d7b4f356025b54e5ed20440d594338554588",
+        "after": "eecbbff03bcff72b117c91cea483d7b4f356025b54e5ed20440d594338554588"
+      },
+      "identical": true,
+      "candidateIds": [
+        "ring-a3b19a8dd1220837",
+        "ring-57535c85c6d3842b",
+        "ring-83af23e5f7707feb",
+        "ring-d8ffd6e888aa119a"
+      ]
+    },
+    {
+      "id": "r6",
+      "file": "r6-segments-assembly.pdf",
+      "pages": 8,
+      "candidates": 87,
+      "pending": 44,
+      "blocked": 43,
+      "idempotencyKey": {
+        "before": "real-doc-baseline|real-doc-r6|real-doc-r6-fbe5db55db9b|fbe5db55db9b6bdf220e1ebef42c3f414580c8e1f360b7c739ab70e7c78d28be|1|8|document-extractor-6",
+        "after": "real-doc-baseline|real-doc-r6|real-doc-r6-fbe5db55db9b|fbe5db55db9b6bdf220e1ebef42c3f414580c8e1f360b7c739ab70e7c78d28be|1|8|document-extractor-6"
+      },
+      "draftId": {
+        "before": "<generated>",
+        "after": "<generated>"
+      },
+      "candidateArraySha256": {
+        "before": "2eef7127b2e34009de782303df484f767314eebeb930df06a1609785dcd886c6",
+        "after": "2eef7127b2e34009de782303df484f767314eebeb930df06a1609785dcd886c6"
+      },
+      "identical": true,
+      "candidateIds": [
+        "ring-d7ffc11c9b01772e",
+        "ring-43131c64f4c08186",
+        "ring-929b4d0999e5aa9b",
+        "ring-d49b18054605b313",
+        "formula-55253a68c5b366f2",
+        "formula-f9637a253cc7acb3",
+        "ring-c426b928d5623e4e",
+        "ring-7dc49292c06724a0",
+        "ring-b438f13d46eda8ef",
+        "ring-4910fe730edf8d45",
+        "ring-dd5566142970e986",
+        "ring-007db38d57e0d39b",
+        "ring-ce1aaac4a88d1d56",
+        "ring-a08719bb553e31c5",
+        "ring-7fe1503f1612f391",
+        "ring-bf14aa7d630e688f",
+        "ring-d40621d59164e0a7",
+        "ring-830ddc2459d6daf6",
+        "formula-4b3b4c949d350142",
+        "ring-757798f7f08faa5d",
+        "ring-488eb2538f5c6555",
+        "ring-a55ea798cf1c06aa",
+        "ring-91dc4eb7a8f7fe59",
+        "ring-7d6ca5d4f72ac32a",
+        "ring-7c3a2688aa2aa6ea",
+        "ring-26a60e3972786e13",
+        "ring-fca8c6c84e545e7a",
+        "ring-f4827e4602061724",
+        "ring-fa006873d4ff5ecd",
+        "ring-16b6e70418c544e2",
+        "formula-9b168c1049c9578a",
+        "formula-0610667768013f45",
+        "ring-53e823707b27f1ae",
+        "ring-a53ada50a4f5b976",
+        "ring-7003532e901228b0",
+        "formula-b01a9fb04367e5ca",
+        "ring-7dc47c5adab23990",
+        "formula-15eec9f3d57675c9",
+        "formula-e26f8591654bba67",
+        "ring-46b43975d3c420b7",
+        "ring-c2b4068e6690a1c0",
+        "ring-7f738e3e023b6664",
+        "ring-a9cab7502c31fe3e",
+        "ring-9bab8f3fb5b7d951",
+        "ring-0ce90dd50dc17e2f",
+        "ring-8baca661a7f4aef7",
+        "ring-bd9e1978e6ee1d3e",
+        "ring-96628f7ae78c8cb8",
+        "formula-f6d08c4a4acd4368",
+        "ring-a5089f3973406adf",
+        "ring-f8bcbf072565a071",
+        "ring-bc964ac89789ceb2",
+        "ring-23e4f3fc80bfc906",
+        "ring-eff9680e7e7af360",
+        "ring-d1787ec350738d51",
+        "formula-9e949846972fcd8c",
+        "ring-215d31cb32c90911",
+        "ring-1c0389108888761e",
+        "ring-81625b22484eaf28",
+        "formula-64783021f1fa22ef",
+        "ring-52467ec679c9dc04",
+        "ring-cb1e7f44b2050716",
+        "ring-c13ba57216b21008",
+        "ring-8f11dd6e69e819a8",
+        "ring-3ca8426e83888494",
+        "ring-22de8859b9c4df13",
+        "formula-5d2ef33c14c9413e",
+        "ring-b3d29ef18f8580af",
+        "ring-534a84f8c39526ba",
+        "ring-7349c0572e082889",
+        "ring-2e15671b55ebda31",
+        "ring-61ff53a0dc65ec72",
+        "ring-13c418563bb4c134",
+        "ring-f2fcfd1fc37ae9fd",
+        "ring-c1d9aa2b063470ad",
+        "ring-d3b3d3352d2737fb",
+        "ring-39be8300add7f59e",
+        "ring-5a4e39d907316573",
+        "formula-3fda3d0655275f1c",
+        "ring-c6bd1ee30a0e41ad",
+        "ring-815c15513acc1bd3",
+        "ring-eec2436591400d7f",
+        "ring-4e046365861b2803",
+        "ring-dd4b1e4ce101a092",
+        "formula-ba5d366961317b3f",
+        "ring-2d965e75d106fbff",
+        "ring-867fba7b2f3d38cd"
+      ]
+    }
+  ],
+  "pageRangeProbe": [
+    {
+      "id": "r4@1-20",
+      "forDocument": "r4",
+      "pageRange": {
+        "from": 1,
+        "to": 20
+      },
+      "candidates": {
+        "total": 1,
+        "pending": 0,
+        "blocked": 1,
+        "confirmed": 0,
+        "byKind": [
+          {
+            "code": "ring",
+            "count": 1
+          }
+        ]
+      },
+      "blockedReasonCodes": [
+        {
+          "code": "UNKNOWN_UNIT",
+          "count": 1
+        }
+      ],
+      "issues": {
+        "total": 3,
+        "blocked": 3,
+        "warning": 0,
+        "byCode": [
+          {
+            "code": "NO_TEXT_LAYER",
+            "count": 3
+          }
+        ],
+        "noTextLayerPages": [
+          1,
+          2,
+          6
+        ]
+      }
+    }
+  ],
+  "invariants": {
+    "I1": "isProvenanceCompleteness 是唯一闸门；pdf-text 分支与改前逐条等价；M02 仍红",
+    "I2": "出处空数组 = 非法（domain 用例与项目文件校验各一条）",
+    "I3": "pdf 看 revision sha、image 看图片 sha、attestation 只认显式撤销",
+    "I5": "候选数/ID/evidenceKey/幂等键逐份逐项一致（本文件 candidateArraySha256 全等）"
+  },
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

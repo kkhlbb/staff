@@ -81,6 +81,11 @@ const EXTRACTION_ERROR_CODES: Record<ExtractionErrorCode, IpcErrorCode> = {
   SOURCE_STALE: 'STALE_EDIT',
   SOURCE_IDENTITY_MISMATCH: 'EXTRACTION_VERSION_MISMATCH',
   EXTRACTOR_VERSION_MISMATCH: 'EXTRACTION_VERSION_MISMATCH',
+  // ADR-001：user-attestation 尚未进入真实产品流程（本步只做类型/校验/用例）。
+  // 未新增 IPC 错误码：它仍是“依据不合法”，映射到现有的出处缺失码，
+  // 等 attestation 接线时再按需要在契约里单独开码。
+  ATTESTATION_SESSION_MISMATCH: 'EXTRACTION_EVIDENCE_REQUIRED',
+  PROVENANCE_REVOKED: 'EXTRACTION_EVIDENCE_REQUIRED',
 }
 
 function failure<T>(

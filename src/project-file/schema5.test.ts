@@ -86,7 +86,7 @@ describe('C-03 schema 5 持久化', () => {
     expect(encoded.ok).toBe(true)
     if (!encoded.ok) return
     expect(encoded.value.manifest.formatVersion).toBe(2)
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(8)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(9)
     expect(encoded.value.manifest.counts.drawings).toBe(1)
 
     const decoded = await decodeProjectFile(encoded.value.bytes)
@@ -314,7 +314,7 @@ describe('C-03 旧 formatVersion 2 / schema 4 文件兼容', () => {
     expect(decoded.value.manifest.formatVersion).toBe(2)
     expect(decoded.value.manifest.project.projectSchemaVersion).toBe(4)
     // 读入后的工作形状为当前 schema7，但来源格式仍是 2（不产生 dirty）。
-    expect(decoded.value.snapshot.project.schemaVersion).toBe(8)
+    expect(decoded.value.snapshot.project.schemaVersion).toBe(9)
     expect(decoded.value.snapshot.project.sourceFormatVersion).toBe(2)
     expect(decoded.value.snapshot.project.parameters).toEqual([])
     expect(decoded.value.snapshot.project.drawings).toEqual([])
@@ -327,19 +327,19 @@ describe('C-03 旧 formatVersion 2 / schema 4 文件兼容', () => {
       now: () => new Date('2026-11-09T12:00:00.000Z'),
     })
     expect(upgraded.upgraded).toBe(true)
-    expect(upgraded.snapshot.project.schemaVersion).toBe(8)
+    expect(upgraded.snapshot.project.schemaVersion).toBe(9)
     // 旧版本记录保持 schema4 原样（不可变历史）。
     expect(upgraded.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(4)
-    expect(upgraded.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(8)
+    expect(upgraded.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(9)
 
     const saved = await encodeProjectFile(upgraded.snapshot)
     expect(saved.ok).toBe(true)
     if (!saved.ok) return
-    expect(saved.value.manifest.project.projectSchemaVersion).toBe(8)
+    expect(saved.value.manifest.project.projectSchemaVersion).toBe(9)
     const reopened = await decodeProjectFile(saved.value.bytes)
     expect(reopened.ok).toBe(true)
     if (!reopened.ok) return
-    expect(reopened.value.snapshot.project.schemaVersion).toBe(8)
+    expect(reopened.value.snapshot.project.schemaVersion).toBe(9)
     expect(reopened.value.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(4)
   })
 })

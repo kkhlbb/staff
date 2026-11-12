@@ -389,7 +389,50 @@
         "timeoutMs": 300000
       }
     },
-    "pageRangeProbe": []
+    "pageRangeProbe": [
+      {
+        "id": "r4@1-20",
+        "forDocument": "r4",
+        "pageRange": {
+          "from": 1,
+          "to": 20
+        },
+        "candidates": {
+          "total": 1,
+          "pending": 0,
+          "blocked": 1,
+          "confirmed": 0,
+          "byKind": [
+            {
+              "code": "ring",
+              "count": 1
+            }
+          ]
+        },
+        "blockedReasonCodes": [
+          {
+            "code": "UNKNOWN_UNIT",
+            "count": 1
+          }
+        ],
+        "issues": {
+          "total": 3,
+          "blocked": 3,
+          "warning": 0,
+          "byCode": [
+            {
+              "code": "NO_TEXT_LAYER",
+              "count": 3
+            }
+          ],
+          "noTextLayerPages": [
+            1,
+            2,
+            6
+          ]
+        }
+      }
+    ]
   },
   "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
   "generatedAtKind": "run-time",

@@ -1,0 +1,139 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/document-extraction/__tests__/evidenceRef.test.ts (22 tests | 1 failed) 12ms
+   ❯ ADR-001 I2：出处非空（显式空 provenance 等同非法） (2)
+     × evidence 仍在但 provenance 显式为 [] → 不能确认 4ms
+ ❯ src/document-extraction/__tests__/badSamples.test.ts (9 tests | 1 failed) 82ms
+   ❯ 不确定分支：合成文本层 (6)
+     × 页面边界框无效 → 无法生成选区，数值不进候选，只留 SOURCE_UNRESOLVED 3ms
+ ❯ src/document-extraction/__tests__/confirmation.test.ts (17 tests | 1 failed) 83ms
+   ❯ V3.6 应用计划门禁（M01/M02 目标） (6)
+     × M02：有数值但出处为空 → 不能确认，也不能进入应用计划 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/document-extraction/__tests__/badSamples.test.ts > 不确定分支：合成文本层 > 页面边界框无效 → 无法生成选区，数值不进候选，只留 SOURCE_UNRESOLVED
+AssertionError: expected [ { …(14) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "candidateId": "ring-451ad6603c9ae19e",
++     "confidence": "low",
++     "confidenceBasis": [
++       "RULE_TABLE_OR_ASSIGNMENT",
++       "RULE_UNIT_MISSING",
++       "RULE_SINGLE_VALUE",
++     ],
++     "data": {
++       "lowerDeviation": {
++         "decimals": 2,
++         "evidence": [],
++         "provenance": [],
++         "text": "-0.02",
++         "unit": null,
++         "unitText": null,
++         "valueQ": null,
++       },
++       "name": "总长",
++       "nominal": {
++         "decimals": 2,
++         "evidence": [],
++         "provenance": [],
++         "text": "52.20",
++         "unit": null,
++         "unitText": null,
++         "valueQ": null,
++       },
++       "symbol": "H",
++       "upperDeviation": {
++         "decimals": 2,
++         "evidence": [],
++         "provenance": [],
++         "text": "+0.02",
++         "unit": null,
++         "unitText": null,
++         "valueQ": null,
++       },
++     },
++     "editRevision": 0,
++     "evidence": [],
++     "groupId": "ring:H",
++     "kind": "ring",
++     "occurrence": null,
++     "page": 1,
++     "provenance": [],
++     "rawText": "H 总长 52.20 +0.02 -0.02",
++     "reasonCodes": [
++       "UNKNOWN_UNIT",
++     ],
++     "status": "blocked",
++   },
++ ]
+
+ ❯ src/document-extraction/__tests__/badSamples.test.ts:214:30
+    212|       'bad-pagebox',
+    213|     )
+    214|     expect(draft.candidates).toEqual([])
+       |                              ^
+    215|     const issue = draft.issues.find((item) => item.code === 'SOURCE_UN…
+    216|     expect(issue).toBeDefined()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/document-extraction/__tests__/confirmation.test.ts > V3.6 应用计划门禁（M01/M02 目标） > M02：有数值但出处为空 → 不能确认，也不能进入应用计划
+AssertionError: expected { ok: true, value: { …(12) } } to match object { Object (ok, code) }
+(13 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "EVIDENCE_REQUIRED",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ src/document-extraction/__tests__/confirmation.test.ts:391:75
+    389|     )
+    390|     if (!strippedCandidate) throw new Error('缺少候选')
+    391|     expect(confirmCandidate(stripped, confirmRequest(strippedCandidate…
+       |                                                                           ^
+    392|       ok: false,
+    393|       code: 'EVIDENCE_REQUIRED',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/document-extraction/__tests__/evidenceRef.test.ts > ADR-001 I2：出处非空（显式空 provenance 等同非法） > evidence 仍在但 provenance 显式为 [] → 不能确认
+AssertionError: expected { ok: true, value: { …(12) } } to match object { Object (ok, code) }
+(13 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "EVIDENCE_REQUIRED",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ src/document-extraction/__tests__/evidenceRef.test.ts:284:7
+    282|         decidedAt: AT,
+    283|       }),
+    284|     ).toMatchObject({ ok: false, code: 'EVIDENCE_REQUIRED' })
+       |       ^
+    285|   })
+    286|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  3 failed | 45 passed (48)
+   Start at  01:00:02
+   Duration  327ms (import 44%, tests 31%, setup 20%, transform 4%, worker 1%)
+

@@ -7,7 +7,8 @@
 import type { AnalysisSnapshot } from '../../history/snapshots'
 import type { ChainDefinition } from '../../domain/types'
 import { sha256Hex } from '../../sources/hash'
-import type { ProjectFileSnapshot } from '../types'
+import type { ProjectFileProject, ProjectFileSnapshot } from '../types'
+import { PROJECT_FILE_SCHEMA_VERSION } from '../types'
 
 export const SAMPLE_PROJECT_ID = 'project-a'
 export const SAMPLE_PDF_BYTES = new TextEncoder().encode('%PDF-1.7 sample attachment bytes')
@@ -69,9 +70,9 @@ export async function createSampleSnapshot(): Promise<ProjectFileSnapshot> {
   const sha256 = await sha256Hex(SAMPLE_PDF_BYTES)
   const createdAt = '2026-11-09T08:00:00.000Z'
   const chain = sampleChain()
-  const project = {
+  const project: ProjectFileProject = {
     id: SAMPLE_PROJECT_ID,
-    schemaVersion: 8 as const,
+    schemaVersion: PROJECT_FILE_SCHEMA_VERSION,
     name: '隔套间隙演示',
     currentRevisionId: 'rev-a1',
     dimensionChain: chain,
