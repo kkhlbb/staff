@@ -1,0 +1,139 @@
+r1 r1-assembly-course.pdf：页 74｜候选 15｜FORMULA_UNSUPPORTED 7
+r2 r2-tolerance-domain.pdf：页 5｜候选 20｜FORMULA_UNSUPPORTED 9
+r3 r3-rv-3dcs.pdf：页 4｜候选 3｜FORMULA_UNSUPPORTED 2
+r4 r4-mtt1097.pdf：页 170｜候选 0｜FORMULA_UNSUPPORTED 0
+r5 r5-tolerance-analysis.pdf：页 8｜候选 4｜FORMULA_UNSUPPORTED 0
+r6 r6-segments-assembly.pdf：页 8｜候选 84｜FORMULA_UNSUPPORTED 27
+
+================ 主归类（每条只归一类，合计 = 45） ================
+
+## 末尾有「数值+单位」且等号左边是字母/希腊字母符号（原文里已给出结果值）：17 条（r2×2 r6×15）
+   子类「中间式纯加减」：2 条
+   子类「中间式含字母/乘除/括号」：13 条
+  - r2 p3 idx=6 原文="Zmax=5.2+0.1-4.9=0.4mm)"
+  - r2 p4 idx=10 原文="δL=δL-δL=0.25-0.10=0.15mm)补偿环尺"
+  - r6 p2 idx=6 原文="avA=T0/m(m-Ring Qyt.)=0.6/3=0.2mm"
+
+## 末尾有「数值+单位」但等号左边不是符号（`0=…`、纯算式行）：5 条（r2×2 r6×3）
+  - r2 p3 idx=4 原文="于100.0-0.1=99.9mm(即L的 基 本 尺 寸 "
+  - r2 p4 idx=12 原文="5.35-0.1 mm.0.225=5.050mm)"
+  - r6 p2 idx=4 原文="0=A3(A1+A2)=1753-(759.48+765.41)=228.11mm"
+
+## 末尾没有「数值+单位」（纯符号式 / 缺单位 / 正文夹带 / 数值错乱）：23 条（r1×7 r2×5 r3×2 r6×9）
+  - r1 p41 idx=4 原文="A=( A+ A)-"
+  - r1 p41 idx=5 原文="( A+A+A)=0"
+  - r1 p43 idx=6 原文="即 T= T- ( T+T+T+T) =0.5-0.2- 0.10-0.05-0.05"
+
+主归类合计：45
+
+================ 形态标记（多标签，一行可命中多个） ================
+多等号（≥2 个 =）：31
+含函数调用：2
+下标上标字符：0
+含括号：36
+括号嵌套：0
+乘除混合：20
+含汉字：7
+含单位串：28
+希腊字母：17
+±偏差：5
+数字里出现连续点号（数值本身错乱）：1
+
+================ 逐条清单（45 条） ================
+r1 p 41 idx=   4 [noTailValue] 段=1 符号="A" 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="A=( A+ A)-"
+r1 p 41 idx=   5 [noTailValue] 段=1 符号=null 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="( A+A+A)=0"
+r1 p 43 idx=   6 [noTailValue] 段=1 符号="T" 中间式="含字母/乘除/括号" 末尾值+单位=n 拆碎点=0
+     原文="即 T= T- ( T+T+T+T) =0.5-0.2- 0.10-0.05-0.05"
+r1 p 63 idx=  10 [noTailValue] 段=2 符号=null 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="准件), A=5"
+r1 p 64 idx=  11 [noTailValue] 段=3 符号="T" 中间式="含字母/乘除/括号" 末尾值+单位=n 拆碎点=0
+     原文="T=T=0.06 , T=T=0.04 , T=0.05 ( 标 准 件 不 能"
+r1 p 65 idx=  12 [noTailValue] 段=3 符号="T" 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="T=0.12 , T=T=0.10 , T=0.05 (标准件不能"
+r1 p 65 idx=  13 [noTailValue] 段=1 符号="A" 中间式="含字母/乘除/括号" 末尾值+单位=n 拆碎点=0
+     原文="得: A=43.05 A=43.05±T/2=43.05±0.075= "
+r2 p  3 idx=   4 [tailValueUnitNoSymbol] 段=1 符号=null 中间式=null 末尾值+单位=Y 拆碎点=3
+     原文="于100.0-0.1=99.9mm(即L的 基 本 尺 寸 "
+r2 p  3 idx=   6 [tailValueUnitSymbolOk] 段=1 符号="Zmax" 中间式="纯加减" 末尾值+单位=Y 拆碎点=4
+     原文="Zmax=5.2+0.1-4.9=0.4mm)"
+     产品形态命中=[{"form":"redundant","symbol":"Zmax","nominal":"0.4","unit":"mm"}]
+r2 p  4 idx=  10 [tailValueUnitSymbolOk] 段=1 符号="δL" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=3
+     原文="δL=δL-δL=0.25-0.10=0.15mm)补偿环尺"
+r2 p  4 idx=  11 [noTailValue] 段=1 符号="Lb" 中间式=null 末尾值+单位=n 拆碎点=6
+     原文="-0.1.05-0.1.2-0.1Lb =43.100- (29.900+4.950+2.975-"
+r2 p  4 idx=  12 [tailValueUnitNoSymbol] 段=1 符号=null 中间式=null 末尾值+单位=Y 拆碎点=3
+     原文="5.35-0.1 mm.0.225=5.050mm)"
+r2 p  4 idx=  14 [noTailValue] 段=1 符号=null 中间式=null 末尾值+单位=n 拆碎点=4
+     原文="2220.304-0.250=0.054(mm)."
+r2 p  4 idx=  15 [noTailValue] 段=1 符号="δL" 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="δL= δL+δL4)"
+r2 p  4 idx=  16 [noTailValue] 段=1 符号="δbi" 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="δL+δbi = δL+δb +δbi5)"
+r2 p  4 idx=  18 [noTailValue] 段=1 符号="δL" 中间式="含字母/乘除/括号" 末尾值+单位=n 拆碎点=0
+     原文="δL=δL- δL= δL-δLi7)"
+r3 p  2 idx=   0 [noTailValue] 段=1 符号="x" 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="x = ( rp+ lrp) sin - asin ( za ) + ( rrp+ lrrp) ×"
+r3 p  2 idx=   1 [noTailValue] 段=1 符号="y" 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="y = ( rp+ lrrp) cos - acos( za ) + ( rrp+ lrrp)×"
+r6 p  2 idx=   4 [tailValueUnitNoSymbol] 段=1 符号=null 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="0=A3(A1+A2)=1753-(759.48+765.41)=228.11mm"
+r6 p  2 idx=   5 [tailValueUnitNoSymbol] 段=1 符号=null 中间式="纯加减" 末尾值+单位=Y 拆碎点=0
+     原文="0=+0.3-(-0.3)=0.6mm."
+r6 p  2 idx=   6 [tailValueUnitSymbolOk] 段=1 符号="avA" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="avA=T0/m(m-Ring Qyt.)=0.6/3=0.2mm"
+r6 p  2 idx=  13 [tailValueUnitSymbolOk] 段=3 符号="B1" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="B1=(125×COS10°+230/2)=238.1mm, B2=(33×COS10°)=32.5mm, B3=488.88mm (within the"
+     产品形态命中=[{"form":"single","symbol":"B3","nominal":"488.88","unit":"mm"}]
+r6 p  2 idx=  14 [tailValueUnitSymbolOk] 段=2 符号="a1" 中间式=null 末尾值+单位=Y 拆碎点=0
+     原文="framework of the arc processing size), after assembly to ensure that the size of a1=759.48±0.1mm."
+     产品形态命中=[{"form":"deviation","symbol":"a1","nominal":"759.48","unit":"mm"}]
+r6 p  3 idx=  15 [tailValueUnitNoSymbol] 段=1 符号=null 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="0= + 0.1-(-0.1)=0.2mm"
+r6 p  3 idx=  23 [tailValueUnitSymbolOk] 段=1 符号="Δ0" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="Δ0=[0.1+(-0.1)]/2=0mm"
+r6 p  3 idx=  24 [tailValueUnitSymbolOk] 段=1 符号="Δ1" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="Δ1=[0.07+(-0.07)]/2=0mm"
+r6 p  3 idx=  25 [tailValueUnitSymbolOk] 段=1 符号="Δ3" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="Δ3=[0.05+(-0.05)]/2=0mm"
+r6 p  3 idx=  26 [noTailValue] 段=1 符号="ES2" 中间式="含字母/乘除/括号" 末尾值+单位=n 拆碎点=0
+     原文="ES2=Δ2+T2/2=0+0.06/2=0.03"
+r6 p  3 idx=  27 [noTailValue] 段=1 符号="EI2" 中间式="含字母/乘除/括号" 末尾值+单位=n 拆碎点=0
+     原文="EI2=Δ2- T2/2=0-0.06/2=-0.03"
+r6 p  3 idx=  29 [tailValueUnitSymbolOk] 段=4 符号="ES0" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="So ES0=Δ0+T0/2=0+0.182/2=0.091mm,EI0=Δ0-T0/2=0-0.182/2=-0.091mm, A1=759.48±0.091,"
+r6 p  4 idx=  31 [noTailValue] 段=2 符号="on" 中间式="含字母/乘除/括号" 末尾值+单位=n 拆碎点=0
+     原文="1on=250/2=125. Free roller tolerance and the same drive roller,"
+r6 p  4 idx=  33 [noTailValue] 段=2 符号="φ" 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="3- mandrel: a large-diameter φ= 129h6( ), the small diameter φ=110f7(-0.071 ) ."
+r6 p  4 idx=  34 [noTailValue] 段=2 符号="φ" 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="4- bearing: bore φ= 180H7( ), the base surface to the hole center distance L=135."
+r6 p  4 idx=  35 [tailValueUnitSymbolOk] 段=1 符号="B1" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="B1=B1+B1under=135+250/2=260 mm"
+r6 p  4 idx=  36 [tailValueUnitSymbolOk] 段=1 符号="T0" 中间式="纯加减" 末尾值+单位=Y 拆碎点=0
+     原文="T0=+0.07-(-0.07)=0.14 mm"
+     产品形态命中=[{"form":"redundant","symbol":"T0","nominal":"0.14","unit":"mm"}]
+r6 p  4 idx=  43 [tailValueUnitSymbolOk] 段=2 符号="Δ0" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="Δ0=Δ1+Δ2=[0.05+(-0.05)]/2+[0.045+(-0.045)]/2=0mm,"
+r6 p  4 idx=  44 [tailValueUnitSymbolOk] 段=1 符号="EI0" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="EI0=Δ0-T0/2=0-0.135/2=-0.07mm.It can be seen B1=260±0.07 comply with B1=260±0.07mm"
+r6 p  5 idx=  51 [noTailValue] 段=2 符号=null 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="(-0.025/2)=0.0325, a"
+r6 p  5 idx=  55 [noTailValue] 段=4 符号="a02" 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="Closed loop a02=a5-(a0+a01) , amax=0.1-(0.008+0)=0.092, amin=-0.1-(0.0355+0.0325)=-0.168,"
+r6 p  6 idx=  62 [noTailValue] 段=4 符号="a03" 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="loop a03=a6-a7, amax=0.04/2-(-0.025/2)=0.0325, amin=0/2-(0/2)=0 , a03=0+0.03250 (assembly"
+r6 p  6 idx=  68 [tailValueUnitSymbolOk] 段=2 符号="on" 中间式=null 末尾值+单位=Y 拆碎点=0
+     原文="tolerances) and B1. on = 125±0.045mm fit, take the B1 at cost: the B1=125±0.045m ."
+     产品形态命中=[{"form":"deviation","symbol":"on","nominal":"125","unit":"mm"}]
+r6 p  6 idx=  69 [tailValueUnitSymbolOk] 段=2 符号="Δ0" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="Δ0=Δ1+Δ2=[0.052+(-0.048)]/2+[0.045+(-0.045)]/2=0.002mm,"
+r6 p  6 idx=  70 [tailValueUnitSymbolOk] 段=1 符号="ES0" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="ES0=Δ0+T0/2=0.002+0.135/2=0.07mm"
+r6 p  6 idx=  71 [tailValueUnitSymbolOk] 段=1 符号="EI0" 中间式="含字母/乘除/括号" 末尾值+单位=Y 拆碎点=0
+     原文="EI0=Δ0-T0/2=0.002-0.135/2=-0.07mm"
+r6 p  7 idx=  75 [noTailValue] 段=2 符号="a02" 中间式=null 末尾值+单位=n 拆碎点=0
+     原文="1Base into the hole center distance L size chain a02: closed loop a02=a5-(a0+a01),"
+
+汇总：6 份 / 269 页 / 候选 126｜FORMULA_UNSUPPORTED 45

@@ -1,0 +1,80 @@
+提取器 document-extractor-5｜页数上限 100｜候选上限 200｜问题上限 200
+文本读取预算（仅度量放大，不影响规则）：maxTextItems=200000，timeoutMs=300000
+
+文档                            语言  页数   文本项    候选  pending  blocked  可确认率   阻塞率     PageLimit 
+----------------------------  --  ---  -----  --  -------  -------  -----  ------  ----------
+r1 r1-assembly-course.pdf     zh  74   4409   15  4        11       26.7%  73.3%   -         
+r2 r2-tolerance-domain.pdf    zh  5    6105   22  7        15       31.8%  68.2%   -         
+r3 r3-rv-3dcs.pdf             zh  4    1570   3   0        3        0.0%   100.0%  -         
+r4 r4-mtt1097.pdf             zh  170  94214  0   0        0        n/a    n/a     PAGE_LIMIT
+r5 r5-tolerance-analysis.pdf  en  8    4053   4   2        2        50.0%  50.0%   -         
+r6 r6-segments-assembly.pdf   en  8    2871   87  44       43       50.6%  49.4%   -         
+
+r1 阻塞原因码：FORMULA_UNSUPPORTED×7, UNKNOWN_UNIT×4
+r1 问题码：UNKNOWN_UNIT×53, AMBIGUOUS_ASSIGNMENT×2, NO_TEXT_LAYER×1；无文本层页：40
+r2 阻塞原因码：UNKNOWN_UNIT×8, FORMULA_UNSUPPORTED×7
+r2 问题码：AMBIGUOUS_ASSIGNMENT×4, UNKNOWN_UNIT×3；无文本层页：无
+r3 阻塞原因码：FORMULA_UNSUPPORTED×2, UNKNOWN_UNIT×1
+r3 问题码：无；无文本层页：无
+r4 阻塞原因码：无
+r4 问题码：PAGE_LIMIT×1；无文本层页：无
+r5 阻塞原因码：UNKNOWN_UNIT×2
+r5 问题码：无；无文本层页：无
+r6 阻塞原因码：UNKNOWN_UNIT×29, FORMULA_UNSUPPORTED×13, UNSUPPORTED_UNIT×1
+r6 问题码：AMBIGUOUS_ASSIGNMENT×16, UNKNOWN_UNIT×14；无文本层页：无
+
+汇总：6 份 / 269 页 / 候选 131（pending 57｜blocked 74｜confirmed 0）
+可确认率 = pending/候选 = 57/131 = 43.5%；阻塞率 = 56.5%
+PAGE_LIMIT 文档：r4；NO_TEXT_LAYER 页数：1
+原因码 Top5：UNKNOWN_UNIT×44, FORMULA_UNSUPPORTED×29, UNSUPPORTED_UNIT×1
+
+页范围探针 r4@1-20：候选 1（pending 0｜blocked 1）；阻塞原因码 UNKNOWN_UNIT×1；问题码 NO_TEXT_LAYER×3；无文本层页 1,2,6
+
+语料目录：/Users/aston/DSH/tmp/cunlian-v36/real-docs（manifest：docs/evidence/real-doc-baseline/corpus-manifest.json）
+已写 docs/evidence/real-doc-baseline/metrics.json
+已更新 docs/evidence/real-doc-baseline/baseline.json（原因：P2 公式行显式末尾值（document-extractor-4→5）：形态 1 中间式放宽到含字母/乘除/括号（仍只取末尾那枚显式结果值，不做算术求值），符号位接受希腊字母；带显式末尾值的行先按赋值解析，不再被 FORMULA_UNSUPPORTED 抢先（管道顺序修复，FORMULA_UNSUPPORTED 判定条件未改）。规则带来的增减：FORMULA_UNSUPPORTED 45→29（16 行公式行改判为赋值行）；r2 候选 20→22、pending 5→7（Zmax 0.4mm、δL 0.15mm 取自原文末尾显式值；δL=0.10mm 的符号由截断的 L 修正为 δL，同值同页、pending 不变；因此 L 组不再有可解析成员，两条 δL= 0.25-… 行由 issue 变为 blocked 候选，UNKNOWN_UNIT 42→44）；r6 候选 84→87、pending 27→44（B1 238.1/260、B2、B3、a1、T3、T0、ES0×2、EI0×2、Δ0×2、Δ1、Δ2、Δ3、T×3 共 14 行 17 处显式末尾值落成待确认，其中 B1/B2/B3/ES0 与既有同值合并）；r1/r3/r4/r5 计数不变。整体 126→131 候选、38→57 pending、88→74 blocked、可确认率 30.2%→43.5%。）
+  变化 documents[0].extractorVersion: "document-extractor-4" → "document-extractor-5"
+  变化 documents[1].blockedReasonCodes[0].code: "FORMULA_UNSUPPORTED" → "UNKNOWN_UNIT"
+  变化 documents[1].blockedReasonCodes[0].count: 9 → 8
+  变化 documents[1].blockedReasonCodes[1].code: "UNKNOWN_UNIT" → "FORMULA_UNSUPPORTED"
+  变化 documents[1].blockedReasonCodes[1].count: 6 → 7
+  变化 documents[1].candidates.byKind[0].count: 11 → 15
+  变化 documents[1].candidates.byKind[1].count: 9 → 7
+  变化 documents[1].candidates.pending: 5 → 7
+  变化 documents[1].candidates.total: 20 → 22
+  变化 documents[1].extractorVersion: "document-extractor-4" → "document-extractor-5"
+  变化 documents[1].issues.blocked: 5 → 3
+  变化 documents[1].issues.byCode[0].code: "UNKNOWN_UNIT" → "AMBIGUOUS_ASSIGNMENT"
+  变化 documents[1].issues.byCode[0].count: 5 → 4
+  变化 documents[1].issues.byCode[1].code: "AMBIGUOUS_ASSIGNMENT" → "UNKNOWN_UNIT"
+  变化 documents[1].issues.byCode[1].count: 2 → 3
+  变化 documents[1].issues.warning: 2 → 4
+  变化 documents[2].extractorVersion: "document-extractor-4" → "document-extractor-5"
+  变化 documents[3].extractorVersion: "document-extractor-4" → "document-extractor-5"
+  变化 documents[4].extractorVersion: "document-extractor-4" → "document-extractor-5"
+  变化 documents[5].blockedReasonCodes[1].count: 27 → 13
+  变化 documents[5].candidates.blocked: 57 → 43
+  变化 documents[5].candidates.byKind[0].count: 56 → 73
+  变化 documents[5].candidates.byKind[1].count: 28 → 14
+  变化 documents[5].candidates.pending: 27 → 44
+  变化 documents[5].candidates.total: 84 → 87
+  变化 documents[5].extractorVersion: "document-extractor-4" → "document-extractor-5"
+  变化 documents[5].issues.blocked: 18 → 14
+  变化 documents[5].issues.byCode[0].code: "UNKNOWN_UNIT" → "AMBIGUOUS_ASSIGNMENT"
+  变化 documents[5].issues.byCode[0].count: 18 → 16
+  变化 documents[5].issues.byCode[1].code: "AMBIGUOUS_ASSIGNMENT" → "UNKNOWN_UNIT"
+  变化 documents[5].issues.byCode[1].count: 11 → 14
+  变化 documents[5].issues.total: 29 → 30
+  变化 documents[5].issues.warning: 11 → 16
+  变化 rules.extractorVersion: "document-extractor-4" → "document-extractor-5"
+  变化 summary.blockedRate: 0.698413 → 0.564885
+  变化 summary.candidates.blocked: 88 → 74
+  变化 summary.candidates.pending: 38 → 57
+  变化 summary.candidates.total: 126 → 131
+  变化 summary.confirmableRate: 0.301587 → 0.435115
+  变化 summary.reasonCodeTop5[0].code: "FORMULA_UNSUPPORTED" → "UNKNOWN_UNIT"
+  变化 summary.reasonCodeTop5[0].count: 45 → 44
+  变化 summary.reasonCodeTop5[1].code: "UNKNOWN_UNIT" → "FORMULA_UNSUPPORTED"
+  变化 summary.reasonCodeTop5[1].count: 42 → 29
+  变化 summary.rules.extractorVersion: "document-extractor-4" → "document-extractor-5"
+  相对旧基线共 44 处变化，已随本次更新记录在提交说明里。
