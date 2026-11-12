@@ -1,0 +1,47 @@
+{
+  "schema": "dxf-viewer-mutations-v1",
+  "methodology": "同一用例：变异后必须失败，恢复后必须通过；文件 SHA-256 恢复前后一致。",
+  "results": [
+    {
+      "id": "m30",
+      "file": "src/dxf-view/parse.ts",
+      "description": "把不支持实体改成静默跳过（不再 collectUnsupported）",
+      "mutated": {
+        "failed": true,
+        "status": 1,
+        "log": "docs/evidence/dxf-viewer/mutations/m30-red.log"
+      },
+      "restored": {
+        "failed": false,
+        "status": 0,
+        "log": "docs/evidence/dxf-viewer/mutations/m30-restored.log"
+      },
+      "restoredHashOk": true,
+      "ok": true
+    },
+    {
+      "id": "m31",
+      "file": "src/dxf-view/decode.ts",
+      "description": "关掉 GBK 解码：ANSI_936 文件按 UTF-8 硬解",
+      "mutated": {
+        "failed": true,
+        "status": 1,
+        "log": "docs/evidence/dxf-viewer/mutations/m31-red.log"
+      },
+      "restored": {
+        "failed": false,
+        "status": 0,
+        "log": "docs/evidence/dxf-viewer/mutations/m31-restored.log"
+      },
+      "restoredHashOk": true,
+      "ok": true
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "passed": 2
+  },
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

@@ -214,3 +214,17 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* 内置 DXF 看图：全屏只读覆盖层，不改变项目布局与数据。 */
+.desktop-workspace__dxf-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: #f5f7fa;
+}
+.desktop-workspace__dxf-overlay .dxf-viewer {
+  flex: 1;
+  min-height: 0;
+}

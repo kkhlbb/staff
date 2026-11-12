@@ -42,6 +42,7 @@ import { registerProjectChannels } from './channels'
 import { registerModelChannels } from './modelChannels'
 import { createModelFileIo } from './modelIo'
 import { registerDrawingChannels } from './drawingChannels'
+import { DXF_VIEW_MAX_BYTES, registerDxfChannels } from './dxfChannels'
 import { registerChangeChannels } from './changeChannels'
 import { registerSourceChannels } from './sourceChannels'
 import { registerRequirementChannels } from './requirementChannels'
@@ -66,7 +67,14 @@ import { createMainWindow, type MainWindowHandle } from './window'
 
 // 应用名与 userData 目录必须在任何路径读取前固定，避免 staff → 寸链 改名漂移。
 app.setName(DESKTOP_APP_NAME)
-app.setPath('userData', path.join(app.getPath('appData'), DESKTOP_APP_NAME))
+// 允许标准 Electron 开关 `--user-data-dir=`（便携/取证隔离配置）；未给定时用默认目录。
+const userDataOverride = process.argv.find((argument) => argument.startsWith('--user-data-dir='))
+app.setPath(
+  'userData',
+  userDataOverride === undefined
+    ? path.join(app.getPath('appData'), DESKTOP_APP_NAME)
+    : path.resolve(userDataOverride.slice('--user-data-dir='.length)),
+)
 
 const WORKSPACE_ROOT = path.join(app.getPath('userData'), 'workspace')
 
@@ -245,6 +253,61 @@ async function takePendingOrPick(title: string): Promise<string | null> {
     return queued
   }
   return pickProjectPath(title)
+}
+
+/** 启动参数 `--open-dxf=<绝对路径>` 只排队给 renderer 看图，不打开项目。 */
+function takeDxfArgument(argv: string[]): string | null {
+  const prefix = '--open-dxf='
+  const found = argv.find((argument) => argument.startsWith(prefix))
+  if (found === undefined) return null
+  const value = found.slice(prefix.length)
+  return value === '' ? null : value
+}
+
+let pendingDxfPath: string | null = takeDxfArgument(process.argv)
+
+async function pickDxfFileFor(): Promise<string | null> {
+  const owner = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+  const options = {
+    title: '打开 DXF 看图（只读）',
+    properties: ['openFile' as const],
+    filters: [{ name: 'DXF 图纸', extensions: ['dxf'] }],
+  }
+  const picked =
+    owner === undefined
+      ? await dialog.showOpenDialog(options)
+      : await dialog.showOpenDialog(owner, options)
+  if (picked.canceled || picked.filePaths.length === 0) return null
+  return picked.filePaths[0]
+}
+
+/** 只读读取 DXF：拒绝符号链接/目录，读前按 stat 限大小，读后再核对。 */
+async function readDxfFileAtPath(targetPath: string): Promise<{ fileName: string; byteSize: number; bytes: Uint8Array }> {
+  let info: Awaited<ReturnType<typeof fsp.lstat>>
+  try {
+    info = await fsp.lstat(targetPath)
+  } catch (error) {
+    throw new IpcFailure(
+      'READ_FAILED',
+      '无法访问 DXF 文件',
+      error instanceof Error ? error.message : String(error),
+    )
+  }
+  if (info.isSymbolicLink() || !info.isFile()) {
+    throw new IpcFailure('INVALID_REQUEST', 'DXF 必须是常规文件（不允许符号链接或目录）')
+  }
+  if (info.size > DXF_VIEW_MAX_BYTES) {
+    throw new IpcFailure('TOO_LARGE', 'DXF 超过看图大小上限', `${info.size} 字节`)
+  }
+  const buffer = await fsp.readFile(targetPath)
+  if (buffer.byteLength !== info.size) {
+    throw new IpcFailure('READ_FAILED', '读取 DXF 时文件大小发生变化，请重试')
+  }
+  return {
+    fileName: path.basename(targetPath),
+    byteSize: buffer.byteLength,
+    bytes: new Uint8Array(buffer),
+  }
 }
 
 async function askDirtyChoice(prompt: {
@@ -506,6 +569,18 @@ function installIpcHandlers(): void {
     pickExportPath: pickDrawingExportPath,
     confirmOverwrite: confirmDrawingOverwrite,
     printPdf: printDrawingPdf,
+    log: logStage,
+  })
+
+  registerDxfChannels(ipc, {
+    guard,
+    pickDxfPath: () => pickDxfFileFor(),
+    readDxfFile: readDxfFileAtPath,
+    takePendingPath: () => {
+      const queued = pendingDxfPath
+      pendingDxfPath = null
+      return queued
+    },
     log: logStage,
   })
 

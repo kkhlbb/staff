@@ -13,6 +13,8 @@ import { ThreeViewport } from '../components/ThreeViewport'
 import { ModelViewport } from '../components/ModelViewport'
 import { DEMO_PARTS, demoPart, isBuiltinPartId, partPropertyRows, qToMm } from '../parts/shaftDemo'
 import { SpacerDrawingPanel } from '../components/SpacerDrawingPanel'
+import { DxfViewer } from '../components/DxfViewer'
+import type { DxfOpenValue } from '../../desktop/shared/contracts'
 import { ChangeWorkbench } from '../components/ChangeWorkbench'
 import { RequirementWizard } from '../components/RequirementWizard'
 import { RequirementStatusPanel } from '../components/RequirementStatusPanel'
@@ -74,7 +76,29 @@ function Splitter({ label, value, min, max, onChange, horizontal = false, revers
 }
 
 export function DesktopWorkspace() {
-  const session = useDesktopSession()
+  const [dxfSource, setDxfSource] = useState<DxfOpenValue | null>(null)
+  const [dxfError, setDxfError] = useState<string | null>(null)
+  const session = useDesktopSession({ onOpenDxf: () => { void openDxfViewer() } })
+
+  /** 只读看图：文件由主进程选并读取字节；这里不接触路径，也不改任何项目。 */
+  async function openDxfViewer(): Promise<void> {
+    const api = window.cunlian
+    if (api === undefined) return
+    setDxfError(null)
+    const result = await api.openDxf()
+    if (result.ok) setDxfSource(result.value)
+    else if (result.error.code !== 'CANCELLED') setDxfError(`DXF 打开失败：${result.error.message}`)
+  }
+
+  useEffect(() => {
+    const api = window.cunlian
+    if (api === undefined) return
+    // 启动参数 --open-dxf=<path> 排队的文件：只消费一次，只读打开。
+    void api.takePendingDxf().then((result) => {
+      if (result.ok && result.value !== null) setDxfSource(result.value)
+      else if (!result.ok) setDxfError(`DXF 打开失败：${result.error.message}`)
+    })
+  }, [])
   const snapshot = session.state?.snapshot
   const project = snapshot?.project
   const activeRequirement =
@@ -313,6 +337,17 @@ export function DesktopWorkspace() {
   const extractionBadge = pendingExtractionBadgeLabel(extractionPending)
   const extractionBadgeTitle = pendingExtractionBadgeTitle(extractionPending)
   const dialogs = <SessionDialogs session={session} />
+  const dxfOverlay = dxfSource === null ? null : (
+    <div className="desktop-workspace__dxf-overlay" role="dialog" aria-modal="true" aria-label="DXF 看图（只读）">
+      <DxfViewer fileName={dxfSource.fileName} bytes={dxfSource.bytes} onClose={() => setDxfSource(null)} />
+    </div>
+  )
+  const dxfErrorBanner = dxfError === null ? null : (
+    <div className="desktop-workspace__model-error" role="alert">
+      <strong>{dxfError}</strong>
+      <button type="button" onClick={() => setDxfError(null)}>知道了</button>
+    </div>
+  )
   if (!project) return <main className="desktop-workspace" aria-label="寸链启动页">
     <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">V4.0 · Beta</span></header>
     <section className="desktop-workspace__start">
@@ -323,13 +358,14 @@ export function DesktopWorkspace() {
         <button disabled={session.busy} onClick={() => void session.create('尺寸链示例（A）', 'chain-demo')}>打开内置示例 · 尺寸链示例（A）</button>
         <button disabled={session.busy} onClick={() => void openShaftDemo()}>打开轴系示例 · 示意装配（B1）</button>
         <button disabled={session.busy} onClick={() => session.action('importV2')}>导入 V2 备份…</button>
+        <button disabled={session.busy} onClick={() => void openDxfViewer()}>打开 DXF 看图…</button>
       </div>
       {session.recovery.length > 0 && <section className="desktop-workspace__recovery"><h3>有尚未保存的恢复草稿</h3>{session.recovery.map(item => <div key={item.recoveryId}><span>{item.name} · {item.savedAt}</span>{item.error ? <p role="alert">{item.error}</p> : <button disabled={session.busy} onClick={() => void session.restore(item.recoveryId)}>恢复为未保存副本</button>}</div>)}</section>}
       <h3>最近项目</h3>
       {!session.recent.length && <p>暂无最近项目</p>}
       <ul className="desktop-workspace__recent">{session.recent.map(item => <li key={item.recentId}><div><strong>{item.name}</strong>{item.sourceKind === 'user-intent' && <span className="desktop-workspace__source-badge" data-testid="recent-no-external-source">无外部来源</span>}<p>{item.rev ? `Rev ${item.rev}` : 'Rev 不可用'} · 上次打开 {item.lastOpenedAt}</p><p>{item.path}</p></div><button disabled={session.busy} onClick={() => void session.openRecent(item)}>{item.missing ? '重新定位' : '打开'}</button></li>)}</ul>
       <p role="status">{session.notice || (window.cunlian ? '文件操作由桌面应用处理。' : 'window.cunlian 不可用，请在桌面应用中执行文件操作。')}</p>
-    </section>{dialogs}
+    </section>{dialogs}{dxfErrorBanner}{dxfOverlay}
   </main>
   return <main className="desktop-workspace" style={style} aria-label="寸链桌面工作台">
     <header className="desktop-workspace__titlebar">
@@ -345,6 +381,7 @@ export function DesktopWorkspace() {
       <button disabled={session.busy} aria-keyshortcuts="Meta+S" onClick={() => session.action('save')}>保存</button>
       <button disabled={session.busy} aria-keyshortcuts="Meta+Shift+S" onClick={() => session.action('saveAs')}>另存为…</button>
       <button disabled={session.busy} onClick={() => session.action('importV2')}>导入 V2 备份…</button>
+      <button disabled={session.busy} onClick={() => void openDxfViewer()}>打开 DXF 看图…</button>
       <button disabled={session.busy} onClick={() => session.action('close')}>关闭窗口</button>
       <button disabled={session.busy || snapshot === undefined} onClick={() => void session.importSource(null)}>导入资料</button>
       <span id="desktop-import-reason" className="desktop-workspace__toolbar-note">PDF 由主进程读取字节、SHA-256、页数与附件；失败不写入</span>
@@ -638,7 +675,7 @@ export function DesktopWorkspace() {
       onLocate={locateFromAgent}
       onProjectChanged={() => session.reloadSession()}
     />
-    {dialogs}
+    {dialogs}{dxfErrorBanner}{dxfOverlay}
   </main>
 }
 
