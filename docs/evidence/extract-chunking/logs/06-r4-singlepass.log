@@ -16,4 +16,4 @@ r4 页数 170｜文本项 94214
 问题 NO_TEXT_LAYER blocked p2：第 2 页没有可读文本层（扫描件/图片页）；本版本不做 OCR，拒绝数值提取
 问题 NO_TEXT_LAYER blocked p6：第 6 页没有可读文本层（扫描件/图片页）；本版本不做 OCR，拒绝数值提取
 
-已写 docs/evidence/extract-chunking/logs/06-r4-singlepass.json
+已写 docs/evidence/extract-chunking/logs/06-r4-singlepass.json（serializeEvidence 已通过 evidenceViolations 与幂等自检）

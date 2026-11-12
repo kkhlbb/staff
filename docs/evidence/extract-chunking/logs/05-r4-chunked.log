@@ -18,4 +18,4 @@ r4 页数 170｜文本项 94214
 问题 NO_TEXT_LAYER blocked p6：第 6 页没有可读文本层（扫描件/图片页）；本版本不做 OCR，拒绝数值提取
 问题 CHUNK_PROCESSED warning p101 chunk=2[101-170]：第 2 块（页 101-170）处理完成：扫描到 3 处条目、0 条问题；结果已并入本草稿
 
-已写 docs/evidence/extract-chunking/logs/05-r4-chunked.json
+已写 docs/evidence/extract-chunking/logs/05-r4-chunked.json（serializeEvidence 已通过 evidenceViolations 与幂等自检）

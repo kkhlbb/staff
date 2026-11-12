@@ -166,7 +166,21 @@ r1/r2/r3/r5/r6 的 `candidates.total / pending / blocked` 全部逐字未变（b
 | CHUNK_* issue | `CHUNK_PROCESSED×2` | 无（单块不写） |
 
 即：切块只增加“块踪迹”，不改候选数组的任何一个字节。整份草稿 JSON 见
-`logs/05-r4-chunked.json`、`logs/06-r4-singlepass.json`（候选部分逐字节一致）。
+`logs/05-r4-chunked.json`、`logs/06-r4-singlepass.json`；两者的候选数组 / 非切块 issue /
+`sourceIdentity` / `pageRange` 逐字节一致（对照输出 `logs/05b-r4-compare.log`：
+
+```
+chunked candidates=7 singlepass candidates=7
+candidates identical: true
+non-chunk issues identical: true
+chunk issues: {"index":1,"from":1,"to":100} {"index":2,"from":101,"to":170}
+sourceIdentity identical: true
+pageRange identical: true
+```
+
+两份 JSON 都按仓库约定走 `serializeEvidence`（`evidenceViolations` 与序列化幂等自检通过；
+生成式 `draftId` 按约定写 `<generated>` 并附 `generatedValueKind`/`runTimeFields` 说明）。
+数组 SHA-256 由探针在序列化前对原始候选计算，所以是“未规范化”的字节身份。）
 
 ---
 

@@ -15,7 +15,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../..')
-const { loadExtraction, loadPdfTextExtract } = await import(
+const { loadExtraction, loadEvidenceJson, loadPdfTextExtract } = await import(
   path.join(repoRoot, 'scripts/real-docs/tsImport.mjs')
 )
 const extraction = await loadExtraction()
@@ -82,6 +82,19 @@ for (const issue of draft.issues) {
 
 const out = process.argv[2]
 if (out) {
-  writeFileSync(out, `${JSON.stringify(draft, null, 2)}\n`)
-  console.log(`\n已写 ${out}`)
+  // 证据 JSON 按仓库约定走 serializeEvidence（生成式标识写 <generated>、附 runTimeFields 说明），
+  // 再用 evidenceViolations 自检；序列化必须幂等，否则不落盘。
+  const evidenceJson = await loadEvidenceJson()
+  const text = evidenceJson.serializeEvidence(draft)
+  const violations = evidenceJson.evidenceViolations(text)
+  if (violations.length > 0) {
+    console.error(`证据守卫未通过：${violations.join(', ')}`)
+    process.exitCode = 1
+  } else if (evidenceJson.serializeEvidence(JSON.parse(text)) !== text) {
+    console.error('serializeEvidence 不可幂等')
+    process.exitCode = 1
+  } else {
+    writeFileSync(out, text)
+    console.log(`\n已写 ${out}（serializeEvidence 已通过 evidenceViolations 与幂等自检）`)
+  }
 }

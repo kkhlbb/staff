@@ -1,5 +1,5 @@
 {
-  "draftId": "draft-74d2e00241dbb054",
+  "draftId": "<generated>",
   "draftRevision": 1,
   "status": "draft",
   "projectId": "real-doc-baseline",
@@ -1018,5 +1018,8 @@
       "candidateIds": [],
       "evidence": []
     }
-  ]
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
 }
