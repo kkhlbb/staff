@@ -1,6 +1,6 @@
 
 > staff@0.4.0-beta package:desktop
-> node scripts/package-desktop.mjs --arch=arm64
+> node scripts/package-desktop.mjs
 
 ❯ Checking your system
 ❯ Checking package manager version

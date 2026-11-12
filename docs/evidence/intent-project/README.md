@@ -7,7 +7,7 @@
 |---|---|
 | 基线 | `main = f79d73b`（EvidenceRef 泛化 + 侧栏文案已合入） |
 | 分支 | `agent/intent-project`（从 f79d73b 切出；未合并、未推送、未删除） |
-| 实现提交 | `ef8ead1`（四工具 + schema 10 + 标记）→ `c42ad0a`（导出测试、标题栏去重、徽标样式、走查脚本）→ `8fba560`（SVG 导出标记）；证据提交见 `git log --oneline f79d73b..HEAD` |
+| 实现提交 | `ef8ead1`（四工具 + schema 10 + 标记）→ `c42ad0a`（导出测试、标题栏去重、徽标样式、走查脚本）→ `8fba560`（SVG 导出标记）→ `dbf9524`（版本栏可读版本号、真模型 3 条用例）；证据提交见 `git log --oneline f79d73b..HEAD` |
 | 提取规则版本 | **不变**：`document-extractor-6`（本步不改 PDF 抽取路径） |
 | 项目文件 schema | `PROJECT_FILE_SCHEMA_VERSION` 9 → **10**（纯加法） |
 | IndexedDB | `PROJECT_DB_VERSION` **未变**（store 结构未动；与项目 JSON schema 分开处理） |
@@ -15,7 +15,7 @@
 | 新增用例 | schema10 迁移 4、意图门禁 7、主进程全链路 6、导出 1（DXF+SVG）、侧栏守卫 2、工作台守卫 1 |
 | 真实语料 | 候选 **138**、pending **58**、r4 **7**；候选身份与第 2 步基线**逐字节一致** |
 | 变异 | M25 红 → 绿；M26 红 → 绿 |
-| 真实模型 3 条 | **BLOCKED**（本机无密钥；见第七节，不记为通过） |
+| 真实模型 3 条 | **PASS**：`deepseek-flash` 3/3（+1 条补充），成本 **$0.00391**、工具调用 13 次（见第七节，原始回执在 `logs/25-intent-real-model-raw.log`） |
 
 ---
 
@@ -80,12 +80,19 @@
 | 项目列表 | 最近项目名后「无外部来源」琥珀色徽标（`sourceKind` 随索引记录） | `screenshots/intent-05-recent-list-badge.png` |
 | 项目头 | 「依据：用户输入，无外部原文件」 | `screenshots/intent-02b-attestation-checkbox.png` 顶部 |
 | 图纸标题栏 | 第 10 行「依据｜用户输入，无外部原文件」（有来源项目**不新增该行**） | `screenshots/intent-04c-title-block-crop.png` |
+| 图纸标题栏·版本栏 | 「草稿 · 第 N 版」（N = 项目版本序号）；**内部 revision UUID 只留在项目文件里，不印在图上** | `src/drawing/spacerDrawing.test.ts`、`desktop/tests/intentProject.test.ts` |
 | SVG | XML 注释 `<!-- 依据：用户输入，无外部原文件 -->` | `desktop/tests/intentProject.test.ts` |
 | DXF | 文件头 `999` 注释 + 标题栏文字（GBK/ANSI_936） | `logs/14-export.log`（实际导出） |
 | 文件名 | 默认后缀 `-userinput`（DXF/SVG/PDF；用户改名后标记仍在项目内与文件头） | `隔套-图纸-1_1-userinput-DXF-R12.dxf` |
 | 提交 | 勾选「这些尺寸由我提供，无原文件可核对」；勾选进入授权记录，提交复核该记录 | `screenshots/intent-02b`、`intent-03` |
 
 有来源项目字节不变：`frameFields.basis` 为空时标题栏/技术区不新增任何行与文字（现有图纸用例全部通过）。
+
+版本栏（本轮改）：改前留空时印「草稿 rev-&lt;内部版本 id&gt;」，内部 UUID 直接画在图上。改后**生成新图时**
+（预览/提交、图纸面板保存）写入「草稿 · 第 N 版」，字符串随图纸记录持久化，重建只读它，所以指纹不随版本数变化。
+**旧记录（版本栏为空的已保存图纸）保持原回退文字**：那些 `dataFingerprint` 是用旧文字算出来的，换掉会让旧项目
+打不开（`draftSyncLegacy` 实测红过一次，见交付说明）。断言：图上真正画出来的 `<text>` 里不出现 ≥32 位连续十六进制串
+（新旧两种形态都测；SVG 根节点的 `data-drawing-fingerprint` 是机器元数据，不画在图上）。
 
 ---
 
@@ -129,20 +136,33 @@ cmp docs/evidence/intent-project/real-docs-candidates-after.json docs/evidence/e
 
 ---
 
-## 七、真实模型 3 条（D）：**BLOCKED，未执行**
+## 七、真实模型 3 条（D）：**PASS（3/3）**
 
-- 本机 `DEEPSEEK_API_KEY` 不存在（环境变量为空）；
-- Keychain 服务 `com.kkhlbb.cunlian.model` 查无此条目（`security find-generic-password -s com.kkhlbb.cunlian.model` 返回 “could not be found”）；
-- 因此 **setChain / setRequirement 各被正确调用一次、模型代填条款被拒一次** 这三条**没有执行**，不记为通过。
-
-模型侧已经就绪：四个工具在 `MODEL_TOOL_SCHEMAS` 里、系统提示包含“数值必须来自用户原话”的约束；
-拿到密钥后可跑：
+开关：`INTENT_REAL_MODEL=1` 且进程内 `DEEPSEEK_API_KEY` 有值（密钥从 `$HERMES_HOME/.env` 读进进程，不写任何文件）。
+用例：`desktop/tests/intentRealModel.test.ts`（默认跳过，写法与 `realModelA40.test.ts` 相同，走真适配器 + 真调度器 + 真工具服务）。
 
 ```bash
-DEEPSEEK_API_KEY=... V40_REAL_MODEL=1 npx vitest run --config vitest.desktop.config.ts desktop/tests/realModelA40.test.ts
+cd /Users/aston/DSH/staff
+set -a; . "$HERMES_HOME/.env"; set +a
+INTENT_REAL_MODEL=1 npx vitest run --config vitest.desktop.config.ts desktop/tests/intentRealModel.test.ts
 ```
 
-（现有真实模型用例覆盖 A40 改图链路；无任务书三条需要按同一 harness 补用例，本步未写，见第九节。）
+实测（`logs/25-intent-real-model.log`，原始回执 `logs/25-intent-real-model-raw.log`）：
+
+| 条 | 模型调用（按实际顺序） | 结果 | 关键回执 |
+|---|---|---|---|
+| D1 建项 | `createProject` → `setBinding` | PASS | `createProject{name:"φ20 轴隔套",partType:"spacer"}` ok；项目 `sourceKind=user-intent`、`actorId=老王`、`sessionSeq=1`、`sessionLabel=2026-11-12 真模型复核`；`.cunlian` 编解码后逐字段一致 |
+| D2 起草链 | `context` → `createProject` → `setChain` → `setBinding` | PASS | `setChain` 四环 H/B1/B2/S = 52.25/20/20/12.05、±0.02/±0.01/±0.01/±0.01（q 逐项核对）；`setBinding` 内径 20、外径 32、长 12.05，`length ↔ S` 绑定 120500；候选全部 pending，正式参数/条款/图纸仍为空 |
+| D3 代填条款被拒 | `createProject` → `context` → `setChain` → `setBinding`(符号 d 无对应环，被拒) → `setBinding` → `setRequirement` | PASS | 模型自行填 `lowerMm=0.05, upperMm=0.25` → **`REQUIREMENT_MUST_BE_USER_GIVEN`**（“条款上下限必须出现在用户原话里”）；草稿区间候选 0 条、条款版本 0 个 |
+| D3b（补充，不计入 3 条） | `setRequirement` | PASS | 同一会话用户自己说“0.15 到 0.25，两端都含” → 接受，草稿区间 1500/2500 含两端 |
+
+成本：prompt **45,596** tokens（cache hit 32,000 / miss 13,596）、completion **2,958** tokens，off-peak 价折算 **$0.00391**；工具调用 13 次、模型调用 14 次。
+
+如实记录两点：
+
+1. **D3 的“诱惑轮”不能把数字写进用户原话**。调度层把本轮 `goal` 当作 `userText` 交给工具，所以只要 goal 里出现 `0.15/0.25`，那两个数就是“用户说的”，按设计必须放行——那不是代填。用例因此写成“用户没给范围、让模型按惯例定一个”，模型确实自行编了 `0.05~0.25` 并被拒。
+2. **任务终态**：D1/D2/D3b 为 `completed`；D3 为 `failed/REQUIREMENT_MUST_BE_USER_GIVEN`——正是被拦的那一次，属预期（调度层把“本轮有过工具失败”记为 `failed`，是既有语义，A40-07 依赖它）。试跑过程中还出现过模型改写 `statement` 被拒（`STATEMENT_NOT_USER_GIVEN`）后自纠成功的情况，草稿内容仍正确；本仓库的日志与 `real-model-results.json` 只保留最终这一次跑的结果。
+
 
 ---
 
@@ -226,7 +246,7 @@ DEEPSEEK_API_KEY=... V40_REAL_MODEL=1 npx vitest run --config vitest.desktop.con
 
 ## 十一、未做 / 已知限制（如实）
 
-1. **真实模型 3 条未执行**（第七节）：没有密钥，不记为通过。
+1. **真实模型只跑任务卡 D 条（3 条 + 1 条补充）**：模型能力波动（改写 `statement`、把“偏差”理解成对称偏差等）都原样记在 `real-model-results.json` 与原始回执里，没有靠多跑几次凑绿。
 2. **无任务书项目不创建 D 层参数绑定**：改参数不会自动同步改环；“参数 ↔ 环”只作为草稿意图与断言冻结，
    随版本可审。要补需要给无任务书项目设计一个“绑定核对”用户动作（另有判据影响，本卡未做）。
 3. **意图草稿的起始链是占位链**（A/B 100.000）：领域校验要求 2..20 个环，而真实环要等用户开口；
@@ -237,3 +257,4 @@ DEEPSEEK_API_KEY=... V40_REAL_MODEL=1 npx vitest run --config vitest.desktop.con
 6. **`setBinding` 的参数值校验是“数值出现在原话里”**，不判断语义（“外径”是否真的指外径由用户核对）。
 7. **`sessionSeq` 语义**：一轮对话一个序号；同一轮多个工具共享。不是每次工具调用 +1。
 8. **手绘/扫描件入口、置信度展示、团队签名**不在本卡范围。
+9. **版本栏序号口径**：预览/提交时写“提交后的版本序号”（现存版本数 + 1），图纸面板保存的是“当前版本序号”；序号随图纸记录持久化，重建指纹不随版本数变化。**旧项目（版本栏为空的图纸记录）不改**：重建仍用旧回退文字，否则已保存文件的 `dataFingerprint` 复核失败；下一次改图/保存即写成「草稿 · 第 N 版」。
