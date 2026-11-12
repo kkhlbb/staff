@@ -113,13 +113,16 @@ function apiWith(options: {
 }
 
 describe('V4.0 阶段3：任务侧栏渲染契约', () => {
-  it('S3-09 工具失败：显示失败码，不显示“已完成/已保存”，无预览时没有确认按钮', async () => {
+  it('S3-09 工具失败：写明原因与怎么办，不显示“已完成/已保存”，无预览时没有确认按钮', async () => {
     window.cunlian = apiWith({ preview: null })
     render(<AgentSidebar open onToggle={() => undefined} projectName="隔套间隙演示" revisionId="rev-a1" onLocate={() => undefined} />)
     fireEvent.click(screen.getByRole('button', { name: /工具失败/ }))
-    await waitFor(() => expect(screen.getByTestId('agent-task-state').textContent).toContain('failed · INVALID_INPUT'))
-    await waitFor(() => expect(screen.getByTestId('agent-question-code').textContent).toBe('INVALID_INPUT'))
-    expect(screen.getAllByText(/stage · INVALID_INPUT/).length).toBeGreaterThan(0)
+    await waitFor(() => expect(screen.getByTestId('agent-task-state').textContent).toContain('没有做成 · 数值或参数不合法'))
+    await waitFor(() => expect(screen.getByTestId('agent-question-reason').textContent).toBe('数值或参数不合法'))
+    expect(screen.getAllByText('改参数没成功').length).toBeGreaterThan(0)
+    // 失败要写清“为什么失败 + 怎么办”，而不是只给一个错误码。
+    expect(screen.getByTestId('agent-task-why').textContent).toContain('必须提供且仅提供 valueMm 或 deltaMm')
+    expect(screen.getByTestId('agent-task-why').textContent).toContain('怎么办')
     expect(screen.queryByText(/已完成/)).not.toBeInTheDocument()
     expect(screen.queryByText(/已保存/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '确认保存' })).not.toBeInTheDocument()
@@ -142,13 +145,13 @@ describe('V4.0 阶段3：任务侧栏渲染契约', () => {
       ],
       questions: [{ code: 'CONSTRAINT_VIOLATED', tool: 'stage', message: '不能修改锁定参数' }],
     }))
-    await waitFor(() => expect(screen.getByTestId('agent-question-code').textContent).toBe('CONSTRAINT_VIOLATED'))
-    expect(screen.getByTestId('agent-task-state').textContent).toContain('failed · CONSTRAINT_VIOLATED')
-    expect(screen.getAllByText(/stage · CONSTRAINT_VIOLATED/).length).toBeGreaterThan(0)
+    await waitFor(() => expect(screen.getByTestId('agent-question-reason').textContent).toBe('这个参数被锁定'))
+    expect(screen.getByTestId('agent-task-state').textContent).toContain('没有做成 · 这个参数被锁定')
+    expect(screen.getAllByText('改参数没成功').length).toBeGreaterThan(0)
     expect(screen.queryByText(/已保存/)).not.toBeInTheDocument()
     expect(screen.queryByText(/已完成/)).not.toBeInTheDocument()
-    // 模型步骤只显示代号，不渲染模型自述。
-    expect(screen.getByText('model')).toBeInTheDocument()
+    // 模型步骤只说“模型想好了下一步”，不渲染模型自述，也不打印内部 kind。
+    expect(screen.getByText('模型想好了下一步')).toBeInTheDocument()
   })
 
   it('S4-02 模型回复单独展示（标注非回执），不产生确认按钮或结论位', async () => {
@@ -169,7 +172,7 @@ describe('V4.0 阶段3：任务侧栏渲染契约', () => {
     expect(screen.getByText(/模型回复（自然语言，不是回执）/)).toBeInTheDocument()
     // 模型文本只展示，不生成“确认保存”，也不改变已送达的工具回执。
     expect(screen.queryByRole('button', { name: '确认保存' })).not.toBeInTheDocument()
-    expect(screen.getAllByText(/stage · ok/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('改了一个参数并重算').length).toBeGreaterThan(0)
   })
 
   it('S3-09/S3-01 提交回执成功才显示“已提交”，且显示真实版本号', async () => {
@@ -206,5 +209,52 @@ describe('V4.0 阶段3：任务侧栏渲染契约', () => {
     expect(readAgentPanelOpen()).toBe(true)
     rerender(<AgentSidebar open onToggle={onToggle} projectName="隔套间隙演示" revisionId="rev-a1" onLocate={() => undefined} />)
     expect(screen.getByRole('heading', { name: 'Agent 任务' })).toBeInTheDocument()
+  })
+
+  it('守卫：侧栏文本不出现工具名 / 内部状态 / 错误码（改回内部名必须变红）', async () => {
+    let emit: ((payload: AgentTaskView) => void) | null = null
+    const blockedPreview: AgentPreviewSummary = {
+      ...preview,
+      requirementRevisionId: 'req-rev-1',
+      requirement: { status: 'unsatisfied', reasonCodes: ['BOTH_VIOLATED'], resultInterval: null, margins: null },
+    }
+    window.cunlian = apiWith({ emit: payload => { emit?.(payload) }, preview: blockedPreview })
+    const api = window.cunlian
+    const originalSubscribe = api.onAgentEvent!
+    api.onAgentEvent = vi.fn(listener => { emit = listener; return originalSubscribe(listener) })
+    render(<AgentSidebar open onToggle={() => undefined} projectName="隔套间隙演示" revisionId="rev-a1" onLocate={() => undefined} />)
+    await waitFor(() => expect(emit).not.toBeNull())
+    emit!(view({
+      task: task({ state: 'failed', errorCode: 'CHUNK_FAILED', errorMessage: '切块解析失败（第 3 批）' }),
+      steps: [
+        { stepId: 'step-model-guard', taskId: 'task-1', kind: 'model', inputSummary: {}, outputRef: 'reply:3:abc', errorCode: null, durationMs: 1, idempotencyKey: 'm-guard', at: '2026-11-11T00:00:00.000Z' },
+        step({ tool: 'context', errorCode: null, outputRef: 'tool:req-0:ok' }),
+        step({ tool: 'confirmed', errorCode: null, outputRef: 'tool:req-0:ok' }),
+        step({ tool: 'apply', errorCode: null, outputRef: 'tool:req-0:ok' }),
+        step({ tool: 'stage', errorCode: null, outputRef: 'tool:req-1:rev-a2' }),
+        step({ tool: 'preview', errorCode: null, outputRef: 'tool:req-2:ok' }),
+        step({ tool: 'export', errorCode: 'CHUNK_FAILED', outputRef: 'tool:req-9:CHUNK_FAILED' }),
+      ],
+      questions: [{ code: 'CHUNK_FAILED', tool: 'export', message: '导出端口没有装配' }],
+    }))
+    await waitFor(() => expect(screen.getByTestId('agent-task-state').textContent).toContain('没有做成 · 读任务书时出错'))
+    const text = document.body.textContent ?? ''
+    const banned = [
+      'stage', 'preview', 'apply', 'confirmed', 'context', 'export', 'model',
+      'CHUNK_FAILED', 'INVALID_INPUT', 'CONSTRAINT_VIOLATED',
+      'satisfied', 'unsatisfied', 'failed', 'ready-to-commit', 'awaiting-input',
+      'tool:req', ' · ok',
+    ]
+    for (const name of banned) {
+      const pattern = /[^\x20-\x7e]/.test(name) || name.includes(':')
+        ? new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        : new RegExp(`(^|[^A-Za-z])${name}([^A-Za-z]|$)`, 'i')
+      expect(pattern.test(text), `侧栏文本不应出现内部名：${name}`).toBe(false)
+    }
+    // 守卫不是空跑：人话确实出现在侧栏里。
+    expect(text).toContain('已读项目')
+    expect(text).toContain('已算完，等你确认')
+    expect(text).toContain('不满足要求')
+    expect(text).toContain('怎么办')
   })
 })

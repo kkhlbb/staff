@@ -95,7 +95,8 @@ const ISSUE_REASON: Record<'empty' | 'format' | 'precision' | 'range', Requireme
   range: 'INPUT_RANGE',
 }
 
-const REASON_TEXT: Record<RequirementReasonCode, string> = {
+/** 原因码 → 中文说明；界面只显示这段说明，不直接打印原因码。 */
+export const REQUIREMENT_REASON_TEXT: Record<RequirementReasonCode, string> = {
   NO_REQUIREMENT: '尚未绑定任务书条款，当前没有可执行的条款检查。',
   UNSUPPORTED_RULE: '条款规则不受支持（只支持带上下限的 mm 闭区间）。',
   INVALID_INPUT: '输入待修正，当前检查未完成。',
@@ -130,7 +131,7 @@ function evaluationOf(
     resultInterval: check.resultInterval === null ? null : { ...check.resultInterval },
     margins: check.margins === null ? null : { ...check.margins },
     eligibleForCommit,
-    reasons: check.reasonCodes.map((code) => REASON_TEXT[code]),
+    reasons: check.reasonCodes.map((code) => REQUIREMENT_REASON_TEXT[code]),
   }
 }
 

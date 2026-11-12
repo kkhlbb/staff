@@ -212,8 +212,8 @@ async function setBounds(width, height) {
 
 async function waitTaskSettled(timeoutMs = 180_000) {
   await waitFor(() => evaluate(`(() => {
-    const text = document.querySelector('[data-testid="agent-task-state"]')?.textContent ?? ''
-    return /ready-to-commit|completed|failed|awaiting-input|cancelled/.test(text)
+    const state = document.querySelector('[data-testid="agent-task-state"]')?.getAttribute('data-state') ?? ''
+    return ['ready-to-commit', 'completed', 'failed', 'awaiting-input', 'cancelled'].includes(state)
   })()`), 'task settled', timeoutMs)
 }
 

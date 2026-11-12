@@ -17,8 +17,30 @@ import type {
 } from '../../desktop/shared/contracts'
 import { formatMm } from '../domain/units'
 import { SPACER_PARAMETER_LABELS } from '../drawing/types'
+import { REQUIREMENT_STATUS_LABEL, type RequirementCheckStatus } from '../requirements/types'
+import { REQUIREMENT_REASON_TEXT } from '../requirements/check'
+import {
+  codeRemedy,
+  codeTitle,
+  receiptLabel,
+  receiptTime,
+  stepSentence,
+  taskStateLabel,
+  toolLabel,
+} from './agentWording'
 
 const parameterLabel = (key: string): string => SPACER_PARAMETER_LABELS[key as keyof typeof SPACER_PARAMETER_LABELS] ?? key
+
+const requirementStatusLabel = (status: string): string =>
+  Object.hasOwn(REQUIREMENT_STATUS_LABEL, status)
+    ? REQUIREMENT_STATUS_LABEL[status as RequirementCheckStatus]
+    : '状态未知'
+
+const requirementReasonText = (codes: string[]): string =>
+  codes
+    .map(code => (Object.hasOwn(REQUIREMENT_REASON_TEXT, code) ? REQUIREMENT_REASON_TEXT[code as keyof typeof REQUIREMENT_REASON_TEXT] : ''))
+    .filter(text => text !== '')
+    .join(' ')
 
 export interface AgentSidebarProps {
   open: boolean
@@ -29,25 +51,11 @@ export interface AgentSidebarProps {
 }
 
 const DEMOS: { scenario: 'normal' | 'ask' | 'failure'; label: string; hint: string }[] = [
-  { scenario: 'normal', label: '正常改图（+0.04 mm）', hint: 'stage → preview；预览后需人工确认' },
-  { scenario: 'ask', label: '需要补充（锁定参数）', hint: '工具返回 CONSTRAINT_VIOLATED，侧栏不当作完成' },
-  { scenario: 'failure', label: '工具失败（非法数值）', hint: '工具返回 INVALID_INPUT，模型自述不算回执' },
+  { scenario: 'normal', label: '正常改图（+0.04 mm）', hint: '会先改长度参数、再算一遍；算完要你点头才落盘' },
+  { scenario: 'ask', label: '需要补充（锁定参数）', hint: '参数被锁定，工具会说清原因；侧栏不会当作完成' },
+  { scenario: 'failure', label: '工具失败（非法数值）', hint: '数值不合法会写明怎么改；模型自己说“成功”不算数' },
 ]
 
-function receiptOf(step: AgentTaskView['steps'][number]): string {
-  if (step.kind === 'model') return 'model'
-  const tool = typeof step.inputSummary.tool === 'string' ? step.inputSummary.tool : 'tool'
-  return step.errorCode === null ? `${tool} · ok` : `${tool} · ${step.errorCode}`
-}
-
-function shortRef(value: string | null): string {
-  if (value === null) return '—'
-  return value.length <= 28 ? value : `${value.slice(0, 25)}…`
-}
-
-function statusLabel(view: AgentTaskView): string {
-  return `${view.task.state}${view.task.errorCode === null ? '' : ` · ${view.task.errorCode}`}`
-}
 
 export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate }: AgentSidebarProps): JSX.Element {
   const api = window.cunlian
@@ -120,7 +128,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
       setTaskId(result.data.taskId)
       setNotice(`已启动离线演示 · ${result.data.modelId} · ${result.data.taskId.slice(0, 8)}`)
     } else {
-      setNotice(`启动失败 · ${result.code}：${result.message}`)
+      setNotice(`启动没有成功：${result.message}`)
     }
     setBusy(false)
   }
@@ -129,7 +137,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     if (taskId === null || api?.agentCancel === undefined) return
     setBusy(true)
     const result = await api.agentCancel({ taskId })
-    setNotice(result.ok ? '已请求取消；已进入执行的步骤会跑到真实边界' : `取消失败 · ${result.code}：${result.message}`)
+    setNotice(result.ok ? '已请求取消；已进入执行的步骤会跑到真实边界' : `取消没有成功：${result.message}`)
     setBusy(false)
   }
 
@@ -137,7 +145,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     if (taskId === null || api?.agentResume === undefined) return
     setBusy(true)
     const result = await api.agentResume({ taskId })
-    setNotice(result.ok ? '已继续任务；先读取当前正式版本' : `继续失败 · ${result.code}：${result.message}`)
+    setNotice(result.ok ? '已继续任务；先读取当前正式版本' : `继续没有成功：${result.message}`)
     setBusy(false)
   }
 
@@ -167,7 +175,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
   const locate = async (request: { requirementRevisionId?: string; checkId?: string; parameterId?: string }): Promise<void> => {
     if (api?.locateEvidence === undefined) return
     const result = await api.locateEvidence(request)
-    if (!result.ok) { setLocateNote(`定位失败 · ${result.code}：${result.message}`); return }
+    if (!result.ok) { setLocateNote(`定位没有成功：${result.message}`); return }
     setLocateNote(result.data.kind === 'parameter'
       ? `已定位参数 ${parameterLabel(result.data.key)} · 绑定环 ${result.data.termIds.join('、') || '无'}`
       : `已定位 ${result.data.label} · 第 ${result.data.page} 页`)
@@ -182,7 +190,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
       setTaskId(result.data.taskId)
       setNotice(`已启动真实模型 · ${result.data.modelId}`)
     } else {
-      setNotice(`启动失败 · ${result.code}：${result.message}`)
+      setNotice(`启动没有成功：${result.message}`)
     }
     setBusy(false)
   }
@@ -200,7 +208,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
       setApiKey('')
       setSettingsNote(result.data.real.configured ? '已保存：配置与密钥齐备（密钥存 Keychain，不落盘）' : '已保存配置，但仍缺密钥')
     } else {
-      setSettingsNote(`保存失败 · ${result.code}：${result.message}`)
+      setSettingsNote(`保存没有成功：${result.message} 检查 base_url、模型 ID 与密钥后重试。`)
     }
     setBusy(false)
   }
@@ -212,8 +220,8 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     setTestNote(result.ok
       ? result.data.ok
         ? `连接成功 · ${result.data.model ?? '模型'} · ${result.data.latencyMs} ms（合成文本，未发送项目资料）`
-        : `连接失败 · ${result.data.code}：${result.data.message}`
-      : `测试请求失败 · ${result.code}：${result.message}`)
+        : `连接没有成功：${result.data.message} 检查 base_url、模型 ID 与密钥后重试。`
+      : `测试请求没有成功：${result.message}`)
     setBusy(false)
   }
 
@@ -222,7 +230,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     setBusy(true); setSettingsNote(null); setTestNote(null)
     const result = await api.clearAgentProviderKey()
     if (result.ok) { setProvider(result.data); setSettingsNote('已从 Keychain 删除密钥') }
-    else setSettingsNote(`清除失败 · ${result.code}：${result.message}`)
+    else setSettingsNote(`清除没有成功：${result.message}`)
     setBusy(false)
   }
 
@@ -232,13 +240,14 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     const result = await api.exportApprovedVersion({ format })
     setExportNote(result.ok
       ? `已导出 · ${result.data.fileName} · ${result.data.byteSize} B · ${result.data.sha256?.slice(0, 12)}…`
-      : `导出未完成 · ${result.code}：${result.message}`)
+      : `导出没有完成：${result.message} 已保存版本还在，可以重试；反复失败请检查目标文件夹权限。`)
     setBusy(false)
   }
 
   const toolSteps = (view?.steps ?? []).filter(step => step.kind === 'tool')
   const recent = toolSteps.slice(-3).reverse()
   const requirementBlocked = preview !== null && preview.requirement !== null && preview.requirement.status !== 'satisfied'
+  const previewReasonText = preview === null || preview.requirement === null ? '' : requirementReasonText(preview.requirement.reasonCodes)
   const running = view !== null && !['completed', 'failed', 'cancelled', 'ready-to-commit'].includes(view.task.state)
 
   if (!open) {
@@ -321,12 +330,15 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     <section className="agent-sidebar__section" aria-label="执行步骤">
       <h3>执行步骤</h3>
       {view === null ? <p className="agent-sidebar__hint">尚未运行任务。</p> : <>
-        <p className="agent-sidebar__state" data-testid="agent-task-state">
-          {statusLabel(view)}{view.task.errorMessage === null ? '' : ` · ${view.task.errorMessage}`}
+        <p className="agent-sidebar__state" data-testid="agent-task-state" data-state={view.task.state}>
+          {taskStateLabel(view.task.state)}{view.task.errorCode === null ? '' : ` · ${codeTitle(view.task.errorCode)}`}
         </p>
+        {view.task.errorCode !== null && <p role="alert" className="agent-sidebar__blocked" data-testid="agent-task-why">
+          没有做成：{view.task.errorMessage ?? '工具没有给出可用的结果。'} 怎么办：{codeRemedy(view.task.errorCode)}
+        </p>}
         <ol className="agent-sidebar__steps">
           {view.steps.map(step => <li key={step.stepId} className={step.errorCode === null ? 'agent-sidebar__step' : 'agent-sidebar__step agent-sidebar__step--failed'}>
-            <span>{step.kind === 'model' ? 'model' : receiptOf(step)}</span>
+            <span>{stepSentence(step)}</span>
             <span className="agent-sidebar__muted">{step.durationMs} ms</span>
           </li>)}
         </ol>
@@ -346,8 +358,9 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
         ? <p className="agent-sidebar__hint">暂无待答问题。</p>
         : <ul className="agent-sidebar__questions">
           {view.questions.map((question, index) => <li key={`${question.code}-${index}`} role="alert">
-            <strong data-testid="agent-question-code">{question.code}</strong>
-            <span>{question.tool} · {question.message}</span>
+            <strong data-testid="agent-question-reason">{codeTitle(question.code)}</strong>
+            <span>{toolLabel(question.tool)}：{question.message}</span>
+            <span className="agent-sidebar__muted">怎么办：{codeRemedy(question.code)}</span>
           </li>)}
         </ul>}
     </section>
@@ -356,14 +369,14 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
       <h3>最近工具结果（回执）</h3>
       {recent.length === 0 ? <p className="agent-sidebar__hint">暂无工具回执。</p> : <ul className="agent-sidebar__steps">
         {recent.map(step => <li key={`recent-${step.stepId}`} className={step.errorCode === null ? 'agent-sidebar__step' : 'agent-sidebar__step agent-sidebar__step--failed'}>
-          <span>{receiptOf(step)}</span><span className="agent-sidebar__muted">{shortRef(step.outputRef)}</span>
+          <span>{receiptLabel(step)}</span><span className="agent-sidebar__muted">{receiptTime(step.at)}</span>
         </li>)}
       </ul>}
     </section>
 
     <section className="agent-sidebar__section" aria-label="预览与确认">
       <h3>预览与确认</h3>
-      {preview === null ? <p className="agent-sidebar__hint">尚无主进程预览。工具 preview 成功后这里才出现“确认保存”。</p> : <>
+      {preview === null ? <p className="agent-sidebar__hint">还没有算过。算完并复核通过后，这里才会出现“确认保存”。</p> : <>
         <dl>
           <div><dt>结果区间</dt><dd>{formatMm(preview.result.minQ)} ～ {formatMm(preview.result.maxQ)} mm</dd></div>
           <div><dt>参数</dt><dd>{preview.parameters.map(parameter => `${parameterLabel(parameter.key)} ${formatMm(parameter.valueQ)}`).join(' · ')}</dd></div>
@@ -371,7 +384,9 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
           <div><dt>有效期至</dt><dd>{new Date(preview.expiresAt).toLocaleTimeString('zh-CN')}</dd></div>
         </dl>
         {preview.requirement !== null && <div className={`agent-sidebar__requirement${requirementBlocked ? ' agent-sidebar__requirement--blocked' : ''}`}>
-          <p>活动条款检查：<strong>{preview.requirement.status}</strong> · {preview.requirement.reasonCodes.join('、')}</p>
+          <p>活动条款检查：<strong>{requirementStatusLabel(preview.requirement.status)}</strong>
+            {previewReasonText === '' ? '' : ` · ${previewReasonText}`}
+          </p>
           {preview.requirement.margins !== null && <p>裕量 下 {formatMm(preview.requirement.margins.lowerQ)} / 上 {formatMm(preview.requirement.margins.upperQ)} mm</p>}
         </div>}
         {preview.requirementProposalPending && <p className="agent-sidebar__hint">Agent 草稿含未确认的条款提案；它不参与本次提交门禁，正式判定仍以活动条款为准。</p>}
@@ -381,10 +396,10 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
           </button>
           {preview.requirement !== null && <button type="button" disabled={busy} onClick={() => void locate({ requirementRevisionId: preview.requirementRevisionId ?? undefined })}>定位条款来源</button>}
         </div>
-        {requirementBlocked && <p role="alert" className="agent-sidebar__blocked">条款检查不是 satisfied；确认保存已禁用，提交也会被主进程拦截。</p>}
+        {requirementBlocked && <p role="alert" className="agent-sidebar__blocked">条款检查没通过（原因见上）；确认保存已禁用，提交也会被主进程拦截。</p>}
       </>}
       {commit !== null && <p role={commit.ok ? 'status' : 'alert'} data-testid="agent-commit-result" className={commit.ok ? 'agent-sidebar__ok' : 'agent-sidebar__blocked'}>
-        {commit.ok ? commit.message : `提交失败 · ${commit.code}：${commit.message}`}
+        {commit.ok ? commit.message : `保存没有完成：${commit.message} 怎么办：${codeRemedy(commit.code)}`}
       </p>}
       {locateNote !== null && <p role="status" className="agent-sidebar__hint">{locateNote}</p>}
     </section>

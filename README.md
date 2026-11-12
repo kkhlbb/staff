@@ -57,7 +57,7 @@ xattr -dr com.apple.quarantine /Applications/寸链.app
 
 ```bash
 npm install
-npm test                 # 1135 用例 / 105 文件
+npm test                 # 1138 用例 / 105 文件（证据 JSON 每份各带一条序列化守卫用例）
 npm run test:desktop     # 278 用例（另 14 条真模型用例默认跳过，需密钥）
 npm run typecheck && npm run lint && npm run build
 
@@ -108,7 +108,6 @@ docs/BENCHMARK.md      真实文档度量体系与复现方式
 - 三维实体与 STEP：没有 B-rep，`three.js` 只是网格预览
 - 校对—审核—批准三级签署、多用户、审计导出
 - 自动更新、崩溃上报、Windows 构建
-- 界面语言仍残留工具名（`stage → preview`），待翻成人话
 
 ---
 
