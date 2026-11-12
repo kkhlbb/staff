@@ -787,15 +787,6 @@ export class AgentToolService {
           objectVersion: created.snapshot.project.currentRevisionId,
         }
       }
-      if (!isBlankProject(session.snapshot)) {
-        return {
-          ok: false,
-          code: 'UNSUPPORTED_SCOPE',
-          message: '当前项目已有内容，不能改成无任务书项目；请先新建一个空项目',
-          requestId,
-          objectVersion,
-        }
-      }
       if (session.snapshot.project.sourceKind === 'user-intent') {
         const draft = intentDraftOf(session.snapshot.project)
         return {
@@ -807,6 +798,15 @@ export class AgentToolService {
             sessionSeq: session.snapshot.project.sessionSeq,
             sessionLabel: session.snapshot.project.sessionLabel,
           },
+          requestId,
+          objectVersion,
+        }
+      }
+      if (!isBlankProject(session.snapshot)) {
+        return {
+          ok: false,
+          code: 'UNSUPPORTED_SCOPE',
+          message: '当前项目已有内容，不能改成无任务书项目；请先新建一个空项目',
           requestId,
           objectVersion,
         }

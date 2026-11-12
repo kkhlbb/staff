@@ -205,6 +205,9 @@ function buildFrame(
 
   // 标题栏：表头 4mm + 9 行 × 4mm。
   const basis = typeof fields.basis === 'string' ? fields.basis.trim() : ''
+  // 标题栏左列已经写“依据”，右列去掉重复前缀，避免出现“依据：依据：…”。
+  const basisValue =
+    basis.startsWith('依据：') ? basis.slice('依据：'.length) : basis
   const rows: [string, string][] = [
     ['零件名', partName],
     ['图号', drawingNumber],
@@ -215,7 +218,7 @@ function buildFrame(
     ['制图人/日期', `${drafter} / ${date}`],
     ['比例/单位', `${scaleKey(scale)} · mm`],
     ['纸张/投影', `A4 横向 · 第三角`],
-    ...(basis === '' ? [] : ([['依据', basis]] as [string, string][])),
+    ...(basisValue === '' ? [] : ([['依据', basisValue]] as [string, string][])),
   ]
   const headerBottom = SHEET_LAYOUT.titleBlock.y1 + 4
   cells.push(

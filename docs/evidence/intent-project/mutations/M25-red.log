@@ -1,0 +1,39 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/intent/intent.input.test.ts (7 tests | 1 failed) 11ms
+   ❯ 意图建件的原话与数值门禁 (7)
+     × M25：条款区间只能来自用户原话；代填数值或引用标准等级一律拒绝 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/intent/intent.input.test.ts > 意图建件的原话与数值门禁 > M25：条款区间只能来自用户原话；代填数值或引用标准等级一律拒绝
+AssertionError: expected { ok: true, value: { …(13) } } to match object { ok: false, …(1) }
+(14 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "REQUIREMENT_MUST_BE_USER_GIVEN",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ src/intent/intent.input.test.ts:123:25
+    121|       upperInclusive: true,
+    122|     })
+    123|     expect(modelFilled).toMatchObject({ ok: false, code: 'REQUIREMENT_…
+       |                         ^
+    124|
+    125|     // 原话是真的，但数值比原话更宽（模型加了裕量）→ 仍拒绝。
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  02:09:22
+   Duration  133ms (setup 51%, transform 25%, tests 18%, import 4%, worker 2%)
+
+EXIT=1

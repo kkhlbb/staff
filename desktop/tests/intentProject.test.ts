@@ -331,7 +331,8 @@ describe('无任务书入口：建项 → 对话写草稿 → 确认 → 预览 
     if (!rebuilt.ok) return
     const svg = renderDrawingSvg(rebuilt.data)
     expect(svg).toContain(`<!-- ${USER_INPUT_BASIS} -->`)
-    expect(svg).toContain(USER_INPUT_BASIS)
+    expect(svg).toContain('依据')
+    expect(svg).toContain('用户输入，无外部原文件')
     const dxf = buildDxfDocument(rebuilt.data, 'r12')
     expect(dxf.text).toContain('999')
     expect(dxf.text).toContain(USER_INPUT_BASIS)

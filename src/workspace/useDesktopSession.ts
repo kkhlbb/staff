@@ -180,8 +180,17 @@ export function useDesktopSession() {
     return random !== undefined ? random.call(globalThis.crypto) : `req-${Date.now()}-${Math.random().toString(16).slice(2)}`
   }
 
+  /** 提交由 main 完成后，把 main 侧的新快照重新挂回界面（不重新打开文件）。 */
+  async function reloadSession(): Promise<void> {
+    if (!adapter.current) return
+    const result = await adapter.current.reattachSession()
+    report(result)
+    await refresh()
+  }
+
   return {
     state, recent, recovery, notice, busy, newOpen, setNewOpen, importOpen, setImportOpen, preview, action,
+    reloadSession,
     applyModelMutation: async (value: Parameters<DesktopSessionAdapter['applyModelMutation']>[0]) => {
       await adapter.current?.applyModelMutation(value)
     },

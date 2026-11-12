@@ -1,0 +1,34 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ desktop/tests/intentProject.test.ts (6 tests | 1 failed | 5 skipped) 140ms
+   ❯ 无任务书入口：建项 → 对话写草稿 → 确认 → 预览 → 勾选 → 提交 (6)
+     × 未勾选“这些尺寸由我提供”→ 不签发授权；勾选后提交成功并冻结条款/依据 139ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  desktop/tests/intentProject.test.ts > 无任务书入口：建项 → 对话写草稿 → 确认 → 预览 → 勾选 → 提交 > 未勾选“这些尺寸由我提供”→ 不签发授权；勾选后提交成功并冻结条款/依据
+AssertionError: expected '' to be '依据：用户输入，无外部原文件' // Object.is equality
+
+- Expected
++ Received
+
+- 依据：用户输入，无外部原文件
+
+ ❯ desktop/tests/intentProject.test.ts:328:38
+    326|     // 提交后：图纸依据栏与文件头标记齐全。
+    327|     const record = project.drawings[0]!
+    328|     expect(record.frameFields.basis).toBe(USER_INPUT_BASIS)
+       |                                      ^
+    329|     const rebuilt = rebuildDrawingFromProject(project)
+    330|     expect(rebuilt.ok, JSON.stringify(rebuilt)).toBe(true)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 skipped (6)
+   Start at  02:09:29
+   Duration  395ms (import 46%, tests 42%, transform 12%)
+
+EXIT=1

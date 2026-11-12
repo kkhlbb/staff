@@ -65,6 +65,8 @@ export interface AgentSidebarProps {
   projectName: string | null
   revisionId: string | null
   onLocate: (value: LocateEvidenceValue) => void
+  /** 提交成功后把 main 侧的新快照重新挂回工作台（可选；测试可不提供）。 */
+  onProjectChanged?: () => void | Promise<void>
 }
 
 /** 无任务书演示的默认原话：每个数值都要能在句子里逐字找到（工具会核）。 */
@@ -77,7 +79,7 @@ const DEMOS: { scenario: 'normal' | 'ask' | 'failure'; label: string; hint: stri
 ]
 
 
-export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate }: AgentSidebarProps): JSX.Element {
+export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate, onProjectChanged }: AgentSidebarProps): JSX.Element {
   const api = window.cunlian
   const installed = api?.agentStart !== undefined && api.agentTaskState !== undefined
   const [provider, setProvider] = useState<AgentProviderStatusValue | null>(null)
@@ -117,6 +119,12 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     })
   }, [api, installed])
 
+  const refreshIntent = useCallback(async (): Promise<void> => {
+    if (api?.intentState === undefined) return
+    const result = await api.intentState()
+    if (result.ok) setIntent(result.data)
+  }, [api])
+
   const refreshPreview = useCallback(async () => {
     if (api?.agentPreviewSummary === undefined) return
     const result = await api.agentPreviewSummary()
@@ -128,10 +136,14 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     const off = api.onAgentEvent(payload => {
       if (taskIdRef.current !== null && payload.task.taskId !== taskIdRef.current) return
       setView(payload)
-      if (payload.task.state === 'ready-to-commit' || payload.task.state === 'completed' || payload.task.state === 'failed') void refreshPreview()
+      if (payload.task.state === 'ready-to-commit' || payload.task.state === 'completed' || payload.task.state === 'failed') {
+        void refreshPreview()
+        // 无任务书工具的写入是任务内的步骤：任务结束后重读意图草稿。
+        void refreshIntent()
+      }
     })
     return off
-  }, [api, open, refreshPreview])
+  }, [api, open, refreshPreview, refreshIntent])
 
   // 事件可能早于订阅完成；任务未结束时用 task-state 轮询兜底，只读主进程记录。
   useEffect(() => {
@@ -141,13 +153,16 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
       const result = await api.agentTaskState!({ taskId })
       if (!stopped && result.ok) {
         setView(result.data)
-        if (['ready-to-commit', 'completed', 'failed', 'awaiting-input', 'cancelled'].includes(result.data.task.state)) void refreshPreview()
+        if (['ready-to-commit', 'completed', 'failed', 'awaiting-input', 'cancelled'].includes(result.data.task.state)) {
+          void refreshPreview()
+          void refreshIntent()
+        }
       }
     }
     void poll()
     const timer = setInterval(() => { void poll() }, 500)
     return () => { stopped = true; clearInterval(timer) }
-  }, [api, open, taskId, refreshPreview])
+  }, [api, open, taskId, refreshPreview, refreshIntent])
 
   const start = async (scenario: 'normal' | 'ask' | 'failure'): Promise<void> => {
     if (!installed || api?.agentStart === undefined) return
@@ -283,11 +298,6 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     return () => { alive = false }
   }, [api, open])
 
-  const refreshIntent = async (): Promise<void> => {
-    if (api?.intentState === undefined) return
-    const result = await api.intentState()
-    if (result.ok) setIntent(result.data)
-  }
 
   const createIntent = async (): Promise<void> => {
     if (api?.intentCreateProject === undefined) return
@@ -378,7 +388,11 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     setIntentCommit(committed.ok
       ? { ok: true, message: `已保存为新版本（工具回执） · ${committed.data.revisionId}` }
       : { ok: false, message: committed.message })
-    if (committed.ok) { setAcknowledged(false); setIntentDraft(null) }
+    if (committed.ok) {
+      setAcknowledged(false)
+      setIntentDraft(null)
+      await onProjectChanged?.()
+    }
     setBusy(false)
   }
 

@@ -139,7 +139,7 @@ function intentDemoScript(goal: string): FakeModelStep[] {
         argumentsJson: JSON.stringify({
           statement,
           rings: [
-            { symbol: 'H', nominalMm: '52.20', upperDeviationMm: '0.02', lowerDeviationMm: '-0.02' },
+            { symbol: 'H', nominalMm: '52.25', upperDeviationMm: '0.02', lowerDeviationMm: '-0.02' },
             { symbol: 'B1', nominalMm: '20', upperDeviationMm: '0.01', lowerDeviationMm: '-0.01' },
             { symbol: 'S', nominalMm: '12.05', upperDeviationMm: '0.01', lowerDeviationMm: '-0.01' },
             { symbol: 'B2', nominalMm: '20', upperDeviationMm: '0.01', lowerDeviationMm: '-0.01' },

@@ -33,6 +33,20 @@
 .desktop-workspace__titlebar > span { font-variant-numeric: tabular-nums; }
 .desktop-workspace__pending { color: var(--pending); background: var(--pending-bg); padding: 4px 8px; border-radius: 4px; }
 .desktop-workspace__batch { margin-left: auto; color: var(--muted); }
+
+/* ADR-001 第 3 步：无外部来源项目必须与有来源项目一眼可分。 */
+.desktop-workspace__source-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 1px solid #b45309;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
 .desktop-workspace__toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
 .desktop-workspace__toolbar-note { color: var(--muted); }
 .desktop-workspace__toolbar-end { position: relative; display: flex; gap: 8px; margin-left: auto; }

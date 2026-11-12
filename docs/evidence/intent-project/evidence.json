@@ -1,0 +1,242 @@
+{
+  "adr": "ADR-001 第 3 步：意图驱动建件（无任务书入口）",
+  "branch": "agent/intent-project",
+  "baselineCommit": "f79d73b",
+  "headCommit": "ef8ead1",
+  "rules": {
+    "extractorVersion": "document-extractor-6",
+    "maxExtractionPages": 100,
+    "readBudget": {
+      "maxTextItems": 200000,
+      "timeoutMs": 300000
+    }
+  },
+  "pdfPath": {
+    "corpus": "~/DSHreal-docs",
+    "baselineMatch": true,
+    "totals": {
+      "total": 138,
+      "pending": 58,
+      "blocked": 80,
+      "confirmed": 0
+    },
+    "pageRangeProbe": [
+      {
+        "id": "r4@1-20",
+        "forDocument": "r4",
+        "pageRange": {
+          "from": 1,
+          "to": 20
+        },
+        "candidates": {
+          "total": 1,
+          "pending": 0,
+          "blocked": 1,
+          "confirmed": 0,
+          "byKind": [
+            {
+              "code": "ring",
+              "count": 1
+            }
+          ]
+        },
+        "blockedReasonCodes": [
+          {
+            "code": "UNKNOWN_UNIT",
+            "count": 1
+          }
+        ],
+        "issues": {
+          "total": 3,
+          "blocked": 3,
+          "warning": 0,
+          "byCode": [
+            {
+              "code": "NO_TEXT_LAYER",
+              "count": 3
+            }
+          ],
+          "noTextLayerPages": [
+            1,
+            2,
+            6
+          ]
+        }
+      }
+    ],
+    "documents": [
+      {
+        "id": "r1",
+        "file": "r1-assembly-course.pdf",
+        "pages": 74,
+        "candidates": 15,
+        "pending": 4,
+        "blocked": 11,
+        "idempotencyKey": "real-doc-baseline|real-doc-r1|real-doc-r1-fc6ad0216abf|fc6ad0216abf60e381d222cbdb84378acecdc799bd753a92baa318a8af1b607d|1|74|document-extractor-6",
+        "draftId": "<generated>",
+        "candidateArraySha256": "2f00d76711de3f35fcbda08a4e8597d8e9f3105fe6965014d84e8acbba0b0df7",
+        "identicalToStep2": true
+      },
+      {
+        "id": "r2",
+        "file": "r2-tolerance-domain.pdf",
+        "pages": 5,
+        "candidates": 22,
+        "pending": 7,
+        "blocked": 15,
+        "idempotencyKey": "real-doc-baseline|real-doc-r2|real-doc-r2-c20d6b523e20|c20d6b523e20a0554b0f5c0c38bbb3c7b32a604505a0dd1b8eb8872483aea9e2|1|5|document-extractor-6",
+        "draftId": "<generated>",
+        "candidateArraySha256": "7ca45c3da6dfb719c4a1f62d02fec7327eb0db337f1e240ee6ef4e45fe7641c0",
+        "identicalToStep2": true
+      },
+      {
+        "id": "r3",
+        "file": "r3-rv-3dcs.pdf",
+        "pages": 4,
+        "candidates": 3,
+        "pending": 0,
+        "blocked": 3,
+        "idempotencyKey": "real-doc-baseline|real-doc-r3|real-doc-r3-458a68fdae94|458a68fdae943174b5edcf35df146ed90e6cb314be14d43d0cdff2b4a701e2d1|1|4|document-extractor-6",
+        "draftId": "<generated>",
+        "candidateArraySha256": "b0d4c916da995dac99a76594a95da7682d7984d181f9f09dfe383de0dd7af18e",
+        "identicalToStep2": true
+      },
+      {
+        "id": "r4",
+        "file": "r4-mtt1097.pdf",
+        "pages": 170,
+        "candidates": 7,
+        "pending": 1,
+        "blocked": 6,
+        "idempotencyKey": "real-doc-baseline|real-doc-r4|real-doc-r4-e18652688580|e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d|1|170|document-extractor-6",
+        "draftId": "<generated>",
+        "candidateArraySha256": "98abced2d7f1ad0b3ea2772acf26a08a535de305ec35bc70e7c1267b16622587",
+        "identicalToStep2": true
+      },
+      {
+        "id": "r5",
+        "file": "r5-tolerance-analysis.pdf",
+        "pages": 8,
+        "candidates": 4,
+        "pending": 2,
+        "blocked": 2,
+        "idempotencyKey": "real-doc-baseline|real-doc-r5|real-doc-r5-e4f5c52b5259|e4f5c52b525948faa7c547458d07e66418241392d698ed892cd44cac1cc310c5|1|8|document-extractor-6",
+        "draftId": "<generated>",
+        "candidateArraySha256": "eecbbff03bcff72b117c91cea483d7b4f356025b54e5ed20440d594338554588",
+        "identicalToStep2": true
+      },
+      {
+        "id": "r6",
+        "file": "r6-segments-assembly.pdf",
+        "pages": 8,
+        "candidates": 87,
+        "pending": 44,
+        "blocked": 43,
+        "idempotencyKey": "real-doc-baseline|real-doc-r6|real-doc-r6-fbe5db55db9b|fbe5db55db9b6bdf220e1ebef42c3f414580c8e1f360b7c739ab70e7c78d28be|1|8|document-extractor-6",
+        "draftId": "<generated>",
+        "candidateArraySha256": "2eef7127b2e34009de782303df484f767314eebeb930df06a1609785dcd886c6",
+        "identicalToStep2": true
+      }
+    ],
+    "candidatesByteIdenticalToStep2": true
+  },
+  "schema": {
+    "projectFile": "9 → 10（加法：sourceKind / actorId / sessionSeq / sessionLabel / attestations；条款来源支持 user-attestation）",
+    "dbVersion": "PROJECT_DB_VERSION 未变（IndexedDB store 结构未动）",
+    "schema9Read": "sourceKind=pdf、账本为空，不重算不改值（schema10.test.ts 4 条）"
+  },
+  "mutations": {
+    "M25": {
+      "description": "删掉 setRequirement 的用户原话/数值校验",
+      "domain": "1 failed) 11ms",
+      "desktop": "1 failed | 5 skipped) 75ms",
+      "restored": "1 passed (1)"
+    },
+    "M26": {
+      "description": "去掉图纸“依据：用户输入，无外部原文件”标记",
+      "desktop": "1 failed | 5 skipped) 140ms",
+      "restored": "1 passed (1)"
+    }
+  },
+  "e2e": {
+    "verdict": "pass",
+    "checks": [
+      {
+        "id": "project-source-note",
+        "ok": true,
+        "note": "依据：用户输入，无外部原文件"
+      },
+      {
+        "id": "draft-candidate-count",
+        "ok": true,
+        "pendingCount": 7
+      },
+      {
+        "id": "intent-draft-written",
+        "ok": true,
+        "text": "依据：用户输入，无外部原文件 · 老王 · 第 1 次输入 · 2026-11-12 走查待确认 7 · 已确认 0 · 组成环与装配式齐 · 条款区间已给装配式：+H -B1 -S -B2 · 原话「我要给 φ20 的轴配个隔套，外径 32，长 12.05；总长 52.25 偏差 0.02；两个轴承各 20 偏差 0.01；隔套 12.05 偏差 0.01；间隙 0.15 到 0.25」（第 1 次）确认这条条款区间：0.15 ～ 0.25 mm（含两端） · 原话「我要给 φ20 的轴配个隔套，外径 32，长 12.05；总长 52.25 偏差 0.02；两个轴承各 20 偏差 0.01；隔套 12.05 偏差 0.01；间隙 0.15 到 0.25」（第 1 次）确认这条隔套参数：内 20 / 外 32 / 长 12.05 mm · 原话「我要给 φ20 的轴配个隔套，外径 32，长"
+      },
+      {
+        "id": "candidates-confirmed-one-by-one",
+        "ok": true
+      },
+      {
+        "id": "requirement-checked",
+        "ok": true,
+        "containsStatus": true
+      },
+      {
+        "id": "commit-with-attestation",
+        "ok": true,
+        "receipt": "已保存为新版本（工具回执） · rev-a-<generated>"
+      },
+      {
+        "id": "drawing-title-block",
+        "ok": true
+      },
+      {
+        "id": "recent-list-badge",
+        "ok": true,
+        "badge": "无外部来源"
+      }
+    ],
+    "screenshots": [
+      "docs/evidence/intent-project/screenshots/intent-01-draft-from-conversation.png",
+      "docs/evidence/intent-project/screenshots/intent-02-preview-and-attestation.png",
+      "docs/evidence/intent-project/screenshots/intent-02b-attestation-checkbox.png",
+      "docs/evidence/intent-project/screenshots/intent-03-commit-receipt.png",
+      "docs/evidence/intent-project/screenshots/intent-04-drawing-title-block.png",
+      "docs/evidence/intent-project/screenshots/intent-04b-drawing-full.png",
+      "docs/evidence/intent-project/screenshots/intent-04c-title-block-crop.png",
+      "docs/evidence/intent-project/screenshots/intent-05-recent-list-badge.png"
+    ],
+    "limitation": "原生保存对话框需要辅助功能权限；导出文件名/文件头由 desktop/tests/intentExport.test.ts 在真实导出路径上验证。"
+  },
+  "export": {
+    "dxfFileName": "隔套-图纸-1_1-userinput-DXF-R12.dxf",
+    "dxfBytes": "9266",
+    "dxfSha256": "57261d8097968b54e1007f29039dc08da626fd5d453021be065fd8fc091995cd",
+    "note": "真实导出代码路径 + 注入路径选择端口（原生对话框需要辅助功能权限）"
+  },
+  "gates": {
+    "typecheck": true,
+    "typecheckDesktop": true,
+    "lint": true,
+    "test": "107 passed (107)",
+    "testDesktop": "41 passed | 1 skipped (42)",
+    "intentDesktop": "2 passed (2)",
+    "build": true,
+    "package": true,
+    "packagedPdfWorker": true
+  },
+  "realModel": {
+    "status": "BLOCKED",
+    "reason": "本机没有 DEEPSEEK_API_KEY（环境变量与 Keychain com.kkhlbb.cunlian.model 均不存在），真实模型 3 条未执行；不记为通过。"
+  },
+  "uiTextLeak": {
+    "fixed": "侧栏离线演示提示改为“已启动离线演示（本机假模型）”；界面不出现 fake- 与任务实例号（AgentSidebar.test.tsx 守卫）"
+  },
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

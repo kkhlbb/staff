@@ -636,6 +636,7 @@ export function DesktopWorkspace() {
       projectName={project.name}
       revisionId={project.currentRevisionId}
       onLocate={locateFromAgent}
+      onProjectChanged={() => session.reloadSession()}
     />
     {dialogs}
   </main>
