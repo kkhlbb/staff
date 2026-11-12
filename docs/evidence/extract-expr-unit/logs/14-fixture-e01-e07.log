@@ -1,0 +1,69 @@
+
+=== 第 1 页
+  行 "轴向尺⼨链任务书（表达式末尾单位样例，合成样本）" 文本项=["轴向尺","⼨","链任务书（表达式末尾单位样例，合成样本）"]
+  行 "⽂件编号：TB-EXPR-001 · 第 1 ⻚ · 场景 E-01" 文本项=["⽂","件编号：TB-EXPR-001 · 第 1"," ","⻚"," ","· 场景 E-01"]
+  行 "A0max = 1753.1 − 759.38 − 765.31 = 228.41 mm" 文本项=["A0max = 1753.1 − 759.38 − 765.31 ="," ","228.41"," ","mm"]
+  候选 kind=ring symbol=A0max status=pending reasons=[] basis=["RULE_TABLE_OR_ASSIGNMENT","RULE_UNIT_MM","RULE_UNIT_EXPRESSION_TAIL","RULE_SINGLE_VALUE"]
+    nominal="228.41" unit="mm" valueQ=2284100 upper=undefined(undefined) lower=undefined(undefined)
+    出处=["A0max = 1753.1 − 759.38 − 765.31 =","228.41","mm"]
+    归一出处=["A0max = 1753.1 − 759.38 − 765.31 =","228.41","mm"]
+    rawText="A0max = 1753.1 − 759.38 − 765.31 = 228.41 mm"
+
+=== 第 2 页
+  行 "2. 组成环赋值（对称偏差）" 文本项=["2. 组成环赋值（对称偏差）"]
+  行 "第 2 ⻚ · 场景 E-02" 文本项=["第 2"," ","⻚"," ","· 场景 E-02"]
+  行 "A = 230 ± 0.3 mm" 文本项=["A = 230 ±"," ","0.3"," ","mm"]
+  候选 kind=ring symbol=A status=pending reasons=[] basis=["RULE_TABLE_OR_ASSIGNMENT","RULE_UNIT_MM","RULE_ASSIGNMENT_PM_DEVIATION","RULE_SINGLE_VALUE"]
+    nominal="230" unit="mm" valueQ=2300000 upper="+0.3"(3000) lower="-0.3"(-3000)
+    出处=["A = 230 ±","mm","A = 230 ± 0.3"]
+    归一出处=["A = 230 ±","mm","A = 230 ± 0.3"]
+    rawText="A = 230 ± 0.3 mm"
+
+=== 第 3 页
+  行 "3. 组成环赋值（括号负数）" 文本项=["3. 组成环赋值（括号负数）"]
+  行 "第 3 ⻚ · 场景 E-03" 文本项=["第 3"," ","⻚"," ","· 场景 E-03"]
+  行 "T0 = +0.3 − (−0.3) = 0.6 mm" 文本项=["T0 = +0.3 − (−0.3) ="," ","0.6"," ","mm"]
+  候选 kind=ring symbol=T0 status=pending reasons=[] basis=["RULE_TABLE_OR_ASSIGNMENT","RULE_UNIT_MM","RULE_UNIT_EXPRESSION_TAIL","RULE_SINGLE_VALUE"]
+    nominal="0.6" unit="mm" valueQ=6000 upper=undefined(undefined) lower=undefined(undefined)
+    出处=["T0 = +0.3 − (−0.3) =","0.6","mm"]
+    归一出处=["T0 = +0.3 − (−0.3) =","0.6","mm"]
+    rawText="T0 = +0.3 − (−0.3) = 0.6 mm"
+
+=== 第 4 页
+  行 "4. 结果值⽭盾" 文本项=["4. 结果值","⽭","盾"]
+  行 "第 4 ⻚ · 场景 E-04" 文本项=["第 4"," ","⻚"," ","· 场景 E-04"]
+  行 "A = 10 = 12 mm" 文本项=["A = 10 ="," ","12"," ","mm"]
+  候选 kind=ring symbol=A status=blocked reasons=["INCONSISTENT_REDUNDANT_VALUE"] basis=["RULE_TABLE_OR_ASSIGNMENT","RULE_UNIT_UNSUPPORTED","RULE_UNIT_EXPRESSION_TAIL","RULE_SINGLE_VALUE"]
+    nominal="12" unit="mm" valueQ=null upper=undefined(undefined) lower=undefined(undefined)
+    出处=["A = 10 =","12","mm"]
+    归一出处=["A = 10 =","12","mm"]
+    rawText="A = 10 = 12 mm"
+  issue INCONSISTENT_REDUNDANT_VALUE blocked p4 "符号 A 的赋值含多个等号，结果值互不一致（10 / 12）；该条已阻塞，未挑其中一个值"
+
+=== 第 5 页
+  行 "5. ⽆单位表达式" 文本项=["5."," ","⽆","单位表达式"]
+  行 "第 5 ⻚ · 场景 E-05" 文本项=["第 5"," ","⻚"," ","· 场景 E-05"]
+  行 "A0max = 1753.1 − 759.38 − 765.31" 文本项=["A0max = 1753.1 − 759.38 − 765.31"]
+  候选 kind=ring symbol=max status=blocked reasons=["UNKNOWN_UNIT"] basis=["RULE_TABLE_OR_ASSIGNMENT","RULE_UNIT_MISSING","RULE_SINGLE_VALUE"]
+    nominal="1753.1" unit=null valueQ=null upper=undefined(undefined) lower=undefined(undefined)
+    出处=["A0max = 1753.1 − 759.38 − 765.31"]
+    归一出处=["A0max = 1753.1 − 759.38 − 765.31"]
+    rawText="A0max = 1753.1 − 759.38 − 765.31"
+
+=== 第 6 页
+  行 "6. ⽆单位赋值 + ⻚内单位声明" 文本项=["6."," ","⽆","单位赋值 +"," ","⻚","内单位声明"]
+  行 "第 6 ⻚ · 场景 E-06" 文本项=["第 6"," ","⻚"," ","· 场景 E-06"]
+  行 "单位：mm" 文本项=["单位：mm"]
+  行 "A = 230 ± 0.3" 文本项=["A = 230 ± 0.3"]
+  候选 kind=ring symbol=A status=pending reasons=[] basis=["RULE_TABLE_OR_ASSIGNMENT","RULE_UNIT_MM","RULE_UNIT_INHERITED_DOCUMENT","RULE_SINGLE_VALUE"]
+    nominal="230" unit="mm" valueQ=2300000 upper=undefined(undefined) lower=undefined(undefined)
+    出处=["A = 230 ± 0.3","单位：mm"]
+    归一出处=["A = 230 ± 0.3","单位:mm"]
+    rawText="A = 230 ± 0.3"
+
+=== 第 7 页
+  行 "7. 公式下标⽚段" 文本项=["7. 公式下标","⽚","段"]
+  行 "第 7 ⻚ · 场景 E-07" 文本项=["第 7"," ","⻚"," ","· 场景 E-07"]
+  行 "i = 0" 文本项=["i = 0"]
+  行 "i = 1" 文本项=["i = 1"]
+  候选：无

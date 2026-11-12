@@ -1,0 +1,267 @@
+
+=== r1 r1-assembly-course.pdf：候选 15｜pending 4｜blocked 11
+  [pending] ring p30 symbol=A text="34" unit="mm" q=340000 reasons=[]
+     raw="A=34mm ， A=22mm ， A=12mm 。试计算各"
+  [pending] ring p30 symbol=A text="12" unit="mm" q=120000 reasons=[]
+     raw="A=34mm ， A=22mm ， A=12mm 。试计算各"
+  [pending] ring p30 symbol=A text="22" unit="mm" q=220000 reasons=[]
+     raw="A=34mm ， A=22mm ， A=12mm 。试计算各"
+  [pending] ring p30 symbol=T text="0.35" unit="mm" q=3500 reasons=[]
+     raw="（ 2 ） T=0.35mm ， T=T"
+  [blocked] formula p41 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="A=( A+ A)-"
+  [blocked] formula p41 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="( A+A+A)=0"
+  [blocked] formula p43 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="即 T= T- （ T+T+T+T） =0.5-0.2- 0.10-0.05-0.05"
+  [blocked] ring p43 symbol=EIA text="0" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="ESA=EIA+EIA-ESA-ESA-EIA=0-0.20=-0.20"
+  [blocked] ring p43 symbol=EIA text="-0" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="同理： EIA=-0. 30"
+  [blocked] ring p61 symbol=n text="4" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="令 T=0.03, 则 n=4 。"
+  [blocked] formula p63 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="准件）， A=5"
+  [blocked] formula p64 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="T=T=0.06 ， T=T=0.04 ， T=0.05 （ 标 准 件 不 能"
+  [blocked] formula p65 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="T=0.12 ， T=T=0.10 ， T=0.05 （标准件不能"
+  [blocked] formula p65 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="得： A=43.05 A=43.05±T/2=43.05±0.075= "
+  [blocked] ring p66 symbol=EI text="0.20" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="得： EI=0.20 即："
+  问题码：AMBIGUOUS_ASSIGNMENT(warning), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), NO_TEXT_LAYER(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), AMBIGUOUS_ASSIGNMENT(warning), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked)
+
+=== r2 r2-tolerance-domain.pdf：候选 20｜pending 5｜blocked 15
+  [pending] ring p2 symbol=L0 text="00" unit="mm" q=0 reasons=[]
+     raw="L0 =00mm,"
+  [pending] ring p2 symbol=L1 text="1001" unit="mm" q=10010000 reasons=[]
+     raw="L1=1001mm 代入式"
+  [blocked] ring p2 symbol=L2 text="100" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="2个尺寸有本质 的 区 别.L2 =100+0.2mm 要 求 尺 寸"
+  [blocked] ring p3 symbol=Lb text="5" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="+0.2 mm,L2 Lb=5"
+  [blocked] formula p3 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="于100.0-0.1=99.9mm(即L的 基 本 尺 寸 "
+  [pending] ring p3 symbol=b text="5.20" unit="mm" q=52000 reasons=[]
+     raw="b=5.20 mm."
+  [blocked] formula p3 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="Zmax=5.2+0.1-4.9=0.4mm)"
+  [blocked] ring p3 symbol=Zmin text="5.2" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="Zmin=5.2-5.2=0."
+  [pending] ring p3 symbol=L3 text="430" unit="mm" q=4300000 reasons=[]
+     raw="L3 =430 mm;L4 =3-0.05mm.b "
+  [pending] ring p3 symbol=L text="0.10" unit="mm" q=1000 reasons=[]
+     raw="δL=0.10mm,则 补 偿 环 间 隔 尺 寸"
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="δL=δL-δL=0.25-0.10=0.15mm)补偿环尺"
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="-0.1.05-0.1.2-0.1Lb =43.100- (29.900+4.950+2.975-"
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="5.35-0.1 mm.0.225=5.050mm)"
+  [blocked] ring p4 symbol=Lb text="5.050" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="Lb = 5.050 ∓ (0.1732)≈ 5.050 ∓"
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="2220.304-0.250=0.054(mm)."
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="δL= δL+δL4)"
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="δL+δbi = δL+δb +δbi5)"
+  [blocked] ring p4 symbol=i text="1" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="ïi=1"
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="δL=δL- δL= δL-δLi7)"
+  [blocked] ring p4 symbol=i text="1" unit="i" q=null reasons=["UNKNOWN_UNIT"]
+     raw="i=1i=1"
+  问题码：UNKNOWN_UNIT(blocked), AMBIGUOUS_ASSIGNMENT(warning), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), AMBIGUOUS_ASSIGNMENT(warning), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked)
+
+=== r3 r3-rv-3dcs.pdf：候选 3｜pending 0｜blocked 3
+  [blocked] formula p2 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="x = ( rp+ lrp) sin - asin ( za ) + ( rrp+ lrrp) ×"
+  [blocked] formula p2 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="y = ( rp+ lrrp) cos - acos( za ) + ( rrp+ lrrp)×"
+  [blocked] ring p2 symbol=K text="1" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="K = 1 + ( za)- 2zacos t "
+  问题码：无
+
+=== r5 r5-tolerance-analysis.pdf：候选 4｜pending 2｜blocked 2
+  [pending] ring p2 symbol=L1 text="50" unit="mm" q=500000 reasons=[]
+     raw="commemorative table. Fig. 2 shows that L1 = 50 mm,"
+  [pending] ring p2 symbol=ryL2 text="27" unit="mm" q=270000 reasons=[]
+     raw="The requirement is a value that represents the boundaryL2 = 27 mm and L3 = 22 mm. In this example, t"
+  [blocked] ring p3 symbol=ucti text="1" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="distribution of data answers the question of whether a producti=1 i"
+  [blocked] ring p3 symbol=i text="1" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="i=1 i"
+  问题码：无
+
+=== r6 r6-segments-assembly.pdf：候选 84｜pending 27｜blocked 57
+  [pending] ring p1 symbol=A text="230" unit="mm" q=2300000 reasons=[]
+     raw="A=230±0.3mm high precision, as shown in Figure1, Dimensions A1, A2, A3 for the composition ring,"
+  [pending] ring p1 symbol=A1 text="759.48" unit="mm" q=7594800 reasons=[]
+     raw="A1=759.48mm, A2=765.41mm, A3=1753mm. Figure. 2 shows the assembly"
+  [pending] ring p1 symbol=A2 text="765.41" unit="mm" q=7654100 reasons=[]
+     raw="A1=759.48mm, A2=765.41mm, A3=1753mm. Figure. 2 shows the assembly"
+  [pending] ring p1 symbol=A3 text="1753" unit="mm" q=17530000 reasons=[]
+     raw="A1=759.48mm, A2=765.41mm, A3=1753mm. Figure. 2 shows the assembly"
+  [blocked] formula p2 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="0=A3(A1+A2)=1753−(759.48+765.41)=228.11mm"
+  [blocked] formula p2 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="0=+0.3−(−0.3)=0.6mm."
+  [blocked] formula p2 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="avA=T0/m(m−Ring Qyt.)=0.6/3=0.2mm"
+  [pending] ring p2 symbol=T2 text="0.2" unit="mm" q=2000 reasons=[]
+     raw="1, A2 tolerance for T1=T2=0.2mm, then"
+  [pending] ring p2 symbol=T1 text="0.2" unit="mm" q=2000 reasons=[]
+     raw="1, A2 tolerance for T1=T2=0.2mm, then"
+  [pending] ring p2 symbol=A0max text="228.41" unit="mm" q=2284100 reasons=[]
+     raw="A0max=1753.1−759.38−765.31=228.41mm"
+  [pending] ring p2 symbol=A0min text="227.81" unit="mm" q=2278100 reasons=[]
+     raw="A0min=1752.9−759.58−765.51=227.81mm"
+  [pending] ring p2 symbol=A0 text="228.11" unit="mm" q=2281100 reasons=[]
+     raw="Then A0=228.11±0.3mm. Accounts show that the closed loop size to meet the requirements, so"
+  [pending] ring p2 symbol=T text="0.04" unit="mm" q=400 reasons=[]
+     raw="completely interchangeable ring by assembly method selected, B1 tolerance of T =0.04mm, too"
+  [blocked] formula p2 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="B1=(125×COS10°+230/2)=238.1mm, B2=(33×COS10°)=32.5mm, B3=488.88mm (within the"
+  [blocked] formula p2 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="framework of the arc processing size), after assembly to ensure that the size of a1=759.48±0.1mm."
+  [blocked] formula p3 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="0= + 0.1−(−0.1)=0.2mm"
+  [blocked] ring p3 symbol=m text="0.2" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="T = T / m= 0.2 / 3 =0.115"
+  [pending] ring p3 symbol=T3 text="0.97" unit="mm" q=9700 reasons=[]
+     raw="T1=0.115mm, T3=0.97mm, then"
+  [pending] ring p3 symbol=T1 text="0.115" unit="mm" q=1150 reasons=[]
+     raw="T1=0.115mm, T3=0.97mm, then"
+  [pending] ring p3 symbol=T3 text="0.10" unit="mm" q=1000 reasons=[]
+     raw="process, so the tolerance reassigned as: T1 = 0. 1 4 mm, T2 = 0. 06 mm, T3 = 0.10mm."
+  [pending] ring p3 symbol=T0 text="0.2" unit="mm" q=2000 reasons=[]
+     raw="This value is less than T0 = 0.2mm."
+  [pending] ring p3 symbol=B1 text="238.1" unit="mm" q=2381000 reasons=[]
+     raw="assembly dimensions. Tentatively define B1=238.1±0.07mm. B3 is frame sizes, finished products,"
+  [pending] ring p3 symbol=B3 text="488.88" unit="mm" q=4888800 reasons=[]
+     raw="configuration principle, take B3=488.88±0.05mm. B2 for the plate size, is the coordination ring, the"
+  [blocked] formula p3 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="Δ0=[0.1+(−0.1)]/2=0mm"
+  [blocked] formula p3 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="Δ1=[0.07+(−0.07)]/2=0mm"
+  [blocked] formula p3 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="Δ3=[0.05+(−0.05)]/2=0mm"
+  [blocked] formula p3 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="ES2=Δ2+T2/2=0+0.06/2=0.03"
+  [blocked] formula p3 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="EI2=Δ2− T2/2=0−0.06/2=−0.03"
+  [pending] ring p3 symbol=B2 text="32.5" unit="mm" q=325000 reasons=[]
+     raw="Take B2=32.5±0.03mm, and take B1=238.1±0.07mm; B2=32.5- 0.03mm; B3=488.88±0.05mm."
+  [blocked] formula p3 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="So ES0=Δ0+T0/2=0+0.182/2=0.091mm,EI0=Δ0−T0/2=0−0.182/2=−0.091mm, A1=759.48±0.091,"
+  [blocked] ring p4 symbol=B text="135" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="the lower half of the roller sleeve, bearing, spindle, bearing, size 1 at B=135; the second is the u"
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="1on=250/2=125. Free roller tolerance and the same drive roller,"
+  [pending] ring p4 symbol=B1 text="260" unit="mm" q=2600000 reasons=[]
+     raw="(1) First, B1=260±0.07mm of tolerance exploded onto the lower half of the roller assembly. The"
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="3- mandrel: a large-diameter φ= 129h6（ ）, the small diameter φ=110f7(-0.071 ) ."
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="4- bearing: bore φ= 180H7（ ）, the base surface to the hole center distance L=135."
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="B1=B1+B1under=135+250/2=260 mm"
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="T0=+0.07−(−0.07)=0.14 mm"
+  [blocked] ring p4 symbol=m text="0.14" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="T = T / m= 0.14 / 2 =0.099"
+  [pending] ring p4 symbol=T2 text="0.10" unit="mm" q=1000 reasons=[]
+     raw="of T1=T2=0.10 mm . Because under B1 chain size small, so the tolerance reassigned as:T1=0.10"
+  [pending] ring p4 symbol=T1 text="0.10" unit="mm" q=1000 reasons=[]
+     raw="of T1=T2=0.10 mm . Because under B1 chain size small, so the tolerance reassigned as:T1=0.10"
+  [pending] ring p4 symbol=T2 text="0.09" unit="mm" q=900 reasons=[]
+     raw="mm, T2 = 0.09mm."
+  [pending] ring p4 symbol=B1 text="135" unit="mm" q=1350000 reasons=[]
+     raw="for next B1=135±0.05mm."
+  [pending] ring p4 symbol=B1 text="125" unit="mm" q=1250000 reasons=[]
+     raw="for the B1=125 ± 0.045mm."
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="Δ0=Δ1+Δ2=[0.05+(−0.05)]/2+[0.045+(−0.045)]/2=0mm,"
+  [blocked] formula p4 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="EI0=Δ0−T0/2=0−0.135/2=−0.07mm.It can be seen B1=260±0.07 comply with B1=260±0.07mm"
+  [pending] ring p5 symbol=B1upper text="135" unit="mm" q=1350000 reasons=[]
+     raw="requirements. According to the accounting result, the B1, B1 lower value of:B1upper =135±0.05mm;"
+  [pending] ring p5 symbol=below text="125" unit="mm" q=1250000 reasons=[]
+     raw="1below =125±0.045mm."
+  [blocked] ring p5 symbol=amax text="0" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="formation of dimensional chain Figure 8, closed loop a0=a1−a2, amax=0/2− (−0.071/2)=0.0355,"
+  [blocked] ring p5 symbol=amin text="-0.02" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="amin=−0.02/2− (−0.036/2)=0.008, a0= 0( assembly clearance)."
+  [blocked] ring p5 symbol=a0 text="0" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="amin=−0.02/2− (−0.036/2)=0.008, a0= 0( assembly clearance)."
+  [blocked] ring p5 symbol=amax text="0.04" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="the formation of the size of the chain as shown in Figure 9: Closed loop a01=a3−a4, amax=0.04/2−"
+  [blocked] formula p5 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="(−0.025/2)=0.0325, a"
+  [blocked] ring p5 symbol=a01 text="0" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="min=0/2-0/2=0, a01= 0 ( assembly clearance)."
+  [blocked] ring p5 symbol=min text="0" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="min=0/2-0/2=0, a01= 0 ( assembly clearance)."
+  [blocked] ring p5 symbol=L text="135" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="③Bore center plane to the distance L= 135 ± 0.1tolerance fit analysis. Dimension Chain see"
+  [blocked] formula p5 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="Closed loop a02=a5−(a0+a01) , amax=0.1−(0.008+0)=0.092, amin=−0.1−(0.0355+0.0325)=−0.168,"
+  [blocked] ring p5 symbol=a02 text="0" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="a02= 0 ( assembly tolerance value)."
+  [blocked] ring p5 symbol=L text="135" unit="take" q=null reasons=["UNKNOWN_UNIT"]
+     raw="B1 under the anastomosis. By calculation, L= 135 take L= 135, then"
+  [blocked] ring p5 symbol=amin text="0.02" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="amax=0.06−(0.008+0)=0.052, amin=0.02−(0.0355+0.0325)=−0.048, a02= 0 ( assembly tolerance"
+  [blocked] ring p5 symbol=amax text="0.06" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="amax=0.06−(0.008+0)=0.052, amin=0.02−(0.0355+0.0325)=−0.048, a02= 0 ( assembly tolerance"
+  [pending] ring p5 symbol=B1below text="135" unit="mm" q=1350000 reasons=[]
+     raw="values) B1below =135±0.05 mm for meet, after adjustments ,take B1below= 135 mm."
+  [pending] ring p5 symbol=upper text="125" unit="mm" q=1250000 reasons=[]
+     raw="(3)Decomposed B1 upper=125±0.045mm into the upper half of the roller assembly, the B1 upper"
+  [blocked] formula p6 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="loop a03=a6−a7, amax=0.04/2−(−0.025/2)=0.0325, amin=0/2−(0/2)=0 , a03=0+0.03250 (assembly"
+  [blocked] ring p6 symbol=amax text="0.1" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="formation of dimensional chain Figure 13: Closed loop a04=a8−a03, amax=0.1/2−0=0.05,"
+  [blocked] ring p6 symbol=a04 text="0" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="amin=−0.1/2−(0.0325)=−0.0825, a04= 0 ( assembly clearance). Through the"
+  [blocked] ring p6 symbol=amin text="-0.1" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="amin=−0.1/2−(0.0325)=−0.0825, a04= 0 ( assembly clearance). Through the"
+  [blocked] ring p6 symbol=amax text="0.09" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="= 250 then amax=0.09/2−0=0.045, amin=−0.025/2−(0.0325)=−0.045, a04= 0 ( assembly"
+  [blocked] ring p6 symbol=amin text="-0.025" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="= 250 then amax=0.09/2−0=0.045, amin=−0.025/2−(0.0325)=−0.045, a04= 0 ( assembly"
+  [blocked] formula p6 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="tolerances) and B1. on = 125±0.045mm fit, take the B1 at cost: the B1=125±0.045m ."
+  [blocked] formula p6 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="Δ0=Δ1+Δ2=[0.052+(−0.048)]/2+[0.045+(−0.045)]/2=0.002mm，"
+  [blocked] formula p6 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="ES0=Δ0+T0/2=0.002+0.135/2=0.07mm"
+  [blocked] formula p6 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="EI0=Δ0−T0/2=0.002−0.135/2=−0.07mm"
+  [blocked] ring p6 symbol=max text="0.142" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="A1= a05+ a08+ a07, A1max=0.142+0.05+0.05=0.242"
+  [blocked] ring p6 symbol=min text="-0.2505" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="A1min=−0.2505−0.05−0.05= −0.1505, A1= 0"
+  [blocked] ring p7 symbol=a05 text="0" unit="becomes" q=null reasons=["UNKNOWN_UNIT"]
+     raw="by a05= 0 becomes a05= 0 . Roller sleeve diameter tolerance of φ±0.1 is defined asφ"
+  [blocked] formula p7 symbol=- text=null unit=null q=null reasons=["FORMULA_UNSUPPORTED"]
+     raw="①Base into the hole center distance L size chain a02: closed loop a02=a5−(a0+a01),"
+  [blocked] ring p7 symbol=amax text="0.05" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="amax=0.05−(0.008+0)=0.042, amin=0.02−(0.0355+0.0325)=−0.048, a02= 0 ."
+  [blocked] ring p7 symbol=amin text="0" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="amax=0.06/2−0 = 0.03, amin=0/2−(0.0325)=−0.0325, a04=0+0. 03−0 .0325."
+  [blocked] ring p7 symbol=amax text="0.042" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="05=a02+a04, amax=0.042+0.03=0.072,"
+  [blocked] ring p7 symbol=amin text="-0.048" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="amin=−0.048+(−0.0325)=−0.0805, a05 = 0 ."
+  [blocked] ring p7 symbol=a05 text="0" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="amin=−0.048+(−0.0325)=−0.0805, a05 = 0 ."
+  [blocked] formula p7 symbol=A1 text=null unit=null q=null reasons=["UNSUPPORTED_UNIT"]
+     raw="A1=a05+a08+a07"
+  [blocked] ring p7 symbol=max text="0.072" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="A1max=0.072+0.01+0.03=0.112"
+  [blocked] ring p7 symbol=min text="-0.0805" unit=null q=null reasons=["UNKNOWN_UNIT"]
+     raw="A1min=−0.0805−0.01−0= −0.0905"
+  问题码：AMBIGUOUS_ASSIGNMENT(warning), AMBIGUOUS_ASSIGNMENT(warning), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), AMBIGUOUS_ASSIGNMENT(warning), AMBIGUOUS_ASSIGNMENT(warning), AMBIGUOUS_ASSIGNMENT(warning), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), AMBIGUOUS_ASSIGNMENT(warning), AMBIGUOUS_ASSIGNMENT(warning), AMBIGUOUS_ASSIGNMENT(warning), AMBIGUOUS_ASSIGNMENT(warning), AMBIGUOUS_ASSIGNMENT(warning), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), UNKNOWN_UNIT(blocked), AMBIGUOUS_ASSIGNMENT(warning), UNKNOWN_UNIT(blocked)

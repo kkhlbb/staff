@@ -1,0 +1,15 @@
+diff --git a/src/document-extraction/parse.ts b/src/document-extraction/parse.ts
+index 2fc7544..3d8ba87 100644
+--- a/src/document-extraction/parse.ts
++++ b/src/document-extraction/parse.ts
+@@ -635,8 +635,8 @@ function parseAssignmentLine(
+   for (const segment of text.split(',')) {
+     const start = offset
+     offset += segment.length + 1
+-    // P1：先认三种明确形态（末尾单位），认不出来再走原有赋值解析，绝不放宽。
+-    const form = matchExpressionAssignment(text, start, start + segment.length)
++    // M19：关掉末尾单位归属（变异实验）——把片段长度压成 0，形态永远认不出来。
++    const form = matchExpressionAssignment(text, start, start)
+     if (form) {
+       entries.push(entryFromExpressionForm(form, line, page, source))
+       continue
