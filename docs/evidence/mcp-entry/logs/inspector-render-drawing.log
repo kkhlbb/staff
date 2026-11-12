@@ -1,0 +1,42 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ok\":true,\"tool\":\"render_drawing\",\"format\":\"dxf\",\"dxfVersion\":\"2000\",\"filePath\":\"/Users/aston/DSH/staff/docs/evidence/mcp-entry/artifacts/spacer-i20.00-o32.00-l12.05-DXF-AC1015.dxf\",\"fileName\":\"spacer-i20.00-o32.00-l12.05-DXF-AC1015.dxf\",\"byteSize\":21239,\"sha256\":\"3e20f273de8c6a868be459f655b4ea5cc68af8933b80074a6dac1583f723541b\",\"drawingId\":\"drawing:project-mcp-readonly:spacer\",\"drawingFingerprint\":\"b67bf5387c9298efc9ef8349776054690f8b4b3054c787dac76e2a6e73223091\",\"sourceMarker\":\"依据：用户输入，无外部原文件\",\"unprovenanced\":true,\"parameters\":[{\"key\":\"innerDiameter\",\"valueQ\":200000,\"inputDecimals\":2},{\"key\":\"outerDiameter\",\"valueQ\":320000,\"inputDecimals\":2},{\"key\":\"length\",\"valueQ\":120500,\"inputDecimals\":2}],\"provenance\":\"全部数值来自 MCP 调用参数（用户输入），无外部文件出处。\",\"readOnly\":true}"
+    }
+  ],
+  "structuredContent": {
+    "ok": true,
+    "tool": "render_drawing",
+    "format": "dxf",
+    "dxfVersion": "2000",
+    "filePath": "/Users/aston/DSH/staff/docs/evidence/mcp-entry/artifacts/spacer-i20.00-o32.00-l12.05-DXF-AC1015.dxf",
+    "fileName": "spacer-i20.00-o32.00-l12.05-DXF-AC1015.dxf",
+    "byteSize": 21239,
+    "sha256": "3e20f273de8c6a868be459f655b4ea5cc68af8933b80074a6dac1583f723541b",
+    "drawingId": "drawing:project-mcp-readonly:spacer",
+    "drawingFingerprint": "b67bf5387c9298efc9ef8349776054690f8b4b3054c787dac76e2a6e73223091",
+    "sourceMarker": "依据：用户输入，无外部原文件",
+    "unprovenanced": true,
+    "parameters": [
+      {
+        "key": "innerDiameter",
+        "valueQ": 200000,
+        "inputDecimals": 2
+      },
+      {
+        "key": "outerDiameter",
+        "valueQ": 320000,
+        "inputDecimals": 2
+      },
+      {
+        "key": "length",
+        "valueQ": 120500,
+        "inputDecimals": 2
+      }
+    ],
+    "provenance": "全部数值来自 MCP 调用参数（用户输入），无外部文件出处。",
+    "readOnly": true
+  },
+  "isError": false
+}

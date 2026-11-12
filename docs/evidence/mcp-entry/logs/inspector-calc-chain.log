@@ -1,0 +1,98 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ok\":true,\"tool\":\"calc_chain\",\"mode\":\"parameters\",\"engineVersion\":\"0.1.0\",\"formula\":\"C = H − B1 − S − B2（主进程 chain-demo 模板）\",\"terms\":[{\"id\":\"t-h\",\"symbol\":\"H\",\"name\":\"总长\",\"nominalQ\":522000,\"nominalMm\":\"52.200\",\"lowerDeviationQ\":-200,\"lowerDeviationMm\":\"-0.020\",\"upperDeviationQ\":200,\"upperDeviationMm\":\"0.020\",\"sign\":1,\"sourceNote\":\"\",\"source\":\"用户输入（MCP 隔套参数）\"},{\"id\":\"t-b1\",\"symbol\":\"B1\",\"name\":\"左轴承\",\"nominalQ\":200000,\"nominalMm\":\"20.000\",\"lowerDeviationQ\":-100,\"lowerDeviationMm\":\"-0.010\",\"upperDeviationQ\":100,\"upperDeviationMm\":\"0.010\",\"sign\":-1,\"sourceNote\":\"\",\"source\":\"用户输入（MCP 隔套参数）\"},{\"id\":\"t-s\",\"symbol\":\"S\",\"name\":\"隔套\",\"nominalQ\":120000,\"nominalMm\":\"12.000\",\"lowerDeviationQ\":-100,\"lowerDeviationMm\":\"-0.010\",\"upperDeviationQ\":100,\"upperDeviationMm\":\"0.010\",\"sign\":-1,\"sourceNote\":\"\",\"source\":\"用户输入（MCP 隔套参数）\"},{\"id\":\"t-b2\",\"symbol\":\"B2\",\"name\":\"右轴承\",\"nominalQ\":200000,\"nominalMm\":\"20.000\",\"lowerDeviationQ\":-100,\"lowerDeviationMm\":\"-0.010\",\"upperDeviationQ\":100,\"upperDeviationMm\":\"0.010\",\"sign\":-1,\"sourceNote\":\"\",\"source\":\"用户输入（MCP 隔套参数）\"}],\"parameters\":{\"innerDiameterQ\":200000,\"outerDiameterQ\":320000,\"lengthQ\":120000},\"target\":null,\"result\":{\"nominalQ\":2000,\"nominalMm\":\"0.200\",\"minQ\":1500,\"minMm\":\"0.150\",\"maxQ\":2500,\"maxMm\":\"0.250\",\"lowerDeviationQ\":-500,\"lowerDeviationMm\":\"-0.050\",\"upperDeviationQ\":500,\"upperDeviationMm\":\"0.050\",\"toleranceQ\":1000,\"toleranceMm\":\"0.100\",\"targetStatus\":\"no-target\"},\"assumptions\":\"\",\"provenance\":\"全部数值来自 MCP 调用参数（用户输入），无外部文件出处。\",\"readOnly\":true}"
+    }
+  ],
+  "structuredContent": {
+    "ok": true,
+    "tool": "calc_chain",
+    "mode": "parameters",
+    "engineVersion": "0.1.0",
+    "formula": "C = H − B1 − S − B2（主进程 chain-demo 模板）",
+    "terms": [
+      {
+        "id": "t-h",
+        "symbol": "H",
+        "name": "总长",
+        "nominalQ": 522000,
+        "nominalMm": "52.200",
+        "lowerDeviationQ": -200,
+        "lowerDeviationMm": "-0.020",
+        "upperDeviationQ": 200,
+        "upperDeviationMm": "0.020",
+        "sign": 1,
+        "sourceNote": "",
+        "source": "用户输入（MCP 隔套参数）"
+      },
+      {
+        "id": "t-b1",
+        "symbol": "B1",
+        "name": "左轴承",
+        "nominalQ": 200000,
+        "nominalMm": "20.000",
+        "lowerDeviationQ": -100,
+        "lowerDeviationMm": "-0.010",
+        "upperDeviationQ": 100,
+        "upperDeviationMm": "0.010",
+        "sign": -1,
+        "sourceNote": "",
+        "source": "用户输入（MCP 隔套参数）"
+      },
+      {
+        "id": "t-s",
+        "symbol": "S",
+        "name": "隔套",
+        "nominalQ": 120000,
+        "nominalMm": "12.000",
+        "lowerDeviationQ": -100,
+        "lowerDeviationMm": "-0.010",
+        "upperDeviationQ": 100,
+        "upperDeviationMm": "0.010",
+        "sign": -1,
+        "sourceNote": "",
+        "source": "用户输入（MCP 隔套参数）"
+      },
+      {
+        "id": "t-b2",
+        "symbol": "B2",
+        "name": "右轴承",
+        "nominalQ": 200000,
+        "nominalMm": "20.000",
+        "lowerDeviationQ": -100,
+        "lowerDeviationMm": "-0.010",
+        "upperDeviationQ": 100,
+        "upperDeviationMm": "0.010",
+        "sign": -1,
+        "sourceNote": "",
+        "source": "用户输入（MCP 隔套参数）"
+      }
+    ],
+    "parameters": {
+      "innerDiameterQ": 200000,
+      "outerDiameterQ": 320000,
+      "lengthQ": 120000
+    },
+    "target": null,
+    "result": {
+      "nominalQ": 2000,
+      "nominalMm": "0.200",
+      "minQ": 1500,
+      "minMm": "0.150",
+      "maxQ": 2500,
+      "maxMm": "0.250",
+      "lowerDeviationQ": -500,
+      "lowerDeviationMm": "-0.050",
+      "upperDeviationQ": 500,
+      "upperDeviationMm": "0.050",
+      "toleranceQ": 1000,
+      "toleranceMm": "0.100",
+      "targetStatus": "no-target"
+    },
+    "assumptions": "",
+    "provenance": "全部数值来自 MCP 调用参数（用户输入），无外部文件出处。",
+    "readOnly": true
+  },
+  "isError": false
+}

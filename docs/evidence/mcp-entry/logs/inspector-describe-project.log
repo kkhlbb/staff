@@ -1,0 +1,207 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ok\":true,\"tool\":\"describe_project\",\"file\":{\"path\":\"/Users/aston/DSH/staff/docs/evidence/v40-stage4/fixtures/a40-1204.cunlian\",\"byteSize\":61437,\"sha256\":\"16adf96f338a749a1a61389ced22cbf8ecc6d5bbd79b290c8ec4cf2a7cf6f891\"},\"manifest\":{\"formatVersion\":2,\"createdAt\":\"2026-11-09T08:00:00.000Z\",\"writer\":{\"appVersion\":\"0.0.0-test\",\"electronVersion\":\"45.2.3\",\"engineVersion\":\"0.1.0\"},\"counts\":{\"documents\":1,\"revisions\":1,\"blobs\":1,\"bindings\":1,\"events\":9,\"analysisSnapshots\":3,\"importSnapshots\":0,\"migrationBackups\":0,\"projectRevisions\":4,\"models\":0,\"drawings\":1,\"legacyArchiveRecords\":0}},\"project\":{\"id\":\"project-a\",\"name\":\"A40 · 完整任务书\",\"schemaVersion\":10,\"engineVersion\":\"0.1.0\",\"sourceKind\":\"pdf\",\"createdAt\":\"2026-11-09T08:00:00.000Z\",\"updatedAt\":\"2026-11-12T06:04:05.487Z\",\"currentRevisionId\":\"rev-a-cd6bdfcb-9993-4f36-935b-ccec6cd4f401\"},\"formalVersion\":{\"revisionId\":\"rev-a-cd6bdfcb-9993-4f36-935b-ccec6cd4f401\",\"parentId\":\"rev-a-53f6f53b-0c91-4219-8e92-f0da4a0580f3\",\"createdAt\":\"2026-11-12T06:04:05.487Z\",\"reason\":\"Agent 授权提交\",\"fileRevisionCount\":4},\"parameters\":[{\"parameterId\":\"param:spacer:inner-diameter\",\"key\":\"innerDiameter\",\"valueQ\":200000,\"valueMm\":\"20.000\",\"inputDecimals\":2,\"parameterRevision\":1,\"reviewStatus\":\"draft\",\"sourceNote\":\"\",\"source\":\"用户输入（项目记录）\"},{\"parameterId\":\"param:spacer:outer-diameter\",\"key\":\"outerDiameter\",\"valueQ\":320000,\"valueMm\":\"32.000\",\"inputDecimals\":2,\"parameterRevision\":1,\"reviewStatus\":\"draft\",\"sourceNote\":\"\",\"source\":\"用户输入（项目记录）\"},{\"parameterId\":\"param:spacer:length\",\"key\":\"length\",\"valueQ\":120500,\"valueMm\":\"12.050\",\"inputDecimals\":2,\"parameterRevision\":3,\"reviewStatus\":\"draft\",\"sourceNote\":\"\",\"source\":\"用户输入（项目记录）\"}],\"terms\":[{\"id\":\"t-h\",\"symbol\":\"H\",\"name\":\"总长\",\"nominalQ\":522000,\"nominalMm\":\"52.200\",\"lowerDeviationQ\":-200,\"lowerDeviationMm\":\"-0.020\",\"upperDeviationQ\":200,\"upperDeviationMm\":\"0.020\",\"sign\":1,\"termRevision\":1,\"sourceNote\":\"\"},{\"id\":\"t-b1\",\"symbol\":\"B1\",\"name\":\"左轴承\",\"nominalQ\":200000,\"nominalMm\":\"20.000\",\"lowerDeviationQ\":-100,\"lowerDeviationMm\":\"-0.010\",\"upperDeviationQ\":100,\"upperDeviationMm\":\"0.010\",\"sign\":-1,\"termRevision\":1,\"sourceNote\":\"\"},{\"id\":\"t-s\",\"symbol\":\"S\",\"name\":\"隔套\",\"nominalQ\":120500,\"nominalMm\":\"12.050\",\"lowerDeviationQ\":-100,\"lowerDeviationMm\":\"-0.010\",\"upperDeviationQ\":100,\"upperDeviationMm\":\"0.010\",\"sign\":-1,\"termRevision\":3,\"sourceNote\":\"\"},{\"id\":\"t-b2\",\"symbol\":\"B2\",\"name\":\"右轴承\",\"nominalQ\":200000,\"nominalMm\":\"20.000\",\"lowerDeviationQ\":-100,\"lowerDeviationMm\":\"-0.010\",\"upperDeviationQ\":100,\"upperDeviationMm\":\"0.010\",\"sign\":-1,\"termRevision\":1,\"sourceNote\":\"\"}],\"requirement\":{\"requirementId\":\"req-1\",\"revisionId\":\"reqrev-1\",\"ruleType\":\"closed-interval-mm\",\"confirmedText\":\"轴向装配间隙 C 应为 0.1000～0.3000 mm，含两端\",\"lowerQ\":1000,\"lowerMm\":\"0.100\",\"upperQ\":3000,\"upperMm\":\"0.300\",\"confirmedAt\":\"2026-11-09T09:00:00.000Z\",\"changeReason\":\"建立条款\",\"source\":{\"kind\":\"pdf\",\"documentId\":\"doc-1\",\"revisionId\":\"sr-1\",\"sha256\":\"6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff\",\"blobKey\":\"blob-1\",\"page\":2,\"rectPdf\":[10,10,110,30],\"pageBoxPdf\":[0,0,595,842]},\"revisionCount\":1},\"recordedCheck\":{\"checkId\":\"check-a-50807fd9-5391-48aa-9b54-de71dae211bb\",\"status\":\"satisfied\",\"reasonCodes\":[\"WITHIN_REQUIREMENT\"],\"resultInterval\":{\"minQ\":1000,\"maxQ\":2000},\"margins\":{\"lowerQ\":0,\"upperQ\":1000},\"checkedAt\":\"2026-11-12T06:04:05.487Z\",\"note\":\"这是文件里记录的历史检查证据，本次读取未重新判定。\"},\"provenance\":{\"total\":0,\"incomplete\":0,\"items\":[]},\"readOnly\":true}"
+    }
+  ],
+  "structuredContent": {
+    "ok": true,
+    "tool": "describe_project",
+    "file": {
+      "path": "/Users/aston/DSH/staff/docs/evidence/v40-stage4/fixtures/a40-1204.cunlian",
+      "byteSize": 61437,
+      "sha256": "16adf96f338a749a1a61389ced22cbf8ecc6d5bbd79b290c8ec4cf2a7cf6f891"
+    },
+    "manifest": {
+      "formatVersion": 2,
+      "createdAt": "2026-11-09T08:00:00.000Z",
+      "writer": {
+        "appVersion": "0.0.0-test",
+        "electronVersion": "45.2.3",
+        "engineVersion": "0.1.0"
+      },
+      "counts": {
+        "documents": 1,
+        "revisions": 1,
+        "blobs": 1,
+        "bindings": 1,
+        "events": 9,
+        "analysisSnapshots": 3,
+        "importSnapshots": 0,
+        "migrationBackups": 0,
+        "projectRevisions": 4,
+        "models": 0,
+        "drawings": 1,
+        "legacyArchiveRecords": 0
+      }
+    },
+    "project": {
+      "id": "project-a",
+      "name": "A40 · 完整任务书",
+      "schemaVersion": 10,
+      "engineVersion": "0.1.0",
+      "sourceKind": "pdf",
+      "createdAt": "2026-11-09T08:00:00.000Z",
+      "updatedAt": "2026-11-12T06:04:05.487Z",
+      "currentRevisionId": "rev-a-cd6bdfcb-9993-4f36-935b-ccec6cd4f401"
+    },
+    "formalVersion": {
+      "revisionId": "rev-a-cd6bdfcb-9993-4f36-935b-ccec6cd4f401",
+      "parentId": "rev-a-53f6f53b-0c91-4219-8e92-f0da4a0580f3",
+      "createdAt": "2026-11-12T06:04:05.487Z",
+      "reason": "Agent 授权提交",
+      "fileRevisionCount": 4
+    },
+    "parameters": [
+      {
+        "parameterId": "param:spacer:inner-diameter",
+        "key": "innerDiameter",
+        "valueQ": 200000,
+        "valueMm": "20.000",
+        "inputDecimals": 2,
+        "parameterRevision": 1,
+        "reviewStatus": "draft",
+        "sourceNote": "",
+        "source": "用户输入（项目记录）"
+      },
+      {
+        "parameterId": "param:spacer:outer-diameter",
+        "key": "outerDiameter",
+        "valueQ": 320000,
+        "valueMm": "32.000",
+        "inputDecimals": 2,
+        "parameterRevision": 1,
+        "reviewStatus": "draft",
+        "sourceNote": "",
+        "source": "用户输入（项目记录）"
+      },
+      {
+        "parameterId": "param:spacer:length",
+        "key": "length",
+        "valueQ": 120500,
+        "valueMm": "12.050",
+        "inputDecimals": 2,
+        "parameterRevision": 3,
+        "reviewStatus": "draft",
+        "sourceNote": "",
+        "source": "用户输入（项目记录）"
+      }
+    ],
+    "terms": [
+      {
+        "id": "t-h",
+        "symbol": "H",
+        "name": "总长",
+        "nominalQ": 522000,
+        "nominalMm": "52.200",
+        "lowerDeviationQ": -200,
+        "lowerDeviationMm": "-0.020",
+        "upperDeviationQ": 200,
+        "upperDeviationMm": "0.020",
+        "sign": 1,
+        "termRevision": 1,
+        "sourceNote": ""
+      },
+      {
+        "id": "t-b1",
+        "symbol": "B1",
+        "name": "左轴承",
+        "nominalQ": 200000,
+        "nominalMm": "20.000",
+        "lowerDeviationQ": -100,
+        "lowerDeviationMm": "-0.010",
+        "upperDeviationQ": 100,
+        "upperDeviationMm": "0.010",
+        "sign": -1,
+        "termRevision": 1,
+        "sourceNote": ""
+      },
+      {
+        "id": "t-s",
+        "symbol": "S",
+        "name": "隔套",
+        "nominalQ": 120500,
+        "nominalMm": "12.050",
+        "lowerDeviationQ": -100,
+        "lowerDeviationMm": "-0.010",
+        "upperDeviationQ": 100,
+        "upperDeviationMm": "0.010",
+        "sign": -1,
+        "termRevision": 3,
+        "sourceNote": ""
+      },
+      {
+        "id": "t-b2",
+        "symbol": "B2",
+        "name": "右轴承",
+        "nominalQ": 200000,
+        "nominalMm": "20.000",
+        "lowerDeviationQ": -100,
+        "lowerDeviationMm": "-0.010",
+        "upperDeviationQ": 100,
+        "upperDeviationMm": "0.010",
+        "sign": -1,
+        "termRevision": 1,
+        "sourceNote": ""
+      }
+    ],
+    "requirement": {
+      "requirementId": "req-1",
+      "revisionId": "reqrev-1",
+      "ruleType": "closed-interval-mm",
+      "confirmedText": "轴向装配间隙 C 应为 0.1000～0.3000 mm，含两端",
+      "lowerQ": 1000,
+      "lowerMm": "0.100",
+      "upperQ": 3000,
+      "upperMm": "0.300",
+      "confirmedAt": "2026-11-09T09:00:00.000Z",
+      "changeReason": "建立条款",
+      "source": {
+        "kind": "pdf",
+        "documentId": "doc-1",
+        "revisionId": "sr-1",
+        "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+        "blobKey": "blob-1",
+        "page": 2,
+        "rectPdf": [
+          10,
+          10,
+          110,
+          30
+        ],
+        "pageBoxPdf": [
+          0,
+          0,
+          595,
+          842
+        ]
+      },
+      "revisionCount": 1
+    },
+    "recordedCheck": {
+      "checkId": "check-a-50807fd9-5391-48aa-9b54-de71dae211bb",
+      "status": "satisfied",
+      "reasonCodes": [
+        "WITHIN_REQUIREMENT"
+      ],
+      "resultInterval": {
+        "minQ": 1000,
+        "maxQ": 2000
+      },
+      "margins": {
+        "lowerQ": 0,
+        "upperQ": 1000
+      },
+      "checkedAt": "2026-11-12T06:04:05.487Z",
+      "note": "这是文件里记录的历史检查证据，本次读取未重新判定。"
+    },
+    "provenance": {
+      "total": 0,
+      "incomplete": 0,
+      "items": []
+    },
+    "readOnly": true
+  },
+  "isError": false
+}

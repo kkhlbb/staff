@@ -1,0 +1,45 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ok\":true,\"tool\":\"check_requirement\",\"status\":\"exceeded\",\"satisfied\":false,\"closed\":{\"minQ\":500,\"minMm\":\"0.050\",\"maxQ\":1500,\"maxMm\":\"0.150\"},\"requirement\":{\"lowerQ\":1000,\"lowerMm\":\"0.100\",\"upperQ\":3000,\"upperMm\":\"0.300\",\"inclusive\":true,\"note\":null},\"margins\":{\"marginQ\":-500,\"marginMm\":\"-0.050\",\"lowerQ\":-500,\"lowerMm\":\"-0.050\",\"upperQ\":1500,\"upperMm\":\"0.150\"},\"reasonCodes\":[\"LOWER_VIOLATED\"],\"reasons\":[\"候选区间在下界越界（下裕量为负）。\"],\"basis\":\"闭区间判定：C=[0.050, 0.150] 对要求 [0.100, 0.300]；最紧裕量 -0.050 mm。\",\"readOnly\":true}"
+    }
+  ],
+  "structuredContent": {
+    "ok": true,
+    "tool": "check_requirement",
+    "status": "exceeded",
+    "satisfied": false,
+    "closed": {
+      "minQ": 500,
+      "minMm": "0.050",
+      "maxQ": 1500,
+      "maxMm": "0.150"
+    },
+    "requirement": {
+      "lowerQ": 1000,
+      "lowerMm": "0.100",
+      "upperQ": 3000,
+      "upperMm": "0.300",
+      "inclusive": true,
+      "note": null
+    },
+    "margins": {
+      "marginQ": -500,
+      "marginMm": "-0.050",
+      "lowerQ": -500,
+      "lowerMm": "-0.050",
+      "upperQ": 1500,
+      "upperMm": "0.150"
+    },
+    "reasonCodes": [
+      "LOWER_VIOLATED"
+    ],
+    "reasons": [
+      "候选区间在下界越界（下裕量为负）。"
+    ],
+    "basis": "闭区间判定：C=[0.050, 0.150] 对要求 [0.100, 0.300]；最紧裕量 -0.050 mm。",
+    "readOnly": true
+  },
+  "isError": false
+}

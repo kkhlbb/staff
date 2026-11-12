@@ -1,0 +1,175 @@
+{
+  "task": "MCP 通用入口",
+  "baseline": "main = aacdab8",
+  "note": "四组判据值：服务端路径 createRequirementProject → computeCandidateRequirementCheck；MCP 路径 calc_chain → check_requirement。",
+  "rows": [
+    {
+      "length": "12.00",
+      "server": {
+        "nominalQ": 2000,
+        "minQ": 1500,
+        "maxQ": 2500,
+        "toleranceQ": 1000,
+        "status": "satisfied",
+        "margins": {
+          "lowerQ": 500,
+          "upperQ": 500
+        }
+      },
+      "mcp": {
+        "nominalQ": 2000,
+        "minQ": 1500,
+        "maxQ": 2500,
+        "toleranceQ": 1000,
+        "status": "satisfied"
+      },
+      "mcpMargins": {
+        "marginQ": 500,
+        "marginMm": "0.050",
+        "lowerQ": 500,
+        "lowerMm": "0.050",
+        "upperQ": 500,
+        "upperMm": "0.050"
+      },
+      "equal": true
+    },
+    {
+      "length": "12.04",
+      "server": {
+        "nominalQ": 1600,
+        "minQ": 1100,
+        "maxQ": 2100,
+        "toleranceQ": 1000,
+        "status": "satisfied",
+        "margins": {
+          "lowerQ": 100,
+          "upperQ": 900
+        }
+      },
+      "mcp": {
+        "nominalQ": 1600,
+        "minQ": 1100,
+        "maxQ": 2100,
+        "toleranceQ": 1000,
+        "status": "satisfied"
+      },
+      "mcpMargins": {
+        "marginQ": 100,
+        "marginMm": "0.010",
+        "lowerQ": 100,
+        "lowerMm": "0.010",
+        "upperQ": 900,
+        "upperMm": "0.090"
+      },
+      "equal": true
+    },
+    {
+      "length": "12.05",
+      "server": {
+        "nominalQ": 1500,
+        "minQ": 1000,
+        "maxQ": 2000,
+        "toleranceQ": 1000,
+        "status": "satisfied",
+        "margins": {
+          "lowerQ": 0,
+          "upperQ": 1000
+        }
+      },
+      "mcp": {
+        "nominalQ": 1500,
+        "minQ": 1000,
+        "maxQ": 2000,
+        "toleranceQ": 1000,
+        "status": "satisfied"
+      },
+      "mcpMargins": {
+        "marginQ": 0,
+        "marginMm": "0.000",
+        "lowerQ": 0,
+        "lowerMm": "0.000",
+        "upperQ": 1000,
+        "upperMm": "0.100"
+      },
+      "equal": true
+    },
+    {
+      "length": "12.10",
+      "server": {
+        "nominalQ": 1000,
+        "minQ": 500,
+        "maxQ": 1500,
+        "toleranceQ": 1000,
+        "status": "unsatisfied",
+        "margins": {
+          "lowerQ": -500,
+          "upperQ": 1500
+        }
+      },
+      "mcp": {
+        "nominalQ": 1000,
+        "minQ": 500,
+        "maxQ": 1500,
+        "toleranceQ": 1000,
+        "status": "exceeded"
+      },
+      "mcpMargins": {
+        "marginQ": -500,
+        "marginMm": "-0.050",
+        "lowerQ": -500,
+        "lowerMm": "-0.050",
+        "upperQ": 1500,
+        "upperMm": "0.150"
+      },
+      "equal": true
+    }
+  ],
+  "allEqual": true,
+  "stdio": {
+    "node": "v26.12.1",
+    "runs": 3,
+    "toolNames": [
+      "read_taskbook",
+      "calc_chain",
+      "check_requirement",
+      "render_drawing",
+      "describe_project"
+    ],
+    "anyError": false,
+    "idempotency": [
+      {
+        "tool": "read_taskbook",
+        "runs": 3,
+        "uniqueTextHashes": 1,
+        "byteIdentical": true
+      },
+      {
+        "tool": "calc_chain",
+        "runs": 3,
+        "uniqueTextHashes": 1,
+        "byteIdentical": true
+      },
+      {
+        "tool": "check_requirement",
+        "runs": 3,
+        "uniqueTextHashes": 1,
+        "byteIdentical": true
+      },
+      {
+        "tool": "render_drawing",
+        "runs": 3,
+        "uniqueTextHashes": 1,
+        "byteIdentical": true
+      },
+      {
+        "tool": "describe_project",
+        "runs": 3,
+        "uniqueTextHashes": 1,
+        "byteIdentical": true
+      }
+    ]
+  },
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}
