@@ -44,6 +44,8 @@ cd docs/evidence/dxf-depth/research
 /tmp/venv-dxf/bin/python dump_vport.py         # 参考样本的 VPORT 表记录
 ```
 
+渲染 PNG（模型空间 / 图纸空间，§10）另需 matplotlib，命令见 §10.5。
+
 
 ### 1.1 研究里踩到的两个坑（都写进 `research.md` §5）
 
@@ -175,6 +177,10 @@ D-02 的标题栏文字高度断言拆成 R12（3→6，模型空间）与 2000�
    中文在无头渲染里显示为 `?????`，因为文件用的是 `txt.shx/hztxt.shx`（中文 CAD 惯例），
    这台机器上 QCAD 的无头渲染找不到这两个字体；文字内容本身由 dxf-parser/ezdxf 读回证明。
 
+> **这两条已在 §10 用 ezdxf 的 drawing addon 补上**：换渲染器后，模型空间能看到三条尺寸的
+> 尺寸线/箭头/数字，图纸空间能看到图框 + 标题栏 + 视口里的零件与尺寸，中文也不是乱码。
+> §10 同时解释了 QCAD 为什么渲不出来，免得下一个人以为图坏了。
+
 ---
 
 ## 8. 六条命令 + 打包（真实输出）
@@ -186,7 +192,7 @@ D-02 的标题栏文字高度断言拆成 R12（3→6，模型空间）与 2000�
 | 3 | `npm run lint` | exit 0（无输出） | `logs/22-lint.log` |
 | 4 | `npm test` | **108 文件 / 1184 用例全过**（基线 107/1159） | `logs/23-test.log` |
 | 5 | `npm run test:desktop` | **41 文件通过 + 2 跳过；285 通过 + 17 跳过**（与基线一致） | `logs/24-test-desktop.log` |
-| 6 | `npm run build` | `✓ built in 221ms` | `logs/10-build.log` |
+| 6 | `npm run build` | `✓ built in 224ms` | `logs/10-build.log` |
 | 7 | `npm run package:desktop -- --arch=arm64` | `RESULT PASS 打包产物中的 pdf worker 可被 main.cjs 运行时加载` | `logs/11-package.log` |
 | 8 | `npm run check:package:pdf-worker` | `RESULT PASS` | `logs/12-check-pdf-worker.log` |
 | 9 | `npx vitest run --config vitest.dxf-depth.config.ts` | 1 用例通过，生成 5 份样本 | 见 §5 |
@@ -210,3 +216,97 @@ D-02 的标题栏文字高度断言拆成 R12（3→6，模型空间）与 2000�
 4. **没有出 PDF 打印版的 A3**（本任务只管 DXF）。
 5. 视口尺寸取固定 `360×208`（纸面 mm），不是自动适配零件大小；零件变大到超出视口时
    目前不会报警（只有 `scripts/dxf-depth-samples.ts` 里的样例断言检查了包围盒）。
+
+---
+
+## 10. 「图能看」的正面证据：换 ezdxf 渲染（QCAD 渲不出来 ≠ 文件坏了）
+
+§7 里 QCAD 的三张位图**不能**证明「人打开图能看见标注」：A3 图框 + 标题栏在，但视口里是空的；
+模型图上看不到任何尺寸线/箭头；中文是方块。所以换一个**真会画 DIMENSION、也真会画视口**的
+渲染器重渲：ezdxf 的 `addons.drawing`。结论：**同一批文件渲得出来，图是好的**，
+QCAD 渲不出来是它的渲染策略问题（§10.4 逐条说明）。
+
+### 10.1 用了什么（版本 + 后端）
+
+| 项 | 值 |
+|---|---|
+| 渲染库 | `ezdxf` **1.4.2**（Python 3.9.6，项目内 venv `~/DSH/.venv-dxf-render`） |
+| 后端 | **`ezdxf.addons.drawing.matplotlib.MatplotlibBackend`**（ezdxf 官方 drawing addon 的 matplotlib 后端，`qsave()` + Agg） |
+| 其余 | matplotlib **3.9.4**、numpy 2.0.2、Pillow（随 matplotlib 装） |
+| 渲染配置 | `background_policy=WHITE`、`color_policy=BLACK`、`min_lineweight=0.18`（黑白打印效果，最利于判读） |
+| 脚本 | `research/render_ezdxf.py`（可重跑，§10.5 给命令） |
+| 运行日志 | `logs/62-ezdxf-render.log`（下面每条数字都在里面） |
+
+### 10.2 三张（+2 张放大）图，及每张能看到什么
+
+| 图 | 渲染对象 | 能看到什么 |
+|---|---|---|
+| `screenshots/render-model-2000-1x1.png` | `...-dxf-2000-1x1.dxf` 的 **Model 空间** | `12.050` 的**尺寸线 + 两端箭头 + 尺寸界线**；`⌀20.000` / `⌀32.000` 两条**引线箭头分别咬在内外圆上**；剖视 + 端视轮廓、中心线；底部中文注释「第三角投影：右端视图置于主视图右侧」 |
+| `screenshots/render-layout-2000-1x1.png` | 同一文件的 **`Layout1`（A3 图纸空间）** | A3 图框（420×297）+ 右下 10 行标题栏 + 左下技术要求区 + **视口里的零件与三条尺寸**（标注线、箭头、数字都在） |
+| `screenshots/render-layout-2000-1x2.png` | `...-dxf-2000-1x2.dxf` 的 `Layout1` | 同上，标题栏「比例/单位」= `1:2 · mm`，视口里的零件明显更小 |
+| `screenshots/render-layout-2000-1x1-viewport-zoom.png` | 上面两张的纸面 `x=30..390, y=72..280` 裁剪 | 1:1：零件纸面 **12.05×32 mm**，尺寸线两端箭头清楚、`12.050` 在线上方 |
+| `screenshots/render-layout-2000-1x2-viewport-zoom.png` | **同一纸面矩形**的裁剪 | 同一零件变成 **6.03×16 mm**（正好一半），标注文字仍是 3.5 mm（纸面字高不随比例变） |
+
+### 10.3 不靠眼睛的三条量化（都在 `logs/62-ezdxf-render.log`）
+
+1. **标注真的被画进位图**：模型空间渲染两遍，第二遍用 `filter_func` 去掉 3 条 `DIMENSION`
+   → 两张 PNG 的墨迹差 **58,111 px**（差分包围盒覆盖整个标注区域）。没画出来就不可能有差。
+2. **视口真的把模型内容画进位图**：图纸空间渲染两遍，第二遍去掉 `VIEWPORT`
+   → 1:1 差 **36,567 px**（差分纸面矩形 `x=200.24..357.63, y=108.71..201.08`）、
+   1:2 差 **34,318 px**（`x=203.20..349.84, y=108.71..193.29`），都落在视口 `30..390 / 72..280` 内。
+3. **视口比例不是写死的**：在渲染图上按纸面 mm 量 `12.050` 那条尺寸线的长度
+   → 1:1 = **11.77 mm**、1:2 = **5.84 mm**，比值 **2.01**（理论 `12.05 / 6.025 = 2.00`；
+   差值来自 300 dpi 下阈值化墨迹宽度）。
+   同时 `research/render_ezdxf.py` 用视口自己的变换矩阵 `get_transformation_matrix()` 预测
+   轮廓层纸面尺寸：1:1 = `122.03×32.00 mm`、1:2 = `111.01×16.00 mm`（剖视 12.05 与端视 32 横向排开，
+   所以 x 是两张视图的跨度；y 的 32 → 16 就是 1:2），渲染结果与预测一致。
+
+### 10.4 为什么 QCAD 渲不出视口内容（不是文件坏了）
+
+1. **`dwg2bmp -block=*Paper_Space` 只画图纸空间自身的实体**，不会把 `VIEWPORT` 里的模型内容
+   变换、裁剪进视口 → 图框、标题栏、技术要求都在，**视口位置是空白**。
+   （`qcad-sheet-2000-1x1.png` 的空白就是这样来的。）
+
+2. **QCAD 导入后自己重算标注，不画匿名块里的原生图形**。文件里 `*D1/*D2/*D3` 的线、箭头、
+   文字是完整的（组码读回可验：`*D1` 7 条 LINE + TEXT `12.050`，`*D2/*D3` 各 4 条 LINE + 直径文字，
+   见 `logs/62-ezdxf-render.log` 的 `DIMENSION` 三行），AutoCAD 系编辑器按块直接显示；QCAD 走它自己的
+   标注重算路径，无头渲染连重算出来的文字/箭头也一并丢掉 → 模型图上看不到尺寸。
+   QCAD 的 SVG 导出其实**认得**这是标注（`<!-- Rotated Dimension -->` ×1、`<!-- Diametric Dimension -->` ×2，
+   见 §7 第 1 行），只是没把几何画进位图。
+
+3. **中文在 QCAD 里是乱码方块，但文件本身没坏**：文件文字样式是 `txt.shx` + 大字体 `hztxt.shx`
+   （中文 CAD 惯例），这台机器上没有这两个 SHX，QCAD 无头渲染就画成方块/`?????`；
+   而且它**不读 `$DWGCODEPAGE`**。文件里 `$DWGCODEPAGE = ANSI_936`、文字内容按 GBK 编码，
+   dxf-parser（GBK 解码）与 ezdxf 都读出正确中文；ezdxf 渲染时把 `txt.shx` 替换成
+   `Arial Unicode.ttf`（Arial Unicode MS，`logs/62-ezdxf-render.log` 第 11–12 行的
+   `STYLE '标准' … -> 渲染用 FontFace(filename='Arial Unicode.ttf', …)`），
+   所以上面 5 张图里中文正常。
+
+4. **同一个文件、换渲染器的对照**：QCAD 位图 = 视口空白 + 无尺寸 + 方块中文；
+   ezdxf = 图框 + 标题栏 + 视口内零件与尺寸 + 正常中文。差别在渲染器，不在 DXF。
+
+### 10.5 复算
+
+```bash
+# 项目内装依赖（不装全局）
+python3 -m venv ~/DSH/.venv-dxf-render
+~/DSH/.venv-dxf-render/bin/pip install "ezdxf==1.4.2" matplotlib
+
+cd docs/evidence/dxf-depth
+~/DSH/.venv-dxf-render/bin/python research/render_ezdxf.py | tee logs/62-ezdxf-render.log
+# 5 张 PNG 落到 screenshots/，stdout 里有 §10.3 的三条差分/量图数字
+```
+
+### 10.6 这张证据的边界（如实写）
+
+1. **渲的是「文件里写了什么」**，不是「AutoCAD 打开一定长这样」。ezdxf 的 drawing addon 是
+   独立实现，它的标注/视口语义可能与 AutoCAD 有细微差异（例如箭头被画成细三角、线宽按
+   `min_lineweight` 归一化），但「尺寸是标注、视口里有零件」这两件事它证到了。
+2. **`⌀` 符号略粗**：文字的 `%%c` 被 ezdxf 换成直径符号 `⌀` 并按填充路径绘制，在这个字体下
+   笔画偏粗；数字内容（`20.000` / `32.000`）与组码 `1=%%c20.000` 完全一致。
+3. **本机没有 AutoCAD**，所以「AutoCAD 里也这样」仍属未验证（本任务卡没要求）。
+4. **别被 1:2 那份的模型包围盒骗了**：`...-1x2.dxf` 的模型包围盒是 `302.47×174.55 mm`，
+   比 1:1 的 `161.78×95.27 mm` 还大。原因是本仓库的纸面→模型换算是 `模型 = 纸面 × k`
+   （1:2 时 k=2），文字高度也跟着 ×2；**零件本身仍是真实尺寸**（剖视轮廓在模型里
+   1:1 与 1:2 两份都是 `12.06×32 mm`，只是平移了位置），1:2 的“变小”发生在纸面：
+   视口 `45=416`（=208×2）把它按 0.5 画到纸上 → 纸面 `6.03×16 mm`。这也是 §10.3 第 3 条的来由。

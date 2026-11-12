@@ -2,3 +2,4 @@
 > staff@0.4.0-beta typecheck
 > tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit
 
+EXIT1=0

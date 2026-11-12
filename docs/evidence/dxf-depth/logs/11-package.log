@@ -63,3 +63,4 @@ PASS worker 模块注册 globalThis.pdfjsWorker: /.vite/build/pdf.worker.mjs
   }
 }
 RESULT PASS 打包产物中的 pdf worker 可被 main.cjs 运行时加载
+EXIT7=0
