@@ -1,7 +1,7 @@
 {
   "name": "staff",
   "private": true,
-  "version": "0.0.5-beta",
+  "version": "0.4.0-beta",
   "license": "MIT",
   "type": "module",
   "main": ".vite/build/main.cjs",
@@ -21,7 +21,8 @@
     "test:real-docs": "vitest run --config vitest.realdocs.config.ts",
     "metrics:real-docs": "node scripts/real-doc-metrics.mjs",
     "test:desktop:e2e": "node desktop/tests/e2e/smoke.mjs",
-    "evidence:record": "vitest run --config vitest.evidence.config.ts"
+    "evidence:record": "vitest run --config vitest.evidence.config.ts",
+    "artifact:export": "vitest run --config vitest.v40stage4export.config.ts"
   },
   "dependencies": {
     "@zip.js/zip.js": "2.24.0",

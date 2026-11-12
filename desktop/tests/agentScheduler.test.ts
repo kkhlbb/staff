@@ -9,14 +9,15 @@ import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { AgentScheduler, type AgentToolDispatch, type StartAgentTaskOptions } from '../main/agentScheduler'
+import { AgentScheduler, toolMessageContent, type AgentToolDispatch, type StartAgentTaskOptions } from '../main/agentScheduler'
 import { AgentTaskStore } from '../main/agentTaskStore'
 import {
   FakeModelAdapter,
   ModelAdapterRegistry,
-  ModelConfig,
   type FakeModelStep,
 } from '../main/modelAdapter'
+import { ModelConfig } from '../main/modelConfig'
+import { MemoryKeychainStore } from '../main/keychain'
 import type { ToolErrorCode, ToolResult } from '../shared/contracts'
 import type { AgentBudget } from '../../src/agent/types'
 import { serializeEvidence } from '../../scripts/evidence-json'
@@ -460,6 +461,19 @@ describe('V4.0 阶段 2：Agent 调度十二项状态验收', () => {
     expect(result.message).toContain('未配置')
     expect(harness.stub.calls).toHaveLength(0)
     await expect(fs.readdir(path.join(harness.workspace, 'agent-tasks'))).rejects.toMatchObject({ code: 'ENOENT' })
-    expect(new ModelConfig().getProviderStatus()).toEqual({ configured: false, provider: null })
+    expect(new ModelConfig({ rootDir: harness.workspace, keychain: new MemoryKeychainStore(), env: {} }).getProviderStatus()).toMatchObject({ configured: false, provider: null, keyPresent: false })
+  })
+
+  it('S4-00 工具回执带 data 进入模型上下文；超限时截断但保留 ok/code', () => {
+    const content = toolMessageContent('context', ok({ length: 120400 }))
+    expect(JSON.parse(content)).toMatchObject({ tool: 'context', ok: true, code: null, data: { length: 120400 } })
+    const failed = toolMessageContent('stage', fail('CONSTRAINT_VIOLATED', '不能修改锁定参数'))
+    expect(JSON.parse(failed)).toMatchObject({ tool: 'stage', ok: false, code: 'CONSTRAINT_VIOLATED', message: '不能修改锁定参数' })
+    const big = toolMessageContent('confirmed', ok({ text: 'x'.repeat(40_000) }))
+    const parsed = JSON.parse(big) as { truncated: boolean; ok: boolean; code: null }
+    expect(parsed.truncated).toBe(true)
+    expect(parsed.ok).toBe(true)
+    expect(parsed.code).toBeNull()
+    expect(big.length).toBeLessThan(25_000)
   })
 })

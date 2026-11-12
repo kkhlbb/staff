@@ -70,3 +70,13 @@ npm run package:desktop -- --arch=arm64
 ## 7 许可
 
 MIT，见 `LICENSE`。第三方组件与字体许可见 `THIRD-PARTY-NOTICES.md`（pdfjs 为 Apache-2.0，Noto 字体为 OFL-1.1）。
+
+## 8 V4.0 阶段 4 增量（0.4.0-beta）
+
+- `CFBundleShortVersionString` = `0.4.0-beta`；顶栏批次标识由「V3.5 · Beta」改为「V4.0 · Beta」。
+- 新增真实模型适配器 `openai-compatible-1`（OpenAI 兼容 `chat/completions` + `tools`，SSE 结构流式）。base_url / 模型 ID / 密钥都可在设置面板修改，换供应商不需要改代码。
+- 密钥只存 macOS Keychain（`security` 经 stdin 写入，不出现在进程参数）；配置文件 `model-config.json` 只含 base_url / 模型 ID / keySource，不含密钥。
+- **联网范围**：只有配置真实模型并点击「真实模型执行」时才会向供应商发请求；发送内容是结构化参数、工具回执、条款摘录与必要选区文字，不发送整份 PDF。未配置时手动功能与离线演示（假模型）保持断网。
+- 新增 `exportApprovedVersion`：导出**当前已保存版本**的图纸（SVG/PDF），经系统对话框，返回真实文件名/大小/哈希；取消返回 `CANCELLED` 且不产生文件。
+- Agent 侧栏新增「模型回复（自然语言，不是回执）」区：模型文本单独展示，结论仍只取工具回执与主进程预览。
+- 已知限制：本机自动化环境无法驱动系统保存对话框（System Events 看不到该 ad-hoc 应用窗口），打包应用的导出对话框走查记为 BLOCKED；真实文件写入/哈希/取消由 `desktop/tests/agentExport.test.ts` 覆盖。

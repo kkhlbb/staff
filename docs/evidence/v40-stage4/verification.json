@@ -1,0 +1,148 @@
+{
+  "baseline": "dc78a5e",
+  "branch": "agent/v40-stage4",
+  "results": [
+    {
+      "step": "typecheck",
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "startedAt": "2026-11-12T06:02:23.231Z",
+      "finishedAt": "2026-11-12T06:02:26.626Z",
+      "log": "docs/evidence/v40-stage4/logs/typecheck.log"
+    },
+    {
+      "step": "typecheck-desktop",
+      "command": "npm run typecheck:desktop",
+      "exitCode": 0,
+      "startedAt": "2026-11-12T06:02:26.627Z",
+      "finishedAt": "2026-11-12T06:02:29.261Z",
+      "log": "docs/evidence/v40-stage4/logs/typecheck-desktop.log"
+    },
+    {
+      "step": "lint",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "startedAt": "2026-11-12T06:02:29.262Z",
+      "finishedAt": "2026-11-12T06:02:34.180Z",
+      "log": "docs/evidence/v40-stage4/logs/lint.log"
+    },
+    {
+      "step": "test",
+      "command": "npm run test",
+      "exitCode": 0,
+      "startedAt": "2026-11-12T06:02:34.180Z",
+      "finishedAt": "2026-11-12T06:02:51.677Z",
+      "log": "docs/evidence/v40-stage4/logs/test.log"
+    },
+    {
+      "step": "test-desktop",
+      "command": "npm run test:desktop",
+      "exitCode": 0,
+      "startedAt": "2026-11-12T06:02:51.678Z",
+      "finishedAt": "2026-11-12T06:02:58.758Z",
+      "log": "docs/evidence/v40-stage4/logs/test-desktop.log"
+    },
+    {
+      "step": "build",
+      "command": "npm run build",
+      "exitCode": 0,
+      "startedAt": "2026-11-12T06:02:58.758Z",
+      "finishedAt": "2026-11-12T06:03:02.359Z",
+      "log": "docs/evidence/v40-stage4/logs/build.log"
+    },
+    {
+      "step": "export-artifact",
+      "command": "npm run artifact:export",
+      "exitCode": 0,
+      "startedAt": "2026-11-12T06:03:02.360Z",
+      "finishedAt": "2026-11-12T06:03:02.732Z",
+      "log": "docs/evidence/v40-stage4/logs/export-artifact.log"
+    },
+    {
+      "step": "package-desktop",
+      "command": "npm run package:desktop",
+      "exitCode": 0,
+      "startedAt": "2026-11-12T06:03:02.732Z",
+      "finishedAt": "2026-11-12T06:03:14.848Z",
+      "log": "docs/evidence/v40-stage4/logs/package-desktop.log"
+    },
+    {
+      "step": "check-package-pdf-worker",
+      "command": "npm run check:package:pdf-worker",
+      "exitCode": 0,
+      "startedAt": "2026-11-12T06:03:14.848Z",
+      "finishedAt": "2026-11-12T06:03:14.995Z",
+      "log": "docs/evidence/v40-stage4/logs/check-package-pdf-worker.log"
+    },
+    {
+      "step": "real-model-a40",
+      "command": "V40_REAL_MODEL=1 npx vitest run --config vitest.desktop.config.ts desktop/tests/realModelA40.test.ts",
+      "exitCode": 0,
+      "startedAt": "2026-11-12T06:03:14.995Z",
+      "finishedAt": "2026-11-12T06:05:00.381Z",
+      "log": "docs/evidence/v40-stage4/logs/real-model-a40.log"
+    },
+    {
+      "step": "e2e-packaged",
+      "command": "node desktop/tests/e2e/v40stage4.mjs",
+      "exitCode": 0,
+      "log": "docs/evidence/v40-stage4/logs/e2e-packaged.log"
+    },
+    {
+      "step": "key-scan",
+      "command": "scan tracked files for runtime key",
+      "exitCode": 0,
+      "skippedReason": null,
+      "hits": {
+        "exact": 0,
+        "prefix": 0
+      }
+    }
+  ],
+  "guards": [
+    {
+      "file": "docs/evidence/v40-stage4/a40-real-results.json",
+      "violations": [],
+      "keyLeak": false
+    },
+    {
+      "file": "docs/evidence/v40-stage4/e2e-result.json",
+      "violations": [],
+      "keyLeak": false
+    },
+    {
+      "file": "docs/evidence/v40-stage4/export-artifact.json",
+      "violations": [],
+      "keyLeak": false
+    }
+  ],
+  "keyScan": {
+    "filesScanned": 1186,
+    "exactHits": [],
+    "prefixHits": [],
+    "keyLength": 35,
+    "prefixLength": 12,
+    "note": "只统计命中文件，不输出密钥内容",
+    "appConfig": {
+      "path": "model-config.json (app data)",
+      "exists": true,
+      "keyLeak": false
+    }
+  },
+  "screenshots": [
+    "v40-stage4-01-provider-configured.png",
+    "v40-stage4-02-provider-test.png",
+    "v40-stage4-03-preview-margins.png",
+    "v40-stage4-04-commit.png",
+    "v40-stage4-05-over-limit-blocked.png",
+    "v40-stage4-06-export-dialog.png",
+    "v40-stage4-08-clarification.png",
+    "v40-stage4-09-reopen-recap.png"
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": [
+    "finishedAt",
+    "startedAt"
+  ]
+}

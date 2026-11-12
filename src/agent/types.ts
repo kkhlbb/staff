@@ -23,7 +23,7 @@ export const AGENT_TASK_STATES = [
 export type AgentTaskState = (typeof AGENT_TASK_STATES)[number]
 
 /** 阶段 1 已实现的 agent:* 工具命令。模型只能发这些调用。 */
-export type AgentToolCommand = 'context' | 'confirmed' | 'apply' | 'stage' | 'preview'
+export type AgentToolCommand = 'context' | 'confirmed' | 'apply' | 'stage' | 'preview' | 'export'
 
 export interface AgentBudget {
   /** 每轮任务最多执行的工具调用次数。 */
@@ -34,20 +34,39 @@ export interface AgentBudget {
   requestTimeoutMs: number
 }
 
-export interface ModelMessage {
-  role: 'system' | 'user' | 'assistant' | 'tool'
-  content: string
-}
-
 export interface ModelToolCall {
+  /** 供应商返回的调用 ID；缺省时由适配器生成，仅用于协议回填，不参与权限判定。 */
+  id?: string
   name: string
   /** 原始参数 JSON；必须由调度层解析并做 JSON Schema 校验后才可执行。 */
   argumentsJson: string
 }
 
+export interface ModelMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool'
+  content: string
+  /** assistant 轮携带的工具调用；适配器据此重建 OpenAI 兼容的 tool_calls 消息。 */
+  toolCalls?: ModelToolCall[]
+  /** tool 轮对应的调用 ID；只用于协议配对。 */
+  toolCallId?: string
+  /** tool 轮的工具名；只用于诊断，不参与判定。 */
+  name?: string
+}
+
+/** 供应商上报的 token 用量；用于指标与费用，不参与任何工程判定。 */
+export interface ModelUsage {
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  /** 供应商可选的缓存命中明细；缺省表示未上报。 */
+  cacheHitTokens?: number
+  cacheMissTokens?: number
+}
+
 export interface ModelReply {
   text: string
   toolCalls: ModelToolCall[]
+  usage?: ModelUsage
 }
 
 export interface ToolSchema {

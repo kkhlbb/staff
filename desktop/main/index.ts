@@ -55,6 +55,8 @@ import { ApprovalStore } from './approvalStore'
 import { inspectSourcePdf } from './pdfSourceInspect'
 import { DrawingExportStore, type DrawingExportKind } from './drawingExportStore'
 import { printDrawingToPdf } from './drawingPdf'
+import { MacKeychainStore } from './keychain'
+import { RealModelRuntime } from './realModelRuntime'
 import { resolvePrintFontPath } from './printAssets'
 import { renderDrawingSvg } from '../../src/drawing/renderDrawingSvg'
 import type { DrawingData } from '../../src/drawing/types'
@@ -505,13 +507,31 @@ function installIpcHandlers(): void {
     confirmOverwrite: confirmProjectOverwrite,
   })
   const approvals = new ApprovalStore({ rootDir: WORKSPACE_ROOT })
-  const agentTools = new AgentToolService({ projectService, recovery, controller, rootDir: path.join(app.getPath('userData'), 'workspace'), approvals })
+  const modelRuntime = new RealModelRuntime({ rootDir: path.join(app.getPath('userData'), 'workspace'), keychain: new MacKeychainStore() })
+  const agentTools = new AgentToolService({
+    projectService,
+    recovery,
+    controller,
+    rootDir: path.join(app.getPath('userData'), 'workspace'),
+    approvals,
+    exportPorts: {
+      // 路径只来自系统对话框；后缀由 format 决定（suggestedName 由工具层生成）。
+      pickTarget: (windowId, suggestedName) => pickDrawingExportPath(
+        windowId,
+        suggestedName.toLowerCase().endsWith('.pdf') ? 'pdf' : 'svg',
+        sanitizeFileName(suggestedName),
+      ),
+      // 已保存版本的 PDF 走既有打印视图（A4 横向、内嵌字体）。
+      renderPdf: async (_windowId, _svg, drawing) => printDrawingPdf(drawing),
+    },
+  })
   registerAgentToolChannels(ipc, { guard, service: agentTools })
   registerAgentSessionChannels(ipc, {
     guard,
     controller,
     service: agentTools,
     approvals,
+    runtime: modelRuntime,
     rootDir: WORKSPACE_ROOT,
     emit: (windowId, view) => {
       const handle = windows.get(windowId)

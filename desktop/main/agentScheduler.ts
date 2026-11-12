@@ -10,6 +10,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import { fingerprint, redactText, summarizeArguments, summarizeMessages } from '../../src/agent/redact'
+import { formatQWithDecimals } from '../../src/drawing/formatDimension'
 import { isTerminal, nextState } from '../../src/agent/stateMachine'
 import { MODEL_TOOL_SCHEMAS, validateToolArguments } from '../../src/agent/toolSchemas'
 import type {
@@ -50,6 +51,63 @@ export interface AgentToolDispatch {
 
 export interface AgentToolDispatcher {
   dispatch(call: AgentToolDispatch): Promise<ToolResult<unknown>>
+}
+
+/** 工具回执进模型上下文的字节预算；超出时保留结构并注明截断，不丢 ok/code。 */
+export const TOOL_MESSAGE_MAX_CHARS = 24_000
+
+/** 草稿类工具回执在进模型上下文前压缩：去掉图纸/差分，保留复核所需字段。 */
+function compactDraftData(data: unknown): unknown {
+  if (data === null || typeof data !== 'object') return data
+  const value = data as Record<string, unknown>
+  if (typeof value.draftId !== 'string') return data
+  const mm = (q: unknown): string | undefined => typeof q === 'number' ? (formatQWithDecimals(q, 4) ?? String(q)) : undefined
+  const parameters = Array.isArray(value.parameters)
+    ? value.parameters.map((parameter) => {
+        const item = parameter as { key?: unknown; valueQ?: unknown; inputDecimals?: unknown; reviewStatus?: unknown }
+        return { key: item.key, valueQ: item.valueQ, valueMm: mm(item.valueQ), inputDecimals: item.inputDecimals, reviewStatus: item.reviewStatus }
+      })
+    : []
+  const computation = value.computation as { result?: { minQ?: number; maxQ?: number; status?: string }; chain?: { terms?: { symbol: string; nominalQ: number; lowerDeviationQ: number; upperDeviationQ: number; sign: number }[] } } | undefined
+  return {
+    draftId: value.draftId,
+    draftRevision: value.draftRevision,
+    baseRevisionId: value.baseRevisionId,
+    stale: value.stale,
+    parameters,
+    geometry: value.geometry,
+    issues: value.issues,
+    requirementPreview: (value.requirementPreview as { status?: unknown; reasonCodes?: unknown } | undefined) === undefined
+      ? null
+      : { status: (value.requirementPreview as { status?: unknown }).status, reasonCodes: (value.requirementPreview as { reasonCodes?: unknown }).reasonCodes },
+    result: computation?.result === undefined ? null : { ...computation.result, minMm: mm(computation.result.minQ), maxMm: mm(computation.result.maxQ) },
+    chainTerms: computation?.chain?.terms ?? [],
+    ...(typeof value.previewId === 'string' ? { previewId: value.previewId } : {}),
+    ...(typeof value.previewFingerprint === 'string' ? { previewFingerprint: value.previewFingerprint } : {}),
+  }
+}
+
+/**
+ * 工具消息内容：成功带 data，失败带 code/message/details。
+ * 模型只能看到这里的实际回执，不能用自述替代。
+ */
+export function toolMessageContent(tool: string, result: ToolResult<unknown>): string {
+  const data = result.ok && (tool === 'apply' || tool === 'stage' || tool === 'preview')
+    ? compactDraftData(result.data)
+    : result.ok ? result.data : undefined
+  const payload: Record<string, unknown> = result.ok
+    ? { tool, ok: true, code: null, objectVersion: result.objectVersion, data }
+    : { tool, ok: false, code: result.code, message: result.message, ...(result.details === undefined ? {} : { details: result.details }) }
+  const text = JSON.stringify(payload)
+  if (text.length <= TOOL_MESSAGE_MAX_CHARS) return text
+  return JSON.stringify({
+    tool,
+    ok: payload.ok,
+    code: payload.code,
+    truncated: true,
+    limitChars: TOOL_MESSAGE_MAX_CHARS,
+    preview: text.slice(0, TOOL_MESSAGE_MAX_CHARS),
+  })
 }
 
 export interface StartAgentTaskOptions {
@@ -311,7 +369,7 @@ export class AgentScheduler {
         }
         await this.recordStep(entry, {
           kind: 'model',
-          inputSummary: { request: this.requestSummary(request) },
+          inputSummary: { request: this.requestSummary(request), ...(reply.usage === undefined ? {} : { usage: reply.usage }) },
           outputRef: `reply:${reply.text.length}:${fingerprint(reply.text)}`,
           errorCode: null,
           durationMs,
@@ -322,7 +380,9 @@ export class AgentScheduler {
           return await this.finish(entry, target, anyToolFailed ? lastFailure?.code ?? 'TOOL_FAILED' : null,
             anyToolFailed ? lastFailure?.message ?? '工具执行失败' : null)
         }
-        if (reply.text.length > 0) messages.push({ role: 'assistant', content: reply.text })
+        if (reply.text.length > 0 || reply.toolCalls.length > 0) {
+          messages.push({ role: 'assistant', content: reply.text, ...(reply.toolCalls.length === 0 ? {} : { toolCalls: reply.toolCalls }) })
+        }
         for (const call of reply.toolCalls) {
           if (this.isStaleReply(entry)) return await this.finishStale(entry)
           if (entry.cancelRequested) {
@@ -426,7 +486,9 @@ export class AgentScheduler {
           }
           messages.push({
             role: 'tool',
-            content: JSON.stringify({ tool: call.name, ok: result.ok, code: result.ok ? null : result.code }),
+            content: toolMessageContent(call.name, result),
+            toolCallId: call.id,
+            name: call.name,
           })
         }
         if (entry.cancelRequested) return await this.finish(entry, 'cancelled', 'CANCELLED', '取消后剩余调用不再执行')
@@ -583,6 +645,9 @@ export class AgentScheduler {
     if (error instanceof ModelTimeoutError) return { code: 'TIMEOUT', message: '模型请求超时；已完成草稿保留，可继续' }
     if (error instanceof ModelAdapterError) {
       if (error.code === 'CANCELLED') return { code: 'CANCELLED', message: '模型请求已取消' }
+      if (error.code === 'TIMEOUT') return { code: 'TIMEOUT', message: error.message }
+      if (error.code === 'INVALID_INPUT') return { code: 'INVALID_INPUT', message: error.message }
+      // 真实供应商的连接/鉴权/协议失败统一记为 TOOL_FAILED，原始原因保留在消息里。
       return { code: 'TOOL_FAILED', message: error.message }
     }
     return { code: 'TOOL_FAILED', message: '模型连接失败或返回内容不可解析' }

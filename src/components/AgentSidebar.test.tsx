@@ -151,6 +151,27 @@ describe('V4.0 阶段3：任务侧栏渲染契约', () => {
     expect(screen.getByText('model')).toBeInTheDocument()
   })
 
+  it('S4-02 模型回复单独展示（标注非回执），不产生确认按钮或结论位', async () => {
+    let emit: ((payload: AgentTaskView) => void) | null = null
+    window.cunlian = apiWith({ emit: payload => { emit?.(payload) }, preview: null })
+    const api = window.cunlian
+    const originalSubscribe = api.onAgentEvent!
+    api.onAgentEvent = vi.fn(listener => { emit = listener; return originalSubscribe(listener) })
+    render(<AgentSidebar open onToggle={() => undefined} projectName="隔套间隙演示" revisionId="rev-a1" onLocate={() => undefined} />)
+    await waitFor(() => expect(emit).not.toBeNull())
+    emit!(view({
+      task: task({ state: 'completed', errorCode: null, errorMessage: null }),
+      steps: [step({ tool: 'stage', errorCode: null, outputRef: 'tool:req-1:rev-a2' })],
+      questions: [],
+      assistantText: '长度已改为 12.04 mm，区间 [0.1100,0.2100] mm；文件已保存。',
+    }))
+    await waitFor(() => expect(screen.getByTestId('agent-model-text').textContent).toContain('12.04'))
+    expect(screen.getByText(/模型回复（自然语言，不是回执）/)).toBeInTheDocument()
+    // 模型文本只展示，不生成“确认保存”，也不改变已送达的工具回执。
+    expect(screen.queryByRole('button', { name: '确认保存' })).not.toBeInTheDocument()
+    expect(screen.getAllByText(/stage · ok/).length).toBeGreaterThan(0)
+  })
+
   it('S3-09/S3-01 提交回执成功才显示“已提交”，且显示真实版本号', async () => {
     let emit: ((payload: AgentTaskView) => void) | null = null
     window.cunlian = apiWith()

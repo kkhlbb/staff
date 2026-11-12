@@ -53,6 +53,12 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
   const api = window.cunlian
   const installed = api?.agentStart !== undefined && api.agentTaskState !== undefined
   const [provider, setProvider] = useState<AgentProviderStatusValue | null>(null)
+  const [baseUrl, setBaseUrl] = useState('')
+  const [model, setModel] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  const [settingsNote, setSettingsNote] = useState<string | null>(null)
+  const [testNote, setTestNote] = useState<string | null>(null)
+  const [exportNote, setExportNote] = useState<string | null>(null)
   const [goal, setGoal] = useState('把隔套加厚 0.10 mm 并检查间隙')
   const [taskId, setTaskId] = useState<string | null>(null)
   const [view, setView] = useState<AgentTaskView | null>(null)
@@ -66,7 +72,12 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
 
   useEffect(() => {
     if (!installed || api?.agentProviderStatus === undefined) return
-    void api.agentProviderStatus().then(result => { if (result.ok) setProvider(result.data) })
+    void api.agentProviderStatus().then(result => {
+      if (!result.ok) return
+      setProvider(result.data)
+      setBaseUrl(current => current === '' ? result.data.real.baseUrl ?? '' : current)
+      setModel(current => current === '' ? result.data.real.model ?? '' : current)
+    })
   }, [api, installed])
 
   const refreshPreview = useCallback(async () => {
@@ -163,6 +174,68 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     onLocate(result.data)
   }
 
+  const startReal = async (): Promise<void> => {
+    if (!installed || api?.agentStart === undefined) return
+    setBusy(true); setNotice(null); setCommit(null); setPreview(null); setView(null); setTaskId(null); setExportNote(null)
+    const result = await api.agentStart({ goal: goal.trim() === '' ? '把隔套加厚 0.10 mm 并检查间隙' : goal.trim(), demo: 'normal', mode: 'real' })
+    if (result.ok) {
+      setTaskId(result.data.taskId)
+      setNotice(`已启动真实模型 · ${result.data.modelId}`)
+    } else {
+      setNotice(`启动失败 · ${result.code}：${result.message}`)
+    }
+    setBusy(false)
+  }
+
+  const saveProvider = async (): Promise<void> => {
+    if (api?.saveAgentProvider === undefined) return
+    setBusy(true); setSettingsNote(null); setTestNote(null)
+    const result = await api.saveAgentProvider({
+      baseUrl: baseUrl.trim(),
+      model: model.trim(),
+      ...(apiKey === '' ? {} : { apiKey }),
+    })
+    if (result.ok) {
+      setProvider(result.data)
+      setApiKey('')
+      setSettingsNote(result.data.real.configured ? '已保存：配置与密钥齐备（密钥存 Keychain，不落盘）' : '已保存配置，但仍缺密钥')
+    } else {
+      setSettingsNote(`保存失败 · ${result.code}：${result.message}`)
+    }
+    setBusy(false)
+  }
+
+  const testProvider = async (): Promise<void> => {
+    if (api?.testAgentProvider === undefined) return
+    setBusy(true); setTestNote(null)
+    const result = await api.testAgentProvider()
+    setTestNote(result.ok
+      ? result.data.ok
+        ? `连接成功 · ${result.data.model ?? '模型'} · ${result.data.latencyMs} ms（合成文本，未发送项目资料）`
+        : `连接失败 · ${result.data.code}：${result.data.message}`
+      : `测试请求失败 · ${result.code}：${result.message}`)
+    setBusy(false)
+  }
+
+  const clearKey = async (): Promise<void> => {
+    if (api?.clearAgentProviderKey === undefined) return
+    setBusy(true); setSettingsNote(null); setTestNote(null)
+    const result = await api.clearAgentProviderKey()
+    if (result.ok) { setProvider(result.data); setSettingsNote('已从 Keychain 删除密钥') }
+    else setSettingsNote(`清除失败 · ${result.code}：${result.message}`)
+    setBusy(false)
+  }
+
+  const exportSaved = async (format: 'pdf' | 'svg'): Promise<void> => {
+    if (api?.exportApprovedVersion === undefined) return
+    setBusy(true); setExportNote(null)
+    const result = await api.exportApprovedVersion({ format })
+    setExportNote(result.ok
+      ? `已导出 · ${result.data.fileName} · ${result.data.byteSize} B · ${result.data.sha256?.slice(0, 12)}…`
+      : `导出未完成 · ${result.code}：${result.message}`)
+    setBusy(false)
+  }
+
   const toolSteps = (view?.steps ?? []).filter(step => step.kind === 'tool')
   const recent = toolSteps.slice(-3).reverse()
   const requirementBlocked = preview !== null && preview.requirement !== null && preview.requirement.status !== 'satisfied'
@@ -186,25 +259,63 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
       <dl>
         <div><dt>活动项目</dt><dd>{projectName ?? '未打开'}</dd></div>
         <div><dt>正式版本</dt><dd>{revisionId ?? '—'}</dd></div>
-        <div><dt>真实模型</dt><dd>{provider === null ? '读取中…' : provider.real.configured ? provider.real.provider : '未配置（阶段 4）'}</dd></div>
+        <div><dt>真实模型</dt><dd data-testid="agent-provider-status">
+          {provider === null ? '读取中…' : provider.real.configured ? provider.real.provider : '未配置'}
+        </dd></div>
+        <div><dt>密钥</dt><dd>{provider === null ? '—' : provider.real.keyPresent === true ? `已存 Keychain` : '未保存'}</dd></div>
         <div><dt>离线演示</dt><dd>{provider === null ? '读取中…' : provider.demo.label}</dd></div>
       </dl>
       {!installed && <p role="alert">当前 preload 未提供 Agent 任务接口；不提供假的执行入口。</p>}
+      {api?.saveAgentProvider !== undefined && (
+        <details className="agent-sidebar__settings">
+          <summary>模型设置（OpenAI 兼容）</summary>
+          <label>base_url
+            <input value={baseUrl} onChange={event => setBaseUrl(event.target.value)} aria-label="模型 base_url" placeholder="https://api.deepseek.com/v1" />
+          </label>
+          <label>模型 ID
+            <input value={model} onChange={event => setModel(event.target.value)} aria-label="模型 ID" placeholder="deepseek-chat" />
+          </label>
+          <label>密钥（只写 Keychain）
+            <input type="password" value={apiKey} onChange={event => setApiKey(event.target.value)} aria-label="模型密钥" autoComplete="off" placeholder="留空表示不修改" />
+          </label>
+          <p className="agent-sidebar__hint">发送范围：结构化参数、条款摘录与必要选区文字；不发送整份 PDF。密钥只存 macOS Keychain，不进项目文件、日志或证据。</p>
+          <div className="agent-sidebar__actions">
+            <button type="button" disabled={busy} onClick={() => void saveProvider()}>保存配置</button>
+            <button type="button" disabled={busy} onClick={() => void testProvider()}>测试连接</button>
+            <button type="button" disabled={busy} onClick={() => void clearKey()}>清除密钥</button>
+          </div>
+          {settingsNote !== null && <p role="status" className="agent-sidebar__hint">{settingsNote}</p>}
+          {testNote !== null && <p role="status" className="agent-sidebar__hint" data-testid="agent-provider-test">{testNote}</p>}
+        </details>
+      )}
     </section>
 
     <section className="agent-sidebar__section" aria-label="任务输入">
       <label>任务
         <input value={goal} maxLength={500} onChange={event => setGoal(event.target.value)} aria-label="Agent 任务输入" />
       </label>
-      <p className="agent-sidebar__hint">真实模型未配置；下面按钮只运行阶段 2 的假模型，不联网。所有结果以工具回执为准。</p>
+      <p className="agent-sidebar__hint">
+        {provider?.real.configured === true
+          ? `真实模型已配置（${provider.real.provider}）；下面第一个按钮走真实供应商，其余只运行离线假模型。`
+          : '真实模型未配置：先在“模型设置”填写 base_url、模型 ID 与密钥。所有结果以工具回执为准。'}
+      </p>
       <div className="agent-sidebar__actions">
+        <button type="button" className="agent-sidebar__primary" disabled={busy || !installed || provider?.real.configured !== true}
+          title="真实模型只发工具调用；确认与提交仍由界面完成"
+          onClick={() => void startReal()}>真实模型执行</button>
         {DEMOS.map(item => <button key={item.scenario} type="button" disabled={busy || !installed} title={item.hint}
-          className={item.scenario === 'normal' ? 'agent-sidebar__primary' : undefined}
           onClick={() => void start(item.scenario)}>{item.label}</button>)}
         {running && <button type="button" disabled={busy} onClick={() => void cancel()}>取消</button>}
         {view !== null && (view.task.state === 'failed' || view.task.state === 'awaiting-input') && <button type="button" disabled={busy} onClick={() => void resume()}>继续</button>}
       </div>
       {notice !== null && <p role="status" className="agent-sidebar__hint">{notice}</p>}
+      {api?.exportApprovedVersion !== undefined && (
+        <div className="agent-sidebar__actions">
+          <button type="button" disabled={busy || revisionId === null} onClick={() => void exportSaved('svg')}>导出已保存版本 SVG</button>
+          <button type="button" disabled={busy || revisionId === null} onClick={() => void exportSaved('pdf')}>导出 PDF</button>
+        </div>
+      )}
+      {exportNote !== null && <p role="status" className="agent-sidebar__hint" data-testid="agent-export-result">{exportNote}</p>}
     </section>
 
     <section className="agent-sidebar__section" aria-label="执行步骤">
@@ -220,6 +331,13 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
           </li>)}
         </ol>
       </>}
+    </section>
+
+    <section className="agent-sidebar__section" aria-label="模型回复">
+      <h3>模型回复（自然语言，不是回执）</h3>
+      {view === null || (view.assistantText ?? '') === ''
+        ? <p className="agent-sidebar__hint">暂无模型文本；结论只看工具回执与下方预览。</p>
+        : <p className="agent-sidebar__reply" data-testid="agent-model-text" style={{ whiteSpace: 'pre-wrap' }}>{view.assistantText}</p>}
     </section>
 
     <section className="agent-sidebar__section" aria-label="待答问题">

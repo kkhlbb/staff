@@ -1,0 +1,221 @@
+{
+  "toolCalls": {
+    "total": 43,
+    "ok": 42,
+    "failed": 1,
+    "successRate": 0.9767
+  },
+  "modelCalls": 54,
+  "userSupplements": 0,
+  "manualBackfill": 0,
+  "failureRecoveries": 2,
+  "byItem": [
+    {
+      "item": "A40-01",
+      "attempts": 3,
+      "pass": 3,
+      "durationsMs": [
+        6450,
+        7149,
+        6231
+      ],
+      "states": [
+        "ready-to-commit",
+        "ready-to-commit",
+        "ready-to-commit"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-04",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        5882
+      ],
+      "states": [
+        "ready-to-commit"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-05",
+      "attempts": 3,
+      "pass": 3,
+      "durationsMs": [
+        4431,
+        5548,
+        5479
+      ],
+      "states": [
+        "ready-to-commit",
+        "ready-to-commit",
+        "ready-to-commit"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-06",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        4112
+      ],
+      "states": [
+        "completed"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-02",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        3499
+      ],
+      "states": [
+        "completed"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-03",
+      "attempts": 3,
+      "pass": 3,
+      "durationsMs": [
+        3685,
+        4519,
+        4864
+      ],
+      "states": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-07",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        5201
+      ],
+      "states": [
+        "ready-to-commit"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-08",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        3421
+      ],
+      "states": [
+        "completed"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-09",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        0
+      ],
+      "states": [
+        "null"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-02b",
+      "attempts": 2,
+      "pass": 2,
+      "durationsMs": [
+        3022,
+        3638
+      ],
+      "states": [
+        "completed",
+        "completed"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-07b",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        5969
+      ],
+      "states": [
+        "ready-to-commit"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-07c-1",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        1892
+      ],
+      "states": [
+        "failed/UNSUPPORTED_SCOPE"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-07c-2",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        0
+      ],
+      "states": [
+        "null"
+      ],
+      "failures": []
+    },
+    {
+      "item": "A40-07d",
+      "attempts": 1,
+      "pass": 1,
+      "durationsMs": [
+        1893
+      ],
+      "states": [
+        "cancelled/STALE_REPLY"
+      ],
+      "failures": []
+    }
+  ],
+  "cost": {
+    "promptTokens": 186105,
+    "completionTokens": 9329,
+    "cacheHitTokens": 122240,
+    "cacheMissTokens": 63865,
+    "estimatedUsd": 0.015544
+  },
+  "pricing": {
+    "currency": "USD",
+    "period": "off-peak",
+    "inputCacheMissPerMillion": 0.15,
+    "inputCacheHitPerMillion": 0.003,
+    "outputPerMillion": 0.6,
+    "source": "https://api-docs.deepseek.com/quick_start/pricing（deepseek-flash 列，off-peak 价）"
+  },
+  "providerProbe": {
+    "ok": true,
+    "model": "deepseek-flash",
+    "latencyMs": 704,
+    "message": "连接成功"
+  },
+  "note": "人工回填 = 交付方手工填写工程数值的次数；本次为 0（所有数值来自提取候选或用户确认）。A40-02b 的 12.00 由用户在参数面板补充，并带「用户输入」来源备注，不属于交付方回填。",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

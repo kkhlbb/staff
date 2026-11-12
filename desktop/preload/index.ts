@@ -52,6 +52,10 @@ import {
   type CommitApprovedDraftValue,
   type LocateEvidenceRequest,
   type LocateEvidenceValue,
+  type AgentProviderSaveRequest,
+  type AgentProviderTestValue,
+  type AgentExportRequest,
+  type AgentExportValue,
   type ToolResult,
 } from '../shared/contracts'
 
@@ -260,6 +264,14 @@ const api: CunlianApi = {
     ipcRenderer.invoke(IPC_CHANNELS.agentCommitApprovedDraft, request) as Promise<ToolResult<CommitApprovedDraftValue>>,
   locateEvidence: (request: LocateEvidenceRequest) =>
     ipcRenderer.invoke(IPC_CHANNELS.agentLocateEvidence, request) as Promise<ToolResult<LocateEvidenceValue>>,
+  saveAgentProvider: (request: AgentProviderSaveRequest) =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentProviderSave, request) as Promise<ToolResult<AgentProviderStatusValue>>,
+  testAgentProvider: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentProviderTest, {}) as Promise<ToolResult<AgentProviderTestValue>>,
+  clearAgentProviderKey: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentProviderClearKey, {}) as Promise<ToolResult<AgentProviderStatusValue>>,
+  exportApprovedVersion: (request: AgentExportRequest) =>
+    ipcRenderer.invoke(IPC_CHANNELS.agentExportApprovedVersion, request) as Promise<ToolResult<AgentExportValue>>,
   onAgentEvent: (listener) => subscribe<AgentTaskView>(IPC_EVENTS.agentEvent, listener),
 }
 
