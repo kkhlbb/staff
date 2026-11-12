@@ -1,0 +1,21 @@
+# 六条命令 + 真实文档 + 打包跑完之后，工作树状态（原始采集）
+#
+#   cd /Users/aston/DSH/staff
+#   npm run typecheck && npm run typecheck:desktop && npm run lint && npm test \
+#     && npm run test:desktop && npm run build
+#   REAL_DOC_CORPUS=~/DSH/tmp/cunlian-v36/real-docs npm run test:real-docs
+#   REAL_DOC_CORPUS=~/DSH/tmp/cunlian-v36/real-docs npm run metrics:real-docs
+#   npm run package:desktop -- --arch=arm64
+#   npm run check:package:pdf-worker
+#   git status --short
+#
+# 实际输出（下面一行是命令与它的原始 stdout，没有任何行 = 工作树干净）：
+
+$ git status --short
+
+（无输出）
+
+# 说明：本目录的 logs/ 被仓库 .gitignore 覆盖（logs/、*.log），所以未提交的日志不会出现在
+# `git status --short` 里；验证完后它们会被 `git add -f` 强制提交。除日志外，测试/构建/打包
+# 都没有写入任何被跟踪文件：docs/evidence/real-doc-baseline/metrics.json 由度量命令重写后
+# 与已提交版本逐字节一致（同样不出现在 status 里）。

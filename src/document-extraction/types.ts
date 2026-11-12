@@ -27,9 +27,24 @@ import type { PdfPageBox, PdfRect } from '../sources/pdfCoordinates'
  *    赋值）或中间块是孤立符号（符号链）→ 不认，交回既有阻塞。符号位接受希腊字母（`Δ0`、`δL`）。
  *    另：带显式末尾值的行先按赋值行解析，不再被 `FORMULA_UNSUPPORTED` 抢先拦下
  *    （`FORMULA_UNSUPPORTED` 判定条件本身未改，取不到条目时仍原样记录）。语义变了 → 升版本。
+ * 6：页跨度超过 `MAX_EXTRACTION_PAGES` 不再整份拒绝（旧行为：一条 `PAGE_LIMIT` + 0 候选），
+ *    改为按上限**顺序切块**，逐块跑同一套逐页扫描，再合并成一份草稿。切的是页数组，
+ *    同一 revision 仍只解析一次文件。合并语义 = “整份一次扫描”的语义：
+ *    - 组成环条目跨块合并后统一 resolve，`occurrence` 按**全局出现顺序**编号（1/2、2/2），
+ *      同符号同值跨块仍合并成一条；
+ *    - 候选与问题按（页, 位置）统一排序，两次运行结果完全一致；
+ *    - 单块失败只标 `CHUNK_FAILED` + 页范围，其余块结果照常返回；每块处理结果都留
+ *      `CHUNK_PROCESSED` issue（可追，不静默丢块）；
+ *    - 无文本层的页仍只在该页标 `NO_TEXT_LAYER`，其余页照常出候选；
+ *    - `sourceIdentity` 仍是原 PDF 的 revisionId + sha256，不因切块变化。
+ *    语义变了 → 升版本（旧草稿不与新候选混并）。
  */
-export const EXTRACTOR_VERSION = 'document-extractor-5'
+export const EXTRACTOR_VERSION = 'document-extractor-6'
 
+/**
+ * 页数上限：单个提取块最多多少页。页跨度超过它时按顺序切块，
+ * 不再是“整份拒绝”的阈值（见 parse.ts 的 planExtractionChunks）。
+ */
 export const MAX_EXTRACTION_PAGES = 100
 export const MAX_EXTRACTION_CANDIDATES = 200
 export const MAX_EXTRACTION_ISSUES = 200
@@ -64,6 +79,7 @@ export const EXTRACTION_REASON_CODES = [
   // 文本层与版面
   'NO_TEXT_LAYER',
   'PAGE_RANGE_INVALID',
+  /** 旧版“整份拒绝”的页数上限码；`document-extractor-6` 起不再产生，保留以读旧草稿。 */
   'PAGE_LIMIT',
   'NO_TABLE_HEADER',
   'UNSUPPORTED_TABLE_LAYOUT',
@@ -81,6 +97,13 @@ export type ExtractionReasonCode = (typeof EXTRACTION_REASON_CODES)[number]
 export const EXTRACTION_ISSUE_CODES = [
   ...EXTRACTION_REASON_CODES,
   'EXTRACTION_EMPTY',
+  /**
+   * 只出现在 issue 上的切块踪迹（不是候选阻塞原因，不进 reasonCodes）：
+   * - CHUNK_PROCESSED：该块处理完成（warning），message 写明页范围与本块扫描结果；
+   * - CHUNK_FAILED：该块处理抛错（blocked），message 写明页范围与错误原因，其余块结果照常保留。
+   */
+  'CHUNK_PROCESSED',
+  'CHUNK_FAILED',
 ] as const
 export type ExtractionIssueCode = (typeof EXTRACTION_ISSUE_CODES)[number]
 
@@ -275,6 +298,21 @@ export interface ExtractionIssue {
   readonly page: number | null
   readonly candidateIds: readonly string[]
   readonly evidence: readonly ExtractionEvidence[]
+  /**
+   * 切块踪迹（纯加法字段，可选）：这条 issue 属于哪一块、覆盖哪些页（1-based 闭区间）。
+   * 旧草稿没有该字段，读取方一律用 `?? null`；页跨度不超过上限的单块提取不写。
+   */
+  readonly chunk?: ExtractionChunkRef | null
+}
+
+/**
+ * 大文档切块的块标记。`index` 从 1 开始、按页升序；`from`/`to` 是 1-based 闭区间，
+ * 且 `to - from + 1 <= MAX_EXTRACTION_PAGES`。它只描述“哪一块”，不改候选身份。
+ */
+export interface ExtractionChunkRef {
+  readonly index: number
+  readonly from: number
+  readonly to: number
 }
 
 export type DecisionAction = 'confirm' | 'reject' | 'edit' | 'revoke'

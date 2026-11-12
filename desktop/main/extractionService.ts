@@ -32,7 +32,6 @@ import {
   EXTRACTOR_VERSION,
   MAX_EXTRACTION_CANDIDATES,
   MAX_EXTRACTION_ISSUES,
-  MAX_EXTRACTION_PAGES,
   buildExtractionDraft,
   buildPdfTextLayer,
   confirmCandidate,
@@ -213,13 +212,11 @@ export class ExtractionService {
     if (range === null) {
       return failure('PAGE_OUT_OF_RANGE', '页范围无效：必须是 1-based、上限不小于下限')
     }
-    if (range.to - range.from + 1 > MAX_EXTRACTION_PAGES) {
-      return failure(
-        'TOO_LARGE',
-        `页跨度超过上限 ${MAX_EXTRACTION_PAGES} 页`,
-        `${range.from}..${range.to}`,
-      )
-    }
+    /*
+     * 页跨度不再在这里整份拒绝：`document-extractor-6` 起由领域层按 MAX_EXTRACTION_PAGES
+     * 顺序切块（切的是页数组，同一 revision 只读一次），单块失败只标 CHUNK_FAILED。
+     * 这里只做“页范围合法 + 不超出 PDF 页数”的检查。
+     */
 
     // 只认快照里的确切版本；不追随 latest，也不接受 renderer 传来的哈希。
     const revision = session.snapshot.revisions.find((item) => item.id === request.revisionId)

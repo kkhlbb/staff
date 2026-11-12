@@ -1,0 +1,1025 @@
+{
+  "draftId": "<generated>",
+  "draftRevision": 1,
+  "status": "draft",
+  "projectId": "real-doc-baseline",
+  "baseToken": "real-doc-baseline-1",
+  "sourceIdentity": {
+    "documentId": "real-doc-r4",
+    "revisionId": "real-doc-r4-e18652688580",
+    "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+    "blobKey": "corpus:r4-mtt1097.pdf",
+    "pageCount": 170
+  },
+  "pageRange": {
+    "from": 1,
+    "to": 170
+  },
+  "extractorVersion": "document-extractor-6",
+  "idempotencyKey": "real-doc-baseline|real-doc-r4|real-doc-r4-e18652688580|e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d|1|170|document-extractor-6",
+  "decisions": [],
+  "candidates": [
+    {
+      "candidateId": "ring-ff82b331d5da4a07",
+      "kind": "ring",
+      "groupId": "ring:mn",
+      "rawText": "mn=2~6,设计侧隙为",
+      "page": 13,
+      "status": "blocked",
+      "confidence": "low",
+      "confidenceBasis": [
+        "RULE_TABLE_OR_ASSIGNMENT",
+        "RULE_UNIT_MISSING",
+        "RULE_SINGLE_VALUE"
+      ],
+      "reasonCodes": [
+        "UNKNOWN_UNIT"
+      ],
+      "evidence": [
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 13,
+          "rectPdf": [
+            329.57599999999996,
+            381.5397126630099,
+            344.484,
+            393.85614934796064
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "mn",
+          "normalizedSnippet": "mn",
+          "textItemIndexes": [
+            391,
+            392
+          ]
+        },
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 13,
+          "rectPdf": [
+            344.581,
+            381.57700000000006,
+            385.72399999999993,
+            393.70700000000005
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "=2~6,",
+          "normalizedSnippet": "=2~6,",
+          "textItemIndexes": [
+            393
+          ]
+        }
+      ],
+      "editRevision": 0,
+      "occurrence": null,
+      "data": {
+        "symbol": "mn",
+        "name": null,
+        "nominal": {
+          "text": "2",
+          "decimals": 0,
+          "unitText": null,
+          "evidence": [
+            {
+              "documentId": "real-doc-r4",
+              "revisionId": "real-doc-r4-e18652688580",
+              "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+              "blobKey": "corpus:r4-mtt1097.pdf",
+              "page": 13,
+              "rectPdf": [
+                344.581,
+                381.57700000000006,
+                385.72399999999993,
+                393.70700000000005
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                595.192,
+                841.832
+              ],
+              "textSnippet": "=2~6,",
+              "normalizedSnippet": "=2~6,",
+              "textItemIndexes": [
+                393
+              ]
+            }
+          ],
+          "valueQ": null,
+          "unit": null
+        },
+        "upperDeviation": null,
+        "lowerDeviation": null
+      }
+    },
+    {
+      "candidateId": "formula-5f89769b1dcaf4fd",
+      "kind": "formula",
+      "groupId": null,
+      "rawText": "注:Ac=g(sinθ+fcosθ)",
+      "page": 22,
+      "status": "blocked",
+      "confidence": "low",
+      "confidenceBasis": [
+        "RULE_FORMULA_UNSUPPORTED"
+      ],
+      "reasonCodes": [
+        "FORMULA_UNSUPPORTED"
+      ],
+      "evidence": [
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 22,
+          "rectPdf": [
+            78.56700000000001,
+            135.34253449725745,
+            175.602,
+            146.11700000000005
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "注:Ac=g(sinθ+fcosθ)",
+          "normalizedSnippet": "注:Ac=g(sinθ+fcosθ)",
+          "textItemIndexes": [
+            462,
+            463,
+            465,
+            466,
+            469,
+            471,
+            472,
+            473,
+            474,
+            475,
+            477,
+            478,
+            480,
+            481,
+            482,
+            483,
+            485,
+            486
+          ]
+        }
+      ],
+      "editRevision": 0,
+      "data": {
+        "outputSymbol": null,
+        "rawExpression": "注:Ac=g(sinθ+fcosθ)",
+        "expression": "注:Ac=g(sinθ+fcosθ)",
+        "operands": [],
+        "unsupported": true,
+        "conflict": false
+      }
+    },
+    {
+      "candidateId": "part-dimension-027d5b24d72274ae",
+      "kind": "part-dimension",
+      "groupId": "part:口环",
+      "rawText": "口环内径120150180220260290320",
+      "page": 29,
+      "status": "blocked",
+      "confidence": "low",
+      "confidenceBasis": [
+        "RULE_PART_LABEL_LINE"
+      ],
+      "reasonCodes": [
+        "NUMBER_UNSUPPORTED"
+      ],
+      "evidence": [
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 29,
+          "rectPdf": [
+            146.435,
+            372.3295,
+            508.862,
+            381.427
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "120150180220260290320",
+          "normalizedSnippet": "120150180220260290320",
+          "textItemIndexes": [
+            295,
+            296,
+            297,
+            301,
+            302,
+            303,
+            307,
+            308,
+            309,
+            313,
+            314,
+            315,
+            319,
+            320,
+            321,
+            325,
+            326,
+            327,
+            331,
+            332,
+            333
+          ]
+        },
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 29,
+          "rectPdf": [
+            488.096,
+            700.048,
+            532.4409999999999,
+            710.3580000000001
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "单位为毫米",
+          "normalizedSnippet": "单位为毫米",
+          "textItemIndexes": [
+            30
+          ]
+        },
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 29,
+          "rectPdf": [
+            488.096,
+            405.35200000000003,
+            532.4409999999999,
+            415.66200000000003
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "单位为毫米",
+          "normalizedSnippet": "单位为毫米",
+          "textItemIndexes": [
+            286
+          ]
+        }
+      ],
+      "editRevision": 0,
+      "data": {
+        "partName": "口环",
+        "innerDiameter": {
+          "text": "120150180220260290320",
+          "decimals": 0,
+          "unitText": "毫米",
+          "evidence": [
+            {
+              "documentId": "real-doc-r4",
+              "revisionId": "real-doc-r4-e18652688580",
+              "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+              "blobKey": "corpus:r4-mtt1097.pdf",
+              "page": 29,
+              "rectPdf": [
+                146.435,
+                372.3295,
+                508.862,
+                381.427
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                595.192,
+                841.832
+              ],
+              "textSnippet": "120150180220260290320",
+              "normalizedSnippet": "120150180220260290320",
+              "textItemIndexes": [
+                295,
+                296,
+                297,
+                301,
+                302,
+                303,
+                307,
+                308,
+                309,
+                313,
+                314,
+                315,
+                319,
+                320,
+                321,
+                325,
+                326,
+                327,
+                331,
+                332,
+                333
+              ]
+            },
+            {
+              "documentId": "real-doc-r4",
+              "revisionId": "real-doc-r4-e18652688580",
+              "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+              "blobKey": "corpus:r4-mtt1097.pdf",
+              "page": 29,
+              "rectPdf": [
+                488.096,
+                700.048,
+                532.4409999999999,
+                710.3580000000001
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                595.192,
+                841.832
+              ],
+              "textSnippet": "单位为毫米",
+              "normalizedSnippet": "单位为毫米",
+              "textItemIndexes": [
+                30
+              ]
+            },
+            {
+              "documentId": "real-doc-r4",
+              "revisionId": "real-doc-r4-e18652688580",
+              "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+              "blobKey": "corpus:r4-mtt1097.pdf",
+              "page": 29,
+              "rectPdf": [
+                488.096,
+                405.35200000000003,
+                532.4409999999999,
+                415.66200000000003
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                595.192,
+                841.832
+              ],
+              "textSnippet": "单位为毫米",
+              "normalizedSnippet": "单位为毫米",
+              "textItemIndexes": [
+                286
+              ]
+            }
+          ],
+          "valueQ": null,
+          "unit": null
+        },
+        "outerDiameter": null,
+        "length": null
+      }
+    },
+    {
+      "candidateId": "part-dimension-88a22be658652560",
+      "kind": "part-dimension",
+      "groupId": "part:环",
+      "rawText": "环内径120150180220260290320",
+      "page": 31,
+      "status": "blocked",
+      "confidence": "low",
+      "confidenceBasis": [
+        "RULE_PART_LABEL_LINE"
+      ],
+      "reasonCodes": [
+        "NUMBER_UNSUPPORTED"
+      ],
+      "evidence": [
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 31,
+          "rectPdf": [
+            146.435,
+            185.14950000000005,
+            508.862,
+            194.24700000000004
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "120150180220260290320",
+          "normalizedSnippet": "120150180220260290320",
+          "textItemIndexes": [
+            432,
+            433,
+            434,
+            438,
+            439,
+            440,
+            444,
+            445,
+            446,
+            450,
+            451,
+            452,
+            456,
+            457,
+            458,
+            462,
+            463,
+            464,
+            468,
+            469,
+            470
+          ]
+        },
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 31,
+          "rectPdf": [
+            488.096,
+            622.032,
+            532.4409999999999,
+            632.3420000000001
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "单位为毫米",
+          "normalizedSnippet": "单位为毫米",
+          "textItemIndexes": [
+            79
+          ]
+        },
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 31,
+          "rectPdf": [
+            488.096,
+            445.525,
+            532.4409999999999,
+            455.835
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "单位为毫米",
+          "normalizedSnippet": "单位为毫米",
+          "textItemIndexes": [
+            207
+          ]
+        },
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 31,
+          "rectPdf": [
+            488.096,
+            308.026,
+            532.4409999999999,
+            318.336
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "单位为毫米",
+          "normalizedSnippet": "单位为毫米",
+          "textItemIndexes": [
+            337
+          ]
+        },
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 31,
+          "rectPdf": [
+            488.096,
+            217.68599999999998,
+            532.4409999999999,
+            227.99599999999998
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "单位为毫米",
+          "normalizedSnippet": "单位为毫米",
+          "textItemIndexes": [
+            425
+          ]
+        }
+      ],
+      "editRevision": 0,
+      "data": {
+        "partName": "环",
+        "innerDiameter": {
+          "text": "120150180220260290320",
+          "decimals": 0,
+          "unitText": "毫米",
+          "evidence": [
+            {
+              "documentId": "real-doc-r4",
+              "revisionId": "real-doc-r4-e18652688580",
+              "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+              "blobKey": "corpus:r4-mtt1097.pdf",
+              "page": 31,
+              "rectPdf": [
+                146.435,
+                185.14950000000005,
+                508.862,
+                194.24700000000004
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                595.192,
+                841.832
+              ],
+              "textSnippet": "120150180220260290320",
+              "normalizedSnippet": "120150180220260290320",
+              "textItemIndexes": [
+                432,
+                433,
+                434,
+                438,
+                439,
+                440,
+                444,
+                445,
+                446,
+                450,
+                451,
+                452,
+                456,
+                457,
+                458,
+                462,
+                463,
+                464,
+                468,
+                469,
+                470
+              ]
+            },
+            {
+              "documentId": "real-doc-r4",
+              "revisionId": "real-doc-r4-e18652688580",
+              "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+              "blobKey": "corpus:r4-mtt1097.pdf",
+              "page": 31,
+              "rectPdf": [
+                488.096,
+                622.032,
+                532.4409999999999,
+                632.3420000000001
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                595.192,
+                841.832
+              ],
+              "textSnippet": "单位为毫米",
+              "normalizedSnippet": "单位为毫米",
+              "textItemIndexes": [
+                79
+              ]
+            },
+            {
+              "documentId": "real-doc-r4",
+              "revisionId": "real-doc-r4-e18652688580",
+              "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+              "blobKey": "corpus:r4-mtt1097.pdf",
+              "page": 31,
+              "rectPdf": [
+                488.096,
+                445.525,
+                532.4409999999999,
+                455.835
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                595.192,
+                841.832
+              ],
+              "textSnippet": "单位为毫米",
+              "normalizedSnippet": "单位为毫米",
+              "textItemIndexes": [
+                207
+              ]
+            },
+            {
+              "documentId": "real-doc-r4",
+              "revisionId": "real-doc-r4-e18652688580",
+              "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+              "blobKey": "corpus:r4-mtt1097.pdf",
+              "page": 31,
+              "rectPdf": [
+                488.096,
+                308.026,
+                532.4409999999999,
+                318.336
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                595.192,
+                841.832
+              ],
+              "textSnippet": "单位为毫米",
+              "normalizedSnippet": "单位为毫米",
+              "textItemIndexes": [
+                337
+              ]
+            },
+            {
+              "documentId": "real-doc-r4",
+              "revisionId": "real-doc-r4-e18652688580",
+              "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+              "blobKey": "corpus:r4-mtt1097.pdf",
+              "page": 31,
+              "rectPdf": [
+                488.096,
+                217.68599999999998,
+                532.4409999999999,
+                227.99599999999998
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                595.192,
+                841.832
+              ],
+              "textSnippet": "单位为毫米",
+              "normalizedSnippet": "单位为毫米",
+              "textItemIndexes": [
+                425
+              ]
+            }
+          ],
+          "valueQ": null,
+          "unit": null
+        },
+        "outerDiameter": null,
+        "length": null
+      }
+    },
+    {
+      "candidateId": "ring-9261177b48f068c5",
+      "kind": "ring",
+      "groupId": "ring:R",
+      "rawText": "用R=0.5mm。",
+      "page": 108,
+      "status": "pending",
+      "confidence": "medium",
+      "confidenceBasis": [
+        "RULE_TABLE_OR_ASSIGNMENT",
+        "RULE_UNIT_MM",
+        "RULE_UNIT_EXPRESSION_TAIL",
+        "RULE_SINGLE_VALUE"
+      ],
+      "reasonCodes": [],
+      "evidence": [
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 108,
+          "rectPdf": [
+            73.65400000000001,
+            125.26971266300987,
+            83.358,
+            137.5861493479606
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "R",
+          "normalizedSnippet": "R",
+          "textItemIndexes": [
+            475
+          ]
+        },
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 108,
+          "rectPdf": [
+            84.001,
+            125.30700000000002,
+            112.04400000000001,
+            137.437
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "=0.5",
+          "normalizedSnippet": "=0.5",
+          "textItemIndexes": [
+            476,
+            477,
+            478
+          ]
+        },
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 108,
+          "rectPdf": [
+            109.618,
+            125.30700000000002,
+            137.37099999999998,
+            137.437
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "mm。",
+          "normalizedSnippet": "mm。",
+          "textItemIndexes": [
+            479
+          ]
+        }
+      ],
+      "editRevision": 0,
+      "occurrence": null,
+      "data": {
+        "symbol": "R",
+        "name": null,
+        "nominal": {
+          "text": "0.5",
+          "decimals": 1,
+          "unitText": "mm",
+          "evidence": [
+            {
+              "documentId": "real-doc-r4",
+              "revisionId": "real-doc-r4-e18652688580",
+              "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+              "blobKey": "corpus:r4-mtt1097.pdf",
+              "page": 108,
+              "rectPdf": [
+                84.001,
+                125.30700000000002,
+                112.04400000000001,
+                137.437
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                595.192,
+                841.832
+              ],
+              "textSnippet": "=0.5",
+              "normalizedSnippet": "=0.5",
+              "textItemIndexes": [
+                476,
+                477,
+                478
+              ]
+            },
+            {
+              "documentId": "real-doc-r4",
+              "revisionId": "real-doc-r4-e18652688580",
+              "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+              "blobKey": "corpus:r4-mtt1097.pdf",
+              "page": 108,
+              "rectPdf": [
+                109.618,
+                125.30700000000002,
+                137.37099999999998,
+                137.437
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                595.192,
+                841.832
+              ],
+              "textSnippet": "mm。",
+              "normalizedSnippet": "mm。",
+              "textItemIndexes": [
+                479
+              ]
+            }
+          ],
+          "valueQ": 5000,
+          "unit": "mm"
+        },
+        "upperDeviation": null,
+        "lowerDeviation": null
+      }
+    },
+    {
+      "candidateId": "formula-86ae1d9bc528de11",
+      "kind": "formula",
+      "groupId": null,
+      "rawText": "力 1℉=9/5℃+32",
+      "page": 170,
+      "status": "blocked",
+      "confidence": "low",
+      "confidenceBasis": [
+        "RULE_FORMULA_UNSUPPORTED"
+      ],
+      "reasonCodes": [
+        "FORMULA_UNSUPPORTED"
+      ],
+      "evidence": [
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 170,
+          "rectPdf": [
+            173.467,
+            143.13349999999997,
+            436.141,
+            153.39499999999995
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "力 1℉=9/5℃+32",
+          "normalizedSnippet": "力 1°F=9/5°C+32",
+          "textItemIndexes": [
+            736,
+            737,
+            738,
+            739,
+            740,
+            741
+          ]
+        }
+      ],
+      "editRevision": 0,
+      "data": {
+        "outputSymbol": null,
+        "rawExpression": "力 1℉=9/5℃+32",
+        "expression": "力 1°F=9/5°C+32",
+        "operands": [],
+        "unsupported": true,
+        "conflict": false
+      }
+    },
+    {
+      "candidateId": "formula-8eb3df4ca9f41952",
+      "kind": "formula",
+      "groupId": null,
+      "rawText": "1℃=5/9",
+      "page": 170,
+      "status": "blocked",
+      "confidence": "low",
+      "confidenceBasis": [
+        "RULE_FORMULA_UNSUPPORTED"
+      ],
+      "reasonCodes": [
+        "FORMULA_UNSUPPORTED"
+      ],
+      "evidence": [
+        {
+          "documentId": "real-doc-r4",
+          "revisionId": "real-doc-r4-e18652688580",
+          "sha256": "e1865268858081545f8ebe9860bae03c5b9fd3fa0d31f4a21367fdeeecf3264d",
+          "blobKey": "corpus:r4-mtt1097.pdf",
+          "page": 170,
+          "rectPdf": [
+            389.079,
+            128.57750000000004,
+            424.206,
+            138.83900000000003
+          ],
+          "pageBoxPdf": [
+            0,
+            0,
+            595.192,
+            841.832
+          ],
+          "textSnippet": "1℃=5/9",
+          "normalizedSnippet": "1°C=5/9",
+          "textItemIndexes": [
+            760,
+            761,
+            762
+          ]
+        }
+      ],
+      "editRevision": 0,
+      "data": {
+        "outputSymbol": null,
+        "rawExpression": "1℃=5/9",
+        "expression": "1°C=5/9",
+        "operands": [],
+        "unsupported": true,
+        "conflict": false
+      }
+    }
+  ],
+  "issues": [
+    {
+      "issueId": "issue-e9d22d8f92c4d3fd",
+      "code": "NO_TEXT_LAYER",
+      "severity": "blocked",
+      "message": "第 1 页没有可读文本层（扫描件/图片页）；本版本不做 OCR，拒绝数值提取",
+      "page": 1,
+      "candidateIds": [],
+      "evidence": []
+    },
+    {
+      "issueId": "issue-303289bf782d9785",
+      "code": "NO_TEXT_LAYER",
+      "severity": "blocked",
+      "message": "第 2 页没有可读文本层（扫描件/图片页）；本版本不做 OCR，拒绝数值提取",
+      "page": 2,
+      "candidateIds": [],
+      "evidence": []
+    },
+    {
+      "issueId": "issue-bd7f8fbf5426088d",
+      "code": "NO_TEXT_LAYER",
+      "severity": "blocked",
+      "message": "第 6 页没有可读文本层（扫描件/图片页）；本版本不做 OCR，拒绝数值提取",
+      "page": 6,
+      "candidateIds": [],
+      "evidence": []
+    }
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

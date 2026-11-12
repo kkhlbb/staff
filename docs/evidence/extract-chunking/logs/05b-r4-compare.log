@@ -1,0 +1,6 @@
+chunked candidates=7 singlepass candidates=7
+candidates identical: true
+non-chunk issues identical: true
+chunk issues: {"index":1,"from":1,"to":100} {"index":2,"from":101,"to":170}
+sourceIdentity identical: true
+pageRange identical: true

@@ -23,6 +23,7 @@ export {
   type CandidateStatus,
   type DecisionAction,
   type ExtractionCandidate,
+  type ExtractionChunkRef,
   type ExtractionDecision,
   type ExtractionDraft,
   type ExtractionErrorCode,

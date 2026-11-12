@@ -1,0 +1,29 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：从确切 PDF 版本提取 > 1110 [1,2]：7 个候选、逐条出处、只写隔离草稿，不动链/目标/绑定/条款 124ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：从确切 PDF 版本提取 > 170 页超过单块上限：不再整份拒绝，切两块出草稿（CHUNK_PROCESSED×2、无 PAGE_LIMIT） 84ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：从确切 PDF 版本提取 > 只读确切 revision（不是 latest）：同字节第二个版本不混用确认 55ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：从确切 PDF 版本提取 > 页范围越界 / 非法范围 / 未知版本：明确拒绝且零写入 59ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：从确切 PDF 版本提取 > 哈希不一致：拒绝，原会话不变 45ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：取消与预算 > 页循环中取消：EXTRACTION_CANCELLED，零写入；错误 requestId 不取消 115ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：取消与预算 > 同一窗口并发的第二次提取返回 EXTRACTION_BUSY，不交错写快照 127ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：逐条决定、持久化与跨重开 > 确认一项 + 拒绝一项：决定带 actor/时间/快照/出处，未确认项不出现在项目字段 64ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：逐条决定、持久化与跨重开 > 确认后显式保存 → 解码仍带候选/决定（schema8），关闭重开项目状态保留 153ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：逐条决定、持久化与跨重开 > 同一版本/页范围/规则重提：候选数与草稿版本不变，acceptedSeq 不推进 65ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：逐条决定、持久化与跨重开 > 不同页范围各自独立草稿：旧范围的决定不被新范围覆盖（偏差见证据文档） 58ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：门禁 > stageDraft 不能伪造提取确认（main 保留权威草稿） 51ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：门禁 > 编辑只接受原文片段里确有的写法；凭空补值被拒绝且不改草稿 57ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：坏样例（无文本层） > 只有图像、无文本层：候选 0、NO_TEXT_LAYER，不猜测数值、不启动 OCR 43ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 main：通道层 sender / 参数门禁 > 非白名单 sender、子框架、额外字段与错会话都被拒绝，且不触发提取 47ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 多草稿（main） > 旧规则版本草稿只读：main 拒绝在旧草稿上确认，快照不变 60ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 多草稿（main） > 删除旧草稿：只删它、其它数据完好，保存后重开默认仍是新草稿 108ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 多草稿（main） > 最新规则版本草稿不许删：明确拒绝且零写入 58ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 多草稿（main） > 删除失败注入（恢复草稿写入抛错）：项目文件字节不变、两份草稿都在 104ms
+ ✓ desktop/tests/extraction.test.ts > V3.6 多草稿（main） > 删除不存在的草稿：NOT_FOUND 且零写入 57ms
+
+ Test Files  1 passed (1)
+      Tests  20 passed (20)
+   Start at  00:36:09
+   Duration  1.75s (tests 91%, import 8%, transform 1%)
+
