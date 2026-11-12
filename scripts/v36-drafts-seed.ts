@@ -3,9 +3,9 @@
  *
  * 生成一个 schema8 项目文件，忠实现场复现用户报告的场景：
  * 同一份 PDF（sr-89d9193b 等价物：仓库内 1110 两页任务书）+ 同一页范围 [1,2]，
- * 因为规则版本升到 document-extractor-2，项目里同时存在两份草稿：
+ * 因为规则版本升到 document-extractor-3，项目里同时存在两份草稿：
  * - document-extractor-1：7 条候选，其中 1 条已确认（旧结果，已被取代）；
- * - document-extractor-2：7 条候选，全部待确认（当前草稿）。
+ * - document-extractor-3：7 条候选，全部待确认（当前草稿）。
  *
  * 都用真实 pdfjs 文本层 + 真实 buildExtractionDraft / confirmCandidate 路径，
  * 不手写候选、不伪造出处。
@@ -76,7 +76,7 @@ describe('V3.6 多草稿证据夹具', () => {
     const current = build(EXTRACTOR_VERSION)
     expect(oldRule.candidates).toHaveLength(7)
     expect(current.candidates).toHaveLength(7)
-    expect(current.extractorVersion).toBe('document-extractor-2')
+    expect(current.extractorVersion).toBe('document-extractor-3')
 
     const snapshot: ProjectFileSnapshot = {
       ...base,

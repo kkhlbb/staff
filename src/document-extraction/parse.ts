@@ -1,14 +1,16 @@
 /**
- * V3.6 阶段 1：任务书文本层 → 候选（确定性规则，不调用计算、不写项目）。
+ * 任务书文本层 → 候选（确定性规则，不调用计算、不写项目）。
  *
  * 规则只做“看得见的抄写”：
  * - 组成环只从带表头的组成环表格行（位号 / 名称 / 基本尺寸 / 上偏差 / 下偏差）读取；
  * - 部件内外径 / 长度只从“内径 / 外径 / 长度”标注行读取，不当轴向环；
  * - 区间只读“X 应为 a～b mm（含两端）”这类显式区间句；
  * - 公式只读线性的 `C = H - B1 - S - B2`，不 eval、不改引擎公式。
+ * - 单位只读显式文字：同一表格表头 / 同一页「单位：」句或图注 / 页范围第一页的文档级声明
+ *   （见 unitScope.ts）。三者都没有就照旧阻塞，跨页只认文档级声明，绝不按相邻页猜。
  *
- * 宁可空着：单位不明、精度不支持、同符号多值、公式矛盾、无文本层时一律 blocked 或
- * 只留 issue，绝不默认 mm、默认 0、默认闭区间、按相邻关系补值。
+ * 宁可空着：单位不明且没有显式声明、精度不支持、同符号多值、公式矛盾、无文本层时一律
+ * blocked 或只留 issue，绝不默认 mm、默认 0、默认闭区间、按相邻关系补值。
  */
 import { tryParseMm } from '../domain/units'
 import type { PdfPageBox, PdfRect } from '../sources/pdfCoordinates'
@@ -22,10 +24,22 @@ import {
   type PdfTextPage,
 } from './textLayer'
 import {
+  declarationLabel,
+  detectUnitDeclarations,
+  inheritedUnitBasis,
+  parseUnitToken,
+  resolveUnit,
+  UNIT_TEXT_SOURCE,
+  unitReason,
+  type UnitDeclaration,
+  type UnitResolution,
+} from './unitScope'
+import {
   EXTRACTOR_VERSION,
   MAX_EXTRACTION_CANDIDATES,
   MAX_EXTRACTION_ISSUES,
   MAX_EXTRACTION_PAGES,
+  evidenceKey,
   isEvidenceComplete,
   uniqueEvidence,
   type CandidateStatus,
@@ -120,36 +134,6 @@ export function evidenceFromSpan(
   return isEvidenceComplete(evidence) ? evidence : null
 }
 
-type ParsedUnitKind = 'mm' | 'unsupported' | 'unknown' | 'missing'
-
-interface ParsedUnit {
-  readonly kind: ParsedUnitKind
-  readonly text: string | null
-}
-
-function parseUnitToken(token: string | null | undefined): ParsedUnit {
-  if (!token) return { kind: 'missing', text: null }
-  const text = token.trim()
-  if (text === '') return { kind: 'missing', text: null }
-  const lower = text.toLowerCase()
-  if (lower === 'mm' || text === '毫米' || text === '㎜') return { kind: 'mm', text }
-  if (
-    lower === 'in' ||
-    lower === 'inch' ||
-    text === '英寸' ||
-    text === '"' ||
-    text === '”' ||
-    text === '″'
-  ) {
-    return { kind: 'unsupported', text }
-  }
-  return { kind: 'unknown', text }
-}
-
-function unitReason(unit: ParsedUnit): ExtractionReasonCode {
-  return unit.kind === 'unsupported' ? 'UNSUPPORTED_UNIT' : 'UNKNOWN_UNIT'
-}
-
 function decimalCount(text: string): number {
   const dot = text.indexOf('.')
   return dot < 0 ? 0 : text.length - dot - 1
@@ -158,33 +142,63 @@ function decimalCount(text: string): number {
 interface QuantityOutcome {
   readonly value: QuantityValue | null
   readonly reason: ExtractionReasonCode | null
+  /** 单位来自继承时的依据标记（写进候选 confidenceBasis）；显式单位或缺失时为 null。 */
+  readonly unitBasis: string | null
 }
 
 /**
  * 数值字段构造：先要求出处齐全，再做十进制字符串 → q 的精确校验。
  * 单位不是 mm 时保留原文与 valueQ=null，绝不换算。
+ *
+ * 单位来源优先级（P0 单位继承的硬约束 3）：
+ * 1. **显式单位**（同一格/同一句里写了的 unitText）—— 永远优先，继承值不得覆盖它；
+ * 2. 继承值（表头 / 同一页 / 文档级声明）—— 只在显式单位缺席时使用，且必须带声明出处；
+ * 3. 都没有 —— 照旧 `UNKNOWN_UNIT` 阻塞，不默认 mm。
+ * 作用域里出现互相矛盾的单位时（`UNIT_CONFLICT`），这里只阻塞、不挑一个。
  */
 function buildQuantity(input: {
   readonly text: string
   readonly unitToken: string | null
   readonly evidence: ExtractionEvidence | null
   readonly extraEvidence?: readonly ExtractionEvidence[]
+  readonly inheritance?: UnitResolution | null
 }): QuantityOutcome {
   const evidence = input.evidence
   if (!evidence || !isEvidenceComplete(evidence)) {
     // M02：缺出处 → 数值不进候选，只留 issue。
-    return { value: null, reason: 'SOURCE_UNRESOLVED' }
+    return { value: null, reason: 'SOURCE_UNRESOLVED', unitBasis: null }
   }
   const text = input.text
   const parsed = tryParseMm(text)
-  const unit = parseUnitToken(input.unitToken)
+  const explicit = parseUnitToken(input.unitToken)
+  const inheritance = explicit.kind === 'missing' ? (input.inheritance ?? null) : null
+
+  let unit = explicit
+  let unitBasis: string | null = null
+  const inheritedEvidence: ExtractionEvidence[] = []
+  if (inheritance?.status === 'inherited' && inheritance.unit) {
+    unit = inheritance.unit
+    unitBasis = inheritedUnitBasis(inheritance)
+    for (const declaration of inheritance.declarations) {
+      if (isEvidenceComplete(declaration.evidence)) inheritedEvidence.push(declaration.evidence)
+    }
+  }
+  const conflict = inheritance?.status === 'conflict'
+  if (conflict) {
+    for (const declaration of inheritance?.declarations ?? []) {
+      if (isEvidenceComplete(declaration.evidence)) inheritedEvidence.push(declaration.evidence)
+    }
+  }
+
   const evidenceList = uniqueEvidence([
     evidence,
     ...(input.extraEvidence ?? []).filter((item) => isEvidenceComplete(item)),
+    ...inheritedEvidence,
   ])
   const base = {
     text,
     decimals: decimalCount(text),
+    // 单位串：显式写的就用原文；继承来的写声明里的那个单位串（出处里带声明选区，可核对）。
     unitText: unit.text,
     evidence: evidenceList,
   }
@@ -192,12 +206,16 @@ function buildQuantity(input: {
     return {
       value: { ...base, valueQ: null, unit: null },
       reason: parsed.code === 'precision' ? 'PRECISION_UNSUPPORTED' : 'NUMBER_UNSUPPORTED',
+      unitBasis: null,
     }
   }
-  if (unit.kind !== 'mm') {
-    return { value: { ...base, valueQ: null, unit: null }, reason: unitReason(unit) }
+  if (conflict) {
+    return { value: { ...base, valueQ: null, unit: null }, reason: 'UNIT_CONFLICT', unitBasis: null }
   }
-  return { value: { ...base, valueQ: parsed.value, unit: 'mm' }, reason: null }
+  if (unit.kind !== 'mm') {
+    return { value: { ...base, valueQ: null, unit: null }, reason: unitReason(unit), unitBasis }
+  }
+  return { value: { ...base, valueQ: parsed.value, unit: 'mm' }, reason: null, unitBasis }
 }
 
 function mergeQuantity(values: readonly QuantityValue[]): QuantityValue | null {
@@ -227,14 +245,118 @@ interface RingEntry {
   readonly reasons: readonly ExtractionReasonCode[]
   readonly page: number
   readonly rawText: string
+  /** 单位来自继承时的依据标记（confidenceBasis 用）；显式或缺失为 null。 */
+  readonly unitBasis: string | null
+}
+
+// ---------------------------------------------------------------- 单位作用域
+
+/**
+ * 单位声明的作用域收集结果。
+ *
+ * 三种允许的作用域（任务卡硬约束 4）：
+ * - `table`：同一张组成环表的表头，只对它自己的数据行有效；
+ * - `page` / `caption`：同一页的「单位：mm」句或图注「（mm）」，只对本页数值有效；
+ * - `document`：**页范围第一页**上的「单位：」声明，对本范围内所有页有效。
+ * 跨页继承只允许最后这一种，且必须是真的写了「单位：」——表头不跨页（同一表格之外一律不认）。
+ */
+interface UnitContext {
+  readonly document: readonly UnitDeclaration[]
+  readonly byPage: ReadonlyMap<number, readonly UnitDeclaration[]>
+  /** 冲突事件（按 页 + 声明出处 去重），最后统一转成 UNIT_CONFLICT issue。 */
+  readonly conflicts: Map<string, { page: number; declarations: readonly UnitDeclaration[] }>
+  readonly pageCache: Map<number, UnitResolution>
+}
+
+function collectUnitContext(
+  pages: readonly PdfTextPage[],
+  firstPage: number,
+  source: ExtractionSourceIdentity,
+): UnitContext {
+  const byPage = new Map<number, readonly UnitDeclaration[]>()
+  for (const page of pages) {
+    const declarations: UnitDeclaration[] = []
+    for (const line of page.lines) {
+      declarations.push(
+        ...detectUnitDeclarations({
+          line,
+          page: page.page,
+          scope: 'page',
+          evidence: (start, end) => locate(line, page, source, [start, end]),
+        }),
+      )
+    }
+    if (declarations.length > 0) byPage.set(page.page, declarations)
+  }
+  // 文档级 = 页范围第一页上的「单位：」句；图注只对本页有效，不抬成文档级。
+  const document = (byPage.get(firstPage) ?? [])
+    .filter((declaration) => declaration.scope === 'page')
+    .map((declaration) => ({ ...declaration, scope: 'document' as const }))
+  return { document, byPage, conflicts: new Map(), pageCache: new Map() }
+}
+
+function noteUnitConflict(
+  context: UnitContext,
+  page: number,
+  resolution: UnitResolution,
+): void {
+  if (resolution.status !== 'conflict') return
+  const key = [page, ...resolution.declarations.map((item) => item.evidence.textSnippet)].join('|')
+  if (!context.conflicts.has(key)) {
+    context.conflicts.set(key, { page, declarations: resolution.declarations })
+  }
+}
+
+/** 只用于本页数值（行内赋值 / 区间 / 部件尺寸）：文档级 + 本页声明。 */
+function resolvePageUnits(context: UnitContext, page: number): UnitResolution {
+  const cached = context.pageCache.get(page)
+  if (cached) return cached
+  const resolution = resolveUnit([...context.document, ...(context.byPage.get(page) ?? [])])
+  context.pageCache.set(page, resolution)
+  noteUnitConflict(context, page, resolution)
+  return resolution
+}
+
+/** 表格数据行：文档级 + 本页声明 + 本表表头。 */
+function resolveTableUnits(
+  context: UnitContext,
+  page: number,
+  table: readonly UnitDeclaration[],
+): UnitResolution {
+  const resolution = resolveUnit([
+    ...context.document,
+    ...(context.byPage.get(page) ?? []),
+    ...table,
+  ])
+  noteUnitConflict(context, page, resolution)
+  return resolution
 }
 
 // ---------------------------------------------------------------- 组成环表格
 
 const TABLE_HEADER_TOKENS = ['位号', '名称', '基本尺寸', '上偏差', '下偏差'] as const
-const HEADER_UNIT_PATTERN = /基本尺寸\s*[(（]([^)）]*)[)）]/d
-const ROW_PATTERN =
-  /^([A-Za-z][A-Za-z0-9]{0,3})\s+([^\s\d+-]\S*)\s+(\d+(?:\.\d+)?)(?:\s+([+-]?\d+(?:\.\d+)?))?(?:\s+([+-]?\d+(?:\.\d+)?))?\s*$/d
+/**
+ * 表头的显式单位：`基本尺寸(mm)`、`基本尺寸 (mm)`、`基本尺寸/mm`。
+ * 只把括号内或斜杠后的**显式单位串**当声明；表头没有单位就返回 null（照旧 UNKNOWN_UNIT）。
+ */
+const HEADER_UNIT_PATTERN = new RegExp(
+  `基本尺寸\\s*(?:[(（]([^)）]*)[)）]|[/／]\\s*(${UNIT_TEXT_SOURCE}))`,
+  'di',
+)
+/**
+ * 数据行：`位号 名称 基本尺寸 上偏差 下偏差`，每个数值格允许自带显式单位。
+ * 分组：1 位号 / 2 名称 / 3 基本尺寸 / 4 基本尺寸单位 / 5 上偏差 / 6 上偏差单位 /
+ *       7 下偏差 / 8 下偏差单位。
+ * 自带单位时按显式单位走（硬约束 3：继承值不得覆盖它）。
+ */
+const ROW_PATTERN = new RegExp(
+  '^([A-Za-z][A-Za-z0-9]{0,3})\\s+([^\\s\\d+-]\\S*)\\s+' +
+    `(\\d+(?:\\.\\d+)?)(?:\\s*(${UNIT_TEXT_SOURCE}))?` +
+    `(?:\\s+([+-]?\\d+(?:\\.\\d+)?)(?:\\s*(${UNIT_TEXT_SOURCE}))?)?` +
+    `(?:\\s+([+-]?\\d+(?:\\.\\d+)?)(?:\\s*(${UNIT_TEXT_SOURCE}))?)?` +
+    '\\s*$',
+  'di',
+)
 
 function locate(
   line: PdfTextLine,
@@ -251,29 +373,38 @@ function groupRange(match: RegExpExecArray, index: number): [number, number] | n
   return [indices[0], indices[1]]
 }
 
+function cellUnit(match: RegExpExecArray, index: number): string | null {
+  const range = groupRange(match, index)
+  if (!range) return null
+  return match.input.slice(range[0], range[1])
+}
+
 function deviationValue(
   line: PdfTextLine,
   page: PdfTextPage,
   source: ExtractionSourceIdentity,
   match: RegExpExecArray,
-  index: number,
-  unitToken: string | null,
-  unitEvidence: ExtractionEvidence | null,
-): { value: QuantityValue | null; reason: ExtractionReasonCode | null } {
-  const range = groupRange(match, index)
-  if (!range) return { value: null, reason: null }
+  valueIndex: number,
+  unitIndex: number,
+  inheritance: UnitResolution,
+): { value: QuantityValue | null; reason: ExtractionReasonCode | null; unitBasis: string | null } {
+  const range = groupRange(match, valueIndex)
+  if (!range) return { value: null, reason: null, unitBasis: null }
   const text = matchTextOf(line).slice(range[0], range[1])
   if (!/^[+-]/.test(text)) {
     // 上下偏差未写符号 → 不当 0，也不当偏差。
-    return { value: null, reason: 'DEVIATION_SIGN_MISSING' }
+    return { value: null, reason: 'DEVIATION_SIGN_MISSING', unitBasis: null }
   }
+  const unitRange = groupRange(match, unitIndex)
+  const unitEvidence = unitRange ? locate(line, page, source, unitRange) : null
   const outcome = buildQuantity({
     text,
-    unitToken,
+    unitToken: cellUnit(match, unitIndex),
     evidence: locate(line, page, source, range),
     extraEvidence: unitEvidence ? [unitEvidence] : [],
+    inheritance,
   })
-  return { value: outcome.value, reason: outcome.reason }
+  return { value: outcome.value, reason: outcome.reason, unitBasis: outcome.unitBasis }
 }
 
 function ringEntryFromRow(
@@ -281,8 +412,7 @@ function ringEntryFromRow(
   page: PdfTextPage,
   source: ExtractionSourceIdentity,
   match: RegExpExecArray,
-  unit: ParsedUnit,
-  unitEvidence: ExtractionEvidence | null,
+  inheritance: UnitResolution,
 ): RingEntry {
   const text = matchTextOf(line)
   const symbol = text.slice(...(groupRange(match, 1) ?? [0, 0]))
@@ -292,14 +422,14 @@ function ringEntryFromRow(
   const nominalOutcome = nominalRange
     ? buildQuantity({
         text: text.slice(nominalRange[0], nominalRange[1]),
-        unitToken: unit.text,
+        unitToken: cellUnit(match, 4),
         evidence: locate(line, page, source, nominalRange),
-        extraEvidence: unitEvidence ? [unitEvidence] : [],
+        inheritance,
       })
-    : { value: null, reason: null }
+    : { value: null, reason: null, unitBasis: null }
 
-  const upper = deviationValue(line, page, source, match, 4, unit.text, unitEvidence)
-  const lower = deviationValue(line, page, source, match, 5, unit.text, unitEvidence)
+  const upper = deviationValue(line, page, source, match, 5, 6, inheritance)
+  const lower = deviationValue(line, page, source, match, 7, 8, inheritance)
   const reasons: ExtractionReasonCode[] = []
   for (const reason of [nominalOutcome.reason, upper.reason, lower.reason]) {
     if (reason) reasons.push(reason)
@@ -315,6 +445,7 @@ function ringEntryFromRow(
     reasons,
     page: line.page,
     rawText: line.rawText,
+    unitBasis: nominalOutcome.unitBasis ?? upper.unitBasis ?? lower.unitBasis ?? null,
   }
 }
 
@@ -323,25 +454,21 @@ function parseTable(
   start: number,
   page: PdfTextPage,
   source: ExtractionSourceIdentity,
+  context: UnitContext,
   issues: ExtractionIssue[],
 ): { entries: RingEntry[]; next: number } {
   const header = lines[start]
-  const match = HEADER_UNIT_PATTERN.exec(matchTextOf(header))
-  const unitToken = match?.[1] ?? null
-  const unit = parseUnitToken(unitToken)
-  const unitRange = match?.indices?.[1] ?? null
-  const unitEvidence = unitRange ? locate(header, page, source, unitRange) : null
-  const entries: RingEntry[] = []
+  // 先确认表里真有数据行：没有数据行的表不产生任何单位事件，也不留假声明。
+  const rows: { line: PdfTextLine; match: RegExpExecArray }[] = []
   let index = start + 1
   while (index < lines.length) {
     const line = lines[index]
     const rowMatch = ROW_PATTERN.exec(matchTextOf(line))
     if (!rowMatch) break
-    // 名称必须不是纯符号/数字，避免把下一段正文误当数据行。
-    entries.push(ringEntryFromRow(line, page, source, rowMatch, unit, unitEvidence))
+    rows.push({ line, match: rowMatch })
     index += 1
   }
-  if (entries.length === 0) {
+  if (rows.length === 0) {
     issues.push({
       issueId: stableId('issue', ['NO_TABLE_ROWS', page.page, header.rawText]),
       code: 'NO_TABLE_HEADER',
@@ -351,7 +478,29 @@ function parseTable(
       candidateIds: [],
       evidence: header.rectPdf ? [] : [],
     })
+    return { entries: [], next: index }
   }
+
+  // 表头显式单位：出处覆盖整段「基本尺寸(mm)」/「基本尺寸/mm」，人工一眼能核对。
+  const headerMatch = HEADER_UNIT_PATTERN.exec(matchTextOf(header))
+  const headerToken = headerMatch?.[1] ?? headerMatch?.[2] ?? null
+  const headerRange = headerMatch?.indices?.[0] ?? null
+  const headerEvidence = headerRange ? locate(header, page, source, headerRange) : null
+  const tableDeclarations: UnitDeclaration[] =
+    headerToken !== null && headerToken.trim() !== '' && headerEvidence
+      ? [
+          {
+            scope: 'table',
+            page: page.page,
+            unit: parseUnitToken(headerToken),
+            evidence: headerEvidence,
+          },
+        ]
+      : []
+  const inheritance = resolveTableUnits(context, page.page, tableDeclarations)
+  const entries = rows.map((row) =>
+    ringEntryFromRow(row.line, page, source, row.match, inheritance),
+  )
   return { entries, next: index }
 }
 
@@ -376,6 +525,7 @@ function parseAssignmentLine(
   line: PdfTextLine,
   page: PdfTextPage,
   source: ExtractionSourceIdentity,
+  context: UnitContext,
 ): RingEntry[] {
   const text = matchTextOf(line)
   const entries: RingEntry[] = []
@@ -408,6 +558,8 @@ function parseAssignmentLine(
       unitToken,
       evidence: valueEvidence,
       extraEvidence: unitEvidence ? [unitEvidence] : [],
+      // 只有这一处自己没写单位时才查继承来源（显式单位优先，硬约束 3）。
+      inheritance: unitToken === null ? resolvePageUnits(context, line.page) : null,
     })
     for (const symbol of symbols) {
       const symbolAt = text.indexOf(symbol, offset + match.index)
@@ -425,6 +577,7 @@ function parseAssignmentLine(
         reasons: outcome.reason ? [outcome.reason] : [],
         page: line.page,
         rawText: line.rawText,
+        unitBasis: outcome.unitBasis,
       })
     }
   }
@@ -589,6 +742,7 @@ function resolveRings(
       if (lowers.length > 0 && !lower) reasons.add('AMBIGUOUS_DEVIATION')
 
       const reasonCodes = [...reasons]
+      const unitBasis = bucket.find((entry) => entry.unitBasis !== null)?.unitBasis ?? null
       const data: RingCandidateData = {
         symbol,
         name,
@@ -633,6 +787,7 @@ function resolveRings(
         confidenceBasis: [
           'RULE_TABLE_OR_ASSIGNMENT',
           unitTextBasis(nominal),
+          ...(unitBasis === null ? [] : [unitBasis]),
           ambiguous
             ? 'RULE_MULTIPLE_VALUES'
             : group.length > 1
@@ -693,6 +848,7 @@ function parsePartLine(
   line: PdfTextLine,
   page: PdfTextPage,
   source: ExtractionSourceIdentity,
+  context: UnitContext,
 ): ExtractionCandidate | null {
   const text = matchTextOf(line)
   PART_FIELD_PATTERN.lastIndex = 0
@@ -709,6 +865,7 @@ function parsePartLine(
   let length: QuantityValue | null = null
   const reasons = new Set<ExtractionReasonCode>()
   const evidenceList: ExtractionEvidence[] = []
+  let unitBasis: string | null = null
 
   for (const match of matches) {
     const valueRange = match.indices?.[2]
@@ -721,8 +878,10 @@ function parsePartLine(
       text: text.slice(valueRange[0], valueRange[1]),
       unitToken,
       evidence: locate(line, page, source, [valueRange[0], spanEnd]),
+      inheritance: unitToken === null ? resolvePageUnits(context, line.page) : null,
     })
     if (outcome.reason) reasons.add(outcome.reason)
+    unitBasis = unitBasis ?? outcome.unitBasis
     const value = outcome.value
     if (value?.evidence) evidenceList.push(...value.evidence)
     if (match[1] === '内径') innerDiameter = value
@@ -745,7 +904,10 @@ function parsePartLine(
     page: line.page,
     status: reasonCodes.length > 0 ? 'blocked' : 'pending',
     confidence: reasonCodes.length > 0 ? 'low' : partName ? 'medium' : 'low',
-    confidenceBasis: ['RULE_PART_LABEL_LINE'],
+    confidenceBasis: [
+      'RULE_PART_LABEL_LINE',
+      ...(unitBasis === null ? [] : [unitBasis]),
+    ],
     reasonCodes,
     evidence: uniqueEvidence(evidenceList),
     editRevision: 0,
@@ -762,6 +924,7 @@ function parseIntervalLine(
   line: PdfTextLine,
   page: PdfTextPage,
   source: ExtractionSourceIdentity,
+  context: UnitContext,
 ): ExtractionCandidate | null {
   const text = matchTextOf(line)
   const match = INTERVAL_PATTERN.exec(text)
@@ -770,15 +933,18 @@ function parseIntervalLine(
   const upperRange = match.indices?.[3]
   if (!lowerRange || !upperRange) return null
   const unitToken = match[4] === '' ? null : match[4]
+  const inheritance = unitToken === null ? resolvePageUnits(context, line.page) : null
   const lower = buildQuantity({
     text: text.slice(lowerRange[0], lowerRange[1]),
     unitToken,
     evidence: locate(line, page, source, lowerRange),
+    inheritance,
   })
   const upper = buildQuantity({
     text: text.slice(upperRange[0], upperRange[1]),
     unitToken,
     evidence: locate(line, page, source, upperRange),
+    inheritance,
   })
   const reasons = new Set<ExtractionReasonCode>()
   for (const reason of [lower.reason, upper.reason]) if (reason) reasons.add(reason)
@@ -836,7 +1002,12 @@ function parseIntervalLine(
     page: line.page,
     status: reasonCodes.length > 0 ? 'blocked' : 'pending',
     confidence: reasonCodes.length > 0 ? 'low' : 'high',
-    confidenceBasis: ['RULE_INTERVAL_SENTENCE'],
+    confidenceBasis: [
+      'RULE_INTERVAL_SENTENCE',
+      ...(lower.unitBasis ?? upper.unitBasis
+        ? [lower.unitBasis ?? upper.unitBasis!]
+        : []),
+    ],
     reasonCodes,
     evidence,
     editRevision: 0,
@@ -1204,6 +1375,11 @@ export function buildExtractionDraft(request: ExtractionRequest): ExtractionDraf
   const pages = request.layer.pages.filter(
     (page) => page.page >= range.from && page.page <= range.to,
   )
+  /**
+   * 单位作用域：文档级（页范围第一页的「单位：」句）+ 每页的页级/图注声明。
+   * 只收集显式文字，不做任何跨页推断；表头声明在 parseTable 里逐表构造。
+   */
+  const unitContext = collectUnitContext(pages, range.from, request.source)
   const ringEntries: RingEntry[] = []
   const partCandidates: ExtractionCandidate[] = []
   const intervalCandidates: ExtractionCandidate[] = []
@@ -1238,7 +1414,7 @@ export function buildExtractionDraft(request: ExtractionRequest): ExtractionDraf
           index += 1
           continue
         }
-        const table = parseTable(page.lines, index, page, request.source, issues)
+        const table = parseTable(page.lines, index, page, request.source, unitContext, issues)
         ringEntries.push(...table.entries)
         index = table.next
         continue
@@ -1249,20 +1425,20 @@ export function buildExtractionDraft(request: ExtractionRequest): ExtractionDraf
         index += 1
         continue
       }
-      const interval = parseIntervalLine(line, page, request.source)
+      const interval = parseIntervalLine(line, page, request.source, unitContext)
       if (interval) {
         intervalCandidates.push(interval)
         index += 1
         continue
       }
-      const part = parsePartLine(line, page, request.source)
+      const part = parsePartLine(line, page, request.source, unitContext)
       if (part) {
         partCandidates.push(part)
         index += 1
         continue
       }
       if (matchTextOf(line).includes('=')) {
-        ringEntries.push(...parseAssignmentLine(line, page, request.source))
+        ringEntries.push(...parseAssignmentLine(line, page, request.source, unitContext))
       }
       index += 1
     }
@@ -1279,10 +1455,44 @@ export function buildExtractionDraft(request: ExtractionRequest): ExtractionDraf
   const conflicts = checkConflicts(candidates)
   issues.push(...conflicts.issues)
 
+  // 单位冲突：同一作用域出现两个不同单位 → 该批候选阻塞，不择优（硬约束 2）。
+  for (const event of unitContext.conflicts.values()) {
+    issues.push({
+      issueId: stableId('issue', [
+        'UNIT_CONFLICT',
+        event.page,
+        ...event.declarations.map((declaration) => declaration.evidence.textSnippet),
+      ]),
+      code: 'UNIT_CONFLICT',
+      severity: 'blocked',
+      message:
+        `第 ${event.page} 页出现互相矛盾的单位声明（${event.declarations
+          .map(declarationLabel)
+          .join(' / ')}）；` +
+        '本页未自带单位的数值一律阻塞，未择优采用其中一个',
+      page: event.page,
+      candidateIds: [],
+      evidence: uniqueEvidence(event.declarations.map((declaration) => declaration.evidence)),
+    })
+  }
+
   const finalCandidates = sortCandidates(applyOverrides(candidates, conflicts.overrides)).slice(
     0,
     MAX_EXTRACTION_CANDIDATES,
   )
+  // 单位冲突 issue 补上真正被它阻塞的候选（按出处 + 原因码精确关联，不按页猜）。
+  const linkedIssues = issues.map((item) => {
+    if (item.code !== 'UNIT_CONFLICT' || item.evidence.length === 0) return item
+    const keys = new Set(item.evidence.map((evidence) => evidenceKey(evidence)))
+    const candidateIds = finalCandidates
+      .filter(
+        (candidate) =>
+          candidate.reasonCodes.includes('UNIT_CONFLICT') &&
+          candidate.evidence.some((evidence) => keys.has(evidenceKey(evidence))),
+      )
+      .map((candidate) => candidate.candidateId)
+    return { ...item, candidateIds }
+  })
   if (finalCandidates.length === 0) {
     issues.push(
       issue(
@@ -1297,6 +1507,6 @@ export function buildExtractionDraft(request: ExtractionRequest): ExtractionDraf
   return {
     ...baseDraft,
     candidates: finalCandidates,
-    issues: sortIssues(issues).slice(0, MAX_EXTRACTION_ISSUES),
+    issues: sortIssues(linkedIssues).slice(0, MAX_EXTRACTION_ISSUES),
   }
 }
