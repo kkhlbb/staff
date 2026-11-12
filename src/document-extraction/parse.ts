@@ -14,6 +14,7 @@
  */
 import { tryParseMm } from '../domain/units'
 import type { PdfPageBox, PdfRect } from '../sources/pdfCoordinates'
+import { matchExpressionAssignment, type ExpressionFormMatch } from './expressionUnits'
 import { stableId } from './ids'
 import {
   itemRectPdf,
@@ -247,6 +248,10 @@ interface RingEntry {
   readonly rawText: string
   /** 单位来自继承时的依据标记（confidenceBasis 用）；显式或缺失为 null。 */
   readonly unitBasis: string | null
+  /** 形态识别带来的规则标记（confidenceBasis 用）；其它路径不设。 */
+  readonly basis?: string | null
+  /** 多个等号结果不一致时列出的各结果值（只用于阻塞 issue 文案）。 */
+  readonly expressionConflict?: { readonly values: readonly string[] } | null
 }
 
 // ---------------------------------------------------------------- 单位作用域
@@ -521,6 +526,101 @@ function tableLayoutSupported(line: PdfTextLine): boolean {
 const ASSIGNMENT_PATTERN =
   /([A-Za-z][A-Za-z0-9]{0,3})((?:\s*=\s*[A-Za-z][A-Za-z0-9]{0,3})*)\s*=\s*([+-]?\d+(?:\.\d+)?)\s*([A-Za-z英寸"″]+)?/gd
 
+/**
+ * 下标/计数片段（论文里的 `i = 0`、`i = 1`）：单字母小写符号 + 值恰为 0 或 1，整行除此以外
+ * 没有别的内容 → 不是尺寸赋值，不建候选（任务卡 E-07：现有 2 条这类误报）。
+ * 只认这一种最窄形态：`a = 5`、`A = 0`、`i = 12` 一律照旧走赋值解析。
+ */
+const INDEX_FRAGMENT_PATTERN = /^[a-z]\s*=\s*[01]$/
+
+/** 形态识别出的赋值 → 组成环条目。数值/单位仍交给 buildQuantity 判定，不在本函数里放宽。 */
+function entryFromExpressionForm(
+  form: ExpressionFormMatch,
+  line: PdfTextLine,
+  page: PdfTextPage,
+  source: ExtractionSourceIdentity,
+): RingEntry {
+  const symbolEvidence = locate(line, page, source, [form.symbol.start, form.symbol.end])
+  const nominalEvidence = locate(line, page, source, [form.nominal.start, form.nominal.end])
+  // 硬约束 4：单位归属必须写进 evidence —— 末尾那段单位文本自己的页 / 选区 / 原文片段。
+  const unitEvidence = locate(line, page, source, [form.unit.start, form.unit.end])
+  const expressionEvidence = form.expression
+    ? locate(line, page, source, [form.expression.start, form.expression.end])
+    : null
+  const extraEvidence = [unitEvidence, expressionEvidence].filter(
+    (item): item is ExtractionEvidence => item !== null,
+  )
+
+  const reasons: ExtractionReasonCode[] = []
+  let nominal: QuantityValue | null
+  if (form.inconsistent) {
+    // 多个等号结果不一致：不挑一个，值留原文但 valueQ=null（不可用于确认）。
+    nominal = {
+      text: form.nominal.text,
+      decimals: decimalCount(form.nominal.text),
+      unitText: form.unit.text,
+      unit: null,
+      valueQ: null,
+      evidence: uniqueEvidence(
+        [nominalEvidence, unitEvidence].filter(
+          (item): item is ExtractionEvidence => item !== null,
+        ),
+      ),
+    }
+    reasons.push('INCONSISTENT_REDUNDANT_VALUE')
+  } else {
+    const outcome = buildQuantity({
+      text: form.nominal.text,
+      unitToken: form.unit.text,
+      evidence: nominalEvidence,
+      extraEvidence,
+    })
+    nominal = outcome.value
+    if (outcome.reason) reasons.push(outcome.reason)
+  }
+
+  let upperDeviation: QuantityValue | null = null
+  let lowerDeviation: QuantityValue | null = null
+  if (form.deviation) {
+    // `±0.3` 是同一枚显式文字：上下偏差都由它派生，出处都指向这枚记号。
+    const deviationEvidence = locate(line, page, source, [form.deviation.start, form.deviation.end])
+    const magnitude = form.deviation.text.replace(/^±\s*/u, '')
+    const upper = buildQuantity({
+      text: `+${magnitude}`,
+      unitToken: form.unit.text,
+      evidence: deviationEvidence,
+    })
+    const lower = buildQuantity({
+      text: `-${magnitude}`,
+      unitToken: form.unit.text,
+      evidence: deviationEvidence,
+    })
+    upperDeviation = upper.value
+    lowerDeviation = lower.value
+    if (upper.reason) reasons.push(upper.reason)
+    if (lower.reason) reasons.push(lower.reason)
+  }
+
+  return {
+    symbol: form.symbol.text,
+    symbolEvidence,
+    name: null,
+    nameEvidence: null,
+    nominal,
+    upperDeviation,
+    lowerDeviation,
+    reasons,
+    page: line.page,
+    rawText: line.rawText,
+    unitBasis: null,
+    basis:
+      form.form === 'deviation' ? 'RULE_ASSIGNMENT_PM_DEVIATION' : 'RULE_UNIT_EXPRESSION_TAIL',
+    expressionConflict: form.inconsistent
+      ? { values: form.redundantValues.map((item) => item.text) }
+      : null,
+  }
+}
+
 function parseAssignmentLine(
   line: PdfTextLine,
   page: PdfTextPage,
@@ -528,10 +628,19 @@ function parseAssignmentLine(
   context: UnitContext,
 ): RingEntry[] {
   const text = matchTextOf(line)
+  // 任务卡 E-07：`i = 0` / `i = 1` 这类下标片段不当尺寸候选。
+  if (INDEX_FRAGMENT_PATTERN.test(text.trim())) return []
   const entries: RingEntry[] = []
+  let offset = 0
   for (const segment of text.split(',')) {
-    const offset = text.indexOf(segment)
-    if (offset < 0) continue
+    const start = offset
+    offset += segment.length + 1
+    // P1：先认三种明确形态（末尾单位），认不出来再走原有赋值解析，绝不放宽。
+    const form = matchExpressionAssignment(text, start, start + segment.length)
+    if (form) {
+      entries.push(entryFromExpressionForm(form, line, page, source))
+      continue
+    }
     ASSIGNMENT_PATTERN.lastIndex = 0
     const match = ASSIGNMENT_PATTERN.exec(segment)
     if (!match) continue
@@ -547,8 +656,8 @@ function parseAssignmentLine(
     const unitGroup = groupRange(match, 4)
     if (!valueGroup) continue
     const shift = (range: readonly [number, number]): [number, number] => [
-      range[0] + offset,
-      range[1] + offset,
+      range[0] + start,
+      range[1] + start,
     ]
     const unitToken = unitGroup ? segment.slice(unitGroup[0], unitGroup[1]) : null
     const valueEvidence = locate(line, page, source, shift(valueGroup))
@@ -562,7 +671,7 @@ function parseAssignmentLine(
       inheritance: unitToken === null ? resolvePageUnits(context, line.page) : null,
     })
     for (const symbol of symbols) {
-      const symbolAt = text.indexOf(symbol, offset + match.index)
+      const symbolAt = text.indexOf(symbol, start + match.index)
       entries.push({
         symbol,
         symbolEvidence:
@@ -642,6 +751,33 @@ function unusableReason(entry: RingEntry): ExtractionReasonCode {
   return found ?? entry.reasons[0] ?? 'SOURCE_UNRESOLVED'
 }
 
+/**
+ * 多个等号结果不一致（`A = 10 = 12 mm`）的阻塞 issue：把各结果值原文并列出来，
+ * 明确“未挑其中一个”，不计算、不替换。
+ */
+function inconsistentValueIssue(
+  entry: RingEntry,
+  symbol: string,
+  candidateIds: readonly string[],
+): ExtractionIssue {
+  const values = entry.expressionConflict?.values ?? []
+  return {
+    issueId: stableId('issue', ['INCONSISTENT_REDUNDANT_VALUE', symbol, entry.page, ...values]),
+    code: 'INCONSISTENT_REDUNDANT_VALUE',
+    severity: 'blocked',
+    message:
+      `符号 ${symbol} 的赋值含多个等号，结果值互不一致（${values.join(' / ')}）；` +
+      '该条已阻塞，未挑其中一个值',
+    page: entry.page,
+    candidateIds,
+    evidence: uniqueEvidence(
+      [entry.symbolEvidence, ...(entry.nominal?.evidence ?? [])].filter(
+        (item): item is ExtractionEvidence => item !== null,
+      ),
+    ),
+  }
+}
+
 function resolveRings(
   entries: readonly RingEntry[],
   source: ExtractionSourceIdentity,
@@ -685,6 +821,11 @@ function resolveRings(
     // 好的照常出行，绝不因一处坏掉整组毙掉。
     if (usable.length > 0) {
       for (const entry of unusable) {
+        // 多等号结果不一致有自己的阻塞 issue（下面单独发），不走通用文案。
+        if (entry.expressionConflict) {
+          issues.push(inconsistentValueIssue(entry, symbol, []))
+          continue
+        }
         const reason = unusableReason(entry)
         const evidence = uniqueEvidence(
           [
@@ -743,6 +884,7 @@ function resolveRings(
 
       const reasonCodes = [...reasons]
       const unitBasis = bucket.find((entry) => entry.unitBasis !== null)?.unitBasis ?? null
+      const ruleBasis = bucket.find((entry) => entry.basis != null)?.basis ?? null
       const data: RingCandidateData = {
         symbol,
         name,
@@ -788,6 +930,7 @@ function resolveRings(
           'RULE_TABLE_OR_ASSIGNMENT',
           unitTextBasis(nominal),
           ...(unitBasis === null ? [] : [unitBasis]),
+          ...(ruleBasis === null ? [] : [ruleBasis]),
           ambiguous
             ? 'RULE_MULTIPLE_VALUES'
             : group.length > 1
@@ -802,6 +945,12 @@ function resolveRings(
       }
       built.push(candidate)
       candidates.push(candidate)
+      // 多个等号结果不一致：候选已阻塞（valueQ=null），另发一条阻塞 issue 并列各结果值。
+      for (const entry of bucket) {
+        if (entry.expressionConflict) {
+          issues.push(inconsistentValueIssue(entry, symbol, [candidate.candidateId]))
+        }
+      }
     }
 
     if (ambiguous && built.length > 1) {

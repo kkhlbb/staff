@@ -3,7 +3,7 @@
  * V3.6 多草稿打包应用走查（1+3 方案）：真实 .app + CDP + open-file（无文件对话框）。
  *
  * 步骤：打开含两份草稿的项目（同一 PDF 版本 + 同一页范围：document-extractor-1
- * 已确认 1 条 / document-extractor-3 全待确认）→ 任务书提取页：
+ * 已确认 1 条 / document-extractor-4 全待确认）→ 任务书提取页：
  * 1) 默认显示新草稿（顶部写明版本 + 草稿 id），候选列表与计数都来自它；
  * 2) 旧草稿折叠成一行（版本/候选数/已确认数/被谁取代）；
  * 3) 展开旧草稿：候选可见、确认/编辑/拒绝禁用且有原因文案、定位可用；
@@ -215,7 +215,7 @@ try {
       foldedHeadline: document.querySelector('.extraction-review__superseded-headline')?.textContent ?? null,
     }
   })()`)
-  assert(current.header.includes('document-extractor-3'), `默认草稿应为 v3，实际：${current.header}`)
+  assert(current.header.includes('document-extractor-4'), `默认草稿应为 v4，实际：${current.header}`)
   assert(current.rows === 7, `新草稿候选应为 7 条，实际 ${current.rows}`)
   assert(current.header.includes('draft-'), '顶部必须写出草稿 id')
   assert(current.counts.includes('待确认 7'), `新草稿计数应为待确认 7，实际：${current.counts}`)
@@ -274,7 +274,7 @@ try {
   assert(oldRows.checkboxDisabled === true, '旧草稿的候选选择必须禁用')
   assert(oldRows.locateDisabled === false, '旧草稿的定位必须可用')
   assert(
-    (oldRows.note ?? '').includes('旧规则版本，请在新版（document-extractor-3）上复核后确认'),
+    (oldRows.note ?? '').includes('旧规则版本，请在新版（document-extractor-4）上复核后确认'),
     `旧草稿必须写明原因，实际：${oldRows.note}`,
   )
   summary.expandedOldDraft = oldRows
@@ -339,9 +339,9 @@ try {
   }))()`)
   const afterSession = await draftsFromSession()
   assert(afterDelete.supersededRows === 0, '删除后不应再有旧草稿行')
-  assert((afterDelete.header ?? '').includes('document-extractor-3'), '删除后仍应显示新草稿')
+  assert((afterDelete.header ?? '').includes('document-extractor-4'), '删除后仍应显示新草稿')
   assert(afterSession.drafts.length === 1, `删除后应只剩 1 份草稿，实际 ${afterSession.drafts.length}`)
-  assert(afterSession.drafts[0].extractorVersion === 'document-extractor-3', '剩下的必须是新草稿')
+  assert(afterSession.drafts[0].extractorVersion === 'document-extractor-4', '剩下的必须是新草稿')
   assert(afterDelete.badge === '待确认 7', `删除后角标应与当前草稿一致，实际 ${afterDelete.badge}`)
   assert((afterDelete.counts ?? '').includes('待确认 7'), `删除后计数应为待确认 7，实际 ${afterDelete.counts}`)
   summary.afterDelete = { ...afterDelete, session: afterSession }
@@ -390,10 +390,10 @@ try {
   const reopenedSession = await draftsFromSession()
   assert(reopenedSession.drafts.length === 1, `重开后应只剩 1 份草稿，实际 ${reopenedSession.drafts.length}`)
   assert(
-    reopenedSession.drafts[0].extractorVersion === 'document-extractor-3',
+    reopenedSession.drafts[0].extractorVersion === 'document-extractor-4',
     '重开后默认草稿必须是新规则版本',
   )
-  assert((reopened.header ?? '').includes('document-extractor-3'), '重开后顶部应显示新草稿')
+  assert((reopened.header ?? '').includes('document-extractor-4'), '重开后顶部应显示新草稿')
   assert(reopened.supersededRows === 0, '重开后不应再有旧草稿行')
   assert(reopened.badge === '待确认 7', `重开后角标应为待确认 7，实际 ${reopened.badge}`)
   summary.reopened = { ...reopened, session: reopenedSession }

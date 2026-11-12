@@ -1,0 +1,88 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ✓ src/document-extraction/__tests__/expressionUnits.test.ts > 形态匹配（纯函数，区间偏移必须落在原文上） > 逗号分隔的第二段：偏移按整行计算，切出来的原文不能串位 1ms
+ ✓ src/document-extraction/__tests__/expressionUnits.test.ts > 形态匹配（纯函数，区间偏移必须落在原文上） > 多个等号结果不一致：标 inconsistent 并列出两个结果值原文 0ms
+ ✓ src/document-extraction/__tests__/expressionUnits.test.ts > 形态匹配（纯函数，区间偏移必须落在原文上） > 末段没有单位 / 不是 ± 形态：一律返回 null（交回既有解析） 0ms
+ ✓ src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > 规则版本升到 document-extractor-4（语义变了必须升版） 2ms
+ × src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > E-01 末尾等号后的结果值 + 末尾单位：取 228.41 mm，表达式原样保留 2ms
+   → expected 'max' to be 'A0max' // Object.is equality
+ × src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > E-02 `A = 230 ± 0.3 mm`：基本尺寸 230、上下偏差 ±0.3、单位 mm 1ms
+   → expected 'blocked' to be 'pending' // Object.is equality
+ × src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > E-03 `T0 = +0.3 − (−0.3) = 0.6 mm`：取 0.6 mm，括号负数不当两个值 0ms
+   → expected 'blocked' to be 'pending' // Object.is equality
+ × src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > E-04 `A = 10 = 12 mm`：INCONSISTENT_REDUNDANT_VALUE 阻塞，不挑一个 1ms
+   → expected [ 'UNKNOWN_UNIT' ] to include 'INCONSISTENT_REDUNDANT_VALUE'
+ ✓ src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > E-05 无单位表达式：仍 UNKNOWN_UNIT（不因新规则放宽） 0ms
+ ✓ src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > E-06 无单位但页内「单位：mm」：走 P0 继承（回归保护） 0ms
+ ✓ src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > E-07 `i = 0` / `i = 1` 下标片段：不当尺寸候选（回归保护） 0ms
+ ✓ src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > 每个数值字段的每条出处都过 isEvidenceComplete，且页码落在请求范围内（1–7 页逐页） 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > E-01 末尾等号后的结果值 + 末尾单位：取 228.41 mm，表达式原样保留
+AssertionError: expected 'max' to be 'A0max' // Object.is equality
+
+Expected: "A0max"
+Received: "max"
+
+ ❯ src/document-extraction/__tests__/expressionUnits.test.ts:136:35
+    134|     const draft = draftFor(1, 1)
+    135|     const candidate = onlyRing(draft)
+    136|     expect(candidate.data.symbol).toBe('A0max')
+       |                                   ^
+    137|     expect(candidate.status).toBe('pending')
+    138|     expect(candidate.reasonCodes).toEqual([])
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > E-02 `A = 230 ± 0.3 mm`：基本尺寸 230、上下偏差 ±0.3、单位 mm
+AssertionError: expected 'blocked' to be 'pending' // Object.is equality
+
+Expected: "pending"
+Received: "blocked"
+
+ ❯ src/document-extraction/__tests__/expressionUnits.test.ts:168:30
+    166|     const candidate = onlyRing(draft)
+    167|     expect(candidate.data.symbol).toBe('A')
+    168|     expect(candidate.status).toBe('pending')
+       |                              ^
+    169|     expect(candidate.reasonCodes).toEqual([])
+    170|     const nominal = field(candidate, 'nominal')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > E-03 `T0 = +0.3 − (−0.3) = 0.6 mm`：取 0.6 mm，括号负数不当两个值
+AssertionError: expected 'blocked' to be 'pending' // Object.is equality
+
+Expected: "pending"
+Received: "blocked"
+
+ ❯ src/document-extraction/__tests__/expressionUnits.test.ts:190:30
+    188|     const candidate = onlyRing(draft)
+    189|     expect(candidate.data.symbol).toBe('T0')
+    190|     expect(candidate.status).toBe('pending')
+       |                              ^
+    191|     expect(candidate.reasonCodes).toEqual([])
+    192|     const nominal = field(candidate, 'nominal')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/document-extraction/__tests__/expressionUnits.test.ts > P1 表达式末尾单位：E-01～E-07 > E-04 `A = 10 = 12 mm`：INCONSISTENT_REDUNDANT_VALUE 阻塞，不挑一个
+AssertionError: expected [ 'UNKNOWN_UNIT' ] to include 'INCONSISTENT_REDUNDANT_VALUE'
+ ❯ src/document-extraction/__tests__/expressionUnits.test.ts:207:35
+    205|     const candidate = onlyRing(draft)
+    206|     expect(candidate.status).toBe('blocked')
+    207|     expect(candidate.reasonCodes).toContain('INCONSISTENT_REDUNDANT_VA…
+       |                                   ^
+    208|     const nominal = field(candidate, 'nominal')
+    209|     expect(nominal.unit).toBeNull()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 8 passed (12)
+   Start at  21:05:27
+   Duration  303ms (import 45%, tests 29%, setup 14%, transform 11%, worker 1%)
+

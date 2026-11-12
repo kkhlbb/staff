@@ -4,12 +4,15 @@
 **候选 123 条、可人工确认（pending）26 条、可确认率 21.1%、阻塞率 78.9%、confirmed 0 条**。
 这条命令就是尺子，以后每次改抽取都必须与 `baseline.json` 对比。
 
-> **当前基线（`main 9b5491e` 之后的 `agent/extract-unit-inherit`）**：提取器升到
-> `document-extractor-3`（单位从表头/同页/文档级显式声明继承）。同一批语料仍然是
-> **123 / 26 / 21.1%**，逐份候选、pending、blocked、原因码**一字未变**，变化只有版本号
-> （`baseline.json` 的 8 处 diff 全是版本串）。为什么 0 变化、逐份增减与归类见
+> **当前基线（`agent/extract-expr-unit` 之后）**：提取器升到 `document-extractor-4`
+> （表达式末尾单位只认三种明确形态）。同一批语料：**候选 126 / pending 38 / 可确认率 30.2%**
+> （改前 123 / 26 / 21.1%）。r6 pending 15→27（8 条取到末尾单位 + 4 条以前被符号截断吃掉的写法
+> 现在能出候选）、r5 候选 5→4（`i=0` 下标误报不再出候选）、r1/r2/r3/r4 与 r4@1-20 探针计数不变。
+> 逐份增减与逐条对照见本文第八节；
+> 规则、用例与 M19 见 `docs/evidence/extract-expr-unit/README.md`。
+>
+> 上一版（`document-extractor-3`，单位继承）是 **123 / 26 / 21.1%** 的 0 变化，见
 > [第七节](#七单位继承document-extractor-3对基线的影响0-条变化逐份列出)。
-> 完整证据：`docs/evidence/extract-unit-inherit/README.md`。
 
 ```bash
 node scripts/real-doc-metrics.mjs        # 一条命令出全部数字，并写 metrics.json、与 baseline.json 对比
@@ -298,4 +301,58 @@ REAL_DOC_CORPUS=~/DSH/tmp/cunlian-v36/real-docs \
   声明再多也没有可继承的数值。
 
 所以这次“数字不动”是规则做对了的结果，不是漏测；把 `UNKNOWN_UNIT` 压下去只能是放宽条件。
+
+---
+
+## 八、表达式末尾单位（`document-extractor-4`）对基线的影响：r6 +12 pending、r5 −1
+
+规则变化：只在这三种明确形态下，把整段表达式末尾的单位归给结果值——
+`X = 表达式 = 数值 单位`、`符号 = 数值 ± 偏差 单位`、`符号 = 数值 单位`；中间表达式只作原文字符串
+保留（**不做算术求值**）；多个等号结果不一致 → `INCONSISTENT_REDUNDANT_VALUE` 阻塞、不择优；
+单字母小写下标片段 `i=0` / `i=1` 不再当尺寸候选。单位出处（页/选区/item 索引/原文片段）写进
+数值字段的 `evidence`。实现与用例见 `docs/evidence/extract-expr-unit/README.md`。
+
+### 8.1 逐份增减（改前 `document-extractor-3` → 改后 `document-extractor-4`）
+
+| 文档 | 改前 候选/pending/blocked | 改后 候选/pending/blocked | 增减 | 可确认率 |
+|---|---|---|---|---:|
+| r1 装配工艺课件 | 15 / 4 / 11 | 15 / 4 / 11 | 0 / 0 / 0 | 26.7% → 26.7% |
+| r2 北理工学报 | 20 / 5 / 15 | 20 / 5 / 15 | 0 / 0 / 0 | 25.0% → 25.0% |
+| r3 RV 减速器 | 3 / 0 / 3 | 3 / 0 / 3 | 0 / 0 / 0 | 0.0% → 0.0% |
+| r4 MT/T 1097（`PAGE_LIMIT`） | 0 / 0 / 0 | 0 / 0 / 0 | 0 / 0 / 0 | n/a |
+| r5 英文公差分析 | 5 / 2 / 3 | 4 / 2 / 2 | **−1 / 0 / −1** | 40.0% → 50.0% |
+| r6 英文装配工艺 | 80 / 15 / 65 | 84 / 27 / 57 | **+4 / +12 / −8** | 18.8% → 32.1% |
+| **合计** | **123 / 26 / 97** | **126 / 38 / 88** | **+3 / +12 / −9** | **21.1% → 30.2%** |
+
+原因码分布：`UNKNOWN_UNIT` **51 → 42**、`FORMULA_UNSUPPORTED` 45 → 45、
+`UNSUPPORTED_UNIT` 1 → 1、`INCONSISTENT_REDUNDANT_VALUE` 0 → 0（真实语料没有多等号矛盾的写法）。
+issue：r1/r2/r3/r4 不变，r5 `AMBIGUOUS_ASSIGNMENT×1 → 无`，r6 `UNKNOWN_UNIT×29 → 18`、
+`AMBIGUOUS_ASSIGNMENT×11 → 13`；r4 的 1-20 页探针不变。
+
+### 8.2 逐份解释
+
+- **r6（唯一有实质上升的一份）**：8 条 `UNKNOWN_UNIT` 阻塞候选取到整段表达式末尾的 `mm`
+  （`A=230±0.3mm`、`A0max=1753.1−759.38−765.31=228.41mm`、`A0min=…`、`A0=228.11±0.3mm`、
+  `B3=488.88±0.05mm`、`B2=32.5±0.03mm`、`B1upper =135±0.05mm`、`B1 upper=125±0.045mm`），
+  另 4 条以前被旧 4 字符符号截断 / 每段只取一个匹配吃掉的写法现在能出候选
+  （`B1=238.1±0.07mm`、`B1=260±0.07mm`、`B1=125 ± 0.045mm`、`1below =125±0.045mm`）。
+  `AMBIGUOUS_ASSIGNMENT` +2 是必然：`B1` 现在有 4 处**可解析**取值，按 V3.6 既有语义逐处出候选 + warning。
+- **r5（候选下降，预期内）**：只少了 `i=0` 这条下标碎片（任务卡 E-07），它不是尺寸，本来就不该出候选；
+  pending 不变（那条本来也是 blocked），`AMBIGUOUS_ASSIGNMENT` 随之消失。
+- **r1/r2/r3/r4 计数不变**：没有行落进三种形态；r2 p4 的 `i=1` 一行不再建条目，但它与同符号同值的
+  `ïi=1` 原本就合并成 1 条候选，所以计数不动、`rawText` 变成后者。
+- **仍未救回的 3 条**（`UNKNOWN_UNIT` 42 条里“行内有单位串”只剩 3 条）：`L2 =100+0.2mm`
+  （只有上偏差、没有 ±）、`+0.2 mm,L2 Lb=5`（单位在行首）、`amax=0.04/2−`（末尾不是数值/单位）。
+  救它们必须放宽形态或做算术求值，本任务明确不做。
+
+### 8.3 `baseline.json` 的 32 处变化怎么来的
+
+| 类别 | 处数 | 内容 |
+|---|---|---|
+| 版本串 | 8 | 6 份文档 + `rules` + `summary.rules` 的 `document-extractor-3 → 4` |
+| r6 规则效果 | 16 | total 80→84、pending 15→27、blocked 65→57、byKind[ring] 52→56、blockedReasonCodes[UNKNOWN_UNIT] 37→29、issues.blocked 29→18、issues.total 40→29、byCode[UNKNOWN_UNIT] 29→18 |
+| r5 E-07 | 6 | total 5→4、blocked 3→2、byKind[ring] 5→4、issues.total 1→0、issues.warning 1→0、byCode[AMBIGUOUS_ASSIGNMENT] 消失 |
+| 汇总 | 6 | total 123→126、pending 26→38、blocked 97→88、confirmableRate 0.2114→0.3016、blockedRate 0.7886→0.6984、reasonCodeTop5 前两位互换 |
+
+`baselineReason` 里逐条写明了上面这些增减的来源；更新后不带参数再跑一次 → `BASELINE MATCH`。
 
