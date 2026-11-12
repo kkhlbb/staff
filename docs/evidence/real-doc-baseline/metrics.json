@@ -1,0 +1,412 @@
+{
+  "corpus": {
+    "manifest": "corpus-manifest.json",
+    "documents": 6
+  },
+  "rules": {
+    "extractorVersion": "document-extractor-2",
+    "maxExtractionPages": 100,
+    "maxExtractionCandidates": 200,
+    "maxExtractionIssues": 200,
+    "readBudget": {
+      "maxTextItems": 200000,
+      "timeoutMs": 300000
+    }
+  },
+  "documents": [
+    {
+      "id": "r1",
+      "file": "r1-assembly-course.pdf",
+      "language": "zh",
+      "pages": 74,
+      "textItems": 4409,
+      "textChars": 9805,
+      "pageRange": {
+        "from": 1,
+        "to": 74
+      },
+      "extractorVersion": "document-extractor-2",
+      "candidates": {
+        "total": 15,
+        "pending": 4,
+        "blocked": 11,
+        "confirmed": 0,
+        "byKind": [
+          {
+            "code": "ring",
+            "count": 8
+          },
+          {
+            "code": "formula",
+            "count": 7
+          }
+        ]
+      },
+      "blockedReasonCodes": [
+        {
+          "code": "FORMULA_UNSUPPORTED",
+          "count": 7
+        },
+        {
+          "code": "UNKNOWN_UNIT",
+          "count": 4
+        }
+      ],
+      "issues": {
+        "total": 56,
+        "blocked": 54,
+        "warning": 2,
+        "byCode": [
+          {
+            "code": "UNKNOWN_UNIT",
+            "count": 53
+          },
+          {
+            "code": "AMBIGUOUS_ASSIGNMENT",
+            "count": 2
+          },
+          {
+            "code": "NO_TEXT_LAYER",
+            "count": 1
+          }
+        ],
+        "noTextLayerPages": [
+          40
+        ]
+      },
+      "pageLimit": null
+    },
+    {
+      "id": "r2",
+      "file": "r2-tolerance-domain.pdf",
+      "language": "zh",
+      "pages": 5,
+      "textItems": 6105,
+      "textChars": 11447,
+      "pageRange": {
+        "from": 1,
+        "to": 5
+      },
+      "extractorVersion": "document-extractor-2",
+      "candidates": {
+        "total": 20,
+        "pending": 5,
+        "blocked": 15,
+        "confirmed": 0,
+        "byKind": [
+          {
+            "code": "ring",
+            "count": 11
+          },
+          {
+            "code": "formula",
+            "count": 9
+          }
+        ]
+      },
+      "blockedReasonCodes": [
+        {
+          "code": "FORMULA_UNSUPPORTED",
+          "count": 9
+        },
+        {
+          "code": "UNKNOWN_UNIT",
+          "count": 6
+        }
+      ],
+      "issues": {
+        "total": 7,
+        "blocked": 5,
+        "warning": 2,
+        "byCode": [
+          {
+            "code": "UNKNOWN_UNIT",
+            "count": 5
+          },
+          {
+            "code": "AMBIGUOUS_ASSIGNMENT",
+            "count": 2
+          }
+        ],
+        "noTextLayerPages": []
+      },
+      "pageLimit": null
+    },
+    {
+      "id": "r3",
+      "file": "r3-rv-3dcs.pdf",
+      "language": "zh",
+      "pages": 4,
+      "textItems": 1570,
+      "textChars": 6529,
+      "pageRange": {
+        "from": 1,
+        "to": 4
+      },
+      "extractorVersion": "document-extractor-2",
+      "candidates": {
+        "total": 3,
+        "pending": 0,
+        "blocked": 3,
+        "confirmed": 0,
+        "byKind": [
+          {
+            "code": "formula",
+            "count": 2
+          },
+          {
+            "code": "ring",
+            "count": 1
+          }
+        ]
+      },
+      "blockedReasonCodes": [
+        {
+          "code": "FORMULA_UNSUPPORTED",
+          "count": 2
+        },
+        {
+          "code": "UNKNOWN_UNIT",
+          "count": 1
+        }
+      ],
+      "issues": {
+        "total": 0,
+        "blocked": 0,
+        "warning": 0,
+        "byCode": [],
+        "noTextLayerPages": []
+      },
+      "pageLimit": null
+    },
+    {
+      "id": "r4",
+      "file": "r4-mtt1097.pdf",
+      "language": "zh",
+      "pages": 170,
+      "textItems": 94214,
+      "textChars": 206682,
+      "pageRange": {
+        "from": 1,
+        "to": 170
+      },
+      "extractorVersion": "document-extractor-2",
+      "candidates": {
+        "total": 0,
+        "pending": 0,
+        "blocked": 0,
+        "confirmed": 0,
+        "byKind": []
+      },
+      "blockedReasonCodes": [],
+      "issues": {
+        "total": 1,
+        "blocked": 1,
+        "warning": 0,
+        "byCode": [
+          {
+            "code": "PAGE_LIMIT",
+            "count": 1
+          }
+        ],
+        "noTextLayerPages": []
+      },
+      "pageLimit": {
+        "maxPages": 100,
+        "blocked": true
+      }
+    },
+    {
+      "id": "r5",
+      "file": "r5-tolerance-analysis.pdf",
+      "language": "en",
+      "pages": 8,
+      "textItems": 4053,
+      "textChars": 32426,
+      "pageRange": {
+        "from": 1,
+        "to": 8
+      },
+      "extractorVersion": "document-extractor-2",
+      "candidates": {
+        "total": 5,
+        "pending": 2,
+        "blocked": 3,
+        "confirmed": 0,
+        "byKind": [
+          {
+            "code": "ring",
+            "count": 5
+          }
+        ]
+      },
+      "blockedReasonCodes": [
+        {
+          "code": "UNKNOWN_UNIT",
+          "count": 3
+        }
+      ],
+      "issues": {
+        "total": 1,
+        "blocked": 0,
+        "warning": 1,
+        "byCode": [
+          {
+            "code": "AMBIGUOUS_ASSIGNMENT",
+            "count": 1
+          }
+        ],
+        "noTextLayerPages": []
+      },
+      "pageLimit": null
+    },
+    {
+      "id": "r6",
+      "file": "r6-segments-assembly.pdf",
+      "language": "en",
+      "pages": 8,
+      "textItems": 2871,
+      "textChars": 18791,
+      "pageRange": {
+        "from": 1,
+        "to": 8
+      },
+      "extractorVersion": "document-extractor-2",
+      "candidates": {
+        "total": 80,
+        "pending": 15,
+        "blocked": 65,
+        "confirmed": 0,
+        "byKind": [
+          {
+            "code": "ring",
+            "count": 52
+          },
+          {
+            "code": "formula",
+            "count": 28
+          }
+        ]
+      },
+      "blockedReasonCodes": [
+        {
+          "code": "UNKNOWN_UNIT",
+          "count": 37
+        },
+        {
+          "code": "FORMULA_UNSUPPORTED",
+          "count": 27
+        },
+        {
+          "code": "UNSUPPORTED_UNIT",
+          "count": 1
+        }
+      ],
+      "issues": {
+        "total": 40,
+        "blocked": 29,
+        "warning": 11,
+        "byCode": [
+          {
+            "code": "UNKNOWN_UNIT",
+            "count": 29
+          },
+          {
+            "code": "AMBIGUOUS_ASSIGNMENT",
+            "count": 11
+          }
+        ],
+        "noTextLayerPages": []
+      },
+      "pageLimit": null
+    }
+  ],
+  "summary": {
+    "documents": 6,
+    "pages": 269,
+    "textItems": 113222,
+    "candidates": {
+      "total": 123,
+      "pending": 26,
+      "blocked": 97,
+      "confirmed": 0
+    },
+    "confirmableRate": 0.211382,
+    "blockedRate": 0.788618,
+    "reasonCodeTop5": [
+      {
+        "code": "UNKNOWN_UNIT",
+        "count": 51
+      },
+      {
+        "code": "FORMULA_UNSUPPORTED",
+        "count": 45
+      },
+      {
+        "code": "UNSUPPORTED_UNIT",
+        "count": 1
+      }
+    ],
+    "pageLimitDocuments": [
+      "r4"
+    ],
+    "noTextLayerPages": 1,
+    "rules": {
+      "extractorVersion": "document-extractor-2",
+      "maxExtractionPages": 100,
+      "maxExtractionCandidates": 200,
+      "maxExtractionIssues": 200,
+      "readBudget": {
+        "maxTextItems": 200000,
+        "timeoutMs": 300000
+      }
+    },
+    "pageRangeProbe": [
+      {
+        "id": "r4@1-20",
+        "forDocument": "r4",
+        "pageRange": {
+          "from": 1,
+          "to": 20
+        },
+        "candidates": {
+          "total": 1,
+          "pending": 0,
+          "blocked": 1,
+          "confirmed": 0,
+          "byKind": [
+            {
+              "code": "ring",
+              "count": 1
+            }
+          ]
+        },
+        "blockedReasonCodes": [
+          {
+            "code": "UNKNOWN_UNIT",
+            "count": 1
+          }
+        ],
+        "issues": {
+          "total": 3,
+          "blocked": 3,
+          "warning": 0,
+          "byCode": [
+            {
+              "code": "NO_TEXT_LAYER",
+              "count": 3
+            }
+          ],
+          "noTextLayerPages": [
+            1,
+            2,
+            6
+          ]
+        }
+      }
+    ]
+  },
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}
