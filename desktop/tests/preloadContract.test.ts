@@ -66,6 +66,8 @@ const ADDED_FUNCTIONS = [
   // V4 stage 4: 真实供应商配置（只写 Keychain）、连接测试与受控导出（仍只增不改）。
   'saveAgentProvider', 'testAgentProvider', 'clearAgentProviderKey', 'exportApprovedVersion',
   'onAgentEvent',
+  // DXF 导出 v1：R12 / 2000（仍只增不改旧函数）。
+  'exportDrawingDxfR12', 'exportDrawingDxf2000',
 ] as const
 
 describe('B2/C preload 契约', () => {

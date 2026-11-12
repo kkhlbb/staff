@@ -185,6 +185,14 @@ const api: CunlianApi = {
     ipcRenderer.invoke(IPC_CHANNELS.drawingExportSvg, request) as Promise<
       IpcResult<DrawingExportValue>
     >,
+  exportDrawingDxfR12: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.drawingExportDxfR12, request) as Promise<
+      IpcResult<DrawingExportValue>
+    >,
+  exportDrawingDxf2000: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.drawingExportDxf2000, request) as Promise<
+      IpcResult<DrawingExportValue>
+    >,
   stageChangeDraft: (request) =>
     ipcRenderer.invoke(IPC_CHANNELS.changeStage, request) as Promise<
       IpcResult<ChangeDraftValue>

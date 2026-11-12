@@ -337,11 +337,21 @@ async function pickDrawingExportPath(
   suggestedName: string,
 ): Promise<string | null> {
   const owner = BrowserWindow.fromId(windowId) ?? BrowserWindow.getFocusedWindow()
+  const dxf = kind === 'dxf-r12' || kind === 'dxf-2000'
+  const title =
+    kind === 'pdf'
+      ? '导出图纸 PDF'
+      : kind === 'svg'
+        ? '导出图纸 SVG'
+        : kind === 'dxf-r12'
+          ? '导出 DXF（R12，切割/检具/老设备）'
+          : '导出 DXF（2000）'
   const options = {
-    title: kind === 'pdf' ? '导出图纸 PDF' : '导出图纸 SVG',
+    title,
     defaultPath: path.join(app.getPath('documents'), suggestedName),
-    filters:
-      kind === 'pdf'
+    filters: dxf
+      ? [{ name: 'DXF 图纸', extensions: ['dxf'] }]
+      : kind === 'pdf'
         ? [{ name: 'PDF 图纸', extensions: ['pdf'] }]
         : [{ name: 'SVG 矢量图纸', extensions: ['svg'] }],
   }
