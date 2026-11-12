@@ -24,11 +24,14 @@ import {
   computeCandidateRequirementCheck,
   type RequirementCheckErrorCode,
 } from './check'
+import {
+  isPdfRequirementSource,
+  type PdfRequirementSource,
+} from './types'
 import type {
   RequirementCheck,
   RequirementChainRef,
   RequirementRevision,
-  RequirementSourceRef,
 } from './types'
 
 export type RequirementErrorCode =
@@ -244,14 +247,15 @@ export async function confirmOrUpdateRequirement(
     return fail('INVALID_REGION', `选区不合法：${regionError}`)
   }
 
-  const source: RequirementSourceRef = {
+  const source: PdfRequirementSource = {
+    kind: 'pdf',
     documentId: document.id,
     revisionId: revision.id,
     sha256: revision.sha256,
     blobKey: revision.blobKey,
     page: input.source.page,
-    rectPdf: [...input.source.rectPdf] as RequirementSourceRef['rectPdf'],
-    pageBoxPdf: [...input.source.pageBoxPdf] as RequirementSourceRef['pageBoxPdf'],
+    rectPdf: [...input.source.rectPdf] as PdfRequirementSource['rectPdf'],
+    pageBoxPdf: [...input.source.pageBoxPdf] as PdfRequirementSource['pageBoxPdf'],
   }
 
   const requirementId = activeRequirementId ?? input.newRequirementId
@@ -315,8 +319,12 @@ export async function confirmOrUpdateRequirement(
     lowerQ: revisionRecord.lowerQ,
     upperQ: revisionRecord.upperQ,
     confirmedTextDigest: stableFingerprint({ text: confirmedText }),
-    sourceRevisionId: revisionRecord.source.revisionId,
-    sourceSha256: revisionRecord.source.sha256,
+    sourceRevisionId: isPdfRequirementSource(revisionRecord.source)
+      ? revisionRecord.source.revisionId
+      : revisionRecord.source.attestation.fieldPath,
+    sourceSha256: isPdfRequirementSource(revisionRecord.source)
+      ? revisionRecord.source.sha256
+      : stableFingerprint(revisionRecord.source.attestation),
     checkId: baseline.value.check.checkId,
     checkStatus: baseline.value.check.status,
     reason: revisionRecord.changeReason,

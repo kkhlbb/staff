@@ -47,6 +47,10 @@ export interface AgentToolDispatch {
   projectId: string
   command: AgentToolCommand
   arguments: unknown
+  /** 本轮用户原话（逐字）；无任务书工具据此校验“值来自人”。 */
+  userText: string
+  /** 无任务书建项的责任人（用户界面手输）；不由模型提供。 */
+  intentIdentity?: { actorId: string; sessionLabel: string | null }
 }
 
 export interface AgentToolDispatcher {
@@ -119,6 +123,8 @@ export interface StartAgentTaskOptions {
   systemPrompt?: string
   messages?: ModelMessage[]
   taskId?: string
+  /** 用户界面注入的责任人；模型不可见、不可改。 */
+  intentIdentity?: { actorId: string; sessionLabel: string | null }
 }
 
 export type AgentFailureCode =
@@ -433,6 +439,10 @@ export class AgentScheduler {
               projectId: entry.task.projectId,
               command: call.name as AgentToolCommand,
               arguments: validation.value,
+              userText: entry.options.goal,
+              ...(entry.options.intentIdentity === undefined
+                ? {}
+                : { intentIdentity: entry.options.intentIdentity }),
             })
           } catch (error) {
             result = {
@@ -519,6 +529,7 @@ export class AgentScheduler {
         projectId: entry.task.projectId,
         command: 'context',
         arguments: {},
+        userText: entry.options.goal,
       })
     } catch (error) {
       result = {

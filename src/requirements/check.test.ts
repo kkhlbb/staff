@@ -15,6 +15,7 @@ import { SAMPLE_PROJECT_ID } from '../project-file/__fixtures__/sampleProjectFil
 import { computeCandidateRequirementCheck } from './check'
 import type { RequirementCheckInput, RequirementCheckValue } from './check'
 import type { RequirementDraftInput } from './fingerprint'
+import type { PdfRequirementSource } from './types'
 import {
   buildRequirementFingerprintInput,
   computeRequirementInputFingerprint,
@@ -237,7 +238,7 @@ describe('V3.5 四态：待确认与未检查的判据不同', () => {
     expect(value.check.status).toBe('pending-confirmation')
     expect(value.check.reasonCodes).toContain('SOURCE_VERSION_CHANGED')
     // 旧条款仍指向旧版本，仍可定位原文。
-    expect(value.check.evidenceRef?.source.revisionId).toBe('sr-1')
+    expect((value.check.evidenceRef?.source as PdfRequirementSource).revisionId).toBe('sr-1')
     expect(value.check.resultInterval).toEqual({ minQ: 1100, maxQ: 2100 })
   })
 
@@ -396,7 +397,7 @@ describe('V3.5 指纹与过期派生', () => {
 })
 
 describe('V3.5 持久化契约：条款与检查可按当前 schema 保存/读回', () => {
-  it('条款版本、活动指针与检查证据通过严格 schema9 解析', async () => {
+  it('条款版本、活动指针与检查证据通过严格 schema10 解析', async () => {
     const project = await createRequirementProject()
     const value = await evaluate(project.snapshot, draftWithLength(project.snapshot, '12.04'))
     const withCheck: ProjectFileSnapshot = {
@@ -405,11 +406,11 @@ describe('V3.5 持久化契约：条款与检查可按当前 schema 保存/读�
     }
     const parsed = parseProjectVersioned(withCheck.project)
     expect(parsed.ok).toBe(true)
-    if (parsed.ok && parsed.value.version === 7) {
+    if (parsed.ok && parsed.value.version === 8) {
       expect(parsed.value.project.activeRequirementRevisionId).toBe('reqrev-1')
       expect(parsed.value.project.currentRequirementCheck?.status).toBe('satisfied')
     } else {
-      throw new Error('条款项目没有被解析为 schema9')
+      throw new Error('条款项目没有被解析为 schema10')
     }
   })
 

@@ -86,7 +86,104 @@ const exportParams: JsonObject = {
   additionalProperties: false,
 }
 
+const mmText: JsonObject = { type: 'string', minLength: 1, maxLength: 32 }
+const statementSchema: JsonObject = { type: 'string', minLength: 1, maxLength: 4000 }
+
+/** ADR-001 第 3 步：无任务书入口。name/partType 之外的身份由 main 绑定，模型无法提供。 */
+const createProject: JsonObject = {
+  type: 'object',
+  properties: {
+    name: { type: 'string', minLength: 1, maxLength: 80 },
+    partType: { enum: ['spacer'] },
+  },
+  required: ['name', 'partType'],
+  additionalProperties: false,
+}
+
+const setChain: JsonObject = {
+  type: 'object',
+  properties: {
+    statement: statementSchema,
+    rings: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 20,
+      items: {
+        type: 'object',
+        properties: {
+          symbol: { type: 'string', minLength: 1, maxLength: 20 },
+          nominalMm: mmText,
+          upperDeviationMm: mmText,
+          lowerDeviationMm: mmText,
+        },
+        required: ['symbol', 'nominalMm', 'upperDeviationMm', 'lowerDeviationMm'],
+        additionalProperties: false,
+      },
+    },
+    formula: { type: 'string', minLength: 1, maxLength: 200 },
+  },
+  required: ['statement', 'rings'],
+  additionalProperties: false,
+}
+
+const setRequirement: JsonObject = {
+  type: 'object',
+  properties: {
+    statement: statementSchema,
+    lowerMm: mmText,
+    upperMm: mmText,
+    lowerInclusive: { type: 'boolean' },
+    upperInclusive: { type: 'boolean' },
+  },
+  required: ['statement', 'lowerMm', 'upperMm', 'lowerInclusive', 'upperInclusive'],
+  additionalProperties: false,
+}
+
+const setBinding: JsonObject = {
+  type: 'object',
+  properties: {
+    statement: statementSchema,
+    parameters: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 3,
+      items: {
+        type: 'object',
+        properties: {
+          parameter: parameterSchema,
+          mm: mmText,
+          symbol: { type: 'string', minLength: 1, maxLength: 20 },
+        },
+        required: ['parameter', 'mm'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['statement', 'parameters'],
+  additionalProperties: false,
+}
+
 export const AGENT_TOOL_SCHEMAS: Record<AgentToolCommand, ToolSchema> = {
+  createProject: {
+    name: 'createProject',
+    description: '把当前空白项目建立为无任务书项目（零件由用户在对话里给出，没有任务书 PDF）。责任人自述由界面绑定，不要自己编造。只建立项目与空草稿，不写任何数值。',
+    parameters: createProject,
+  },
+  setChain: {
+    name: 'setChain',
+    description: '把用户说出的组成环写入意图草稿（只产草稿，不提交）。statement 必须是用户原话逐字；rings 的每个数值都必须出现在用户原话里，编造或推算会被拒绝。formula 例如 "H - B1 - S - B2"。',
+    parameters: setChain,
+  },
+  setRequirement: {
+    name: 'setRequirement',
+    description: '把用户明确给出的条款区间写入意图草稿。lowerMm/upperMm 必须出现在用户原话里；不允许引用 GB/T 5847 等级、标准默认值或自行推算，否则返回 REQUIREMENT_MUST_BE_USER_GIVEN。',
+    parameters: setRequirement,
+  },
+  setBinding: {
+    name: 'setBinding',
+    description: '写入隔套参数（内径/外径/长度）与可选的“参数 ↔ 组成环”绑定意图。参数值必须来自用户原话；绑定要求参数值等于该环基本尺寸，否则拒绝。只产草稿。',
+    parameters: setBinding,
+  },
   context: { name: 'context', description: '读取当前项目、正式版本、工作草稿、最近版本参数与条款状态。只读。', parameters: context },
   confirmed: { name: 'confirmed', description: '读取提取草稿的已确认候选（紧凑视图：candidateId、kind、summary、原文摘录）与冲突问题。只读。', parameters: confirmed },
   apply: {

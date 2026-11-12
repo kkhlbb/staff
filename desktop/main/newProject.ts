@@ -127,6 +127,11 @@ export function createNewProjectSnapshot(options: NewProjectOptions): ProjectFil
     activeRequirementRevisionId: null,
     currentRequirementCheck: null,
     extractionDrafts: [],
+    sourceKind: 'pdf',
+    actorId: null,
+    sessionSeq: 0,
+    sessionLabel: null,
+    attestations: [],
   }
 
   return {

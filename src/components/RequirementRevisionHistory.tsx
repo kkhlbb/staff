@@ -79,14 +79,24 @@ export function RequirementRevisionHistory({
                   {formatMm(item.lowerQ)} ～ {formatMm(item.upperQ)} mm
                 </td>
                 <td>
-                  {item.sourceFileName === null ? null : (
-                    <span className="requirement-history__file">{item.sourceFileName} · </span>
+                  {item.sourceKind === 'user-attestation' ? (
+                    <span className="requirement-history__file">用户输入，无外部原文件</span>
+                  ) : (
+                    <>
+                      {item.sourceFileName === null ? null : (
+                        <span className="requirement-history__file">{item.sourceFileName} · </span>
+                      )}
+                      <code className="requirement-history__id">{item.sourceRevisionId}</code>
+                    </>
                   )}
-                  <code className="requirement-history__id">{item.sourceRevisionId}</code>
                 </td>
-                <td>第 {item.sourcePage} 页</td>
+                <td>{item.sourcePage === null ? '无页码' : `第 ${item.sourcePage} 页`}</td>
                 <td>
-                  <code className="requirement-history__rect">{formatRect(item.sourceRectPdf)}</code>
+                  <code className="requirement-history__rect">
+                    {item.sourceRectPdf === null
+                      ? (item.sourceStatement ?? '—')
+                      : formatRect(item.sourceRectPdf)}
+                  </code>
                 </td>
                 <td>
                   {item.isActive ? (

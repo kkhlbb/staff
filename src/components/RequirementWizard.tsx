@@ -9,6 +9,7 @@ import { MmInput } from './MmInput'
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SnapshotDto } from '../../desktop/shared/contracts'
+import { isPdfRequirementSource } from '../requirements/types'
 import type { RequirementRevision } from '../requirements/types'
 import type { SourceRevision } from '../sources/types'
 import { formatMm, tryParseMm } from '../domain/units'
@@ -60,7 +61,7 @@ export function RequirementWizard(props: RequirementWizardProps) {
   const { snapshot, active } = props
   const documents = snapshot.documents
   const initial = useMemo(() => {
-    if (active !== null) {
+    if (active !== null && isPdfRequirementSource(active.source)) {
       return {
         documentId: active.source.documentId,
         revisionId: active.source.revisionId,

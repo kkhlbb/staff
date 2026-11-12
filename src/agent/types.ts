@@ -23,7 +23,18 @@ export const AGENT_TASK_STATES = [
 export type AgentTaskState = (typeof AGENT_TASK_STATES)[number]
 
 /** 阶段 1 已实现的 agent:* 工具命令。模型只能发这些调用。 */
-export type AgentToolCommand = 'context' | 'confirmed' | 'apply' | 'stage' | 'preview' | 'export'
+export type AgentToolCommand =
+  | 'context'
+  | 'confirmed'
+  | 'apply'
+  | 'stage'
+  | 'preview'
+  | 'export'
+  /** ADR-001 第 3 步：无任务书入口的四个工具（全部只产草稿，没有提交能力）。 */
+  | 'createProject'
+  | 'setChain'
+  | 'setRequirement'
+  | 'setBinding'
 
 export interface AgentBudget {
   /** 每轮任务最多执行的工具调用次数。 */

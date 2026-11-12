@@ -37,7 +37,7 @@ import {
 } from '../drawing/types'
 import type { ProjectFileVisualReferenceLink } from '../project-file/types'
 import { isVisualReferenceLink } from '../project-file/types'
-import { REQUIREMENT_STATUS_LABEL } from '../requirements/types'
+import { REQUIREMENT_STATUS_LABEL, isPdfRequirementSource } from '../requirements/types'
 import './Workspace.css'
 import './DesktopWorkspace.css'
 import '../components/AgentSidebar.css'
@@ -327,13 +327,16 @@ export function DesktopWorkspace() {
       {session.recovery.length > 0 && <section className="desktop-workspace__recovery"><h3>有尚未保存的恢复草稿</h3>{session.recovery.map(item => <div key={item.recoveryId}><span>{item.name} · {item.savedAt}</span>{item.error ? <p role="alert">{item.error}</p> : <button disabled={session.busy} onClick={() => void session.restore(item.recoveryId)}>恢复为未保存副本</button>}</div>)}</section>}
       <h3>最近项目</h3>
       {!session.recent.length && <p>暂无最近项目</p>}
-      <ul className="desktop-workspace__recent">{session.recent.map(item => <li key={item.recentId}><div><strong>{item.name}</strong><p>{item.rev ? `Rev ${item.rev}` : 'Rev 不可用'} · 上次打开 {item.lastOpenedAt}</p><p>{item.path}</p></div><button disabled={session.busy} onClick={() => void session.openRecent(item)}>{item.missing ? '重新定位' : '打开'}</button></li>)}</ul>
+      <ul className="desktop-workspace__recent">{session.recent.map(item => <li key={item.recentId}><div><strong>{item.name}</strong>{item.sourceKind === 'user-intent' && <span className="desktop-workspace__source-badge" data-testid="recent-no-external-source">无外部来源</span>}<p>{item.rev ? `Rev ${item.rev}` : 'Rev 不可用'} · 上次打开 {item.lastOpenedAt}</p><p>{item.path}</p></div><button disabled={session.busy} onClick={() => void session.openRecent(item)}>{item.missing ? '重新定位' : '打开'}</button></li>)}</ul>
       <p role="status">{session.notice || (window.cunlian ? '文件操作由桌面应用处理。' : 'window.cunlian 不可用，请在桌面应用中执行文件操作。')}</p>
     </section>{dialogs}
   </main>
   return <main className="desktop-workspace" style={style} aria-label="寸链桌面工作台">
     <header className="desktop-workspace__titlebar">
       <h1>寸链 · {project.name}</h1><span>Rev {project.currentRevisionId}</span><span className="desktop-workspace__pending">{saveState}</span>
+      {project.sourceKind === 'user-intent' && (
+        <span className="desktop-workspace__source-badge" data-testid="project-source-note">依据：用户输入，无外部原文件</span>
+      )}
       <span className="desktop-workspace__batch">V4.0 · Beta</span>
     </header>
     <div className="desktop-workspace__toolbar" role="toolbar" aria-label="项目操作">
@@ -577,12 +580,22 @@ export function DesktopWorkspace() {
           <h3>任务书要求（唯一判定依据）</h3>
           {activeRequirement === null ? <p>尚未绑定任务书要求。原项目目标仍在独立展示与计算。</p> : <>
             <p>活动条款 {activeRequirement.requirementId} · 版本 {activeRequirement.revisionId} · {formatMm(activeRequirement.lowerQ)} ～ {formatMm(activeRequirement.upperQ)} mm（闭区间）</p>
-            <p>来源 {activeRequirement.source.revisionId} 第 {activeRequirement.source.page} 页 · SHA-256 {activeRequirement.source.sha256.slice(0, 12)}…</p>
+            {isPdfRequirementSource(activeRequirement.source) ? (
+              <p>来源 {activeRequirement.source.revisionId} 第 {activeRequirement.source.page} 页 · SHA-256 {activeRequirement.source.sha256.slice(0, 12)}…</p>
+            ) : (
+              <p>依据：用户输入，无外部原文件 · 原话「{activeRequirement.source.attestation.statement}」</p>
+            )}
             {project.currentRequirementCheck && <p>当前正式检查（冻结）：{REQUIREMENT_STATUS_LABEL[project.currentRequirementCheck.status]} · {project.currentRequirementCheck.reasonCodes.join('、')}</p>}
           </>}
           <div className="desktop-workspace__model-dialog-actions">
-            <button type="button" disabled={session.busy || snapshot === undefined} onClick={() => setRequirementOpen(true)}>{activeRequirement === null ? '绑定任务书要求…' : '更新条款（新建版本）…'}</button>
-            <button type="button" disabled={activeRequirement === null} onClick={locateRequirement}>定位任务书</button>
+            {project?.sourceKind === 'user-intent' ? (
+              <p>无任务书项目：条款区间由你在对话中给出，提交前由主进程重算校验。</p>
+            ) : (
+              <>
+                <button type="button" disabled={session.busy || snapshot === undefined} onClick={() => setRequirementOpen(true)}>{activeRequirement === null ? '绑定任务书要求…' : '更新条款（新建版本）…'}</button>
+                <button type="button" disabled={activeRequirement === null} onClick={locateRequirement}>定位任务书</button>
+              </>
+            )}
             {snapshot.documents.length === 0 && <button type="button" disabled={session.busy} onClick={() => void session.importSource(null)}>先导入任务书 PDF…</button>}
           </div>
           {locateError && <p role="alert" data-testid="requirement-locate-error-global">{locateError}</p>}
@@ -623,6 +636,7 @@ export function DesktopWorkspace() {
       projectName={project.name}
       revisionId={project.currentRevisionId}
       onLocate={locateFromAgent}
+      onProjectChanged={() => session.reloadSession()}
     />
     {dialogs}
   </main>

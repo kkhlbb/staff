@@ -1,0 +1,17 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+stdout | desktop/tests/intentExport.test.ts > 无任务书项目导出：文件名后缀与文件头标记 > DXF/SVG 建议文件名带 -userinput，DXF 999 注释与 SVG 注释都含依据
+DXF_FILE 隔套-图纸-1_1-userinput-DXF-R12.dxf bytes=9266 sha256=8f7bc4d92675f1f8311ea5a1fb9b74e2d5fc022e1a8aeb5be18dfc09b5a85d1a
+
+stdout | desktop/tests/intentExport.test.ts > 无任务书项目导出：文件名后缀与文件头标记 > DXF/SVG 建议文件名带 -userinput，DXF 999 注释与 SVG 注释都含依据
+SVG_FILE 隔套-图纸-1_1-userinput.svg bytes=9418 sha256=11a5b7eb954d0adc04ef797fe6d43c07a6d6ffe047517c45bbb51c58d8e2ac6f
+
+ ✓ desktop/tests/intentExport.test.ts > 无任务书项目导出：文件名后缀与文件头标记 > DXF/SVG 建议文件名带 -userinput，DXF 999 注释与 SVG 注释都含依据 173ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  02:26:40
+   Duration  444ms (tests 46%, import 43%, transform 10%)
+
+EXIT=0

@@ -595,6 +595,14 @@ export interface PlanSession {
   readonly actorId: string
   /** 项目内自增序号（不是 UUID）。 */
   readonly sessionSeq: number
+  /**
+   * 本项目**已经发生**的输入会话序号（由 main 依据项目断言账本给出）。
+   *
+   * 为什么需要它：无任务书项目可能跨多轮输入（第 1 次说尺寸、第 2 次说条款），
+   * 提交时必须同时接受这些轮次；但只接受账本里真实发生过的序号——
+   * 伪造“第 99 次输入”的断言仍然拒绝（M24 目标）。
+   */
+  readonly sessionSeqs?: readonly number[]
 }
 
 export interface PlanRequest {
@@ -756,10 +764,9 @@ function attestationMatchesSession(
   if (evidenceRefKind(ref) !== 'user-attestation') return true
   if (session === undefined) return false
   const attestation = ref as UserAttestation
-  return (
-    attestation.actorId === session.actorId &&
-    attestation.sessionSeq === session.sessionSeq
-  )
+  if (attestation.actorId !== session.actorId) return false
+  if (attestation.sessionSeq === session.sessionSeq) return true
+  return (session.sessionSeqs ?? []).includes(attestation.sessionSeq)
 }
 
 /**

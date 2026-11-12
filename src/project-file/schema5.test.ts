@@ -86,7 +86,7 @@ describe('C-03 schema 5 持久化', () => {
     expect(encoded.ok).toBe(true)
     if (!encoded.ok) return
     expect(encoded.value.manifest.formatVersion).toBe(2)
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(9)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(10)
     expect(encoded.value.manifest.counts.drawings).toBe(1)
 
     const decoded = await decodeProjectFile(encoded.value.bytes)
@@ -183,6 +183,11 @@ describe('C-03 schema 5 持久化', () => {
     delete (v4 as Record<string, unknown>).activeRequirementRevisionId
     delete (v4 as Record<string, unknown>).currentRequirementCheck
     delete (v4 as Record<string, unknown>).extractionDrafts
+    delete (v4 as Record<string, unknown>).sourceKind
+    delete (v4 as Record<string, unknown>).actorId
+    delete (v4 as Record<string, unknown>).sessionSeq
+    delete (v4 as Record<string, unknown>).sessionLabel
+    delete (v4 as Record<string, unknown>).attestations
     const parsed = parseProjectVersioned(v4)
     expect(parsed.ok).toBe(true)
     if (parsed.ok) {
@@ -198,6 +203,11 @@ describe('C-03 schema 5 持久化', () => {
     delete (withParameters as Record<string, unknown>).activeRequirementRevisionId
     delete (withParameters as Record<string, unknown>).currentRequirementCheck
     delete (withParameters as Record<string, unknown>).extractionDrafts
+    delete (withParameters as Record<string, unknown>).sourceKind
+    delete (withParameters as Record<string, unknown>).actorId
+    delete (withParameters as Record<string, unknown>).sessionSeq
+    delete (withParameters as Record<string, unknown>).sessionLabel
+    delete (withParameters as Record<string, unknown>).attestations
     const rejected = parseProjectVersioned(withParameters)
     expect(rejected.ok).toBe(false)
     if (!rejected.ok) expect(rejected.error.code).toBe('INVALID_RECORD')
@@ -256,6 +266,11 @@ async function rewriteAsSchema4(bytes: Uint8Array): Promise<Uint8Array> {
     delete project.activeRequirementRevisionId
     delete project.currentRequirementCheck
     delete project.extractionDrafts
+    delete project.sourceKind
+    delete project.actorId
+    delete project.sessionSeq
+    delete project.sessionLabel
+    delete project.attestations
   })
   for (const path of [...parts.keys()]) {
     if (path.startsWith('revisions/')) {
@@ -268,6 +283,11 @@ async function rewriteAsSchema4(bytes: Uint8Array): Promise<Uint8Array> {
         delete project.activeRequirementRevisionId
         delete project.currentRequirementCheck
         delete project.extractionDrafts
+        delete project.sourceKind
+        delete project.actorId
+        delete project.sessionSeq
+        delete project.sessionLabel
+        delete project.attestations
       })
     }
   }
@@ -314,7 +334,7 @@ describe('C-03 旧 formatVersion 2 / schema 4 文件兼容', () => {
     expect(decoded.value.manifest.formatVersion).toBe(2)
     expect(decoded.value.manifest.project.projectSchemaVersion).toBe(4)
     // 读入后的工作形状为当前 schema7，但来源格式仍是 2（不产生 dirty）。
-    expect(decoded.value.snapshot.project.schemaVersion).toBe(9)
+    expect(decoded.value.snapshot.project.schemaVersion).toBe(10)
     expect(decoded.value.snapshot.project.sourceFormatVersion).toBe(2)
     expect(decoded.value.snapshot.project.parameters).toEqual([])
     expect(decoded.value.snapshot.project.drawings).toEqual([])
@@ -327,19 +347,19 @@ describe('C-03 旧 formatVersion 2 / schema 4 文件兼容', () => {
       now: () => new Date('2026-11-09T12:00:00.000Z'),
     })
     expect(upgraded.upgraded).toBe(true)
-    expect(upgraded.snapshot.project.schemaVersion).toBe(9)
+    expect(upgraded.snapshot.project.schemaVersion).toBe(10)
     // 旧版本记录保持 schema4 原样（不可变历史）。
     expect(upgraded.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(4)
-    expect(upgraded.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(9)
+    expect(upgraded.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(10)
 
     const saved = await encodeProjectFile(upgraded.snapshot)
     expect(saved.ok).toBe(true)
     if (!saved.ok) return
-    expect(saved.value.manifest.project.projectSchemaVersion).toBe(9)
+    expect(saved.value.manifest.project.projectSchemaVersion).toBe(10)
     const reopened = await decodeProjectFile(saved.value.bytes)
     expect(reopened.ok).toBe(true)
     if (!reopened.ok) return
-    expect(reopened.value.snapshot.project.schemaVersion).toBe(9)
+    expect(reopened.value.snapshot.project.schemaVersion).toBe(10)
     expect(reopened.value.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(4)
   })
 })

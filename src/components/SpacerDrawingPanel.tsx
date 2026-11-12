@@ -340,7 +340,7 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
             <input
               value={frame.version}
               maxLength={200}
-              placeholder="留空自动写“草稿 + 基准版本”"
+              placeholder="留空自动写“草稿 · 第 N 版”"
               onChange={(event) => setFrame({ ...frame, version: event.target.value })}
             />
           </label>

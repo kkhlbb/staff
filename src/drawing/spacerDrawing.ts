@@ -122,6 +122,19 @@ function normalizeField(
   return trimmed
 }
 
+/**
+ * 标题栏版本栏的默认文字：可读的「草稿 · 第 N 版」。
+ *
+ * 序号由调用方在**生成时**算好并写进 `frameFields.version`（随图纸记录持久化），
+ * 重建只读这个已保存的字符串，所以指纹稳定、不会因为版本数增长而自我不一致。
+ * 拿不到序号时只写「草稿」——绝不把内部 revision UUID 印到图上。
+ */
+export function draftVersionText(ordinal?: number): string {
+  return typeof ordinal === 'number' && Number.isInteger(ordinal) && ordinal > 0
+    ? `草稿 · 第 ${ordinal} 版`
+    : '草稿'
+}
+
 function buildFrame(
   fields: DrawingFrameFields,
   revisionId: string,
@@ -146,6 +159,9 @@ function buildFrame(
   const tolerance = normalizeField(fields.tolerance, '公差/配合', missingFields)
   const surface = normalizeField(fields.surface, '表面要求', missingFields)
   const drafter = normalizeField(fields.drafter, '制图人/日期', missingFields)
+  // 旧记录（版本栏为空）保持既有回退文字：这些图纸的 dataFingerprint 是用这段文字算的，
+  // 换掉会让已保存的旧项目打不开（重建指纹不一致）。新图由调用方在生成时写入
+  // 「草稿 · 第 N 版」（见 draftVersionText），正常路径不会走到这里。
   const version = fields.version.trim() === '' ? `草稿 ${revisionId}` : fields.version.trim()
   const date = normalizeField(fields.date, '制图人/日期', [])
 
@@ -204,6 +220,10 @@ function buildFrame(
   })
 
   // 标题栏：表头 4mm + 9 行 × 4mm。
+  const basis = typeof fields.basis === 'string' ? fields.basis.trim() : ''
+  // 标题栏左列已经写“依据”，右列去掉重复前缀，避免出现“依据：依据：…”。
+  const basisValue =
+    basis.startsWith('依据：') ? basis.slice('依据：'.length) : basis
   const rows: [string, string][] = [
     ['零件名', partName],
     ['图号', drawingNumber],
@@ -214,6 +234,7 @@ function buildFrame(
     ['制图人/日期', `${drafter} / ${date}`],
     ['比例/单位', `${scaleKey(scale)} · mm`],
     ['纸张/投影', `A4 横向 · 第三角`],
+    ...(basisValue === '' ? [] : ([['依据', basisValue]] as [string, string][])),
   ]
   const headerBottom = SHEET_LAYOUT.titleBlock.y1 + 4
   cells.push(
@@ -267,6 +288,7 @@ function buildFrame(
     '3. 材料、图号、制图人/日期：待补充。',
     '4. 不声明符合 GB/ISO 等制图标准。',
     '5. 单位 mm；比例只作用于视图几何。',
+    ...(basis === '' ? [] : [`6. ${basis}。`]),
   ]
   techLines.forEach((text, index) => {
     cells.push(
@@ -317,6 +339,7 @@ function buildFrame(
       paper: 'A4 横向',
       projection: '第三角',
       status: DRAFT_STATUS_TEXT,
+      ...(basis === '' ? {} : { basis }),
     },
     missingFields,
     status,

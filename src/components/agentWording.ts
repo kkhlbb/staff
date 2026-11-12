@@ -19,6 +19,10 @@ const TOOL_LABELS: Record<string, string> = {
   stage: '改参数',
   preview: '算一遍',
   export: '导出',
+  createProject: '建立无任务书项目',
+  setChain: '写组成环',
+  setRequirement: '写条款区间',
+  setBinding: '写隔套参数',
 }
 
 export function toolLabel(tool: unknown): string {
@@ -59,6 +63,9 @@ const CODE_TITLES: Record<string, string> = {
   BUDGET_EXHAUSTED: '工具调用次数用完了',
   CHUNK_FAILED: '读任务书时出错',
   EXPORT_UNAVAILABLE: '导出端口没有装配',
+  REQUIREMENT_MUST_BE_USER_GIVEN: '条款区间必须由你说',
+  VALUE_MUST_BE_USER_GIVEN: '数值必须由你说',
+  STATEMENT_NOT_USER_GIVEN: '出处原话不是本轮输入',
 }
 
 export function codeTitle(code: string | null): string {
@@ -80,6 +87,9 @@ const CODE_REMEDIES: Record<string, string> = {
   BUDGET_EXHAUSTED: '把改动说得更直接，或拆成更小的一步再试。',
   CHUNK_FAILED: '换一份带文本层的 PDF；扫描件或加密文档读不出来。',
   EXPORT_UNAVAILABLE: '在桌面包里重试导出；导出仍由系统保存对话框确认。',
+  REQUIREMENT_MUST_BE_USER_GIVEN: '把条款区间用自己的话说一遍（例如“间隙 0.15 到 0.25”）；模型不能代填或引用标准等级。',
+  VALUE_MUST_BE_USER_GIVEN: '把尺寸用自己的话说一遍；编造或推算的数会被拒绝。',
+  STATEMENT_NOT_USER_GIVEN: '让用户原样说出这句话，再重试。',
 }
 
 export function codeRemedy(code: string | null): string {
@@ -115,6 +125,10 @@ export function stepSentence(step: Pick<AgentStepRecord, 'kind' | 'inputSummary'
     case 'context': return '已读项目'
     case 'confirmed': return '已读已确认项'
     case 'export': return '已导出'
+    case 'createProject': return '已建立无任务书项目'
+    case 'setChain': return '已写入组成环草稿'
+    case 'setRequirement': return '已写入条款区间草稿（来自你的原话）'
+    case 'setBinding': return '已写入隔套参数草稿'
     default: return '已执行一步'
   }
 }

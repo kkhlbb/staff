@@ -11,7 +11,8 @@ import { SAMPLE_PROJECT_ID } from '../../project-file/__fixtures__/sampleProject
 import { parameterBindingLinks } from '../../revisions/digest'
 import { sha256Hex } from '../../sources/hash'
 import type { RequirementDraftInput } from '../fingerprint'
-import type { RequirementEditDraft, RequirementRevision } from '../types'
+import type { RequirementEditDraft, RequirementRevision, PdfRequirementSource } from '../types'
+import { isPdfRequirementSource } from '../types'
 import { confirmOrUpdateRequirement, type ConfirmRequirementValue } from '../confirm'
 
 export const TASKBOOK_TEXT = '轴向装配间隙 C 应为 0.1000～0.3000 mm，含两端'
@@ -108,6 +109,13 @@ export function activeRequirement(snapshot: ProjectFileSnapshot): RequirementRev
   return revision
 }
 
+function pdfSourceOf(revision: RequirementRevision): PdfRequirementSource {
+  if (!isPdfRequirementSource(revision.source)) {
+    throw new Error('夹具只构造 PDF 来源的条款')
+  }
+  return revision.source
+}
+
 export function pendingEditOf(revision: RequirementRevision): RequirementEditDraft {
   return {
     requirementId: revision.requirementId,
@@ -115,13 +123,7 @@ export function pendingEditOf(revision: RequirementRevision): RequirementEditDra
     confirmedText: revision.confirmedText,
     lowerText: '0.1100',
     upperText: '0.3100',
-    source: {
-      documentId: revision.source.documentId,
-      revisionId: revision.source.revisionId,
-      page: revision.source.page,
-      rectPdf: revision.source.rectPdf,
-      pageBoxPdf: revision.source.pageBoxPdf,
-    },
+    source: pdfSourceOf(revision),
   }
 }
 

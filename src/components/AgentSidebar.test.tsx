@@ -112,6 +112,94 @@ function apiWith(options: {
   return api as CunlianApi
 }
 
+
+const intentDraft: import('../../desktop/shared/contracts').IntentDraftView = {
+  projectId: 'project-intent',
+  draftId: 'intent-draft-1',
+  draftRevision: 3,
+  sourceKind: 'user-intent',
+  actorId: '老王',
+  sessionSeq: 2,
+  sessionLabel: '2026-11-12 复检',
+  candidates: [
+    {
+      candidateId: 'intent-ring-1',
+      kind: 'ring',
+      status: 'pending',
+      editRevision: 1,
+      summary: { symbol: 'H', nominal: '52.25', upperDeviation: '0.02', lowerDeviation: '-0.02' },
+      statement: '总长 52.25 偏差 0.02',
+      sessionSeq: 1,
+      sessionLabel: '2026-11-12 复检',
+    },
+  ],
+  pendingCount: 1,
+  confirmedCount: 0,
+  hasInterval: false,
+  hasFormula: true,
+  bindings: [],
+  chainReady: true,
+}
+
+describe('ADR-001 第 3 步：无任务书侧栏', () => {
+  it('离线演示提示只说人话：界面不出现内部模型 id 与任务实例号', async () => {
+    const api = apiWith({ preview: null })
+    vi.mocked(api.agentStart!).mockResolvedValue({
+      ok: true,
+      data: { taskId: '7e437681-aaaa-bbbb-cccc-000000000000', demo: 'normal', modelId: 'fake-1' },
+      requestId: 'r',
+      objectVersion: 'rev-a1',
+    })
+    window.cunlian = api
+    render(<AgentSidebar open onToggle={() => undefined} projectName="隔套间隙演示" revisionId="rev-a1" onLocate={() => undefined} />)
+    fireEvent.click(screen.getByRole('button', { name: /正常改图/ }))
+    const notice = await screen.findByTestId('agent-notice')
+    expect(notice.textContent).toBe('已启动离线演示（本机假模型）')
+    expect(document.body.textContent).not.toContain('fake-')
+    expect(document.body.textContent).not.toContain('7e437681')
+  })
+
+  it('建项要填责任人；草稿逐条确认；未算过时不给保存', async () => {
+    const api = apiWith({ preview: null })
+    const intentState = vi.fn(async () => ({ ok: true as const, data: intentDraft, requestId: 'r', objectVersion: 'rev-a1' }))
+    const intentConfirmCandidate = vi.fn(async () => ({ ok: true as const, data: { ...intentDraft, pendingCount: 0, confirmedCount: 1 }, requestId: 'r', objectVersion: 'rev-a1' }))
+    const intentCreateProject = vi.fn(async () => ({
+      ok: true as const,
+      data: { projectId: 'project-intent', draftId: 'intent-draft-1', actorId: '老王', sessionSeq: 1, sessionLabel: null },
+      requestId: 'r',
+      objectVersion: 'rev-a1',
+    }))
+    const intentIssueApproval = vi.fn(async () => ({ ok: false as const, code: 'NOT_CONFIRMED' as const, message: '还没有预览', requestId: 'r', objectVersion: 'rev-a1' }))
+    Object.assign(api, { intentState, intentConfirmCandidate, intentCreateProject, intentIssueApproval })
+    window.cunlian = api
+    render(<AgentSidebar open onToggle={() => undefined} projectName="无任务书项目" revisionId="rev-a1" onLocate={() => undefined} />)
+
+    const create = screen.getByRole('button', { name: '建立无任务书项目' })
+    expect(create).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('责任人称呼'), { target: { value: '老王' } })
+    await waitFor(() => expect(create).toBeEnabled())
+    fireEvent.click(create)
+    await waitFor(() => expect(intentCreateProject).toHaveBeenCalledWith({ name: 'φ20 轴隔套', actorId: '老王' }))
+    await screen.findByTestId('intent-note')
+    expect(screen.getByTestId('intent-note').textContent).toContain('已建立无任务书项目：责任人 老王')
+
+    // 草稿：只显示用户给出的数值与原话；每条单独确认。
+    await screen.findByTestId('intent-draft')
+    expect(screen.getByTestId('intent-counts').textContent).toContain('待确认 1')
+    expect(screen.getByTestId('intent-draft').textContent).toContain('组成环 H：52.25 mm')
+    fireEvent.click(screen.getByRole('button', { name: '确认这条' }))
+    await waitFor(() => expect(intentConfirmCandidate).toHaveBeenCalledWith({ candidateId: 'intent-ring-1', editRevision: 1 }))
+
+    // 没算过就没有预览回执：勾选后仍拒绝保存，并说明原因。
+    const commitButton = screen.getByRole('button', { name: '确认并保存为新版本' })
+    expect(commitButton).toBeDisabled()
+    fireEvent.click(screen.getByLabelText('这些尺寸由我提供'))
+    await waitFor(() => expect(commitButton).toBeEnabled())
+    fireEvent.click(commitButton)
+    expect(await screen.findByTestId('intent-commit-result')).toHaveTextContent('先算一遍')
+  })
+})
+
 describe('V4.0 阶段3：任务侧栏渲染契约', () => {
   it('S3-09 工具失败：写明原因与怎么办，不显示“已完成/已保存”，无预览时没有确认按钮', async () => {
     window.cunlian = apiWith({ preview: null })

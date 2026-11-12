@@ -7,7 +7,7 @@ import {
   formatQWithDecimals,
   resolveDimension,
 } from './formatDimension'
-import { annotationTextsOf, buildSpacerDrawing, DrawingBuildError } from './spacerDrawing'
+import { annotationTextsOf, buildSpacerDrawing, draftVersionText, DrawingBuildError } from './spacerDrawing'
 import {
   canonicalizeSvg,
   renderDrawingSvg,
@@ -233,6 +233,62 @@ describe('C-02 模板几何与比例', () => {
   it('零件名为空/声明已批准时拒绝生成', () => {
     expect(() => build({}, undefined, { ...FRAME, partName: '  ' })).toThrow(/零件名/)
     expect(() => build({}, undefined, { ...FRAME, material: '已批准 Rev A' })).toThrow(/已复核/)
+  })
+})
+
+describe('标题栏版本栏：新图写「草稿 · 第 N 版」，UUID 不上图', () => {
+  const UUID_REV = 'rev-a-b29cacb4-5be4-4f5a-9c1d-2f6a7b8c9d0e'
+  /** 图上真正画出来的文字（<text> 的内容），不含 SVG 根节点上的机器元数据。 */
+  function visibleTexts(svg: string): string {
+    return [...svg.matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/gu)]
+      .map((match) => match[1] ?? '')
+      .join('\n')
+  }
+  const params = (() => {
+    const parsed = parseSpacerParameters(DEFAULT_SPACER_TEXTS)
+    if (!parsed.ok) throw new Error(parsed.message)
+    return parsed.parameters
+  })()
+
+  it('旧记录（版本栏为空）保持既有回退文字，不改指纹；图上仍无 ≥32 位连续十六进制串', () => {
+    const data = buildSpacerDrawing({
+      projectId: 'project-test',
+      revisionId: UUID_REV,
+      drawingId: 'drawing-test-1',
+      parameters: params,
+      scale: { numerator: 1, denominator: 1 },
+      frameFields: FRAME,
+    })
+    // 兼容：已保存项目的 dataFingerprint 是用这段文字算的，换字会让旧项目打不开。
+    expect(data.frame.fields.version).toBe(`草稿 ${UUID_REV}`)
+    const svg = renderDrawingSvg(data)
+    expect(visibleTexts(svg)).not.toMatch(/[0-9a-f]{32,}/iu)
+  })
+
+  it('新图：生成时写入「草稿 · 第 3 版」，图上不出现 revisionId 也不出现 ≥32 位十六进制串', () => {
+    const data = buildSpacerDrawing({
+      projectId: 'project-test',
+      revisionId: UUID_REV,
+      drawingId: 'drawing-test-1',
+      parameters: params,
+      scale: { numerator: 1, denominator: 1 },
+      frameFields: { ...FRAME, version: draftVersionText(3) },
+    })
+    expect(data.frame.fields.version).toBe('草稿 · 第 3 版')
+    const svg = renderDrawingSvg(data)
+    expect(visibleTexts(svg)).toContain('草稿 · 第 3 版')
+    expect(visibleTexts(svg)).not.toContain('b29cacb4')
+    expect(visibleTexts(svg)).not.toMatch(/[0-9a-f]{32,}/iu)
+    // 机器元数据（SVG 根属性）仍带内容指纹——它不是图纸文字，不参与“图上不许出现”。
+    expect(svg).toContain('data-drawing-fingerprint="')
+  })
+
+  it('draftVersionText 只接受正整数序号；自定义版本原样保留', () => {
+    expect(draftVersionText(3)).toBe('草稿 · 第 3 版')
+    expect(draftVersionText()).toBe('草稿')
+    for (const bad of [0, -1, 1.5, Number.NaN]) expect(draftVersionText(bad)).toBe('草稿')
+    const custom = build({}, undefined, { ...FRAME, version: 'A 方案' })
+    expect(custom.frame.fields.version).toBe('A 方案')
   })
 })
 

@@ -587,6 +587,11 @@ export async function migrateV2Bundle(
     activeRequirementRevisionId: null,
     currentRequirementCheck: null,
     extractionDrafts: [],
+    sourceKind: 'pdf',
+    actorId: null,
+    sessionSeq: 0,
+    sessionLabel: null,
+    attestations: [],
   }
 
   const archive = collectArchive(backup, project.id)
@@ -758,6 +763,11 @@ export async function migrateV2Json(
     activeRequirementRevisionId: null,
     currentRequirementCheck: null,
     extractionDrafts: [],
+    sourceKind: 'pdf',
+    actorId: null,
+    sessionSeq: 0,
+    sessionLabel: null,
+    attestations: [],
   }
 
   const warnings = [...value.warnings]

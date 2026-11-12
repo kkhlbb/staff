@@ -15,6 +15,7 @@ import { canonicalJson, stableFingerprint } from './canonical'
 import type { ProjectFileParameterBindingLink, ProjectFileSnapshot } from '../project-file/types'
 import { SPACER_TEMPLATE_VERSION } from '../drawing/types'
 import type { ProjectFileSpacerParameter } from '../project-file/types'
+import { isPdfRequirementSource } from '../requirements/types'
 
 export const D_GENERATOR_VERSION = 'spacer-drawing-generator-v1'
 
@@ -233,15 +234,23 @@ export function requirementInput(snapshot: ProjectFileSnapshot): unknown {
         confirmedText: revision.confirmedText,
         confirmedAt: revision.confirmedAt,
         confirmedAgainstLatestRevisionId: revision.confirmedAgainstLatestRevisionId,
-        source: {
-          documentId: revision.source.documentId,
-          revisionId: revision.source.revisionId,
-          sha256: revision.source.sha256,
-          blobKey: revision.source.blobKey,
-          page: revision.source.page,
-          rectPdf: revision.source.rectPdf,
-          pageBoxPdf: revision.source.pageBoxPdf,
-        },
+        source: isPdfRequirementSource(revision.source)
+          ? {
+              documentId: revision.source.documentId,
+              revisionId: revision.source.revisionId,
+              sha256: revision.source.sha256,
+              blobKey: revision.source.blobKey,
+              page: revision.source.page,
+              rectPdf: revision.source.rectPdf,
+              pageBoxPdf: revision.source.pageBoxPdf,
+            }
+          : {
+              kind: 'user-attestation',
+              actorId: revision.source.attestation.actorId,
+              sessionSeq: revision.source.attestation.sessionSeq,
+              fieldPath: revision.source.attestation.fieldPath,
+              statement: revision.source.attestation.statement,
+            },
         bindingBasisDigest: revision.bindingBasis.digest,
       }))
       .sort((left, right) => (left.revisionId < right.revisionId ? -1 : 1)),

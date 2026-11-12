@@ -15,6 +15,7 @@ import { validateBindingRegion } from '../project-file/validation'
 import type { RequirementEditDraft } from '../requirements/types'
 import { ChangeError, computeChange } from '../revisions/compute'
 import type { ChangeComputation } from '../revisions/types'
+import { mapIntentChain } from './mapIntent'
 
 export interface MappingIntent {
   spacerPart?: 'builtin:shaft-demo:spacer'
@@ -22,6 +23,17 @@ export interface MappingIntent {
   formulaId?: string
   requirement?: boolean
   linkLengthToSymbol?: string
+  /**
+   * ADR-001 第 3 步：无任务书项目。组成环直接由计划里的 ring 候选建立，
+   * 不走“项目里已登记链”的老路径；门禁（planApplication、computeChange）
+   * 与 PDF 路径完全相同。缺省 = 老路径。
+   */
+  intentChain?: boolean
+  /** 参数 ↔ 环绑定（无任务书项目）；参数值必须相等。 */
+  intentBindings?: readonly {
+    parameter: 'innerDiameter' | 'outerDiameter' | 'length'
+    symbol: string
+  }[]
 }
 
 export interface MappedInputs {
@@ -66,6 +78,10 @@ export function mapConfirmed(
   mapping: MappingIntent,
   { draftId, now }: { draftId: string; now: string },
 ): MappedInputs {
+  // 无任务书项目：链本来就不存在，由用户给出的 ring 候选建立；其余门禁不变。
+  if (mapping.intentChain === true) {
+    return mapIntentChain(snapshot, draft, plan, mapping, { draftId, now })
+  }
   if (mapping.spacerPart !== undefined && mapping.spacerPart !== SPACER_PART_ID) {
     throw new MappingError('UNSUPPORTED_SCOPE', '只支持内置隔套部件')
   }

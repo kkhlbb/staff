@@ -9,6 +9,7 @@
  *    当前是否过期由指纹与当前对象派生（见 fingerprint.ts / check.ts）。
  */
 import type { ProjectFileSpacerParameter } from '../project-file/types'
+import type { UserAttestation } from '../document-extraction/types'
 import type { PdfPageBox, PdfRect } from '../sources/pdfCoordinates'
 
 /** 条款规则版本；参与检查指纹，规则语义变化必须提升。 */
@@ -69,7 +70,9 @@ export interface RequirementChainRef {
 }
 
 /** 条款引用的确切 PDF 版本与页内区域；不复用 termId 的组成环来源绑定。 */
-export interface RequirementSourceRef {
+export interface PdfRequirementSource {
+  /** 缺省即 pdf（旧 schema 没有该字段）；显式写出便于与新来源区分。 */
+  kind?: 'pdf'
   documentId: string
   revisionId: string
   sha256: string
@@ -77,6 +80,30 @@ export interface RequirementSourceRef {
   page: number
   rectPdf: PdfRect
   pageBoxPdf: PdfPageBox
+}
+
+/**
+ * ADR-001 第 3 步：无任务书项目的条款来源 = 用户断言。
+ *
+ * 条款区间必须由用户原话给出；这里不伪造页码/选区，也没有 PDF 可核对。
+ * 完整性、撤销与跨会话校验复用 `UserAttestation` 的既有判据。
+ */
+export interface AttestedRequirementSource {
+  kind: 'user-attestation'
+  attestation: UserAttestation
+}
+
+export type RequirementSourceRef = PdfRequirementSource | AttestedRequirementSource
+
+/** 来源种类；缺省 `kind` 就是 pdf（schema ≤9 的记录）。 */
+export function requirementSourceKind(source: RequirementSourceRef): 'pdf' | 'user-attestation' {
+  return source.kind === 'user-attestation' ? 'user-attestation' : 'pdf'
+}
+
+export function isPdfRequirementSource(
+  source: RequirementSourceRef,
+): source is PdfRequirementSource {
+  return requirementSourceKind(source) === 'pdf'
 }
 
 /** 确认时的参数/组成环/绑定身份摘要；不冻结长度值，不把数值当永久有效条件。 */

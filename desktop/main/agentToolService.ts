@@ -1,7 +1,7 @@
 /** V4 stage 1: model-free, draft-only trusted engineering tools. */
 import { createHash, randomUUID } from 'node:crypto'
 import path from 'node:path'
-import { planApplication, isDraftSuperseded, type ExtractionDraft } from '../../src/document-extraction'
+import { planApplication, isDraftSuperseded, confirmCandidate, type ExtractionDraft } from '../../src/document-extraction'
 import { mapConfirmed, MappingError } from '../../src/agent-tools/mapConfirmed'
 import { stableFingerprint } from '../../src/revisions/canonical'
 import { calculateChain } from '../../src/domain/calculate'
@@ -12,7 +12,7 @@ import { resolveRequirementRevisionSource } from '../../src/requirements/history
 import type { RequirementCheck } from '../../src/requirements/types'
 import type { ChangeComputation } from '../../src/revisions/types'
 import { tryParseMm } from '../../src/domain/units'
-import { SPACER_PARAMETER_KEYS } from '../../src/drawing/types'
+import { SPACER_PARAMETER_KEYS, SPACER_PART_ID, USER_INPUT_FILE_SUFFIX } from '../../src/drawing/types'
 import { rebuildDrawingFromProject } from '../../src/drawing/rebuildDrawing'
 import { renderDrawingSvg, validateDrawingSvgMarkup } from '../../src/drawing/renderDrawingSvg'
 import { formatQWithDecimals } from '../../src/drawing/formatDimension'
@@ -24,6 +24,9 @@ import type { ProjectFileSnapshot } from '../../src/project-file/types'
 import type {
   AgentContextValue,
   AgentDraftValue,
+  IntentCreateValue,
+  IntentDraftCandidateView,
+  IntentDraftView,
   AgentDraftView,
   AgentExportValue,
   AgentParameterChangeRequest,
@@ -42,6 +45,19 @@ import type { ProjectService, ProjectSession } from './projectService'
 import type { RecoveryStore } from './recovery'
 import type { SessionController } from './sessionController'
 import { nodeWorkspaceOps, type WorkspaceOps } from './workspaceJson'
+import {
+  applyIntentCommand,
+  convertBlankProjectToIntent,
+  createIntentProjectSnapshot,
+  intentDraftOf,
+  intentRingSymbols,
+  isBlankProject,
+  validateActorId,
+  validateSessionLabel,
+  type IntentIdentity,
+} from './intentProject'
+import { intentDraftId } from '../../src/intent/draft'
+import { buildIntentRequirementRevision } from '../../src/intent/requirement'
 
 interface PlanCredential {
   windowId: number; sessionId: string; draftId: string; draftDigest: string; baseDigest: string; expires: number
@@ -148,6 +164,9 @@ export interface AgentToolDeps {
   approvals?: ApprovalStore
   /** 阶段 4：exportApprovedVersion 的系统对话框与落盘端口。 */
   exportPorts?: AgentExportPorts
+  /** 新建无任务书项目时写入项目文件的程序/引擎版本；测试可缺省。 */
+  appVersion?: string
+  electronVersion?: string
 }
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 const engineeringBasis = (snapshot: ProjectFileSnapshot) => {
@@ -348,7 +367,11 @@ export class AgentToolService {
   }
 
   /** 界面确认动作签发授权；只返回 approvalId，不下发模型。 */
-  async issueApproval(windowId: number, previewId: string): Promise<ToolResult<{ approvalId: string; expiresAt: string }>> {
+  async issueApproval(
+    windowId: number,
+    previewId: string,
+    options: { userAttestationAcknowledged?: boolean } = {},
+  ): Promise<ToolResult<{ approvalId: string; expiresAt: string }>> {
     const requestId = randomUUID()
     const session = this.deps.controller.sessionFor(windowId)
     const objectVersion = session?.snapshot.project.currentRevisionId ?? 'unavailable'
@@ -361,6 +384,19 @@ export class AgentToolService {
     if (approvals === undefined) {
       return { ok: false, code: 'INVALID_INPUT', message: '授权服务未装配', requestId, objectVersion }
     }
+    // 无任务书项目：必须先勾选“这些尺寸由我提供，无原文件可核对”，否则不签发授权。
+    if (
+      session.snapshot.project.sourceKind === 'user-intent' &&
+      options.userAttestationAcknowledged !== true
+    ) {
+      return {
+        ok: false,
+        code: 'NOT_CONFIRMED',
+        message: '无任务书项目：请先勾选「这些尺寸由我提供，无原文件可核对」再确认',
+        requestId,
+        objectVersion,
+      }
+    }
     const issued = await approvals.issue({
       windowId,
       projectId: record.projectId,
@@ -369,6 +405,7 @@ export class AgentToolService {
       requirementRevisionId: record.requirementRevisionId,
       previewFingerprint: record.previewFingerprint,
       baseRevisionId: record.baseRevisionId,
+      userAttestationAcknowledged: options.userAttestationAcknowledged === true,
     })
     if (!issued.ok) {
       return { ok: false, code: issued.code, message: issued.message, requestId, objectVersion, details: issued.causeCode === undefined ? undefined : { causeCode: issued.causeCode } }
@@ -402,6 +439,12 @@ export class AgentToolService {
         if (approval.previewFingerprint !== request.previewFingerprint) return fail('NOT_CONFIRMED', '请求的预览指纹与授权记录不符', 'PREVIEW_MISMATCH')
         const revisionId = session.snapshot.project.currentRevisionId
         if (approval.baseRevisionId !== revisionId) return fail('STALE_BASE', '授权签发的正式基准已变化，请重新预览', 'BASE_CHANGED')
+        if (
+          session.snapshot.project.sourceKind === 'user-intent' &&
+          approval.userAttestationAcknowledged !== true
+        ) {
+          return fail('NOT_CONFIRMED', '无任务书项目：授权没有包含“这些尺寸由我提供”的勾选，拒绝提交', 'ATTESTATION_NOT_ACKNOWLEDGED')
+        }
 
         const stored = await this.read(session)
         if (stored === null || stored.draft.draftId !== approval.draftId) return fail('NOT_CONFIRMED', '工程草稿不存在或身份不符', 'DRAFT_MISSING')
@@ -409,20 +452,24 @@ export class AgentToolService {
         const extraction = session.snapshot.project.extractionDrafts.find(item => item.draftId === stored.sourceDraftId)
         if (extraction !== undefined) {
           if (stableFingerprint(extraction) !== stored.sourceDigest) return fail('NOT_CONFIRMED', '来源决定已变化', 'STALE_DECISION')
-          await this.checkedSource(session, extraction)
+          // 无任务书项目：没有 PDF 版本/字节可核，来源由用户断言账本与 planApplication 校验。
+          if (session.snapshot.project.sourceKind !== 'user-intent') await this.checkedSource(session, extraction)
         }
 
         // 关键：从磁盘草稿重新计算，绝不复用预览结果。
         const now = new Date().toISOString()
         const commitRevisionId = `rev-a-${randomUUID()}`
-        const candidateSnapshot: ProjectFileSnapshot = { ...session.snapshot, project: { ...session.snapshot.project, dimensionChain: stored.draft.chain } }
+        const candidateSnapshot: ProjectFileSnapshot = this.withIntentRequirement({
+          ...session.snapshot,
+          project: { ...session.snapshot.project, dimensionChain: stored.draft.chain },
+        }, stored.draft)
         const computation = computeChange(candidateSnapshot, { parameters: stored.draft.parameters, bindings: stored.draft.bindings }, { revisionId: commitRevisionId, now })
         computation.previousChain = structuredClone(session.snapshot.project.dimensionChain)
         computation.previousResult = calculateChain(session.snapshot.project.dimensionChain)
         const checkResult = await computeCandidateRequirementCheck({
           snapshot: candidateSnapshot,
-          requirementRevisions: session.snapshot.project.requirementRevisions,
-          activeRequirementRevisionId: session.snapshot.project.activeRequirementRevisionId,
+          requirementRevisions: candidateSnapshot.project.requirementRevisions,
+          activeRequirementRevisionId: candidateSnapshot.project.activeRequirementRevisionId,
           // Agent 草稿里的条款提案不是已确认条款；正式门禁只看活动条款版本。
           pendingEdit: null,
           draft: { draftId: stored.draft.draftId, draftRevision: stored.draft.draftRevision, parameters: stored.draft.parameters, bindings: stored.draft.bindings },
@@ -456,8 +503,8 @@ export class AgentToolService {
         const commit = await commitRecomputedChange({
           snapshot: candidateSnapshot,
           draft: { draftId: stored.draft.draftId, draftRevision: stored.draft.draftRevision, parameters: stored.draft.parameters, bindings: stored.draft.bindings },
-          requirementRevisions: session.snapshot.project.requirementRevisions,
-          activeRequirementRevisionId: session.snapshot.project.activeRequirementRevisionId,
+          requirementRevisions: candidateSnapshot.project.requirementRevisions,
+          activeRequirementRevisionId: candidateSnapshot.project.activeRequirementRevisionId,
           pendingEdit: null,
           previewCheck: checkResult.value.check,
           baseRevisionId: revisionId,
@@ -499,7 +546,8 @@ export class AgentToolService {
           },
         })
         if (!committed.ok) {
-          return fail('SAVE_FAILED', `${committed.error.message}；授权已消费，请重新预览确认`, committed.error.code)
+          const detail = committed.error.detail === undefined ? '' : `：${committed.error.detail}`
+          return fail('SAVE_FAILED', `${committed.error.message}${detail}；授权已消费，请重新预览确认`, committed.error.code)
         }
         for (const [key, preview] of this.previews) {
           if (preview.previewFingerprint === approval.previewFingerprint) this.previews.delete(key)
@@ -639,7 +687,9 @@ export class AgentToolService {
           return { ok: false, code: 'TOOL_FAILED', message: 'PDF 渲染失败，未产生文件', requestId, objectVersion: revisionId }
         }
       }
-      const suggested = `${session.snapshot.project.name}-${revisionId.slice(0, 8)}.${format}`
+      const intentSuffix =
+        session.snapshot.project.sourceKind === 'user-intent' ? USER_INPUT_FILE_SUFFIX : ''
+      const suggested = `${session.snapshot.project.name}${intentSuffix}-${revisionId.slice(0, 8)}.${format}`
       const target = await ports.pickTarget(windowId, suggested)
       if (target === null) {
         return { ok: false, code: 'CANCELLED', message: '已在系统对话框中取消导出；没有产生文件', requestId, objectVersion: revisionId }
@@ -685,6 +735,479 @@ export class AgentToolService {
     const next = previous.then(task, task)
     this.queues.set(sessionId, next)
     return next
+  }
+
+
+  // ------------------------------------------------------------------
+  // ADR-001 第 3 步：无任务书入口（对话建件）
+  // ------------------------------------------------------------------
+
+  /** 无任务书项目：建立（无会话时新建并挂接；空白项目就地转换，projectId 不变）。 */
+  async createIntentProject(
+    windowId: number,
+    input: { name: string; actorId: string; sessionLabel?: string | null },
+  ): Promise<ToolResult<IntentCreateValue>> {
+    const requestId = randomUUID()
+    const session = this.deps.controller.sessionFor(windowId)
+    const objectVersion = session?.snapshot.project.currentRevisionId ?? 'unavailable'
+    const actor = validateActorId(input.actorId)
+    if (!actor.ok) {
+      return { ok: false, code: 'INVALID_INPUT', message: actor.message, requestId, objectVersion }
+    }
+    const name = input.name.trim() === '' ? '无任务书项目' : input.name.trim()
+    const identity: IntentIdentity = {
+      actorId: actor.value,
+      sessionLabel: validateSessionLabel(input.sessionLabel),
+    }
+    const appVersion = this.deps.appVersion ?? '0.0.0-test'
+    const electronVersion = this.deps.electronVersion ?? 'test'
+    try {
+      if (session === null) {
+        const snapshot = createIntentProjectSnapshot({ name, identity, appVersion, electronVersion })
+        const opened = this.deps.projectService.adoptSnapshot(snapshot, null, null)
+        if (!opened.ok) {
+          return { ok: false, code: 'SAVE_FAILED', message: opened.error.message, requestId, objectVersion }
+        }
+        await this.deps.controller.attach(windowId, opened.value.sessionId)
+        const created = this.deps.controller.sessionFor(windowId)
+        if (created === null) {
+          return { ok: false, code: 'TOOL_FAILED', message: '新会话建立后无法读取', requestId, objectVersion }
+        }
+        const draft = intentDraftOf(created.snapshot.project)
+        return {
+          ok: true,
+          data: {
+            projectId: created.snapshot.project.id,
+            draftId: draft?.draftId ?? '',
+            actorId: identity.actorId,
+            sessionSeq: created.snapshot.project.sessionSeq,
+            sessionLabel: identity.sessionLabel,
+          },
+          requestId,
+          objectVersion: created.snapshot.project.currentRevisionId,
+        }
+      }
+      if (session.snapshot.project.sourceKind === 'user-intent') {
+        const draft = intentDraftOf(session.snapshot.project)
+        return {
+          ok: true,
+          data: {
+            projectId: session.snapshot.project.id,
+            draftId: draft?.draftId ?? '',
+            actorId: session.snapshot.project.actorId ?? identity.actorId,
+            sessionSeq: session.snapshot.project.sessionSeq,
+            sessionLabel: session.snapshot.project.sessionLabel,
+          },
+          requestId,
+          objectVersion,
+        }
+      }
+      if (!isBlankProject(session.snapshot)) {
+        return {
+          ok: false,
+          code: 'UNSUPPORTED_SCOPE',
+          message: '当前项目已有内容，不能改成无任务书项目；请先新建一个空项目',
+          requestId,
+          objectVersion,
+        }
+      }
+      session.snapshot = convertBlankProjectToIntent(session.snapshot, { name, identity })
+      session.acceptedSeq += 1
+      const staged = await this.deps.recovery.stage(
+        session.sessionId,
+        session.snapshot,
+        session.acceptedSeq,
+        this.deps.controller.recoveryMeta(session, session.snapshot),
+      )
+      void staged
+      const draft = intentDraftOf(session.snapshot.project)
+      return {
+        ok: true,
+        data: {
+          projectId: session.snapshot.project.id,
+          draftId: draft?.draftId ?? '',
+          actorId: identity.actorId,
+          sessionSeq: session.snapshot.project.sessionSeq,
+          sessionLabel: identity.sessionLabel,
+        },
+        requestId,
+        objectVersion: session.snapshot.project.currentRevisionId,
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        code: 'TOOL_FAILED',
+        message: error instanceof Error ? error.message : '建立无任务书项目失败',
+        requestId,
+        objectVersion,
+      }
+    }
+  }
+
+  private intentPlanSession(project: ProjectFileSnapshot['project']): {
+    actorId: string
+    sessionSeq: number
+    sessionSeqs: number[]
+  } {
+    return {
+      actorId: project.actorId ?? '',
+      sessionSeq: project.sessionSeq,
+      sessionSeqs: [...new Set(project.attestations.map((attestation) => attestation.sessionSeq))].sort(
+        (left, right) => left - right,
+      ),
+    }
+  }
+
+  private intentView(project: ProjectFileSnapshot['project']): IntentDraftView | null {
+    const draft = intentDraftOf(project)
+    if (draft === null) return null
+    const candidates: IntentDraftCandidateView[] = draft.candidates.map((candidate) => {
+      const attestation = candidate.provenance?.find((ref) => ref.kind === 'user-attestation')
+      const summary: Record<string, string | null> = {}
+      if (candidate.kind === 'ring') {
+        summary.symbol = candidate.data.symbol
+        summary.nominal = candidate.data.nominal?.text ?? null
+        summary.upperDeviation = candidate.data.upperDeviation?.text ?? null
+        summary.lowerDeviation = candidate.data.lowerDeviation?.text ?? null
+      } else if (candidate.kind === 'interval') {
+        summary.lower = candidate.data.lower?.text ?? null
+        summary.upper = candidate.data.upper?.text ?? null
+        summary.endpoints =
+          candidate.data.lowerInclusive === true && candidate.data.upperInclusive === true
+            ? '含两端'
+            : '端点未确认'
+      } else if (candidate.kind === 'formula') {
+        summary.expression = candidate.data.rawExpression
+        summary.operands = candidate.data.operands
+          .map((operand) => `${operand.sign > 0 ? '+' : '-'}${operand.symbol}`)
+          .join(' ')
+      } else {
+        summary.innerDiameter = candidate.data.innerDiameter?.text ?? null
+        summary.outerDiameter = candidate.data.outerDiameter?.text ?? null
+        summary.length = candidate.data.length?.text ?? null
+      }
+      return {
+        candidateId: candidate.candidateId,
+        kind: candidate.kind,
+        status: candidate.status,
+        editRevision: candidate.editRevision,
+        summary,
+        statement: attestation?.statement ?? null,
+        sessionSeq: attestation?.sessionSeq ?? null,
+        sessionLabel: attestation?.sessionLabel ?? null,
+      }
+    })
+    return {
+      projectId: project.id,
+      draftId: draft.draftId,
+      draftRevision: draft.draftRevision,
+      sourceKind: project.sourceKind,
+      actorId: project.actorId,
+      sessionSeq: project.sessionSeq,
+      sessionLabel: project.sessionLabel,
+      candidates,
+      pendingCount: candidates.filter((candidate) => candidate.status === 'pending').length,
+      confirmedCount: candidates.filter((candidate) => candidate.status === 'confirmed').length,
+      hasInterval: draft.candidates.some((candidate) => candidate.kind === 'interval'),
+      hasFormula: draft.candidates.some((candidate) => candidate.kind === 'formula'),
+      bindings: (draft.intentBindings ?? []).map((binding) => ({
+        parameter: binding.parameter,
+        symbol: binding.symbol,
+        text: binding.text,
+      })),
+      chainReady:
+        draft.candidates.filter((candidate) => candidate.kind === 'ring').length >= 2 &&
+        draft.candidates.some((candidate) => candidate.kind === 'formula'),
+    }
+  }
+
+  /** 侧栏/意图面板读状态：只读，不改任何东西。 */
+  intentState(windowId: number): ToolResult<IntentDraftView | null> {
+    const requestId = randomUUID()
+    const session = this.deps.controller.sessionFor(windowId)
+    if (session === null) {
+      return { ok: false, code: 'STALE_BASE', message: '没有活动项目', requestId, objectVersion: 'unavailable' }
+    }
+    return {
+      ok: true,
+      data: this.intentView(session.snapshot.project),
+      requestId,
+      objectVersion: session.snapshot.project.currentRevisionId,
+    }
+  }
+
+  private intentErrorCode(code: string): ToolErrorCode {
+    if (code === 'REQUIREMENT_MUST_BE_USER_GIVEN') return 'REQUIREMENT_MUST_BE_USER_GIVEN'
+    if (code === 'VALUE_MUST_BE_USER_GIVEN') return 'VALUE_MUST_BE_USER_GIVEN'
+    if (code === 'STATEMENT_NOT_USER_GIVEN') return 'STATEMENT_NOT_USER_GIVEN'
+    if (code === 'FORMULA_UNSUPPORTED') return 'UNSUPPORTED_SCOPE'
+    if (code === 'SYMBOL_DUPLICATED' || code === 'BINDING_CONFLICT' || code === 'VALUE_CONFLICT') {
+      return 'CONSTRAINT_VIOLATED'
+    }
+    return 'INVALID_INPUT'
+  }
+
+  /** 模型侧四个工具里的三个写草稿工具：只写意图草稿 + 断言账本，不写链/参数/条款。 */
+  async runIntentTool(
+    windowId: number,
+    command: 'setChain' | 'setRequirement' | 'setBinding',
+    args: unknown,
+    turn: { userText: string; turnId: string; at: string },
+  ): Promise<ToolResult<IntentDraftView>> {
+    const requestId = randomUUID()
+    const session = this.deps.controller.sessionFor(windowId)
+    if (session === null) {
+      return { ok: false, code: 'STALE_BASE', message: '没有活动项目', requestId, objectVersion: 'unavailable' }
+    }
+    const objectVersion = session.snapshot.project.currentRevisionId
+    const project = session.snapshot.project
+    if (project.sourceKind !== 'user-intent') {
+      return {
+        ok: false,
+        code: 'UNSUPPORTED_SCOPE',
+        message: '当前项目不是无任务书项目；先用 createProject 建立无任务书项目',
+        requestId,
+        objectVersion,
+      }
+    }
+    const outcome = applyIntentCommand(project, command, {
+      turn,
+      args:
+        args !== null && typeof args === 'object' && !Array.isArray(args)
+          ? (args as Record<string, unknown>)
+          : {},
+    })
+    if (!outcome.ok) {
+      return {
+        ok: false,
+        code: this.intentErrorCode(outcome.code),
+        message: outcome.message,
+        requestId,
+        objectVersion,
+        details: { causeCode: outcome.code },
+      }
+    }
+    session.snapshot = { ...session.snapshot, project: outcome.value.project }
+    session.acceptedSeq += 1
+    const staged = await this.deps.recovery.stage(
+      session.sessionId,
+      session.snapshot,
+      session.acceptedSeq,
+      this.deps.controller.recoveryMeta(session, session.snapshot),
+    )
+    void staged
+    const view = this.intentView(session.snapshot.project)
+    if (view === null) {
+      return { ok: false, code: 'TOOL_FAILED', message: '意图草稿写入后无法读取', requestId, objectVersion }
+    }
+    return { ok: true, data: view, requestId, objectVersion }
+  }
+
+  /**
+   * 按已确认的意图候选生成工程草稿：planApplication 是唯一入口，
+   * 不直接写项目；后续预览/提交仍需用户确认。
+   */
+  async applyIntentDraft(windowId: number): Promise<ToolResult<AgentDraftValue>> {
+    const requestId = randomUUID()
+    const session = this.deps.controller.sessionFor(windowId)
+    const objectVersion = session?.snapshot.project.currentRevisionId ?? 'unavailable'
+    if (session === null) return { ok: false, code: 'STALE_BASE', message: '没有活动项目', requestId, objectVersion }
+    const task = async (): Promise<ToolResult<AgentDraftValue>> => {
+      const project = session.snapshot.project
+      const fail = (code: ToolErrorCode, message: string): ToolResult<never> => ({
+        ok: false, code, message, requestId, objectVersion: session.snapshot.project.currentRevisionId,
+      })
+      if (project.sourceKind !== 'user-intent') {
+        return fail('UNSUPPORTED_SCOPE', '当前项目不是无任务书项目')
+      }
+      const draft = intentDraftOf(project)
+      if (draft === null) return fail('INVALID_INPUT', '意图草稿不存在')
+      if (draft.candidates.length === 0) return fail('NEEDS_CLARIFICATION', '还没有任何候选；先让用户说出零件尺寸')
+      const plan = planApplication(draft, {
+        source: draft.sourceIdentity,
+        candidateIds: draft.candidates.map((candidate) => candidate.candidateId),
+        session: this.intentPlanSession(project),
+      })
+      if (!plan.ok) {
+        const code: ToolErrorCode =
+          plan.code === 'SOURCE_STALE'
+            ? 'SOURCE_CHANGED'
+            : plan.code === 'ATTESTATION_SESSION_MISMATCH'
+              ? 'CONSTRAINT_VIOLATED'
+              : 'NOT_CONFIRMED'
+        return fail(code, plan.message)
+      }
+      const formula = draft.candidates.find((candidate) => candidate.kind === 'formula')
+      const draftId = `agent-draft-${randomUUID()}`
+      try {
+        const mapping = {
+          spacerPart: SPACER_PART_ID,
+          ringSymbols: intentRingSymbols(draft),
+          ...(formula === undefined ? {} : { formulaId: formula.candidateId }),
+          requirement: true,
+          intentChain: true,
+          intentBindings: (draft.intentBindings ?? []).map((binding) => ({
+            parameter: binding.parameter,
+            symbol: binding.symbol,
+          })),
+        } as const
+        const mapped = mapConfirmed(session.snapshot, draft, plan.value, mapping, {
+          draftId,
+          now: new Date().toISOString(),
+        })
+        const value = this.value(mapped, draftId, session.snapshot.project.currentRevisionId)
+        const stored = await this.read(session)
+        const payload: DraftFile = {
+          schemaVersion: 1,
+          projectId: project.id,
+          planKey: 'intent',
+          requestKey: stableFingerprint({ intent: draft.draftId, draftRevision: draft.draftRevision }),
+          applications: {},
+          sourceDraftId: draft.draftId,
+          sourceDigest: stableFingerprint(draft),
+          baseDigest: engineeringBasis(session.snapshot),
+          recovery: { basePath: session.path, baseFingerprint: session.fingerprint },
+          draft: value,
+        }
+        void stored
+        await this.write(session, payload, () => this.deps.controller.sessionFor(windowId) === session)
+        return { ok: true, data: value, requestId, objectVersion: session.snapshot.project.currentRevisionId }
+      } catch (error) {
+        const mapped = errorOf(error)
+        return fail(mapped.code, mapped.message)
+      }
+    }
+    return this.enqueue(session.sessionId, task)
+  }
+
+  /**
+   * 界面触发：逐条确认意图候选（与 PDF 草稿的逐条确认是同一纯函数 confirmCandidate）。
+   * 不是全批确认：每次只确认一条，且必须带界面看到的编辑代数。
+   */
+  async confirmIntentCandidate(
+    windowId: number,
+    request: { candidateId: string; editRevision: number },
+  ): Promise<ToolResult<IntentDraftView>> {
+    const requestId = randomUUID()
+    const session = this.deps.controller.sessionFor(windowId)
+    if (session === null) {
+      return { ok: false, code: 'STALE_BASE', message: '没有活动项目', requestId, objectVersion: 'unavailable' }
+    }
+    const objectVersion = session.snapshot.project.currentRevisionId
+    const project = session.snapshot.project
+    if (project.sourceKind !== 'user-intent') {
+      return { ok: false, code: 'UNSUPPORTED_SCOPE', message: '当前项目不是无任务书项目', requestId, objectVersion }
+    }
+    const draft = intentDraftOf(project)
+    if (draft === null) {
+      return { ok: false, code: 'INVALID_INPUT', message: '意图草稿不存在', requestId, objectVersion }
+    }
+    const confirmed = confirmCandidate(draft, {
+      candidateId: request.candidateId,
+      editRevision: request.editRevision,
+      confirmed: true,
+      actor: project.actorId ?? 'local',
+      decidedAt: new Date().toISOString(),
+    })
+    if (!confirmed.ok) {
+      return {
+        ok: false,
+        code: confirmed.code === 'GROUP_ALREADY_CONFIRMED' ? 'CONSTRAINT_VIOLATED' : 'NOT_CONFIRMED',
+        message: confirmed.message,
+        requestId,
+        objectVersion,
+        details: { causeCode: confirmed.code },
+      }
+    }
+    session.snapshot = {
+      ...session.snapshot,
+      project: {
+        ...project,
+        extractionDrafts: project.extractionDrafts.map((item) =>
+          item.draftId === draft.draftId ? confirmed.value : item,
+        ),
+      },
+    }
+    session.acceptedSeq += 1
+    const staged = await this.deps.recovery.stage(
+      session.sessionId,
+      session.snapshot,
+      session.acceptedSeq,
+      this.deps.controller.recoveryMeta(session, session.snapshot),
+    )
+    void staged
+    const view = this.intentView(session.snapshot.project)
+    if (view === null) {
+      return { ok: false, code: 'TOOL_FAILED', message: '确认后无法读取意图草稿', requestId, objectVersion }
+    }
+    return { ok: true, data: view, requestId, objectVersion }
+  }
+
+  /** 界面触发：对当前工程草稿重新预览（与模型 preview 走同一段重算）。 */
+  async previewLatestDraft(windowId: number): Promise<ToolResult<unknown>> {
+    const requestId = randomUUID()
+    const session = this.deps.controller.sessionFor(windowId)
+    if (session === null) {
+      return { ok: false, code: 'STALE_BASE', message: '没有活动项目', requestId, objectVersion: 'unavailable' }
+    }
+    const stored = await this.read(session)
+    if (stored === null) {
+      return {
+        ok: false,
+        code: 'STALE_PREVIEW',
+        message: '还没有工程草稿；先按已确认项生成草稿',
+        requestId,
+        objectVersion: session.snapshot.project.currentRevisionId,
+      }
+    }
+    return this.run(windowId, 'preview', {
+      toolMode: 'agent',
+      draftId: stored.draft.draftId,
+      baseRevisionId: session.snapshot.project.currentRevisionId,
+    })
+  }
+
+  /**
+   * 无任务书项目的条款版本注入：用户已确认的区间 → 正式条款版本。
+   * 只进入预览/提交的候选快照，与版本一起冻结；不写第二份真源。
+   */
+  private withIntentRequirement(
+    snapshot: ProjectFileSnapshot,
+    draftValue: AgentDraftValue,
+  ): ProjectFileSnapshot {
+    const project = snapshot.project
+    if (project.sourceKind !== 'user-intent') return snapshot
+    const intent = project.extractionDrafts.find((item) => item.draftId === intentDraftId(project.id))
+    if (intent === undefined) return snapshot
+    const interval = intent.candidates.find(
+      (candidate) => candidate.kind === 'interval' && candidate.status === 'confirmed',
+    )
+    if (interval === undefined || interval.kind !== 'interval') return snapshot
+    const previous =
+      project.requirementRevisions.find(
+        (revision) => revision.revisionId === project.activeRequirementRevisionId,
+      ) ?? null
+    const revision = buildIntentRequirementRevision({
+      projectId: project.id,
+      candidate: interval,
+      chain: draftValue.chain,
+      parameters: draftValue.parameters,
+      bindings: draftValue.bindings,
+      requirementId: previous?.requirementId ?? null,
+    })
+    if (revision === null) return snapshot
+    const next = previous === null ? revision : { ...revision, parentRevisionId: previous.revisionId }
+    return {
+      ...snapshot,
+      project: {
+        ...project,
+        requirementRevisions: [
+          ...project.requirementRevisions.filter((item) => item.revisionId !== next.revisionId),
+          next,
+        ],
+        activeRequirementRevisionId: next.revisionId,
+      },
+    }
   }
 
   private async read(session: ProjectSession): Promise<DraftFile | null> {
@@ -740,10 +1263,64 @@ export class AgentToolService {
   }
 
   /** All calls, including reads, are serialized per project session. */
-  async run(windowId: number, command: 'context' | 'confirmed' | 'apply' | 'stage' | 'preview' | 'export', input: unknown): Promise<ToolResult<unknown>> {
+  async run(
+    windowId: number,
+    command:
+      | 'context'
+      | 'confirmed'
+      | 'apply'
+      | 'stage'
+      | 'preview'
+      | 'export'
+      | 'createProject'
+      | 'setChain'
+      | 'setRequirement'
+      | 'setBinding',
+    input: unknown,
+    context?: {
+      userText?: string
+      turnId?: string
+      intentIdentity?: { actorId: string; sessionLabel: string | null }
+    },
+  ): Promise<ToolResult<unknown>> {
     const requestId = randomUUID()
     const session = this.deps.controller.sessionFor(windowId)
     const objectVersion = session?.snapshot.project.currentRevisionId ?? 'unavailable'
+
+    // 无任务书入口：先建项，再写草稿；都不需要（也不允许）模型提供身份。
+    if (command === 'createProject') {
+      if (context?.intentIdentity === undefined) {
+        return {
+          ok: false,
+          code: 'INVALID_INPUT',
+          message: '无责任人自述：请用户在界面填写“你的称呼”后再启动',
+          requestId,
+          objectVersion,
+        }
+      }
+      const args = input as { name?: unknown; partType?: unknown }
+      if (typeof args.name !== 'string' || args.partType !== 'spacer') {
+        return { ok: false, code: 'INVALID_INPUT', message: '建项参数只接受名称与零件类型 spacer', requestId, objectVersion }
+      }
+      return this.createIntentProject(windowId, {
+        name: args.name,
+        actorId: context.intentIdentity.actorId,
+        sessionLabel: context.intentIdentity.sessionLabel,
+      })
+    }
+    if (command === 'setChain' || command === 'setRequirement' || command === 'setBinding') {
+      if (session === null) return { ok: false, code: 'STALE_BASE', message: '没有活动项目', requestId, objectVersion }
+      const userText = context?.userText ?? ''
+      if (userText.trim() === '') {
+        return { ok: false, code: 'INVALID_INPUT', message: '缺少本轮用户原话，不能校验数值来源', requestId, objectVersion }
+      }
+      return this.runIntentTool(windowId, command, input, {
+        userText,
+        turnId: context?.turnId ?? requestId,
+        at: new Date().toISOString(),
+      })
+    }
+
     if (session === null) return { ok: false, code: 'STALE_BASE', message: '没有活动项目', requestId, objectVersion }
     // 导出走独立串行队列（会等待系统对话框），不能嵌进本函数的 enqueue。
     if (command === 'export') {
@@ -826,7 +1403,9 @@ export class AgentToolService {
         const extraction = session.snapshot.project.extractionDrafts.find(d => d.draftId === stored.sourceDraftId)
         const demo = stored.sourceDraftId === 'demo' && stored.sourceDigest === 'demo'
         let stale = stored.baseDigest !== engineeringBasis(session.snapshot) || (!demo && (!extraction || stableFingerprint(extraction) !== stored.sourceDigest))
-        if (extraction) { try { await this.checkedSource(session, extraction) } catch { stale = true } }
+        if (extraction && session.snapshot.project.sourceKind !== 'user-intent') {
+          try { await this.checkedSource(session, extraction) } catch { stale = true }
+        }
         visibleDraft = { ...visibleDraft, stale }
       }
       const draftView: AgentDraftView | null = visibleDraft === null ? null : {
@@ -925,19 +1504,23 @@ export class AgentToolService {
     const demoDraft = stored.sourceDraftId === 'demo' && stored.sourceDigest === 'demo'
     if (!demoDraft) {
       if (!extraction || stableFingerprint(extraction) !== stored.sourceDigest) throw new MappingError('NOT_CONFIRMED', '来源决定已变化', { causeCode: 'STALE_DECISION' })
-      await this.checkedSource(session, extraction)
+      if (session.snapshot.project.sourceKind !== 'user-intent') await this.checkedSource(session, extraction)
     }
     if (command === 'preview') {
       const nowIso = new Date().toISOString()
-      const candidateSnapshot: ProjectFileSnapshot = { ...session.snapshot, project: { ...session.snapshot.project, dimensionChain: stored.draft.chain } }
+      const candidateSnapshot: ProjectFileSnapshot = this.withIntentRequirement({
+        ...session.snapshot,
+        project: { ...session.snapshot.project, dimensionChain: stored.draft.chain },
+      }, stored.draft)
+      void stored
       const computation = computeChange(candidateSnapshot,
         { parameters: stored.draft.parameters, bindings: stored.draft.bindings }, { revisionId: stored.draft.draftId, now: nowIso })
       computation.previousChain = session.snapshot.project.dimensionChain
       computation.previousResult = calculateChain(computation.previousChain)
       const checkResult = await computeCandidateRequirementCheck({
         snapshot: candidateSnapshot,
-        requirementRevisions: session.snapshot.project.requirementRevisions,
-        activeRequirementRevisionId: session.snapshot.project.activeRequirementRevisionId,
+        requirementRevisions: candidateSnapshot.project.requirementRevisions,
+        activeRequirementRevisionId: candidateSnapshot.project.activeRequirementRevisionId,
         pendingEdit: null,
         draft: { draftId: stored.draft.draftId, draftRevision: stored.draft.draftRevision, parameters: stored.draft.parameters, bindings: stored.draft.bindings },
         baseRevisionId: revisionId,

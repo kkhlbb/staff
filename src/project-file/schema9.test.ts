@@ -116,7 +116,7 @@ function stripProvenance(value: unknown): void {
   for (const item of Object.values(record)) stripProvenance(item)
 }
 
-/** 把 schema9 容器改写成 schema8：版本号降一级 + 删掉全部 provenance。 */
+/** 把 schema10 容器改写成 schema8：版本号降一级 + 删掉全部 provenance。 */
 async function downgradeToSchema8(bytes: Uint8Array): Promise<Uint8Array> {
   return await rebuildArchive(bytes, (parts) => {
     patchJson(parts, 'manifest.json', (manifest) => {
@@ -125,6 +125,12 @@ async function downgradeToSchema8(bytes: Uint8Array): Promise<Uint8Array> {
     patchAllProjects(parts, (project) => {
       project.schemaVersion = 8
       stripProvenance(project)
+      // schema8 严格拒绝 schema10 的加法字段。
+      delete project.sourceKind
+      delete project.actorId
+      delete project.sessionSeq
+      delete project.sessionLabel
+      delete project.attestations
     })
   })
 }
@@ -133,13 +139,13 @@ function sortedEvidenceKeys(draft: ExtractionDraft): string[] {
   return draft.candidates.flatMap((candidate) => candidate.evidence.map((item) => evidenceKey(item)))
 }
 
-describe('ADR-001 schema 9：provenance 纯加法往返', () => {
-  it('编码解码：schema9 逐字段保留，候选身份与出处 key 不变', async () => {
+describe('ADR-001 schema 9/10：provenance 纯加法往返', () => {
+  it('编码解码：schema10 逐字段保留，候选身份与出处 key 不变', async () => {
     const { snapshot, draft } = await snapshotWithDraft()
     const encoded = await encodeProjectFile(snapshot)
     expect(encoded.ok, encoded.ok ? '' : encoded.error.message).toBe(true)
     if (!encoded.ok) return
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(9)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(10)
 
     const decoded = await decodeProjectFile(encoded.value.bytes)
     expect(decoded.ok, decoded.ok ? '' : `${decoded.error.code}: ${decoded.error.message}`).toBe(true)
@@ -158,7 +164,7 @@ describe('ADR-001 schema 9：provenance 纯加法往返', () => {
     expect(after.project.parameters).toEqual([])
   })
 
-  it('schema8 文件读入：补 pdf-text 出处（不重算、不改值），保存升级为 9', async () => {
+  it('schema8 文件读入：补 pdf-text 出处（不重算、不改值），保存升级为 10', async () => {
     const { snapshot, draft } = await snapshotWithDraft()
     const encoded = await encodeProjectFile(snapshot)
     if (!encoded.ok) throw new Error(encoded.error.message)
@@ -168,7 +174,7 @@ describe('ADR-001 schema 9：provenance 纯加法往返', () => {
     expect(decoded.ok, decoded.ok ? '' : `${decoded.error.code}: ${decoded.error.message}`).toBe(true)
     if (!decoded.ok) return
     const migrated = decoded.value.snapshot.project
-    expect(migrated.schemaVersion).toBe(9)
+    expect(migrated.schemaVersion).toBe(10)
 
     const migratedDraft = migrated.extractionDrafts[0]
     expect(migratedDraft).toBeDefined()
@@ -200,7 +206,7 @@ describe('ADR-001 schema 9：provenance 纯加法往返', () => {
     const rewritten = await encodeProjectFile(decoded.value.snapshot)
     expect(rewritten.ok, rewritten.ok ? '' : rewritten.error.message).toBe(true)
     if (!rewritten.ok) return
-    expect(rewritten.value.manifest.project.projectSchemaVersion).toBe(9)
+    expect(rewritten.value.manifest.project.projectSchemaVersion).toBe(10)
     const reopened = await decodeProjectFile(rewritten.value.bytes)
     expect(reopened.ok).toBe(true)
     if (!reopened.ok) return

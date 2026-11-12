@@ -559,6 +559,10 @@ export function buildDxfDocument(data: DrawingData, version: DxfVersion): DxfBui
   const pattern = dashPattern(data)
   const state: Serializer = { version, lines: [], handle: 0 }
 
+  // 无任务书项目：文件头第一行写依据（999 = DXF 注释，R12/2000 均允许）。
+  const basis = typeof data.frame.fields.basis === 'string' ? data.frame.fields.basis : ''
+  if (basis !== '') pair(state, 999, basis)
+
   // HEADER
   pair(state, 0, 'SECTION')
   pair(state, 2, 'HEADER')

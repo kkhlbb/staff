@@ -239,6 +239,7 @@ export class SessionController {
       name: session.snapshot.project.name,
       path: targetPath,
       fingerprint,
+      sourceKind: session.snapshot.project.sourceKind,
     })
     if (!recorded.ok) {
       this.ports.log?.({

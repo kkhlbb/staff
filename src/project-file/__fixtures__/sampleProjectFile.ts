@@ -93,6 +93,11 @@ export async function createSampleSnapshot(): Promise<ProjectFileSnapshot> {
     activeRequirementRevisionId: null,
     currentRequirementCheck: null,
     extractionDrafts: [],
+    sourceKind: 'pdf',
+    actorId: null,
+    sessionSeq: 0,
+    sessionLabel: null,
+    attestations: [],
   }
   const draft = {
     terms: chain.terms.map((term) => ({

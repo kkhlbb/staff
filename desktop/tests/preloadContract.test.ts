@@ -68,6 +68,9 @@ const ADDED_FUNCTIONS = [
   'onAgentEvent',
   // DXF 导出 v1：R12 / 2000（仍只增不改旧函数）。
   'exportDrawingDxfR12', 'exportDrawingDxf2000',
+  // ADR-001 第 3 步：无任务书入口（用户界面触发；仍只增不改旧函数）。
+  'intentCreateProject', 'intentState', 'intentApply', 'intentPreview',
+  'intentConfirmCandidate', 'intentIssueApproval',
 ] as const
 
 describe('B2/C preload 契约', () => {

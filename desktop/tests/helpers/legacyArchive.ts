@@ -68,6 +68,12 @@ export async function downgradeToSchema6(bytes: Uint8Array): Promise<Uint8Array>
       delete project.activeRequirementRevisionId
       delete project.currentRequirementCheck
       delete project.extractionDrafts
+      // schema 10 的加法字段在 schema ≤9 里是未声明字段（严格 schema 会拒绝）。
+      delete project.sourceKind
+      delete project.actorId
+      delete project.sessionSeq
+      delete project.sessionLabel
+      delete project.attestations
     }
     patchJson(parts, 'project/project.json', strip)
     for (const path of [...parts.keys()]) {
