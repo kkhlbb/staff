@@ -32,7 +32,7 @@ afterEach(async () => {
 })
 
 describe('无任务书项目导出：文件名后缀与文件头标记', () => {
-  it('DXF 建议文件名带 -userinput，文件头含依据；SVG 也带标记', async () => {
+  it('DXF/SVG 建议文件名带 -userinput，DXF 999 注释与 SVG 注释都含依据', async () => {
     const h = await createHarness({ debounceMs: 60_000 })
     harness = h
     const snapshot = createIntentProjectSnapshot({
@@ -140,5 +140,18 @@ describe('无任务书项目导出：文件名后缀与文件头标记', () => {
     expect(text).toContain('依据：用户输入，无外部原文件')
     expect(text).toContain('999')
     console.log(`DXF_FILE ${dxf.value.fileName} bytes=${dxf.value.byteSize} sha256=${dxf.value.sha256}`)
+
+    const svgExport = await h.invoke<DrawingExportValue>(IPC_CHANNELS.drawingExportSvg, {
+      sessionId: opened.sessionId,
+      baseEditSeq: session.acceptedSeq,
+      drawingId: drawing.drawingId,
+      drawingFingerprint: drawing.dataFingerprint,
+    })
+    expect(svgExport.ok, JSON.stringify(svgExport)).toBe(true)
+    if (!svgExport.ok) return
+    expect(svgExport.value.fileName.endsWith('-userinput.svg')).toBe(true)
+    const svgFile = await fsp.readFile(picked[1]!.target, 'utf8')
+    expect(svgFile).toContain('<!-- 依据：用户输入，无外部原文件 -->')
+    console.log(`SVG_FILE ${svgExport.value.fileName} bytes=${svgExport.value.byteSize} sha256=${svgExport.value.sha256}`)
   })
 })

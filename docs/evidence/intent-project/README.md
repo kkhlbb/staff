@@ -7,7 +7,7 @@
 |---|---|
 | 基线 | `main = f79d73b`（EvidenceRef 泛化 + 侧栏文案已合入） |
 | 分支 | `agent/intent-project`（从 f79d73b 切出；未合并、未推送、未删除） |
-| 实现提交 | `ef8ead1`（四工具 + schema 10 + 标记 + 用例）；证据提交见 `git log --oneline f79d73b..HEAD` |
+| 实现提交 | `ef8ead1`（四工具 + schema 10 + 标记）→ `c42ad0a`（导出测试、标题栏去重、徽标样式、走查脚本）；证据提交 `f809f22` |
 | 提取规则版本 | **不变**：`document-extractor-6`（本步不改 PDF 抽取路径） |
 | 项目文件 schema | `PROJECT_FILE_SCHEMA_VERSION` 9 → **10**（纯加法） |
 | IndexedDB | `PROJECT_DB_VERSION` **未变**（store 结构未动；与项目 JSON schema 分开处理） |
@@ -99,14 +99,14 @@ REAL_DOC_CORPUS=~/DSH/tmp/cunlian-v36/real-docs node scripts/evidence-ref-candid
 cmp docs/evidence/intent-project/real-docs-candidates-after.json docs/evidence/evidence-ref/real-docs-candidates-after.json
 ```
 
-| 文档 | 页数 | 候选 | pending | blocked | 候选数组 SHA-256 | 与第 2 步基线 |
+| 文档 | 页数 | 候选 | pending | blocked | 候选数组 SHA-256（前 16 位） | 与第 2 步基线 |
 |---|---|---|---|---|---|---|
-| r1 | 74 | 15 | 4 | 11 | 与第 2 步同值 | 一致 |
-| r2 | 5 | 22 | 7 | 15 | 同上 | 一致 |
-| r3 | 4 | 3 | 0 | 3 | 同上 | 一致 |
-| r4 | 170 | 7 | 1 | 6 | 同上 | 一致 |
-| r5 | 8 | 4 | 2 | 2 | 同上 | 一致 |
-| r6 | 8 | 87 | 44 | 43 | 同上 | 一致 |
+| r1 | 74 | 15 | 4 | 11 | `2f00d76711de3f35` | 一致 |
+| r2 | 5 | 22 | 7 | 15 | `7ca45c3da6dfb719` | 一致 |
+| r3 | 4 | 3 | 0 | 3 | `b0d4c916da995dac` | 一致 |
+| r4 | 170 | 7 | 1 | 6 | `98abced2d7f1ad0b` | 一致 |
+| r5 | 8 | 4 | 2 | 2 | `eecbbff03bcff72b` | 一致 |
+| r6 | 8 | 87 | 44 | 43 | `2eef7127b2e34009` | 一致 |
 | **合计** | 269 | **138** | **58** | 80 | 6/6 全等 | 一致 |
 
 - `logs/01-metrics.log`：`BASELINE MATCH：与 docs/evidence/real-doc-baseline/baseline.json 完全一致（6 份文档）`
@@ -177,9 +177,12 @@ DEEPSEEK_API_KEY=... V40_REAL_MODEL=1 npx vitest run --config vitest.desktop.con
 2. **原生保存对话框**（导出 DXF/SVG/PDF）需要 macOS 辅助功能权限，本会话没有该权限，
    无法截图“对话框里的文件名”。导出文件名与文件头改由
    `desktop/tests/intentExport.test.ts` 在**真实导出代码路径**上验证（只把路径选择端口注入固定目录）：
-   - 建议文件名与回执文件名：`隔套-图纸-1_1-userinput-DXF-R12.dxf`
-   - 实际写盘 9266 B，sha256 `57261d80…1995cd`
-   - GBK 解码后文件头含 `999` 与「依据：用户输入，无外部原文件」
+   - 建议文件名与回执文件名：`隔套-图纸-1_1-userinput-DXF-R12.dxf`（SVG 为 `隔套-图纸-1_1-userinput.svg`）
+   - 实际写盘：DXF 9266 B，sha256 `8f7bc4d9…a85d1a`；SVG 9418 B，sha256 `11a5b7eb…8e2ac6f`
+     （DXF 头含生成时间，逐次导出哈希会变；文件名与标记不变）
+   - GBK 解码后 DXF 文件头含 `999` 与「依据：用户输入，无外部原文件」；SVG 含
+     `<!-- 依据：用户输入，无外部原文件 -->`
+   - **PDF 导出未在本次验证**：PDF 走系统打印面板，需要辅助功能权限
    - 日志：`logs/14-export.log`
 
 ---

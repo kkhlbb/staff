@@ -2,7 +2,7 @@
   "adr": "ADR-001 第 3 步：意图驱动建件（无任务书入口）",
   "branch": "agent/intent-project",
   "baselineCommit": "f79d73b",
-  "implementationCommit": "c42ad0a",
+  "implementationCommit": "f809f22",
   "rules": {
     "extractorVersion": "document-extractor-6",
     "maxExtractionPages": 100,
@@ -215,7 +215,7 @@
   "export": {
     "dxfFileName": "隔套-图纸-1_1-userinput-DXF-R12.dxf",
     "dxfBytes": "9266",
-    "dxfSha256": "57261d8097968b54e1007f29039dc08da626fd5d453021be065fd8fc091995cd",
+    "dxfSha256": "8f7bc4d92675f1f8311ea5a1fb9b74e2d5fc022e1a8aeb5be18dfc09b5a85d1a",
     "note": "真实导出代码路径 + 注入路径选择端口（原生对话框需要辅助功能权限）"
   },
   "gates": {
