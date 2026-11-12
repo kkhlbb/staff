@@ -220,7 +220,29 @@ npx vitest run src/document-extraction/__tests__/chunking.test.ts   # 预期 7 p
 
 ## 八、六条命令 + 打包（原始输出）
 
-（见下节，跑完后回填）
+在 `4d0a634` 的干净工作树上执行（源码与证据都已提交；执行时只有本目录的日志文件在写，
+`logs/` 被 `.gitignore` 覆盖，所以 `git status --short` 全程无输出，见 `logs/20-git-status-after-commands.txt`）。
+
+| # | 命令 | 退出码 | 实际输出 | 日志 |
+|---|---|---|---|---|
+| 1 | `npm run typecheck` | 0 | 无诊断 | `logs/10-typecheck.log` |
+| 2 | `npm run typecheck:desktop` | 0 | 无诊断 | `logs/11-typecheck-desktop.log` |
+| 3 | `npm run lint` | 0 | `eslint .` 无输出 | `logs/12-lint.log` |
+| 4 | `npm test` | 0 | **103 文件 / 1107 用例全过** | `logs/13-test.log` |
+| 5 | `npm run test:desktop` | 0 | **39 文件通过 + 1 跳过（40）；278 通过 + 14 跳过（292）** | `logs/14-test-desktop.log` |
+| 6 | `npm run build` | 0 | vite 生产构建通过（`✓ built in 216ms`；既有 chunk >500 kB 警告） | `logs/15-build.log` |
+| 7 | `npm run test:real-docs` | 0 | 1 文件 / 5 用例全过 | `logs/16-test-real-docs.log` |
+| 8 | `npm run metrics:real-docs` | 0 | 逐份表 + `BASELINE MATCH：与 docs/evidence/real-doc-baseline/baseline.json 完全一致（6 份文档）` | `logs/17-metrics.log` |
+| 9 | `npm run package:desktop -- --arch=arm64` | 0 | 打包成功，末尾 `RESULT PASS 打包产物中的 pdf worker 可被 main.cjs 运行时加载`；asar 内 `pdf.worker.mjs` sha256 `b4c8353d…` 与 `node_modules/pdfjs-dist` 一致 | `logs/18-package-desktop.log` |
+| 10 | `npm run check:package:pdf-worker` | 0 | `RESULT PASS`（同上 sha256 断言） | `logs/19-check-package-pdf-worker.log` |
+
+（第 7、8 条是本节“度量”口径的命令，一并附上真实输出；第 9、10 条是打包与打包校验。）
+
+跑完后的工作树：`git status --short` **无输出**（原文与说明见
+`logs/20-git-status-after-commands.txt`）。
+
+> 本次提交只新增这些日志与本节文本，**没有改动任何源码/测试**；因此上面十条命令的结果
+> 就是当前分支 HEAD 的结果（`git log --oneline 5b2f06c..HEAD` 可见提交顺序）。
 
 ---
 
