@@ -1,0 +1,371 @@
+{
+  "schema": "dxf-depth-samples-v1",
+  "baseline": "main 791483c（意图建件已合入）",
+  "branch": "agent/dxf-depth",
+  "drawing": "隔套 20×32×12.05（q=200000/320000/120500）",
+  "sheet": "A3 横向 420×297（2000）/ A4 横向单张（R12，保持现状）",
+  "samples": [
+    {
+      "case": "r12-1x1",
+      "file": "docs/evidence/dxf-depth/samples/spacer-20x32x12.05-dxf-r12-1x1.dxf",
+      "version": "r12",
+      "acadVersion": "AC1009",
+      "scale": "1:1",
+      "byteSize": 8689,
+      "sha256": "a5bd8e12ba25c2f5ff7e14bd3d55e50e727d930fd77b95f66fe0302f9c29d31a",
+      "sheet": {
+        "widthMm": 297,
+        "heightMm": 210,
+        "space": "model"
+      },
+      "counts": {
+        "line": 29,
+        "polyline": 4,
+        "vertex": 20,
+        "circle": 2,
+        "text": 30,
+        "dimension": 0,
+        "viewport": 0
+      },
+      "dimensions": null,
+      "dimStyleName": "寸链尺寸",
+      "viewport": null,
+      "layouts": [],
+      "paperSpaceTexts": 0,
+      "titleBlockTexts": [
+        "草稿 · 第 3 版",
+        "45 钢",
+        "1:1 · mm"
+      ],
+      "drawingOutline": {
+        "minX": 73.975,
+        "minY": 114,
+        "maxX": 86.025,
+        "maxY": 146
+      },
+      "hex32Leaks": []
+    },
+    {
+      "case": "r12-1x2",
+      "file": "docs/evidence/dxf-depth/samples/spacer-20x32x12.05-dxf-r12-1x2.dxf",
+      "version": "r12",
+      "acadVersion": "AC1009",
+      "scale": "1:2",
+      "byteSize": 8717,
+      "sha256": "0e4754f775567f371e610c04d76592043e2b4506516e24c0f5438e545b6e25a7",
+      "sheet": {
+        "widthMm": 297,
+        "heightMm": 210,
+        "space": "model"
+      },
+      "counts": {
+        "line": 29,
+        "polyline": 4,
+        "vertex": 20,
+        "circle": 2,
+        "text": 30,
+        "dimension": 0,
+        "viewport": 0
+      },
+      "dimensions": null,
+      "dimStyleName": "寸链尺寸",
+      "viewport": null,
+      "layouts": [],
+      "paperSpaceTexts": 0,
+      "titleBlockTexts": [
+        "草稿 · 第 3 版",
+        "45 钢",
+        "1:2 · mm"
+      ],
+      "drawingOutline": {
+        "minX": 153.975,
+        "minY": 244,
+        "maxX": 166.025,
+        "maxY": 276
+      },
+      "hex32Leaks": []
+    },
+    {
+      "case": "2000-1x1",
+      "file": "docs/evidence/dxf-depth/samples/spacer-20x32x12.05-dxf-2000-1x1.dxf",
+      "version": "2000",
+      "acadVersion": "AC1015",
+      "scale": "1:1",
+      "byteSize": 21231,
+      "sha256": "d943b2c3c02522145cd288ae43d9364750d141478438aee0bef8052ce5c557c4",
+      "sheet": {
+        "widthMm": 420,
+        "heightMm": 297,
+        "space": "layout"
+      },
+      "counts": {
+        "line": 5,
+        "polyline": 1,
+        "vertex": 5,
+        "circle": 2,
+        "text": 1,
+        "dimension": 3,
+        "viewport": 0
+      },
+      "dimensions": [
+        {
+          "block": "*D1",
+          "dimensionType": 32,
+          "text": "12.050",
+          "actualMeasurement": 12.05,
+          "layer": "尺寸"
+        },
+        {
+          "block": "*D2",
+          "dimensionType": 35,
+          "text": "%%c20.000",
+          "actualMeasurement": 20,
+          "layer": "尺寸"
+        },
+        {
+          "block": "*D3",
+          "dimensionType": 35,
+          "text": "%%c32.000",
+          "actualMeasurement": 32,
+          "layer": "尺寸"
+        }
+      ],
+      "dimStyleName": "寸链尺寸",
+      "viewport": {
+        "centerMm": {
+          "x": 210,
+          "y": 176
+        },
+        "widthMm": 360,
+        "heightMm": 208,
+        "viewHeightMm": 208,
+        "viewCenter": {
+          "x": 80,
+          "y": 130
+        },
+        "paperPerModel": 1
+      },
+      "layouts": [
+        {
+          "name": "Model",
+          "tabOrder": 0,
+          "paperWidthMm": 420,
+          "paperHeightMm": 297,
+          "viewportCount": 0
+        },
+        {
+          "name": "Layout1",
+          "tabOrder": 1,
+          "paperWidthMm": 420,
+          "paperHeightMm": 297,
+          "viewportCount": 1
+        }
+      ],
+      "paperSpaceTexts": 29,
+      "titleBlockTexts": [
+        "草稿 · 第 3 版",
+        "45 钢",
+        "1:1 · mm",
+        "A3 横向 · 第三角",
+        "4. 单位 mm；比例作用于视口，模型空间是 1:1 真实尺寸。",
+        "6. 依据：本图档未记录来源文档名/页。"
+      ],
+      "drawingOutline": {
+        "minX": 73.975,
+        "minY": 114,
+        "maxX": 86.025,
+        "maxY": 146
+      },
+      "hex32Leaks": []
+    },
+    {
+      "case": "2000-1x2",
+      "file": "docs/evidence/dxf-depth/samples/spacer-20x32x12.05-dxf-2000-1x2.dxf",
+      "version": "2000",
+      "acadVersion": "AC1015",
+      "scale": "1:2",
+      "byteSize": 21264,
+      "sha256": "1aba5d95e649c30a61eec0ca544adc79e32e4dc326db8fabead93cea92ca8b10",
+      "sheet": {
+        "widthMm": 420,
+        "heightMm": 297,
+        "space": "layout"
+      },
+      "counts": {
+        "line": 5,
+        "polyline": 1,
+        "vertex": 5,
+        "circle": 2,
+        "text": 1,
+        "dimension": 3,
+        "viewport": 0
+      },
+      "dimensions": [
+        {
+          "block": "*D1",
+          "dimensionType": 32,
+          "text": "12.050",
+          "actualMeasurement": 12.05,
+          "layer": "尺寸"
+        },
+        {
+          "block": "*D2",
+          "dimensionType": 35,
+          "text": "%%c20.000",
+          "actualMeasurement": 20,
+          "layer": "尺寸"
+        },
+        {
+          "block": "*D3",
+          "dimensionType": 35,
+          "text": "%%c32.000",
+          "actualMeasurement": 32,
+          "layer": "尺寸"
+        }
+      ],
+      "dimStyleName": "寸链尺寸",
+      "viewport": {
+        "centerMm": {
+          "x": 210,
+          "y": 176
+        },
+        "widthMm": 360,
+        "heightMm": 208,
+        "viewHeightMm": 416,
+        "viewCenter": {
+          "x": 160,
+          "y": 260
+        },
+        "paperPerModel": 0.5
+      },
+      "layouts": [
+        {
+          "name": "Model",
+          "tabOrder": 0,
+          "paperWidthMm": 420,
+          "paperHeightMm": 297,
+          "viewportCount": 0
+        },
+        {
+          "name": "Layout1",
+          "tabOrder": 1,
+          "paperWidthMm": 420,
+          "paperHeightMm": 297,
+          "viewportCount": 1
+        }
+      ],
+      "paperSpaceTexts": 29,
+      "titleBlockTexts": [
+        "草稿 · 第 3 版",
+        "45 钢",
+        "1:2 · mm",
+        "A3 横向 · 第三角",
+        "4. 单位 mm；比例作用于视口，模型空间是 1:1 真实尺寸。",
+        "6. 依据：本图档未记录来源文档名/页。"
+      ],
+      "drawingOutline": {
+        "minX": 153.975,
+        "minY": 244,
+        "maxX": 166.025,
+        "maxY": 276
+      },
+      "hex32Leaks": []
+    },
+    {
+      "case": "2000-1x2-userinput",
+      "file": "docs/evidence/dxf-depth/samples/spacer-20x32x12.05-dxf-2000-1x2-userinput.dxf",
+      "version": "2000",
+      "acadVersion": "AC1015",
+      "scale": "1:2",
+      "byteSize": 21293,
+      "sha256": "778a2e32ac8f16627fe96ec340fb683f96b1b2a7a1e32f683facf9ecd54b9663",
+      "sheet": {
+        "widthMm": 420,
+        "heightMm": 297,
+        "space": "layout"
+      },
+      "counts": {
+        "line": 5,
+        "polyline": 1,
+        "vertex": 5,
+        "circle": 2,
+        "text": 1,
+        "dimension": 3,
+        "viewport": 0
+      },
+      "dimensions": [
+        {
+          "block": "*D1",
+          "dimensionType": 32,
+          "text": "12.050",
+          "actualMeasurement": 12.05,
+          "layer": "尺寸"
+        },
+        {
+          "block": "*D2",
+          "dimensionType": 35,
+          "text": "%%c20.000",
+          "actualMeasurement": 20,
+          "layer": "尺寸"
+        },
+        {
+          "block": "*D3",
+          "dimensionType": 35,
+          "text": "%%c32.000",
+          "actualMeasurement": 32,
+          "layer": "尺寸"
+        }
+      ],
+      "dimStyleName": "寸链尺寸",
+      "viewport": {
+        "centerMm": {
+          "x": 210,
+          "y": 176
+        },
+        "widthMm": 360,
+        "heightMm": 208,
+        "viewHeightMm": 416,
+        "viewCenter": {
+          "x": 160,
+          "y": 260
+        },
+        "paperPerModel": 0.5
+      },
+      "layouts": [
+        {
+          "name": "Model",
+          "tabOrder": 0,
+          "paperWidthMm": 420,
+          "paperHeightMm": 297,
+          "viewportCount": 0
+        },
+        {
+          "name": "Layout1",
+          "tabOrder": 1,
+          "paperWidthMm": 420,
+          "paperHeightMm": 297,
+          "viewportCount": 1
+        }
+      ],
+      "paperSpaceTexts": 29,
+      "titleBlockTexts": [
+        "草稿 · 第 3 版",
+        "45 钢",
+        "1:2 · mm",
+        "A3 横向 · 第三角",
+        "4. 单位 mm；比例作用于视口，模型空间是 1:1 真实尺寸。",
+        "6. 依据：用户输入，无外部原文件。"
+      ],
+      "drawingOutline": {
+        "minX": 153.975,
+        "minY": 244,
+        "maxX": 166.025,
+        "maxY": 276
+      },
+      "hex32Leaks": []
+    }
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

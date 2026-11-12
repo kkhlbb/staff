@@ -93,17 +93,24 @@ function parseDxf(bytes: Uint8Array): { parsed: IDxf; decoded: string } {
   return { parsed, decoded }
 }
 
-function entityCounts(parsed: IDxf, build: DxfBuildResult) {
+function entityCounts(parsed: IDxf, build: DxfBuildResult, version: DxfVersion) {
   const parsedCounts: Record<string, number> = {}
-  for (const entity of parsed.entities) parsedCounts[entity.type] = (parsedCounts[entity.type] ?? 0) + 1
+  // 只数模型空间实体：2000 的图框/标题栏在图纸空间，单独算。
+  for (const entity of parsed.entities) {
+    if ((entity as unknown as { inPaperSpace?: boolean }).inPaperSpace === true) continue
+    parsedCounts[entity.type] = (parsedCounts[entity.type] ?? 0) + 1
+  }
+  const known = ['LINE', 'POLYLINE', 'CIRCLE', 'TEXT']
   return {
     parsed: {
       line: parsedCounts.LINE ?? 0,
       polyline: parsedCounts.POLYLINE ?? 0,
       circle: parsedCounts.CIRCLE ?? 0,
       text: parsedCounts.TEXT ?? 0,
+      // 2000 的标注是真 DIMENSION 实体，算「other」里，单独列出来。
+      dimension: parsedCounts.DIMENSION ?? 0,
       other: Object.entries(parsedCounts)
-        .filter(([type]) => !['LINE', 'POLYLINE', 'CIRCLE', 'TEXT'].includes(type))
+        .filter(([type]) => !known.includes(type) && type !== 'DIMENSION')
         .map(([type, count]) => ({ type, count })),
     },
     expected: {
@@ -112,6 +119,7 @@ function entityCounts(parsed: IDxf, build: DxfBuildResult) {
       vertex: build.counts.vertex,
       circle: build.counts.circle,
       text: build.counts.text,
+      dimension: version === '2000' ? build.counts.dimension : 0,
     },
   }
 }
@@ -127,7 +135,9 @@ function boundsOf(points: { x: number; y: number }[]) {
 
 function parsedGeometry(parsed: IDxf) {
   const points: { x: number; y: number }[] = []
+  // 只取模型空间：2000 的图框/标题栏在图纸空间，混进来会把包围盒撑到 420×297。
   for (const entity of parsed.entities) {
+    if ((entity as unknown as { inPaperSpace?: boolean }).inPaperSpace === true) continue
     if (entity.type === 'LINE') {
       const line = entity as unknown as { vertices: { x: number; y: number }[] }
       points.push(...line.vertices)
@@ -198,7 +208,7 @@ function reportFor(data: DrawingData, version: DxfVersion, file: string | null, 
   const build = buildDxfDocument(data, version)
   const { parsed, decoded } = parseDxf(bytes)
   expect(decoded).toBe(build.text)
-  const counts = entityCounts(parsed, build)
+  const counts = entityCounts(parsed, build, version)
 
   const layerEntities = new Map<string, number>()
   for (const entity of parsed.entities) layerEntities.set(entity.layer, (layerEntities.get(entity.layer) ?? 0) + 1)
@@ -236,6 +246,13 @@ function reportFor(data: DrawingData, version: DxfVersion, file: string | null, 
   const textEntities = parsed.entities
     .filter((entity) => entity.type === 'TEXT')
     .map((entity) => entity as unknown as { text: string; layer: string })
+  // 2000 的标注文字在匿名标注块里，读回时要连块内容一起算。
+  const blockTexts = Object.values(parsed.blocks ?? {}).flatMap((block) =>
+    (block.entities ?? [])
+      .filter((entity) => entity.type === 'TEXT')
+      .map((entity) => entity as unknown as { text: string; layer: string }),
+  )
+  const allTexts = [...textEntities, ...blockTexts]
   const forbiddenR12: Record<string, number> = {}
   for (const token of ['LWPOLYLINE', 'MTEXT', 'SPLINE', 'HATCH']) {
     forbiddenR12[token] = decoded.split(token).length - 1
@@ -269,8 +286,8 @@ function reportFor(data: DrawingData, version: DxfVersion, file: string | null, 
     },
     texts: {
       total: textEntities.length,
-      dimension: textEntities.filter((entity) => entity.layer === '尺寸').map((entity) => entity.text),
-      chineseSamples: textEntities
+      dimension: allTexts.filter((entity) => entity.layer === '尺寸').map((entity) => entity.text),
+      chineseSamples: allTexts
         .map((entity) => entity.text)
         .filter((text) => /[\u4e00-\u9fff]/u.test(text))
         .slice(0, 6),
@@ -307,6 +324,7 @@ describe('DXF 导出 v1 回环证据', () => {
         polyline: report.counts.expected.polyline,
         circle: report.counts.expected.circle,
         text: report.counts.expected.text,
+        dimension: report.counts.expected.dimension,
         other: [],
       })
       expect(report.layers.map((layer) => [layer.name, layer.color])).toEqual([

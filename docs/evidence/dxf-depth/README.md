@@ -1,0 +1,198 @@
+# 出图加深 · 证据（追上 AgentCAD 的图纸能力）
+
+分支 `agent/dxf-depth`，基线 `main` = `791483c`（意图建件已合入）。
+本目录放**研究**（`research.md`）、**样本**（`samples/`）、**渲染图**（`screenshots/`）、
+**日志**（`logs/`）、**变异脚本**（`mutations/`）。
+
+---
+
+## 1. 研究结论（先研究后写码）
+
+完整版在 `research.md`（含组码表与实测证据）。三个问题的答案：
+
+1. **R2000 的 `DIMENSION` 最小可用字段集**：`2`（匿名几何块名，**缺了它 ezdxf 直接判
+   UNDEFINED_BLOCK 并删除该标注**）、`3`（DIMSTYLE 名）、`10/11`（尺寸线定义点、文字中点）、
+   `70`（低 4 位标注类型 + 位 32「几何块被引用」）、`1`（文字覆盖值）、子类
+   `AcDbAlignedDimension` 的 `13/14/50` 或 `AcDbDiametricDimension` 的 `15`、`42` 实测值。
+   另需 `DIMSTYLE` 表条目（句柄组码是 `105`）与 `BLOCK_RECORD` + `BLOCK/ENDBLK`（匿名块 `70=1`）。
+2. **路线选 A（自写）**：
+   - B（`@tarikjabiri/dxf` 2.10.0）实测不合格——它写出的 DIMENSION **没有 `2` 几何块、没有 `10/11/3/42`**，
+     ezdxf `audit()` 直接 `UNDEFINED_BLOCK Removed DIMENSION(...)`；且 `LIB` 里 `LAYOUT`/`VIEWPORT`
+     出现 **0** 次（只有 VPORT 表记录的 `AcDbViewportTableRecord`）、`ANSI_936`/GBK 出现 **0** 次。
+     证据：`research/lib-dimension-tarikjabiri.dxf`、`research/audit_tarikjabiri.py`。
+   - C 无候选（无原生模块 / 不联网）。
+   - A 的可行性与组码由 ezdxf 参考样本 `research/ref-r2000.dxf` 逐条对照。
+3. **图纸空间**：`BLOCK_RECORD` 表（`*Model_Space`/`*Paper_Space`/匿名块）+ `BLOCKS` 段 +
+   `ENTITIES` 里 `67=1` 的图纸空间实体 + `OBJECTS` 段的根字典 / `ACAD_LAYOUT` 字典 / 两个
+   `LAYOUT` 对象（`44/45 = 420/297`）+ 一个 `VIEWPORT` 实体。
+   **`VIEWPORT` 实体的 `40=视口宽`、`41=视口高`（纸面 mm）、`45=模型视高`**，
+   `41/45 = 1/k`（1:1 → 1，1:2 → 0.5）。这个语义用不对称视口（`size=(100,2)`）实测确认过：
+   `research/probe-vp-40-41.dxf` + `research/probe-vp.png`（渲染出来是一条 100×2 的细缝）。
+
+研究阶段**没改任何产品代码**（本目录先落研究文件，实现是第 2 步）。
+
+### 1.1 研究里踩到的两个坑（都写进 `research.md` §5）
+
+- **ezdxf `audit()` 0 错误 ≠ 文件能被 CAD 打开**。第一版 R2000 在 QCAD 3.33.1 里
+  `Null object Id: <object> (0)` 整份拒收，原因是缺 `100` 子类标记（实体、符号表记录都有）、
+  符号表头缺 `330 0`/`100 AcDbSymbolTable`、块内实体属主写成模型空间、
+  `LAYOUT.331` 指向一个不存在的句柄、图纸空间折线的 VERTEX/SEQENT 漏了 `67 1`。
+- **QCAD 的无头渲染不画标注文字/箭头**：本仓库的文件和 ezdxf 的参考样本
+  （`research/ref-model.png`）表现一致，所以「数字对不对」由组码读回证明，不由位图证明。
+
+---
+
+## 2. 改动清单
+
+| 文件 | 改动 |
+|---|---|
+| `src/drawing/dxfExport.ts` | 新增 R2000 图纸结构：`DIMSTYLE` 表、`BLOCK_RECORD` 表、`BLOCKS` 段（`*Model_Space`/`*Paper_Space`/匿名标注块）、真 `DIMENSION` 实体、A3 图纸空间图框/标题栏/技术要求区、`VIEWPORT`、`OBJECTS`（根字典 + `ACAD_LAYOUT` + `LAYOUT`）、实体子类标记。**R12 分支逐字节不变**（见 §6）。新增导出常量 `DXF_SHEET_A3`、`A3_LAYOUT`、`DXF_DIM_STYLE_NAME`、`sourceMarkerOf()`；`DxfBuildResult` 增 `sheet` / `dimensions` / `viewport` / `counts.dimension` / `counts.viewport` |
+| `src/drawing/dxfExport.test.ts` | D-01/D-02 的 2000 分支改成版本相关（模型空间计数、标注文字从匿名块读）；**新增 D-09～D-13**（见 §3） |
+| `src/drawing/dxfR12Freeze.test.ts` | **新增**：R12 golden SHA-256 冻结（4 个比例/场景） |
+| `desktop/tests/dxfExport.test.ts` | D-07 的 2000 读回把匿名块里的文字一起算（否则读不到标注数字） |
+| `scripts/dxf-export-evidence.ts` | 旧证据脚本改成版本相关（模型空间计数、块内文字、包围盒排除图纸空间） |
+| `scripts/dxf-depth-samples.ts` + `vitest.dxf-depth.config.ts` | **新增**：本任务样本生成器（5 份样本 + `samples/index.json`） |
+| `README.md` | 把「DXF 的实情」拆成 R12 / 2000 两段，明确 R12 保持现状（无 DIMENSION/LAYOUT/VIEWPORT） |
+| `docs/evidence/dxf-export/*` | 跑旧证据脚本时被重新生成（2000 样本内容变了；**R12 样本文件没变**，`git status` 只显示 2000 那一个） |
+
+冻结区**没动**：纸面→模型换算（`x=k·x_paper`、`y=k·(纸面高−y_paper)`、`k=分母/分子`）、
+R12 白名单、`DrawingData` 生成逻辑（只改导出层）、无新依赖、无原生模块、不联网。
+
+---
+
+## 3. 新增用例
+
+| 用例 | 断言什么 |
+|---|---|
+| **D-09** 2000 的真 DIMENSION（6 条） | 3 条 `DIMENSION`（模型空间里尺寸层不再有 LINE/TEXT 冒充标注）；`70` = 32/35/35（长度 + 两个直径 + 位 32）；每条指向自己的 `*D1/*D2/*D3`，块里有线有文字（长度块 7 线 + 1 文字）；**改 q → `42`/`1` 跟着变**（12.05→12.4）；`DIMSTYLE` 名被引用且句柄组码是 `105`；定义点是模型坐标（纸面 (80,110)→模型 (80,100)、界线 y=113、直径 10↔15 距离 = 32） |
+| **D-10** A3 图幅（4 条） | `$PLIMMAX=420×297`；两个 `LAYOUT` 的 `44/45=420/297`、`71=0/1`、`Layout1.76=1` 且 `331` 指向真实 VIEWPORT 句柄；图框折线在图纸空间 10..410 / 10..287（400×277 内框）；模型空间仍是 12.05×32 真实尺寸 |
+| **D-11** 视口比例（4 条） | 1:1 / 1:2 / 2:1：`40=360`、`41=208` 不随比例变，`45=208k`，`41/45=1/k`；视口 `67=1`、`100 AcDbViewport`、属主是 `*Paper_Space` 的块记录 |
+| **D-12** 标题栏（3 条） | 零件名/隔套/材料/45 钢/版本/草稿 v1/`1:2 · mm`/`A3 横向 · 第三角`/日期都在图纸空间；有来源写 basis 原文（文档名+页），无来源写「依据：用户输入，无外部原文件」；版本栏「草稿 · 第 3 版」，图上无 ≥32 位十六进制串（连组码 1 全部扫过） |
+| **D-13** R12 不变（2 条） | R12 里 `DIMENSION`/`LAYOUT`/`VIEWPORT`/`BLOCK_RECORD`/`DIMSTYLE` 出现次数都是 0；实体仍只有 `LINE/POLYLINE/CIRCLE/TEXT`；尺寸层的线和文字仍在 ENTITIES（没有匿名块） |
+| **R12 冻结**（4 条） | R12 输出字节数与 SHA-256 与 `main@791483c` 一致（4 个场景） |
+
+刷新旧用例的地方：D-01 的 2000 分支改成「模型空间实体计数 + 标注文字从匿名块读」，
+D-02 的标题栏文字高度断言拆成 R12（3→6，模型空间）与 2000（图纸空间恒 3，另加一条新用例）。
+
+---
+
+## 4. 变异验证（M27 / M28）
+
+脚本：`mutations/run-mutations.sh` + `mutations/mutate.py`（改坏 → 跑 → 还原 → 再跑）。
+
+| 变异 | 结果 | 日志 |
+|---|---|---|
+| **M27** 2000 的标注退回「几何 + TEXT」 | **8 条红**（D-09 全部 6 条 + D-01 的 2000 分支 + D-02 的 2000 分支）→ 还原后 33 条全绿 | `logs/50-M27-red.log` / `logs/51-M27-green.log` |
+| **M28** 视口比例写死 `45 = heightMm`（1:1） | **2 条红**（D-11 的 1:2 与 2:1）→ 还原后 33 条全绿 | `logs/52-M28-red.log` / `logs/53-M28-green.log` |
+
+两次还原后 `cmp` 都确认 `src/drawing/dxfExport.ts` 与备份逐字节一致（脚本最后一行打印）。
+
+---
+
+## 5. 样本与 SHA-256
+
+`npx vitest run --config vitest.dxf-depth.config.ts` 生成（断言不过就不生成）。
+
+| 样本 | 字节 | SHA-256 |
+|---|---|---|
+| `samples/spacer-20x32x12.05-dxf-r12-1x1.dxf` | 8,689 | `a5bd8e12ba25c2f5ff7e14bd3d55e50e727d930fd77b95f66fe0302f9c29d31a` |
+| `samples/spacer-20x32x12.05-dxf-r12-1x2.dxf` | 8,717 | `0e4754f775567f371e610c04d76592043e2b4506516e24c0f5438e545b6e25a7` |
+| `samples/spacer-20x32x12.05-dxf-2000-1x1.dxf` | 21,231 | `d943b2c3c02522145cd288ae43d9364750d141478438aee0bef8052ce5c557c4` |
+| `samples/spacer-20x32x12.05-dxf-2000-1x2.dxf` | 21,264 | `1aba5d95e649c30a61eec0ca544adc79e32e4dc326db8fabead93cea92ca8b10` |
+| `samples/spacer-20x32x12.05-dxf-2000-1x2-userinput.dxf` | 21,293 | `778a2e32ac8f16627fe96ec340fb683f96b1b2a7a1e32f683facf9ecd54b9663` |
+
+第 5 份是**无来源项目**：`frame.fields.basis = 依据：用户输入，无外部原文件`，
+文件名带 `-userinput`，标题栏与技术要求区都写着这句话（两处都在）。
+
+`samples/index.json` 里每份样本都记了：图幅、视口 `40/41/45`、`LAYOUT` 的 `44/45/76`、
+3 条 DIMENSION 的块名/类型/实测值、标题栏里与来源/版本相关的文字、`hex32Leaks`（必须为空）。
+
+### 5.1 第三方读回
+
+| 工具 | 结果 | 日志 |
+|---|---|---|
+| `dxf-parser` 1.1.2（仓库既有 devDependency，产品测试里跑） | 3 条 `DIMENSION`（`dimensionType` 32/35/35、`block` `*D1/*D2/*D3`、`actualMeasurement` 12.05/20/32）、`TEXT` 都在匿名块里、图纸空间实体 `inPaperSpace=true` | `npm test`（`src/drawing/dxfExport.test.ts`） |
+| **ezdxf 1.4.2** `readfile` + `audit()` | **5 份样本全部 `audit errors = 0, fixes = 0`**；`dxfversion` AC1009/AC1015 正确；DIMENSION 的 `geometry`/`dimstyle`/`defpoint`/`text`/`actual` 全部读出；`Layout1` 视口 `width=360 height=208 view_height=208/416` | `logs/30-ezdxf-audit.log`（脚本 `research/audit_samples.py`） |
+
+---
+
+## 6. R12 保持不变的证明
+
+三道证据，互相独立：
+
+1. **逐字节对比**（临时把 `main` 的 `dxfExport.ts` 原样拷成模块，同一份 `DrawingData` 各生成一次）：
+   4 个场景（1:1 / 1:2 / 2:1 / 1:1+无来源）**字节数、SHA-256、每个字节都相同** →
+   `logs/31-r12-byte-identical.log`（`R12_SAME 1:1 bytes=8676 sha256=bdbb9aa9…` 等）。
+2. **golden 冻结用例**：把上面这 4 组哈希写进 `src/drawing/dxfR12Freeze.test.ts`，
+   以后任何人改动 R12 输出都会红。
+3. **旧证据脚本重跑**：`npx vitest run --config vitest.dxfexport.config.ts` 之后
+   `git status` 里只有 `docs/evidence/dxf-export/samples/…-dxf-2000.dxf` 变了，
+   **`…-dxf-r12.dxf` 没有出现在改动列表**（R12 样本字节没变）。
+
+另外 `D-13` 用例直接从组码层面断言：R12 文件里 `DIMENSION`/`LAYOUT`/`VIEWPORT`/`BLOCK_RECORD`/`DIMSTYLE`
+出现次数为 0，实体集合仍限于 `LINE/POLYLINE/CIRCLE/TEXT`，尺寸仍是「几何 + TEXT」。
+
+---
+
+## 7. 看图软件实测（用了什么、看到了什么、哪里没做到）
+
+**软件：QCAD 3.33.1**（Homebrew cask `qcad 3.33.1,13-26-qt6`，`/Applications/QCAD.app`）。
+本机没有 AutoCAD；LibreCAD 的 cask 被 Homebrew 以 Gatekeeper 为由禁用，所以选 QCAD。
+（另有 ezdxf 1.4.2 作为独立的严格读回校验器，不是看图软件。）
+
+| 证据 | 文件 | 说明 |
+|---|---|---|
+| QCAD 把标注**识别成标注对象** | `samples/*-2000-*.svg` 里 `<!-- Rotated Dimension -->` ×1、`<!-- Diametric Dimension -->` ×2 | QCAD 的 SVG 导出按实体类型打注释。**对照**：同图纸的 R12 文件只有 `<!-- Line -->` ×29、`<!-- Polyline -->` ×4、`<!-- Circle -->` ×2，**零 Dimension** —— 同一张图，R12 是线，2000 是标注 |
+| A3 图幅 + 标题栏 + 技术要求区 | `screenshots/qcad-sheet-2000-1x2.png`（1:1 版 `qcad-sheet-2000-1x1.png`） | QCAD 渲染图纸空间：420×297 横向外框、右下 10 行标题栏（标签 + 值两列）、左下技术要求区 |
+| 零件几何（模型空间） | `screenshots/qcad-model-2000-1x2.png`、`qcad-model-r12-1x1.png` | R12 那张能看到 `12.050`、`⌀20.000`、`⌀32.000`（它是普通 TEXT，QCAD 画得出来） |
+| 1:2 视口 | 组码 `40=360 41=208 45=416` + `samples/index.json` 的 `viewport` 字段 + `logs/30-ezdxf-audit.log` | 数值证据；`index.json` 同时断言「视口在模型里覆盖的窗口 ⊇ 图形包围盒」，即零件确实装得进这个 1:2 视口 |
+
+### 没做到的两件事（如实写，不编）
+
+1. **没有 GUI 点选属性面板的截图**。本机 `screencapture` 无权限
+   （`could not create image from display`）、辅助功能（AX）也无权限，
+   无法在 QCAD 界面上点选尺寸再截属性面板。替代证据是上面第 1 行的
+   **QCAD 实体类型注释**（`<!-- Rotated Dimension -->`）——它来自 QCAD 自己的导出器，
+   不是我们写的文本。
+2. **位图渲染看不到标注数字/箭头**。QCAD 3.33.1 的无头 `dwg2bmp`/`dwg2svg` 不绘制
+   DIMENSION 的文字与箭头；**对照组** ezdxf 参考样本 `research/ref-r2000.dxf` 渲染出来
+   也一样是空壳（`research/ref-model.png`）。所以图上「12.050」这类数字由组码读回证明
+   （`1=12.050`、`42=12.05`、`5` 号块 `*D1` 里的 `TEXT`），不是由截图证明。
+   中文在无头渲染里显示为 `?????`，因为文件用的是 `txt.shx/hztxt.shx`（中文 CAD 惯例），
+   这台机器上 QCAD 的无头渲染找不到这两个字体；文字内容本身由 dxf-parser/ezdxf 读回证明。
+
+---
+
+## 8. 六条命令 + 打包（真实输出）
+
+| # | 命令 | 结果 | 日志 |
+|---|---|---|---|
+| 1 | `npm run typecheck` | exit 0 | `logs/20-typecheck.log` |
+| 2 | `npm run typecheck:desktop` | exit 0 | `logs/21-typecheck-desktop.log` |
+| 3 | `npm run lint` | exit 0（无输出） | `logs/22-lint.log` |
+| 4 | `npm test` | **108 文件 / 1184 用例全过**（基线 107/1159） | `logs/23-test.log` |
+| 5 | `npm run test:desktop` | **41 文件通过 + 2 跳过；285 通过 + 17 跳过**（与基线一致） | `logs/24-test-desktop.log` |
+| 6 | `npm run build` | `✓ built in 221ms` | `logs/10-build.log` |
+| 7 | `npm run package:desktop -- --arch=arm64` | `RESULT PASS 打包产物中的 pdf worker 可被 main.cjs 运行时加载` | `logs/11-package.log` |
+| 8 | `npm run check:package:pdf-worker` | `RESULT PASS` | `logs/12-check-pdf-worker.log` |
+| 9 | `npx vitest run --config vitest.dxf-depth.config.ts` | 1 用例通过，生成 5 份样本 | 见 §5 |
+| 10 | `npx vitest run --config vitest.dxfexport.config.ts` | 1 用例通过（旧回环证据，R12 样本未变） | — |
+
+---
+
+## 9. 未做 / 已知限制
+
+1. **有来源项目的「文档名+页」没写进标题栏**。`DrawingData` 只有 `frame.fields.basis`
+   这一个来源载体（生成逻辑冻结，不许改），没有文档名/页字段。所以：
+   basis 有值 → 原样写进标题栏（无来源项目就是「依据：用户输入，无外部原文件」）；
+   basis 为空（有来源项目）→ 写「依据：本图档未记录来源文档名/页」。
+   要真正写「《xxx.pdf》第 3 页」，得在 `revisions/compute.ts` 里把来源信息塞进
+   `frameFields`（属于改生成逻辑，本任务不做）。
+2. **QCAD 会重算标注**，不显示匿名块里的原生图形（无头渲染还丢文字/箭头）。文件里
+   `*D1/*D2/*D3` 的线条与文字是完整的（组码读回可验），AutoCAD 系编辑器按块显示；
+   QCAD 的表现是它自己的渲染策略，不是文件缺陷。
+3. **只做了隔套一张图**（`DrawingData` 本来就只有这一个模板）；A3 版式是导出层按
+   `A3_LAYOUT` 常量画的，不跟随 `DrawingData.paper`（后者仍是 A4，属冻结区）。
+4. **没有出 PDF 打印版的 A3**（本任务只管 DXF）。
+5. 视口尺寸取固定 `360×208`（纸面 mm），不是自动适配零件大小；零件变大到超出视口时
+   目前不会报警（只有 `scripts/dxf-depth-samples.ts` 里的样例断言检查了包围盒）。

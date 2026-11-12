@@ -1,0 +1,34 @@
+QCAD version  3.33.1
+03:48:38: Debug:    loading plugins...
+03:48:38: Debug:    RCavalierPlugin::init: trial
+03:48:38: Debug:    RHelpPlugin::init
+03:48:38: Debug:    RJSApiPlugin::init
+03:48:38: Debug:    RPolygonPlugin::init
+03:48:38: Debug:    RProScriptsPlugin::init: trial
+
+
+You are using a trial version of QCAD Professional.
+If you would like to use this software productively,
+please purchase the full version for a small license fee from our
+Online Shop at:
+https://qcad.org/shop
+Thank you for trying this add-on!
+
+Your script will start in 15 seconds...
+
+
+03:48:53: Debug:    RProxiesPlugin::init: trial
+03:48:53: Debug:    RTracePlugin::init: trial
+03:48:53: Debug:    RDwgPlugin::init: trial
+03:48:53: Debug:    loading static plugins...
+03:48:53: Debug:    Plugin does not implement RPluginInterface: ""
+Warning:  Unimplemented code.
+Warning:  Unimplemented code.
+Warning:  RDwgImporter::importFile: reading: OdError:
+03:48:53: Debug:    "RDwgServices::printErrorStackTrace: Null object Id: <object> (0)"
+Warning:  RDwgImporter::importFile: trying to recover...
+Warning:  RDwgImporter::importFile: recovering complete
+Converting
+  from: /Users/aston/DSH/staff/docs/evidence/dxf-depth/samples/spacer-20x32x12.05-dxf-2000-1x2.dxf
+  to  : /Users/aston/DSH/staff/docs/evidence/dxf-depth/screenshots/qcad-a3-1x2-both.png
+Conversion finished.

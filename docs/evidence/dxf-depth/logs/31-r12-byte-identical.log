@@ -1,0 +1,25 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+stdout | src/drawing/dxfR12Baseline.test.ts > R12 保持现状：新旧实现逐字节相同 > 1:1：字节数、SHA-256、每个字节都一致
+R12_SAME 1:1 bytes=8676 sha256=bdbb9aa9aed11dd43bccbafc3cb303ed9de07b3404c000b90b08fe0955d5624b
+
+stdout | src/drawing/dxfR12Baseline.test.ts > R12 保持现状：新旧实现逐字节相同 > 1:2：字节数、SHA-256、每个字节都一致
+R12_SAME 1:2 bytes=8704 sha256=00e7dc42b424e94bb5be0f3537ad5d7e63561737799b5958dbc2bae7180d252f
+
+stdout | src/drawing/dxfR12Baseline.test.ts > R12 保持现状：新旧实现逐字节相同 > 2:1：字节数、SHA-256、每个字节都一致
+R12_SAME 2:1 bytes=8649 sha256=1880a6d86812f478abf47dbd54fe0c703b31c9686b0acb261d30665b86eab197
+
+stdout | src/drawing/dxfR12Baseline.test.ts > R12 保持现状：新旧实现逐字节相同 > 1:1 无来源：字节数、SHA-256、每个字节都一致
+R12_SAME 1:1 无来源 bytes=9242 sha256=4689af9c56f6053b6a5381d5a8e6662e689fbef200b8c32833376280a7c32794
+
+ ✓ src/drawing/dxfR12Baseline.test.ts > R12 保持现状：新旧实现逐字节相同 > 1:1：字节数、SHA-256、每个字节都一致 10ms
+ ✓ src/drawing/dxfR12Baseline.test.ts > R12 保持现状：新旧实现逐字节相同 > 1:2：字节数、SHA-256、每个字节都一致 1ms
+ ✓ src/drawing/dxfR12Baseline.test.ts > R12 保持现状：新旧实现逐字节相同 > 2:1：字节数、SHA-256、每个字节都一致 2ms
+ ✓ src/drawing/dxfR12Baseline.test.ts > R12 保持现状：新旧实现逐字节相同 > 1:1 无来源：字节数、SHA-256、每个字节都一致 1ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  03:27:53
+   Duration  129ms (setup 49%, tests 23%, import 13%, transform 12%, worker 2%)
+

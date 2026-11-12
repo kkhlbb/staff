@@ -16,8 +16,8 @@
       "version": "2000",
       "acadVersion": "AC1015",
       "file": "docs/evidence/dxf-export/samples/spacer-20x32x12.05-dxf-2000.dxf",
-      "byteSize": 9552,
-      "sha256": "168514d599484b88a64374bfd285441c482dc23ff3985187044804710ee52f68",
+      "byteSize": 21226,
+      "sha256": "19310d433eb8fedfe9b15ee33580ee86bdb42289b35bde715053019a123e2e9d",
       "header": {
         "acadver": "AC1015",
         "dwgcodepage": "ANSI_936",
@@ -26,18 +26,20 @@
       },
       "counts": {
         "parsed": {
-          "line": 29,
-          "polyline": 4,
+          "line": 5,
+          "polyline": 1,
           "circle": 2,
-          "text": 30,
+          "text": 1,
+          "dimension": 3,
           "other": []
         },
         "expected": {
-          "line": 29,
-          "polyline": 4,
-          "vertex": 20,
+          "line": 5,
+          "polyline": 1,
+          "vertex": 5,
           "circle": 2,
-          "text": 30
+          "text": 1,
+          "dimension": 3
         }
       },
       "layers": [
@@ -57,33 +59,33 @@
           "name": "尺寸",
           "color": 3,
           "linetype": "CONTINUOUS",
-          "entities": 18
+          "entities": 3
         },
         {
           "name": "文字",
           "color": 2,
           "linetype": "CONTINUOUS",
-          "entities": 1
+          "entities": 8
         },
         {
           "name": "图框",
           "color": 4,
           "linetype": "CONTINUOUS",
-          "entities": 38
+          "entities": 35
         }
       ],
       "bounds": {
         "parsedGeometry": {
-          "minX": 10,
-          "minY": 10,
-          "maxX": 287,
-          "maxY": 200
+          "minX": 69.975,
+          "minY": 110,
+          "maxX": 200,
+          "maxY": 150
         },
         "writerGeometry": {
-          "minX": 10,
-          "minY": 10,
-          "maxX": 287,
-          "maxY": 200
+          "minX": 69.975,
+          "minY": 110,
+          "maxX": 200,
+          "maxY": 150
         },
         "maxDeviationMm": 0,
         "drawingOutline": {
@@ -137,6 +139,7 @@
           "polyline": 4,
           "circle": 2,
           "text": 30,
+          "dimension": 0,
           "other": []
         },
         "expected": {
@@ -144,7 +147,8 @@
           "polyline": 4,
           "vertex": 20,
           "circle": 2,
-          "text": 30
+          "text": 30,
+          "dimension": 0
         }
       },
       "layers": [
@@ -245,6 +249,7 @@
         "polyline": 4,
         "circle": 2,
         "text": 30,
+        "dimension": 0,
         "other": []
       },
       "expected": {
@@ -252,7 +257,8 @@
         "polyline": 4,
         "vertex": 20,
         "circle": 2,
-        "text": 30
+        "text": 30,
+        "dimension": 0
       }
     },
     "layers": [
