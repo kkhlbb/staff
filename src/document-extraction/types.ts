@@ -22,8 +22,13 @@ import type { PdfPageBox, PdfRect } from '../sources/pdfCoordinates'
  *    `符号 = 数值 单位`），单位出处写进 evidence；中间表达式只作原文字符串保留，不做算术求值；
  *    多个等号结果不一致 → INCONSISTENT_REDUNDANT_VALUE 阻塞，不择优；单字母小写下标片段
  *    （i=0 / i=1）不再当尺寸候选。语义变了 → 升版本。
+ * 5：形态 1 的中间式不再限定“纯加减”：允许字母/乘除/括号（`B1=B1+B1under=135+250/2=260 mm`），
+ *    被采用的仍然是末尾那枚显式结果值，仍不做算术求值；中间块出现单位/汉字（说明夹着另一处
+ *    赋值）或中间块是孤立符号（符号链）→ 不认，交回既有阻塞。符号位接受希腊字母（`Δ0`、`δL`）。
+ *    另：带显式末尾值的行先按赋值行解析，不再被 `FORMULA_UNSUPPORTED` 抢先拦下
+ *    （`FORMULA_UNSUPPORTED` 判定条件本身未改，取不到条目时仍原样记录）。语义变了 → 升版本。
  */
-export const EXTRACTOR_VERSION = 'document-extractor-4'
+export const EXTRACTOR_VERSION = 'document-extractor-5'
 
 export const MAX_EXTRACTION_PAGES = 100
 export const MAX_EXTRACTION_CANDIDATES = 200

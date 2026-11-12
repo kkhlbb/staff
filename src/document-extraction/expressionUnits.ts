@@ -9,8 +9,12 @@
  * 3. `符号 = 数值 单位`                                     → form 'single'
  *
  * 三条硬边界：
- * - **不做算术求值**：形态 1 中间那段只校验“是不是由数字和 +/- 组成的式子”（纯字符串判定），
- *   原文字符串原样交给调用方；绝不计算，也绝不与结果值比对。
+ * - **不做算术求值**：形态 1 中间那段只做“字符是否越界”的校验（不含单位、不含汉字、
+ *   不能是孤立符号），原文字符串原样交给调用方；**绝不计算**，也绝不与结果值比对。
+ *   中间式允许出现字母/乘除/括号（`B1=B1+B1under=135+250/2=260 mm`、
+ *   `Δ0=Δ1+Δ2=[0.05+(−0.05)]/2=0mm`），被采用的永远是末尾那枚显式结果值。
+ * - **中间夹着第二处赋值的行不算**：`EI0=…=−0.07mm.It can be seen B1=260±0.07mm` 里
+ *   末尾的 `260±0.07mm` 属于另一处赋值；中间块出现单位/汉字即返回 null，交回既有阻塞。
  * - **多个等号但末段不是数值** → 返回 null，交回原有解析路径（保持既有阻塞）。
  * - **多个等号结果不一致**（`A = 10 = 12 mm`）→ 标 `inconsistent`，调用方必须阻塞整条，
  *   不允许挑其中一个值；一致性比较只做十进制字符串归一，不经浮点。
@@ -27,6 +31,19 @@ export interface ExpressionSpan {
 }
 
 export type ExpressionForm = 'redundant' | 'deviation' | 'single'
+
+/** 符号位：拉丁字母或希腊字母开头（`Δ0`、`δL` 与 `B1` 是同一类符号位，不猜其含义）。 */
+const SYMBOL_SOURCE = '[A-Za-z\\u0391-\\u03a9\\u03b1-\\u03c9][A-Za-z0-9\\u0391-\\u03a9\\u03b1-\\u03c9]*'
+const SYMBOL_TAIL = new RegExp(`(${SYMBOL_SOURCE})\\s*$`, 'u')
+const BARE_SYMBOL = new RegExp(`^${SYMBOL_SOURCE}$`, 'u')
+
+/**
+ * 中间式里出现这些字符就说明“这不只是一个式子”：显式单位、汉字。
+ * 为什么必须禁：`EI0=…−0.07mm.It can be seen B1=260±0.07mm` 这种行里，末尾的
+ * `260±0.07mm` 属于**另一处赋值**，不能挂到 `EI0` 头上。单位串在这里判定更严
+ * （拉丁字母单位必须自成词），避免 `Ring` 里的 `in` 被误当英制单位。
+ */
+const MIDDLE_FORBIDDEN = /(?:英寸|inch|毫米|mm|(?<![A-Za-z])in(?![A-Za-z])|[″”"]|[\u4e00-\u9fff])/iu
 
 export interface ExpressionFormMatch {
   readonly form: ExpressionForm
@@ -45,10 +62,7 @@ export interface ExpressionFormMatch {
   readonly redundantValues: readonly ExpressionSpan[]
 }
 
-/** 一个数字项：普通数字，或括号包起来的负数 `(−0.3)`。 */
-const EXPR_TERM = '(?:\\d+(?:\\.\\d+)?|\\(\\s*[+-]?\\d+(?:\\.\\d+)?\\s*\\))'
-/** 纯加减式子：数字项之间只能出现 + / -。 */
-const NUMERIC_EXPRESSION = new RegExp(`^\\s*[+-]?${EXPR_TERM}(?:\\s*[+-]\\s*${EXPR_TERM})*\\s*$`)
+/** 一个十进制数值文本（`inconsistent` 只做十进制字符串归一比较，不经浮点）。 */
 const BARE_DECIMAL = /^[+-]?\d+(?:\.\d+)?$/
 /** 单位后面必须是词边界：不能再接字母数字，也不能是 `mm.5` 这种小数续写。 */
 const UNIT_TAIL = '(?![A-Za-z0-9])(?!\\.\\d)'
@@ -98,7 +112,7 @@ export function matchExpressionAssignment(
   const equals = segment.indexOf('=')
   if (equals < 0) return null
   const left = segment.slice(0, equals)
-  const symbolMatch = /([A-Za-z][A-Za-z0-9]*)\s*$/.exec(left)
+  const symbolMatch = SYMBOL_TAIL.exec(left)
   if (!symbolMatch) return null
   const symbolText = symbolMatch[1]
   const symbolEnd = left.trimEnd().length
@@ -110,9 +124,13 @@ export function matchExpressionAssignment(
   if (lastEquals >= 0) {
     // 形态 1：符号 = 表达式 = 数值 单位
     const expressionRaw = right.slice(0, lastEquals)
-    // 等号多于两个 → 不解析，交回既有阻塞路径（硬约束 3）。
-    if (expressionRaw.includes('=')) return null
-    if (!NUMERIC_EXPRESSION.test(expressionRaw)) return null
+    // 中间式按 `=` 再切（允许 3 个及以上等号），每一块都必须非空、不含单位/汉字，
+    // 且不能是孤立符号：`A = B = 10 = 12 mm` 那种是符号链，交回既有解析（硬约束 3）。
+    // 仍不做算术求值：这些块只做“字符是否越界”的校验，原文原样留在 evidence。
+    const expressionChunks = expressionRaw.split('=').map((chunk) => chunk.trim())
+    if (expressionChunks.some((chunk) => chunk === '')) return null
+    if (expressionChunks.some((chunk) => BARE_SYMBOL.test(chunk))) return null
+    if (expressionChunks.some((chunk) => MIDDLE_FORBIDDEN.test(chunk))) return null
     const tail = right.slice(lastEquals + 1)
     const tailMatch = VALUE_UNIT.exec(tail)
     const nominalRange = tailMatch ? groupRange(tailMatch, 1) : null
@@ -181,4 +199,22 @@ export function matchExpressionAssignment(
   }
 
   return null
+}
+
+/**
+ * 这一整行是不是「赋值行」（而不是公式行）：只要有一个逗号片段命中三种形态之一即可。
+ *
+ * 供 parse 的公式分支让位用：`Zmax=5.2+0.1-4.9=0.4mm)`、`a1=759.48±0.1mm` 这类行
+ * 原文里已经写出了带单位的结果值，属于赋值；旧顺序里它们先被 `parseFormulaLine`
+ * 当成“无法解析的公式”拦下（`FORMULA_UNSUPPORTED`），P1 的三种形态永远看不到它们。
+ * 本函数只做形态判定，不看数值、不做任何求值，也不改 `FORMULA_UNSUPPORTED` 的判定条件。
+ */
+export function lineMatchesAssignmentForm(text: string): boolean {
+  let offset = 0
+  for (const segment of text.split(',')) {
+    const start = offset
+    offset += segment.length + 1
+    if (matchExpressionAssignment(text, start, start + segment.length) !== null) return true
+  }
+  return false
 }
