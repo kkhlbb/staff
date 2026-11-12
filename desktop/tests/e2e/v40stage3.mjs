@@ -180,16 +180,16 @@ try {
   const revisionId = commitText.match(/版本 (\S+)/)?.[1] ?? null
   checks.push({ id: 'commit-success', ok: true, receipt: commitText, revisionId })
 
-  // 待答问题：工具回执 CONSTRAINT_VIOLATED + 模型自述不进入结论位。
+  // 待答问题：工具回执 CONSTRAINT_VIOLATED（界面已翻成“这个参数被锁定”）+ 模型自述不进入结论位。
   await clickByText('.agent-sidebar button', '需要补充')
-  await waitFor(() => evaluate(`document.querySelector('[data-testid="agent-question-code"]')?.textContent === 'CONSTRAINT_VIOLATED'`), 'question', 20_000)
+  await waitFor(() => evaluate(`document.querySelector('[data-testid="agent-question-reason"]')?.textContent === '这个参数被锁定'`), 'question', 20_000)
   const questionText = await evaluate(`document.querySelector('.agent-sidebar')?.textContent ?? ''`)
   await shot('v40-stage3-02-pending-question')
   checks.push({ id: 'pending-question', ok: true, code: 'CONSTRAINT_VIOLATED', containsModelClaim: questionText.includes('已完成') || questionText.includes('已保存') })
 
-  // 工具失败：显示失败码；即使模型文本声称保存成功也不得出现结论文案。
+  // 工具失败：写明原因与怎么办；即使模型文本声称保存成功也不得出现结论文案。
   await clickByText('.agent-sidebar button', '工具失败')
-  await waitFor(() => evaluate(`(document.querySelector('[data-testid="agent-task-state"]')?.textContent ?? '').includes('failed · INVALID_INPUT')`), 'tool failure', 20_000)
+  await waitFor(() => evaluate(`(document.querySelector('[data-testid="agent-task-state"]')?.textContent ?? '').includes('没有做成 · 数值或参数不合法')`), 'tool failure', 20_000)
   const sidebarText = await evaluate(`document.querySelector('.agent-sidebar')?.textContent ?? ''`)
   const contradiction = /已完成|已保存/.test(sidebarText)
   await shot('v40-stage3-03-tool-failure')

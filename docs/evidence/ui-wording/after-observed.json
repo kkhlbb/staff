@@ -1,0 +1,58 @@
+{
+  "label": "after",
+  "appExecutable": "out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链",
+  "seed": "docs/evidence/v40-stage3/fixtures/stage3-seed.cunlian",
+  "viewport": "1280x900",
+  "guard": {
+    "banned": [
+      "stage",
+      "preview",
+      "apply",
+      "confirmed",
+      "context",
+      "export",
+      "model",
+      "CHUNK_FAILED",
+      "INVALID_INPUT",
+      "CONSTRAINT_VIOLATED",
+      "satisfied",
+      "unsatisfied",
+      "ready-to-commit",
+      "awaiting-input",
+      "failed",
+      "tool:req"
+    ],
+    "hits": []
+  },
+  "checks": [
+    {
+      "id": "normal-scenario",
+      "banned": [],
+      "hasHumanStep": true,
+      "text": "Agent 任务收起活动项目隔套 · 阶段3 侧栏走查正式版本rev-a1真实模型未配置密钥未保存离线演示离线演示（假模型，不联网）模型设置（OpenAI 兼容）base_url模型 ID密钥（只写 Keychain）发送范围：结构化参数、条款摘录与必要选区文字；不发送整份 PDF。密钥只存 macOS Keychain，不进项目文件、日志或证据。保存配置测试连接清除密钥任务真实模型未配置：先在“模型设置”填写 base_url、模型 ID 与密钥。所有结果以工具回执为准。真实模型执行正常改图（+0.04 mm）需要补充（锁定参数）工具失败（非法数值）已启动离线演示 · fake-1 · 7e437681导出已保存版本 SVG导出 PDF执行步骤已算完，等你确认模型想好了下一步0 ms已改长度参数并重算13 ms模型想好了下一步0 ms已算完，等你确认6 ms模型想好了下一步0 ms模型回复（自然语言，不是回执）预览完成，请确认保存。待答问题暂无待答问题。最近工具结果（回执）算一遍 · 完成01:41:26改参数 · 完成01:41:26预览与确认结果区间-0.010 ～ 0.090 mm参数内径 20.000 · 外径 32.000 · 长度 12.160预览指纹1d2c4c8f6611f175…有效期至01:51:26确认保存"
+    },
+    {
+      "id": "pending-question",
+      "banned": [],
+      "reason": "这个参数被锁定",
+      "text": "Agent 任务收起活动项目隔套 · 阶段3 侧栏走查正式版本rev-a1真实模型未配置密钥未保存离线演示离线演示（假模型，不联网）模型设置（OpenAI 兼容）base_url模型 ID密钥（只写 Keychain）发送范围：结构化参数、条款摘录与必要选区文字；不发送整份 PDF。密钥只存 macOS Keychain，不进项目文件、日志或证据。保存配置测试连接清除密钥任务真实模型未配置：先在“模型设置”填写 base_url、模型 ID 与密钥。所有结果以工具回执为准。真实模型执行正常改图（+0.04 mm）需要补充（锁定参数）工具失败（非法数值）继续已启动离线演示 · fake-1 · 9dadf88a导出已保存版本 SVG导出 PDF执行步骤没有做成 · 这个参数被锁定没有做成：不能修改锁定参数 怎么办：换一个能改的参数（内径 / 外径 / 长度）；锁定参数改不了。模型想好了下一步0 ms改参数没成功1 ms模型想好了下一步0 ms模型回复（自然语言，不是回执）已按要求加厚，请确认。待答问题这个参数被锁定改参数：不能修改锁定参数怎么办：换一个能改的参数（内径 / 外径 / 长度）；锁定参数改不了。最近工具结果（回执）改参数 · 没成功01:41:27预览与确认结果区间-0.010 ～ 0.090 mm参数内径 20.000 · 外径 32.000 · 长度 12.160预览指纹1d2c4c8f6611f175…有效期至01:51:26确认保存"
+    },
+    {
+      "id": "tool-failure",
+      "banned": [],
+      "hasWhy": true,
+      "text": "Agent 任务收起活动项目隔套 · 阶段3 侧栏走查正式版本rev-a1真实模型未配置密钥未保存离线演示离线演示（假模型，不联网）模型设置（OpenAI 兼容）base_url模型 ID密钥（只写 Keychain）发送范围：结构化参数、条款摘录与必要选区文字；不发送整份 PDF。密钥只存 macOS Keychain，不进项目文件、日志或证据。保存配置测试连接清除密钥任务真实模型未配置：先在“模型设置”填写 base_url、模型 ID 与密钥。所有结果以工具回执为准。真实模型执行正常改图（+0.04 mm）需要补充（锁定参数）工具失败（非法数值）继续已启动离线演示 · fake-1 · 56897b64导出已保存版本 SVG导出 PDF执行步骤没有做成 · 数值或参数不合法没有做成：格式不正确，请输入十进制数字，例如 20 或 -0.0200 怎么办：检查数值与单位后再说一次，例如“把长度改成 12.04 mm”。模型想好了下一步0 ms改参数没成功1 ms模型想好了下一步0 ms模型回复（自然语言，不是回执）已完成并保存成功。待答问题数值或参数不合法改参数：格式不正确，请输入十进制数字，例如 20 或 -0.0200怎么办：检查数值与单位后再说一次，例如“把长度改成 12.04 mm”。最近工具结果（回执）改参数 · 没成功01:41:28预览与确认结果区间-0.010 ～ 0.090 mm参数内径 20.000 · 外径 32.000 · 长度 12.160预览指纹1d2c4c8f6611f175…有效期至01:51:26确认保存"
+    }
+  ],
+  "screenshots": [
+    "docs/evidence/ui-wording/screenshots/after-01-sidebar-normal-top.png",
+    "docs/evidence/ui-wording/screenshots/after-02-sidebar-normal-bottom.png",
+    "docs/evidence/ui-wording/screenshots/after-03-pending-question.png",
+    "docs/evidence/ui-wording/screenshots/after-04-tool-failure.png"
+  ],
+  "verdict": "pass",
+  "failed": [],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}
