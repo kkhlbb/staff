@@ -8,7 +8,7 @@
 
  Test Files  41 passed | 2 skipped (43)
       Tests  285 passed | 17 skipped (302)
-   Start at  02:47:48
-   Duration  7.35s (tests 88%, import 10%, transform 1%)
+   Start at  02:50:18
+   Duration  7.48s (tests 89%, import 10%, transform 1%)
 
 EXIT=0
