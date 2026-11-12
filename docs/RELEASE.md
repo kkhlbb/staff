@@ -7,14 +7,14 @@
 
 | 文件 | 大小 | SHA-256 |
 |---|---|---|
-| `寸链-v0.4.0-beta-macOS-arm64.zip` | 121,217,497 字节 | `27f53371a2fd6b29180761538e9da76f8a227d6d1ed26aae49cd7de3ad2d81ed` |
+| `cunlian-v0.4.0-beta-macOS-arm64.zip` | 121,231,204 字节 | `568383a64cbb66aa1393de4c7495aa4975ef8a2e88e9ecf2accad7c2275d4907` |
 
 `CFBundleShortVersionString` = `0.4.0-beta`，arm64，未签名未公证（`adhoc, linker-signed`）。解压后 `.app` 约 258 MB。
 
 下载后先校验，再解压：
 
 ```bash
-shasum -a 256 寸链-v0.4.0-beta-macOS-arm64.zip
+shasum -a 256 cunlian-v0.4.0-beta-macOS-arm64.zip
 # 必须与上表一致；不一致就别用
 ```
 
@@ -64,7 +64,15 @@ npm run package:desktop -- --arch=arm64
 - 只读与计算，**不暴露任何写操作**；写入与提交必须回桌面端点确认
 - 与服务端同一套内核：四组判据值（12.00 / 12.04 / 12.05 / 12.10）MCP 与桌面端算出的 q 完全相等
 
-### 4.5 Agent 的边界
+### 4.5 打开别人的 DXF 看（本期新增）
+- 应用内**只读** DXF 看图：R12 与 2000 都能开
+- 平移 / 滚轮缩放（真坐标变换）、**图层逐个显示隐藏**（ACI 颜色）、点选实体看类型/图层/坐标/文字、两点量距（mm）
+- `DIMENSION` 渲染匿名块几何并把 `42` 实测值当标注值；`VIEWPORT` 把模型内容按比例画进纸面
+- **不支持的实体显式计数**：`SPLINE` / `HATCH` / `INSERT` / `SOLID` 等会显示「未渲染 N 个 XXX（不支持）」，**不静默丢弃**
+- 编码：`$DWGCODEPAGE=ANSI_936` 按 GBK 解，UTF-8 也认；识别不了会直接标出来，不装没事
+- **只读**：不写回文件、不改原图
+
+### 4.6 Agent 的边界
 - 模型只有 6 个原有工具 + 4 个意图建件工具，**全部只产草稿**
 - 授权 `approvalId` 只在主进程签发，模型拿不到；提交时主进程重算
 - 侧栏只显示工具回执；模型文本单列展示，不作判据
@@ -95,8 +103,8 @@ npm run package:desktop -- --arch=arm64
 ## 8 怎么验证这一版
 
 ```bash
-npm test              # 1186 用例 / 108 文件
-npm run test:desktop  # 285 通过（另 17 条真模型用例默认跳过，需密钥）
+npm test              # 1219 用例 / 110 文件
+npm run test:desktop  # 290 通过（另 17 条真模型用例默认跳过，需密钥）
 npm run test:mcp      # 22 用例
 npm run typecheck && npm run lint && npm run build
 ```
