@@ -1,0 +1,16 @@
+
+> staff@0.4.0-beta test:desktop
+> vitest run --config vitest.desktop.config.ts
+
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+
+ Test Files  41 passed | 2 skipped (43)
+      Tests  285 passed | 17 skipped (302)
+   Start at  04:40:46
+   Duration  7.93s (tests 87%, import 11%, transform 1%)
+
+    Isolate  43 workers spawned · ~106ms startup each (spawn + environment, per file)
+             at least ~399ms faster with isolate: false — reuses workers across files instead of one per file
+

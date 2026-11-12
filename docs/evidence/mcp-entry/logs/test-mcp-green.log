@@ -1,0 +1,43 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+stdout | mcp/tests/consistency.test.ts > MCP calc_chain 与服务端内核：四组判据值 q 完全相等 > 隔套长度 12.00 → C=[1500,2500]，判定 satisfied
+{"length":"12.00","server":{"nominalQ":2000,"minQ":1500,"maxQ":2500,"toleranceQ":1000,"status":"satisfied","margins":{"lowerQ":500,"upperQ":500}},"mcp":{"nominalQ":2000,"minQ":1500,"maxQ":2500,"toleranceQ":1000,"status":"satisfied","margins":{"marginQ":500,"marginMm":"0.050","lowerQ":500,"lowerMm":"0.050","upperQ":500,"upperMm":"0.050"}},"equal":true}
+
+stdout | mcp/tests/consistency.test.ts > MCP calc_chain 与服务端内核：四组判据值 q 完全相等 > 隔套长度 12.04 → C=[1100,2100]，判定 satisfied
+{"length":"12.04","server":{"nominalQ":1600,"minQ":1100,"maxQ":2100,"toleranceQ":1000,"status":"satisfied","margins":{"lowerQ":100,"upperQ":900}},"mcp":{"nominalQ":1600,"minQ":1100,"maxQ":2100,"toleranceQ":1000,"status":"satisfied","margins":{"marginQ":100,"marginMm":"0.010","lowerQ":100,"lowerMm":"0.010","upperQ":900,"upperMm":"0.090"}},"equal":true}
+
+stdout | mcp/tests/consistency.test.ts > MCP calc_chain 与服务端内核：四组判据值 q 完全相等 > 隔套长度 12.05 → C=[1000,2000]，判定 satisfied
+{"length":"12.05","server":{"nominalQ":1500,"minQ":1000,"maxQ":2000,"toleranceQ":1000,"status":"satisfied","margins":{"lowerQ":0,"upperQ":1000}},"mcp":{"nominalQ":1500,"minQ":1000,"maxQ":2000,"toleranceQ":1000,"status":"satisfied","margins":{"marginQ":0,"marginMm":"0.000","lowerQ":0,"lowerMm":"0.000","upperQ":1000,"upperMm":"0.100"}},"equal":true}
+
+stdout | mcp/tests/consistency.test.ts > MCP calc_chain 与服务端内核：四组判据值 q 完全相等 > 隔套长度 12.10 → C=[500,1500]，判定 exceeded
+{"length":"12.10","server":{"nominalQ":1000,"minQ":500,"maxQ":1500,"toleranceQ":1000,"status":"unsatisfied","margins":{"lowerQ":-500,"upperQ":1500}},"mcp":{"nominalQ":1000,"minQ":500,"maxQ":1500,"toleranceQ":1000,"status":"exceeded","margins":{"marginQ":-500,"marginMm":"-0.050","lowerQ":-500,"lowerMm":"-0.050","upperQ":1500,"upperMm":"0.150"}},"equal":true}
+
+ ✓ mcp/tests/consistency.test.ts > MCP calc_chain 与服务端内核：四组判据值 q 完全相等 > 隔套长度 12.00 → C=[1500,2500]，判定 satisfied 18ms
+ ✓ mcp/tests/consistency.test.ts > MCP calc_chain 与服务端内核：四组判据值 q 完全相等 > 隔套长度 12.04 → C=[1100,2100]，判定 satisfied 8ms
+ ✓ mcp/tests/consistency.test.ts > MCP calc_chain 与服务端内核：四组判据值 q 完全相等 > 隔套长度 12.05 → C=[1000,2000]，判定 satisfied 8ms
+ ✓ mcp/tests/consistency.test.ts > MCP calc_chain 与服务端内核：四组判据值 q 完全相等 > 隔套长度 12.10 → C=[500,1500]，判定 exceeded 5ms
+ ✓ mcp/tests/consistency.test.ts > 开区间（inclusive=false）与边界 > 边界相等在闭区间算满足、开区间算不满足 0ms
+ ✓ mcp/tests/protocol.test.ts > MCP stdio 协议 > initialize → tools/list → 五个工具；通知不回帧；stdout 只有 JSON-RPC 276ms
+ ✓ mcp/tests/tools.test.ts > 红线：工具清单固定为五个只读/计算工具 > 没有写项目/提交/保存/删除类工具 1ms
+ ✓ mcp/tests/tools.test.ts > 红线：工具清单固定为五个只读/计算工具 > 五个工具都返回 readOnly: true（render_drawing 只新增导出文件） 36ms
+ ✓ mcp/tests/tools.test.ts > read_taskbook > 真实 PDF：候选带页/选区/原文出处，出处完整性由 isProvenanceCompleteness 判 72ms
+ ✓ mcp/tests/tools.test.ts > read_taskbook > 不存在的路径 → NOT_FOUND；相对路径 → INVALID_ARGUMENTS 3ms
+ ✓ mcp/tests/tools.test.ts > calc_chain / check_requirement 输入校验 > parameters 与 terms 必须二选一 0ms
+ ✓ mcp/tests/tools.test.ts > calc_chain / check_requirement 输入校验 > q 必须是安全整数；外径必须大于内径（走内核参数校验） 1ms
+ ✓ mcp/tests/tools.test.ts > calc_chain / check_requirement 输入校验 > terms 模式走同一内核：与手算极值一致 0ms
+ ✓ mcp/tests/tools.test.ts > calc_chain / check_requirement 输入校验 > check_requirement 拒绝下界大于上界、cMaxQ 小于 cQ 0ms
+ ✓ mcp/tests/tools.test.ts > render_drawing > SVG：真实文件 + 字节数 + SHA-256 + 无外部来源标记 2ms
+ ✓ mcp/tests/tools.test.ts > render_drawing > DXF 2000：AC1015 头 + 尺寸实体；拒绝非法格式与相对目录 8ms
+ ✓ mcp/tests/tools.test.ts > describe_project > 真实 .cunlian：正式版本、参数、组成环、条款；只读 7ms
+ ✓ mcp/tests/tools.test.ts > describe_project > 不是项目文件 → TOOL_FAILED（不猜结构） 1ms
+ ✓ mcp/tests/tools.test.ts > 幂等：同输入连跑 3 次，输出字节一致 > calc_chain / check_requirement / describe_project / read_taskbook 90ms
+ ✓ mcp/tests/tools.test.ts > 幂等：同输入连跑 3 次，输出字节一致 > render_drawing 连跑 3 次：同一路径、同一字节、同一 SHA-256 6ms
+ ✓ mcp/tests/protocol.test.ts > MCP stdio 协议 > tools/call 失败返回 isError；未知方法返回 -32601；坏 JSON 返回 -32700 264ms
+ ✓ mcp/tests/protocol.test.ts > MCP stdio 协议 > calc_chain / check_requirement 通过真实帧返回结构化结果 248ms
+
+ Test Files  3 passed (3)
+      Tests  22 passed (22)
+   Start at  04:40:45
+   Duration  874ms (tests 77%, import 18%, transform 4%)
+
