@@ -2,7 +2,7 @@
   "adr": "ADR-001 第 3 步：意图驱动建件（无任务书入口）",
   "branch": "agent/intent-project",
   "baselineCommit": "f79d73b",
-  "implementationCommit": "f809f22",
+  "implementationCommit": "ef8ead1",
   "rules": {
     "extractorVersion": "document-extractor-6",
     "maxExtractionPages": 100,

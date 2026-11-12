@@ -58,7 +58,7 @@ const payload = {
   adr: 'ADR-001 第 3 步：意图驱动建件（无任务书入口）',
   branch: git(['rev-parse', '--abbrev-ref', 'HEAD']),
   baselineCommit: 'f79d73b',
-  implementationCommit: git(['rev-parse', '--short', 'HEAD']),
+  implementationCommit: git(['log', '--format=%h', '-1', '--', 'src/intent', 'desktop/main/intentProject.ts']),
   rules: after.rules,
   pdfPath: {
     corpus: '本机真实语料：6 份 PDF / 269 页（目录写在 logs/01-metrics.log 的“语料目录”）',

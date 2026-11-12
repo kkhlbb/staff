@@ -7,7 +7,7 @@
 |---|---|
 | 基线 | `main = f79d73b`（EvidenceRef 泛化 + 侧栏文案已合入） |
 | 分支 | `agent/intent-project`（从 f79d73b 切出；未合并、未推送、未删除） |
-| 实现提交 | `ef8ead1`（四工具 + schema 10 + 标记）→ `c42ad0a`（导出测试、标题栏去重、徽标样式、走查脚本）；证据提交 `f809f22` |
+| 实现提交 | `ef8ead1`（四工具 + schema 10 + 标记）→ `c42ad0a`（导出测试、标题栏去重、徽标样式、走查脚本）→ `8fba560`（SVG 导出标记）；证据提交见 `git log --oneline f79d73b..HEAD` |
 | 提取规则版本 | **不变**：`document-extractor-6`（本步不改 PDF 抽取路径） |
 | 项目文件 schema | `PROJECT_FILE_SCHEMA_VERSION` 9 → **10**（纯加法） |
 | IndexedDB | `PROJECT_DB_VERSION` **未变**（store 结构未动；与项目 JSON schema 分开处理） |
