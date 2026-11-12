@@ -257,6 +257,44 @@ function sourceProblems(
   return [...new Set(codes)]
 }
 
+/**
+ * 闭区间判定的**唯一实现**（服务端条款判定与 MCP `check_requirement` 共用）。
+ *
+ * 判据：满足 iff Cmin ≥ 下限 且 Cmax ≤ 上限；`inclusive=false` 时改为严格不等。
+ * 裕量含负值：下裕量 = Cmin − 下限，上裕量 = 上限 − Cmax。
+ * 边界相等默认算满足（inclusive），部分相交不算满足。
+ */
+export function closedIntervalVerdict(input: {
+  minQ: number
+  maxQ: number
+  lowerQ: number
+  upperQ: number
+  inclusive?: boolean
+}): {
+  satisfied: boolean
+  lowerMarginQ: number
+  upperMarginQ: number
+  codes: RequirementReasonCode[]
+} {
+  const inclusive = input.inclusive ?? true
+  const lowerOk = inclusive ? input.minQ >= input.lowerQ : input.minQ > input.lowerQ
+  const upperOk = inclusive ? input.maxQ <= input.upperQ : input.maxQ < input.upperQ
+  const lowerMarginQ = input.minQ - input.lowerQ
+  const upperMarginQ = input.upperQ - input.maxQ
+  if (lowerOk && upperOk) {
+    return { satisfied: true, lowerMarginQ, upperMarginQ, codes: ['WITHIN_REQUIREMENT'] }
+  }
+  const codes: RequirementReasonCode[] = []
+  if (!lowerOk) codes.push('LOWER_VIOLATED')
+  if (!upperOk) codes.push('UPPER_VIOLATED')
+  return {
+    satisfied: false,
+    lowerMarginQ,
+    upperMarginQ,
+    codes: codes.length === 2 ? ['BOTH_VIOLATED'] : codes,
+  }
+}
+
 function numericVerdict(
   requirement: RequirementRevision,
   chain: ChainDefinition,
@@ -268,18 +306,16 @@ function numericVerdict(
     assumptions: chain.assumptions,
   }
   const result = calculateChain(probe)
-  const lowerOk = result.minQ >= requirement.lowerQ
-  const upperOk = result.maxQ <= requirement.upperQ
-  if (lowerOk && upperOk) {
-    return { result, status: 'satisfied', codes: ['WITHIN_REQUIREMENT'] }
-  }
-  const codes: RequirementReasonCode[] = []
-  if (!lowerOk) codes.push('LOWER_VIOLATED')
-  if (!upperOk) codes.push('UPPER_VIOLATED')
+  const verdict = closedIntervalVerdict({
+    minQ: result.minQ,
+    maxQ: result.maxQ,
+    lowerQ: requirement.lowerQ,
+    upperQ: requirement.upperQ,
+  })
   return {
     result,
-    status: 'unsatisfied',
-    codes: codes.length === 2 ? ['BOTH_VIOLATED'] : codes,
+    status: verdict.satisfied ? 'satisfied' : 'unsatisfied',
+    codes: verdict.codes,
   }
 }
 
