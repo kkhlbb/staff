@@ -15,8 +15,11 @@ import type { PdfPageBox, PdfRect } from '../sources/pdfCoordinates'
  * 提取规则版本；参与幂等键与候选身份。
  * 2：同符号多处不同赋值改为逐处候选（不再整批 AMBIGUOUS_ASSIGNMENT 阻塞）；
  *    同值多处合并；坏处单独 issue。规则语义变化必须升版本，旧草稿需主动重提。
+ * 3：单位允许从显式文字继承（同一表格表头 / 同一页「单位：」或图注 / 页范围第一页的
+ *    文档级声明），继承必须带声明出处；同作用域两个不同单位 → UNIT_CONFLICT 阻塞。
+ *    显式单位不被覆盖；没有声明时 UNKNOWN_UNIT 原义不变。语义变了 → 升版本。
  */
-export const EXTRACTOR_VERSION = 'document-extractor-2'
+export const EXTRACTOR_VERSION = 'document-extractor-3'
 
 export const MAX_EXTRACTION_PAGES = 100
 export const MAX_EXTRACTION_CANDIDATES = 200

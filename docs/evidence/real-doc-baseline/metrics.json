@@ -4,7 +4,7 @@
     "documents": 6
   },
   "rules": {
-    "extractorVersion": "document-extractor-2",
+    "extractorVersion": "document-extractor-3",
     "maxExtractionPages": 100,
     "maxExtractionCandidates": 200,
     "maxExtractionIssues": 200,
@@ -25,7 +25,7 @@
         "from": 1,
         "to": 74
       },
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "candidates": {
         "total": 15,
         "pending": 4,
@@ -87,7 +87,7 @@
         "from": 1,
         "to": 5
       },
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "candidates": {
         "total": 20,
         "pending": 5,
@@ -143,7 +143,7 @@
         "from": 1,
         "to": 4
       },
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "candidates": {
         "total": 3,
         "pending": 0,
@@ -190,7 +190,7 @@
         "from": 1,
         "to": 170
       },
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "candidates": {
         "total": 0,
         "pending": 0,
@@ -227,7 +227,7 @@
         "from": 1,
         "to": 8
       },
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "candidates": {
         "total": 5,
         "pending": 2,
@@ -271,7 +271,7 @@
         "from": 1,
         "to": 8
       },
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "candidates": {
         "total": 80,
         "pending": 15,
@@ -352,7 +352,7 @@
     ],
     "noTextLayerPages": 1,
     "rules": {
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "maxExtractionPages": 100,
       "maxExtractionCandidates": 200,
       "maxExtractionIssues": 200,

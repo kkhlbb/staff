@@ -1,0 +1,51 @@
+
+r1 r1-assembly-course.pdf：页 74｜显式单位声明 0｜UNKNOWN_UNIT 阻塞候选 4｜UNIT_CONFLICT 候选 0｜继承到单位的候选 0
+  B 行内完全没有单位串 4 条，例：
+    p43 "ESA=EIA+EIA-ESA-ESA-EIA=0-0.20=-0.20"
+    p43 "同理： EIA=-0. 30"
+    p61 "令 T=0.03, 则 n=4 。"
+
+r2 r2-tolerance-domain.pdf：页 5｜显式单位声明 0｜UNKNOWN_UNIT 阻塞候选 6｜UNIT_CONFLICT 候选 0｜继承到单位的候选 0
+  A 行内有单位串但不在数值 token 上 2 条，例：
+    p2 "2个尺寸有本质 的 区 别.L2 =100+0.2mm 要 求 尺 寸"
+    p3 "+0.2 mm,L2 Lb=5"
+  B 行内完全没有单位串 3 条，例：
+    p3 "Zmin=5.2-5.2=0."
+    p4 "Lb = 5.050 ∓ (0.1732)≈ 5.050 ∓"
+    p4 "i=1i=1"
+  C 下标/计数片段（i=0 之类） 1 条，例：
+    p4 "i=1"
+
+r3 r3-rv-3dcs.pdf：页 4｜显式单位声明 0｜UNKNOWN_UNIT 阻塞候选 1｜UNIT_CONFLICT 候选 0｜继承到单位的候选 0
+  B 行内完全没有单位串 1 条，例：
+    p2 "K = 1 + ( za)- 2zacos t "
+
+r4 r4-mtt1097.pdf：页 170｜显式单位声明 58｜UNKNOWN_UNIT 阻塞候选 0｜UNIT_CONFLICT 候选 0｜继承到单位的候选 0
+  声明 page@p9:「单位为毫米」
+  声明 page@p9:「单位为毫米」
+  声明 page@p10:「单位为毫米」
+  声明 page@p10:「单位为毫米」
+  声明 page@p11:「单位为毫米」
+  声明 page@p11:「单位为毫米」
+  声明 page@p15:「单位为毫米」
+  声明 page@p23:「单位为毫米」
+  …其余 50 条省略
+
+r5 r5-tolerance-analysis.pdf：页 8｜显式单位声明 0｜UNKNOWN_UNIT 阻塞候选 3｜UNIT_CONFLICT 候选 0｜继承到单位的候选 0
+  B 行内完全没有单位串 2 条，例：
+    p3 "distribution of data answers the question of whether a producti=1 i"
+    p3 "i=1 i"
+  C 下标/计数片段（i=0 之类） 1 条，例：
+    p3 "i=0"
+
+r6 r6-segments-assembly.pdf：页 8｜显式单位声明 0｜UNKNOWN_UNIT 阻塞候选 37｜UNIT_CONFLICT 候选 0｜继承到单位的候选 0
+  A 行内有单位串但不在数值 token 上 9 条，例：
+    p1 "A=230±0.3mm high precision, as shown in Figure1, Dimensions A1, A2, A3 for the composition ring,"
+    p2 "A0max=1753.1−759.38−765.31=228.41mm"
+    p2 "A0min=1752.9−759.58−765.51=227.81mm"
+  B 行内完全没有单位串 28 条，例：
+    p3 "T = T / m= 0.2 / 3 =0.115"
+    p4 "the lower half of the roller sleeve, bearing, spindle, bearing, size 1 at B=135; the second is t"
+    p4 "T = T / m= 0.14 / 2 =0.099"
+
+汇总：显式单位声明 58 条；UNKNOWN_UNIT 阻塞候选 51 条（A 行内有单位串 11｜B 无单位串 38｜C 下标片段 2）；因继承拿到单位的候选 0 条

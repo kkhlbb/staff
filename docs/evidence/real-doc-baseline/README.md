@@ -4,6 +4,13 @@
 **候选 123 条、可人工确认（pending）26 条、可确认率 21.1%、阻塞率 78.9%、confirmed 0 条**。
 这条命令就是尺子，以后每次改抽取都必须与 `baseline.json` 对比。
 
+> **当前基线（`main 9b5491e` 之后的 `agent/extract-unit-inherit`）**：提取器升到
+> `document-extractor-3`（单位从表头/同页/文档级显式声明继承）。同一批语料仍然是
+> **123 / 26 / 21.1%**，逐份候选、pending、blocked、原因码**一字未变**，变化只有版本号
+> （`baseline.json` 的 8 处 diff 全是版本串）。为什么 0 变化、逐份增减与归类见
+> [第七节](#七单位继承document-extractor-3对基线的影响0-条变化逐份列出)。
+> 完整证据：`docs/evidence/extract-unit-inherit/README.md`。
+
 ```bash
 node scripts/real-doc-metrics.mjs        # 一条命令出全部数字，并写 metrics.json、与 baseline.json 对比
 npm run test:real-docs                   # 回归测试：重跑度量 + 与基线逐项比对
@@ -241,3 +248,54 @@ node scripts/real-doc-metrics.mjs --update-baseline --reason "为什么变化：
    数字变化需按第五节显式更新基线并说明。
 7. `metrics.json` 里 `UNKNOWN_UNIT` 的 issue 条数（如 r1 的 53 条）大于候选数：那是逐处缺口记录，
    不是候选；两类计数不混用。
+
+---
+
+## 七、单位继承（`document-extractor-3`）对基线的影响：0 条变化，逐份列出
+
+规则变化：单位允许从**显式文字**继承（同一表格表头 / 同一页「单位：」句或图注 / 页范围第一页的
+文档级声明），继承必须带声明出处；同一作用域两个不同单位改报 `UNIT_CONFLICT` 阻塞、不择优；
+显式单位不被覆盖；没有声明时 `UNKNOWN_UNIT` 原义不变。
+实现与用例见 `docs/evidence/extract-unit-inherit/README.md`。
+
+### 7.1 逐份增减（改前 `document-extractor-2` → 改后 `document-extractor-3`）
+
+| 文档 | 改前 候选/pending/blocked | 改后 候选/pending/blocked | 增减 | 可确认率 |
+|---|---|---|---|---:|
+| r1 装配工艺课件 | 15 / 4 / 11 | 15 / 4 / 11 | 0 / 0 / 0 | 26.7% → 26.7% |
+| r2 北理工学报 | 20 / 5 / 15 | 20 / 5 / 15 | 0 / 0 / 0 | 25.0% → 25.0% |
+| r3 RV 减速器 | 3 / 0 / 3 | 3 / 0 / 3 | 0 / 0 / 0 | 0.0% → 0.0% |
+| r4 MT/T 1097（`PAGE_LIMIT`） | 0 / 0 / 0 | 0 / 0 / 0 | 0 / 0 / 0 | n/a |
+| r5 英文公差分析 | 5 / 2 / 3 | 5 / 2 / 3 | 0 / 0 / 0 | 40.0% → 40.0% |
+| r6 英文装配工艺 | 80 / 15 / 65 | 80 / 15 / 65 | 0 / 0 / 0 | 18.8% → 18.8% |
+| **合计** | **123 / 26 / 97** | **123 / 26 / 97** | **0 / 0 / 0** | **21.1% → 21.1%** |
+
+原因码分布：`UNKNOWN_UNIT` 51 → 51、`FORMULA_UNSUPPORTED` 45 → 45、
+`UNSUPPORTED_UNIT` 1 → 1、`UNIT_CONFLICT` 0 → 0。issue 计数与 r4 的 1-20 页探针同样不变。
+**没有任何一份文档下降**（也没有上升）。
+
+### 7.2 为什么 0 变化（逐份，可复跑）
+
+```bash
+REAL_DOC_CORPUS=~/DSH/tmp/cunlian-v36/real-docs \
+  node docs/evidence/extract-unit-inherit/probe-unit-declarations.mjs
+```
+
+| 文档 | 显式单位声明 | `UNKNOWN_UNIT` 阻塞候选 | A 行内有单位串但不在数值 token 上 | B 行内完全没单位串 | C 下标片段 | 因继承拿到单位的候选 |
+|---|---:|---:|---:|---:|---:|---:|
+| r1 | 0 | 4 | 0 | 4 | 0 | 0 |
+| r2 | 0 | 6 | 2 | 3 | 1 | 0 |
+| r3 | 0 | 1 | 0 | 1 | 0 | 0 |
+| r4 | 58（全部「单位为毫米」） | 0 | 0 | 0 | 0 | 0 |
+| r5 | 0 | 3 | 0 | 2 | 1 | 0 |
+| r6 | 0 | 37 | 9 | 28 | 0 | 0 |
+
+- **r1/r2/r3/r5/r6**：整份文档没有一条 P0 认可的显式声明。38 条候选所在行**根本没有任何单位串**
+  （缺证据 → 必须继续阻塞），2 条是 `i=0`/`i=1` 这类公式下标碎片，
+  11 条行内写了 mm 但单位串不在被解析的数值 token 上（如 `A0max=1753.1−759.38−765.31=228.41mm`、
+  `A=230±0.3mm`）——救它们要改**数值/表达式解析**，任务卡明确不做（留 P1）。
+- **r4**：唯一有显式声明的一份，但 170 页 > 页数上限，整份 `PAGE_LIMIT`（0 候选），
+  声明再多也没有可继承的数值。
+
+所以这次“数字不动”是规则做对了的结果，不是漏测；把 `UNKNOWN_UNIT` 压下去只能是放宽条件。
+

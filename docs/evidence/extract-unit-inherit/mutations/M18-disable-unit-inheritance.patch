@@ -1,0 +1,14 @@
+diff --git a/src/document-extraction/parse.ts b/src/document-extraction/parse.ts
+index 9ad165b..5e5e06e 100644
+--- a/src/document-extraction/parse.ts
++++ b/src/document-extraction/parse.ts
+@@ -171,7 +171,8 @@ function buildQuantity(input: {
+   const text = input.text
+   const parsed = tryParseMm(text)
+   const explicit = parseUnitToken(input.unitToken)
+-  const inheritance = explicit.kind === 'missing' ? (input.inheritance ?? null) : null
++  // M18 变异：关闭单位继承（只保留显式单位），用于证明 U-01/U-02/U-07 真的依赖继承规则。
++  const inheritance: UnitResolution | null = { status: 'absent', unit: null, declarations: [] }
+ 
+   let unit = explicit
+   let unitBasis: string | null = null
