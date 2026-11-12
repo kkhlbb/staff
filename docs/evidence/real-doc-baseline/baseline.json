@@ -4,7 +4,7 @@
     "documents": 6
   },
   "rules": {
-    "extractorVersion": "document-extractor-5",
+    "extractorVersion": "document-extractor-6",
     "maxExtractionPages": 100,
     "maxExtractionCandidates": 200,
     "maxExtractionIssues": 200,
@@ -25,7 +25,7 @@
         "from": 1,
         "to": 74
       },
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "candidates": {
         "total": 15,
         "pending": 4,
@@ -87,7 +87,7 @@
         "from": 1,
         "to": 5
       },
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "candidates": {
         "total": 22,
         "pending": 7,
@@ -143,7 +143,7 @@
         "from": 1,
         "to": 4
       },
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "candidates": {
         "total": 3,
         "pending": 0,
@@ -190,31 +190,62 @@
         "from": 1,
         "to": 170
       },
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "candidates": {
-        "total": 0,
-        "pending": 0,
-        "blocked": 0,
+        "total": 7,
+        "pending": 1,
+        "blocked": 6,
         "confirmed": 0,
-        "byKind": []
+        "byKind": [
+          {
+            "code": "formula",
+            "count": 3
+          },
+          {
+            "code": "part-dimension",
+            "count": 2
+          },
+          {
+            "code": "ring",
+            "count": 2
+          }
+        ]
       },
-      "blockedReasonCodes": [],
+      "blockedReasonCodes": [
+        {
+          "code": "FORMULA_UNSUPPORTED",
+          "count": 3
+        },
+        {
+          "code": "NUMBER_UNSUPPORTED",
+          "count": 2
+        },
+        {
+          "code": "UNKNOWN_UNIT",
+          "count": 1
+        }
+      ],
       "issues": {
-        "total": 1,
-        "blocked": 1,
-        "warning": 0,
+        "total": 5,
+        "blocked": 3,
+        "warning": 2,
         "byCode": [
           {
-            "code": "PAGE_LIMIT",
-            "count": 1
+            "code": "NO_TEXT_LAYER",
+            "count": 3
+          },
+          {
+            "code": "CHUNK_PROCESSED",
+            "count": 2
           }
         ],
-        "noTextLayerPages": []
+        "noTextLayerPages": [
+          1,
+          2,
+          6
+        ]
       },
-      "pageLimit": {
-        "maxPages": 100,
-        "blocked": true
-      }
+      "pageLimit": null
     },
     {
       "id": "r5",
@@ -227,7 +258,7 @@
         "from": 1,
         "to": 8
       },
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "candidates": {
         "total": 4,
         "pending": 2,
@@ -266,7 +297,7 @@
         "from": 1,
         "to": 8
       },
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "candidates": {
         "total": 87,
         "pending": 44,
@@ -321,33 +352,35 @@
     "pages": 269,
     "textItems": 113222,
     "candidates": {
-      "total": 131,
-      "pending": 57,
-      "blocked": 74,
+      "total": 138,
+      "pending": 58,
+      "blocked": 80,
       "confirmed": 0
     },
-    "confirmableRate": 0.435115,
-    "blockedRate": 0.564885,
+    "confirmableRate": 0.42029,
+    "blockedRate": 0.57971,
     "reasonCodeTop5": [
       {
         "code": "UNKNOWN_UNIT",
-        "count": 44
+        "count": 45
       },
       {
         "code": "FORMULA_UNSUPPORTED",
-        "count": 29
+        "count": 32
+      },
+      {
+        "code": "NUMBER_UNSUPPORTED",
+        "count": 2
       },
       {
         "code": "UNSUPPORTED_UNIT",
         "count": 1
       }
     ],
-    "pageLimitDocuments": [
-      "r4"
-    ],
-    "noTextLayerPages": 1,
+    "pageLimitDocuments": [],
+    "noTextLayerPages": 4,
     "rules": {
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "maxExtractionPages": 100,
       "maxExtractionCandidates": 200,
       "maxExtractionIssues": 200,
@@ -356,52 +389,9 @@
         "timeoutMs": 300000
       }
     },
-    "pageRangeProbe": [
-      {
-        "id": "r4@1-20",
-        "forDocument": "r4",
-        "pageRange": {
-          "from": 1,
-          "to": 20
-        },
-        "candidates": {
-          "total": 1,
-          "pending": 0,
-          "blocked": 1,
-          "confirmed": 0,
-          "byKind": [
-            {
-              "code": "ring",
-              "count": 1
-            }
-          ]
-        },
-        "blockedReasonCodes": [
-          {
-            "code": "UNKNOWN_UNIT",
-            "count": 1
-          }
-        ],
-        "issues": {
-          "total": 3,
-          "blocked": 3,
-          "warning": 0,
-          "byCode": [
-            {
-              "code": "NO_TEXT_LAYER",
-              "count": 3
-            }
-          ],
-          "noTextLayerPages": [
-            1,
-            2,
-            6
-          ]
-        }
-      }
-    ]
+    "pageRangeProbe": []
   },
-  "baselineReason": "P2 公式行显式末尾值（document-extractor-4→5）：形态 1 中间式放宽到含字母/乘除/括号（仍只取末尾那枚显式结果值，不做算术求值），符号位接受希腊字母；带显式末尾值的行先按赋值解析，不再被 FORMULA_UNSUPPORTED 抢先（管道顺序修复，FORMULA_UNSUPPORTED 判定条件未改）。规则带来的增减：FORMULA_UNSUPPORTED 45→29（16 行公式行改判为赋值行）；r2 候选 20→22、pending 5→7（Zmax 0.4mm、δL 0.15mm 取自原文末尾显式值；δL=0.10mm 的符号由截断的 L 修正为 δL，同值同页、pending 不变；因此 L 组不再有可解析成员，两条 δL= 0.25-… 行由 issue 变为 blocked 候选，UNKNOWN_UNIT 42→44）；r6 候选 84→87、pending 27→44（B1 238.1/260、B2、B3、a1、T3、T0、ES0×2、EI0×2、Δ0×2、Δ1、Δ2、Δ3、T×3 共 14 行 17 处显式末尾值落成待确认，其中 B1/B2/B3/ES0 与既有同值合并）；r1/r3/r4/r5 计数不变。整体 126→131 候选、38→57 pending、88→74 blocked、可确认率 30.2%→43.5%。",
+  "baselineReason": "document-extractor-6 大文档切块：r4（170 页）不再整份 PAGE_LIMIT，改为两块合并后出 7 条候选（pending 1 / blocked 6），问题码新增 CHUNK_PROCESSED×2、NO_TEXT_LAYER×3（页 1,2,6）；r4 不再是 PAGE_LIMIT 文档，故 1-20 页探针随之消失；其余 5 份候选/pending/blocked 逐个不变，仅规则版本串 5→6 变化。",
   "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
   "generatedAtKind": "run-time",
   "runTimeFields": []

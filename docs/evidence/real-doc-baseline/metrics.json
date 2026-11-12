@@ -4,7 +4,7 @@
     "documents": 6
   },
   "rules": {
-    "extractorVersion": "document-extractor-5",
+    "extractorVersion": "document-extractor-6",
     "maxExtractionPages": 100,
     "maxExtractionCandidates": 200,
     "maxExtractionIssues": 200,
@@ -25,7 +25,7 @@
         "from": 1,
         "to": 74
       },
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "candidates": {
         "total": 15,
         "pending": 4,
@@ -87,7 +87,7 @@
         "from": 1,
         "to": 5
       },
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "candidates": {
         "total": 22,
         "pending": 7,
@@ -143,7 +143,7 @@
         "from": 1,
         "to": 4
       },
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "candidates": {
         "total": 3,
         "pending": 0,
@@ -190,31 +190,62 @@
         "from": 1,
         "to": 170
       },
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "candidates": {
-        "total": 0,
-        "pending": 0,
-        "blocked": 0,
+        "total": 7,
+        "pending": 1,
+        "blocked": 6,
         "confirmed": 0,
-        "byKind": []
+        "byKind": [
+          {
+            "code": "formula",
+            "count": 3
+          },
+          {
+            "code": "part-dimension",
+            "count": 2
+          },
+          {
+            "code": "ring",
+            "count": 2
+          }
+        ]
       },
-      "blockedReasonCodes": [],
+      "blockedReasonCodes": [
+        {
+          "code": "FORMULA_UNSUPPORTED",
+          "count": 3
+        },
+        {
+          "code": "NUMBER_UNSUPPORTED",
+          "count": 2
+        },
+        {
+          "code": "UNKNOWN_UNIT",
+          "count": 1
+        }
+      ],
       "issues": {
-        "total": 1,
-        "blocked": 1,
-        "warning": 0,
+        "total": 5,
+        "blocked": 3,
+        "warning": 2,
         "byCode": [
           {
-            "code": "PAGE_LIMIT",
-            "count": 1
+            "code": "NO_TEXT_LAYER",
+            "count": 3
+          },
+          {
+            "code": "CHUNK_PROCESSED",
+            "count": 2
           }
         ],
-        "noTextLayerPages": []
+        "noTextLayerPages": [
+          1,
+          2,
+          6
+        ]
       },
-      "pageLimit": {
-        "maxPages": 100,
-        "blocked": true
-      }
+      "pageLimit": null
     },
     {
       "id": "r5",
@@ -227,7 +258,7 @@
         "from": 1,
         "to": 8
       },
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "candidates": {
         "total": 4,
         "pending": 2,
@@ -266,7 +297,7 @@
         "from": 1,
         "to": 8
       },
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "candidates": {
         "total": 87,
         "pending": 44,
@@ -321,33 +352,35 @@
     "pages": 269,
     "textItems": 113222,
     "candidates": {
-      "total": 131,
-      "pending": 57,
-      "blocked": 74,
+      "total": 138,
+      "pending": 58,
+      "blocked": 80,
       "confirmed": 0
     },
-    "confirmableRate": 0.435115,
-    "blockedRate": 0.564885,
+    "confirmableRate": 0.42029,
+    "blockedRate": 0.57971,
     "reasonCodeTop5": [
       {
         "code": "UNKNOWN_UNIT",
-        "count": 44
+        "count": 45
       },
       {
         "code": "FORMULA_UNSUPPORTED",
-        "count": 29
+        "count": 32
+      },
+      {
+        "code": "NUMBER_UNSUPPORTED",
+        "count": 2
       },
       {
         "code": "UNSUPPORTED_UNIT",
         "count": 1
       }
     ],
-    "pageLimitDocuments": [
-      "r4"
-    ],
-    "noTextLayerPages": 1,
+    "pageLimitDocuments": [],
+    "noTextLayerPages": 4,
     "rules": {
-      "extractorVersion": "document-extractor-5",
+      "extractorVersion": "document-extractor-6",
       "maxExtractionPages": 100,
       "maxExtractionCandidates": 200,
       "maxExtractionIssues": 200,
@@ -356,50 +389,7 @@
         "timeoutMs": 300000
       }
     },
-    "pageRangeProbe": [
-      {
-        "id": "r4@1-20",
-        "forDocument": "r4",
-        "pageRange": {
-          "from": 1,
-          "to": 20
-        },
-        "candidates": {
-          "total": 1,
-          "pending": 0,
-          "blocked": 1,
-          "confirmed": 0,
-          "byKind": [
-            {
-              "code": "ring",
-              "count": 1
-            }
-          ]
-        },
-        "blockedReasonCodes": [
-          {
-            "code": "UNKNOWN_UNIT",
-            "count": 1
-          }
-        ],
-        "issues": {
-          "total": 3,
-          "blocked": 3,
-          "warning": 0,
-          "byCode": [
-            {
-              "code": "NO_TEXT_LAYER",
-              "count": 3
-            }
-          ],
-          "noTextLayerPages": [
-            1,
-            2,
-            6
-          ]
-        }
-      }
-    ]
+    "pageRangeProbe": []
   },
   "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
   "generatedAtKind": "run-time",
