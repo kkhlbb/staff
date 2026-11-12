@@ -4,7 +4,7 @@
     "model": "deepseek-chat",
     "adapter": "openai-compatible-1"
   },
-  "project": "stage4-run-5260.cunlian",
+  "project": "stage4-run-28591.cunlian",
   "checks": [
     {
       "id": "provider-configured",
@@ -14,12 +14,12 @@
     {
       "id": "provider-test",
       "ok": true,
-      "text": "连接成功 · deepseek-flash · 947 ms（合成文本，未发送项目资料）"
+      "text": "连接成功 · deepseek-flash · 1397 ms（合成文本，未发送项目资料）"
     },
     {
       "id": "preview-12.04",
       "ok": true,
-      "text": " 20.0000 mm、外径 32.0000 mm 保持原值并锁定，重算无异常。\n\n复核结果：\n- 封闭环计算区间：[0.1100, 0.2100] mm（公差 0.1000 mm）\n- 相对条款区间的裕量：下裕量 0.0100 mm，上裕量 0.0900 mm，状态 within\n- 各环公差贡献：总长 H 0.0400 mm，左轴承 B1 0.0200 mm，隔套 S 0.0200 mm，右轴承 B2 0.0200 mm\n- 条款检查状态为 unchecked（原因 NO_REQUIREMENT，当前无关联条款可校核）\n\n这些只是草稿上的未保存修改（draftRevision 2，基于 rev-cfg-1），正式版本尚未变更。确认候选、签发/提交版本与导出需你在界面操作。待答问题暂无待答问题。最近工具结果（回执）preview · oktool:47d5a1b5-0e88-401e-8…stage · oktool:65d4d71b-3a14-4d77-8…预览与确认结果区间0.110 ～ 0.210 mm参数内径 20.000 · 外径 32.000 · 长度 12.040预览指纹98b471e1a651c1df…有效期至08:04:52活动条款检查：satisfied · WITHIN_REQUIREMENT裕量 下 0.010 / 上 0.090 mm确认保存定位条款来源"
+      "text": ".1000～0.3000 mm。\n- 相对条款区间的裕量：下限 0.0100 mm，上限 0.0900 mm，说明区间仍落在条款范围内。\n- 注意：preview 的 requirementPreview 状态为 unchecked / NO_REQUIREMENT（预览未带条款状态），条款对比信息取自基础版本已保存的检查记录；如需正式条款结论，请在界面中复核确认。\n\n变更幅度：长度 12.0000 → 12.0400 mm，使间隙名义值由 0.2000 mm 降到 0.1600 mm，下限裕量从 0.0500 mm 收窄到 0.0100 mm。\n\n保存版本与导出需你在界面确认后执行，我没有这些权限。待答问题暂无待答问题。最近工具结果（回执）preview · oktool:ce02430a-1765-4714-9…stage · oktool:5d7f31fa-9eed-466b-8…context · oktool:8578c7f6-4f7a-4133-a…预览与确认结果区间0.110 ～ 0.210 mm参数内径 20.000 · 外径 32.000 · 长度 12.040预览指纹2996ac78aee263ca…有效期至21:50:03活动条款检查：satisfied · WITHIN_REQUIREMENT裕量 下 0.010 / 上 0.090 mm确认保存定位条款来源"
     },
     {
       "id": "commit",
@@ -30,23 +30,29 @@
       "id": "over-limit-blocked",
       "ok": true,
       "confirmDisabled": true,
-      "text": "满足条款（原值 12.0400 mm 时区间为 [0.1100, 0.2100] mm，恰好贴下限）。\n\n原因很直接：隔套加长 0.06 mm，间隙区间整体左移。若需保持合规，隔套长度大约需 ≤ 12.04 mm 区间内的对应位置，或放宽条款。需要我把长度调回去，或按某个具体值再算一版吗？确认候选、签发授权、提交版本和导出需由界面操作。待答问题暂无待答问题。最近工具结果（回执）preview · oktool:0299bb3b-1af9-4ceb-8…stage · oktool:2ca918b2-3faf-42eb-b…context · oktool:9bef7eca-865e-4b6b-8…预览与确认结果区间0.050 ～ 0.150 mm参数内径 20.000 · 外径 32.000 · 长度 12.100预览指纹fa81e5df040424f4…有效期至08:04:58活动条款检查：unsatisfied · LOWER_VIOLATED裕量 下 -0.050 / 上 0.150 mm确认保存定位条款来源条款检查不是 satisfied；确认保存已禁用，提交也会被主进程拦截。"
+      "text": "（NO_REQUIREMENT），需在界面完成条款复核才能得出正式判定\n\n可见这次加长 0.06 mm 使间隙整体下移，下端已超出条款下限。若需满足条款，隔套长度应回落到较短一侧（例如原 12.0400 mm 时区间为 [0.1100, 0.2100] mm，两端裕量 0.0100/0.0900 mm）。是否需要我再按某个目标长度重算？待答问题暂无待答问题。最近工具结果（回执）preview · oktool:c782979c-3ae3-4109-a…stage · oktool:4163115c-00eb-43c7-9…context · oktool:8f4c4335-a8f2-4fd3-8…预览与确认结果区间0.050 ～ 0.150 mm参数内径 20.000 · 外径 32.000 · 长度 12.100预览指纹6411c5c990ace6b9…有效期至21:50:10活动条款检查：unsatisfied · LOWER_VIOLATED裕量 下 -0.050 / 上 0.150 mm确认保存定位条款来源条款检查不是 satisfied；确认保存已禁用，提交也会被主进程拦截。"
     },
     {
       "id": "export-dialog",
       "ok": false,
       "blocked": true,
-      "reason": "native-save-dialog-not-automatable: System Events 报 0 windows；AppleScript 无法激活该 ad-hoc 应用；Escape 未投递"
+      "reason": "no-accessibility-permission: System Events 对寸链报 0（Terminal=0、Finder=0）；本会话没有辅助功能权限，无法投递点击或按键",
+      "probe": {
+        "寸链": 0,
+        "Terminal": 0,
+        "Finder": 0
+      },
+      "reference": "README §7（System Events 复核步骤 + 保存为字段陷阱）；导出产物 docs/evidence/v40-stage4/artifacts/a40-project-approved.svg"
     },
     {
       "id": "clarification",
       "ok": true,
-      "text": " · 947 ms（合成文本，未发送项目资料）任务真实模型已配置（openai-compatible-1:deepseek-chat）；下面第一个按钮走真实供应商，其余只运行离线假模型。真实模型执行正常改图（+0.04 mm）需要补充（锁定参数）工具失败（非法数值）已启动真实模型 · openai-compatible-1导出已保存版本 SVG导出 PDF执行步骤completedmodel963 ms模型回复（自然语言，不是回执）我需要先确认隔套要改成什么。请提供具体参数：是内径、外径还是长度，以及目标值（mm）。其他参数我会保持锁定不动。待答问题暂无待答问题。最近工具结果（回执）暂无工具回执。预览与确认结果区间0.050 ～ 0.150 mm参数内径 20.000 · 外径 32.000 · 长度 12.100预览指纹fa81e5df040424f4…有效期至08:04:58活动条款检查：unsatisfied · LOWER_VIOLATED裕量 下 -0.050 / 上 0.150 mm确认保存定位条款来源条款检查不是 satisfied；确认保存已禁用，提交也会被主进程拦截。"
+      "text": "版本不一致，属于尚未提交的草稿，不能当作已保存值。\n- 隔套长度绑定尺寸链环 S，计算间隙名义 0.1000 mm，区间 [0.0500, 0.1500] mm，条款要求 0.1000～0.3000 mm；当前状态 outside（下限裕量 -0.0500 mm）。\n\n需要你确认两点：\n1. 改哪个参数、改成多少毫米？（内径 / 外径 / 隔套长度）\n2. 如果只改长度，请给出目标值（如 11.89 mm），我按你给的值单参数修改并锁定其余两项。\n\n请给一个具体的毫米数，我再执行。待答问题暂无待答问题。最近工具结果（回执）context · oktool:9804d0dc-2c3d-4fd3-9…预览与确认结果区间0.050 ～ 0.150 mm参数内径 20.000 · 外径 32.000 · 长度 12.100预览指纹6411c5c990ace6b9…有效期至21:50:10活动条款检查：unsatisfied · LOWER_VIOLATED裕量 下 -0.050 / 上 0.150 mm确认保存定位条款来源条款检查不是 satisfied；确认保存已禁用，提交也会被主进程拦截。"
     },
     {
       "id": "reopen-recap",
       "ok": true,
-      "text": "是 rev-cfg-1“建立任务书条款”）只改动了一个参数：\n\n- 隔套 length：12.0000 mm 改为 **12.04 mm**（120000 q 改为 120400 q）。\n- innerDiameter 保持 20.0000 mm，outerDiameter 保持 32.0000 mm，均未变。\n\n这是该版本与前一版本之间唯一的参数差异；条款 rev-1（轴向装配间隙 C 应为 0.1000～0.3000 mm，含两端）本身未被修改。\n\n**当前检查结果**（已保存版本 rev-a-fdc57237… 上的 committed 校核，依据 reqrev-1）：\n\n- 结论：**satisfied**（WITHIN_REQUIREMENT）。\n- 结果区间：[0.1100, 0.2100] mm。\n- 相对条款 [0.1000, 0.3000] mm 的裕量：下裕量 **0.0100 mm**，上裕量 **0.0900 mm**。\n- 条款区间：下限 0.1000 mm，上限 0.3000 mm。\n\n**需要注意：工作区里还有一份未保存草稿**（agent-draft-88e00955…，未标记 stale，但它不是当前正式版本），其中 length 已改为 12.1 mm。该草稿自身预计算的名义间隙为 0.1000 mm，区间 [0.0500, 0.1500] mm，状态 outside，下裕量 -0.0500 mm；并且尚未做条款检查（NO_REQUIREMENT）。\n\n需要我针对这份草稿正式跑一次 preview 复核，还是先把它丢弃、保持以已保存版本为准？"
+      "text": " length：12.0000 mm → **12.0400 mm**（+0.04 mm）\n- 内径 innerDiameter 20.0000 mm、外径 outerDiameter 32.0000 mm 未变\n\n**当前检查结果**\n\n需要注意基准不同：\n- 该已保存版本自身的检查记录（`check-a-ef44f116…`，provenance=committed）状态为 **satisfied**（满足条款）：计算区间 [0.1100, 0.2100] mm，相对条款 0.1000～0.3000 mm 的裕量为下侧 0.0100 mm、上侧 0.0900 mm。\n- 但那次检查的 basis 是 draft `agent-draft-0d63cfbf…` 的 draftRevision 2，并非当前工作草稿。\n\n**当前工作草稿**（`agent-draft-a1dfec69…`，draftRevision 2，基于上述已保存版本，stale=false，未保存）与已保存版本参数一致：内径 20.0000 mm、外径 32.0000 mm、长度 12.1000 mm；其内嵌结果显示间隙区间计算值为 [0.0500, 0.1500] mm、status=outside（下侧裕量 −0.0500 mm），且条款预览为 `unchecked`（NO_REQUIREMENT），即尚未做条款校核。\n\n也就是说：已保存版本经校核是满足的，而当前草稿的长度为 12.1000 mm、尚未跑条款校核，你不能把草稿结果当作已保存结论。要我对此草稿跑一次 preview 复核（不改参数）吗？"
     }
   ],
   "blocked": [
@@ -58,7 +64,7 @@
     "docs/evidence/v40-stage4/screenshots/v40-stage4-03-preview-margins.png",
     "docs/evidence/v40-stage4/screenshots/v40-stage4-04-commit.png",
     "docs/evidence/v40-stage4/screenshots/v40-stage4-05-over-limit-blocked.png",
-    "docs/evidence/v40-stage4/screenshots/v40-stage4-06-export-blocked.png",
+    "docs/evidence/v40-stage4/screenshots/v40-stage4-06-export-dialog.png",
     "docs/evidence/v40-stage4/screenshots/v40-stage4-08-clarification.png",
     "docs/evidence/v40-stage4/screenshots/v40-stage4-09-reopen-recap.png"
   ],

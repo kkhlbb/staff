@@ -27,6 +27,7 @@ const commands = [
   ['test', ['run', 'test']],
   ['test-desktop', ['run', 'test:desktop']],
   ['build', ['run', 'build']],
+  ['export-artifact', ['run', 'artifact:export']],
   ['package-desktop', ['run', 'package:desktop']],
   ['check-package-pdf-worker', ['run', 'check:package:pdf-worker']],
 ]
@@ -88,6 +89,7 @@ if (hasKey) {
 const evidenceFiles = [
   'docs/evidence/v40-stage4/a40-real-results.json',
   'docs/evidence/v40-stage4/e2e-result.json',
+  'docs/evidence/v40-stage4/export-artifact.json',
 ]
 for (const file of evidenceFiles) {
   try {
@@ -115,7 +117,7 @@ const screenshotDir = 'docs/evidence/v40-stage4/screenshots'
 const screenshots = (await fs.readdir(screenshotDir).catch(() => [])).filter((name) => name.endsWith('.png')).sort()
 
 await fs.writeFile('docs/evidence/v40-stage4/verification.json', serializeEvidence({
-  baseline: '15cdac5',
+  baseline: 'dc78a5e',
   branch: 'agent/v40-stage4',
   results,
   guards,

@@ -77,6 +77,28 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const screenshots = []
 const checks = []
 
+/**
+ * 辅助功能（AX）权限探测：System Events 能不能看到应用窗口。
+ * 只有拿得到窗口，AppleScript 才能点到系统保存对话框（README §7 的步骤）。
+ * 这一项与产品能力无关：同一个打包应用在授权过的 GUI 会话里可以点。
+ */
+function probeAccessibility() {
+  const windows = {}
+  for (const name of ['寸链', 'Terminal', 'Finder']) {
+    const result = spawnSync('osascript', ['-e', `tell application "System Events" to tell process "${name}" to get count windows`], { encoding: 'utf8' })
+    const value = (result.stdout ?? '').trim()
+    windows[name] = result.status === 0 && value !== '' ? Number(value) : `error:${(result.stderr ?? '').trim().slice(0, 80)}`
+  }
+  const available = typeof windows['寸链'] === 'number' && windows['寸链'] > 0
+  return {
+    available,
+    windows,
+    detail: available
+      ? 'System Events 能看到寸链窗口'
+      : `System Events 对寸链报 ${JSON.stringify(windows['寸链'])}（Terminal=${JSON.stringify(windows.Terminal)}、Finder=${JSON.stringify(windows.Finder)}）；本会话没有辅助功能权限，无法投递点击或按键`,
+  }
+}
+
 let child = null
 let childExit = null
 let socket = null
@@ -291,16 +313,22 @@ try {
   checks.push({ id: 'over-limit-blocked', ok: confirmDisabled === true && overText.includes('-0.050'), confirmDisabled, text: overText.slice(-500) })
   await shot('v40-stage4-05-over-limit-blocked')
 
-  // 导出：系统保存对话框在本机自动化环境中不可驱动（System Events 看不到该 ad-hoc 应用窗口，
-  // Escape/keystroke 无法投递；open 无法启动该构建）。如实记为 BLOCKED，不假装成功。
-  // 导出的真实文件写入/哈希/取消由 desktop/tests/agentExport.test.ts 覆盖，见交付说明。
+  // 导出：能不能自动点「系统保存对话框」取决于**运行环境有没有辅助功能（AX）权限**，
+  // 不是产品能力问题——评审方在同一台机器、同一个 ad-hoc 打包应用上已实测通过
+  // （可复现步骤与「保存为只接受文件名」的陷阱见 docs/evidence/v40-stage4/README.md §7）。
+  // 这里先探测 AX：拿不到就如实记 blocked 并写清探测结果，绝不假装点过。
+  const axProbe = probeAccessibility()
   checks.push({
     id: 'export-dialog',
     ok: false,
     blocked: true,
-    reason: 'native-save-dialog-not-automatable: System Events 报 0 windows；AppleScript 无法激活该 ad-hoc 应用；Escape 未投递',
+    reason: axProbe.available
+      ? 'accessibility-available-but-this-run-did-not-drive-the-dialog'
+      : `no-accessibility-permission: ${axProbe.detail}`,
+    probe: axProbe.windows,
+    reference: 'README §7（System Events 复核步骤 + 保存为字段陷阱）；导出产物 docs/evidence/v40-stage4/artifacts/a40-project-approved.svg',
   })
-  await shot('v40-stage4-06-export-blocked')
+  await shot('v40-stage4-06-export-dialog')
 
   // 追问：模糊指令下模型必须提问而不是猜（真实模型行为记录）。
   await setGoal('把隔套改一下，其他先不动。')

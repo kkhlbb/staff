@@ -19,7 +19,8 @@
     "typecheck:desktop": "tsc -p tsconfig.desktop.json --noEmit",
     "test:desktop": "vitest run --config vitest.desktop.config.ts",
     "test:desktop:e2e": "node desktop/tests/e2e/smoke.mjs",
-    "evidence:record": "vitest run --config vitest.evidence.config.ts"
+    "evidence:record": "vitest run --config vitest.evidence.config.ts",
+    "artifact:export": "vitest run --config vitest.v40stage4export.config.ts"
   },
   "dependencies": {
     "@zip.js/zip.js": "2.24.0",

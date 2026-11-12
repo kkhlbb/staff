@@ -37,12 +37,20 @@ import {
   IPC_CHANNELS,
   type AgentDraftValue,
   type AgentDraftView,
+  type AgentExportValue,
   type AgentPreviewSummary,
+  type ChangeApplyValue,
+  type ChangeDraftValue,
+  type ChangePreviewValue,
   type ExtractionDecideValue,
   type ExtractionRunValue,
   type ProjectOpenValue,
   type ToolResult,
 } from '../shared/contracts'
+import type { ModelAdapter, ModelReply, ModelRequest } from '../../src/agent/types'
+import { stableFingerprint } from '../../src/revisions/canonical'
+import { DrawingExportStore } from '../main/drawingExportStore'
+import { nodeFileOps, type FileOps } from '../main/fileStore'
 import { createHarness, type Harness } from './helpers/a04'
 
 const KEY = process.env.DEEPSEEK_API_KEY ?? ''
@@ -393,6 +401,60 @@ async function commit(ctx: Ctx): Promise<ToolResult<{ revisionId: string }>> {
     previewFingerprint: preview.previewFingerprint,
   })
   return committed.ok ? { ok: true, data: { revisionId: committed.data.revisionId }, requestId: committed.requestId, objectVersion: committed.data.revisionId } : committed
+}
+
+/** 用户补充值在参数来源备注里的标记（界面「来源备注」同款通道；不是 PDF 原文）。 */
+const USER_INPUT_NOTE = '用户输入：对话补充（任务书未给出隔套基本长度，非 PDF 原文）'
+
+async function fileSha256(filePath: string): Promise<string> {
+  return sha256Hex(new Uint8Array(await fsp.readFile(filePath)))
+}
+
+function extractionDigest(ctx: Ctx): string {
+  return stableFingerprint(ctx.h.projectService.getSession(ctx.sessionId)!.snapshot.project.extractionDrafts)
+}
+
+/**
+ * 让「切换项目后旧任务回包」可复现的包装器：底层仍是真实模型适配器，
+ * 只是把**已经收到的回包**延迟 1.2 s 交给调度层，并且忽略取消信号
+ * （模拟已发出、无法撤回的请求）。这样切换项目发生在回包落地之前，
+ * 只能靠 taskId+projectId 身份检查丢弃。
+ */
+class LateReplyAdapter implements ModelAdapter {
+  readonly id: string
+  private readonly inner: ModelAdapter
+  private readonly delayMs: number
+  constructor(inner: ModelAdapter, delayMs: number) {
+    this.inner = inner
+    this.id = inner.id
+    this.delayMs = delayMs
+  }
+  generate(request: ModelRequest): Promise<ModelReply> {
+    return this.inner.generate(request)
+  }
+  async streamEvents(request: ModelRequest, onEvent: (event: ModelEvent) => void): Promise<ModelReply> {
+    const reply = await this.inner.streamEvents(request, onEvent)
+    await new Promise((resolve) => setTimeout(resolve, this.delayMs))
+    return reply
+  }
+  cancel(): void {
+    /* 故意忽略：模拟请求已发出、回包已在路上的情形。 */
+  }
+}
+
+/** 在原子提交点（rename）之后才收到「取消」：写入已提交，回执必须是已导出。 */
+class CancelAfterCommitStore extends DrawingExportStore {
+  committed = false
+  override async save(options: Parameters<DrawingExportStore['save']>[0]) {
+    const result = await super.save(options)
+    this.committed = true
+    return result
+  }
+}
+
+/** 在指定文件操作上注入取消/中断，其余走真实实现。 */
+function interruptedOps(overrides: Partial<FileOps>): FileOps {
+  return { ...nodeFileOps, ...overrides }
 }
 
 const CHANGE_PROMPT = (draftId: string, baseRevisionId: string, projectId: string): string =>
@@ -1044,6 +1106,504 @@ describe.skipIf(!ENABLED)('V4.0 阶段4：真实模型 A40 验收', () => {
       record.notes.push(`异常：${error instanceof Error ? error.message : String(error)}`)
       check('流程无异常', false, record.notes.at(-1))
     } finally {
+      await cleanupAll()
+    }
+  }, 600_000)
+  /**
+   * A40-02b：模型追问「缺隔套长度」后，用户补一个数值。
+   * 判据（结构化）：
+   * ① 用户补的值只以「用户输入」来源进入参数草稿/正式参数（sourceNote 带用户标记）；
+   * ② PDF 侧一切不变：提取草稿指纹、候选字段（长度仍为空）、任何证据片段都不含 12.00、PDF 字节哈希；
+   * ③ 补值后能生成变更草稿、预览并复核条款，真模型第二轮读到的也是这个状态。
+   */
+  it('A40-02b：模型追问缺长度后用户补数值 → 标为用户输入，PDF 原证据不变', async () => {
+    const record: AttemptRecord = {
+      item: 'A40-02b', attempt: 1, startedAt: new Date().toISOString(), durationMs: 0,
+      taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
+      modelCalls: 0, assertions: [], notes: [],
+    }
+    const followUp: AttemptRecord = {
+      item: 'A40-02b', attempt: 2, startedAt: new Date().toISOString(), durationMs: 0,
+      taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
+      modelCalls: 0, assertions: [], notes: [],
+    }
+    records.push(record, followUp)
+    const check = makeChecker(record)
+    const checkFollowUp = makeChecker(followUp)
+    try {
+      const ctx = await openContext(await buildSnapshot({ pdf: 'missing-length.pdf' }))
+      const session = ctx.h.projectService.getSession(ctx.sessionId)!
+      const revisionBefore = session.snapshot.project.currentRevisionId
+      const pdfPath = path.join(SAMPLE_DIR, 'missing-length.pdf')
+      const pdfBefore = await fileSha256(pdfPath)
+      const extraction = await extractionAndDecision(ctx)
+      const extractionBefore = extractionDigest(ctx)
+
+      // ① 真模型第一轮：必须具体追问缺失的隔套长度（与 A40-02 同入口）。
+      await runTask(ctx, record, {
+        goal: '根据这份任务书建立隔套项目。',
+        systemPrompt: realTaskSystemPrompt({
+          projectId: session.snapshot.project.id,
+          baseRevisionId: session.snapshot.project.currentRevisionId,
+          planToken: extraction.planToken,
+          extractionDraftId: extraction.draftId,
+        }),
+      })
+      const askText = record.modelText
+      const applyReceipt = record.toolReceipts.find((receipt) => receipt.tool === 'apply')
+      check('模型追问缺失的隔套长度（原文回执见 notes）',
+        /(长度|隔套|S\b)/u.test(askText) && /(缺|没有|未|请提供|补充|blocked|未解析)/u.test(askText), askText.slice(0, 400))
+      check('没有成功建项（apply 未成功）',
+        applyReceipt === undefined || applyReceipt.errorCode !== null, applyReceipt ?? 'no-apply')
+      check('正式项目未改变', ctx.h.projectService.getSession(ctx.sessionId)!.snapshot.project.currentRevisionId === revisionBefore, revisionBefore)
+
+      // ② 用户补数值：走界面同款 change:stage 通道（内径/外径来自 PDF，长度由用户输入）。
+      const draft = session.snapshot.project.extractionDrafts.find((item) => item.draftId === extraction.draftId)!
+      const part = draft.candidates.find((candidate) => candidate.kind === 'part-dimension')
+      const innerText = part?.kind === 'part-dimension' ? part.data.innerDiameter?.text : undefined
+      const outerText = part?.kind === 'part-dimension' ? part.data.outerDiameter?.text : undefined
+      check('PDF 只给出内径/外径，长度为空（缺的就是它）',
+        innerText === '20.00' && outerText === '32.00' && (part?.kind === 'part-dimension' ? part.data.length === null : false),
+        { innerText, outerText, length: part?.kind === 'part-dimension' ? part.data.length : null })
+      const staged = await ipcCall<ChangeDraftValue>(ctx, IPC_CHANNELS.changeStage, {
+        sessionId: session.sessionId,
+        baseEditSeq: session.acceptedSeq,
+        inputs: { innerDiameter: innerText!, outerDiameter: outerText!, length: '12.00' },
+        sourceNotes: {
+          innerDiameter: '任务书 2 零件尺寸（PDF 原文）',
+          outerDiameter: '任务书 2 零件尺寸（PDF 原文）',
+          length: USER_INPUT_NOTE,
+        },
+        reason: '用户补充任务书缺失的隔套长度',
+      })
+      check('用户补数值后生成变更草稿', staged.ok, staged.ok ? staged.value.draftId : `${staged.error.code} ${staged.error.message}`)
+      if (!staged.ok) throw new Error(`stage 失败：${staged.error.code} ${staged.error.message}`)
+      const draftLength = staged.value.parameters.find((parameter) => parameter.key === 'length')
+      check('草稿长度 = 12.00 且来源备注标为用户输入',
+        draftLength?.valueQ === 120_000 && (draftLength?.sourceNote ?? '').includes('用户输入'), draftLength)
+
+      // ③ 复核：预览 + 条款检查（应用算的，不是模型自述）。
+      const preview = await ipcCall<ChangePreviewValue>(ctx, IPC_CHANNELS.changePreview, {
+        sessionId: session.sessionId, baseToken: staged.value.baseToken, draftToken: staged.value.draftToken,
+      })
+      check('能生成预览继续复核', preview.ok, preview.ok ? preview.value.previewId : `${preview.error.code} ${preview.error.message}`)
+      if (!preview.ok) throw new Error(`preview 失败：${preview.error.code} ${preview.error.message}`)
+      check('复核区间 [0.1500,0.2500]（S=12.00、H/B1/B2 不变）',
+        preview.value.result.minQ === 1500 && preview.value.result.maxQ === 2500,
+        { minQ: preview.value.result.minQ, maxQ: preview.value.result.maxQ })
+      check('条款仍按 [0.1000,0.3000] 判 satisfied、裕量 +0.0500/+0.0500',
+        preview.value.requirement?.check.status === 'satisfied'
+        && preview.value.requirement.check.margins?.lowerQ === 500
+        && preview.value.requirement.check.margins?.upperQ === 500,
+        preview.value.requirement?.check.status)
+
+      // ④ 用户确认保存 → 正式版本；来源仍然是用户输入。
+      const revisionsBefore = session.snapshot.fileRevisions.length
+      const applied = await ipcCall<ChangeApplyValue>(ctx, IPC_CHANNELS.changeApply, {
+        sessionId: session.sessionId,
+        baseToken: staged.value.baseToken,
+        draftToken: staged.value.draftToken,
+        previewId: preview.value.previewId,
+        previewToken: preview.value.previewToken,
+        requestId: `a40-02b-${Date.now()}`,
+        reason: '用户确认保存补充后的隔套参数',
+      })
+      check('保存成功', applied.ok, applied.ok ? applied.value.revisionId : `${applied.error.code} ${applied.error.message}`)
+      const after = ctx.h.projectService.getSession(ctx.sessionId)!
+      const savedLength = after.snapshot.project.parameters.find((parameter) => parameter.key === 'length')
+      check('正式参数长度 = 12.00、来源备注 = 用户输入',
+        savedLength?.valueQ === 120_000 && (savedLength?.sourceNote ?? '').includes('用户输入'), savedLength)
+      check('正式版本只 +1', after.snapshot.fileRevisions.length === revisionsBefore + 1,
+        `${revisionsBefore} → ${after.snapshot.fileRevisions.length}`)
+
+      // ⑤ PDF 原证据不变：草稿指纹、候选字段、证据片段、文件字节。
+      check('提取草稿指纹未变（PDF 侧没有被改写）', extractionDigest(ctx) === extractionBefore, 'stableFingerprint 相同')
+      const afterDraft = after.snapshot.project.extractionDrafts.find((item) => item.draftId === extraction.draftId)!
+      const afterPart = afterDraft.candidates.find((candidate) => candidate.kind === 'part-dimension')
+      check('PDF 候选的长度字段仍为空（用户值没有冒充原文）',
+        afterPart?.kind === 'part-dimension' ? afterPart.data.length === null : false,
+        afterPart?.kind === 'part-dimension' ? afterPart.data.length : 'no-candidate')
+      check('任何 PDF 证据片段都不含 12.00',
+        afterDraft.candidates.every((candidate) => candidate.evidence.every((evidence) => !evidence.textSnippet.includes('12.00'))),
+        afterDraft.candidates.flatMap((candidate) => candidate.evidence.map((evidence) => evidence.textSnippet)).slice(0, 6))
+      check('公式候选仍为 blocked（没有擅自补操作数）',
+        afterDraft.candidates.find((candidate) => candidate.kind === 'formula')?.status === 'blocked',
+        afterDraft.candidates.find((candidate) => candidate.kind === 'formula')?.status)
+      check('PDF 文件字节未变', await fileSha256(pdfPath) === pdfBefore, pdfBefore.slice(0, 16))
+
+      // ⑥ 真模型第二轮：读当前状态并复核（用户值已在正式项目里，标注为用户输入）。
+      const saved2 = ctx.h.projectService.getSession(ctx.sessionId)!
+      await runTask(ctx, followUp, {
+        goal: `用户已在参数面板补充隔套长度 12.00 mm（来源备注：${USER_INPUT_NOTE}），不是任务书原文。请读取当前状态复核条款是否满足，不要修改任何数值。`,
+        systemPrompt: realTaskSystemPrompt({
+          projectId: saved2.snapshot.project.id,
+          baseRevisionId: saved2.snapshot.project.currentRevisionId,
+        }),
+        writes: false,
+      })
+      checkFollowUp('第二轮任务未失败', followUp.taskState !== 'failed', `${followUp.taskState}/${followUp.taskErrorCode}`)
+      checkFollowUp('模型读到并复述 12.00（来自当前状态，不是 PDF）',
+        /12(\.0+)?\s*mm|12000|0\.2/u.test(followUp.modelText) && /(用户|补充)/u.test(followUp.modelText), followUp.modelText.slice(0, 400))
+      checkFollowUp('读到的条款结论为满足（与应用计算一致）',
+        /满足|符合|satisfied|0\.0500|0\.05/u.test(followUp.modelText), followUp.modelText.slice(0, 400))
+      checkFollowUp('正式项目未被这次只读任务改动',
+        ctx.h.projectService.getSession(ctx.sessionId)!.snapshot.project.currentRevisionId === after.snapshot.project.currentRevisionId,
+        after.snapshot.project.currentRevisionId)
+      record.notes.push(`模型追问原文：${askText.slice(0, 300)}`)
+      record.notes.push(`用户补充值进入的通道：change:stage（与界面参数面板同款），来源备注=${USER_INPUT_NOTE}`)
+    } catch (error) {
+      record.notes.push(`异常：${error instanceof Error ? error.message : String(error)}`)
+      check('流程无异常', false, record.notes.at(-1))
+    } finally {
+      record.outcome = record.assertions.length > 0 && record.assertions.every((assertion) => assertion.ok) ? 'PASS' : 'FAIL'
+      followUp.outcome = followUp.assertions.length > 0 && followUp.assertions.every((assertion) => assertion.ok) ? 'PASS' : 'FAIL'
+      await cleanupAll()
+    }
+  }, 900_000)
+
+  /**
+   * A40-07b：预览后人工改参数再提交 → STALE_PREVIEW，正式版本不变；重新预览确认后才允许保存。
+   */
+  it('A40-07b：预览后人工改参数 → STALE_PREVIEW，正式版本与磁盘字节不变', async () => {
+    const record: AttemptRecord = {
+      item: 'A40-07b', attempt: 1, startedAt: new Date().toISOString(), durationMs: 0,
+      taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
+      modelCalls: 0, assertions: [], notes: [],
+    }
+    records.push(record)
+    const check = makeChecker(record)
+    try {
+      const ctx = await openContext(await buildSnapshot())
+      const session = ctx.h.projectService.getSession(ctx.sessionId)!
+      const draft = await ctx.service.prepareDemoDraft(1)
+      check('应用准备工程草稿', draft.ok, draft.ok ? draft.data.draftId : `${draft.code} ${draft.message}`)
+      if (!draft.ok) throw new Error(`prepareDemoDraft 失败：${draft.code}`)
+      const revisionBefore = session.snapshot.project.currentRevisionId
+      const revisionsBefore = session.snapshot.fileRevisions.length
+      const bytesBefore = await fileSha256(ctx.projectPath)
+
+      // ① 真模型：改 12.04 并预览。
+      await runTask(ctx, record, {
+        goal: '把隔套长度改为 12.04 mm，其余尺寸保持原值，然后预览检查。',
+        systemPrompt: CHANGE_PROMPT(draft.data.draftId, revisionBefore, session.snapshot.project.id),
+      })
+      const preview1 = previewOf(ctx)
+      check('模型产生预览（12.04）', preview1 !== null && preview1.parameters.find((parameter) => parameter.key === 'length')?.valueQ === 120_400,
+        preview1 === null ? 'null' : preview1.parameters)
+      if (preview1 === null) throw new Error('没有预览')
+
+      // ② 用户点「确认保存」前的授权已签发（预览指纹绑定在授权里）。
+      const issued = await ctx.service.issueApproval(1, preview1.previewId)
+      check('已签发一次性授权（绑定 12.04 的预览指纹）', issued.ok, issued.ok ? issued.data.approvalId : `${issued.code}`)
+      if (!issued.ok) throw new Error(`issueApproval 失败：${issued.code}`)
+
+      // ③ 人工改参数（界面参数面板同款 stage 路径）→ 草稿新版本，旧预览过期。
+      const staged = await ctx.service.run(1, 'stage', {
+        toolMode: 'agent', draftId: preview1.draftId, baseRevisionId: revisionBefore,
+        parameter: 'length', valueMm: '12.05', lockedKeys: ['innerDiameter', 'outerDiameter'],
+      })
+      check('人工改参数成功（草稿版本 +1）',
+        staged.ok && (staged.data as AgentDraftValue).draftRevision === preview1.draftRevision + 1,
+        staged.ok ? (staged.data as AgentDraftValue).draftRevision : `${staged.code} ${staged.message}`)
+
+      // ④ 用旧预览的授权提交 → STALE_PREVIEW，正式版本与磁盘字节都不变。
+      const stale = await ctx.service.commitApprovedDraft(1, {
+        approvalId: issued.data.approvalId, draftId: preview1.draftId, previewFingerprint: preview1.previewFingerprint,
+      })
+      const staleCause = stale.ok ? null : (stale.details as { causeCode?: string } | undefined)?.causeCode ?? null
+      check('旧预览提交被拒（STALE_PREVIEW / PREVIEW_STALE）',
+        !stale.ok && stale.code === 'STALE_PREVIEW' && staleCause === 'PREVIEW_STALE',
+        stale.ok ? 'unexpected ok' : { code: stale.code, causeCode: staleCause, message: stale.message })
+      const afterStale = ctx.h.projectService.getSession(ctx.sessionId)!
+      check('正式版本未变', afterStale.snapshot.project.currentRevisionId === revisionBefore, afterStale.snapshot.project.currentRevisionId)
+      check('版本数未变', afterStale.snapshot.fileRevisions.length === revisionsBefore, afterStale.snapshot.fileRevisions.length)
+      check('正式长度仍 12.00', afterStale.snapshot.project.parameters.find((parameter) => parameter.key === 'length')?.valueQ === 120_000,
+        afterStale.snapshot.project.parameters.find((parameter) => parameter.key === 'length'))
+      check('磁盘字节未变', await fileSha256(ctx.projectPath) === bytesBefore, bytesBefore.slice(0, 16))
+
+      // ⑤ 必须重新预览确认：新预览 → 授权 → 提交成功，正式值 = 12.05。
+      const preview2 = await ctx.service.run(1, 'preview', { toolMode: 'agent', draftId: preview1.draftId, baseRevisionId: revisionBefore })
+      check('重新预览成功', preview2.ok, preview2.ok ? '' : `${preview2.code} ${preview2.message}`)
+      const summary2 = previewOf(ctx)
+      check('新预览反映 12.05', summary2 !== null && summary2.parameters.find((parameter) => parameter.key === 'length')?.valueQ === 120_500,
+        summary2 === null ? 'null' : summary2.parameters)
+      if (!preview2.ok || summary2 === null) throw new Error('重新预览失败')
+      const issued2 = await ctx.service.issueApproval(1, summary2.previewId)
+      check('重新确认后签发新授权', issued2.ok, issued2.ok ? issued2.data.approvalId : `${issued2.code}`)
+      if (!issued2.ok) throw new Error(`issueApproval#2 失败：${issued2.code}`)
+      const committed = await ctx.service.commitApprovedDraft(1, {
+        approvalId: issued2.data.approvalId, draftId: summary2.draftId, previewFingerprint: summary2.previewFingerprint,
+      })
+      check('重新确认后提交成功', committed.ok, committed.ok ? committed.data.revisionId : `${committed.code} ${committed.message}`)
+      const after = ctx.h.projectService.getSession(ctx.sessionId)!
+      check('正式长度更新为 12.05', after.snapshot.project.parameters.find((parameter) => parameter.key === 'length')?.valueQ === 120_500,
+        after.snapshot.project.parameters.find((parameter) => parameter.key === 'length'))
+      check('版本数 +1', after.snapshot.fileRevisions.length === revisionsBefore + 1,
+        `${revisionsBefore} → ${after.snapshot.fileRevisions.length}`)
+      record.notes.push(`旧预览提交回执：${JSON.stringify(stale.ok ? 'ok' : { code: stale.code, causeCode: staleCause, message: stale.message })}`)
+    } catch (error) {
+      record.notes.push(`异常：${error instanceof Error ? error.message : String(error)}`)
+      check('流程无异常', false, record.notes.at(-1))
+    } finally {
+      record.outcome = record.assertions.length > 0 && record.assertions.every((assertion) => assertion.ok) ? 'PASS' : 'FAIL'
+      await cleanupAll()
+    }
+  }, 600_000)
+
+  /**
+   * A40-07c：取消/中断落在保存原子步骤。
+   *
+   * 产品在「选好路径」之后没有取消通道，因此原子步骤只有两个边界：提交或未提交。
+   * 判据：回执与磁盘一致——CANCELLED 必须没有文件；EXPORTED 必须文件存在且哈希一致；
+   * 中断必须没有目标文件也没有临时残留。任何“显示已取消但文件已写”都算失败。
+   */
+  it('A40-07c：取消落在保存原子步骤 → 回执与磁盘一致（不允许“已取消但文件已写”）', async () => {
+    const record: AttemptRecord = {
+      item: 'A40-07c', attempt: 1, startedAt: new Date().toISOString(), durationMs: 0,
+      taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
+      modelCalls: 0, assertions: [], notes: [],
+    }
+    records.push(record)
+    const check = makeChecker(record)
+    const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'a40-07c-'))
+    try {
+      const ctx = await openContext(await buildSnapshot())
+      const session = ctx.h.projectService.getSession(ctx.sessionId)!
+      const projectBytesBefore = await fileSha256(ctx.projectPath)
+
+      // ① 真模型尝试导出：本测试没装配系统对话框端口，模型必须收到明确失败回执，不能自称已导出。
+      await runTask(ctx, record, {
+        goal: '导出当前已保存版本的 SVG 图纸。',
+        systemPrompt: realTaskSystemPrompt({
+          projectId: session.snapshot.project.id,
+          baseRevisionId: session.snapshot.project.currentRevisionId,
+        }),
+        writes: false,
+      })
+      const exportReceipt = record.toolReceipts.find((receipt) => receipt.tool === 'export')
+      check('模型导出收到明确失败回执（端口未装配，不是假成功）',
+        exportReceipt === undefined || exportReceipt.errorCode !== null,
+        exportReceipt ?? 'no-export-call')
+      check('模型文本没有声称已导出文件',
+        !/(已导出|导出成功|文件已保存|已写入)/u.test(record.modelText), record.modelText.slice(0, 240))
+
+      const makeService = (ports: { pickTarget: (windowId: number, name: string) => Promise<string | null>; store?: DrawingExportStore }) =>
+        new AgentToolService({
+          controller: ctx.h.controller,
+          projectService: ctx.h.projectService,
+          recovery: ctx.h.recovery,
+          rootDir: ctx.h.workspace,
+          exportPorts: ports,
+        })
+      const temps = async () => (await fsp.readdir(dir)).filter((name) => name.endsWith('.tmp'))
+      const exists = async (target: string) => {
+        try { await fsp.access(target); return true } catch { return false }
+      }
+
+      // ② 对话框取消（唯一真实的取消通道）：CANCELLED，且没有文件。
+      const targetCancel = path.join(dir, 'cancel.svg')
+      const cancelled = await makeService({ pickTarget: async () => null }).exportApprovedVersion(1, 'svg')
+      check('对话框取消 → CANCELLED',
+        !cancelled.ok && cancelled.code === 'CANCELLED', cancelled.ok ? 'unexpected ok' : { code: cancelled.code, message: cancelled.message })
+      check('取消后目标文件不存在', !(await exists(targetCancel)), targetCancel)
+
+      // ③ 原子步骤中断：临时文件写入被取消（ECANCELED）。
+      const targetWrite = path.join(dir, 'write-cancel.svg')
+      const writeInterrupted = await makeService({
+        pickTarget: async () => targetWrite,
+        store: new DrawingExportStore({
+          ops: interruptedOps({
+            writeExclusive: async () => { throw Object.assign(new Error('injected cancel while writing temp'), { code: 'ECANCELED' }) },
+          }),
+        }),
+      }).exportApprovedVersion(1, 'svg')
+      check('写入临时文件时被取消 → SAVE_FAILED（不是 CANCELLED 也不是成功）',
+        !writeInterrupted.ok && writeInterrupted.code === 'SAVE_FAILED',
+        writeInterrupted.ok ? 'unexpected ok' : { code: writeInterrupted.code, message: writeInterrupted.message })
+      check('写入中断后目标文件不存在、无临时残留',
+        !(await exists(targetWrite)) && (await temps()).length === 0, { target: await exists(targetWrite), temps: await temps() })
+
+      // ④ 原子步骤中断：rename（提交点）被取消。
+      const targetRename = path.join(dir, 'rename-cancel.svg')
+      const renameInterrupted = await makeService({
+        pickTarget: async () => targetRename,
+        store: new DrawingExportStore({
+          ops: interruptedOps({
+            rename: async () => { throw Object.assign(new Error('injected cancel at rename'), { code: 'ECANCELED' }) },
+          }),
+        }),
+      }).exportApprovedVersion(1, 'svg')
+      check('rename 提交点被取消 → SAVE_FAILED，原目标保持不变',
+        !renameInterrupted.ok && renameInterrupted.code === 'SAVE_FAILED',
+        renameInterrupted.ok ? 'unexpected ok' : { code: renameInterrupted.code, message: renameInterrupted.message })
+      check('提交点中断后目标文件不存在、无临时残留',
+        !(await exists(targetRename)) && (await temps()).length === 0, { target: await exists(targetRename), temps: await temps() })
+
+      // ⑤ 取消在提交点之后到达：写入已提交，回执必须是 EXPORTED，且哈希/大小与磁盘一致。
+      const targetCommit = path.join(dir, 'after-commit.svg')
+      const store = new CancelAfterCommitStore()
+      const exported = await makeService({ pickTarget: async () => targetCommit, store }).exportApprovedVersion(1, 'svg')
+      const receipt: AgentExportValue | null = exported.ok ? exported.data : null
+      check('提交点之后的取消不撤销已写文件：回执 = EXPORTED',
+        exported.ok && receipt?.status === 'EXPORTED', exported.ok ? receipt : { code: exported.code, message: exported.message })
+      check('存储层已跨过原子提交点', store.committed, store.committed)
+      const diskHash = (await exists(targetCommit)) ? await fileSha256(targetCommit) : null
+      const diskSize = (await exists(targetCommit)) ? (await fsp.stat(targetCommit)).size : null
+      check('回执哈希/字节数与磁盘一致', receipt !== null && diskHash === receipt.sha256 && diskSize === receipt.byteSize,
+        { receipt: receipt === null ? null : { sha256: receipt.sha256, byteSize: receipt.byteSize }, diskHash, diskSize })
+      check('导出物是矢量 SVG（不是截图）', diskHash !== null && (await fsp.readFile(targetCommit, 'utf8')).includes('<svg')
+        && (await fsp.readFile(targetCommit, 'utf8')).includes('width="297mm"'), targetCommit)
+
+      // ⑥ 不变式：不允许出现「回执说取消/失败，但目标文件已写」。
+      const cases = [
+        { name: 'dialog-cancel', code: cancelled.ok ? 'OK' : cancelled.code, file: await exists(targetCancel) },
+        { name: 'write-interrupt', code: writeInterrupted.ok ? 'OK' : writeInterrupted.code, file: await exists(targetWrite) },
+        { name: 'rename-interrupt', code: renameInterrupted.ok ? 'OK' : renameInterrupted.code, file: await exists(targetRename) },
+        { name: 'after-commit', code: exported.ok ? 'EXPORTED' : exported.code, file: await exists(targetCommit) },
+      ]
+      check('没有“已取消/失败但文件已写”的组合',
+        cases.every((item) => (item.code === 'EXPORTED' ? item.file : !item.file)), cases)
+      check('所有成功回执都有对应文件', cases.filter((item) => item.code === 'EXPORTED').every((item) => item.file), cases)
+      check('导出没有改动正式项目字节', await fileSha256(ctx.projectPath) === projectBytesBefore, projectBytesBefore.slice(0, 16))
+      record.notes.push(`原子步骤边界实测：${JSON.stringify(cases)}`)
+    } catch (error) {
+      record.notes.push(`异常：${error instanceof Error ? error.message : String(error)}`)
+      check('流程无异常', false, record.notes.at(-1))
+    } finally {
+      record.outcome = record.assertions.length > 0 && record.assertions.every((assertion) => assertion.ok) ? 'PASS' : 'FAIL'
+      await fsp.rm(dir, { recursive: true, force: true }).catch(() => undefined)
+      await cleanupAll()
+    }
+  }, 600_000)
+
+  /**
+   * A40-07d：切换项目后旧任务回包 → 按 taskId+projectId 丢弃，新项目零写入。
+   */
+  it('A40-07d：切换项目后旧任务回包 → 按 taskId+projectId 丢弃，新项目零写入', async () => {
+    const record: AttemptRecord = {
+      item: 'A40-07d', attempt: 1, startedAt: new Date().toISOString(), durationMs: 0,
+      taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
+      modelCalls: 0, assertions: [], notes: [],
+    }
+    records.push(record)
+    const check = makeChecker(record)
+    try {
+      const ctx = await openContext(await buildSnapshot())
+      const sessionA = ctx.h.projectService.getSession(ctx.sessionId)!
+      const projectA = sessionA.snapshot.project.id
+      const registry = new ModelAdapterRegistry()
+      registry.register(new LateReplyAdapter(adapterFor(), 1_200))
+      const scheduler = new AgentScheduler({
+        store: new AgentTaskStore({ rootDir: ctx.h.workspace }),
+        dispatch: { dispatch: (call) => ctx.service.run(1, call.command, call.arguments) },
+        adapters: registry,
+        provider: { getProviderStatus: () => ({ configured: true, provider: 'openai-compatible-1' }) },
+        activeProjectId: projectA,
+      })
+      const startedAt = Date.now()
+      const started = await scheduler.startTask({
+        projectId: projectA,
+        baseRevisionId: sessionA.snapshot.project.currentRevisionId,
+        goal: '把隔套长度改为 12.04 mm 并检查。',
+        modelId: 'openai-compatible-1',
+        writes: true,
+        systemPrompt: CHANGE_PROMPT('agent-draft-does-not-exist', sessionA.snapshot.project.currentRevisionId, projectA),
+        messages: [{ role: 'user', content: '把隔套长度改为 12.04 mm 并检查。' }],
+      })
+      check('旧任务已启动（项目 A）', started.ok, started.ok ? started.taskId : `${started.code} ${started.message}`)
+      if (!started.ok) throw new Error(`startTask 失败：${started.code}`)
+
+      // 等真模型的回包真的开始到达（token 事件），再切项目：这样“旧任务回包”是实际发生的，
+      // 不是靠时序假装的。包装器在回包到达后又压 1.2 s 才交给调度层，留出切换窗口。
+      const deadline = Date.now() + 90_000
+      let sawTokens = false
+      let tokenCount = 0
+      while (Date.now() < deadline) {
+        const traceNow = scheduler.getTrace(started.taskId)
+        tokenCount = (traceNow?.events ?? []).filter((event) => event.type === 'token').length
+        if (tokenCount > 0) { sawTokens = true; break }
+        if (traceNow !== null && ['cancelled', 'failed', 'completed', 'ready-to-commit'].includes(traceNow.task.state)) break
+        await new Promise((resolve) => setTimeout(resolve, 25))
+      }
+      check('真模型回包已开始到达（token 事件）', sawTokens,
+        sawTokens ? `tokens=${tokenCount}` : '等待 90 s 仍无 token')
+
+      // 切换项目：新建并打开项目 B（应用生成的新 projectId），再把调度器的活动项目切到 B。
+      const createdB = await ipcCall<ProjectOpenValue>(ctx, IPC_CHANNELS.projectNew, { name: 'A40-07d 项目 B', template: 'chain-demo' })
+      check('切换前能打开第二个项目（id 不同）',
+        createdB.ok && createdB.value.snapshot.project.id !== projectA,
+        createdB.ok ? { projectA, projectB: createdB.value.snapshot.project.id } : `${createdB.error.code} ${createdB.error.message}`)
+      if (!createdB.ok) throw new Error(`新建项目 B 失败：${createdB.error.code} ${createdB.error.message}`)
+      const projectB = createdB.value.snapshot.project.id
+      const sessionB = ctx.h.projectService.getSession(createdB.value.sessionId)!
+      const bBaseline = {
+        revisionId: sessionB.snapshot.project.currentRevisionId,
+        revisions: sessionB.snapshot.fileRevisions.length,
+        parameters: JSON.stringify(sessionB.snapshot.project.parameters.map((parameter) => [parameter.key, parameter.valueQ])),
+        drafts: sessionB.snapshot.project.extractionDrafts.length,
+      }
+      scheduler.setActiveProject(projectB)
+
+      const task = await started.completion
+      record.durationMs = Date.now() - startedAt
+      record.taskState = task.state
+      record.taskErrorCode = task.errorCode
+      const steps = scheduler.getSteps(task.taskId)
+      record.toolReceipts = steps.filter((step) => step.kind === 'tool').map((step) => ({
+        tool: typeof step.inputSummary.tool === 'string' ? step.inputSummary.tool : 'tool',
+        errorCode: step.errorCode, durationMs: step.durationMs,
+      }))
+      const trace = scheduler.getTrace(task.taskId)!
+      record.modelText = (trace.events as ModelEvent[])
+        .filter((event): event is Extract<ModelEvent, { type: 'token' }> => event.type === 'token')
+        .map((event) => event.text).join('')
+      const modelSteps = steps.filter((step) => step.kind === 'model')
+      record.modelCalls = modelSteps.length
+      record.modelUsage = modelSteps.reduce((sum, step) => {
+        const usage = (step.inputSummary as { usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number; cacheHitTokens?: number; cacheMissTokens?: number } }).usage
+        return {
+          prompt: sum.prompt + (usage?.promptTokens ?? 0),
+          completion: sum.completion + (usage?.completionTokens ?? 0),
+          total: sum.total + (usage?.totalTokens ?? 0),
+          cacheHit: sum.cacheHit + (usage?.cacheHitTokens ?? 0),
+          cacheMiss: sum.cacheMiss + (usage?.cacheMissTokens ?? 0),
+        }
+      }, { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 })
+
+      check('旧任务记为 cancelled / STALE_REPLY',
+        task.state === 'cancelled' && task.errorCode === 'STALE_REPLY', `${task.state}/${task.errorCode}`)
+      const staleStep = steps.find((step) => step.errorCode === 'STALE_REPLY' && step.kind === 'model')
+      const staleMarker = staleStep?.inputSummary.staleReply as { taskId?: string; projectId?: string; activeProjectId?: string } | undefined
+      check('丢弃依据是 taskId + projectId（证据里写全了身份）',
+        staleMarker?.taskId === task.taskId && staleMarker?.projectId === projectA && staleMarker?.activeProjectId === projectB,
+        staleMarker ?? 'no-stale-step')
+      check('旧任务没有执行任何工具调用（回包里的调用被丢弃）',
+        record.toolReceipts.length === 0, record.toolReceipts)
+      check('真模型回包确实到达过（文本事件非空），随后被丢弃',
+        record.modelText.length > 0, `tokens=${record.modelText.length} text=${record.modelText.slice(0, 160)}`)
+
+      const afterB = ctx.h.projectService.getSession(createdB.value.sessionId)!
+      check('新项目正式版本未变', afterB.snapshot.project.currentRevisionId === bBaseline.revisionId,
+        afterB.snapshot.project.currentRevisionId)
+      check('新项目版本数未变', afterB.snapshot.fileRevisions.length === bBaseline.revisions, afterB.snapshot.fileRevisions.length)
+      check('新项目参数未被改写',
+        JSON.stringify(afterB.snapshot.project.parameters.map((parameter) => [parameter.key, parameter.valueQ])) === bBaseline.parameters,
+        afterB.snapshot.project.parameters)
+      check('新项目没有新增提取草稿', afterB.snapshot.project.extractionDrafts.length === bBaseline.drafts,
+        afterB.snapshot.project.extractionDrafts.length)
+      check('新项目仍未被保存到磁盘（零落盘）', afterB.path === null, afterB.path)
+      const agentDir = path.join(ctx.h.workspace, 'agent-inputs')
+      const drafts = await fsp.readdir(agentDir).catch(() => [] as string[])
+      check('应用工作区没有任何工程草稿写入（零写入）', drafts.length === 0, drafts)
+      record.notes.push(`丢弃标记：${JSON.stringify(staleMarker)}；回包文本前 160 字：${record.modelText.slice(0, 160)}`)
+      if (record.modelUsage.prompt === 0) {
+        record.notes.push('该次模型调用的 usage 未落盘：回包被 STALE_REPLY 丢弃，调度层没有为它记录用量，因此成本汇总会少算这一次请求')
+      }
+    } catch (error) {
+      record.notes.push(`异常：${error instanceof Error ? error.message : String(error)}`)
+      check('流程无异常', false, record.notes.at(-1))
+    } finally {
+      record.outcome = record.assertions.length > 0 && record.assertions.every((assertion) => assertion.ok) ? 'PASS' : 'FAIL'
       await cleanupAll()
     }
   }, 600_000)

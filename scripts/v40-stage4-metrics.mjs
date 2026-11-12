@@ -49,7 +49,7 @@ const metrics = {
   cost: data.cost ?? null,
   pricing: data.pricing ?? null,
   providerProbe: data.providerProbe ?? null,
-  note: '人工回填 = 交付方手工填写工程数值的次数；本次为 0（所有数值来自提取候选或用户确认）。',
+  note: '人工回填 = 交付方手工填写工程数值的次数；本次为 0（所有数值来自提取候选或用户确认）。A40-02b 的 12.00 由用户在参数面板补充，并带「用户输入」来源备注，不属于交付方回填。',
 }
 await fs.writeFile('docs/evidence/v40-stage4/metrics.json', serializeEvidence(metrics))
 
