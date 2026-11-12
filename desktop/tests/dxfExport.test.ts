@@ -131,7 +131,9 @@ describe('D-07 保存成功：回执文件名/字节数/SHA-256 与磁盘一致'
       expect(Object.keys(parsed!.tables.layer.layers).sort()).toEqual(
         ['图框', '尺寸', '文字', '中心线', '轮廓'].sort(),
       )
-      const texts = parsed!.entities
+      // 2000 的标注文字在匿名标注块里（真 DIMENSION 引用的几何块），读回要连块内容一起看。
+      const blockEntities = Object.values(parsed!.blocks ?? {}).flatMap((block) => block.entities ?? [])
+      const texts = [...parsed!.entities, ...blockEntities]
         .filter((entity) => entity.type === 'TEXT')
         .map((entity) => (entity as unknown as { text: string }).text)
       expect(texts).toContain('12.050')

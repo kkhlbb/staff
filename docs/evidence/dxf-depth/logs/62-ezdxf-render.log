@@ -1,0 +1,43 @@
+ezdxf 1.4.2 | matplotlib 3.9.4
+backend = ezdxf.addons.drawing.matplotlib.MatplotlibBackend（ezdxf 官方 drawing addon 的 matplotlib 后端，PNG 用 Agg）
+config  = background=WHITE color=BLACK min_lineweight=0.18
+
+[1] 模型空间渲染：spacer-20x32x12.05-dxf-2000-1x1.dxf
+  dxfversion=AC1015 codepage=ANSI_936
+  layout=Model paperspace=False entities={'POLYLINE': 1, 'LINE': 5, 'CIRCLE': 2, 'TEXT': 1, 'DIMENSION': 3}
+  DIMENSION handle=143 type=32 block=*D1 actual=12.05 text='12.050' block_entities={'LINE': 7, 'TEXT': 1} block_texts=['12.050']
+  DIMENSION handle=144 type=35 block=*D2 actual=20.0 text='%%c20.000' block_entities={'LINE': 4, 'TEXT': 1} block_texts=['%%c20.000']
+  DIMENSION handle=145 type=35 block=*D3 actual=32.0 text='%%c32.000' block_entities={'LINE': 4, 'TEXT': 1} block_texts=['%%c32.000']
+  STYLE '标准' font='txt.shx' bigfont='hztxt.shx' -> 渲染用 FontFace(filename='Arial Unicode.ttf', family='Arial Unicode MS', style='Regular', weight=400, width=5)
+  STYLE 'Standard' font='txt' bigfont=None -> 渲染用 FontFace(filename='Arial Unicode.ttf', family='Arial Unicode MS', style='Regular', weight=400, width=5)
+  模型包围盒 161.78x95.27 mm -> 2200x1295 px，有墨像素=41107，墨迹包围盒=(100, 58, 2099, 1236)
+  wrote screenshots/render-model-2000-1x1.png
+  [差分证明] 去掉 DIMENSION 后不同像素=58111，差分包围盒=(100, 58, 2099, 1236)  <- 这些像素就是标注的尺寸线/箭头/数字
+
+[2] 图纸空间渲染（1x1）：spacer-20x32x12.05-dxf-2000-1x1.dxf
+  layout=Layout1 paperspace=True entities={'POLYLINE': 3, 'LINE': 10, 'TEXT': 29, 'VIEWPORT': 1}
+  VIEWPORT center=(210,176) size=360x208 view_center=(80,130) view_height=208 -> 比例 1:1
+  按视口变换矩阵预测：轮廓层（剖视+端视图）在纸面占 122.03x32.00 mm，位置 x=203.97..326.00 y=160.00..192.00
+  渲染 4960x3507 px（A3 @300dpi），有墨像素=263401，墨迹包围盒(px)=(178, 159, 4783, 3348)
+  墨迹包围盒(纸面 mm)=(15.07, 13.46, 404.96, 283.46)
+  wrote screenshots/render-layout-2000-1x1.png
+  [差分证明] 去掉 VIEWPORT 后不同像素=36567，差分包围盒=(2365, 1132, 4224, 2223)
+            差分包围盒(纸面 mm)=(200.24, 108.71, 357.63, 201.08)
+  [量图] 12.050 尺寸线所在纸面高度 y=159.00 mm，渲染图上该行有墨 x=204.13..215.90 -> 长 11.77 mm
+  wrote screenshots/render-layout-2000-1x1-viewport-zoom.png（纸面 x=30..390, y=72..280 的裁剪）
+
+[2] 图纸空间渲染（1x2）：spacer-20x32x12.05-dxf-2000-1x2.dxf
+  layout=Layout1 paperspace=True entities={'POLYLINE': 3, 'LINE': 10, 'TEXT': 29, 'VIEWPORT': 1}
+  VIEWPORT center=(210,176) size=360x208 view_center=(160,260) view_height=416 -> 比例 1:0.5
+  按视口变换矩阵预测：轮廓层（剖视+端视图）在纸面占 111.01x16.00 mm，位置 x=206.99..318.00 y=168.00..184.00
+  渲染 4960x3507 px（A3 @300dpi），有墨像素=261306，墨迹包围盒(px)=(178, 159, 4783, 3348)
+  墨迹包围盒(纸面 mm)=(15.07, 13.46, 404.96, 283.46)
+  wrote screenshots/render-layout-2000-1x2.png
+  [差分证明] 去掉 VIEWPORT 后不同像素=34318，差分包围盒=(2400, 1224, 4132, 2223)
+            差分包围盒(纸面 mm)=(203.2, 108.71, 349.84, 193.29)
+  [量图] 12.050 尺寸线所在纸面高度 y=167.00 mm，渲染图上该行有墨 x=207.09..212.94 -> 长 5.84 mm
+  wrote screenshots/render-layout-2000-1x2-viewport-zoom.png（纸面 x=30..390, y=72..280 的裁剪）
+
+[量图汇总] 12.050 尺寸线纸面长度：1:1=11.77 mm，1:2=5.84 mm，比值=2.01（1:2 的视口比例若真的是 0.5，比值应是 2.00）
+
+OK
