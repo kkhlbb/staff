@@ -4,7 +4,7 @@
     "model": "deepseek-chat",
     "adapter": "openai-compatible-1"
   },
-  "project": "stage4-run-28591.cunlian",
+  "project": "stage4-run-31993.cunlian",
   "checks": [
     {
       "id": "provider-configured",
@@ -14,12 +14,12 @@
     {
       "id": "provider-test",
       "ok": true,
-      "text": "连接成功 · deepseek-flash · 1397 ms（合成文本，未发送项目资料）"
+      "text": "连接成功 · deepseek-flash · 1066 ms（合成文本，未发送项目资料）"
     },
     {
       "id": "preview-12.04",
       "ok": true,
-      "text": ".1000～0.3000 mm。\n- 相对条款区间的裕量：下限 0.0100 mm，上限 0.0900 mm，说明区间仍落在条款范围内。\n- 注意：preview 的 requirementPreview 状态为 unchecked / NO_REQUIREMENT（预览未带条款状态），条款对比信息取自基础版本已保存的检查记录；如需正式条款结论，请在界面中复核确认。\n\n变更幅度：长度 12.0000 → 12.0400 mm，使间隙名义值由 0.2000 mm 降到 0.1600 mm，下限裕量从 0.0500 mm 收窄到 0.0100 mm。\n\n保存版本与导出需你在界面确认后执行，我没有这些权限。待答问题暂无待答问题。最近工具结果（回执）preview · oktool:ce02430a-1765-4714-9…stage · oktool:5d7f31fa-9eed-466b-8…context · oktool:8578c7f6-4f7a-4133-a…预览与确认结果区间0.110 ～ 0.210 mm参数内径 20.000 · 外径 32.000 · 长度 12.040预览指纹2996ac78aee263ca…有效期至21:50:03活动条款检查：satisfied · WITHIN_REQUIREMENT裕量 下 0.010 / 上 0.090 mm确认保存定位条款来源"
+      "text": "改为 12.04 mm，其余参数保持原值（内径 20.0000 mm、外径 32.0000 mm，均锁定未动），并已重算复核：\n\n- 装配间隙结果区间：0.1100～0.2100 mm（标称 0.1600 mm）\n- 任务书条款区间：0.1000～0.3000 mm\n- 裕量（相对条款区间）：下侧 0.0100 mm，上侧 0.0900 mm；状态 within（在区间内）\n\n说明：以上是当前工作草稿（draftId agent-draft-e2bc0afe…，draftRevision 2）的预览结果，尚未保存为正式版本。确认候选、签发授权、提交版本和导出需要你在界面操作；需要的话我可以说明下一步。待答问题暂无待答问题。最近工具结果（回执）preview · oktool:f9f6345b-3002-43e6-9…stage · oktool:34a9bed6-26e7-49fa-b…context · oktool:cc2d84c4-0f12-40ae-b…预览与确认结果区间0.110 ～ 0.210 mm参数内径 20.000 · 外径 32.000 · 长度 12.040预览指纹a3669294ba49043d…有效期至22:15:09活动条款检查：satisfied · WITHIN_REQUIREMENT裕量 下 0.010 / 上 0.090 mm确认保存定位条款来源"
     },
     {
       "id": "commit",
@@ -30,29 +30,29 @@
       "id": "over-limit-blocked",
       "ok": true,
       "confirmDisabled": true,
-      "text": "（NO_REQUIREMENT），需在界面完成条款复核才能得出正式判定\n\n可见这次加长 0.06 mm 使间隙整体下移，下端已超出条款下限。若需满足条款，隔套长度应回落到较短一侧（例如原 12.0400 mm 时区间为 [0.1100, 0.2100] mm，两端裕量 0.0100/0.0900 mm）。是否需要我再按某个目标长度重算？待答问题暂无待答问题。最近工具结果（回执）preview · oktool:c782979c-3ae3-4109-a…stage · oktool:4163115c-00eb-43c7-9…context · oktool:8f4c4335-a8f2-4fd3-8…预览与确认结果区间0.050 ～ 0.150 mm参数内径 20.000 · 外径 32.000 · 长度 12.100预览指纹6411c5c990ace6b9…有效期至21:50:10活动条款检查：unsatisfied · LOWER_VIOLATED裕量 下 -0.050 / 上 0.150 mm确认保存定位条款来源条款检查不是 satisfied；确认保存已禁用，提交也会被主进程拦截。"
+      "text": "1000 mm 还低 0.0500 mm\n  - 上限侧裕量 0.1500 mm\n- 主要影响：隔套环 S 贡献公差 0.0200 mm（总长 H 0.0400 mm、左右轴承各 0.0200 mm）\n\n如果你确实要满足条款，就需要把长度往回减小，仅靠这里的修改无法同时满足“12.10 mm”和该条款。是否需要我按条款试算一个可行长度？待答问题暂无待答问题。最近工具结果（回执）preview · oktool:62844bad-ada5-4a08-a…stage · oktool:54b12589-6369-4676-9…context · oktool:9f7a24a0-d657-4f6c-a…预览与确认结果区间0.050 ～ 0.150 mm参数内径 20.000 · 外径 32.000 · 长度 12.100预览指纹d9351a86dd51e5ac…有效期至22:15:15活动条款检查：unsatisfied · LOWER_VIOLATED裕量 下 -0.050 / 上 0.150 mm确认保存定位条款来源条款检查不是 satisfied；确认保存已禁用，提交也会被主进程拦截。"
     },
     {
       "id": "export-dialog",
       "ok": false,
       "blocked": true,
-      "reason": "no-accessibility-permission: System Events 对寸链报 0（Terminal=0、Finder=0）；本会话没有辅助功能权限，无法投递点击或按键",
+      "reason": "accessibility-available-but-this-run-did-not-drive-the-dialog",
       "probe": {
-        "寸链": 0,
+        "寸链": 1,
         "Terminal": 0,
-        "Finder": 0
+        "Finder": 2
       },
       "reference": "README §7（System Events 复核步骤 + 保存为字段陷阱）；导出产物 docs/evidence/v40-stage4/artifacts/a40-project-approved.svg"
     },
     {
       "id": "clarification",
       "ok": true,
-      "text": "版本不一致，属于尚未提交的草稿，不能当作已保存值。\n- 隔套长度绑定尺寸链环 S，计算间隙名义 0.1000 mm，区间 [0.0500, 0.1500] mm，条款要求 0.1000～0.3000 mm；当前状态 outside（下限裕量 -0.0500 mm）。\n\n需要你确认两点：\n1. 改哪个参数、改成多少毫米？（内径 / 外径 / 隔套长度）\n2. 如果只改长度，请给出目标值（如 11.89 mm），我按你给的值单参数修改并锁定其余两项。\n\n请给一个具体的毫米数，我再执行。待答问题暂无待答问题。最近工具结果（回执）context · oktool:9804d0dc-2c3d-4fd3-9…预览与确认结果区间0.050 ～ 0.150 mm参数内径 20.000 · 外径 32.000 · 长度 12.100预览指纹6411c5c990ace6b9…有效期至21:50:10活动条款检查：unsatisfied · LOWER_VIOLATED裕量 下 -0.050 / 上 0.150 mm确认保存定位条款来源条款检查不是 satisfied；确认保存已禁用，提交也会被主进程拦截。"
+      "text": "需要先确认“改”的具体内容：要修改哪个参数、改成多少？另外，请允许我先查看当前已保存版本的参数，这样才不会动到其他量。\n\n当前已保存版本（rev-a-26170afb）的隔套参数是：内径 20.0000 mm、外径 32.0000 mm、长度 12.0400 mm。\n\n请补充两点，我才能动手：\n\n1. 改哪个参数：内径、外径，还是长度（长度绑定了尺寸链里的 S 环，会影响装配间隙校核）？\n2. 改成多少 mm。\n\n另外，你只授权长度的话，我会把另外两个参数锁定，其他量不动。请确认。待答问题暂无待答问题。最近工具结果（回执）context · oktool:60ff146a-58e0-4307-b…预览与确认结果区间0.050 ～ 0.150 mm参数内径 20.000 · 外径 32.000 · 长度 12.100预览指纹d9351a86dd51e5ac…有效期至22:15:15活动条款检查：unsatisfied · LOWER_VIOLATED裕量 下 -0.050 / 上 0.150 mm确认保存定位条款来源条款检查不是 satisfied；确认保存已禁用，提交也会被主进程拦截。"
     },
     {
       "id": "reopen-recap",
       "ok": true,
-      "text": " length：12.0000 mm → **12.0400 mm**（+0.04 mm）\n- 内径 innerDiameter 20.0000 mm、外径 outerDiameter 32.0000 mm 未变\n\n**当前检查结果**\n\n需要注意基准不同：\n- 该已保存版本自身的检查记录（`check-a-ef44f116…`，provenance=committed）状态为 **satisfied**（满足条款）：计算区间 [0.1100, 0.2100] mm，相对条款 0.1000～0.3000 mm 的裕量为下侧 0.0100 mm、上侧 0.0900 mm。\n- 但那次检查的 basis 是 draft `agent-draft-0d63cfbf…` 的 draftRevision 2，并非当前工作草稿。\n\n**当前工作草稿**（`agent-draft-a1dfec69…`，draftRevision 2，基于上述已保存版本，stale=false，未保存）与已保存版本参数一致：内径 20.0000 mm、外径 32.0000 mm、长度 12.1000 mm；其内嵌结果显示间隙区间计算值为 [0.0500, 0.1500] mm、status=outside（下侧裕量 −0.0500 mm），且条款预览为 `unchecked`（NO_REQUIREMENT），即尚未做条款校核。\n\n也就是说：已保存版本经校核是满足的，而当前草稿的长度为 12.1000 mm、尚未跑条款校核，你不能把草稿结果当作已保存结论。要我对此草稿跑一次 preview 复核（不改参数）吗？"
+      "text": "0 mm、外径 32.0000 mm 未变（`rev-a1` → `rev-cfg-1` 只有“建立任务书条款”，参数没动）。\n\n**当前检查结果**\n- 正式版本对应的已提交校核（`check-a-5171d6b7…`，basis 为草稿、`provenance: committed`）：状态 **satisfied**（WITHIN_REQUIREMENT）。\n  - 计算区间：[0.1100, 0.2100] mm\n  - 相对条款区间（0.1000～0.3000 mm）的裕量：下限 0.0100 mm、上限 0.0900 mm\n- 说明：该结论基于长度 12.0400 mm 的正式参数（环 S 名义 12.0400 mm、偏差 ±0.0100 mm；H 52.2000 mm ±0.0200 mm；B1、B2 各 20.0000 mm ±0.0100 mm），组成环公差贡献 400 + 200 + 200 + 200 q。\n\n**另需注意当前工作草稿**\n- 现有未保存草稿 `agent-draft-3c63351f…`（draftRevision 2，不 stale），其中长度被改为 **12.1000 mm**。\n- 该草稿尚未校核（`NO_REQUIREMENT`，status=unchecked）；其内存结果区间为 [0.0500, 0.1500] mm，已低于条款下限，因此显示 outside。这只是未保存草稿的计算，不是已保存版本，也不能当作当前检测结论。\n\n需要我把草稿恢复为 12.0400 mm 或就某个长度重新计算吗？确认候选、提交版本仍需你在界面操作。"
     }
   ],
   "blocked": [

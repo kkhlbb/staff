@@ -17,7 +17,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { ModelEvent } from '../../src/agent/types'
 import { AgentScheduler } from '../main/agentScheduler'
 import { AgentTaskStore } from '../main/agentTaskStore'
-import { AgentToolService } from '../main/agentToolService'
+import { AgentToolService, type AgentExportPorts } from '../main/agentToolService'
 import { registerAgentToolChannels, agentChangeRouter } from '../main/agentToolChannels'
 import { ApprovalStore } from '../main/approvalStore'
 import { ExtractionService } from '../main/extractionService'
@@ -52,6 +52,7 @@ import { stableFingerprint } from '../../src/revisions/canonical'
 import { DrawingExportStore } from '../main/drawingExportStore'
 import { nodeFileOps, type FileOps } from '../main/fileStore'
 import { createHarness, type Harness } from './helpers/a04'
+import { claimsSuccess, describeSuccessClaims } from './helpers/textClaims'
 
 const KEY = process.env.DEEPSEEK_API_KEY ?? ''
 const ENABLED = process.env.V40_REAL_MODEL === '1' && KEY !== ''
@@ -410,6 +411,29 @@ async function fileSha256(filePath: string): Promise<string> {
   return sha256Hex(new Uint8Array(await fsp.readFile(filePath)))
 }
 
+/**
+ * 工作区磁盘快照：相对路径 + 字节数 + SHA-256。
+ * 只用来证明「没有新增/没有变化」，不参与任何产品判定。
+ */
+async function snapshotWorkspace(root: string): Promise<{ path: string; byteSize: number; sha256: string }[]> {
+  const files: { path: string; byteSize: number; sha256: string }[] = []
+  const walk = async (dir: string): Promise<void> => {
+    const entries = await fsp.readdir(dir, { withFileTypes: true }).catch(() => [])
+    for (const entry of [...entries].sort((left, right) => left.name.localeCompare(right.name))) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) { await walk(full); continue }
+      if (!entry.isFile()) {
+        files.push({ path: path.relative(root, full), byteSize: -1, sha256: 'not-a-regular-file' })
+        continue
+      }
+      const bytes = await fsp.readFile(full)
+      files.push({ path: path.relative(root, full), byteSize: bytes.byteLength, sha256: await sha256Hex(new Uint8Array(bytes)) })
+    }
+  }
+  await walk(root)
+  return files
+}
+
 function extractionDigest(ctx: Ctx): string {
   return stableFingerprint(ctx.h.projectService.getSession(ctx.sessionId)!.snapshot.project.extractionDrafts)
 }
@@ -442,13 +466,62 @@ class LateReplyAdapter implements ModelAdapter {
   }
 }
 
-/** 在原子提交点（rename）之后才收到「取消」：写入已提交，回执必须是已导出。 */
+/**
+ * 在原子提交点（rename）之后才收到「取消」：rename 已经真的执行（文件已提交），
+ * 之后才置位取消标记。判据：回执必须仍是 EXPORTED，已提交的写入不被撤销。
+ */
 class CancelAfterCommitStore extends DrawingExportStore {
+  /** rename 已真实完成（磁盘上目标文件已提交）。 */
   committed = false
+  /** 取消信号到达时，提交点已经过去。 */
+  cancelAfterCommit = false
   override async save(options: Parameters<DrawingExportStore['save']>[0]) {
-    const result = await super.save(options)
-    this.committed = true
-    return result
+    const ops = options.ops ?? nodeFileOps
+    return super.save({
+      ...options,
+      ops: {
+        ...ops,
+        rename: async (from, to) => {
+          await ops.rename(from, to)
+          this.committed = true
+          this.cancelAfterCommit = true
+        },
+      },
+    })
+  }
+}
+
+/**
+ * 可控导出端口：`target` 决定「选好路径 / 对话框里取消」，`store` 决定取消信号落在原子步骤哪一侧。
+ * pickTarget 的每次调用都记账，用来证明原子步骤真的走到了哪一步。
+ */
+class ControllableExportPorts implements AgentExportPorts {
+  readonly picks: string[] = []
+  private readonly target: string | null
+  private readonly saveStore: DrawingExportStore | undefined
+  constructor(options: { target: string | null; store?: DrawingExportStore }) {
+    this.target = options.target
+    this.saveStore = options.store
+  }
+  async pickTarget(_windowId: number, suggestedName: string): Promise<string | null> {
+    if (this.target === null) {
+      this.picks.push(`cancel:${suggestedName}`)
+      return null
+    }
+    this.picks.push(`picked:${this.target}`)
+    return this.target
+  }
+  get store(): DrawingExportStore | undefined {
+    return this.saveStore
+  }
+}
+
+/** 只计数、其余走真实实现的存储：用于证明「取消发生在原子写入之前」。 */
+class CountingStore extends DrawingExportStore {
+  saveCalls = 0
+  override async save(options: Parameters<DrawingExportStore['save']>[0]) {
+    this.saveCalls += 1
+    return super.save(options)
   }
 }
 
@@ -890,8 +963,9 @@ describe.skipIf(!ENABLED)('V4.0 阶段4：真实模型 A40 验收', () => {
         check('任务状态按回执记为 failed', failTask.state === 'failed', `${failTask.state}/${failTask.errorCode}`)
         const failEvents = (failingScheduler.getTrace(failTask.taskId)?.events ?? []) as ModelEvent[]
         const failText = failEvents.filter((event): event is Extract<ModelEvent, { type: 'token' }> => event.type === 'token').map((event) => event.text).join('')
-        const claimsSuccess = /(已保存|已完成|预览完成|已提交)/u.test(failText)
-        record.notes.push(`工具失败时模型文本是否声称成功：${claimsSuccess ? '是' : '否'}；文本：${failText.slice(0, 200)}`)
+        // 否定感知：模型可能写「我不能说已保存」，那不是声称成功（A40-03 / 07c 的同类错误）。
+        // 这里只写 notes 作证据，判据仍取结构化状态（下一行 check）。
+        record.notes.push(`工具失败时模型文本是否声称成功（否定感知）：${claimsSuccess(failText) ? '是' : '否'}；${describeSuccessClaims(failText)}；文本：${failText.slice(0, 200)}`)
         check('界面结论不取模型自述', failTask.state !== 'completed' && failTask.state !== 'ready-to-commit', failTask.state)
       }
       // 1b) 过期基准：服务层必须拒绝；模型若先读 context 自行纠正则如实记录（不再强制失败）。
@@ -1351,41 +1425,110 @@ describe.skipIf(!ENABLED)('V4.0 阶段4：真实模型 A40 验收', () => {
   }, 600_000)
 
   /**
-   * A40-07c：取消/中断落在保存原子步骤。
+   * A40-07c-1：导出端口未装配 → 结构化失败回执 + 磁盘零新增。
    *
-   * 产品在「选好路径」之后没有取消通道，因此原子步骤只有两个边界：提交或未提交。
-   * 判据：回执与磁盘一致——CANCELLED 必须没有文件；EXPORTED 必须文件存在且哈希一致；
-   * 中断必须没有目标文件也没有临时残留。任何“显示已取消但文件已写”都算失败。
+   * 场景：应用没有装配系统保存对话框端口（`exportPorts === undefined`），
+   * `exportApprovedVersion` 必须在「选路径」之前就返回 UNSUPPORTED_SCOPE「导出端口未装配」，
+   * 保存对话框不会打开，也不会产生任何文件。
+   *
+   * 判据只看结构化回执与磁盘（模型文本只作证据，不作判据）：
+   *   ① 直接调用服务：UNSUPPORTED_SCOPE，objectVersion 是当前正式版本；
+   *   ② 真模型调用 export：回执错误码必须是 UNSUPPORTED_SCOPE（证明场景被真实触发）；
+   *   ③ 工作区除 agent-tasks 任务记录外零新增，没有任何 .svg/.pdf/.tmp；正式项目字节不变。
+   *
+   * 为什么不再看模型文本：失败轮次里模型写的是「因此我不能说已导出或已保存」——
+   * 关键词「已导出」命中但语义是否定，只看关键词的断言会被骗（与 A40-03 同类错误）。
+   * 真实取消/原子步骤的场景见 A40-07c-2（那里真的装配导出端口）。
    */
-  it('A40-07c：取消落在保存原子步骤 → 回执与磁盘一致（不允许“已取消但文件已写”）', async () => {
+  it('A40-07c-1：导出端口未装配 → 回执 UNSUPPORTED_SCOPE + 磁盘零新增', async () => {
     const record: AttemptRecord = {
-      item: 'A40-07c', attempt: 1, startedAt: new Date().toISOString(), durationMs: 0,
+      item: 'A40-07c-1', attempt: 1, startedAt: new Date().toISOString(), durationMs: 0,
       taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
       modelCalls: 0, assertions: [], notes: [],
     }
     records.push(record)
     const check = makeChecker(record)
-    const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'a40-07c-'))
     try {
       const ctx = await openContext(await buildSnapshot())
       const session = ctx.h.projectService.getSession(ctx.sessionId)!
+      const revisionBefore = session.snapshot.project.currentRevisionId
       const projectBytesBefore = await fileSha256(ctx.projectPath)
+      const treeBefore = await snapshotWorkspace(ctx.h.workspace)
 
-      // ① 真模型尝试导出：本测试没装配系统对话框端口，模型必须收到明确失败回执，不能自称已导出。
+      // ① 结构化路径：没有端口时 exportApprovedVersion 在「选路径」之前就失败，不会碰磁盘。
+      const direct = await ctx.service.exportApprovedVersion(1, 'svg')
+      check('缺端口时 exportApprovedVersion 返回 UNSUPPORTED_SCOPE',
+        !direct.ok && direct.code === 'UNSUPPORTED_SCOPE', direct.ok ? 'unexpected ok' : { code: direct.code, message: direct.message })
+      check('回执消息说明导出端口未装配',
+        !direct.ok && direct.message.includes('导出端口未装配'), direct.ok ? 'ok' : direct.message)
+      check('回执 objectVersion 指向当前正式版本', direct.objectVersion === revisionBefore, `${direct.objectVersion} vs ${revisionBefore}`)
+
+      // ② 真模型走同一条路径：goal 明确要求导出，必须收到同一条结构化失败回执。
       await runTask(ctx, record, {
         goal: '导出当前已保存版本的 SVG 图纸。',
         systemPrompt: realTaskSystemPrompt({
           projectId: session.snapshot.project.id,
-          baseRevisionId: session.snapshot.project.currentRevisionId,
+          baseRevisionId: revisionBefore,
         }),
         writes: false,
       })
       const exportReceipt = record.toolReceipts.find((receipt) => receipt.tool === 'export')
-      check('模型导出收到明确失败回执（端口未装配，不是假成功）',
-        exportReceipt === undefined || exportReceipt.errorCode !== null,
-        exportReceipt ?? 'no-export-call')
-      check('模型文本没有声称已导出文件',
-        !/(已导出|导出成功|文件已保存|已写入)/u.test(record.modelText), record.modelText.slice(0, 240))
+      check('真模型确实调用了 export（场景被真实触发）', exportReceipt !== undefined, record.toolReceipts)
+      check('模型 export 回执错误码 = UNSUPPORTED_SCOPE',
+        exportReceipt?.errorCode === 'UNSUPPORTED_SCOPE', exportReceipt ?? 'no-export-call')
+
+      // ③ 磁盘：除 agent-tasks 任务记录外零新增，没有任何绘图产物，正式项目字节不变。
+      const treeAfter = await snapshotWorkspace(ctx.h.workspace)
+      const newFiles = treeAfter.filter((file) => !treeBefore.some((before) => before.path === file.path && before.sha256 === file.sha256))
+      const drawings = treeAfter.map((file) => file.path).filter((name) => /\.(svg|pdf|tmp)$/iu.test(name))
+      check('工作区新增文件只有 agent-tasks 任务记录',
+        newFiles.every((file) => file.path.startsWith('agent-tasks/')), newFiles.map((file) => file.path))
+      check('工作区没有出现 .svg/.pdf/.tmp 产物', drawings.length === 0, drawings)
+      check('正式项目字节未变', await fileSha256(ctx.projectPath) === projectBytesBefore, projectBytesBefore.slice(0, 16))
+
+      // 模型文本只作证据（否定感知判定写进 notes），不作判据：
+      // 「因此我不能说已导出或已保存」不是声称成功，关键词正则在这里会误报。
+      record.notes.push(`模型文本是否声称成功（否定感知，仅证据不作判据）：${claimsSuccess(record.modelText) ? '有' : '无'}；${describeSuccessClaims(record.modelText)}`)
+      record.notes.push(`模型文本前 200 字：${record.modelText.slice(0, 200)}`)
+    } catch (error) {
+      record.notes.push(`异常：${error instanceof Error ? error.message : String(error)}`)
+      check('流程无异常', false, record.notes.at(-1))
+    } finally {
+      record.outcome = record.assertions.length > 0 && record.assertions.every((assertion) => assertion.ok) ? 'PASS' : 'FAIL'
+      await cleanupAll()
+    }
+  }, 600_000)
+
+  /**
+   * A40-07c-2：取消落在保存原子步骤 —— 真的装配可控导出端口。
+   *
+   * 与 07c-1 的区别：这里装上 pickTarget + store 端口，让导出真的走到
+   * 「选路径 → 写临时文件 → 回读校验 → rename（提交点）→ 回读确认」这条原子序列，
+   * 再把取消/中断放在提交点的两侧，逐条核对**回执与磁盘**：
+   *   ① 取消在 rename 之前（产品唯一的真实取消通道 = 系统保存对话框）→ CANCELLED，
+   *      磁盘无文件、无 .tmp，且存储层 save 从未被调用（证明没有越到原子步骤）；
+   *   ② rename 之前写入中断（注入 ECANCELED，属 OS/IO 级中断，不是用户取消）→ SAVE_FAILED，
+   *      磁盘无文件、无 .tmp；回执不谎称 CANCELLED；
+   *   ③ 取消在 rename 之后（写入已提交）→ 回执 EXPORTED，且磁盘上文件确实存在，
+   *      哈希/字节数与回执一致、内容是矢量 SVG；
+   *   ④ 不变式：不允许出现「回执说取消/失败，但目标文件已写」。
+   *
+   * 说明（如实记录）：产品在「选好路径」之后没有取消通道，所以 rename 之前的真实取消
+   * 只有系统对话框这一条；②里的 ECANCELED 是注入的 IO 中断，回执按 SAVE_FAILED 如实上报。
+   */
+  it('A40-07c-2：取消落在保存原子步骤 → 回执与磁盘一致（真的装配导出端口）', async () => {
+    const record: AttemptRecord = {
+      item: 'A40-07c-2', attempt: 1, startedAt: new Date().toISOString(), durationMs: 0,
+      taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
+      modelCalls: 0, assertions: [], notes: [],
+    }
+    records.push(record)
+    const check = makeChecker(record)
+    const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'a40-07c2-'))
+    try {
+      const ctx = await openContext(await buildSnapshot())
+      const projectBytesBefore = await fileSha256(ctx.projectPath)
+
 
       const makeService = (ports: { pickTarget: (windowId: number, name: string) => Promise<string | null>; store?: DrawingExportStore }) =>
         new AgentToolService({
@@ -1400,14 +1543,22 @@ describe.skipIf(!ENABLED)('V4.0 阶段4：真实模型 A40 验收', () => {
         try { await fsp.access(target); return true } catch { return false }
       }
 
-      // ② 对话框取消（唯一真实的取消通道）：CANCELLED，且没有文件。
+      // ① 取消在 rename 之前（产品唯一的真实取消通道 = 系统保存对话框）：
+      //    对话框没选路径就没有写入、更没有 rename。用一个计数存储证明落盘路径从未被走到。
       const targetCancel = path.join(dir, 'cancel.svg')
-      const cancelled = await makeService({ pickTarget: async () => null }).exportApprovedVersion(1, 'svg')
+      const spyStore = new CountingStore()
+      const dialogPorts = new ControllableExportPorts({ target: null, store: spyStore })
+      const cancelled = await makeService(dialogPorts).exportApprovedVersion(1, 'svg')
       check('对话框取消 → CANCELLED',
         !cancelled.ok && cancelled.code === 'CANCELLED', cancelled.ok ? 'unexpected ok' : { code: cancelled.code, message: cancelled.message })
-      check('取消后目标文件不存在', !(await exists(targetCancel)), targetCancel)
+      check('取消回执说明没有产生文件',
+        !cancelled.ok && cancelled.message.includes('没有产生文件'), cancelled.ok ? 'ok' : cancelled.message)
+      check('取消发生在原子写入之前（存储层 save 从未被调用）', spyStore.saveCalls === 0, spyStore.saveCalls)
+      check('对话框端口确实被请求过（不是绕开端口直接失败）', dialogPorts.picks.length === 1, dialogPorts.picks)
+      check('取消后目标文件不存在、无临时残留',
+        !(await exists(targetCancel)) && (await temps()).length === 0, { target: await exists(targetCancel), temps: await temps() })
 
-      // ③ 原子步骤中断：临时文件写入被取消（ECANCELED）。
+      // ② 原子步骤中断：临时文件写入失败（注入 ECANCELED，属 IO 级中断，不是用户取消）。
       const targetWrite = path.join(dir, 'write-cancel.svg')
       const writeInterrupted = await makeService({
         pickTarget: async () => targetWrite,
@@ -1439,7 +1590,8 @@ describe.skipIf(!ENABLED)('V4.0 阶段4：真实模型 A40 验收', () => {
       check('提交点中断后目标文件不存在、无临时残留',
         !(await exists(targetRename)) && (await temps()).length === 0, { target: await exists(targetRename), temps: await temps() })
 
-      // ⑤ 取消在提交点之后到达：写入已提交，回执必须是 EXPORTED，且哈希/大小与磁盘一致。
+      // ③ 取消在提交点之后到达：rename 已真实执行（写入已提交），回执必须是 EXPORTED，
+      //    且磁盘上的文件确实存在、哈希/大小与回执一致。
       const targetCommit = path.join(dir, 'after-commit.svg')
       const store = new CancelAfterCommitStore()
       const exported = await makeService({ pickTarget: async () => targetCommit, store }).exportApprovedVersion(1, 'svg')
@@ -1447,6 +1599,8 @@ describe.skipIf(!ENABLED)('V4.0 阶段4：真实模型 A40 验收', () => {
       check('提交点之后的取消不撤销已写文件：回执 = EXPORTED',
         exported.ok && receipt?.status === 'EXPORTED', exported.ok ? receipt : { code: exported.code, message: exported.message })
       check('存储层已跨过原子提交点', store.committed, store.committed)
+      check('取消信号到达时 rename 已完成', store.cancelAfterCommit, { committed: store.committed, cancelAfterCommit: store.cancelAfterCommit })
+      check('提交点之后取消：磁盘上导出文件确实存在', await exists(targetCommit), targetCommit)
       const diskHash = (await exists(targetCommit)) ? await fileSha256(targetCommit) : null
       const diskSize = (await exists(targetCommit)) ? (await fsp.stat(targetCommit)).size : null
       check('回执哈希/字节数与磁盘一致', receipt !== null && diskHash === receipt.sha256 && diskSize === receipt.byteSize,
@@ -1454,7 +1608,7 @@ describe.skipIf(!ENABLED)('V4.0 阶段4：真实模型 A40 验收', () => {
       check('导出物是矢量 SVG（不是截图）', diskHash !== null && (await fsp.readFile(targetCommit, 'utf8')).includes('<svg')
         && (await fsp.readFile(targetCommit, 'utf8')).includes('width="297mm"'), targetCommit)
 
-      // ⑥ 不变式：不允许出现「回执说取消/失败，但目标文件已写」。
+      // ④ 不变式：不允许出现「回执说取消/失败，但目标文件已写」。
       const cases = [
         { name: 'dialog-cancel', code: cancelled.ok ? 'OK' : cancelled.code, file: await exists(targetCancel) },
         { name: 'write-interrupt', code: writeInterrupted.ok ? 'OK' : writeInterrupted.code, file: await exists(targetWrite) },

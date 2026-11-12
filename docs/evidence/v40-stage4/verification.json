@@ -6,80 +6,80 @@
       "step": "typecheck",
       "command": "npm run typecheck",
       "exitCode": 0,
-      "startedAt": "2026-11-12T05:37:04.394Z",
-      "finishedAt": "2026-11-12T05:37:07.624Z",
+      "startedAt": "2026-11-12T06:02:23.231Z",
+      "finishedAt": "2026-11-12T06:02:26.626Z",
       "log": "docs/evidence/v40-stage4/logs/typecheck.log"
     },
     {
       "step": "typecheck-desktop",
       "command": "npm run typecheck:desktop",
       "exitCode": 0,
-      "startedAt": "2026-11-12T05:37:07.624Z",
-      "finishedAt": "2026-11-12T05:37:10.224Z",
+      "startedAt": "2026-11-12T06:02:26.627Z",
+      "finishedAt": "2026-11-12T06:02:29.261Z",
       "log": "docs/evidence/v40-stage4/logs/typecheck-desktop.log"
     },
     {
       "step": "lint",
       "command": "npm run lint",
       "exitCode": 0,
-      "startedAt": "2026-11-12T05:37:10.224Z",
-      "finishedAt": "2026-11-12T05:37:15.097Z",
+      "startedAt": "2026-11-12T06:02:29.262Z",
+      "finishedAt": "2026-11-12T06:02:34.180Z",
       "log": "docs/evidence/v40-stage4/logs/lint.log"
     },
     {
       "step": "test",
       "command": "npm run test",
       "exitCode": 0,
-      "startedAt": "2026-11-12T05:37:15.097Z",
-      "finishedAt": "2026-11-12T05:37:31.969Z",
+      "startedAt": "2026-11-12T06:02:34.180Z",
+      "finishedAt": "2026-11-12T06:02:51.677Z",
       "log": "docs/evidence/v40-stage4/logs/test.log"
     },
     {
       "step": "test-desktop",
       "command": "npm run test:desktop",
       "exitCode": 0,
-      "startedAt": "2026-11-12T05:37:31.969Z",
-      "finishedAt": "2026-11-12T05:37:38.914Z",
+      "startedAt": "2026-11-12T06:02:51.678Z",
+      "finishedAt": "2026-11-12T06:02:58.758Z",
       "log": "docs/evidence/v40-stage4/logs/test-desktop.log"
     },
     {
       "step": "build",
       "command": "npm run build",
       "exitCode": 0,
-      "startedAt": "2026-11-12T05:37:38.914Z",
-      "finishedAt": "2026-11-12T05:37:42.376Z",
+      "startedAt": "2026-11-12T06:02:58.758Z",
+      "finishedAt": "2026-11-12T06:03:02.359Z",
       "log": "docs/evidence/v40-stage4/logs/build.log"
     },
     {
       "step": "export-artifact",
       "command": "npm run artifact:export",
       "exitCode": 0,
-      "startedAt": "2026-11-12T05:37:42.376Z",
-      "finishedAt": "2026-11-12T05:37:42.751Z",
+      "startedAt": "2026-11-12T06:03:02.360Z",
+      "finishedAt": "2026-11-12T06:03:02.732Z",
       "log": "docs/evidence/v40-stage4/logs/export-artifact.log"
     },
     {
       "step": "package-desktop",
       "command": "npm run package:desktop",
       "exitCode": 0,
-      "startedAt": "2026-11-12T05:37:42.751Z",
-      "finishedAt": "2026-11-12T05:37:56.373Z",
+      "startedAt": "2026-11-12T06:03:02.732Z",
+      "finishedAt": "2026-11-12T06:03:14.848Z",
       "log": "docs/evidence/v40-stage4/logs/package-desktop.log"
     },
     {
       "step": "check-package-pdf-worker",
       "command": "npm run check:package:pdf-worker",
       "exitCode": 0,
-      "startedAt": "2026-11-12T05:37:56.374Z",
-      "finishedAt": "2026-11-12T05:37:56.521Z",
+      "startedAt": "2026-11-12T06:03:14.848Z",
+      "finishedAt": "2026-11-12T06:03:14.995Z",
       "log": "docs/evidence/v40-stage4/logs/check-package-pdf-worker.log"
     },
     {
       "step": "real-model-a40",
       "command": "V40_REAL_MODEL=1 npx vitest run --config vitest.desktop.config.ts desktop/tests/realModelA40.test.ts",
       "exitCode": 0,
-      "startedAt": "2026-11-12T05:37:56.521Z",
-      "finishedAt": "2026-11-12T05:39:53.978Z",
+      "startedAt": "2026-11-12T06:03:14.995Z",
+      "finishedAt": "2026-11-12T06:05:00.381Z",
       "log": "docs/evidence/v40-stage4/logs/real-model-a40.log"
     },
     {
@@ -117,7 +117,7 @@
     }
   ],
   "keyScan": {
-    "filesScanned": 1182,
+    "filesScanned": 1186,
     "exactHits": [],
     "prefixHits": [],
     "keyLength": 35,
