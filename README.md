@@ -1,95 +1,115 @@
-# staff · 寸链
+# 寸链 · 轴系轴向尺寸链工作台
 
-轴系轴向公差链分析与修改追踪工具。浏览器端用极值法分析一维轴向尺寸链；V3 起提供 macOS 桌面制图工作台：零件参数、3D 部件、A4 工程图、尺寸链联动与版本快照。
+一个 macOS 桌面应用（Electron + React + TypeScript）：**从机械任务书 PDF 里提取参数，用整数精度算出尺寸链，出 A4 工程图与 DXF，并允许用自然语言改图 —— 但任何保存、提交、导出都必须由人点头。**
 
-许可：**MIT**（见 `LICENSE`）。第三方组件与字体的许可见 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)。
+它不是一个通用 CAD，也不是一个公差分析仿真器。它做的是**一条窄而完整的链路**，并且把"凭什么这么算"留在文件里。
 
-## 两个运行形态
+许可 **MIT**。第三方组件与字体许可见 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)。
 
-| 形态 | 说明 |
-|---|---|
-| 浏览器版 | `npm run build && npm run preview`，数据存本机 IndexedDB |
-| macOS 桌面版（V3） | Electron 应用，项目以 `.cunlian` 单文件保存，可直接出 A4 PDF/SVG 工程图 |
+---
 
-## 从源码构建 macOS 应用
+## 一、它到底能做什么
+
+| 环节 | 现在能做到 | 证据 |
+|---|---|---|
+| **读任务书** | 带文本层的 PDF → 候选参数/组成环/公式/闭区间要求，每条带页、选区、原文片段 | 6 份真实文档 269 页：**138 候选 / 58 可确认 = 42.0%**，逐份原因码见 [`docs/BENCHMARK.md`](docs/BENCHMARK.md) |
+| **建项目** | 人工逐条确认 → 生成隔套项目草稿 | 确认凭据只来自界面；请求里带 `confirmed: true` 一律不采信 |
+| **算尺寸链** | 整数 `q`（1q = 0.0001 mm）极值法；`C = H − B1 − S − B2` | 内核不联网、不依赖浮点累加 |
+| **判条款** | 结果落在任务书要求的闭区间内？超了多少？ | 12.00→`0.1500~0.2500` 满足；12.10→`0.0500~0.1500` 不满足 |
+| **出图** | A4 横向工程图 → 矢量 PDF / SVG / **DXF（R12 + 2000）** | DXF 我在模型空间按真实尺寸输出，`$DWGCODEPAGE=ANSI_936` |
+| **改图** | 一句话（"加厚 0.10"）→ 草稿 → 重算 → 复核 | 真实模型 **14/14** 条验收通过（DeepSeek） |
+| **留痕** | 版本不可变、出处可追、提交时重算 | 授权只在主进程签发，模型拿不到 `approvalId` |
+
+## 二、Agent 在这里做什么（以及不许做什么）
+
+模型只有 **6 个工具**（`src/agent/toolSchemas.ts`）：
+
+```
+context   读项目/版本/草稿/条款     只读
+confirmed 读已确认候选              只读
+apply     候选 → 项目草稿           只产草稿
+stage     改一个参数并重算          只产草稿，且只接受 内径/外径/长度
+preview   重算图纸/区间/条款         只读
+export    导出                     需用户点保存框
+```
+
+**它不能**：算数（内核算）、判合规（提交时主进程重算）、提交（`agentToolService.ts:280` 签发授权）、自己宣布成功（侧栏只显示工具回执）。
+
+这条边界不是靠自觉，是架构关住的。设计理由见 [`ADR-001`](docs/adr/ADR-001-证据模型.md)。
+
+## 三、能力边界（先说清，免得你白试）
+
+**不支持**：扫描件 / 图片 PDF（只吃文本层）· DOCX · 形位公差与 GD&T · 统计公差（RSS/蒙特卡洛）· 多链联合求解 · 非回转体零件 · STEP 导出 · DWG · Windows
+
+**只能在 隔套 + 一条一维轴向链 + 一条毫米闭区间 上工作。** 这不是路线图问题，是数据模型就这么窄。
+
+**DXF 的实情**：R12 白名单 `LINE/POLYLINE/CIRCLE/ARC/TEXT`；**没有 `DIMENSION` 实体**（尺寸是几何 + 文字，改图不会自动改数）；R12 的 TEXT 有 255 字节上限；GBK 表外字符直接报错。
+
+**签名**：`.app` 是 ad-hoc 签名、未公证。自行构建可直接打开；下载来的会被 Gatekeeper 拦一次：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/寸链.app
+```
+
+## 四、怎么验证我说的话
+
+不信任何一句，跑命令：
 
 ```bash
 npm install
+npm test                 # 1135 用例 / 105 文件
+npm run test:desktop     # 278 用例（另 14 条真模型用例默认跳过，需密钥）
+npm run typecheck && npm run lint && npm run build
+
+# 真实文档度量（需自备 6 份 PDF，见 docs/BENCHMARK.md）
+REAL_DOC_CORPUS=<目录> npm run metrics:real-docs
+```
+
+每个功能的证据都在 `docs/evidence/` 下，含**变异实验**：把实现改坏，用例必须变红，再改回来。
+
+```bash
+# 例：去掉出处校验 → 必须红
+docs/evidence/evidence-ref/mutations/M02-red.log    # 3 failed / 45 passed
+docs/evidence/evidence-ref/mutations/M02-green-restored.log  # 48 passed
+```
+
+## 五、构建桌面应用
+
+```bash
 npm run package:desktop -- --arch=arm64
-# 产物：out/寸链-darwin-arm64/寸链.app
+# 产物：out/寸链-darwin-arm64/寸链.app（约 256 MB）
 ```
 
-需要 Node.js 20+ 与 macOS。构建本机无需 Apple 开发者账号。
+需要 Node.js 20+ 与 macOS。构建本机不需要 Apple 开发者账号。
 
-### 未签名说明（重要）
+## 六、数据与隐私
 
-发布出来的 `.app` **没有使用 Apple Developer ID 签名，也没有公证**。因此：
+- 所有计算、渲染、PDF/DXF 生成都在本机完成，**不联网**
+- 项目文件是你指定的 `.cunlian`（ZIP：项目、来源附件原始字节、版本、事件、快照）
+- 唯一的外部调用是 **Agent 模型**，密钥存 macOS Keychain，明文不落盘；不配置模型时用离线假模型演示
+- `package.json` 的 `"private": true` 只为防误 `npm publish`
 
-- **你自己构建的**产物可以直接打开；
-- 从网络下载/网盘/压缩包解压得到的，会被 Gatekeeper 拦下，需要手动放行一次：
-  1. 在 Finder 里**右键 → 打开**，或
-  2. 系统设置 → 隐私与安全性 → 找到拦截提示 → **仍要打开**，或
-  3. 终端执行 `xattr -dr com.apple.quarantine /Applications/寸链.app`
+## 七、仓库里有什么
 
-这不是缺陷，是没买 99 美元/年的开发者账号。要消除这个弹窗只能走签名 + 公证。
-
-## 数据与隐私
-
-- 所有计算、渲染、PDF 生成都在本机完成，**不发网络请求**；
-- 项目文件是你自己指定的 `.cunlian`（ZIP 容器：项目、来源附件、版本、事件、分析快照）；
-- 应用目录只存最近项目索引、界面偏好与恢复草稿。
-
-## 常用命令
-
-```bash
-npm install
-npm run dev          # 浏览器开发
-npm test             # 单元/组件测试
-npm run test:desktop # 主进程与 IPC 测试
-npm run test:real-docs # 真实文档抽取基线回归（需自备 6 份 PDF，见 docs/evidence/real-doc-baseline/README.md）
-npm run metrics:real-docs # 一条命令出真实文档全部度量
-npm run lint
-npm run typecheck
-npm run build
+```
+src/domain/            尺寸链内核（整数 q、极值法）
+src/document-extraction/  任务书提取（document-extractor-6）：规则、切块、出处校验
+src/agent/             Agent 工具契约
+src/drawing/           DrawingData → SVG / PDF / DXF
+desktop/main/          主进程：授权签发、提交重算、导出端口
+docs/adr/              架构决策（证据模型、入口与出处）
+docs/evidence/         每批交付的度量、变异日志、截图
+docs/BENCHMARK.md      真实文档度量体系与复现方式
 ```
 
-> `package.json` 里的 `"private": true` 是为了防止误 `npm publish`——这是应用不是库，不影响开源与再分发。
+## 八、已知未做
 
-## 桌面版功能范围（V3）
+- 真实机械装配任务书样本：**一份都没有**（评测语料是公开论文与标准）
+- 三维实体与 STEP：没有 B-rep，`three.js` 只是网格预览
+- 校对—审核—批准三级签署、多用户、审计导出
+- 自动更新、崩溃上报、Windows 构建
+- 界面语言仍残留工具名（`stage → preview`），待翻成人话
 
-- 打开/保存/另存为 `.cunlian`，导入 V2 `.cunlian.zip` 备份，最近项目
-- 内置轴系示意装配（阶梯轴/左右轴承/隔套/挡圈），3D 旋转缩放、装配与爆炸、树↔画布互选
-- STL 导入（二进制/ASCII，上限 10 MiB / 20 万面），替换生成新模型版本，旧关联标记待核
-- 隔套三参数（内径/外径/长度，整数 q，1q = 0.0001 mm）驱动 A4 横向工程图：主视图 + 端视图、中心线、尺寸线与箭头、图框
-- 图纸以矢量 PDF / SVG 导出（真文本与矢量路径，不是截图；字体子集嵌入）
-- 参数与组成环绑定，只同步基本尺寸；改参数给出旧值/新值、受影响环、旧结果/新结果；基准变化使旧预览作废；确认时一次原子写入
-- 不可变版本历史与分析快照
+---
 
-**范围外**：STEP 出图、多尺寸链联合求解、自动读图、Agent 指令入口。
-
-## 分析快照与完整备份（V2.2 第二组）
-
-报告已改为由**不可变分析快照**生成，不再读取工作台实时数据。工作台点“创建分析快照”后
-进入快照报告；旧 `#/project/<id>/report` 链接会转到快照列表并说明变更。审查未完成也允许
-创建，但报告会明确标注待办，不能当作“已完成复核报告”。
-
-项目列表提供 `.cunlian.zip` 完整备份与恢复：
-
-- 包含项目、草稿、来源附件原始字节、版本、绑定、事件与快照；
-- **不包含全局映射模板**（manifest 中明示）；
-- 导入校验路径穿越、条目数 ≤500、解压后 ≤150 MiB、逐文件 SHA-256 与引用一致性；
-- 全部通过才在单个事务写库，失败零写入；恢复只支持空数据库，并清除人工确认。
-
-实现与验收细节见
-[docs/V2.2-第二组-快照与完整备份.md](docs/V2.2-第二组-快照与完整备份.md)。
-
-## 本地运行
-
-```bash
-npm run build
-npm run preview
-```
-
-然后在浏览器打开 `npm run preview` 输出的地址（默认 `http://localhost:4173/`）。构建产物不依赖外网，断网后仍可通过这个本地服务打开和刷新。
-
-不支持直接双击 `dist/index.html`：用 `file://` 打开时，浏览器会因安全限制拦下模块脚本，页面会白屏。
+**这是一个作品，不是一个产品。** 它的价值在"每一步都能被验证、每个结论都有出处"，不在功能多少。如果你只想算一个尺寸链，Excel 或网页计算器够了。
