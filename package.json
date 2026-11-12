@@ -18,6 +18,8 @@
     "make:desktop": "electron-forge make",
     "typecheck:desktop": "tsc -p tsconfig.desktop.json --noEmit",
     "test:desktop": "vitest run --config vitest.desktop.config.ts",
+    "test:real-docs": "vitest run --config vitest.realdocs.config.ts",
+    "metrics:real-docs": "node scripts/real-doc-metrics.mjs",
     "test:desktop:e2e": "node desktop/tests/e2e/smoke.mjs",
     "evidence:record": "vitest run --config vitest.evidence.config.ts"
   },

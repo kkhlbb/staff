@@ -46,6 +46,8 @@ npm install
 npm run dev          # 浏览器开发
 npm test             # 单元/组件测试
 npm run test:desktop # 主进程与 IPC 测试
+npm run test:real-docs # 真实文档抽取基线回归（需自备 6 份 PDF，见 docs/evidence/real-doc-baseline/README.md）
+npm run metrics:real-docs # 一条命令出真实文档全部度量
 npm run lint
 npm run typecheck
 npm run build
