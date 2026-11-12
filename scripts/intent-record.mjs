@@ -52,7 +52,7 @@ const documents = baseline.documents.map((row) => {
   }
 })
 
-const testsFrom = (text) => text.match(/\d+ failed[^\n]*|\d+ passed[^\n]*/u)?.[0] ?? null
+const testsFrom = (text) => text.match(/\n\s*Tests\s+([^\n]+)/u)?.[1]?.trim() ?? null
 
 const payload = {
   adr: 'ADR-001 第 3 步：意图驱动建件（无任务书入口）',
