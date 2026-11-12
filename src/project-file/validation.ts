@@ -632,6 +632,20 @@ const extractionIssueSchema = z
     page: z.number().int().min(1).nullable(),
     candidateIds: z.array(idSchema).max(64),
     evidence: z.array(extractionEvidenceSchema).max(64),
+    /**
+     * 大文档切块的块标记（`document-extractor-6` 新增，纯加法）。
+     * 可选：旧草稿没有该字段，读时保持兼容；只有切块产生的 issue 才写。
+     */
+    chunk: z
+      .object({
+        index: z.number().int().min(1),
+        from: z.number().int().min(1),
+        to: z.number().int().min(1),
+      })
+      .strict()
+      .refine((chunk) => chunk.to >= chunk.from, { message: '块页范围上限必须不小于下限' })
+      .nullable()
+      .optional(),
   })
   .strict()
 

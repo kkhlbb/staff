@@ -50,6 +50,7 @@ import {
   type CandidateStatus,
   type ConfidenceLevel,
   type ExtractionCandidate,
+  type ExtractionChunkRef,
   type ExtractionDraft,
   type ExtractionEvidence,
   type ExtractionIssue,
@@ -1456,6 +1457,159 @@ function issue(
   }
 }
 
+interface ChunkScan {
+  readonly ringEntries: RingEntry[]
+  readonly candidates: ExtractionCandidate[]
+  readonly issues: ExtractionIssue[]
+}
+
+/**
+ * 一块页面 → 组成环条目 + 直接候选（部件/区间/公式）+ 本块 issue。
+ *
+ * 组成环不在这里 resolve：跨块的同符号必须按**全局出现顺序**编号，所以条目一律交回
+ * buildExtractionDraft 末尾统一 resolveRings（跨块同值仍合并成一条，与整份一次扫描一致）。
+ * 逐页判定：某页没有文本层只在该页标 NO_TEXT_LAYER 并继续下一页，不废整块/整份。
+ * 本函数不读文件、不碰 pdfjs：切的是已经解析好的页数组。
+ */
+function scanChunkPages(
+  pages: readonly PdfTextPage[],
+  source: ExtractionSourceIdentity,
+  unitContext: UnitContext,
+): ChunkScan {
+  const issues: ExtractionIssue[] = []
+  const ringEntries: RingEntry[] = []
+  const partCandidates: ExtractionCandidate[] = []
+  const intervalCandidates: ExtractionCandidate[] = []
+  const formulaCandidates: ExtractionCandidate[] = []
+
+  for (const page of pages) {
+    const textItems = page.items.filter((item) => item.text.trim() !== '')
+    if (textItems.length === 0) {
+      issues.push(
+        issue(
+          'NO_TEXT_LAYER',
+          'blocked',
+          `第 ${page.page} 页没有可读文本层（扫描件/图片页）；本版本不做 OCR，拒绝数值提取`,
+          page.page,
+        ),
+      )
+      continue
+    }
+    let index = 0
+    while (index < page.lines.length) {
+      const line = page.lines[index]
+      if (TABLE_HEADER_TOKENS.every((token) => matchTextOf(line).includes(token))) {
+        if (!tableLayoutSupported(line)) {
+          issues.push(
+            issue(
+              'UNSUPPORTED_TABLE_LAYOUT',
+              'blocked',
+              `第 ${page.page} 页组成环表头列顺序不是 位号/名称/基本尺寸/上偏差/下偏差，不猜列`,
+              page.page,
+            ),
+          )
+          index += 1
+          continue
+        }
+        const table = parseTable(page.lines, index, page, source, unitContext, issues)
+        ringEntries.push(...table.entries)
+        index = table.next
+        continue
+      }
+      const formula = parseFormulaLine(line, page, source)
+      if (formula) {
+        // P2：这一行原文里已经写出「符号 = 表达式 = 数值 单位」的显式结果值 → 它是赋值行，
+        // 不是“无法解析的公式”。交给赋值解析取那枚显式值（不计算中间式）；一个条目都取不到时
+        // 仍保留原来的 FORMULA_UNSUPPORTED 记录，不静默丢行。
+        if (
+          formula.kind === 'formula' &&
+          formula.data.unsupported &&
+          lineMatchesAssignmentForm(matchTextOf(line))
+        ) {
+          const entries = parseAssignmentLine(line, page, source, unitContext)
+          if (entries.length > 0) {
+            ringEntries.push(...entries)
+            index += 1
+            continue
+          }
+        }
+        formulaCandidates.push(formula)
+        index += 1
+        continue
+      }
+      const interval = parseIntervalLine(line, page, source, unitContext)
+      if (interval) {
+        intervalCandidates.push(interval)
+        index += 1
+        continue
+      }
+      const part = parsePartLine(line, page, source, unitContext)
+      if (part) {
+        partCandidates.push(part)
+        index += 1
+        continue
+      }
+      if (matchTextOf(line).includes('=')) {
+        ringEntries.push(...parseAssignmentLine(line, page, source, unitContext))
+      }
+      index += 1
+    }
+  }
+  return {
+    ringEntries,
+    candidates: [...partCandidates, ...intervalCandidates, ...formulaCandidates],
+    issues,
+  }
+}
+
+interface ExtractionChunkPlan {
+  readonly index: number
+  readonly from: number
+  readonly to: number
+}
+
+/**
+ * 顺序切块：每块最多 MAX_EXTRACTION_PAGES 页，1-based 闭区间，index 从 1 开始。
+ * 页跨度不超过上限时恰好一块（与旧版逐页扫描完全同构，且不写 CHUNK_* issue）。
+ */
+function planExtractionChunks(range: ExtractionPageRange): ExtractionChunkPlan[] {
+  const plans: ExtractionChunkPlan[] = []
+  let index = 1
+  for (let from = range.from; from <= range.to; from += MAX_EXTRACTION_PAGES) {
+    const to = Math.min(range.to, from + MAX_EXTRACTION_PAGES - 1)
+    plans.push({ index, from, to })
+    index += 1
+  }
+  return plans
+}
+
+/** 块踪迹 issue：每块都要留痕（CHUNK_PROCESSED / CHUNK_FAILED），绝不静默丢块。 */
+function chunkIssue(
+  plan: ExtractionChunkPlan,
+  code: 'CHUNK_PROCESSED' | 'CHUNK_FAILED',
+  message: string,
+): ExtractionIssue {
+  const chunk: ExtractionChunkRef = { index: plan.index, from: plan.from, to: plan.to }
+  return {
+    issueId: stableId('issue', [code, chunk.index, chunk.from, chunk.to]),
+    code,
+    severity: code === 'CHUNK_FAILED' ? 'blocked' : 'warning',
+    message,
+    page: chunk.from,
+    candidateIds: [],
+    evidence: [],
+    chunk,
+  }
+}
+
+/** 失败原因只取 message（不带栈/时间戳），保证同一输入两次运行 issue 文本一致。 */
+function errorSummary(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message.trim() === '' ? error.name : error.message
+  }
+  return String(error)
+}
+
 export function buildExtractionDraft(request: ExtractionRequest): ExtractionDraft {
   const extractorVersion = request.extractorVersion ?? EXTRACTOR_VERSION
   const idempotencyKey = [
@@ -1510,116 +1664,69 @@ export function buildExtractionDraft(request: ExtractionRequest): ExtractionDraf
       ],
     }
   }
-  if (range.to - range.from + 1 > MAX_EXTRACTION_PAGES) {
-    return {
-      ...baseDraft,
-      candidates: [],
-      issues: [
-        issue(
-          'PAGE_LIMIT',
-          'blocked',
-          `页跨度超过上限 ${MAX_EXTRACTION_PAGES} 页`,
-          null,
-        ),
-      ],
-    }
-  }
-
   const pages = request.layer.pages.filter(
     (page) => page.page >= range.from && page.page <= range.to,
   )
   /**
-   * 单位作用域：文档级（页范围第一页的「单位：」句）+ 每页的页级/图注声明。
+   * 单位作用域：文档级（**请求页范围的第一页**的「单位：」句）+ 每页的页级/图注声明。
    * 只收集显式文字，不做任何跨页推断；表头声明在 parseTable 里逐表构造。
+   *
+   * 关键：单位上下文按**整个请求页范围**收集一次再传给每一块，文档级声明因此仍取自
+   * 请求范围的第一页，而不是每一块自己的首页——切块不改变任何单位继承语义。
    */
   const unitContext = collectUnitContext(pages, range.from, request.source)
+  /**
+   * 页跨度超过 MAX_EXTRACTION_PAGES 时不再整份拒绝，而是顺序切块、逐块扫描后合并
+   * （切的是页数组，同一 revision 仍只解析一次文件）。
+   */
+  const plans = planExtractionChunks(range)
+  const chunked = plans.length > 1
   const ringEntries: RingEntry[] = []
-  const partCandidates: ExtractionCandidate[] = []
-  const intervalCandidates: ExtractionCandidate[] = []
-  const formulaCandidates: ExtractionCandidate[] = []
-
-  for (const page of pages) {
-    const textItems = page.items.filter((item) => item.text.trim() !== '')
-    if (textItems.length === 0) {
+  const directCandidates: ExtractionCandidate[] = []
+  for (const plan of plans) {
+    const chunkPages = chunked
+      ? pages.filter((page) => page.page >= plan.from && page.page <= plan.to)
+      : pages
+    try {
+      const scan = scanChunkPages(chunkPages, request.source, unitContext)
+      /**
+       * 只有整块扫描成功才并入：抛错的块不留半截条目，避免重复/残缺候选。
+       * 其余块的结果不受影响（不连坐）。
+       */
+      ringEntries.push(...scan.ringEntries)
+      directCandidates.push(...scan.candidates)
+      issues.push(...scan.issues)
+      if (chunked) {
+        issues.push(
+          chunkIssue(
+            plan,
+            'CHUNK_PROCESSED',
+            `第 ${plan.index} 块（页 ${plan.from}-${plan.to}）处理完成：` +
+              `扫描到 ${scan.ringEntries.length + scan.candidates.length} 处条目、` +
+              `${scan.issues.length} 条问题；结果已并入本草稿`,
+          ),
+        )
+      }
+    } catch (error) {
+      // 单块失败不连坐：只标这一块的页范围，其它块照常出结果。
       issues.push(
-        issue(
-          'NO_TEXT_LAYER',
-          'blocked',
-          `第 ${page.page} 页没有可读文本层（扫描件/图片页）；本版本不做 OCR，拒绝数值提取`,
-          page.page,
+        chunkIssue(
+          plan,
+          'CHUNK_FAILED',
+          `第 ${plan.index} 块（页 ${plan.from}-${plan.to}）处理失败（${errorSummary(error)}）；` +
+            '该块结果缺失，其余块结果照常保留',
         ),
       )
-      continue
-    }
-    let index = 0
-    while (index < page.lines.length) {
-      const line = page.lines[index]
-      if (TABLE_HEADER_TOKENS.every((token) => matchTextOf(line).includes(token))) {
-        if (!tableLayoutSupported(line)) {
-          issues.push(
-            issue(
-              'UNSUPPORTED_TABLE_LAYOUT',
-              'blocked',
-              `第 ${page.page} 页组成环表头列顺序不是 位号/名称/基本尺寸/上偏差/下偏差，不猜列`,
-              page.page,
-            ),
-          )
-          index += 1
-          continue
-        }
-        const table = parseTable(page.lines, index, page, request.source, unitContext, issues)
-        ringEntries.push(...table.entries)
-        index = table.next
-        continue
-      }
-      const formula = parseFormulaLine(line, page, request.source)
-      if (formula) {
-        // P2：这一行原文里已经写出「符号 = 表达式 = 数值 单位」的显式结果值 → 它是赋值行，
-        // 不是“无法解析的公式”。交给赋值解析取那枚显式值（不计算中间式）；一个条目都取不到时
-        // 仍保留原来的 FORMULA_UNSUPPORTED 记录，不静默丢行。
-        if (
-          formula.kind === 'formula' &&
-          formula.data.unsupported &&
-          lineMatchesAssignmentForm(matchTextOf(line))
-        ) {
-          const entries = parseAssignmentLine(line, page, request.source, unitContext)
-          if (entries.length > 0) {
-            ringEntries.push(...entries)
-            index += 1
-            continue
-          }
-        }
-        formulaCandidates.push(formula)
-        index += 1
-        continue
-      }
-      const interval = parseIntervalLine(line, page, request.source, unitContext)
-      if (interval) {
-        intervalCandidates.push(interval)
-        index += 1
-        continue
-      }
-      const part = parsePartLine(line, page, request.source, unitContext)
-      if (part) {
-        partCandidates.push(part)
-        index += 1
-        continue
-      }
-      if (matchTextOf(line).includes('=')) {
-        ringEntries.push(...parseAssignmentLine(line, page, request.source, unitContext))
-      }
-      index += 1
     }
   }
 
   const ringBuild = resolveRings(ringEntries, request.source)
   issues.push(...ringBuild.issues)
-  const candidates = [
-    ...ringBuild.candidates,
-    ...partCandidates,
-    ...intervalCandidates,
-    ...formulaCandidates,
-  ]
+  /**
+   * 合并：组成环先按全局符号分组 resolve（occurrence 按全局出现顺序编号），
+   * 再接上各块扫描出的直接候选；之后的冲突判定、排序、上限截断都作用于整份文档。
+   */
+  const candidates = [...ringBuild.candidates, ...directCandidates]
   const conflicts = checkConflicts(candidates)
   issues.push(...conflicts.issues)
 

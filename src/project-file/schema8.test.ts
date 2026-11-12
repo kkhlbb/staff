@@ -13,6 +13,7 @@ import { decodeProjectFile, encodeProjectFile } from './codec'
 import { createSampleSnapshot } from './__fixtures__/sampleProjectFile'
 import type { ProjectFileSnapshot } from './types'
 import { buildExtractionDraft, buildPdfTextLayer, confirmCandidate, rejectCandidate } from '../document-extraction'
+import type { RawPdfTextPage } from '../document-extraction/textLayer'
 import { fixtureBytes, fixtureSha256, readPdfTextPages } from '../document-extraction/__tests__/helpers/pdfFixture'
 import { rewriteArchive } from '../../desktop/tests/helpers/legacyArchive'
 
@@ -103,6 +104,62 @@ describe('V3.6 schema8：提取草稿持久化与严格校验', () => {
     expect(decoded.value.snapshot.project.parameters).toEqual([])
     expect(decoded.value.snapshot.bindings).toEqual(snapshot.bindings)
     expect(decoded.value.snapshot.project.requirementRevisions).toEqual([])
+  })
+
+  it('切块草稿（170 页）往返：CHUNK_* issue 的 chunk 页范围逐字段保留', async () => {
+    const snapshot = await snapshotWithDrafts()
+    const pages: RawPdfTextPage[] = Array.from({ length: 170 }, (_, index) => ({
+      page: index + 1,
+      view: [0, 0, 595, 842],
+      items: [
+        {
+          str: `A${String(index + 1).padStart(3, '0')} = 10 mm`,
+          transform: [1, 0, 0, 1, 60, 780],
+          width: 320,
+          height: 12,
+          hasEOL: true,
+        },
+      ],
+    }))
+    const draft = buildExtractionDraft({
+      projectId: snapshot.project.id,
+      baseToken: `base-${snapshot.project.id}`,
+      source: {
+        documentId: 'doc-1',
+        revisionId: 'sr-1',
+        sha256: snapshot.revisions[0]!.sha256,
+        blobKey: 'blob-1',
+        pageCount: 170,
+      },
+      pageRange: { from: 1, to: 170 },
+      layer: buildPdfTextLayer(pages),
+    })
+    // 切块生效：170 条候选、两条块踪迹，没有 PAGE_LIMIT。
+    expect(draft.candidates).toHaveLength(170)
+    expect(draft.issues.some((item) => item.code === 'PAGE_LIMIT')).toBe(false)
+
+    const chunked: ProjectFileSnapshot = {
+      ...snapshot,
+      project: { ...snapshot.project, extractionDrafts: [draft] },
+      revisions: [{ ...snapshot.revisions[0]!, pageCount: 170 }],
+    }
+    const encoded = await encodeProjectFile(chunked)
+    expect(encoded.ok, encoded.ok ? '' : JSON.stringify(encoded.error)).toBe(true)
+    if (!encoded.ok) return
+    const decoded = await decodeProjectFile(encoded.value.bytes)
+    expect(decoded.ok, decoded.ok ? '' : `${decoded.error.code}: ${decoded.error.message}`).toBe(true)
+    if (!decoded.ok) return
+    const roundTrip = decoded.value.snapshot.project.extractionDrafts[0]!
+    expect(
+      roundTrip.issues
+        .filter((item) => item.code === 'CHUNK_PROCESSED')
+        .map((item) => item.chunk),
+    ).toEqual([
+      { index: 1, from: 1, to: 100 },
+      { index: 2, from: 101, to: 170 },
+    ])
+    // 纯加法字段：其余内容逐字段不变（解码后键顺序由 schema 决定，用深比较）。
+    expect(roundTrip).toEqual(draft)
   })
 
   it('旧 schema7 文件缺少 extractionDrafts：读入补空数组，不凭空造候选', async () => {

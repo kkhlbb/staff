@@ -231,6 +231,66 @@ describe('V3.6 main：从确切 PDF 版本提取', () => {
     }
   })
 
+  it('170 页超过单块上限：不再整份拒绝，切两块出草稿（CHUNK_PROCESSED×2、无 PAGE_LIMIT）', async () => {
+    const harness = await createHarness()
+    try {
+      // 注入 170 页合成文本层（真实 PDF 夹具只有 2 页；这里只验证 main 侧不再拦页跨度）。
+      const injected = async () =>
+        Array.from({ length: 170 }, (_, index) => ({
+          page: index + 1,
+          view: [0, 0, 595, 842] as const,
+          items: [
+            {
+              str: `A${String(index + 1).padStart(3, '0')} = 10 mm`,
+              transform: [1, 0, 0, 1, 60, 780] as const,
+              width: 320,
+              height: 12,
+              hasEOL: true,
+            },
+          ],
+        }))
+      await withExtraction(harness, { extractText: injected })
+      const snapshot = await snapshotWithPdf()
+      const open = await harness.openSample({
+        ...snapshot,
+        revisions: [{ ...snapshot.revisions[0]!, pageCount: 170 }],
+      })
+
+      const run = await harness.invoke<ExtractionRunValue>(IPC_CHANNELS.extractionRun, {
+        sessionId: open.sessionId,
+        baseEditSeq: 0,
+        revisionId: 'sr-1',
+        pageFrom: 1,
+        pageTo: 170,
+        requestId: 'req-170',
+      })
+      expect(run.ok, run.ok ? '' : `${run.error.code}: ${run.error.message}`).toBe(true)
+      if (!run.ok) return
+
+      const draft = draftOf(run.value)
+      expect(draft.candidates).toHaveLength(170)
+      expect(draft.issues.some((item) => item.code === 'PAGE_LIMIT')).toBe(false)
+      expect(
+        draft.issues
+          .filter((item) => item.code === 'CHUNK_PROCESSED')
+          .map((item) => item.chunk),
+      ).toEqual([
+        { index: 1, from: 1, to: 100 },
+        { index: 2, from: 101, to: 170 },
+      ])
+      // 切块不改来源身份：仍是同一 revision + 同一 sha256。
+      expect(draft.sourceIdentity).toMatchObject({
+        revisionId: 'sr-1',
+        sha256: (await fixture()).sha256,
+        pageCount: 170,
+      })
+      expect(draft.candidates.some((candidate) => candidate.page === 1)).toBe(true)
+      expect(draft.candidates.some((candidate) => candidate.page === 170)).toBe(true)
+    } finally {
+      await harness.dispose()
+    }
+  })
+
   it('只读确切 revision（不是 latest）：同字节第二个版本不混用确认', async () => {
     const harness = await createHarness()
     try {

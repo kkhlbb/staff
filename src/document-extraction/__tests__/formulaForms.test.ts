@@ -130,9 +130,9 @@ describe('形态匹配（纯函数）', () => {
 })
 
 describe('P2 公式行显式末尾值：F-01～F-07', () => {
-  it('规则版本升到 document-extractor-5（语义变了必须升版）', () => {
-    expect(EXTRACTOR_VERSION).toBe('document-extractor-5')
-    expect(draftFor(1, 1).extractorVersion).toBe('document-extractor-5')
+  it('规则版本升到 document-extractor-6（语义变了必须升版）', () => {
+    expect(EXTRACTOR_VERSION).toBe('document-extractor-6')
+    expect(draftFor(1, 1).extractorVersion).toBe('document-extractor-6')
   })
 
   it('F-01 中间式含字母/除号：取 260 mm，中间式原样保留（不计算）', () => {
