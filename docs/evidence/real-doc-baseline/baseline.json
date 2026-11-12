@@ -4,7 +4,7 @@
     "documents": 6
   },
   "rules": {
-    "extractorVersion": "document-extractor-2",
+    "extractorVersion": "document-extractor-3",
     "maxExtractionPages": 100,
     "maxExtractionCandidates": 200,
     "maxExtractionIssues": 200,
@@ -25,7 +25,7 @@
         "from": 1,
         "to": 74
       },
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "candidates": {
         "total": 15,
         "pending": 4,
@@ -87,7 +87,7 @@
         "from": 1,
         "to": 5
       },
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "candidates": {
         "total": 20,
         "pending": 5,
@@ -143,7 +143,7 @@
         "from": 1,
         "to": 4
       },
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "candidates": {
         "total": 3,
         "pending": 0,
@@ -190,7 +190,7 @@
         "from": 1,
         "to": 170
       },
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "candidates": {
         "total": 0,
         "pending": 0,
@@ -227,7 +227,7 @@
         "from": 1,
         "to": 8
       },
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "candidates": {
         "total": 5,
         "pending": 2,
@@ -271,7 +271,7 @@
         "from": 1,
         "to": 8
       },
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "candidates": {
         "total": 80,
         "pending": 15,
@@ -352,7 +352,7 @@
     ],
     "noTextLayerPages": 1,
     "rules": {
-      "extractorVersion": "document-extractor-2",
+      "extractorVersion": "document-extractor-3",
       "maxExtractionPages": 100,
       "maxExtractionCandidates": 200,
       "maxExtractionIssues": 200,
@@ -406,7 +406,7 @@
       }
     ]
   },
-  "baselineReason": "首次建立真实文档基线：main 15cdac5（document-extractor-2），全篇页范围 + r4 前 20 页探针；语料按 manifest 的 SHA-256 校验；不记不稳定的读取耗时",
+  "baselineReason": "抽取规则升到 document-extractor-3：单位可从「同一表格表头 / 同一页『单位：』或图注 / 页范围第一页的文档级声明」继承，同作用域两个不同单位改报 UNIT_CONFLICT 阻塞。6 份真实语料逐份候选/pending/blocked/问题码全部不变，只有 extractorVersion 变化：语料里唯一的显式单位声明出现在 r4（170 页，PAGE_LIMIT 整份不提取，0 候选）；51 条 UNKNOWN_UNIT 阻塞候选中 11 条的行内单位串不在数值 token 上（属数值解析，本任务明确不改）、38 条行内没有任何单位串、2 条是 i=0/i=1 这类下标片段——没有一处满足继承前提，所以 0 条被救回，UNKNOWN_UNIT 原义不变。",
   "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
   "generatedAtKind": "run-time",
   "runTimeFields": []

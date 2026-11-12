@@ -1,0 +1,244 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-01 表头写「基本尺寸/mm」，单元格只有数字 > 两条组成环都继承表头 mm，数值精确、状态 pending 3ms
+   → expected 'blocked' to be 'pending' // Object.is equality
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-01 表头写「基本尺寸/mm」，单元格只有数字 > 出处指回表头那一行文本项（不只在数字单元格上） 0ms
+   → expected undefined to be defined
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-02 第 1 页写「单位：mm」，正文多处数字无单位 > 第 2 页三条赋值与第 3 页表格行全部继承 mm，且都待确认 0ms
+   → expected 'blocked' to be 'pending' // Object.is equality
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-02 第 1 页写「单位：mm」，正文多处数字无单位 > 每条候选的出处都指回第 1 页那句「单位：mm」 0ms
+   → 符号 H 缺少单位声明出处: expected undefined to be defined
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-02 第 1 页写「单位：mm」，正文多处数字无单位 > 第 3 页表头本身没有单位，靠文档级声明才对（不是表头继承） 1ms
+   → expected [ 'RULE_TABLE_OR_ASSIGNMENT', …(2) ] to include 'RULE_UNIT_INHERITED_DOCUMENT'
+ ✓ src/document-extraction/__tests__/unitInheritance.test.ts > U-03 表头 mm，但单元格自带 in > 单元格保留 in，不被表头 mm 覆盖，报 UNSUPPORTED_UNIT 0ms
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-03 表头 mm，但单元格自带 in > 同一行的上下偏差没有自带单位，仍按表头继承 mm（继承只补空缺） 0ms
+   → expected null to be 'mm' // Object.is equality
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-03 表头 mm，但单元格自带 in > 出处里既有单元格自带单位（2.05 in），也有被继承的表头 0ms
+   → expected undefined to be defined
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-04 表格 mm、正文另处说「单位为英寸」 > UNIT_CONFLICT：只出一条阻塞候选，不产出“选了 mm / 选了英寸”的两条 0ms
+   → expected [ 'UNKNOWN_UNIT' ] to include 'UNIT_CONFLICT'
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-04 表格 mm、正文另处说「单位为英寸」 > issue 级也标 UNIT_CONFLICT，并把两条互相矛盾的声明一起给出处 0ms
+   → expected [] to have a length of 1 but got +0
+ ✓ src/document-extraction/__tests__/unitInheritance.test.ts > U-05 完全没有任何单位线索（回归保护） > 表头行与行内赋值都仍按 UNKNOWN_UNIT 阻塞，不默认 mm 0ms
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-06 单位声明在表格上一页（跨页表格） > 本页有表头的表格正常继承；续表行因为没有表头而不构成候选 0ms
+   → expected 'blocked' to be 'pending' // Object.is equality
+ ✓ src/document-extraction/__tests__/unitInheritance.test.ts > U-06 单位声明在表格上一页（跨页表格） > 第 9 页的无单位赋值不许跨页继承第 8 页表头，仍 UNKNOWN_UNIT 0ms
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-07 图注「间隙（mm）」+ 图内标注数字 > 两个标注数字都继承图注的 mm，出处指向图注文本项 0ms
+   → expected 'blocked' to be 'pending' // Object.is equality
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-08 继承来的单位不破坏量级判据 > 继承 mm 时，超精度与超量级仍报既有错误，不四舍五入、不截断 0ms
+   → expected false to be true // Object.is equality
+ × src/document-extraction/__tests__/unitInheritance.test.ts > U-08 继承来的单位不破坏量级判据 > 继承到英制单位时仍 UNSUPPORTED_UNIT，不把 0.15 in 换算成 0.15 mm 0ms
+   → expected [ 'UNKNOWN_UNIT' ] to deeply equal [ 'UNSUPPORTED_UNIT' ]
+ ✓ src/document-extraction/__tests__/unitInheritance.test.ts > 证据完整性（继承不豁免出处要求） > U-01～U-08 全场景的每个数值字段都带完整出处，且声明出处也在页框内 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-01 表头写「基本尺寸/mm」，单元格只有数字 > 两条组成环都继承表头 mm，数值精确、状态 pending
+AssertionError: expected 'blocked' to be 'pending' // Object.is equality
+
+Expected: "pending"
+Received: "blocked"
+
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:102:32
+    100|     expect(draft.candidates).toHaveLength(2)
+    101|     for (const candidate of rings(draft)) {
+    102|       expect(candidate.status).toBe('pending')
+       |                                ^
+    103|       expect(candidate.reasonCodes).toEqual([])
+    104|       const nominal = field(candidate, 'nominal')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-01 表头写「基本尺寸/mm」，单元格只有数字 > 出处指回表头那一行文本项（不只在数字单元格上）
+AssertionError: expected undefined to be defined
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:120:20
+    118|     const h = ringOf(draft, 'H')
+    119|     const header = evidenceCiting(h, '基本尺寸/mm')
+    120|     expect(header).toBeDefined()
+       |                    ^
+    121|     expect(header?.page).toBe(4)
+    122|     const nominal = field(h, 'nominal')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-02 第 1 页写「单位：mm」，正文多处数字无单位 > 第 2 页三条赋值与第 3 页表格行全部继承 mm，且都待确认
+AssertionError: expected 'blocked' to be 'pending' // Object.is equality
+
+Expected: "pending"
+Received: "blocked"
+
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:139:32
+    137|     expect(draft.candidates.length).toBeGreaterThanOrEqual(4)
+    138|     for (const candidate of rings(draft)) {
+    139|       expect(candidate.status).toBe('pending')
+       |                                ^
+    140|       expect(field(candidate, 'nominal').unit).toBe('mm')
+    141|       expect(field(candidate, 'nominal').unitText).toBe('mm')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-02 第 1 页写「单位：mm」，正文多处数字无单位 > 每条候选的出处都指回第 1 页那句「单位：mm」
+AssertionError: 符号 H 缺少单位声明出处: expected undefined to be defined
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:153:52
+    151|       const candidate = ringOf(draft, symbol)
+    152|       const declaration = evidenceCiting(candidate, '单位:')
+    153|       expect(declaration, `符号 ${symbol} 缺少单位声明出处`).toBeDefined()
+       |                                                    ^
+    154|       expect(declaration?.page).toBe(1)
+    155|       expect(declaration?.normalizedSnippet).toContain('mm')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-02 第 1 页写「单位：mm」，正文多处数字无单位 > 第 3 页表头本身没有单位，靠文档级声明才对（不是表头继承）
+AssertionError: expected [ 'RULE_TABLE_OR_ASSIGNMENT', …(2) ] to include 'RULE_UNIT_INHERITED_DOCUMENT'
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:163:32
+    161|     const b2 = ringOf(draft, 'B2')
+    162|     expect(b2.page).toBe(3)
+    163|     expect(b2.confidenceBasis).toContain('RULE_UNIT_INHERITED_DOCUMENT…
+       |                                ^
+    164|     expect(b2.confidenceBasis).not.toContain('RULE_UNIT_INHERITED_TABL…
+    165|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-03 表头 mm，但单元格自带 in > 同一行的上下偏差没有自带单位，仍按表头继承 mm（继承只补空缺）
+AssertionError: expected null to be 'mm' // Object.is equality
+
+- Expected:
+"mm"
+
++ Received:
+null
+
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:188:45
+    186|
+    187|   it('同一行的上下偏差没有自带单位，仍按表头继承 mm（继承只补空缺）', () => {
+    188|     expect(field(h, 'upperDeviation').unit).toBe('mm')
+       |                                             ^
+    189|     expect(field(h, 'upperDeviation').valueQ).toBe(200)
+    190|     expect(field(h, 'lowerDeviation').unit).toBe('mm')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-03 表头 mm，但单元格自带 in > 出处里既有单元格自带单位（2.05 in），也有被继承的表头
+AssertionError: expected undefined to be defined
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:197:20
+    195|     expect(h.evidence.some((item) => item.normalizedSnippet.includes('…
+    196|     const header = evidenceCiting(h, '基本尺寸/mm')
+    197|     expect(header).toBeDefined()
+       |                    ^
+    198|     // 显式单位优先：名义值本身的出处只覆盖「2.05 in」这个单元格。
+    199|     expect(field(h, 'nominal').evidence[0].normalizedSnippet).toContai…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-04 表格 mm、正文另处说「单位为英寸」 > UNIT_CONFLICT：只出一条阻塞候选，不产出“选了 mm / 选了英寸”的两条
+AssertionError: expected [ 'UNKNOWN_UNIT' ] to include 'UNIT_CONFLICT'
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:214:27
+    212|     const h = candidates[0]!
+    213|     expect(h.status).toBe('blocked')
+    214|     expect(h.reasonCodes).toContain('UNIT_CONFLICT')
+       |                           ^
+    215|     expect(h.reasonCodes).not.toContain('UNSUPPORTED_UNIT')
+    216|     for (const name of ['nominal', 'upperDeviation', 'lowerDeviation']…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-04 表格 mm、正文另处说「单位为英寸」 > issue 级也标 UNIT_CONFLICT，并把两条互相矛盾的声明一起给出处
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:230:33
+    228|     expect(issue).toBeDefined()
+    229|     expect(issue?.severity).toBe('blocked')
+    230|     expect(issue?.candidateIds).toHaveLength(1)
+       |                                 ^
+    231|     expect(issue?.candidateIds).toEqual([rings(draft)[0]!.candidateId])
+    232|     expect(issue?.evidence.some((item) => item.normalizedSnippet.inclu…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-06 单位声明在表格上一页（跨页表格） > 本页有表头的表格正常继承；续表行因为没有表头而不构成候选
+AssertionError: expected 'blocked' to be 'pending' // Object.is equality
+
+Expected: "pending"
+Received: "blocked"
+
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:268:22
+    266|     const h = ringOf(draft, 'H')
+    267|     expect(h.page).toBe(8)
+    268|     expect(h.status).toBe('pending')
+       |                      ^
+    269|     expect(h.confidenceBasis).toContain('RULE_UNIT_INHERITED_TABLE')
+    270|     // 第 9 页的续表行（B1 …）没有表头，不产生组成环候选；本页只有那条无单位赋值。
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-07 图注「间隙（mm）」+ 图内标注数字 > 两个标注数字都继承图注的 mm，出处指向图注文本项
+AssertionError: expected 'blocked' to be 'pending' // Object.is equality
+
+Expected: "pending"
+Received: "blocked"
+
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:295:32
+    293|     const c2 = ringOf(draft, 'C2')
+    294|     for (const candidate of [c, c2]) {
+    295|       expect(candidate.status).toBe('pending')
+       |                                ^
+    296|       expect(field(candidate, 'nominal').unit).toBe('mm')
+    297|       expect(candidate.confidenceBasis).toContain('RULE_UNIT_INHERITED…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/13]⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-08 继承来的单位不破坏量级判据 > 继承 mm 时，超精度与超量级仍报既有错误，不四舍五入、不截断
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:323:79
+    321|     expect(field(b, 'nominal').valueQ).toBeNull()
+    322|     // 单位确实继承到了（出处里有「单位：mm」），但量级判据没有因此放松。
+    323|     expect(a.evidence.some((item) => item.normalizedSnippet.includes('…
+       |                                                                               ^
+    324|     expect(b.evidence.some((item) => item.normalizedSnippet.includes('…
+    325|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/13]⎯
+
+ FAIL  src/document-extraction/__tests__/unitInheritance.test.ts > U-08 继承来的单位不破坏量级判据 > 继承到英制单位时仍 UNSUPPORTED_UNIT，不把 0.15 in 换算成 0.15 mm
+AssertionError: expected [ 'UNKNOWN_UNIT' ] to deeply equal [ 'UNSUPPORTED_UNIT' ]
+
+- Expected
++ Received
+
+  [
+-   "UNSUPPORTED_UNIT",
++   "UNKNOWN_UNIT",
+  ]
+
+ ❯ src/document-extraction/__tests__/unitInheritance.test.ts:331:27
+    329|     const d = ringOf(draft, 'D')
+    330|     expect(d.status).toBe('blocked')
+    331|     expect(d.reasonCodes).toEqual(['UNSUPPORTED_UNIT'])
+       |                           ^
+    332|     expect(field(d, 'nominal').text).toBe('0.15')
+    333|     expect(field(d, 'nominal').unitText).toBe('英寸')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/13]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  13 failed | 4 passed (17)
+   Start at  20:44:59
+   Duration  325ms (import 41%, tests 35%, setup 13%, transform 10%, worker 1%)
+
