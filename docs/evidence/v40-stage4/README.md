@@ -14,7 +14,7 @@
 | 适配器 | `openai-compatible-1`（`desktop/main/openaiCompatibleAdapter.ts`），OpenAI 兼容 `chat/completions` + `tools`，SSE 结构流式；换供应商只改 base_url / model / key |
 | 超时 | 单次模型请求 120 s（任务预算）；适配器网络层重试 2 次（仅 fetch 失败 / 429 / 5xx） |
 | 预算 | 每轮最多 20 次工具调用、同一工具连续相同失败 2 次 |
-| 计费口径 | 官网 off-peak 价（USD/百万 token）：cache hit 0.003、cache miss 0.15、输出 0.6；本次估算 **$0.013506**（prompt 167,268 / completion 7,757 / cache hit 110,464 / cache miss 56,804） |
+| 计费口径 | 官网 off-peak 价（USD/百万 token）：cache hit 0.003、cache miss 0.15、输出 0.6；本次估算 **$0.013985**（prompt 166,766 / completion 8,680 / cache hit 110,464 / cache miss 56,302） |
 
 ## 2 A40 验收矩阵
 
@@ -24,7 +24,7 @@
 |---|---|---|
 | A40-01 完整任务书建项 | **通过**（3/3 次） | 参数 200000/320000/120000 q；基线区间 [0.1500,0.2500]；条款 [0.1000,0.3000] 满足、裕量 +0.0500/+0.0500；用户确认后提交成功；重开定位条款原文（页/选区）可用 |
 | A40-02 缺失数据追问 | **通过** | `missing-length.pdf`：模型指出「公式 blocked，原因码 FORMULA_UNRESOLVED_OPERAND，未解析操作数是 S（隔套长度），隔套长度候选为空」；apply 回执 NOT_CONFIRMED；未成功建项、无草稿、正式项目与版本不变 |
-| A40-03 冲突要求 | **通过** | `bad-formula-conflict.pdf`：模型列出 `C = H − B1 − S − B2` 与 `C = H − B1 + S − B2` 两条公式与出处并请用户选择；正式项目不变；冲突未决时 `apply` 被拒（NOT_CONFIRMED） |
+| A40-03 冲突要求 | **通过**（3/3 次） | `bad-formula-conflict.pdf`：判据是结构化的——提取带 `FORMULA_CONFLICT`/`FORMULA_VALUE_CONFLICT` 且两条公式候选 `status=blocked`；伪造 planToken 的 `apply` 被拒（NOT_CONFIRMED）；任务内没有成功的 apply/preview/commit、无草稿/预览、正式版本不变；冲突候选仍 blocked（未擅自择优）；模型文本按候选数据推导的两条公式签名（`c=h-b1-s-b2` / `c=h-b1+s-b2`，判别位 `b1-s` / `b1+s`）逐条命中 |
 | A40-04 合格改图 | **通过** | 12.04 → 参数 120400 q、区间 [0.1100,0.2100]、裕量 +0.0100/+0.0900；提交后版本数只 +1；重复提交被拒；磁盘文件与内存一致 |
 | A40-05 超限改图 | **通过**（3/3 次） | 12.10 → 区间 [0.0500,0.1500]、裕量 −0.0500（下限不足 0.0500）、条款 unsatisfied；可信提交被拦；正式长度仍 12.04、版本数不变 |
 | A40-06 边界与重开 | **通过** | 12.05 → 区间 [0.1000,0.2000]、裕量 0（相等满足）；提交成功；重开后询问上次改动 → 模型答「12.0000 → 12.0400 mm，已保存检查 satisfied，区间 [0.1100,0.2100]，裕量 0.0100/0.0900」 |
@@ -38,17 +38,27 @@ A40-01 ×3（`a40-real-results.json > records`）：
 
 | 次 | 结果 | 耗时 | 任务状态 | 模型调用 | 工具序列 |
 |---|---|---|---|---|---|
-| 1 | PASS | 6,029 ms | ready-to-commit | 4 | context → confirmed → apply → preview |
-| 2 | PASS | 6,074 ms | ready-to-commit | 4 | context → confirmed → apply → preview |
-| 3 | PASS | 5,935 ms | ready-to-commit | 4 | context → confirmed → apply → preview |
+| 1 | PASS | 6,076 ms | ready-to-commit | 4 | confirmed → apply → preview |
+| 2 | PASS | 6,239 ms | ready-to-commit | 4 | confirmed → context → apply → preview |
+| 3 | PASS | 6,133 ms | ready-to-commit | 4 | confirmed → context → apply → preview |
 
 A40-05 ×3：
 
 | 次 | 结果 | 耗时 | 任务状态 | 模型调用 | 结论 |
 |---|---|---|---|---|---|
-| 1 | PASS | 4,933 ms | ready-to-commit | 3 | 区间 [0.0500,0.1500]、下限 −0.0500、提交被拦 |
-| 2 | PASS | 6,154 ms | ready-to-commit | 3 | 同上 |
-| 3 | PASS | 5,099 ms | ready-to-commit | 3 | 同上 |
+| 1 | PASS | 4,282 ms | ready-to-commit | 3 | 区间 [0.0500,0.1500]、下限 −0.0500、提交被拦 |
+| 2 | PASS | 5,965 ms | ready-to-commit | 4 | 同上 |
+| 3 | PASS | 5,334 ms | ready-to-commit | 4 | 同上 |
+
+A40-03 ×3（断言改为结构化判定后重跑；文字同义词只进 `notes` 作辅助）：
+
+| 次 | 结果 | 耗时 | 任务状态 | 模型调用 | 两条公式命中（full/pairs/候选 ID） |
+|---|---|---|---|---|---|
+| 1 | PASS | 4,827 ms | completed | 2 | 两条均 `full=true, pairs=true, id=false` |
+| 2 | PASS | 4,478 ms | completed | 2 | 两条均 `full=true, pairs=true, id=false` |
+| 3 | PASS | 4,338 ms | completed | 2 | 两条均 `full=true, pairs=true, id=true`（模型还引用了两个候选 ID） |
+
+三次的 `taskState` 都是 `completed`（不是 `awaiting-input`），见 §7 第 7 条。
 
 开发过程中的波动（如实记录，未计入上表）：早期轮次里模型出现过 ① 跳过 `preview` 直接总结（该次无法进入确认保存，按失败记）；② 用错 draftId 调 `confirmed` 得到 INVALID_INPUT；③ 把 q 当 0.001 mm 转述（120.04 mm）。为此做了两项产品修正：工具回执进模型上下文前压缩图纸数据并附带 `valueMm`，上下文草稿改为紧凑视图。修正后最终运行 3/3。
 
@@ -56,14 +66,14 @@ A40-05 ×3：
 
 | 指标 | 值 |
 |---|---|
-| 工具调用成功率 | 35/36 = **97.2 %**（1 次失败为 A40-02 的 apply NOT_CONFIRMED） |
-| 模型调用次数 | 43 |
+| 工具调用成功率 | 37/38 = **97.4 %**（1 次失败为 A40-02 的 apply NOT_CONFIRMED） |
+| 模型调用次数 | 46 |
 | 首次配置时间 | 设置面板写入 + 连接测试 ≈ 0.6–0.9 s（三次走查回执 625 / 843 / 947 ms） |
 | 用户补资料次数 | 1（A40-02 缺长度） |
 | 人工回填数值次数 | 0 |
-| 改图耗时（模型→预览） | A40-04 5,838 ms；A40-05 4,933 / 6,154 / 5,099 ms；A40-06 3,368 ms |
+| 改图耗时（模型→预览） | A40-04 5,137 ms；A40-05 4,282 / 5,965 / 5,334 ms；A40-06 3,900 ms |
 | 失败恢复次数 | 1（过期基准：模型先读 context 后自行纠正，服务层直接拒绝过期基准） |
-| 模型调用成本 | ≈ **$0.0135**（off-peak 价目表估算，实际账单以供应商为准） |
+| 模型调用成本 | ≈ **$0.0140**（off-peak 价目表估算，实际账单以供应商为准） |
 
 ## 5 打包走查（真实点击 + 真实模型）
 
@@ -99,6 +109,7 @@ A40-05 ×3：
 4. **模型额度/供应商**：请求 `deepseek-chat` 时网关回执 `deepseek-flash`；若后续要用 `deepseek-v4-pro`，只改设置里的模型 ID（代码不变）。
 5. **模型的数值转述**：最终运行里 A40-05 的模型文本把「条款要求区间」写成 [0.1100,0.2100]（实际条款是 [0.1000,0.3000]，那是上一步的结果区间），截图 `v40-stage4-05-over-limit-blocked.png` 可核对；侧栏「活动条款检查」与提交门禁由主进程数据生成，判定仍为 unsatisfied / LOWER_VIOLATED，未受模型文本影响。早期轮次还出现过 q/mm 换算错误（120.04 mm）。
 6. **A40-01 的条款先确认**：验收脚本用 `createRequirementProject()`（真实 `confirmOrUpdateRequirement` 路径）建立活动条款 [0.1000,0.3000]，视为用户已在条款面板确认；模型只负责候选→草稿映射。
+7. **A40-03 的任务状态语义缺口（未修，待拍板）**：状态机里表示「停下来等用户」的是 `awaiting-input` / `awaiting-confirmation`，但实测三次都是 `completed`——`agentScheduler.finish()` 在「没有 preview、也没有工具失败」时把目标状态定成 `completed`，而 `agentSessionChannels.askQuestions()` 对 `completed` 返回空，所以界面上不会出现待答条目（模型在文本里问的那句「请选择哪条公式」只有对话文本可看）。A40-03 的断言因此不是写死 `awaiting-input`，而是结构等价判据：未进入 `ready-to-commit`/`committing`、任务内无成功的 apply/preview/commit、无草稿/预览、正式版本不变、冲突候选仍 blocked；真实状态逐次写进证据 `records[].notes`。改状态机属产品行为变更（会影响其他终态语义与单测），未在本轮任务范围内擅自修改，等用户裁决。
 
 ## 8 复跑命令与产物
 

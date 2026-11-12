@@ -29,6 +29,7 @@ import { realTaskSystemPrompt } from '../main/agentSessionChannels'
 import { ModelAdapterRegistry } from '../main/modelAdapter'
 import { createRequirementProject } from '../../src/requirements/__fixtures__/requirementFixture'
 import type { ProjectFileSnapshot } from '../../src/project-file/types'
+import type { ExtractionCandidate } from '../../src/document-extraction/types'
 import { sha256Hex } from '../../src/sources/hash'
 import { decodeProjectFile } from '../../src/project-file/codec'
 import { serializeEvidence } from '../../scripts/evidence-json'
@@ -70,6 +71,13 @@ interface AttemptRecord {
 
 const records: AttemptRecord[] = []
 const harnesses: Harness[] = []
+/** 会改变草稿/正式数据的工具：任务内只要成功一次，就不算「停在待答」。 */
+const WRITE_TOOLS = new Set(['apply', 'preview', 'commit', 'commitApprovedDraft'])
+/**
+ * 仅用于「人工快读」的辅助文字判据（任务卡要求：文字判定是辅助，不是主判据）。
+ * 结论由结构化断言决定：状态/回执/草稿/版本/两条公式签名。
+ */
+const AUX_SYNONYMS = ['矛盾', '冲突', '不一致', '两条', '选择', '指定', '待定', '请你确认', '需要你', '无法同时', '均未通过'] as const
 /** A40-04 提交后的真实项目文件；A40-05/06 从它开始（打不开时退回等价夹具并注明）。 */
 let baseline1204Path: string | null = null
 const BASELINE_1204 = path.join(EVIDENCE, 'fixtures', 'a40-1204.cunlian')
@@ -274,6 +282,74 @@ async function contextValue(ctx: Ctx): Promise<{ draft: AgentDraftView | null; p
   const result = await ctx.service.run(1, 'context', {})
   if (!result.ok) throw new Error(`context 失败：${result.code}`)
   return result.data as { draft: AgentDraftView | null; parameters: { key: string; valueQ: number }[]; check: unknown }
+}
+
+/**
+ * 公式文本归一化：统一 Unicode 减号/加号、全角数字、反引号/星号/空白，便于结构化比对。
+ * 只用于「比较」，归一化结果不回写任何产品数据。
+ */
+function normalizeMathText(raw: string): string {
+  return raw
+    .replace(/[\uFF0B\uFE62]/gu, '+')
+    .replace(/[\u2212\u2013\u2014\u2015\uFF0D\uFE63\u2796]/gu, '-')
+    .replace(/[\uFF10-\uFF19]/gu, (digit) => String.fromCharCode(digit.charCodeAt(0) - 0xfee0))
+    .toLowerCase()
+    .replace(/[`*_\u00A0]/gu, '')
+    .replace(/\s+/gu, '')
+}
+
+interface FormulaSignature {
+  candidateId: string
+  /** 归一化后的完整表达式（来自候选数据，不写死夹具文本）。 */
+  expression: string
+  /** 相邻操作数 + 符号片段，例如 `b1-s` 与 `b1+s`：这是两条公式的判别位。 */
+  pairs: string[]
+}
+
+/**
+ * 从提取草稿里推导冲突公式签名。冲突的来源是结构化原因码，不是文本：
+ * parse.ts 的 checkConflicts 给冲突公式打上 `status='blocked'` + `reasonCodes` 含 `FORMULA_CONFLICT`
+ * （`data.conflict` 在解析阶段恒为 false，不能拿它当判据）。
+ */
+function conflictedFormulaSignatures(draft: { candidates: readonly ExtractionCandidate[] }): FormulaSignature[] {
+  return draft.candidates
+    .filter((candidate): candidate is Extract<ExtractionCandidate, { kind: 'formula' }> =>
+      candidate.kind === 'formula'
+      && candidate.status === 'blocked'
+      && candidate.reasonCodes.includes('FORMULA_CONFLICT'))
+    .map((candidate) => {
+      const operands = candidate.data.operands
+      return {
+        candidateId: candidate.candidateId,
+        expression: normalizeMathText(candidate.data.expression),
+        pairs: operands.slice(1).map((operand, index) =>
+          `${operands[index]!.symbol.toLowerCase()}${operand.sign === 1 ? '+' : '-'}${operand.symbol.toLowerCase()}`),
+      }
+    })
+}
+
+interface FormulaMention {
+  candidateId: string
+  expression: string
+  full: boolean
+  pairs: boolean
+  id: boolean
+  ok: boolean
+}
+
+/**
+ * 判定模型文本是否真的给出了某条公式：
+ * ① 归一化后的完整表达式出现；② 或该公式的每一组相邻「操作数+符号」都出现（含判别位）；
+ * ③ 或直接引用了该公式候选 ID。三者任一即算提到。
+ */
+function formulaMentions(modelText: string, signatures: readonly FormulaSignature[]): FormulaMention[] {
+  const text = normalizeMathText(modelText)
+  return signatures.map((signature) => {
+    const full = signature.expression !== '' && text.includes(signature.expression)
+    const pairs = signature.pairs.length > 0 && signature.pairs.every((pair) => text.includes(pair))
+    const id = text.includes(signature.candidateId.toLowerCase())
+    return { candidateId: signature.candidateId, expression: signature.expression, full, pairs, id, ok: full || pairs || id }
+  })
 }
 
 
@@ -619,47 +695,92 @@ describe.skipIf(!ENABLED)('V4.0 阶段4：真实模型 A40 验收', () => {
     }
   }, 600_000)
 
-  it('A40-03：冲突公式 → 展示出处并询问，正式项目不变', async () => {
-    const record: AttemptRecord = {
-      item: 'A40-03', attempt: 1, startedAt: new Date().toISOString(), durationMs: 0,
-      taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
-      modelCalls: 0, assertions: [], notes: [],
-    }
-    records.push(record)
-    const check = makeChecker(record)
-    try {
-      const snapshot = await buildSnapshot({ pdf: 'bad-formula-conflict.pdf' })
-      const ctx = await openContext(snapshot)
-      const session = ctx.h.projectService.getSession(ctx.sessionId)!
-      const before = session.snapshot.project.currentRevisionId
-      const run = await ipcCall<ExtractionRunValue>(ctx, IPC_CHANNELS.extractionRun, {
-        sessionId: session.sessionId, baseEditSeq: session.acceptedSeq, revisionId: 'sr-1', pageFrom: 1, pageTo: 1, requestId: 'a40-03',
-      })
-      if (!run.ok) {
-        check('提取成功', false, `${run.error.code} ${run.error.message}`)
-        return
+  it('A40-03 ×3：冲突公式 → 两条并列请用户选，正式项目不变', async () => {
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const record: AttemptRecord = {
+        item: 'A40-03', attempt, startedAt: new Date().toISOString(), durationMs: 0,
+        taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
+        modelCalls: 0, assertions: [], notes: [],
       }
-      const draft = session.snapshot.project.extractionDrafts.find((item) => item.draftId === run.value.draftId)!
-      check('提取成功并带冲突问题', draft.issues.some((issue) => issue.code.includes('CONFLICT')) || draft.candidates.some((candidate) => candidate.kind === 'formula' && candidate.data.conflict),
-        draft.issues)
-      // 用户未处理冲突前，模型拿不到任何 planToken：apply 必须被拒。
-      const apply = await ctx.service.run(1, 'apply', {
-        planToken: 'forged-token', baseRevisionId: before, candidateIds: draft.candidates.map((candidate) => candidate.candidateId), mapping: { ringSymbols: ['H', 'B1', 'S', 'B2'] },
-      })
-      check('冲突未决时 apply 被拒', !apply.ok, apply.ok ? 'unexpected ok' : `${apply.code}`)
-      await runTask(ctx, record, {
-        goal: '根据这份任务书建立隔套项目。',
-        systemPrompt: realTaskSystemPrompt({ projectId: session.snapshot.project.id, baseRevisionId: before, extractionDraftId: draft.draftId }),
-      })
-      check('正式项目未改变', ctx.h.projectService.getSession(ctx.sessionId)!.snapshot.project.currentRevisionId === before, before)
-      check('模型文本提示冲突或需要选择', /冲突|两条|选择|不一致/u.test(record.modelText), record.modelText.slice(0, 300))
-    } catch (error) {
-      record.notes.push(`异常：${error instanceof Error ? error.message : String(error)}`)
-      check('流程无异常', false, record.notes.at(-1))
-    } finally {
-      await cleanupAll()
+      records.push(record)
+      const check = makeChecker(record)
+      try {
+        const snapshot = await buildSnapshot({ pdf: 'bad-formula-conflict.pdf' })
+        const ctx = await openContext(snapshot)
+        const session = ctx.h.projectService.getSession(ctx.sessionId)!
+        const before = session.snapshot.project.currentRevisionId
+        const revisionsBefore = session.snapshot.fileRevisions.length
+        const run = await ipcCall<ExtractionRunValue>(ctx, IPC_CHANNELS.extractionRun, {
+          sessionId: session.sessionId, baseEditSeq: session.acceptedSeq, revisionId: 'sr-1', pageFrom: 1, pageTo: 1, requestId: `a40-03-${attempt}`,
+        })
+        if (!run.ok) {
+          check('提取成功', false, `${run.error.code} ${run.error.message}`)
+          continue
+        }
+        const draft = session.snapshot.project.extractionDrafts.find((item) => item.draftId === run.value.draftId)!
+        // 判据从候选数据推导（不写死夹具文本）：两条冲突公式的表达式必须互不相同。
+        const signatures = conflictedFormulaSignatures(draft)
+        check('提取成功并带冲突问题',
+          draft.issues.some((issue) => issue.code.includes('CONFLICT')) && signatures.length > 0,
+          { issues: draft.issues.map((issue) => issue.code), signatures: signatures.map((signature) => `${signature.candidateId}:${signature.expression}`) })
+        check('两条冲突公式候选、表达式互不相同',
+          signatures.length === 2 && new Set(signatures.map((signature) => signature.expression)).size === 2,
+          signatures.map((signature) => `${signature.candidateId}:${signature.expression} pairs=${signature.pairs.join('|')}`))
+        // 用户未处理冲突前，模型拿不到任何 planToken：apply 必须被拒（正式数据不动）。
+        const apply = await ctx.service.run(1, 'apply', {
+          planToken: 'forged-token', baseRevisionId: before, candidateIds: draft.candidates.map((candidate) => candidate.candidateId), mapping: { ringSymbols: ['H', 'B1', 'S', 'B2'] },
+        })
+        check('冲突未决时 apply 被拒', !apply.ok, apply.ok ? 'unexpected ok' : `${apply.code}`)
+        await runTask(ctx, record, {
+          goal: '根据这份任务书建立隔套项目。',
+          systemPrompt: realTaskSystemPrompt({ projectId: session.snapshot.project.id, baseRevisionId: before, extractionDraftId: draft.draftId }),
+        })
+        // ① 待答状态（结构化）：不写死某一个状态字符串，而是验证「任务没有推进到可提交/已提交」，
+        //    且任务内没有任何成功的写入类工具、没有草稿/预览。真实状态写进 detail 与 notes。
+        const value = await contextValue(ctx)
+        const preview = previewOf(ctx)
+        const successfulWrites = record.toolReceipts
+          .filter((receipt) => receipt.errorCode === null && WRITE_TOOLS.has(receipt.tool))
+          .map((receipt) => receipt.tool)
+        const commitCapable = record.taskState === 'ready-to-commit' || record.taskState === 'committing'
+        check('任务未进入 ready-to-commit/committing（停在等用户决定）', !commitCapable, `${record.taskState}/${record.taskErrorCode}`)
+        check('任务内没有成功的 apply/preview/commit', successfulWrites.length === 0, successfulWrites)
+        check('没有生成工程草稿与预览', value.draft === null && preview === null,
+          { draft: value.draft === null ? null : value.draft.draftId, preview: preview === null ? null : preview.previewId })
+        record.notes.push(`待答状态实测 taskState=${record.taskState}/errorCode=${record.taskErrorCode}；`
+          + '状态机的等待态是 awaiting-input/awaiting-confirmation，本产品在「模型只提问、无产物」时记为 completed，'
+          + 'askQuestions() 对 completed 返回空（产品语义缺口，已在交付报告列为未完成项）')
+        // ② 两条公式：各自的操作数/符号都要出现，或引用候选 ID。
+        const mentions = formulaMentions(record.modelText, signatures)
+        check('模型文本同时给出两条冲突公式（完整表达式 / 判别性操作数-符号对 / 候选 ID 任一命中）',
+          signatures.length === 2 && mentions.length === 2 && mentions.every((mention) => mention.ok), mentions)
+        // ③ 正式项目未改变（保留原判据）。
+        const after = ctx.h.projectService.getSession(ctx.sessionId)!
+        check('正式项目未改变', after.snapshot.project.currentRevisionId === before, before)
+        check('正式版本数未变化', after.snapshot.fileRevisions.length === revisionsBefore, `${revisionsBefore} → ${after.snapshot.fileRevisions.length}`)
+        const afterDraft = after.snapshot.project.extractionDrafts.find((item) => item.draftId === draft.draftId)
+        const afterFormulas = afterDraft?.candidates.filter((candidate) => candidate.kind === 'formula') ?? []
+        check('冲突公式候选仍为 blocked（未擅自择优）',
+          afterFormulas.length === 2 && afterFormulas.every((candidate) => candidate.status === 'blocked'),
+          afterFormulas.map((candidate) => `${candidate.candidateId}:${candidate.status}`))
+        // ④ 辅助文字判定：只写进 notes、不计入结论（任务卡：文字判定是辅助，不是主判据）。
+        const auxHits = AUX_SYNONYMS.filter((word) => record.modelText.includes(word))
+        record.notes.push(`辅助文字判定（不计入结论，仅便于人工快读）：命中同义词 [${auxHits.join('、')}]`)
+      } catch (error) {
+        record.notes.push(`异常：${error instanceof Error ? error.message : String(error)}`)
+        check('流程无异常', false, record.notes.at(-1))
+      } finally {
+        record.outcome = record.assertions.length > 0 && record.assertions.every((assertion) => assertion.ok) ? 'PASS' : 'FAIL'
+        await cleanupAll()
+      }
     }
-  }, 600_000)
+    const attempts = records.filter((item) => item.item === 'A40-03')
+    expect(attempts.length).toBe(3)
+    const failed = attempts.filter((item) => item.outcome !== 'PASS')
+    expect(failed.length, JSON.stringify(attempts.map((item) => ({
+      attempt: item.attempt, outcome: item.outcome, failed: item.assertions.filter((assertion) => !assertion.ok),
+    })))).toBe(0)
+  }, 900_000)
 
   it('A40-07：真实模型下的失败路径（工具失败/连接失败/超时/导出取消/重复提交）', async () => {
     const record: AttemptRecord = {
