@@ -6,7 +6,7 @@
  */
 import { calculateChain } from '../domain/calculate'
 import type { ChainDefinition } from '../domain/types'
-import { buildSpacerDrawing, DrawingBuildError } from '../drawing/spacerDrawing'
+import { buildSpacerDrawing, draftVersionText, DrawingBuildError } from '../drawing/spacerDrawing'
 import {
   SPACER_PARAMETER_IDS,
   SPACER_PARAMETER_KEYS,
@@ -242,6 +242,11 @@ export function computeChange(
   const frameFields = { ...(baseRecord?.frameFields ?? DEFAULT_FRAME_FIELDS) }
   // 无任务书项目：标题栏与技术要求的依据栏是强制标记，不由用户备注决定。
   if (snapshot.project.sourceKind === 'user-intent') frameFields.basis = USER_INPUT_BASIS
+  // 版本栏：写可读的「草稿 · 第 N 版」，N = 本次提交后的版本序号（现存版本数 + 1）。
+  // 字符串随图纸记录持久化，重建时直接读它，绝不把内部 revision UUID 印在图上。
+  if (frameFields.version.trim() === '') {
+    frameFields.version = draftVersionText(snapshot.fileRevisions.length + 1)
+  }
   const scale = baseRecord?.scale ?? { numerator: 1, denominator: 1 }
   const drawingId = baseRecord?.drawingId ?? `drawing:${snapshot.project.id}:spacer`
 

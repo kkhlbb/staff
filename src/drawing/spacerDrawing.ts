@@ -122,6 +122,19 @@ function normalizeField(
   return trimmed
 }
 
+/**
+ * 标题栏版本栏的默认文字：可读的「草稿 · 第 N 版」。
+ *
+ * 序号由调用方在**生成时**算好并写进 `frameFields.version`（随图纸记录持久化），
+ * 重建只读这个已保存的字符串，所以指纹稳定、不会因为版本数增长而自我不一致。
+ * 拿不到序号时只写「草稿」——绝不把内部 revision UUID 印到图上。
+ */
+export function draftVersionText(ordinal?: number): string {
+  return typeof ordinal === 'number' && Number.isInteger(ordinal) && ordinal > 0
+    ? `草稿 · 第 ${ordinal} 版`
+    : '草稿'
+}
+
 function buildFrame(
   fields: DrawingFrameFields,
   revisionId: string,
@@ -146,6 +159,9 @@ function buildFrame(
   const tolerance = normalizeField(fields.tolerance, '公差/配合', missingFields)
   const surface = normalizeField(fields.surface, '表面要求', missingFields)
   const drafter = normalizeField(fields.drafter, '制图人/日期', missingFields)
+  // 旧记录（版本栏为空）保持既有回退文字：这些图纸的 dataFingerprint 是用这段文字算的，
+  // 换掉会让已保存的旧项目打不开（重建指纹不一致）。新图由调用方在生成时写入
+  // 「草稿 · 第 N 版」（见 draftVersionText），正常路径不会走到这里。
   const version = fields.version.trim() === '' ? `草稿 ${revisionId}` : fields.version.trim()
   const date = normalizeField(fields.date, '制图人/日期', [])
 

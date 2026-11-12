@@ -14,7 +14,7 @@ import type {
   ProjectStageValue,
 } from '../shared/contracts'
 import { IPC_CHANNELS } from '../shared/contracts'
-import { buildSpacerDrawing, DrawingBuildError } from '../../src/drawing/spacerDrawing'
+import { buildSpacerDrawing, draftVersionText, DrawingBuildError } from '../../src/drawing/spacerDrawing'
 import { renderDrawingSvg, validateDrawingSvgMarkup } from '../../src/drawing/renderDrawingSvg'
 import { DxfExportError, buildDxfDocument, validateDxfBytes } from '../../src/drawing/dxfExport'
 import { USER_INPUT_BASIS, USER_INPUT_FILE_SUFFIX } from '../../src/drawing/types'
@@ -216,6 +216,14 @@ export function registerDrawingChannels(ipc: IpcMainLike, deps: DrawingChannelDe
         }
         const project = session.snapshot.project
         const drawingId = `drawing:${project.id}:spacer`
+        // 版本栏：留空时写可读的「草稿 · 第 N 版」（当前版本序号），并随图纸记录持久化；
+        // 内部 revision UUID 只留在项目文件里，不印到图上。
+        const frameFields = {
+          ...params.frameFields,
+          version: params.frameFields.version.trim() === ''
+            ? draftVersionText(session.snapshot.fileRevisions.length)
+            : params.frameFields.version.trim(),
+        }
         let data: DrawingData
         try {
           data = buildSpacerDrawing({
@@ -224,7 +232,7 @@ export function registerDrawingChannels(ipc: IpcMainLike, deps: DrawingChannelDe
             drawingId,
             parameters: parsed.parameters,
             scale: params.scale,
-            frameFields: params.frameFields,
+            frameFields,
           })
         } catch (error) {
           mapBuildError(error)
@@ -237,7 +245,7 @@ export function registerDrawingChannels(ipc: IpcMainLike, deps: DrawingChannelDe
           // C 通道不改变参数修订号语义：沿用已有修订号，新参数从 1 起。
           parameterRevision: previous.get(item.parameterId) ?? 1,
         }))
-        const record = drawingRecordOf(data, params.frameFields)
+        const record = drawingRecordOf(data, frameFields)
         const applied = deps.projectService.applySpacerDrawing(
           session.sessionId,
           params.baseEditSeq,

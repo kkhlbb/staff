@@ -326,6 +326,10 @@ describe('无任务书入口：建项 → 对话写草稿 → 确认 → 预览 
     // 提交后：图纸依据栏与文件头标记齐全。
     const record = project.drawings[0]!
     expect(record.frameFields.basis).toBe(USER_INPUT_BASIS)
+    // 版本栏：可读的「草稿 · 第 N 版」（N = 提交后的版本序号），不印内部 revision UUID。
+    const revisionCount = setup.controller.sessionFor(1)!.snapshot.fileRevisions.length
+    expect(record.frameFields.version).toBe(`草稿 · 第 ${revisionCount} 版`)
+    expect(record.frameFields.version).toContain('第 2 版')
     const rebuilt = rebuildDrawingFromProject(project)
     expect(rebuilt.ok, JSON.stringify(rebuilt)).toBe(true)
     if (!rebuilt.ok) return
@@ -333,6 +337,11 @@ describe('无任务书入口：建项 → 对话写草稿 → 确认 → 预览 
     expect(svg).toContain(`<!-- ${USER_INPUT_BASIS} -->`)
     expect(svg).toContain('依据')
     expect(svg).toContain('用户输入，无外部原文件')
+    // 图上不许出现 ≥32 位连续十六进制串（内部 UUID/指纹只留在文件与机器元数据里）。
+    const visible = [...svg.matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/gu)].map((match) => match[1] ?? '').join('\n')
+    expect(visible).toContain(record.frameFields.version)
+    expect(visible).not.toContain(record.revisionId)
+    expect(visible).not.toMatch(/[0-9a-f]{32,}/iu)
     const dxf = buildDxfDocument(rebuilt.data, 'r12')
     expect(dxf.text).toContain('999')
     expect(dxf.text).toContain(USER_INPUT_BASIS)
