@@ -209,6 +209,21 @@ node scripts/real-doc-metrics.mjs --update-baseline --reason "为什么变化：
 
 度量里刻意不记录的东西：读取耗时（不稳定，会污染对比）、时间戳、本机绝对路径。
 
+### 证据与日志
+
+| 文件 | 内容 |
+|---|---|
+| `corpus-manifest.json` | 6 份语料的文件名/字节数/SHA-256/页数/来源（不含 PDF） |
+| `metrics.json` | 本次度量完整结果（每份文档 + 汇总 + 页范围探针） |
+| `baseline.json` | 固定基线（含 `baselineReason`），回归测试的比对对象 |
+| `history/v1-c52ac9f-metrics.json` | 用同一套度量代码跑 `c52ac9f`（`document-extractor-1`）的历史复算，只用于第四节的版本对账 |
+| `logs/01-test.log` ~ `logs/06-metrics.log` | 六条命令的原始输出（`npm test` / `test:desktop` / `typecheck` / `lint` / `test:real-docs` / `metrics:real-docs`） |
+| `logs/07-corpus-guards.log` | 三条语料守卫的真实输出：目录缺失、缺 1 份、1 份被替换（均退出 1） |
+
+`history/v1-c52ac9f-metrics.json` 的生成方式（可复核）：`git archive c52ac9f | tar -x -C <空目录>`，
+把本目录的 `scripts/real-docs/metrics.mjs`、`scripts/real-docs/tsImport.mjs`、`scripts/real-doc-metrics.mjs`、
+`scripts/evidence-json.ts` 与 `corpus-manifest.json` 放进去，软链 `node_modules` 后跑同一条命令。
+
 ---
 
 ## 六、未做 / 已知问题（如实列出）
