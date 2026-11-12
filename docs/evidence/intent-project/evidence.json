@@ -2,7 +2,7 @@
   "adr": "ADR-001 第 3 步：意图驱动建件（无任务书入口）",
   "branch": "agent/intent-project",
   "baselineCommit": "f79d73b",
-  "headCommit": "ef8ead1",
+  "implementationCommit": "c42ad0a",
   "rules": {
     "extractorVersion": "document-extractor-6",
     "maxExtractionPages": 100,
@@ -12,7 +12,7 @@
     }
   },
   "pdfPath": {
-    "corpus": "~/DSHreal-docs",
+    "corpus": "本机真实语料：6 份 PDF / 269 页（目录写在 logs/01-metrics.log 的“语料目录”）",
     "baselineMatch": true,
     "totals": {
       "total": 138,
