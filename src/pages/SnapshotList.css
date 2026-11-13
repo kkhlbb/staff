@@ -1,6 +1,6 @@
 .snapshot-list {
   width: 100%;
-  max-width: 1120px;
+  max-width: var(--layout-snapshotlist-3-max-width);
   margin: 0 auto;
   padding: 24px clamp(16px, 2vw, 32px) 48px;
 }
@@ -29,7 +29,7 @@
 }
 
 .snapshot-list__subtitle {
-  max-width: 760px;
+  max-width: var(--layout-snapshotlist-32-max-width);
   margin: 0;
   color: var(--muted);
   line-height: 1.65;
@@ -130,7 +130,7 @@
 }
 
 .snapshot-list__blocked {
-  max-width: 720px;
+  max-width: var(--layout-snapshotlist-133-max-width);
   margin: 48px auto;
   padding: 24px;
   border: 1px solid #fecaca;

@@ -103,7 +103,7 @@
 }
 
 .dxf-viewer__swatch {
-  width: 12px;
+  width: var(--layout-dxfviewer-106-width);
   height: 12px;
   border: 1px solid rgb(0 0 0 / 20%);
   border-radius: 2px;
@@ -152,7 +152,7 @@
 }
 
 .dxf-viewer__zoom {
-  min-width: 52px;
+  min-width: var(--layout-dxfviewer-155-min-width);
   color: #526075;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -237,6 +237,7 @@
 
 .dxf-viewer__sr-only {
   position: absolute;
+/* W07: 辅助技术专用 sr-only 1px 盒，不参与可见布局预算。 */
   width: 1px;
   height: 1px;
   padding: 0;

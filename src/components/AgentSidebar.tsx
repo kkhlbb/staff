@@ -18,6 +18,7 @@ import type {
   IntentDraftView,
   LocateEvidenceValue,
 } from '../../desktop/shared/contracts'
+import { Panel } from './layout/Panel'
 import { formatMm } from '../domain/units'
 import { SPACER_PARAMETER_LABELS } from '../drawing/types'
 import { REQUIREMENT_STATUS_LABEL, type RequirementCheckStatus } from '../requirements/types'
@@ -415,7 +416,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     </aside>
   }
 
-  return <aside className="agent-sidebar" id="agent-sidebar-panel" aria-label="Agent 任务侧栏">
+  return <Panel as="aside" className="agent-sidebar" id="agent-sidebar-panel" aria-label="Agent 任务侧栏" minWidth="var(--panel-sidebar-min)">
     <header className="agent-sidebar__header">
       <h2>Agent 任务</h2>
       <button type="button" aria-expanded={true} aria-controls="agent-sidebar-panel" onClick={onToggle}>收起</button>
@@ -630,5 +631,5 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
       </p>}
       {locateNote !== null && <p role="status" className="agent-sidebar__hint">{locateNote}</p>}
     </section>
-  </aside>
+  </Panel>
 }

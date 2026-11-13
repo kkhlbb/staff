@@ -40,8 +40,10 @@ describe('Workspace 布局约束', () => {
       /@media \(max-width: 720px\)[\s\S]*?\.workspace\s*\{[^}]*overflow-x:\s*hidden/,
     )
     expect(workspaceCss).toMatch(
-      /@media \(max-width: 720px\)[\s\S]*?\.dimension-table__table\s*\{[^}]*min-width:\s*820px/,
+      /@media \(max-width: 720px\)[\s\S]*?\.dimension-table__table\s*\{[^}]*min-width:\s*var\(--layout-workspace-726-min-width\)/,
     )
+    const tokens = readFileSync(new URL('../components/layout/tokens.css', import.meta.url), 'utf8')
+    expect(tokens).toMatch(/--layout-workspace-726-min-width:\s*820px/)
   })
 
   it('贡献表和方案对比表在窄屏内单独滚动，不把页面撑宽', () => {

@@ -24,6 +24,7 @@
     "test:real-docs": "vitest run --config vitest.realdocs.config.ts",
     "metrics:real-docs": "node scripts/real-doc-metrics.mjs",
     "test:desktop:e2e": "node desktop/tests/e2e/smoke.mjs",
+    "test:desktop:layout": "node desktop/tests/e2e/layout.mjs",
     "evidence:record": "vitest run --config vitest.evidence.config.ts",
     "evidence:dxf": "vitest run --config vitest.dxfexport.config.ts",
     "test:desktop:dxf-e2e": "node desktop/tests/e2e/dxfExport.mjs",

@@ -27,7 +27,7 @@
 }
 .model-viewport__toolbar button {
   min-height: 32px;
-  min-width: 28px;
+  min-width: var(--layout-modelviewport-30-min-width);
 }
 .model-viewport__group {
   display: flex;

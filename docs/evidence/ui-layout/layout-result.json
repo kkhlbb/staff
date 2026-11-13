@@ -1,0 +1,2498 @@
+{
+  "verdict": "pass",
+  "checks": [
+    {
+      "width": 960,
+      "tab": "工程图",
+      "observed": {
+        "viewport": [
+          960,
+          640
+        ],
+        "scrollWidth": 960,
+        "clientWidth": 960,
+        "pageHeight": 640,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 436,
+          "height": 394.109375,
+          "right": 674,
+          "bottom": 607
+        },
+        "sidebar": {
+          "x": 680,
+          "y": 212.890625,
+          "width": 280,
+          "height": 394.109375,
+          "right": 960,
+          "bottom": 607
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 394.109375,
+          "right": 232,
+          "bottom": 607
+        },
+        "bottom": {
+          "x": 0,
+          "y": 607,
+          "width": 960,
+          "height": 33,
+          "right": 960,
+          "bottom": 640
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 960,
+      "tab": "3D",
+      "observed": {
+        "viewport": [
+          960,
+          640
+        ],
+        "scrollWidth": 960,
+        "clientWidth": 960,
+        "pageHeight": 640,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 436,
+          "height": 394.109375,
+          "right": 674,
+          "bottom": 607
+        },
+        "sidebar": {
+          "x": 680,
+          "y": 212.890625,
+          "width": 280,
+          "height": 394.109375,
+          "right": 960,
+          "bottom": 607
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 394.109375,
+          "right": 232,
+          "bottom": 607
+        },
+        "bottom": {
+          "x": 0,
+          "y": 607,
+          "width": 960,
+          "height": 33,
+          "right": 960,
+          "bottom": 640
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 960,
+      "tab": "来源 PDF",
+      "observed": {
+        "viewport": [
+          960,
+          640
+        ],
+        "scrollWidth": 960,
+        "clientWidth": 960,
+        "pageHeight": 640,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 436,
+          "height": 394.109375,
+          "right": 674,
+          "bottom": 607
+        },
+        "sidebar": {
+          "x": 680,
+          "y": 212.890625,
+          "width": 280,
+          "height": 394.109375,
+          "right": 960,
+          "bottom": 607
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 394.109375,
+          "right": 232,
+          "bottom": 607
+        },
+        "bottom": {
+          "x": 0,
+          "y": 607,
+          "width": 960,
+          "height": 33,
+          "right": 960,
+          "bottom": 640
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 960,
+      "tab": "尺寸链",
+      "observed": {
+        "viewport": [
+          960,
+          640
+        ],
+        "scrollWidth": 960,
+        "clientWidth": 960,
+        "pageHeight": 640,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 436,
+          "height": 394.109375,
+          "right": 674,
+          "bottom": 607
+        },
+        "sidebar": {
+          "x": 680,
+          "y": 212.890625,
+          "width": 280,
+          "height": 394.109375,
+          "right": 960,
+          "bottom": 607
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 394.109375,
+          "right": 232,
+          "bottom": 607
+        },
+        "bottom": {
+          "x": 0,
+          "y": 607,
+          "width": 960,
+          "height": 33,
+          "right": 960,
+          "bottom": 640
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 960,
+      "tab": "历史报告",
+      "observed": {
+        "viewport": [
+          960,
+          640
+        ],
+        "scrollWidth": 960,
+        "clientWidth": 960,
+        "pageHeight": 640,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 436,
+          "height": 394.109375,
+          "right": 674,
+          "bottom": 607
+        },
+        "sidebar": {
+          "x": 680,
+          "y": 212.890625,
+          "width": 280,
+          "height": 394.109375,
+          "right": 960,
+          "bottom": 607
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 394.109375,
+          "right": 232,
+          "bottom": 607
+        },
+        "bottom": {
+          "x": 0,
+          "y": 607,
+          "width": 960,
+          "height": 33,
+          "right": 960,
+          "bottom": 640
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 960,
+      "tab": "任务书提取",
+      "observed": {
+        "viewport": [
+          960,
+          640
+        ],
+        "scrollWidth": 960,
+        "clientWidth": 960,
+        "pageHeight": 640,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 436,
+          "height": 394.109375,
+          "right": 674,
+          "bottom": 607
+        },
+        "sidebar": {
+          "x": 680,
+          "y": 212.890625,
+          "width": 280,
+          "height": 394.109375,
+          "right": 960,
+          "bottom": 607
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 394.109375,
+          "right": 232,
+          "bottom": 607
+        },
+        "bottom": {
+          "x": 0,
+          "y": 607,
+          "width": 960,
+          "height": 33,
+          "right": 960,
+          "bottom": 640
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 960,
+      "pointerSplit": [
+        232,
+        248,
+        232
+      ],
+      "bottomDragNoJump": "not-applicable-collapsed"
+    },
+    {
+      "width": 960,
+      "exportClicked": true,
+      "submitClicked": true,
+      "submit": {
+        "text": "确认提交（一次原子写入）",
+        "x": 445.65625,
+        "y": 536.453125,
+        "right": 615.65625,
+        "bottom": 568.453125
+      },
+      "revisionId": "rev-d-<generated>"
+    },
+    {
+      "width": 1280,
+      "tab": "工程图",
+      "observed": {
+        "viewport": [
+          1280,
+          800
+        ],
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 716,
+          "height": 301.109375,
+          "right": 954,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 960,
+          "y": 212.890625,
+          "width": 320,
+          "height": 301.109375,
+          "right": 1280,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1280,
+          "height": 280,
+          "right": 1280,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1280,
+      "tab": "3D",
+      "observed": {
+        "viewport": [
+          1280,
+          800
+        ],
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 716,
+          "height": 301.109375,
+          "right": 954,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 960,
+          "y": 212.890625,
+          "width": 320,
+          "height": 301.109375,
+          "right": 1280,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1280,
+          "height": 280,
+          "right": 1280,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1280,
+      "tab": "来源 PDF",
+      "observed": {
+        "viewport": [
+          1280,
+          800
+        ],
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 716,
+          "height": 301.109375,
+          "right": 954,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 960,
+          "y": 212.890625,
+          "width": 320,
+          "height": 301.109375,
+          "right": 1280,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1280,
+          "height": 280,
+          "right": 1280,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1280,
+      "tab": "尺寸链",
+      "observed": {
+        "viewport": [
+          1280,
+          800
+        ],
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 716,
+          "height": 301.109375,
+          "right": 954,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 960,
+          "y": 212.890625,
+          "width": 320,
+          "height": 301.109375,
+          "right": 1280,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1280,
+          "height": 280,
+          "right": 1280,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1280,
+      "tab": "历史报告",
+      "observed": {
+        "viewport": [
+          1280,
+          800
+        ],
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 716,
+          "height": 301.109375,
+          "right": 954,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 960,
+          "y": 212.890625,
+          "width": 320,
+          "height": 301.109375,
+          "right": 1280,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1280,
+          "height": 280,
+          "right": 1280,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1280,
+      "tab": "任务书提取",
+      "observed": {
+        "viewport": [
+          1280,
+          800
+        ],
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 716,
+          "height": 301.109375,
+          "right": 954,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 960,
+          "y": 212.890625,
+          "width": 320,
+          "height": 301.109375,
+          "right": 1280,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1280,
+          "height": 280,
+          "right": 1280,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1280,
+      "pointerSplit": [
+        232,
+        248,
+        232
+      ],
+      "bottomDragNoJump": true
+    },
+    {
+      "width": 1280,
+      "exportClicked": true,
+      "submitClicked": true,
+      "submit": {
+        "text": "确认提交（一次原子写入）",
+        "x": 445.65625,
+        "y": 412.671875,
+        "right": 615.65625,
+        "bottom": 444.671875
+      },
+      "revisionId": "rev-d-<generated>"
+    },
+    {
+      "width": 1440,
+      "tab": "工程图",
+      "observed": {
+        "viewport": [
+          1440,
+          900
+        ],
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "pageHeight": 900,
+        "centerMin": 700,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 836,
+          "height": 401.109375,
+          "right": 1074,
+          "bottom": 574
+        },
+        "sidebar": {
+          "x": 1080,
+          "y": 172.890625,
+          "width": 360,
+          "height": 401.109375,
+          "right": 1440,
+          "bottom": 574
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 401.109375,
+          "right": 232,
+          "bottom": 574
+        },
+        "bottom": {
+          "x": 0,
+          "y": 580,
+          "width": 1440,
+          "height": 320,
+          "right": 1440,
+          "bottom": 900
+        },
+        "collapsed": false,
+        "bottomToken": 320
+      }
+    },
+    {
+      "width": 1440,
+      "tab": "3D",
+      "observed": {
+        "viewport": [
+          1440,
+          900
+        ],
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "pageHeight": 900,
+        "centerMin": 700,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 836,
+          "height": 401.109375,
+          "right": 1074,
+          "bottom": 574
+        },
+        "sidebar": {
+          "x": 1080,
+          "y": 172.890625,
+          "width": 360,
+          "height": 401.109375,
+          "right": 1440,
+          "bottom": 574
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 401.109375,
+          "right": 232,
+          "bottom": 574
+        },
+        "bottom": {
+          "x": 0,
+          "y": 580,
+          "width": 1440,
+          "height": 320,
+          "right": 1440,
+          "bottom": 900
+        },
+        "collapsed": false,
+        "bottomToken": 320
+      }
+    },
+    {
+      "width": 1440,
+      "tab": "来源 PDF",
+      "observed": {
+        "viewport": [
+          1440,
+          900
+        ],
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "pageHeight": 900,
+        "centerMin": 700,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 836,
+          "height": 401.109375,
+          "right": 1074,
+          "bottom": 574
+        },
+        "sidebar": {
+          "x": 1080,
+          "y": 172.890625,
+          "width": 360,
+          "height": 401.109375,
+          "right": 1440,
+          "bottom": 574
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 401.109375,
+          "right": 232,
+          "bottom": 574
+        },
+        "bottom": {
+          "x": 0,
+          "y": 580,
+          "width": 1440,
+          "height": 320,
+          "right": 1440,
+          "bottom": 900
+        },
+        "collapsed": false,
+        "bottomToken": 320
+      }
+    },
+    {
+      "width": 1440,
+      "tab": "尺寸链",
+      "observed": {
+        "viewport": [
+          1440,
+          900
+        ],
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "pageHeight": 900,
+        "centerMin": 700,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 836,
+          "height": 401.109375,
+          "right": 1074,
+          "bottom": 574
+        },
+        "sidebar": {
+          "x": 1080,
+          "y": 172.890625,
+          "width": 360,
+          "height": 401.109375,
+          "right": 1440,
+          "bottom": 574
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 401.109375,
+          "right": 232,
+          "bottom": 574
+        },
+        "bottom": {
+          "x": 0,
+          "y": 580,
+          "width": 1440,
+          "height": 320,
+          "right": 1440,
+          "bottom": 900
+        },
+        "collapsed": false,
+        "bottomToken": 320
+      }
+    },
+    {
+      "width": 1440,
+      "tab": "历史报告",
+      "observed": {
+        "viewport": [
+          1440,
+          900
+        ],
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "pageHeight": 900,
+        "centerMin": 700,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 836,
+          "height": 401.109375,
+          "right": 1074,
+          "bottom": 574
+        },
+        "sidebar": {
+          "x": 1080,
+          "y": 172.890625,
+          "width": 360,
+          "height": 401.109375,
+          "right": 1440,
+          "bottom": 574
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 401.109375,
+          "right": 232,
+          "bottom": 574
+        },
+        "bottom": {
+          "x": 0,
+          "y": 580,
+          "width": 1440,
+          "height": 320,
+          "right": 1440,
+          "bottom": 900
+        },
+        "collapsed": false,
+        "bottomToken": 320
+      }
+    },
+    {
+      "width": 1440,
+      "tab": "任务书提取",
+      "observed": {
+        "viewport": [
+          1440,
+          900
+        ],
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "pageHeight": 900,
+        "centerMin": 700,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 836,
+          "height": 401.109375,
+          "right": 1074,
+          "bottom": 574
+        },
+        "sidebar": {
+          "x": 1080,
+          "y": 172.890625,
+          "width": 360,
+          "height": 401.109375,
+          "right": 1440,
+          "bottom": 574
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 401.109375,
+          "right": 232,
+          "bottom": 574
+        },
+        "bottom": {
+          "x": 0,
+          "y": 580,
+          "width": 1440,
+          "height": 320,
+          "right": 1440,
+          "bottom": 900
+        },
+        "collapsed": false,
+        "bottomToken": 320
+      }
+    },
+    {
+      "width": 1440,
+      "pointerSplit": [
+        232,
+        248,
+        232
+      ],
+      "bottomDragNoJump": true
+    },
+    {
+      "width": 1440,
+      "exportClicked": true,
+      "submitClicked": true,
+      "submit": {
+        "text": "确认提交（一次原子写入）",
+        "x": 445.65625,
+        "y": 372.671875,
+        "right": 615.65625,
+        "bottom": 404.671875
+      },
+      "revisionId": "rev-d-<generated>"
+    },
+    {
+      "width": 1025,
+      "tab": "工程图",
+      "observed": {
+        "viewport": [
+          1025,
+          800
+        ],
+        "scrollWidth": 1025,
+        "clientWidth": 1025,
+        "pageHeight": 800,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 501,
+          "height": 554.109375,
+          "right": 739,
+          "bottom": 767
+        },
+        "sidebar": {
+          "x": 745,
+          "y": 212.890625,
+          "width": 280,
+          "height": 554.109375,
+          "right": 1025,
+          "bottom": 767
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 554.109375,
+          "right": 232,
+          "bottom": 767
+        },
+        "bottom": {
+          "x": 0,
+          "y": 767,
+          "width": 1025,
+          "height": 33,
+          "right": 1025,
+          "bottom": 800
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 1025,
+      "tab": "3D",
+      "observed": {
+        "viewport": [
+          1025,
+          800
+        ],
+        "scrollWidth": 1025,
+        "clientWidth": 1025,
+        "pageHeight": 800,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 501,
+          "height": 554.109375,
+          "right": 739,
+          "bottom": 767
+        },
+        "sidebar": {
+          "x": 745,
+          "y": 212.890625,
+          "width": 280,
+          "height": 554.109375,
+          "right": 1025,
+          "bottom": 767
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 554.109375,
+          "right": 232,
+          "bottom": 767
+        },
+        "bottom": {
+          "x": 0,
+          "y": 767,
+          "width": 1025,
+          "height": 33,
+          "right": 1025,
+          "bottom": 800
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 1025,
+      "tab": "来源 PDF",
+      "observed": {
+        "viewport": [
+          1025,
+          800
+        ],
+        "scrollWidth": 1025,
+        "clientWidth": 1025,
+        "pageHeight": 800,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 501,
+          "height": 554.109375,
+          "right": 739,
+          "bottom": 767
+        },
+        "sidebar": {
+          "x": 745,
+          "y": 212.890625,
+          "width": 280,
+          "height": 554.109375,
+          "right": 1025,
+          "bottom": 767
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 554.109375,
+          "right": 232,
+          "bottom": 767
+        },
+        "bottom": {
+          "x": 0,
+          "y": 767,
+          "width": 1025,
+          "height": 33,
+          "right": 1025,
+          "bottom": 800
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 1025,
+      "tab": "尺寸链",
+      "observed": {
+        "viewport": [
+          1025,
+          800
+        ],
+        "scrollWidth": 1025,
+        "clientWidth": 1025,
+        "pageHeight": 800,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 501,
+          "height": 554.109375,
+          "right": 739,
+          "bottom": 767
+        },
+        "sidebar": {
+          "x": 745,
+          "y": 212.890625,
+          "width": 280,
+          "height": 554.109375,
+          "right": 1025,
+          "bottom": 767
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 554.109375,
+          "right": 232,
+          "bottom": 767
+        },
+        "bottom": {
+          "x": 0,
+          "y": 767,
+          "width": 1025,
+          "height": 33,
+          "right": 1025,
+          "bottom": 800
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 1025,
+      "tab": "历史报告",
+      "observed": {
+        "viewport": [
+          1025,
+          800
+        ],
+        "scrollWidth": 1025,
+        "clientWidth": 1025,
+        "pageHeight": 800,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 501,
+          "height": 554.109375,
+          "right": 739,
+          "bottom": 767
+        },
+        "sidebar": {
+          "x": 745,
+          "y": 212.890625,
+          "width": 280,
+          "height": 554.109375,
+          "right": 1025,
+          "bottom": 767
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 554.109375,
+          "right": 232,
+          "bottom": 767
+        },
+        "bottom": {
+          "x": 0,
+          "y": 767,
+          "width": 1025,
+          "height": 33,
+          "right": 1025,
+          "bottom": 800
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 1025,
+      "tab": "任务书提取",
+      "observed": {
+        "viewport": [
+          1025,
+          800
+        ],
+        "scrollWidth": 1025,
+        "clientWidth": 1025,
+        "pageHeight": 800,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 501,
+          "height": 554.109375,
+          "right": 739,
+          "bottom": 767
+        },
+        "sidebar": {
+          "x": 745,
+          "y": 212.890625,
+          "width": 280,
+          "height": 554.109375,
+          "right": 1025,
+          "bottom": 767
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 554.109375,
+          "right": 232,
+          "bottom": 767
+        },
+        "bottom": {
+          "x": 0,
+          "y": 767,
+          "width": 1025,
+          "height": 33,
+          "right": 1025,
+          "bottom": 800
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 1025,
+      "pointerSplit": [
+        232,
+        248,
+        232
+      ],
+      "bottomDragNoJump": "not-applicable-collapsed"
+    },
+    {
+      "width": 1025,
+      "exportClicked": true,
+      "submitClicked": true,
+      "submit": {
+        "text": "确认提交（一次原子写入）",
+        "x": 445.65625,
+        "y": 412.671875,
+        "right": 615.65625,
+        "bottom": 444.671875
+      },
+      "revisionId": "rev-d-<generated>"
+    },
+    {
+      "width": 1123,
+      "tab": "工程图",
+      "observed": {
+        "viewport": [
+          1123,
+          800
+        ],
+        "scrollWidth": 1123,
+        "clientWidth": 1123,
+        "pageHeight": 800,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 599,
+          "height": 554.109375,
+          "right": 837,
+          "bottom": 767
+        },
+        "sidebar": {
+          "x": 843,
+          "y": 212.890625,
+          "width": 280,
+          "height": 554.109375,
+          "right": 1123,
+          "bottom": 767
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 554.109375,
+          "right": 232,
+          "bottom": 767
+        },
+        "bottom": {
+          "x": 0,
+          "y": 767,
+          "width": 1123,
+          "height": 33,
+          "right": 1123,
+          "bottom": 800
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 1123,
+      "tab": "3D",
+      "observed": {
+        "viewport": [
+          1123,
+          800
+        ],
+        "scrollWidth": 1123,
+        "clientWidth": 1123,
+        "pageHeight": 800,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 599,
+          "height": 554.109375,
+          "right": 837,
+          "bottom": 767
+        },
+        "sidebar": {
+          "x": 843,
+          "y": 212.890625,
+          "width": 280,
+          "height": 554.109375,
+          "right": 1123,
+          "bottom": 767
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 554.109375,
+          "right": 232,
+          "bottom": 767
+        },
+        "bottom": {
+          "x": 0,
+          "y": 767,
+          "width": 1123,
+          "height": 33,
+          "right": 1123,
+          "bottom": 800
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 1123,
+      "tab": "来源 PDF",
+      "observed": {
+        "viewport": [
+          1123,
+          800
+        ],
+        "scrollWidth": 1123,
+        "clientWidth": 1123,
+        "pageHeight": 800,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 599,
+          "height": 554.109375,
+          "right": 837,
+          "bottom": 767
+        },
+        "sidebar": {
+          "x": 843,
+          "y": 212.890625,
+          "width": 280,
+          "height": 554.109375,
+          "right": 1123,
+          "bottom": 767
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 554.109375,
+          "right": 232,
+          "bottom": 767
+        },
+        "bottom": {
+          "x": 0,
+          "y": 767,
+          "width": 1123,
+          "height": 33,
+          "right": 1123,
+          "bottom": 800
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 1123,
+      "tab": "尺寸链",
+      "observed": {
+        "viewport": [
+          1123,
+          800
+        ],
+        "scrollWidth": 1123,
+        "clientWidth": 1123,
+        "pageHeight": 800,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 599,
+          "height": 554.109375,
+          "right": 837,
+          "bottom": 767
+        },
+        "sidebar": {
+          "x": 843,
+          "y": 212.890625,
+          "width": 280,
+          "height": 554.109375,
+          "right": 1123,
+          "bottom": 767
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 554.109375,
+          "right": 232,
+          "bottom": 767
+        },
+        "bottom": {
+          "x": 0,
+          "y": 767,
+          "width": 1123,
+          "height": 33,
+          "right": 1123,
+          "bottom": 800
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 1123,
+      "tab": "历史报告",
+      "observed": {
+        "viewport": [
+          1123,
+          800
+        ],
+        "scrollWidth": 1123,
+        "clientWidth": 1123,
+        "pageHeight": 800,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 599,
+          "height": 554.109375,
+          "right": 837,
+          "bottom": 767
+        },
+        "sidebar": {
+          "x": 843,
+          "y": 212.890625,
+          "width": 280,
+          "height": 554.109375,
+          "right": 1123,
+          "bottom": 767
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 554.109375,
+          "right": 232,
+          "bottom": 767
+        },
+        "bottom": {
+          "x": 0,
+          "y": 767,
+          "width": 1123,
+          "height": 33,
+          "right": 1123,
+          "bottom": 800
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 1123,
+      "tab": "任务书提取",
+      "observed": {
+        "viewport": [
+          1123,
+          800
+        ],
+        "scrollWidth": 1123,
+        "clientWidth": 1123,
+        "pageHeight": 800,
+        "centerMin": 360,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 599,
+          "height": 554.109375,
+          "right": 837,
+          "bottom": 767
+        },
+        "sidebar": {
+          "x": 843,
+          "y": 212.890625,
+          "width": 280,
+          "height": 554.109375,
+          "right": 1123,
+          "bottom": 767
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 554.109375,
+          "right": 232,
+          "bottom": 767
+        },
+        "bottom": {
+          "x": 0,
+          "y": 767,
+          "width": 1123,
+          "height": 33,
+          "right": 1123,
+          "bottom": 800
+        },
+        "collapsed": true,
+        "bottomToken": 33
+      }
+    },
+    {
+      "width": 1123,
+      "pointerSplit": [
+        232,
+        248,
+        232
+      ],
+      "bottomDragNoJump": "not-applicable-collapsed"
+    },
+    {
+      "width": 1123,
+      "exportClicked": true,
+      "submitClicked": true,
+      "submit": {
+        "text": "确认提交（一次原子写入）",
+        "x": 445.65625,
+        "y": 412.671875,
+        "right": 615.65625,
+        "bottom": 444.671875
+      },
+      "revisionId": "rev-d-<generated>"
+    },
+    {
+      "width": 1124,
+      "tab": "工程图",
+      "observed": {
+        "viewport": [
+          1124,
+          800
+        ],
+        "scrollWidth": 1124,
+        "clientWidth": 1124,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 560,
+          "height": 301.109375,
+          "right": 798,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 804,
+          "y": 212.890625,
+          "width": 320,
+          "height": 301.109375,
+          "right": 1124,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1124,
+          "height": 280,
+          "right": 1124,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1124,
+      "tab": "3D",
+      "observed": {
+        "viewport": [
+          1124,
+          800
+        ],
+        "scrollWidth": 1124,
+        "clientWidth": 1124,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 560,
+          "height": 301.109375,
+          "right": 798,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 804,
+          "y": 212.890625,
+          "width": 320,
+          "height": 301.109375,
+          "right": 1124,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1124,
+          "height": 280,
+          "right": 1124,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1124,
+      "tab": "来源 PDF",
+      "observed": {
+        "viewport": [
+          1124,
+          800
+        ],
+        "scrollWidth": 1124,
+        "clientWidth": 1124,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 560,
+          "height": 301.109375,
+          "right": 798,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 804,
+          "y": 212.890625,
+          "width": 320,
+          "height": 301.109375,
+          "right": 1124,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1124,
+          "height": 280,
+          "right": 1124,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1124,
+      "tab": "尺寸链",
+      "observed": {
+        "viewport": [
+          1124,
+          800
+        ],
+        "scrollWidth": 1124,
+        "clientWidth": 1124,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 560,
+          "height": 301.109375,
+          "right": 798,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 804,
+          "y": 212.890625,
+          "width": 320,
+          "height": 301.109375,
+          "right": 1124,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1124,
+          "height": 280,
+          "right": 1124,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1124,
+      "tab": "历史报告",
+      "observed": {
+        "viewport": [
+          1124,
+          800
+        ],
+        "scrollWidth": 1124,
+        "clientWidth": 1124,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 560,
+          "height": 301.109375,
+          "right": 798,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 804,
+          "y": 212.890625,
+          "width": 320,
+          "height": 301.109375,
+          "right": 1124,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1124,
+          "height": 280,
+          "right": 1124,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1124,
+      "tab": "任务书提取",
+      "observed": {
+        "viewport": [
+          1124,
+          800
+        ],
+        "scrollWidth": 1124,
+        "clientWidth": 1124,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 212.890625,
+          "width": 560,
+          "height": 301.109375,
+          "right": 798,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 804,
+          "y": 212.890625,
+          "width": 320,
+          "height": 301.109375,
+          "right": 1124,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 212.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1124,
+          "height": 280,
+          "right": 1124,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1124,
+      "pointerSplit": [
+        232,
+        232,
+        232
+      ],
+      "bottomDragNoJump": true
+    },
+    {
+      "width": 1124,
+      "exportClicked": true,
+      "submitClicked": true,
+      "submit": {
+        "text": "确认提交（一次原子写入）",
+        "x": 445.65625,
+        "y": 412.671875,
+        "right": 615.65625,
+        "bottom": 444.671875
+      },
+      "revisionId": "rev-d-<generated>"
+    },
+    {
+      "width": 1399,
+      "tab": "工程图",
+      "observed": {
+        "viewport": [
+          1399,
+          800
+        ],
+        "scrollWidth": 1399,
+        "clientWidth": 1399,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 835,
+          "height": 341.109375,
+          "right": 1073,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 1079,
+          "y": 172.890625,
+          "width": 320,
+          "height": 341.109375,
+          "right": 1399,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 341.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1399,
+          "height": 280,
+          "right": 1399,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1399,
+      "tab": "3D",
+      "observed": {
+        "viewport": [
+          1399,
+          800
+        ],
+        "scrollWidth": 1399,
+        "clientWidth": 1399,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 835,
+          "height": 341.109375,
+          "right": 1073,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 1079,
+          "y": 172.890625,
+          "width": 320,
+          "height": 341.109375,
+          "right": 1399,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 341.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1399,
+          "height": 280,
+          "right": 1399,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1399,
+      "tab": "来源 PDF",
+      "observed": {
+        "viewport": [
+          1399,
+          800
+        ],
+        "scrollWidth": 1399,
+        "clientWidth": 1399,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 835,
+          "height": 341.109375,
+          "right": 1073,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 1079,
+          "y": 172.890625,
+          "width": 320,
+          "height": 341.109375,
+          "right": 1399,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 341.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1399,
+          "height": 280,
+          "right": 1399,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1399,
+      "tab": "尺寸链",
+      "observed": {
+        "viewport": [
+          1399,
+          800
+        ],
+        "scrollWidth": 1399,
+        "clientWidth": 1399,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 835,
+          "height": 341.109375,
+          "right": 1073,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 1079,
+          "y": 172.890625,
+          "width": 320,
+          "height": 341.109375,
+          "right": 1399,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 341.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1399,
+          "height": 280,
+          "right": 1399,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1399,
+      "tab": "历史报告",
+      "observed": {
+        "viewport": [
+          1399,
+          800
+        ],
+        "scrollWidth": 1399,
+        "clientWidth": 1399,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 835,
+          "height": 341.109375,
+          "right": 1073,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 1079,
+          "y": 172.890625,
+          "width": 320,
+          "height": 341.109375,
+          "right": 1399,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 341.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1399,
+          "height": 280,
+          "right": 1399,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1399,
+      "tab": "任务书提取",
+      "observed": {
+        "viewport": [
+          1399,
+          800
+        ],
+        "scrollWidth": 1399,
+        "clientWidth": 1399,
+        "pageHeight": 800,
+        "centerMin": 560,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 835,
+          "height": 341.109375,
+          "right": 1073,
+          "bottom": 514
+        },
+        "sidebar": {
+          "x": 1079,
+          "y": 172.890625,
+          "width": 320,
+          "height": 341.109375,
+          "right": 1399,
+          "bottom": 514
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 341.109375,
+          "right": 232,
+          "bottom": 514
+        },
+        "bottom": {
+          "x": 0,
+          "y": 520,
+          "width": 1399,
+          "height": 280,
+          "right": 1399,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 280
+      }
+    },
+    {
+      "width": 1399,
+      "pointerSplit": [
+        232,
+        248,
+        232
+      ],
+      "bottomDragNoJump": true
+    },
+    {
+      "width": 1399,
+      "exportClicked": true,
+      "submitClicked": true,
+      "submit": {
+        "text": "确认提交（一次原子写入）",
+        "x": 445.65625,
+        "y": 372.671875,
+        "right": 615.65625,
+        "bottom": 404.671875
+      },
+      "revisionId": "rev-d-<generated>"
+    },
+    {
+      "width": 1400,
+      "tab": "工程图",
+      "observed": {
+        "viewport": [
+          1400,
+          800
+        ],
+        "scrollWidth": 1400,
+        "clientWidth": 1400,
+        "pageHeight": 800,
+        "centerMin": 700,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 796,
+          "height": 301.109375,
+          "right": 1034,
+          "bottom": 474
+        },
+        "sidebar": {
+          "x": 1040,
+          "y": 172.890625,
+          "width": 360,
+          "height": 301.109375,
+          "right": 1400,
+          "bottom": 474
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 474
+        },
+        "bottom": {
+          "x": 0,
+          "y": 480,
+          "width": 1400,
+          "height": 320,
+          "right": 1400,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 320
+      }
+    },
+    {
+      "width": 1400,
+      "tab": "3D",
+      "observed": {
+        "viewport": [
+          1400,
+          800
+        ],
+        "scrollWidth": 1400,
+        "clientWidth": 1400,
+        "pageHeight": 800,
+        "centerMin": 700,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 796,
+          "height": 301.109375,
+          "right": 1034,
+          "bottom": 474
+        },
+        "sidebar": {
+          "x": 1040,
+          "y": 172.890625,
+          "width": 360,
+          "height": 301.109375,
+          "right": 1400,
+          "bottom": 474
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 474
+        },
+        "bottom": {
+          "x": 0,
+          "y": 480,
+          "width": 1400,
+          "height": 320,
+          "right": 1400,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 320
+      }
+    },
+    {
+      "width": 1400,
+      "tab": "来源 PDF",
+      "observed": {
+        "viewport": [
+          1400,
+          800
+        ],
+        "scrollWidth": 1400,
+        "clientWidth": 1400,
+        "pageHeight": 800,
+        "centerMin": 700,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 796,
+          "height": 301.109375,
+          "right": 1034,
+          "bottom": 474
+        },
+        "sidebar": {
+          "x": 1040,
+          "y": 172.890625,
+          "width": 360,
+          "height": 301.109375,
+          "right": 1400,
+          "bottom": 474
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 474
+        },
+        "bottom": {
+          "x": 0,
+          "y": 480,
+          "width": 1400,
+          "height": 320,
+          "right": 1400,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 320
+      }
+    },
+    {
+      "width": 1400,
+      "tab": "尺寸链",
+      "observed": {
+        "viewport": [
+          1400,
+          800
+        ],
+        "scrollWidth": 1400,
+        "clientWidth": 1400,
+        "pageHeight": 800,
+        "centerMin": 700,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 796,
+          "height": 301.109375,
+          "right": 1034,
+          "bottom": 474
+        },
+        "sidebar": {
+          "x": 1040,
+          "y": 172.890625,
+          "width": 360,
+          "height": 301.109375,
+          "right": 1400,
+          "bottom": 474
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 474
+        },
+        "bottom": {
+          "x": 0,
+          "y": 480,
+          "width": 1400,
+          "height": 320,
+          "right": 1400,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 320
+      }
+    },
+    {
+      "width": 1400,
+      "tab": "历史报告",
+      "observed": {
+        "viewport": [
+          1400,
+          800
+        ],
+        "scrollWidth": 1400,
+        "clientWidth": 1400,
+        "pageHeight": 800,
+        "centerMin": 700,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 796,
+          "height": 301.109375,
+          "right": 1034,
+          "bottom": 474
+        },
+        "sidebar": {
+          "x": 1040,
+          "y": 172.890625,
+          "width": 360,
+          "height": 301.109375,
+          "right": 1400,
+          "bottom": 474
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 474
+        },
+        "bottom": {
+          "x": 0,
+          "y": 480,
+          "width": 1400,
+          "height": 320,
+          "right": 1400,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 320
+      }
+    },
+    {
+      "width": 1400,
+      "tab": "任务书提取",
+      "observed": {
+        "viewport": [
+          1400,
+          800
+        ],
+        "scrollWidth": 1400,
+        "clientWidth": 1400,
+        "pageHeight": 800,
+        "centerMin": 700,
+        "center": {
+          "x": 238,
+          "y": 172.890625,
+          "width": 796,
+          "height": 301.109375,
+          "right": 1034,
+          "bottom": 474
+        },
+        "sidebar": {
+          "x": 1040,
+          "y": 172.890625,
+          "width": 360,
+          "height": 301.109375,
+          "right": 1400,
+          "bottom": 474
+        },
+        "tree": {
+          "x": 0,
+          "y": 172.890625,
+          "width": 232,
+          "height": 301.109375,
+          "right": 232,
+          "bottom": 474
+        },
+        "bottom": {
+          "x": 0,
+          "y": 480,
+          "width": 1400,
+          "height": 320,
+          "right": 1400,
+          "bottom": 800
+        },
+        "collapsed": false,
+        "bottomToken": 320
+      }
+    },
+    {
+      "width": 1400,
+      "pointerSplit": [
+        232,
+        248,
+        232
+      ],
+      "bottomDragNoJump": true
+    },
+    {
+      "width": 1400,
+      "exportClicked": true,
+      "submitClicked": true,
+      "submit": {
+        "text": "确认提交（一次原子写入）",
+        "x": 445.65625,
+        "y": 372.671875,
+        "right": 615.65625,
+        "bottom": 404.671875
+      },
+      "revisionId": "rev-d-<generated>"
+    }
+  ],
+  "screenshots": [
+    "layout-960x640.png",
+    "layout-1280x800.png",
+    "layout-1440x900.png",
+    "layout-1025x800.png",
+    "layout-1123x800.png",
+    "layout-1124x800.png",
+    "layout-1399x800.png",
+    "layout-1400x800.png"
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}
