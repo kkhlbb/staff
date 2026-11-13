@@ -1,0 +1,424 @@
+{
+  "payload": {
+    "projectId": "project-<generated>",
+    "source": {
+      "kind": "pdf-page",
+      "revisionId": "sr-<generated>",
+      "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+      "page": 3
+    },
+    "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。",
+    "readings": [
+      {
+        "kind": "dimension",
+        "symbol": "L1",
+        "nominalQ": 300000,
+        "upperDeviationQ": 0,
+        "lowerDeviationQ": -2000,
+        "unit": "mm"
+      },
+      {
+        "kind": "dimension",
+        "symbol": "L2",
+        "nominalQ": 500000,
+        "upperDeviationQ": 0,
+        "lowerDeviationQ": -1000,
+        "unit": "mm"
+      },
+      {
+        "kind": "dimension",
+        "symbol": "L3",
+        "nominalQ": 430000,
+        "upperDeviationQ": 2000,
+        "lowerDeviationQ": 0,
+        "unit": "mm"
+      }
+    ]
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "status": "pending",
+      "requiresVerification": true,
+      "batchConfirmable": false,
+      "draftId": "<generated>",
+      "candidates": [
+        {
+          "candidateId": "intent-ring-7162a00c25dbda02",
+          "kind": "ring",
+          "groupId": "ring:L1",
+          "rawText": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。",
+          "page": 3,
+          "status": "pending",
+          "requiresVerification": true,
+          "batchConfirmable": false,
+          "confidence": "low",
+          "confidenceBasis": [
+            "EXTERNAL_READING_UNVERIFIED"
+          ],
+          "reasonCodes": [],
+          "evidence": [],
+          "provenance": [
+            {
+              "kind": "agent-read",
+              "actorId": "验收转录",
+              "at": "2026-11-13T09:14:34.258Z",
+              "sessionSeq": 3,
+              "turnId": "evidence-manual-readings",
+              "modelId": null,
+              "source": {
+                "kind": "pdf-page",
+                "revisionId": "sr-<generated>",
+                "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+                "page": 3
+              },
+              "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。"
+            }
+          ],
+          "editRevision": 2,
+          "occurrence": null,
+          "data": {
+            "symbol": "L1",
+            "name": null,
+            "nominal": {
+              "text": "30.000",
+              "decimals": 3,
+              "valueQ": 300000,
+              "unitText": "mm",
+              "unit": "mm",
+              "evidence": [],
+              "provenance": [
+                {
+                  "kind": "agent-read",
+                  "actorId": "验收转录",
+                  "at": "2026-11-13T09:14:34.258Z",
+                  "sessionSeq": 3,
+                  "turnId": "evidence-manual-readings",
+                  "modelId": null,
+                  "source": {
+                    "kind": "pdf-page",
+                    "revisionId": "sr-<generated>",
+                    "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+                    "page": 3
+                  },
+                  "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。"
+                }
+              ]
+            },
+            "upperDeviation": {
+              "text": "0.000",
+              "decimals": 3,
+              "valueQ": 0,
+              "unitText": "mm",
+              "unit": "mm",
+              "evidence": [],
+              "provenance": [
+                {
+                  "kind": "agent-read",
+                  "actorId": "验收转录",
+                  "at": "2026-11-13T09:14:34.258Z",
+                  "sessionSeq": 3,
+                  "turnId": "evidence-manual-readings",
+                  "modelId": null,
+                  "source": {
+                    "kind": "pdf-page",
+                    "revisionId": "sr-<generated>",
+                    "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+                    "page": 3
+                  },
+                  "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。"
+                }
+              ]
+            },
+            "lowerDeviation": {
+              "text": "-0.200",
+              "decimals": 3,
+              "valueQ": -2000,
+              "unitText": "mm",
+              "unit": "mm",
+              "evidence": [],
+              "provenance": [
+                {
+                  "kind": "agent-read",
+                  "actorId": "验收转录",
+                  "at": "2026-11-13T09:14:34.258Z",
+                  "sessionSeq": 3,
+                  "turnId": "evidence-manual-readings",
+                  "modelId": null,
+                  "source": {
+                    "kind": "pdf-page",
+                    "revisionId": "sr-<generated>",
+                    "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+                    "page": 3
+                  },
+                  "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "candidateId": "intent-ring-7462a4c59ff00f97",
+          "kind": "ring",
+          "groupId": "ring:L2",
+          "rawText": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。",
+          "page": 3,
+          "status": "pending",
+          "requiresVerification": true,
+          "batchConfirmable": false,
+          "confidence": "low",
+          "confidenceBasis": [
+            "EXTERNAL_READING_UNVERIFIED"
+          ],
+          "reasonCodes": [],
+          "evidence": [],
+          "provenance": [
+            {
+              "kind": "agent-read",
+              "actorId": "验收转录",
+              "at": "2026-11-13T09:14:34.258Z",
+              "sessionSeq": 3,
+              "turnId": "evidence-manual-readings",
+              "modelId": null,
+              "source": {
+                "kind": "pdf-page",
+                "revisionId": "sr-<generated>",
+                "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+                "page": 3
+              },
+              "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。"
+            }
+          ],
+          "editRevision": 2,
+          "occurrence": null,
+          "data": {
+            "symbol": "L2",
+            "name": null,
+            "nominal": {
+              "text": "50.000",
+              "decimals": 3,
+              "valueQ": 500000,
+              "unitText": "mm",
+              "unit": "mm",
+              "evidence": [],
+              "provenance": [
+                {
+                  "kind": "agent-read",
+                  "actorId": "验收转录",
+                  "at": "2026-11-13T09:14:34.258Z",
+                  "sessionSeq": 3,
+                  "turnId": "evidence-manual-readings",
+                  "modelId": null,
+                  "source": {
+                    "kind": "pdf-page",
+                    "revisionId": "sr-<generated>",
+                    "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+                    "page": 3
+                  },
+                  "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。"
+                }
+              ]
+            },
+            "upperDeviation": {
+              "text": "0.000",
+              "decimals": 3,
+              "valueQ": 0,
+              "unitText": "mm",
+              "unit": "mm",
+              "evidence": [],
+              "provenance": [
+                {
+                  "kind": "agent-read",
+                  "actorId": "验收转录",
+                  "at": "2026-11-13T09:14:34.258Z",
+                  "sessionSeq": 3,
+                  "turnId": "evidence-manual-readings",
+                  "modelId": null,
+                  "source": {
+                    "kind": "pdf-page",
+                    "revisionId": "sr-<generated>",
+                    "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+                    "page": 3
+                  },
+                  "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。"
+                }
+              ]
+            },
+            "lowerDeviation": {
+              "text": "-0.100",
+              "decimals": 3,
+              "valueQ": -1000,
+              "unitText": "mm",
+              "unit": "mm",
+              "evidence": [],
+              "provenance": [
+                {
+                  "kind": "agent-read",
+                  "actorId": "验收转录",
+                  "at": "2026-11-13T09:14:34.258Z",
+                  "sessionSeq": 3,
+                  "turnId": "evidence-manual-readings",
+                  "modelId": null,
+                  "source": {
+                    "kind": "pdf-page",
+                    "revisionId": "sr-<generated>",
+                    "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+                    "page": 3
+                  },
+                  "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "candidateId": "intent-ring-7362a3321a04452c",
+          "kind": "ring",
+          "groupId": "ring:L3",
+          "rawText": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。",
+          "page": 3,
+          "status": "pending",
+          "requiresVerification": true,
+          "batchConfirmable": false,
+          "confidence": "low",
+          "confidenceBasis": [
+            "EXTERNAL_READING_UNVERIFIED"
+          ],
+          "reasonCodes": [],
+          "evidence": [],
+          "provenance": [
+            {
+              "kind": "agent-read",
+              "actorId": "验收转录",
+              "at": "2026-11-13T09:14:34.258Z",
+              "sessionSeq": 3,
+              "turnId": "evidence-manual-readings",
+              "modelId": null,
+              "source": {
+                "kind": "pdf-page",
+                "revisionId": "sr-<generated>",
+                "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+                "page": 3
+              },
+              "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。"
+            }
+          ],
+          "editRevision": 2,
+          "occurrence": null,
+          "data": {
+            "symbol": "L3",
+            "name": null,
+            "nominal": {
+              "text": "43.000",
+              "decimals": 3,
+              "valueQ": 430000,
+              "unitText": "mm",
+              "unit": "mm",
+              "evidence": [],
+              "provenance": [
+                {
+                  "kind": "agent-read",
+                  "actorId": "验收转录",
+                  "at": "2026-11-13T09:14:34.258Z",
+                  "sessionSeq": 3,
+                  "turnId": "evidence-manual-readings",
+                  "modelId": null,
+                  "source": {
+                    "kind": "pdf-page",
+                    "revisionId": "sr-<generated>",
+                    "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+                    "page": 3
+                  },
+                  "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。"
+                }
+              ]
+            },
+            "upperDeviation": {
+              "text": "0.200",
+              "decimals": 3,
+              "valueQ": 2000,
+              "unitText": "mm",
+              "unit": "mm",
+              "evidence": [],
+              "provenance": [
+                {
+                  "kind": "agent-read",
+                  "actorId": "验收转录",
+                  "at": "2026-11-13T09:14:34.258Z",
+                  "sessionSeq": 3,
+                  "turnId": "evidence-manual-readings",
+                  "modelId": null,
+                  "source": {
+                    "kind": "pdf-page",
+                    "revisionId": "sr-<generated>",
+                    "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+                    "page": 3
+                  },
+                  "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。"
+                }
+              ]
+            },
+            "lowerDeviation": {
+              "text": "0.000",
+              "decimals": 3,
+              "valueQ": 0,
+              "unitText": "mm",
+              "unit": "mm",
+              "evidence": [],
+              "provenance": [
+                {
+                  "kind": "agent-read",
+                  "actorId": "验收转录",
+                  "at": "2026-11-13T09:14:34.258Z",
+                  "sessionSeq": 3,
+                  "turnId": "evidence-manual-readings",
+                  "modelId": null,
+                  "source": {
+                    "kind": "pdf-page",
+                    "revisionId": "sr-<generated>",
+                    "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+                    "page": 3
+                  },
+                  "statement": "验收外部输入夹具：第3页 L1 基本尺寸30，上偏差0，下偏差-0.2；L2 报为50，上偏差0，下偏差-0.1（故意10倍错误，真值5）；L3 基本尺寸43，上偏差+0.2，下偏差0，单位mm。不是产品看图结果。"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "requestId": "<generated>",
+    "objectVersion": "<generated>"
+  },
+  "wrongSymbol": "L2",
+  "truth": [
+    {
+      "kind": "dimension",
+      "symbol": "L1",
+      "nominalQ": 300000,
+      "upperDeviationQ": 0,
+      "lowerDeviationQ": -2000,
+      "unit": "mm"
+    },
+    {
+      "kind": "dimension",
+      "symbol": "L2",
+      "nominalQ": 50000,
+      "upperDeviationQ": 0,
+      "lowerDeviationQ": -1000,
+      "unit": "mm"
+    },
+    {
+      "kind": "dimension",
+      "symbol": "L3",
+      "nominalQ": 430000,
+      "upperDeviationQ": 2000,
+      "lowerDeviationQ": 0,
+      "unit": "mm"
+    }
+  ],
+  "truthLocator": "扫描件第3页左栏最下方：L1=30(0/-0.2), L2=5(0/-0.1), L3=43(+0.2/0) mm。测试夹具由实现代理查看渲染页转录，非产品识别结果、非用户本人核对；page3.png 可复查。合成装配式和隔套参数不是论文事实。",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

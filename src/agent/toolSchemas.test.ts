@@ -39,6 +39,7 @@ describe('Agent 工具参数 JSON Schema 与状态机', () => {
     expect(validateToolArguments('commitApprovedDraft', {})).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
     expect(validateToolArguments('export', { format: 'dwg' })).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
     expect(Object.keys(AGENT_TOOL_SCHEMAS)).toEqual([
+      'ingest_readings',
       'createProject', 'setChain', 'setRequirement', 'setBinding',
       'context', 'confirmed', 'apply', 'stage', 'preview', 'export',
     ])

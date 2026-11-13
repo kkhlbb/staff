@@ -45,6 +45,8 @@ export interface ParameterSnapshotItem {
   reviewStatus: ParameterReviewStatus
   /** 来源备注，可选；空字符串不持久化。 */
   sourceNote?: string
+  /** Frozen provenance used for visible reading-source labels in every export. */
+  provenance?: readonly import('../document-extraction/types').EvidenceRef[]
 }
 
 export interface DrawingScale {

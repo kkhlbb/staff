@@ -1,4 +1,6 @@
 import { MmInput } from './MmInput'
+import { AgentReadEvidenceList } from './AgentReadEvidenceList'
+import { provenanceOf } from '../sources/agentReadDisplay'
 import { useId, type Dispatch, type MouseEvent } from 'react'
 import { termLimits } from '../domain/calculate'
 import type { ChainDefinition } from '../domain/types'
@@ -374,6 +376,7 @@ export function DimensionTable({
                       updateText(term.id, 'sourceNote', value)
                     }
                   />
+                  <AgentReadEvidenceList provenance={provenanceOf(chainTerm)} />
                   {sourceBindingCounts === undefined ? null : (
                     <span
                       className={

@@ -1,0 +1,40 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts (16 tests | 1 failed) 8ms
+   ❯ ingest_readings 核心防线 / M46 M47 M48 (16)
+     × M46: 即使只选一条也不得走批量，整批零写入 4ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 15 passed (16)
+   Start at  01:14:35
+   Duration  173ms (setup 73%, transform 10%, tests 8%, import 7%, worker 1%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/document-extraction/__tests__/ingestReadings.test.ts > ingest_readings 核心防线 / M46 M47 M48 > M46: 即使只选一条也不得走批量，整批零写入
+AssertionError: expected { ok: true, value: { …(3) } } to match object { ok: false, …(1) }
+(4 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "BATCH_NOT_ELIGIBLE",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts:47:31
+     45|     const draft = pending(), before = JSON.stringify(draft)
+     46|     expect(confirmCandidateBatch(draft, { candidateIds: [draft.candida…
+     47|       decidedAt: input.at })).toMatchObject({ ok: false, code: 'BATCH_…
+       |                               ^
+     48|     expect(JSON.stringify(draft)).toBe(before)
+     49|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+EXIT_CODE=1

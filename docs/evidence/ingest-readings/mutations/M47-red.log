@@ -1,0 +1,204 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts (16 tests | 7 failed) 10ms
+   ❯ ingest_readings 核心防线 / M46 M47 M48 (16)
+     × M47: 第五支出处逐字保留，PDF evidence 始终空，数值出处不是 pdf-text 4ms
+     × M46: 即使只选一条也不得走批量，整批零写入 1ms
+     × 未确认、伪造confirmed无决定、批量决定均不能应用 1ms
+     × 逐条决定允许计划，出处完整保留 0ms
+     × M48: 入口必须写 requiresVerification，标记删除/改假后提交必拒 0ms
+     × 去掉batchConfirmable不放行；改会话、来源SHA不放行 0ms
+     × 图片/未来模型出处完整性与失效身份先就位，不能假装为PDF文本 1ms
+
+ Test Files  1 failed (1)
+      Tests  7 failed | 9 passed (16)
+   Start at  01:14:36
+   Duration  134ms (setup 55%, tests 17%, transform 14%, import 12%, worker 2%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/document-extraction/__tests__/ingestReadings.test.ts > ingest_readings 核心防线 / M46 M47 M48 > M47: 第五支出处逐字保留，PDF evidence 始终空，数值出处不是 pdf-text
+AssertionError: expected [ { kind: 'pdf-text', …(10) } ] to deeply equal [ { kind: 'agent-read', …(7) } ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "actorId": "验收转录",
+-     "at": "2026-11-13T12:00:00.000Z",
+-     "kind": "agent-read",
+-     "modelId": null,
+-     "sessionSeq": 1,
+-     "source": {
+-       "kind": "pdf-page",
+-       "page": 3,
+-       "revisionId": "scan",
+-       "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+-     },
+-     "statement": "人报数：L1 30，0/-0.2 mm",
+-     "turnId": "turn-1",
++     "blobKey": "intent:no-external-file",
++     "documentId": "intent:p",
++     "kind": "pdf-text",
++     "normalizedSnippet": "人报数：L1 30，0/-0.2 mm",
++     "page": 1,
++     "pageBoxPdf": [
++       0,
++       0,
++       100,
++       100,
++     ],
++     "rectPdf": [
++       0,
++       0,
++       1,
++       1,
++     ],
++     "revisionId": "intent:p:s1",
++     "sha256": "3a0be54a021ca1145033b31fd5f38db1ea33b768807ec656caec08d56081e43b",
++     "textItemIndexes": [],
++     "textSnippet": "人报数：L1 30，0/-0.2 mm",
+    },
+  ]
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts:35:34
+     33|     const draft = pending(), candidate = draft.candidates[0]!
+     34|     expect(candidate).toMatchObject({ status: 'pending', requiresVerif…
+     35|     expect(candidate.provenance).toEqual([{ kind: 'agent-read', actorI…
+       |                                  ^
+     36|       sessionSeq: 1, turnId: input.turnId, modelId: null, source: inpu…
+     37|     for (const { value } of candidateNumericFields(candidate)) {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  src/document-extraction/__tests__/ingestReadings.test.ts > ingest_readings 核心防线 / M46 M47 M48 > M46: 即使只选一条也不得走批量，整批零写入
+AssertionError: expected { ok: true, value: { …(3) } } to match object { ok: false, …(1) }
+(4 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "BATCH_NOT_ELIGIBLE",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts:47:31
+     45|     const draft = pending(), before = JSON.stringify(draft)
+     46|     expect(confirmCandidateBatch(draft, { candidateIds: [draft.candida…
+     47|       decidedAt: input.at })).toMatchObject({ ok: false, code: 'BATCH_…
+       |                               ^
+     48|     expect(JSON.stringify(draft)).toBe(before)
+     49|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  src/document-extraction/__tests__/ingestReadings.test.ts > ingest_readings 核心防线 / M46 M47 M48 > 未确认、伪造confirmed无决定、批量决定均不能应用
+AssertionError: expected { ok: true, value: { …(2) } } to match object { ok: false, code: 'NOT_CONFIRMED' }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "NOT_CONFIRMED",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts:56:8
+     54|     const valid = confirmed()
+     55|     expect(planApplication({ ...valid, decisions: valid.decisions.map(…
+     56|       .toMatchObject({ ok: false, code: 'NOT_CONFIRMED' })
+       |        ^
+     57|   })
+     58|   it('逐条决定允许计划，出处完整保留', () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  src/document-extraction/__tests__/ingestReadings.test.ts > ingest_readings 核心防线 / M46 M47 M48 > 逐条决定允许计划，出处完整保留
+AssertionError: expected { kind: 'pdf-text', …(10) } to match object { kind: 'agent-read' }
+(10 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "kind": "agent-read",
++   "kind": "pdf-text",
+  }
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts:63:61
+     61|     const plan = planApplication(draft, request(draft))
+     62|     expect(plan.ok).toBe(true)
+     63|     if (plan.ok) expect(plan.value.items[0]!.provenance[0]).toMatchObj…
+       |                                                             ^
+     64|   })
+     65|   it('M48: 入口必须写 requiresVerification，标记删除/改假后提交必拒', () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  src/document-extraction/__tests__/ingestReadings.test.ts > ingest_readings 核心防线 / M46 M47 M48 > M48: 入口必须写 requiresVerification，标记删除/改假后提交必拒
+AssertionError: expected { ok: true, value: { …(2) } } to match object { ok: false, code: 'NOT_CONFIRMED' }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "NOT_CONFIRMED",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts:70:10
+     68|     for (const flag of [undefined, false]) {
+     69|       expect(planApplication({ ...draft, candidates: draft.candidates.…
+     70|         .toMatchObject({ ok: false, code: 'NOT_CONFIRMED' })
+       |          ^
+     71|     }
+     72|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  src/document-extraction/__tests__/ingestReadings.test.ts > ingest_readings 核心防线 / M46 M47 M48 > 去掉batchConfirmable不放行；改会话、来源SHA不放行
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts:75:139
+     73|   it('去掉batchConfirmable不放行；改会话、来源SHA不放行', () => {
+     74|     const draft = confirmed()
+     75|     expect(planApplication({ ...draft, candidates: draft.candidates.ma…
+       |                                                                                                                                           ^
+     76|     expect(planApplication(draft, { ...request(draft), session: { acto…
+     77|     expect(planApplication(draft, { ...request(draft), revisions: [] }…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  src/document-extraction/__tests__/ingestReadings.test.ts > ingest_readings 核心防线 / M46 M47 M48 > 图片/未来模型出处完整性与失效身份先就位，不能假装为PDF文本
+AssertionError: expected 'intent:p:s1#1#0.00#0.00#1.00#1.00#人报数…' to contain 'agent-read'
+
+Expected: "agent-read"
+Received: "intent:p:s1#1#0.00#0.00#1.00#1.00#人报数：L1 30，0/-0.2 mm"
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts:100:32
+     98|     const ref = result.value.candidates[0]!.provenance![0]!
+     99|     expect(isProvenanceCompleteness(ref)).toBe(true)
+    100|     expect(provenanceKey(ref)).toContain('agent-read')
+       |                                ^
+    101|     expect(provenanceValidity(ref, { revisions: [], images: [{ imageId…
+    102|     expect(provenanceValidity(ref, { revisions: [], images: [] })).toB…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+EXIT_CODE=1

@@ -1,4 +1,6 @@
 import { MmInput } from './MmInput'
+import { AgentReadEvidenceList } from './AgentReadEvidenceList'
+import { provenanceOf } from '../sources/agentReadDisplay'
 /**
  * 隔套图纸工作区（V3-C-03）：参数 → 唯一 DrawingData → 预览 / 导出。
  *
@@ -307,6 +309,10 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
           {committedData === null ? '生成图纸' : '应用参数与比例'}
         </button>
       </form>
+
+      {props.project.parameters.map((parameter) => (
+        <AgentReadEvidenceList key={parameter.parameterId} provenance={provenanceOf(parameter)} />
+      ))}
 
       <details
         className="spacer-drawing__frame"

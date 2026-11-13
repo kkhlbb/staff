@@ -8,6 +8,7 @@
  * 比例只作用于视图尺寸，不改参数、单位或输入精度。
  */
 import { Q_PER_MM } from '../domain/types'
+import { agentReadSources, readingSourceLabel } from '../sources/agentReadDisplay'
 import { formatParameterValue, formatQWithDecimals, resolveDimension, dimensionText } from './formatDimension'
 import { stableFingerprint } from './fingerprint'
 import { computeLayout } from './layout'
@@ -68,6 +69,8 @@ export interface BuildSpacerDrawingInput {
   scale: DrawingScale
   frameFields: DrawingFrameFields
   partId?: string
+  /** Ring/parameter provenance collected by the project-level caller. */
+  sourceProvenance?: readonly unknown[]
 }
 
 const FORBIDDEN_CLAIM = /已复核|已批准|符合\s*GB|符合\s*ISO/i
@@ -384,7 +387,10 @@ export function buildSpacerDrawing(input: BuildSpacerDrawingInput): DrawingData 
   if (!validated.ok) {
     throw new DrawingBuildError('INVALID_PARAMETER', validated.message)
   }
-  const parameters = validated.parameters
+  const parameters = validated.parameters.map((parameter) => {
+    const provenance = input.parameters.find((item) => item.parameterId === parameter.parameterId)?.provenance
+    return provenance === undefined ? parameter : { ...parameter, provenance }
+  })
   const byKey = new Map(parameters.map((item) => [item.key, item]))
   const inner = byKey.get('innerDiameter') as ParameterSnapshotItem
   const outer = byKey.get('outerDiameter') as ParameterSnapshotItem
@@ -528,7 +534,16 @@ export function buildSpacerDrawing(input: BuildSpacerDrawingInput): DrawingData 
     { viewId: endViewId, kind: 'right-end', anchorMm: { ...end }, scaleFactor, primitiveIds: ['end.outer', 'end.inner', 'end.center.h', 'end.center.v'] },
   ]
 
-  const frame = buildFrame(input.frameFields, input.revisionId, input.scale)
+  const readings = agentReadSources([
+    ...(input.sourceProvenance ?? []),
+    ...parameters.flatMap((parameter) => parameter.provenance ?? []),
+  ])
+  const readingBasis = [...new Set(readings.map(readingSourceLabel))].join('；')
+  const frameFields = readingBasis === '' ? input.frameFields : {
+    ...input.frameFields,
+    basis: [input.frameFields.basis, `读数来源：${readingBasis}`].filter(Boolean).join('；'),
+  }
+  const frame = buildFrame(frameFields, input.revisionId, input.scale)
   primitives.push(...frame.cells)
 
   const layout = computeLayout({

@@ -116,6 +116,7 @@ export function mapConfirmed(
       if (decimals === null) throw new MappingError('INVALID_INPUT', `无法确定 ${key} 的显示精度`)
       const old = snapshot.project.parameters.find((parameter) => parameter.key === key)
       parameters.push({
+        ...(item.provenance.some((ref) => ref.kind === 'agent-read') ? { provenance: item.provenance } : {}),
         parameterId: SPACER_PARAMETER_IDS[key], partId: SPACER_PART_ID, key,
         valueQ: q!, inputDecimals: decimals, reviewStatus: 'draft',
         parameterRevision: old === undefined ? 1 : old.parameterRevision + (old.valueQ === q ? 0 : 1),
@@ -184,6 +185,7 @@ export function mapConfirmed(
     if (nominal === null || lower === null || upper === null || sign === undefined) continue
     if (nominal < 0 || lower > upper) throw new MappingError('CONSTRAINT_VIOLATED', `${symbol} 的基本尺寸或偏差范围不合法`)
     Object.assign(term, { nominalQ: nominal, lowerDeviationQ: lower, upperDeviationQ: upper,
+      ...(ring?.provenance.some((ref) => ref.kind === 'agent-read') ? { provenance: ring.provenance } : {}),
       sign, termRevision: term.termRevision + 1 })
     changed.add(term.id)
   }

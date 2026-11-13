@@ -1146,6 +1146,7 @@ export interface IntentCreateValue {
 }
 
 export interface IntentDraftCandidateView {
+  provenance?: readonly import('../../src/document-extraction/types').EvidenceRef[]
   candidateId: string
   kind: 'ring' | 'interval' | 'formula' | 'part-dimension'
   status: string

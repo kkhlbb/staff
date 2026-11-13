@@ -42,6 +42,7 @@ import {
   type QuantityValue,
 } from '../document-extraction'
 import type { SourceRevision } from '../sources/types'
+import { candidateReadSources, readingSourceLabel } from '../sources/agentReadDisplay'
 import { PdfViewer } from './PdfViewer'
 import './ExtractionReviewPanel.css'
 
@@ -238,6 +239,9 @@ export function ExtractionReviewPanel({
     () => (draft === null ? [] : activeUnitBatches(draft)),
     [draft],
   )
+  const readingCandidates = grouping?.groups.find((group) => group.key === 'agent-read')?.candidates ?? []
+  const readingPending = readingCandidates.filter((candidate) => candidate.status === 'pending').length
+  const readingBlocked = readingCandidates.filter((candidate) => candidate.status === 'blocked').length
   /**
    * “仅差单位”批量补单位的目标集合：两个仅差单位组（单值 + 同符号多处）的全部成员。
    * 公式/数值/单位不支持与可确认组永远不在集合里。
@@ -348,6 +352,10 @@ export function ExtractionReviewPanel({
    */
   async function confirmBatch(ids: readonly string[], key: string): Promise<void> {
     if (draft === null || actions.onConfirmBatch === undefined || batchRunning !== null) return
+    if (draft.candidates.some((candidate) => ids.includes(candidate.candidateId) && candidateReadSources(candidate).length > 0)) {
+      setError('读数未核对：必须对照来源逐条确认，不能批量确认。')
+      return
+    }
     if (ids.length === 0) return
     setError('')
     setMessage('')
@@ -470,6 +478,7 @@ export function ExtractionReviewPanel({
   ) {
     const readOnly = readOnlyReason !== null
     const evidence = evidenceOf(candidate)
+    const readings = candidateReadSources(candidate)
     const firstEvidence = evidence[0]
     const canAct = !readOnly && !busy && candidate.status !== 'confirmed' && candidate.status !== 'rejected' && candidate.status !== 'stale'
     const occurrence = candidate.occurrence ?? null
@@ -527,12 +536,19 @@ export function ExtractionReviewPanel({
           </p>
         )}
         <p className="extraction-review__raw">原文：{candidate.rawText}</p>
-        <p className="extraction-review__evidence">
+        {readings.map((reading, index) => (
+          <div key={index} className="extraction-review__warning" data-testid={`agent-read-source-${candidate.candidateId}`}>
+            <strong>读数未核对（来源：{readingSourceLabel(reading)}）</strong>
+            <p>读数说明（原话）：{reading.statement}</p>
+            <p>{reading.source.kind === 'pdf-page' ? `来源版本：${reading.source.revisionId}` : `图片：${reading.source.imageId}`} · SHA-256 {reading.source.sha256}</p>
+          </div>
+        ))}
+        {(readings.length === 0 || firstEvidence !== undefined) && <p className="extraction-review__evidence">
           第 {candidate.page} 页
           {firstEvidence !== undefined
             ? ` · 选区 PDF 点 ${formatRect(firstEvidence.rectPdf)} · 页框 ${formatRect(firstEvidence.pageBoxPdf)} · 片段「${firstEvidence.textSnippet}」· item ${firstEvidence.textItemIndexes.join(',')}`
             : ' · 无选区出处'}
-        </p>
+        </p>}
         <p className="extraction-review__values">
           {numericFields(candidate).length === 0
             ? '无数值字段（仅保留原文与结构）'
@@ -859,11 +875,16 @@ export function ExtractionReviewPanel({
                 按原因码分组（组内按页/位置固定顺序，两次打开一致）
               </p>
               <p className="extraction-review__groups-line" data-testid="group-summary-confirmable">
-                可确认 {grouping.counts.pending}：
+                可确认 {grouping.counts.pending - readingPending}：
                 单值 {grouping.counts.confirmableSingle}（可批量确认）·
                 同符号多处 {grouping.counts.confirmableMulti}（
-                {grouping.pendingIndividualDecisions} 组，只能人工选一处）
+                {grouping.pendingIndividualDecisions - readingPending} 组，只能人工选一处）
               </p>
+              {readingCandidates.length > 0 && (
+                <p className="extraction-review__groups-line">
+                  外部读数 {readingCandidates.length}：待逐条核对 {readingPending} · 阻塞 {readingBlocked}；不允许批量确认。
+                </p>
+              )}
               <p className="extraction-review__groups-line" data-testid="group-summary-units">
                 仅差单位 {grouping.counts.unitOnlySingle + grouping.counts.unitOnlyMulti}：
                 单值 {grouping.counts.unitOnlySingle} · 同符号多处 {grouping.counts.unitOnlyMulti}
@@ -915,7 +936,7 @@ export function ExtractionReviewPanel({
                 </div>
               )}
               <p className="extraction-review__groups-line" data-testid="group-summary-blocked">
-                阻塞其余 {grouping.counts.blocked - grouping.counts.unitOnlySingle - grouping.counts.unitOnlyMulti}：
+                阻塞其余 {grouping.counts.blocked - readingBlocked - grouping.counts.unitOnlySingle - grouping.counts.unitOnlyMulti}：
                 {grouping.counts.blockedByCode
                   .map((item) => `${item.code} ${item.count}`)
                   .join(' · ')}
@@ -946,7 +967,7 @@ export function ExtractionReviewPanel({
           )}
           <div className="extraction-review__batch">
             <span>已选 {selectedIds.length} 项</span>
-            {actions.onConfirmBatch !== undefined && (
+            {actions.onConfirmBatch !== undefined && !draft.candidates.some((candidate) => selectedIds.includes(candidate.candidateId) && candidateReadSources(candidate).length > 0) && (
               <button
                 type="button"
                 onClick={() => void confirmBatch(selectedIds, 'confirm-selected')}

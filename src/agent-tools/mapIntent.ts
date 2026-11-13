@@ -112,6 +112,7 @@ export function mapIntentChain(
       throw new MappingError('CONSTRAINT_VIOLATED', `${symbol} 的基本尺寸或偏差范围不合法`)
     }
     terms.push({
+      ...(item.provenance.some((ref) => ref.kind === 'agent-read') ? { provenance: item.provenance } : {}),
       id: stableId('intent-term', [draft.draftId, symbol]),
       symbol,
       name: symbol,
@@ -150,6 +151,7 @@ export function mapIntentChain(
     if (decimals === null) throw new MappingError('INVALID_INPUT', `无法确定 ${key} 的显示精度`)
     const old = snapshot.project.parameters.find((parameter) => parameter.key === key)
     parameters.push({
+      ...(parts[0]!.provenance.some((ref) => ref.kind === 'agent-read') ? { provenance: parts[0]!.provenance } : {}),
       parameterId: SPACER_PARAMETER_IDS[key],
       partId: SPACER_PART_ID,
       key,

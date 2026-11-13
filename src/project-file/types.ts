@@ -313,6 +313,7 @@ export function isVisualReferenceLink(
  * 这只描述参数记录，不改变 V2 尺寸链；C 参数也不自动同步链 S。
  */
 export interface ProjectFileSpacerParameter {
+  provenance?: readonly import('../document-extraction/types').EvidenceRef[]
   parameterId: string
   partId: string
   key: 'innerDiameter' | 'outerDiameter' | 'length'

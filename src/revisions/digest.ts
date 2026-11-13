@@ -78,6 +78,7 @@ function chainInput(snapshot: ProjectFileSnapshot): unknown {
     target: chain.target,
     assumptions: chain.assumptions,
     terms: chain.terms.map((term) => ({
+      ...(term.provenance === undefined ? {} : { provenance: term.provenance }),
       id: term.id,
       symbol: term.symbol,
       name: term.name,
@@ -93,6 +94,7 @@ function chainInput(snapshot: ProjectFileSnapshot): unknown {
 function parameterInput(parameters: readonly ProjectFileSpacerParameter[]): unknown {
   return [...parameters]
     .map((parameter) => ({
+      ...(parameter.provenance === undefined ? {} : { provenance: parameter.provenance }),
       parameterId: parameter.parameterId,
       partId: parameter.partId,
       key: parameter.key,

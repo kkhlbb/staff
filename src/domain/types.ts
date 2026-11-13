@@ -10,6 +10,7 @@ export const MAX_ABS_Q = MAX_ABS_MM * Q_PER_MM
 export const PROJECT_SCHEMA_VERSION = 2
 
 export interface DimensionTerm {
+  provenance?: readonly import('../document-extraction/types').EvidenceRef[]
   id: string
   symbol: string
   name: string

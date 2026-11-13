@@ -14,6 +14,7 @@
  *    永远 batch='none'，界面据此不渲染任何批量按钮。
  */
 import { tryParseMm } from '../domain/units'
+import { candidateReadSources } from '../sources/agentReadDisplay'
 import {
   EXTRACTION_REASON_CODES,
   candidateNumericFields,
@@ -23,6 +24,7 @@ import {
 
 /** 组键：稳定字符串，用作折叠状态/测试定位，不随界面文案变化。 */
 export type ConfirmGroupKey =
+  | 'agent-read'
   | 'confirmable:single'
   | 'confirmable:multi'
   | 'blocked-unit:single'
@@ -184,6 +186,7 @@ export function groupConfirmCandidates(
 ): ConfirmGrouping {
   const members = membersOf(candidates)
   const pendingSingle: ExtractionCandidate[] = []
+  const readings: ExtractionCandidate[] = []
   const pendingMulti: ExtractionCandidate[] = []
   const unitSingle: ExtractionCandidate[] = []
   const unitMulti: ExtractionCandidate[] = []
@@ -195,6 +198,12 @@ export function groupConfirmCandidates(
   let blocked = 0
 
   for (const candidate of candidates) {
+    if (candidateReadSources(candidate).length > 0) {
+      readings.push(candidate)
+      if (candidate.status === 'pending') pending += 1
+      if (candidate.status === 'blocked') blocked += 1
+      continue
+    }
     if (candidate.status === 'pending') {
       pending += 1
       if (isMulti(candidate, members)) pendingMulti.push(candidate)
@@ -226,6 +235,16 @@ export function groupConfirmCandidates(
   }
 
   const groups: ConfirmGroupSummary[] = []
+  if (readings.length > 0) {
+    groups.push({
+      key: 'agent-read',
+      title: `读数未核对 · ${readings.length}`,
+      hint: '外部提供的读数必须对照来源逐条核对、逐条确认；不提供批量确认。',
+      capability: 'none',
+      candidates: readings,
+      reasonCode: null,
+    })
+  }
   if (pendingSingle.length > 0) {
     groups.push({
       key: 'confirmable:single',
@@ -334,7 +353,7 @@ export function groupConfirmCandidates(
       unitOnlyMulti: unitMulti.length,
       blockedByCode,
     },
-    pendingIndividualDecisions: multiGroups.size,
+    pendingIndividualDecisions: multiGroups.size + readings.filter((item) => item.status === 'pending').length,
     afterUnitAttestationIndividualDecisions: unitMultiGroups.size,
   }
 }
@@ -343,7 +362,7 @@ export function groupConfirmCandidates(
 export function batchConfirmCandidateIds(group: ConfirmGroupSummary): readonly string[] {
   if (group.capability !== 'confirm') return []
   return group.candidates
-    .filter((candidate) => candidate.status === 'pending')
+    .filter((candidate) => candidate.status === 'pending' && candidateReadSources(candidate).length === 0)
     .map((candidate) => candidate.candidateId)
 }
 

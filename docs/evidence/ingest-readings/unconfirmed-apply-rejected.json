@@ -1,0 +1,17 @@
+{
+  "response": {
+    "ok": false,
+    "code": "NOT_CONFIRMED",
+    "message": "候选 intent-formula-cbd586d8abe3373a 状态为 pending，未经逐条确认不能送入项目草稿",
+    "requestId": "<generated>",
+    "objectVersion": "<generated>"
+  },
+  "plan": {
+    "ok": false,
+    "code": "NOT_CONFIRMED",
+    "message": "候选 intent-ring-7162a00c25dbda02 状态为 pending，未经逐条确认不能送入项目草稿"
+  },
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

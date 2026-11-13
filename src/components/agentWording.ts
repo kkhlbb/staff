@@ -23,6 +23,7 @@ const TOOL_LABELS: Record<string, string> = {
   setChain: '写组成环',
   setRequirement: '写条款区间',
   setBinding: '写隔套参数',
+  ingest_readings: '接收外部读数（未核对）',
 }
 
 export function toolLabel(tool: unknown): string {
