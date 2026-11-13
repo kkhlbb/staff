@@ -303,6 +303,18 @@
   word-break: break-word;
 }
 
+/* 单位来自用户声明：与“从原文读到”的出处视觉上分开，不混为一谈。 */
+.extraction-review__unit-source {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #1f5f8b;
+  background: rgba(31, 95, 139, 0.08);
+  border-left: 3px solid #1f5f8b;
+  padding: 2px 6px;
+  word-break: break-word;
+}
+
 .extraction-review__raw {
   color: var(--text-h);
 }

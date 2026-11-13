@@ -12,6 +12,7 @@ import {
   confirmCandidate,
   confirmCandidateBatch,
   groupConfirmCandidates,
+  hasActiveUnitAttestation,
   isUnitOnlyCandidate,
   planApplication,
   revokeUnitAttestations,
@@ -237,6 +238,7 @@ describe('批量补单位', () => {
       actor: ACTOR,
       decidedAt: AT,
       sessionSeq: 3,
+      turnId: 'panel-turn-3',
     })
     expect(result.ok).toBe(true)
     if (!result.ok) return
@@ -299,6 +301,7 @@ describe('批量补单位', () => {
       actor: ACTOR,
       decidedAt: AT,
       sessionSeq: 1,
+      turnId: 'panel-turn-1',
     })
     expect(result.ok).toBe(false)
     if (result.ok) return
@@ -326,6 +329,7 @@ describe('批量补单位', () => {
         actor: ACTOR,
         decidedAt: AT,
         sessionSeq: 1,
+        turnId: 'panel-turn-1',
       })
     for (const statement of ['表里都是毫米', '本表单位 inch', '本表单位 mm，局部单位 in']) {
       const result = run(statement)
@@ -352,6 +356,7 @@ describe('批量补单位', () => {
       actor: ACTOR,
       decidedAt: AT,
       sessionSeq: 1,
+      turnId: 'panel-turn-1',
     })
     expect(result.ok).toBe(true)
     if (!result.ok) return
@@ -475,6 +480,7 @@ describe('补单位后的出处与撤销', () => {
       actor: ACTOR,
       decidedAt: AT,
       sessionSeq: 2,
+      turnId: 'panel-turn-2',
     })
     if (!result.ok) throw new Error(result.message)
     return result.value
@@ -554,6 +560,107 @@ describe('补单位后的出处与撤销', () => {
     const statuses = result.value.draft.candidates.map((candidate) => candidate.status)
     expect(statuses).toEqual(['blocked', 'pending'])
     expect(activeUnitBatches(result.value.draft)[0]?.candidateIds).toEqual(['u-2'])
+  })
+
+  it('撤销必须真的改存储：候选回 blocked、单位清空、旧决定失效（M34 靶子）', () => {
+    const value = attested()
+    const beforeRevision = value.draft.draftRevision
+    const result = revokeUnitAttestations(value.draft, {
+      batchId: value.batchId,
+      actor: ACTOR,
+      decidedAt: '2026-11-12T11:00:00.000Z',
+      reason: '单位声明填错了',
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const next = result.value.draft
+    // 存储真的变了：草稿代数推进，旧补单位决定被标失效，候选与单位都回退。
+    expect(next.draftRevision).toBeGreaterThan(beforeRevision)
+    const oldAttest = next.decisions.filter((decision) => decision.action === 'attest-unit')
+    expect(oldAttest).toHaveLength(2)
+    for (const decision of oldAttest) {
+      expect(decision.invalidatedByEditRevision).not.toBeNull()
+    }
+    expect(hasActiveUnitAttestation(next.candidates[0]!)).toBe(false)
+    expect(next.candidates.map((candidate) => candidate.status)).toEqual(['blocked', 'blocked'])
+    for (const candidate of next.candidates) {
+      if (candidate.kind !== 'ring') continue
+      expect(candidate.data.nominal?.unit).toBeNull()
+      expect(candidate.data.nominal?.unitText).toBeNull()
+      expect(candidate.data.nominal?.valueQ).toBeNull()
+    }
+    // 不是只改界面：撤销决定本身也落盘，各带一条。
+    expect(
+      next.decisions.filter(
+        (decision) => decision.action === 'revoke' && decision.batchId === value.batchId,
+      ),
+    ).toHaveLength(2)
+  })
+
+  it('三类“不支持”无论怎么传都进不了批量补单位（M35 靶子）', () => {
+    const blockedCodes = [
+      'FORMULA_UNSUPPORTED',
+      'NUMBER_UNSUPPORTED',
+      'UNSUPPORTED_UNIT',
+    ] as const
+    for (const code of blockedCodes) {
+      const source = draft([
+        ring('unit-ok', {
+          symbol: 'A',
+          status: 'blocked',
+          reasonCodes: ['UNKNOWN_UNIT'],
+          unit: null,
+          unitText: null,
+        }),
+        ring('must-stay-blocked', {
+          symbol: 'B',
+          status: 'blocked',
+          reasonCodes: [code],
+          unit: null,
+          unitText: null,
+        }),
+      ])
+      expect(isUnitOnlyCandidate(source.candidates[1]!)).toBe(false)
+      const result = attestCandidateUnits(source, {
+        candidateIds: ['unit-ok', 'must-stay-blocked'],
+        statement: '本表单位 mm',
+        actor: ACTOR,
+        decidedAt: AT,
+        sessionSeq: 1,
+        turnId: 'panel-turn-1',
+      })
+      expect(result.ok).toBe(false)
+      if (result.ok) continue
+      expect(result.code).toBe('BATCH_NOT_ELIGIBLE')
+      expect(result.message).toContain('must-stay-blocked')
+      expect(result.message).toContain(code)
+      // 0 写入：连合格的 unit-ok 也不许被顺手改掉。
+      expect(source.candidates[1]!.status).toBe('blocked')
+      expect(source.decisions).toHaveLength(0)
+    }
+  })
+
+  it('没有 turnId 的补单位被拒（出处必须能回答“哪一轮输入”）', () => {
+    const source = draft([
+      ring('u-1', {
+        symbol: 'A',
+        status: 'blocked',
+        reasonCodes: ['UNKNOWN_UNIT'],
+        unit: null,
+        unitText: null,
+      }),
+    ])
+    const result = attestCandidateUnits(source, {
+      candidateIds: ['u-1'],
+      statement: '本表单位 mm',
+      actor: ACTOR,
+      decidedAt: AT,
+      sessionSeq: 1,
+      turnId: '   ',
+    })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.code).toBe('ATTESTATION_TURN_REQUIRED')
   })
 
   it('已确认的候选不能借撤销补单位绕过确认', () => {

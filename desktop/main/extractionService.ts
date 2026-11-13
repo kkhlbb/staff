@@ -96,6 +96,7 @@ const EXTRACTION_ERROR_CODES: Record<ExtractionErrorCode, IpcErrorCode> = {
   // 未新增 IPC 错误码：它仍是“依据不合法”，映射到现有的出处缺失码，
   // 等 attestation 接线时再按需要在契约里单独开码。
   ATTESTATION_SESSION_MISMATCH: 'EXTRACTION_EVIDENCE_REQUIRED',
+  ATTESTATION_TURN_REQUIRED: 'EXTRACTION_EVIDENCE_REQUIRED',
   PROVENANCE_REVOKED: 'EXTRACTION_EVIDENCE_REQUIRED',
   BATCH_NOT_ELIGIBLE: 'EXTRACTION_BATCH_REJECTED',
   UNIT_STATEMENT_INVALID: 'EXTRACTION_UNIT_STATEMENT_INVALID',
@@ -773,6 +774,9 @@ export class ExtractionService {
     const project = session.snapshot.project
     const actorId = project.actorId ?? EXTRACTION_ACTOR
     const sessionSeq = Math.max(1, project.sessionSeq + 1)
+    // 面板的一次提交就是一轮输入：turnId 由 main 生成（renderer/模型不能提供），
+    // 与 sessionSeq 一一对应，便于审计“哪一轮说的”。
+    const turnId = `extraction-panel-${sessionSeq}`
     const decidedAt = this.now().toISOString()
     const result = attestCandidateUnits(draft, {
       candidateIds: request.candidateIds,
@@ -781,6 +785,7 @@ export class ExtractionService {
       decidedAt,
       sessionSeq,
       sessionLabel: null,
+      turnId,
     })
     if (!result.ok) return failure(EXTRACTION_ERROR_CODES[result.code], result.message)
     const staged = await this.stageUpdatedDraft(session, result.value.draft, request.baseEditSeq, {

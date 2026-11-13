@@ -30,11 +30,19 @@ import { loadEvidenceJson } from './real-docs/tsImport.mjs'
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 function parseArgs(argv) {
-  const options = { updateBaseline: false, reason: null, help: false }
+  const options = {
+    updateBaseline: false,
+    reason: null,
+    help: false,
+    attestUnits: null,
+    evidenceDir: null,
+  }
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]
     if (arg === '--update-baseline') options.updateBaseline = true
     else if (arg === '--reason') options.reason = argv[(index += 1)] ?? null
+    else if (arg === '--attest-units') options.attestUnits = argv[(index += 1)] ?? ''
+    else if (arg === '--evidence-dir') options.evidenceDir = argv[(index += 1)] ?? null
     else if (arg === '--help' || arg === '-h') options.help = true
     else throw new Error(`未知参数：${arg}`)
   }
@@ -110,6 +118,67 @@ function printTable(measured) {
   }
 }
 
+function printAttestTable(measured) {
+  const header = [
+    '文档',
+    '候选',
+    '未声明 pending',
+    '未声明 blocked',
+    '声明后 pending',
+    '声明后 blocked',
+    '补上条数',
+    '撤销后 pending',
+    '撤销后 blocked',
+    '撤销一致',
+  ]
+  const rows = measured.documents.map((doc) => {
+    const unit = doc.unitAttestation
+    return [
+      `${doc.id} ${doc.file}`,
+      String(doc.candidates.total),
+      String(unit.before.pending),
+      String(unit.before.blocked),
+      String(unit.after.pending),
+      String(unit.after.blocked),
+      String(unit.converted),
+      String(unit.reverted.pending),
+      String(unit.reverted.blocked),
+      unit.revokeRestored ? '是' : '否',
+    ]
+  })
+  const widths = header.map((title, column) =>
+    Math.max(title.length, ...rows.map((row) => row[column].length)),
+  )
+  const format = (row) => row.map((cell, column) => cell.padEnd(widths[column])).join('  ')
+  console.log(format(header))
+  console.log(widths.map((width) => '-'.repeat(width)).join('  '))
+  for (const row of rows) console.log(format(row))
+  const total = (pick) => rows.reduce((sum, row, index) => sum + pick(measured.documents[index]), 0)
+  const totalCandidates = total((doc) => doc.candidates.total)
+  const totalPending = total((doc) => doc.unitAttestation.after.pending)
+  console.log('')
+  console.log(
+    `可确认率 = 声明后 pending/候选 = ${totalPending}/${totalCandidates} = ` +
+      `${((totalPending / totalCandidates) * 100).toFixed(1)}%`,
+  )
+  console.log(
+    `汇总：候选 ${total((doc) => doc.candidates.total)}｜未声明 pending ${total((doc) => doc.unitAttestation.before.pending)} / blocked ${total((doc) => doc.unitAttestation.before.blocked)}` +
+      `｜声明后 pending ${total((doc) => doc.unitAttestation.after.pending)} / blocked ${total((doc) => doc.unitAttestation.after.blocked)}` +
+      `｜补上 ${total((doc) => doc.unitAttestation.converted)} 条` +
+      `｜撤销后 pending ${total((doc) => doc.unitAttestation.reverted.pending)} / blocked ${total((doc) => doc.unitAttestation.reverted.blocked)}`,
+  )
+  for (const doc of measured.documents) {
+    const unit = doc.unitAttestation
+    const preserved = Object.entries(unit.preservedBlocked)
+      .map(([code, count]) => `${code}×${count}`)
+      .join('、')
+    console.log(
+      `${doc.id} 声明「${unit.statement}」｜actor=${unit.actor}｜sessionSeq=${unit.sessionSeq}｜turnId=${unit.turnId}` +
+        `｜batchId=${unit.batchId.slice(0, 24)}…｜决定 ${unit.decisionCount} 条｜三类不支持保持：${preserved}`,
+    )
+  }
+}
+
 async function writeEvidence(file, value, evidenceJson) {
   mkdirSync(path.dirname(file), { recursive: true })
   const text = evidenceJson.serializeEvidence(value)
@@ -128,14 +197,42 @@ async function main() {
   if (options.help) {
     console.log(
       '用法：node scripts/real-doc-metrics.mjs [--update-baseline --reason "<为什么数字变了>"]\n' +
-        '环境变量：REAL_DOC_CORPUS（默认 ~/DSH/tmp/cunlian-v36/real-docs）',
+        '      node scripts/real-doc-metrics.mjs --attest-units "<单位声明>" [--evidence-dir <目录>]\n' +
+        '环境变量：REAL_DOC_CORPUS（默认 ~/DSH/tmp/cunlian-v36/real-docs）；' +
+        'UNIT_ATTEST_AT（仅度量：固定决定时间，默认 2026-11-12T00:00:00.000Z，保证证据可复现）',
     )
     return 0
   }
   const corpusDir = process.env.REAL_DOC_CORPUS ?? defaultCorpusDir()
   const manifestPath = path.join(repoRoot, MANIFEST_RELATIVE_PATH)
-  const measured = await measureCorpus({ manifestPath, corpusDir })
+  const unitAttestation =
+    options.attestUnits === null
+      ? null
+      : {
+          statement: options.attestUnits,
+          actor: 'local-operator',
+          at: process.env.UNIT_ATTEST_AT ?? '2026-11-12T00:00:00.000Z',
+          revokeReason: '度量：整批撤销补单位，核对回到未声明状态',
+        }
+  const measured = await measureCorpus({ manifestPath, corpusDir, unitAttestation })
   const evidenceJson = await loadEvidenceJson()
+
+  if (unitAttestation !== null) {
+    console.log(
+      `批量补单位度量：声明「${unitAttestation.statement}」（只对“仅差单位”开放；补完逐条记 user-attestation，随后整批撤销核对）`,
+    )
+    console.log('')
+    printAttestTable(measured)
+    console.log('')
+    console.log(`语料目录：${corpusDir}（manifest：${MANIFEST_RELATIVE_PATH}）`)
+    const evidenceDir =
+      options.evidenceDir ?? path.join(repoRoot, 'docs', 'evidence', 'unit-attest-state')
+    const evidencePath = path.join(evidenceDir, 'metrics.json')
+    await writeEvidence(evidencePath, measured, evidenceJson)
+    console.log(`已写 ${path.relative(repoRoot, evidencePath)}`)
+    console.log('本模式不比较 baseline、不覆盖 real-doc-baseline/metrics.json：声明后数字本就有意改变。')
+    return 0
+  }
 
   printTable(measured)
   console.log('')

@@ -1,0 +1,16 @@
+$ npm run test:real-docs
+
+> staff@0.4.0-beta test:real-docs
+> vitest run --config vitest.realdocs.config.ts
+
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+
+ Test Files  3 passed (3)
+      Tests  7 passed (7)
+   Start at  21:23:49
+   Duration  4.31s (tests 100%)
+
+
+EXIT=0
