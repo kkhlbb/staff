@@ -212,6 +212,40 @@ function issueSummary(issues) {
   }
 }
 
+/** Compare nominal q against crop-verified truth by page and nominal-source geometry, never by value. */
+export function compareGroundTruth(docId, candidates, truths) {
+  const details = truths.filter(t=>t.docId===docId).map(truth=>{
+    const located = candidates.filter(c=>c.kind==='ring' && c.data.nominal?.evidence.some(e=>{
+      if(e.page!==truth.page) return false
+      const [x0,y0,x1,y1]=e.rectPdf
+      const x=(x0+x1)/2, y=(y0+y1)/2
+      return x>=truth.rect[0] && x<=truth.rect[2] && y>=truth.rect[1] && y<=truth.rect[3]
+    }))
+    // Symbol-chain candidates can share a nominal rectangle (T1=T2=0.2).
+    // Disambiguate by the symbol-source x anchor, never by the extracted number.
+    const distance = c => {
+      const anchor = c.evidence?.find(e=>e.page===truth.page) ?? c.data.nominal.evidence.find(e=>e.page===truth.page)
+      return Math.abs(anchor.rectPdf[0]-truth.rect[0])
+    }
+    const nearest = Math.min(...located.map(distance))
+    const matches = located.filter(c=>distance(c)===nearest)
+    const pending=matches.filter(c=>c.status==='pending')
+    // Decimal -> q without binary floating point or precision relaxation.
+    const text=String(truth.nominal)
+    if(!/^[+\-]?\d+(?:\.\d{1,4})?$/u.test(text)) throw new Error(`Invalid ground truth nominal: ${text}`)
+    const [integer,fraction='']=text.replace(/^[+\-]/u,'').split('.')
+    const expectedQ=Number(BigInt(integer)*10000n+BigInt(fraction.padEnd(4,'0'))) * (text.startsWith('-')?-1:1)
+    return {docId,page:truth.page,rect:truth.rect,originalText:truth.originalText,expectedQ,
+      cropFile:truth.cropFile, pendingChecked:pending.length,
+      wrongPending:pending.filter(c=>c.data.nominal.valueQ!==expectedQ).length,
+      matches:matches.map(c=>({candidateId:c.candidateId,status:c.status,nominal:c.data.nominal?.text,
+        valueQ:c.data.nominal?.valueQ,upperDeviation:c.data.upperDeviation?.text??null,
+        lowerDeviation:c.data.lowerDeviation?.text??null,reasonCodes:c.reasonCodes}))}
+  })
+  return {pendingChecked:details.reduce((n,d)=>n+d.pendingChecked,0),
+    wrongPending:details.reduce((n,d)=>n+d.wrongPending,0),details}
+}
+
 /**
  * 每份文档一行：页数、候选、状态、阻塞原因码、问题码。
  *
@@ -402,6 +436,11 @@ export function summarize(rows, probe, rules) {
     pages: sum((row) => row.pages),
     textItems: sum((row) => row.textItems),
     candidates: { total: totalCandidates, pending, blocked, confirmed },
+    correctness: {
+      pendingChecked: sum(row=>row.correctness?.pendingChecked ?? 0),
+      wrongPending: sum(row=>row.correctness?.wrongPending ?? 0),
+      wrongRate: ratio(sum(row=>row.correctness?.wrongPending ?? 0), sum(row=>row.correctness?.pendingChecked ?? 0)),
+    },
     confirmableRate: ratio(pending, totalCandidates),
     blockedRate: ratio(blocked, totalCandidates),
     reasonCodeTop5: reasonCodes.slice(0, 5),
@@ -423,6 +462,7 @@ export async function measureCorpus({
   unitAttestation = null,
 }) {
   const manifest = loadManifest(manifestPath)
+  const groundTruth = JSON.parse(readFileSync(new URL('../../docs/evidence/ground-truth/gt-01.json', import.meta.url), 'utf8')).entries
   const verified = verifyCorpus(manifest, corpusDir)
   const modules = await loadExtraction()
   const rules = {
@@ -451,6 +491,7 @@ export async function measureCorpus({
             turnId: `real-doc-attest-${index + 1}`,
           }
     const measured = await measureDocument(entry, modules, perDocument)
+    measured.row.correctness = compareGroundTruth(entry.doc.id, measured.draft.candidates, groundTruth)
     rows.push(measured.row)
 
     // 1-20 页探针的对象：页跨度超过上限、确实会被切块的文档（当前为 r4，170 页）。

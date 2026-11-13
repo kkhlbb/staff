@@ -1,0 +1,41 @@
+
+> staff@0.4.0-beta package:desktop
+> node scripts/package-desktop.mjs
+
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.20.0
+✔ Checking your system
+❯ Preparing to package application
+✔ Preparing to package application
+❯ Running packaging hooks
+❯ Running generateAssets hook
+✔ Running generateAssets hook
+❯ Running prePackage hook
+❯ [plugin-vite] Building production Vite bundles
+❯ Building main and preload targets...
+❯ Building renderer targets...
+❯ Building desktop/main/index.ts
+❯ Building desktop/preload/index.ts
+❯ Building main_window
+❯ Building drawing_print
+✔ Built target desktop/preload/index.ts
+✔ Built target drawing_print
+✔ Built target desktop/main/index.ts
+✔ Building main and preload targets...
+✔ Built target main_window
+✔ Building renderer targets...
+✔ [plugin-vite] Building production Vite bundles
+✔ Running prePackage hook
+✔ Running packaging hooks
+❯ Packaging application
+› Determining targets...
+❯ Packaging for arm64 on darwin
+❯ Copying files
+✖ Copying files [FAILED: fetch failed]
+✖ Packaging for arm64 on darwin [FAILED: fetch failed]
+✖ Packaging application [FAILED: fetch failed]
+
+An unhandled rejection has occurred inside Forge:
+TypeError: fetch failed
+

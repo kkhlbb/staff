@@ -1,0 +1,7 @@
+$ sandbox-exec -p '(version 1)(allow default)(deny network*)' npm run lint
+
+> staff@0.4.0-beta lint
+> eslint .
+
+
+exit=0

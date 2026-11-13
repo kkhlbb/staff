@@ -20,6 +20,7 @@ import {
   type ExpressionFormMatch,
 } from './expressionUnits'
 import { stableId } from './ids'
+import { protectScriptNominals, type ScriptDecoration } from './scriptsGeometry'
 import {
   itemRectPdf,
   itemsForSpan,
@@ -631,12 +632,42 @@ function entryFromExpressionForm(
   }
 }
 
+function applyScriptDecoration(
+  entry: RingEntry, decorations: readonly ScriptDecoration[], line: PdfTextLine,
+  page: PdfTextPage, source: ExtractionSourceIdentity,
+): RingEntry {
+  const indexes = new Set(entry.nominal?.evidence.flatMap(e=>e.textItemIndexes) ?? [])
+  const decoration = decorations.find(d=>d.nominalItems.some(i=>indexes.has(i)))
+  if (!decoration) return entry
+  if (decoration.ambiguous) {
+    return {...entry, reasons:[...entry.reasons, 'SUBSCRIPT_AMBIGUOUS']}
+  }
+  const items = [...decoration.items].sort((a,b)=>a.itemIndex-b.itemIndex)
+  let cursor = 0
+  const spans = items.map(item=>{
+    const start = cursor; cursor += item.normalizedText.length
+    return {start,end:cursor,itemIndex:item.itemIndex}
+  })
+  const scriptLine: PdfTextLine = {...line,items,spans,
+    normalizedText:items.map(i=>i.normalizedText).join(''),rawText:items.map(i=>i.text).join('')}
+  const evidence = evidenceFromSpan(scriptLine,page,source,0,cursor)
+  const make = (text: string) => buildQuantity({text,unitToken:entry.nominal?.unitText ?? null,
+    evidence,extraEvidence:entry.nominal?.evidence ?? []})
+  // A missing side of a one-sided tolerance is zero, never the negation of the other side.
+  const upper = make(decoration.upper ?? '0')
+  const lower = make(decoration.lower ?? '0')
+  return {...entry,upperDeviation:upper.value,lowerDeviation:lower.value,
+    reasons:[...entry.reasons,...[upper.reason,lower.reason].filter((r): r is ExtractionReasonCode=>r!==null)],
+    basis:'RULE_GEOMETRIC_SCRIPTS'}
+}
+
 function parseAssignmentLine(
-  line: PdfTextLine,
+  originalLine: PdfTextLine,
   page: PdfTextPage,
   source: ExtractionSourceIdentity,
   context: UnitContext,
 ): RingEntry[] {
+  const {line,decorations} = protectScriptNominals(originalLine,page)
   const text = matchTextOf(line)
   // 任务卡 E-07：`i = 0` / `i = 1` 这类下标片段不当尺寸候选。
   if (INDEX_FRAGMENT_PATTERN.test(text.trim())) return []
@@ -700,7 +731,7 @@ function parseAssignmentLine(
       })
     }
   }
-  return entries
+  return entries.map(entry=>applyScriptDecoration(entry,decorations,originalLine,page,source))
 }
 
 // ---------------------------------------------------------------- 组成环汇总

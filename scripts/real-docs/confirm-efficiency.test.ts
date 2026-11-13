@@ -2,9 +2,9 @@
  * L2 确认效率：真实语料分组回归（专用配置 vitest.realdocs.config.ts）。
  *
  * 用真实 6 份 PDF 跑真实提取器，再用 UI 同一个分组纯函数统计：
- * - 候选/待确认/阻塞必须仍是 138 / 58 / 80（一行都不许变）；
- * - 仅差单位 45（单值 13 / 同符号多处 32），三类“只能补原文”32 / 2 / 1；
- * - 必须人工单独决策（同符号多处组每组算一条）58 → 11，且 ≤ 25。
+ * - v8 候选/待确认/阻塞精确基线为 140 / 58 / 82；
+ * - 仅差单位 43（单值 12 / 同符号多处 31），三类“只能补原文”32 / 2 / 1；
+ * - 必须人工单独决策（同符号多处组每组算一条）58 → 13，且 ≤ 25。
  *
  * 不依赖网络；语料缺失/被替换会由 verifyCorpus 直接失败，不静默跳过。
  */
@@ -77,7 +77,7 @@ async function measureGroups() {
 }
 
 describe('L2 真实语料：分组不改变候选/状态数字', () => {
-  it('138 / 58 / 80；仅差单位 45；必须单独决策 58 → 11（≤25）', { timeout: 300_000 }, async () => {
+  it('v8: 140 / 58 / 82；仅差单位 43；必须单独决策 58 → 13（≤25）', { timeout: 300_000 }, async () => {
     const rows = await measureGroups()
     const sum = (pick: (row: (typeof rows)[number]) => number) =>
       rows.reduce((total, row) => total + pick(row), 0)
@@ -93,9 +93,9 @@ describe('L2 真实语料：分组不改变候选/状态数字', () => {
     console.log(table)
 
     expect(rows).toHaveLength(6)
-    expect(sum((row) => row.candidates)).toBe(138)
+    expect(sum((row) => row.candidates)).toBe(140)
     expect(sum((row) => row.pending)).toBe(58)
-    expect(sum((row) => row.blocked)).toBe(80)
+    expect(sum((row) => row.blocked)).toBe(82)
 
     const blockedByCode = new Map<string, number>()
     for (const row of rows) {
@@ -104,22 +104,24 @@ describe('L2 真实语料：分组不改变候选/状态数字', () => {
       }
     }
     expect(Object.fromEntries(blockedByCode)).toEqual({
-      UNKNOWN_UNIT: 45,
+      UNKNOWN_UNIT: 44,
       FORMULA_UNSUPPORTED: 32,
       NUMBER_UNSUPPORTED: 2,
       UNSUPPORTED_UNIT: 1,
+      SUBSCRIPT_AMBIGUOUS: 2,
+      AMBIGUOUS_DEVIATION: 2,
     })
 
     const unitOnly = sum((row) => row.unitOnlySingle + row.unitOnlyMulti)
-    expect(unitOnly).toBe(45)
-    expect(sum((row) => row.unitOnlySingle)).toBe(13)
-    expect(sum((row) => row.unitOnlyMulti)).toBe(32)
+    expect(unitOnly).toBe(43)
+    expect(sum((row) => row.unitOnlySingle)).toBe(12)
+    expect(sum((row) => row.unitOnlyMulti)).toBe(31)
 
     // 改前：58 条逐条确认；改后：只剩互斥组（每组一条）需要人工单独决策。
     const individual = sum((row) => row.pendingIndividualDecisions)
-    expect(individual).toBe(11)
+    expect(individual).toBe(13)
     expect(individual).toBeLessThanOrEqual(25)
-    expect(sum((row) => row.confirmableSingle)).toBe(28)
+    expect(sum((row) => row.confirmableSingle)).toBe(26)
 
     // 分组键的顺序固定（同一份草稿两次调用完全一致，与 UI 两次打开一致）。
     expect(rows.every((row) => row.stableKeys)).toBe(true)

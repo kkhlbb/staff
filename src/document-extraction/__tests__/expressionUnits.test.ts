@@ -125,9 +125,9 @@ describe('形态匹配（纯函数，区间偏移必须落在原文上）', () =
 })
 
 describe('P1 表达式末尾单位：E-01～E-07', () => {
-  it('规则版本升到 document-extractor-6（P2 语义变了必须升版）', () => {
-    expect(EXTRACTOR_VERSION).toBe('document-extractor-6')
-    expect(draftFor(1, 1).extractorVersion).toBe('document-extractor-6')
+  it('规则版本升到 document-extractor-8（P2 语义变了必须升版）', () => {
+    expect(EXTRACTOR_VERSION).toBe('document-extractor-8')
+    expect(draftFor(1, 1).extractorVersion).toBe('document-extractor-8')
   })
 
   it('E-01 末尾等号后的结果值 + 末尾单位：取 228.41 mm，表达式原样保留', () => {

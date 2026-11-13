@@ -1,0 +1,37 @@
+$ node node_modules/vitest/vitest.mjs run src/document-extraction/__tests__/scriptsGeometry.test.ts -t M44 asymmetric
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/document-extraction/__tests__/scriptsGeometry.test.ts (15 tests | 1 failed | 14 skipped) 6ms
+   ❯ geometric scripts safety (15)
+     × M44 asymmetric +0.2 / -0.1 stays asymmetric 5ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 14 skipped (15)
+   Start at  23:49:11
+   Duration  125ms (setup 53%, transform 18%, import 17%, tests 10%, worker 2%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/document-extraction/__tests__/scriptsGeometry.test.ts > geometric scripts safety > M44 asymmetric +0.2 / -0.1 stays asymmetric
+AssertionError: expected -2000 to be -1000 // Object.is equality
+
+- Expected
++ Received
+
+- -1000
++ -2000
+
+ ❯ src/document-extraction/__tests__/scriptsGeometry.test.ts:54:41
+     52|   expect(c.status).toBe('pending')
+     53|   expect(c.data.upperDeviation?.valueQ).toBe(2000)
+     54|   expect(c.data.lowerDeviation?.valueQ).toBe(-1000)
+       |                                         ^
+     55|   expect(c.data.upperDeviation?.evidence.length).toBeGreaterThan(0)
+     56|  })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+exit=1
