@@ -1,0 +1,181 @@
+{
+  "generator": "platform-seam-redaction-1",
+  "note": "macOS 路径（用户主目录、私有临时目录根）用例在 src/agent/redact.test.ts 断言，不写进本 JSON（证据守卫禁止机器绝对路径）",
+  "cases": [
+    {
+      "id": "drive-backslash",
+      "input": "C:\\Users\\aston\\报告.pdf",
+      "output": "<path>",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "drive-other-letter",
+      "input": "D:\\data\\raw\\a.csv",
+      "output": "<path>",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "drive-forward-slash",
+      "input": "C:/work/project/a.txt",
+      "output": "<path>",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "drive-dir-with-space",
+      "input": "C:\\Program Files\\Cunlian\\app.exe",
+      "output": "<path>",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "unc-share",
+      "input": "\\\\server\\share\\docs\\a.pdf",
+      "output": "<path>",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "unc-inline",
+      "input": "打开 \\\\nas-01\\design\\2026\\b.dxf 后",
+      "output": "打开 <path> 后",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "env-appdata",
+      "input": "%APPDATA%\\vendor\\keys.json",
+      "output": "<path>",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "env-localappdata",
+      "input": "%LOCALAPPDATA%\\Temp\\x.log",
+      "output": "<path>",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "env-lowercase",
+      "input": "%appdata%\\lower\\case.json",
+      "output": "<path>",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "env-userprofile",
+      "input": "%USERPROFILE%\\Documents\\a.pdf",
+      "output": "<path>",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "env-temp-bare",
+      "input": "%TEMP%",
+      "output": "<path>",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "prose-after-path",
+      "input": "已保存到 C:\\Users\\aston\\a.txt 请查看",
+      "output": "已保存到 <path> 请查看",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "prose-after-path-cjk-punct",
+      "input": "C:\\Users\\aston\\a.txt，请查看",
+      "output": "<path>，请查看",
+      "redacted": true,
+      "findings": [
+        "absolute path"
+      ]
+    },
+    {
+      "id": "not-a-drive-three-letters",
+      "input": "ABC:\\x",
+      "output": "ABC:\\x",
+      "redacted": false,
+      "findings": []
+    },
+    {
+      "id": "not-a-drive-ratio",
+      "input": "比例 a:b，时间 12:30",
+      "output": "比例 a:b，时间 12:30",
+      "redacted": false,
+      "findings": []
+    },
+    {
+      "id": "not-a-path-url",
+      "input": "见 https://example.com/a/b",
+      "output": "见 https://example.com/a/b",
+      "redacted": false,
+      "findings": []
+    },
+    {
+      "id": "not-a-path-bare-drive-root",
+      "input": "驱动器 C:\\ 未就绪",
+      "output": "驱动器 C:\\ 未就绪",
+      "redacted": false,
+      "findings": []
+    },
+    {
+      "id": "not-a-path-relative",
+      "input": "docs/evidence/a.json",
+      "output": "docs/evidence/a.json",
+      "redacted": false,
+      "findings": []
+    },
+    {
+      "id": "not-a-path-escapes",
+      "input": "换行符写成 \\n，转义写成 \\\"",
+      "output": "换行符写成 \\n，转义写成 \\\"",
+      "redacted": false,
+      "findings": []
+    },
+    {
+      "id": "dimension-text",
+      "input": "H 52.2 ±0.02 / B1 20 ±0.01",
+      "output": "H 52.2 ±0.02 / B1 20 ±0.01",
+      "redacted": false,
+      "findings": []
+    }
+  ],
+  "summary": {
+    "total": 20,
+    "redacted": 13,
+    "untouched": 7,
+    "failures": 0
+  },
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

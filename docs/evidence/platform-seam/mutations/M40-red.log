@@ -1,0 +1,101 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/agent/redact.test.ts (11 tests | 5 failed) 6ms
+   ❯ redactText：Windows 路径 (6)
+     × 盘符路径（反斜杠与正斜杠）都被替换 3ms
+     × 目录段含空格的路径整段替换（C:\Program Files\…） 1ms
+     × UNC 共享路径被替换 0ms
+     × 环境变量根被替换（大小写不敏感） 0ms
+     × 路径后面的正文不被吞掉 0ms
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 6 passed (11)
+   Start at  10:07:04
+   Duration  160ms (setup 76%, transform 14%, tests 7%, import 2%, worker 1%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/agent/redact.test.ts > redactText：Windows 路径 > 盘符路径（反斜杠与正斜杠）都被替换
+AssertionError: expected 'C:\Users\aston\报告.pdf' to be '<path>' // Object.is equality
+
+Expected: "<path>"
+Received: "C:\Users\aston\报告.pdf"
+
+ ❯ src/agent/redact.test.ts:16:52
+     14| describe('redactText：Windows 路径', () => {
+     15|   it('盘符路径（反斜杠与正斜杠）都被替换', () => {
+     16|     expect(redactText('C:\\Users\\aston\\报告.pdf')).toBe('<path>')
+       |                                                    ^
+     17|     expect(redactText('D:\\data\\raw\\a.csv')).toBe('<path>')
+     18|     expect(redactText('C:/Users/aston/a.txt')).toBe('<path>')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/agent/redact.test.ts > redactText：Windows 路径 > 目录段含空格的路径整段替换（C:\Program Files\…）
+AssertionError: expected 'C:\Program Files\Cunlian\app.exe' to be '<path>' // Object.is equality
+
+Expected: "<path>"
+Received: "C:\Program Files\Cunlian\app.exe"
+
+ ❯ src/agent/redact.test.ts:22:63
+     20|
+     21|   it('目录段含空格的路径整段替换（C:\\Program Files\\…）', () => {
+     22|     expect(redactText('C:\\Program Files\\Cunlian\\app.exe')).toBe('<p…
+       |                                                               ^
+     23|   })
+     24|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/agent/redact.test.ts > redactText：Windows 路径 > UNC 共享路径被替换
+AssertionError: expected '\\server\share\docs\a.pdf' to be '<path>' // Object.is equality
+
+Expected: "<path>"
+Received: "\\server\share\docs\a.pdf"
+
+ ❯ src/agent/redact.test.ts:26:58
+     24|
+     25|   it('UNC 共享路径被替换', () => {
+     26|     expect(redactText('\\\\server\\share\\docs\\a.pdf')).toBe('<path>')
+       |                                                          ^
+     27|     expect(redactText('打开 \\\\nas-01\\design\\2026\\b.dxf 后')).toBe('打…
+     28|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  src/agent/redact.test.ts > redactText：Windows 路径 > 环境变量根被替换（大小写不敏感）
+AssertionError: expected '%APPDATA%\vendor\keys.json' to be '<path>' // Object.is equality
+
+Expected: "<path>"
+Received: "%APPDATA%\vendor\keys.json"
+
+ ❯ src/agent/redact.test.ts:31:56
+     29|
+     30|   it('环境变量根被替换（大小写不敏感）', () => {
+     31|     expect(redactText('%APPDATA%\\vendor\\keys.json')).toBe('<path>')
+       |                                                        ^
+     32|     expect(redactText('%LOCALAPPDATA%\\Temp\\x.log')).toBe('<path>')
+     33|     expect(redactText('%appdata%\\lower\\case.json')).toBe('<path>')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  src/agent/redact.test.ts > redactText：Windows 路径 > 路径后面的正文不被吞掉
+AssertionError: expected '已保存到 C:\Users\aston\a.txt 请查看' to be '已保存到 <path> 请查看' // Object.is equality
+
+Expected: "已保存到 <path> 请查看"
+Received: "已保存到 C:\Users\aston\a.txt 请查看"
+
+ ❯ src/agent/redact.test.ts:39:60
+     37|
+     38|   it('路径后面的正文不被吞掉', () => {
+     39|     expect(redactText('已保存到 C:\\Users\\aston\\a.txt 请查看')).toBe('已保存到 …
+       |                                                            ^
+     40|     expect(redactText('C:\\Users\\aston\\a.txt，请查看')).toBe('<path>，请查看…
+     41|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+EXIT_CODE=1

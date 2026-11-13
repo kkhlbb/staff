@@ -1,0 +1,11 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+
+ Test Files  1 passed (1)
+      Tests  12 passed (12)
+   Start at  10:07:04
+   Duration  295ms (tests 96%, import 2%, transform 1%, worker 1%)
+
+
+EXIT_CODE=0

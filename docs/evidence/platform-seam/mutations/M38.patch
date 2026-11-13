@@ -1,0 +1,16 @@
+--- desktop/main/keychain.ts
++++ desktop/main/keychain.ts
+-    if (this.legacy === null || this.migrated.has(account)) return null
+    // 迁移：旧 Keychain 有、新路径没有 → 读出来重存到 safeStorage。
+    const legacySecret = await this.legacy.read(account)
+    if (legacySecret === null || legacySecret === '') return null
+    try {
+      await this.write(account, legacySecret)
+      this.migrated.add(account)
+    } catch {
+      // 加密不可用时无法重存：不迁移、也不丢密钥，本次调用仍把旧值交回调用方。
+    }
+    return legacySecret
++    // M38: 不回退旧 Keychain，safeStorage 没有就当没有密钥
+    return null
+# 删掉旧 Keychain 回退迁移；「预置旧记录 → 首次读取成功」用例必须红。

@@ -5,6 +5,7 @@ import {
   dialog,
   ipcMain,
   session,
+  safeStorage,
   shell,
   webContents,
 } from 'electron'
@@ -57,7 +58,7 @@ import { ApprovalStore } from './approvalStore'
 import { inspectSourcePdf } from './pdfSourceInspect'
 import { DrawingExportStore, type DrawingExportKind } from './drawingExportStore'
 import { printDrawingToPdf } from './drawingPdf'
-import { MacKeychainStore } from './keychain'
+import { createModelKeyStore } from './keychain'
 import { RealModelRuntime } from './realModelRuntime'
 import { resolvePrintFontPath } from './printAssets'
 import { renderDrawingSvg } from '../../src/drawing/renderDrawingSvg'
@@ -611,7 +612,9 @@ function installIpcHandlers(): void {
     confirmOverwrite: confirmProjectOverwrite,
   })
   const approvals = new ApprovalStore({ rootDir: WORKSPACE_ROOT })
-  const modelRuntime = new RealModelRuntime({ rootDir: path.join(app.getPath('userData'), 'workspace'), keychain: new MacKeychainStore() })
+  // 密钥走 safeStorage（macOS→Keychain，Windows→DPAPI）+ 密文文件；macOS 保留旧 Keychain 迁移。
+  const modelKeyStore = createModelKeyStore({ userDataDir: app.getPath('userData'), safeStorage })
+  const modelRuntime = new RealModelRuntime({ rootDir: path.join(app.getPath('userData'), 'workspace'), keychain: modelKeyStore })
   const agentTools = new AgentToolService({
     projectService,
     recovery,
