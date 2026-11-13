@@ -9,6 +9,7 @@
  * 本模块没有任何写项目/写盘/计算入口：planApplication 只产出映射计划，不应用。
  */
 import { tryParseMm } from '../domain/units'
+import { hasAgentRead } from './types'
 import { stableId } from './ids'
 import {
   candidateNumericFields,
@@ -149,6 +150,7 @@ function occurrenceLabel(candidate: ExtractionCandidate): string {
 }
 
 export interface ConfirmRequest {
+  readonly confirmationMode?: 'individual' | 'batch'
   readonly candidateId: string
   /** 候选当前编辑代数；不匹配即拒绝，防止拿旧界面确认新值。 */
   readonly editRevision: number
@@ -234,6 +236,7 @@ export function confirmCandidate(
     ]),
     candidateId: candidate.candidateId,
     action: 'confirm',
+    confirmationMode: request.confirmationMode ?? 'individual',
     candidateEditRevision: candidate.editRevision,
     decidedAt: request.decidedAt,
     actor: request.actor,
@@ -606,6 +609,7 @@ export interface PlanSession {
 }
 
 export interface PlanRequest {
+  readonly revisions?: readonly { readonly revisionId: string; readonly sha256: string }[]
   readonly candidateIds: readonly string[]
   /**
    * 调用方声明的 PDF 来源身份；与草稿不一致即失效。
@@ -645,6 +649,7 @@ export function planApplication(
   const state = {
     revisions: [
       { revisionId: draft.sourceIdentity.revisionId, sha256: draft.sourceIdentity.sha256 },
+      ...(request.revisions ?? []),
     ],
     images: request.images ?? [],
   }
@@ -682,6 +687,11 @@ export function planApplication(
         }
       }
       const kind = evidenceRefKind(ref)
+      if (ref.kind === 'agent-read' && (request.session === undefined ||
+        ref.actorId !== request.session.actorId ||
+        !(ref.sessionSeq === request.session.sessionSeq || (request.session.sessionSeqs ?? []).includes(ref.sessionSeq)))) {
+        return { code: 'ATTESTATION_SESSION_MISMATCH', message: '读数出处不属于当前项目输入会话' }
+      }
       if (kind === 'user-attestation' && !attestationMatchesSession(ref, request.session)) {
         return {
           code: 'ATTESTATION_SESSION_MISMATCH',
@@ -721,6 +731,10 @@ export function planApplication(
       confirmedGroups.set(candidate.groupId, candidateId)
     }
     const decision = latestActiveDecision(draft, candidateId)
+    if (hasAgentRead(candidate) && (candidate.requiresVerification !== true ||
+      candidate.batchConfirmable !== false || decision?.confirmationMode !== 'individual')) {
+      return extractionFailure('NOT_CONFIRMED', '读数未核对：必须保留核对标记并逐条确认，批量决定无效')
+    }
     if (!decision || decision.candidateEditRevision !== candidate.editRevision) {
       return extractionFailure('STALE_DECISION', `候选 ${candidateId} 的确认已失效，需重新确认`)
     }

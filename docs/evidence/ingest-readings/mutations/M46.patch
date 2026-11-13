@@ -1,0 +1,4 @@
+--- src/document-extraction/batch.ts
++++ src/document-extraction/batch.ts
+-if (hasAgentRead(candidate)) {
++if (false && hasAgentRead(candidate)) {

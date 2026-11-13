@@ -6,6 +6,7 @@
  */
 import { calculateChain } from '../domain/calculate'
 import type { ChainDefinition } from '../domain/types'
+import { agentReadSources, readingSourceLabel } from '../sources/agentReadDisplay'
 import { buildSpacerDrawing, draftVersionText, DrawingBuildError } from '../drawing/spacerDrawing'
 import {
   SPACER_PARAMETER_IDS,
@@ -165,6 +166,7 @@ function drawingInputOf(
     projectId,
     revisionId: record.revisionId,
     parameters: parameters.map((parameter) => ({
+      ...(parameter.provenance === undefined ? {} : { provenance: parameter.provenance }),
       parameterId: parameter.parameterId,
       partId: parameter.partId,
       key: parameter.key,
@@ -242,6 +244,8 @@ export function computeChange(
   const frameFields = { ...(baseRecord?.frameFields ?? DEFAULT_FRAME_FIELDS) }
   // 无任务书项目：标题栏与技术要求的依据栏是强制标记，不由用户备注决定。
   if (snapshot.project.sourceKind === 'user-intent') frameFields.basis = USER_INPUT_BASIS
+  const readBasis = [...new Set(agentReadSources(snapshot.project.dimensionChain.terms.flatMap((term) => term.provenance ?? [])).map(readingSourceLabel))].join('；')
+  if (readBasis !== '') frameFields.basis = `读数来源：${readBasis}`
   // 版本栏：写可读的「草稿 · 第 N 版」，N = 本次提交后的版本序号（现存版本数 + 1）。
   // 字符串随图纸记录持久化，重建时直接读它，绝不把内部 revision UUID 印在图上。
   if (frameFields.version.trim() === '') {
@@ -251,6 +255,7 @@ export function computeChange(
   const drawingId = baseRecord?.drawingId ?? `drawing:${snapshot.project.id}:spacer`
 
   const drawingParameters: ParameterSnapshotItem[] = parameters.map((parameter) => ({
+    ...(parameter.provenance === undefined ? {} : { provenance: parameter.provenance }),
     parameterId: parameter.parameterId,
     partId: parameter.partId,
     key: parameter.key,

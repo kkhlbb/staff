@@ -1,0 +1,4 @@
+--- src/document-extraction/ingestReadings.ts
++++ src/document-extraction/ingestReadings.ts
+-requiresVerification: true,
++

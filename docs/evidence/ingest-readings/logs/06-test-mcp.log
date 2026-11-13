@@ -1,0 +1,15 @@
+
+> staff@0.4.0-beta test:mcp
+> vitest run --config vitest.mcp.config.ts
+
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+
+ Test Files  3 passed (3)
+      Tests  22 passed (22)
+   Start at  01:15:18
+   Duration  811ms (tests 75%, import 18%, transform 7%)
+
+
+EXIT_CODE=0

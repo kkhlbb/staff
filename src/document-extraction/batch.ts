@@ -15,6 +15,7 @@
  * 公式/数值/单位不支持与同符号多处赋值组，本模块拒绝批量（见 confirmGroups.ts）。
  */
 import { tryParseMm } from '../domain/units'
+import { hasAgentRead } from './types'
 import { parseUnitStatement } from './unitScope'
 import { stableId } from './ids'
 import {
@@ -158,6 +159,9 @@ export function confirmCandidateBatch(
       invalid.push(`${label(candidate)}（状态 ${candidate.status}，批量确认只对“可确认”组开放）`)
       continue
     }
+    if (hasAgentRead(candidate)) {
+      return extractionFailure('BATCH_NOT_ELIGIBLE', '读数未核对：agent-read 必须逐条确认，整批未执行（0 条写入）')
+    }
     const missing = provenanceMissing(candidate)
     if (missing !== null) {
       invalid.push(`${label(candidate)}（字段 ${missing} 出处不完整）`)
@@ -197,6 +201,7 @@ export function confirmCandidateBatch(
       return extractionFailure('CANDIDATE_NOT_FOUND', `找不到候选 ${candidateId}`)
     }
     const confirmed = confirmCandidate(current, {
+      confirmationMode: 'batch',
       candidateId,
       editRevision: candidate.editRevision,
       confirmed: true,

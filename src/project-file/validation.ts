@@ -267,6 +267,7 @@ const spacerParameterV5Schema = z
     inputDecimals: z.number().int().min(0).max(4),
     reviewStatus: z.enum(['draft', 'pending', 'confirmed']),
     sourceNote: z.string().max(2000).optional(),
+    provenance: z.lazy(() => z.array(provenanceRefSchema).min(1).max(64)).optional(),
   })
   .strict()
 
@@ -609,6 +610,16 @@ const pdfTextProvenanceSchema = z
 
 /** 出处联合：pdf-text（旧 evidence 形状或无 kind）或带 kind 的其它三类。 */
 const provenanceRefSchema = z.union([
+  z.object({
+    kind: z.literal('agent-read'), actorId: z.string().min(1).max(200),
+    at: z.iso.datetime(), sessionSeq: z.number().int().min(1),
+    turnId: z.string().min(1).max(240), modelId: z.string().min(1).max(240).nullable(),
+    statement: z.string().min(1).max(4000),
+    source: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('pdf-page'), revisionId: idSchema, sha256: sha256Schema, page: z.number().int().min(1) }).strict(),
+      z.object({ kind: z.literal('image'), imageId: idSchema, sha256: sha256Schema }).strict(),
+    ]),
+  }).strict(),
   pdfTextProvenanceSchema,
   pdfOcrEvidenceSchema,
   imageOcrEvidenceSchema,
@@ -679,6 +690,8 @@ const partDimensionDataSchema = z
   .strict()
 
 const extractionCandidateBaseShape = {
+  requiresVerification: z.boolean().optional(),
+  batchConfirmable: z.boolean().optional(),
   candidateId: idSchema,
   groupId: idSchema.nullable(),
   rawText: z.string().max(4000),
@@ -738,6 +751,7 @@ const extractionCandidateSchema = z.discriminatedUnion('kind', [
 
 const extractionDecisionSchema = z
   .object({
+    confirmationMode: z.enum(['individual', 'batch']).optional(),
     decisionId: idSchema,
     candidateId: idSchema,
     action: z.enum(['confirm', 'reject', 'edit', 'revoke', 'attest-unit']),
@@ -1986,10 +2000,16 @@ export function validateExtractionDraftReferences(
    *   planApplication 判（PROVENANCE_REVOKED），不是这里判“指向别的版本”。
    */
   const provenanceMatchesDraft = (
-    ref: ExtractionEvidence | { readonly kind: 'pdf-ocr' | 'image-ocr' | 'user-attestation' } | { readonly kind?: 'pdf-text' },
+    ref: ExtractionEvidence | { readonly kind: 'pdf-ocr' | 'image-ocr' | 'user-attestation' } | { readonly kind?: 'pdf-text' } | import('../document-extraction/types').AgentReadEvidence,
     draft: ExtractionDraft,
   ): boolean => {
     const kind = (ref as { readonly kind?: string }).kind
+    if ('kind' in ref && ref.kind === 'agent-read') {
+      const source = ref.source
+      if (source.kind === 'image') return true
+      const revision = revisionById.get(source.revisionId)
+      return revision !== undefined && revision.sha256 === source.sha256 && source.page <= revision.pageCount
+    }
     if (kind === 'image-ocr') return true
     if (kind === 'user-attestation') return true
     return evidenceMatchesSource(ref as ExtractionEvidence, draft)
@@ -2044,7 +2064,8 @@ export function validateExtractionDraftReferences(
         return fail('INVALID_RECORD', `提取候选 ID 重复：${candidate.candidateId}`)
       }
       candidateById.set(candidate.candidateId, candidate)
-      if (candidate.page < draft.pageRange.from || candidate.page > draft.pageRange.to) {
+      if (!(candidate.provenance ?? []).some((ref) => ref.kind === 'agent-read') &&
+        (candidate.page < draft.pageRange.from || candidate.page > draft.pageRange.to)) {
         return fail(
           'INVALID_RECORD',
           `提取候选 ${candidate.candidateId} 的页码不在提取页范围内`,

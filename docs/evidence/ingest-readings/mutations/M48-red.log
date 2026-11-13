@@ -1,0 +1,105 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts (16 tests | 4 failed) 8ms
+   ❯ ingest_readings 核心防线 / M46 M47 M48 (16)
+     × M47: 第五支出处逐字保留，PDF evidence 始终空，数值出处不是 pdf-text 4ms
+     × 逐条决定允许计划，出处完整保留 0ms
+     × M48: 入口必须写 requiresVerification，标记删除/改假后提交必拒 0ms
+     × 去掉batchConfirmable不放行；改会话、来源SHA不放行 0ms
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 12 passed (16)
+   Start at  01:14:36
+   Duration  129ms (setup 58%, tests 14%, transform 13%, import 12%, worker 2%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/document-extraction/__tests__/ingestReadings.test.ts > ingest_readings 核心防线 / M46 M47 M48 > M47: 第五支出处逐字保留，PDF evidence 始终空，数值出处不是 pdf-text
+AssertionError: expected { …(15) } to match object { status: 'pending', …(3) }
+(17 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "batchConfirmable": false,
+    "evidence": [],
+-   "requiresVerification": true,
+    "status": "pending",
+  }
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts:34:23
+     32|   it('M47: 第五支出处逐字保留，PDF evidence 始终空，数值出处不是 pdf-text', () => {
+     33|     const draft = pending(), candidate = draft.candidates[0]!
+     34|     expect(candidate).toMatchObject({ status: 'pending', requiresVerif…
+       |                       ^
+     35|     expect(candidate.provenance).toEqual([{ kind: 'agent-read', actorI…
+     36|       sessionSeq: 1, turnId: input.turnId, modelId: null, source: inpu…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/document-extraction/__tests__/ingestReadings.test.ts > ingest_readings 核心防线 / M46 M47 M48 > 逐条决定允许计划，出处完整保留
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts:62:21
+     60|     expect(draft.decisions[0]).toMatchObject({ confirmationMode: 'indi…
+     61|     const plan = planApplication(draft, request(draft))
+     62|     expect(plan.ok).toBe(true)
+       |                     ^
+     63|     if (plan.ok) expect(plan.value.items[0]!.provenance[0]).toMatchObj…
+     64|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/document-extraction/__tests__/ingestReadings.test.ts > ingest_readings 核心防线 / M46 M47 M48 > M48: 入口必须写 requiresVerification，标记删除/改假后提交必拒
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts:67:59
+     65|   it('M48: 入口必须写 requiresVerification，标记删除/改假后提交必拒', () => {
+     66|     const draft = confirmed()
+     67|     expect(pending().candidates[0]!.requiresVerification).toBe(true)
+       |                                                           ^
+     68|     for (const flag of [undefined, false]) {
+     69|       expect(planApplication({ ...draft, candidates: draft.candidates.…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/document-extraction/__tests__/ingestReadings.test.ts > ingest_readings 核心防线 / M46 M47 M48 > 去掉batchConfirmable不放行；改会话、来源SHA不放行
+AssertionError: expected { ok: false, …(2) } to match object { ok: false, …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "ATTESTATION_SESSION_MISMATCH",
++   "code": "NOT_CONFIRMED",
+    "ok": false,
+  }
+
+ ❯ src/document-extraction/__tests__/ingestReadings.test.ts:76:102
+     74|     const draft = confirmed()
+     75|     expect(planApplication({ ...draft, candidates: draft.candidates.ma…
+     76|     expect(planApplication(draft, { ...request(draft), session: { acto…
+       |                                                                                                      ^
+     77|     expect(planApplication(draft, { ...request(draft), revisions: [] }…
+     78|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+EXIT_CODE=1

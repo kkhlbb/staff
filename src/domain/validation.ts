@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isProvenanceCompleteness, type EvidenceRef } from '../document-extraction/types'
 import { MAX_ABS_Q, type ChainDefinition, type DimensionTerm, type Q } from './types'
 
 export type ValidationError = {
@@ -218,7 +219,12 @@ export function validateChain(input: unknown): ValidationResult {
       }
 
       // 仅当 errors 为空时才会返回 value；这些占位值不会作为合法结果泄漏。
+      const provenance = term.provenance === undefined ? undefined : z.array(z.custom<EvidenceRef>((ref) => {
+        try { return isProvenanceCompleteness(ref as EvidenceRef) } catch { return false }
+      })).min(1).max(64).safeParse(term.provenance)
+      if (provenance !== undefined && !provenance.success) addError(['terms', index, 'provenance'], 'provenance_invalid', '组成环出处不完整')
       terms.push({
+        ...(provenance?.success ? { provenance: provenance.data } : {}),
         id: id ?? '',
         symbol: symbol ?? '',
         name: name ?? '',

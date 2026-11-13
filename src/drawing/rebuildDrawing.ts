@@ -29,7 +29,9 @@ export function rebuildDrawingFromProject(project: ProjectFileProject): RebuildD
       projectId: project.id,
       revisionId: record.revisionId,
       drawingId: record.drawingId,
-      parameters: parameters.parameters,
+      // Pass the source objects, not the validator's numerical projection: the
+      // builder validates again and freezes any parameter provenance itself.
+      parameters: project.parameters,
       scale: record.scale,
       frameFields: record.frameFields,
     })

@@ -207,10 +207,22 @@ export interface UserAttestation {
   readonly revokedStatement?: string | null
 }
 
-export type EvidenceRefKind = 'pdf-text' | 'pdf-ocr' | 'image-ocr' | 'user-attestation'
+export interface AgentReadEvidence {
+  readonly kind: 'agent-read'
+  readonly actorId: string
+  readonly at: string
+  readonly sessionSeq: number
+  readonly turnId: string
+  readonly modelId: string | null
+  readonly source: { readonly kind: 'pdf-page'; readonly revisionId: string; readonly sha256: string; readonly page: number }
+    | { readonly kind: 'image'; readonly imageId: string; readonly sha256: string }
+  readonly statement: string
+}
+
+export type EvidenceRefKind = 'pdf-text' | 'pdf-ocr' | 'image-ocr' | 'user-attestation' | 'agent-read'
 
 /** 一个数值/候选/决定/应用计划项所依据的出处。 */
-export type EvidenceRef = PdfTextEvidence | PdfOcrEvidence | ImageOcrEvidence | UserAttestation
+export type EvidenceRef = PdfTextEvidence | PdfOcrEvidence | ImageOcrEvidence | UserAttestation | AgentReadEvidence
 
 /** 出处种类；缺省 `kind` 就是 pdf-text（兼容改前的 evidence 形状）。 */
 export function evidenceRefKind(ref: EvidenceRef): EvidenceRefKind | null {
@@ -220,7 +232,7 @@ export function evidenceRefKind(ref: EvidenceRef): EvidenceRefKind | null {
     kind === 'pdf-text' ||
     kind === 'pdf-ocr' ||
     kind === 'image-ocr' ||
-    kind === 'user-attestation'
+    kind === 'user-attestation' || kind === 'agent-read'
   ) {
     return kind
   }
@@ -241,6 +253,19 @@ function isConfidence(value: unknown): boolean {
 export function isProvenanceCompleteness(ref: EvidenceRef | null | undefined): boolean {
   if (!ref) return false
   const kind = evidenceRefKind(ref)
+  if (ref.kind === 'agent-read') {
+    const s = ref.source
+    return typeof ref.actorId === 'string' && ref.actorId.trim() !== '' &&
+      typeof ref.statement === 'string' && ref.statement.trim() !== '' &&
+      typeof ref.turnId === 'string' && ref.turnId.trim() !== '' &&
+      typeof ref.at === 'string' && !Number.isNaN(Date.parse(ref.at)) &&
+      Number.isSafeInteger(ref.sessionSeq) && ref.sessionSeq > 0 &&
+      (ref.modelId === null || (typeof ref.modelId === 'string' && ref.modelId.trim() !== '')) &&
+      s !== undefined && typeof s.sha256 === 'string' && /^[a-f0-9]{64}$/iu.test(s.sha256) &&
+      (s.kind === 'pdf-page' ? typeof s.revisionId === 'string' && s.revisionId.trim() !== '' &&
+        Number.isSafeInteger(s.page) && s.page > 0 :
+        s.kind === 'image' && typeof s.imageId === 'string' && s.imageId.trim() !== '')
+  }
   if (kind === 'pdf-text') {
     const evidence = ref as ExtractionEvidence
     if (
@@ -373,6 +398,7 @@ export function evidenceKey(evidence: TextAnchorEvidence): string {
  */
 export function provenanceKey(ref: EvidenceRef): string {
   const kind = evidenceRefKind(ref)
+  if (ref.kind === 'agent-read') return JSON.stringify(['agent-read', ref])
   if (kind === 'pdf-text') return evidenceKey(ref as PdfTextEvidence)
   if (kind === 'pdf-ocr') return `${evidenceKey(ref as PdfOcrEvidence)}#pdf-ocr`
   if (kind === 'image-ocr') {
@@ -442,6 +468,13 @@ export function provenanceValidity(
   state: ProvenanceSourceState,
 ): ProvenanceValidity {
   const kind = evidenceRefKind(ref)
+  if (ref.kind === 'agent-read') {
+    const s = ref.source
+    const current = s.kind === 'pdf-page'
+      ? state.revisions.find((r) => r.revisionId === s.revisionId)
+      : (state.images ?? []).find((i) => i.imageId === s.imageId)
+    return current?.sha256 === s.sha256 ? 'valid' : 'stale'
+  }
   if (kind === 'pdf-text' || kind === 'pdf-ocr') {
     const anchor = ref as PdfTextEvidence
     const current = state.revisions.find((item) => item.revisionId === anchor.revisionId)
@@ -553,6 +586,8 @@ export interface PartDimensionData {
 }
 
 interface CandidateBase {
+  readonly requiresVerification?: boolean
+  readonly batchConfirmable?: boolean
   readonly candidateId: string
   readonly kind: ExtractionKind
   readonly groupId: string | null
@@ -576,6 +611,11 @@ interface CandidateBase {
    * 可选是为了读旧 schema8 文件（当时还没有该字段），读取方一律用 `?? null`。
    */
   readonly occurrence?: ExtractionOccurrence | null
+}
+
+export function hasAgentRead(candidate: ExtractionCandidate): boolean {
+  return [...candidateProvenance(candidate), ...candidateNumericFields(candidate).flatMap(({ value }) => valueProvenance(value))]
+    .some((ref) => ref.kind === 'agent-read')
 }
 
 export type ExtractionCandidate =
@@ -617,6 +657,7 @@ export interface ExtractionChunkRef {
 export type DecisionAction = 'confirm' | 'reject' | 'edit' | 'revoke' | 'attest-unit'
 
 export interface ExtractionDecision {
+  readonly confirmationMode?: 'individual' | 'batch'
   readonly decisionId: string
   readonly candidateId: string
   readonly action: DecisionAction

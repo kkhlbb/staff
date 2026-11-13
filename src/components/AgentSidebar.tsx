@@ -9,6 +9,7 @@
  * - 面板是覆盖式抽屉：960×640 下不改变中央画布列宽。
  */
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
+import { agentReadSources, readingSourceLabel } from '../sources/agentReadDisplay'
 import type {
   AgentDraftValue,
   AgentPreviewSummary,
@@ -481,7 +482,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
       {intent !== null && (
         <div className="agent-sidebar__intent" data-testid="intent-draft">
           <p className="agent-sidebar__muted">
-            依据：用户输入，无外部原文件 · {intent.actorId ?? '未填责任人'} · 第 {intent.sessionSeq} 次输入
+            {intent.candidates.some((c) => agentReadSources(c.provenance ?? []).length > 0) ? '依据：外部读数，须对照来源逐条核对' : '依据：用户输入，无外部原文件'} · {intent.actorId ?? '未填责任人'} · 第 {intent.sessionSeq} 次输入
             {intent.sessionLabel === null ? '' : ` · ${intent.sessionLabel}`}
           </p>
           <p role="status" data-testid="intent-counts">
@@ -494,6 +495,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
               <li key={candidate.candidateId} className="agent-sidebar__step">
                 <span>
                   {intentCandidateLine(candidate)}
+                  {agentReadSources(candidate.provenance ?? []).map((ref, index) => <span key={index} className="agent-sidebar__hint">读数未核对（来源：{readingSourceLabel(ref)}） · 原话「{ref.statement}」</span>)}
                   <span className="agent-sidebar__muted"> · 原话「{candidate.statement ?? '—'}」（第 {candidate.sessionSeq ?? '—'} 次）</span>
                 </span>
                 {candidate.status === 'confirmed'
@@ -514,7 +516,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
           )}
           <label className="agent-sidebar__ack">
             <input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} aria-label="这些尺寸由我提供" />
-            这些尺寸由我提供，无原文件可核对
+            {intent?.candidates.some((c) => agentReadSources(c.provenance ?? []).length > 0) ? '这些外部读数由我逐条核对并负责' : '这些尺寸由我提供，无原文件可核对'}
           </label>
           <div className="agent-sidebar__actions">
             <button type="button" className="agent-sidebar__primary" disabled={busy || !acknowledged} onClick={() => void commitIntent()}>确认并保存为新版本</button>

@@ -1,0 +1,16 @@
+{
+  "committed": {
+    "ok": false,
+    "code": "CONSTRAINT_VIOLATED",
+    "message": "条款检查不满足要求，禁止参数正式提交；草稿与证据已保留。",
+    "requestId": "<generated>",
+    "objectVersion": "<generated>",
+    "details": {
+      "causeCode": "REQUIREMENT_NOT_SATISFIED"
+    }
+  },
+  "note": "原样保留10倍错值；固定条款不满足，产品拒绝提交",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

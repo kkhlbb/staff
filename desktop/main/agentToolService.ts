@@ -1,5 +1,6 @@
 /** V4 stage 1: model-free, draft-only trusted engineering tools. */
 import { createHash, randomUUID } from 'node:crypto'
+import { ingestIntoSnapshot } from './ingestReadings'
 import path from 'node:path'
 import { planApplication, isDraftSuperseded, confirmCandidate, type ExtractionDraft } from '../../src/document-extraction'
 import { mapConfirmed, MappingError } from '../../src/agent-tools/mapConfirmed'
@@ -892,6 +893,7 @@ export class AgentToolService {
         status: candidate.status,
         editRevision: candidate.editRevision,
         summary,
+        ...(candidate.provenance?.some((ref) => ref.kind === 'agent-read') ? { provenance: candidate.provenance } : {}),
         statement: attestation?.statement ?? null,
         sessionSeq: attestation?.sessionSeq ?? null,
         sessionLabel: attestation?.sessionLabel ?? null,
@@ -1025,6 +1027,7 @@ export class AgentToolService {
       if (draft.candidates.length === 0) return fail('NEEDS_CLARIFICATION', '还没有任何候选；先让用户说出零件尺寸')
       const plan = planApplication(draft, {
         source: draft.sourceIdentity,
+        revisions: session.snapshot.revisions.map((r) => ({ revisionId: r.id, sha256: r.sha256 })),
         candidateIds: draft.candidates.map((candidate) => candidate.candidateId),
         session: this.intentPlanSession(project),
       })
@@ -1275,6 +1278,7 @@ export class AgentToolService {
       | 'createProject'
       | 'setChain'
       | 'setRequirement'
+      | 'ingest_readings'
       | 'setBinding',
     input: unknown,
     context?: {
@@ -1288,6 +1292,27 @@ export class AgentToolService {
     const objectVersion = session?.snapshot.project.currentRevisionId ?? 'unavailable'
 
     // 无任务书入口：先建项，再写草稿；都不需要（也不允许）模型提供身份。
+    if (command === 'ingest_readings') {
+      if (session === null) return { ok: false, code: 'STALE_BASE', message: '没有活动项目', requestId, objectVersion }
+      const task = async (): Promise<ToolResult<unknown>> => {
+        if (this.deps.controller.sessionFor(windowId) !== session) return { ok: false, code: 'STALE_BASE', message: '活动项目已切换', requestId, objectVersion }
+        const result = ingestIntoSnapshot(session.snapshot, input, {
+          userText: context?.userText ?? '', turnId: context?.turnId ?? requestId, at: new Date().toISOString(),
+          actorId: context?.intentIdentity?.actorId,
+        })
+        if (!result.ok) return { ...result, requestId, objectVersion }
+        const acceptedSeq = session.acceptedSeq + 1
+        await this.deps.recovery.stage(session.sessionId, result.snapshot, acceptedSeq,
+          this.deps.controller.recoveryMeta(session, result.snapshot))
+        session.snapshot = result.snapshot
+        session.acceptedSeq = acceptedSeq
+        return { ok: true, data: result.data, requestId, objectVersion }
+      }
+      const previous = this.queues.get(session.sessionId) ?? Promise.resolve()
+      const next = previous.then(task, task)
+      this.queues.set(session.sessionId, next)
+      return next
+    }
     if (command === 'createProject') {
       if (context?.intentIdentity === undefined) {
         return {
@@ -1474,7 +1499,9 @@ export class AgentToolService {
       if (isDraftSuperseded(current, session.snapshot.project.extractionDrafts)) throw new MappingError('NOT_CONFIRMED', '提取规则版本已过期', { causeCode: 'EXTRACTOR_VERSION_MISMATCH' })
       if (stableFingerprint(draft) !== stableFingerprint(current) || stableFingerprint(draft) !== credential.draftDigest) throw new MappingError('NOT_CONFIRMED', '候选决定代数已变化', { causeCode: 'STALE_DECISION' })
       // M08: this MUST be the authoritative gate; no parallel confirmation implementation.
-      const plan = planApplication(draft, { source: draft.sourceIdentity, candidateIds: req.candidateIds })
+      const plan = planApplication(draft, { source: draft.sourceIdentity, candidateIds: req.candidateIds,
+        session: this.intentPlanSession(session.snapshot.project),
+        revisions: session.snapshot.revisions.map((r) => ({ revisionId: r.id, sha256: r.sha256 })) })
       if (!plan.ok) throw new MappingError(plan.code === 'GROUP_ALREADY_CONFIRMED' ? 'CONSTRAINT_VIOLATED' : plan.code === 'SOURCE_STALE' ? 'SOURCE_CHANGED' : 'NOT_CONFIRMED', plan.message, { causeCode: plan.code })
       // M09: formal basis validation cannot be replaced by a cached plan token.
       if (req.baseRevisionId !== revisionId) throw new MappingError('STALE_BASE', '计划正式基准已过期')

@@ -1,0 +1,38 @@
+{
+  "verdict": "pass",
+  "checks": [
+    {
+      "id": "batch-rejected-zero-write",
+      "code": "EXTRACTION_BATCH_REJECTED"
+    },
+    {
+      "id": "unconfirmed-plan-rejected",
+      "code": "NOT_CONFIRMED"
+    },
+    {
+      "id": "drawing:export-svg",
+      "sha256": "53fdc6bf123ddd9c4036782b77ed4aa5bc9db108ceef0732ed7921757ff8f26b",
+      "fileName": "隔套-图纸-1_1.svg"
+    },
+    {
+      "id": "drawing:export-dxf-r12",
+      "sha256": "8efba1417ffae03a2adcd02197b864698bba2a63b43db2d2d4a10a5e17b97287",
+      "fileName": "隔套-图纸-1_1-DXF-R12.dxf"
+    }
+  ],
+  "pdf": {
+    "file": "docs/evidence/ingest-readings/fixtures/r2-tolerance-domain-scanned-300dpi.pdf",
+    "sha256": "1c846ad52f571a5458518dde87615276766929e373ebf754b1098a30cc538b8f",
+    "textItems": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "limitation": "本次不含看图能力；读数为已审阅人工转录。服务取证不是打包 UI 取证，后者单独运行 ingestReadings.mjs。",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

@@ -164,6 +164,27 @@ const setBinding: JsonObject = {
 }
 
 export const AGENT_TOOL_SCHEMAS: Record<AgentToolCommand, ToolSchema> = {
+  ingest_readings: {
+    name: 'ingest_readings',
+    description: '仅桌面端：接收用户对照文件报出的读数，不自行识图或 OCR。DeepSeek 不支持图像输入。statement 必须逐字来自用户，数值单位 q（1 mm=10000 q）。只产读数未核对候选，必须逐条确认，禁止批量确认。',
+    parameters: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        projectId: idSchema, draftId: idSchema, statement: statementSchema,
+        source: { oneOf: [
+          { type: 'object', additionalProperties: false, properties: { kind: { const: 'pdf-page' }, revisionId: idSchema,
+            sha256: { type: 'string', pattern: '^[a-fA-F0-9]{64}$' }, page: { type: 'integer' } }, required: ['kind', 'revisionId', 'sha256', 'page'] },
+          { type: 'object', additionalProperties: false, properties: { kind: { const: 'image' }, imageId: idSchema,
+            sha256: { type: 'string', pattern: '^[a-fA-F0-9]{64}$' } }, required: ['kind', 'imageId', 'sha256'] },
+        ] },
+        readings: { type: 'array', minItems: 1, maxItems: 20, items: {
+          type: 'object', additionalProperties: false, properties: { kind: { const: 'dimension' }, symbol: idSchema,
+            nominalQ: { type: 'integer' }, upperDeviationQ: { type: 'integer' }, lowerDeviationQ: { type: 'integer' }, unit: { const: 'mm' } },
+          required: ['kind', 'symbol', 'nominalQ', 'upperDeviationQ', 'lowerDeviationQ', 'unit'],
+        } },
+      }, required: ['source', 'statement', 'readings'],
+    },
+  },
   createProject: {
     name: 'createProject',
     description: '把当前空白项目建立为无任务书项目（零件由用户在对话里给出，没有任务书 PDF）。责任人自述由界面绑定，不要自己编造。只建立项目与空草稿，不写任何数值。',

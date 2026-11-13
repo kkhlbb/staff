@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { useDesktopSession } from '../workspace/useDesktopSession'
+import { agentReadSources, readingSourceLabel } from '../sources/agentReadDisplay'
 import { useBuiltinAssemblyView } from '../workspace/useBuiltinAssemblyView'
 import { useImportedModel } from '../workspace/useImportedModel'
 import type { PendingImport } from '../workspace/useImportedModel'
@@ -371,7 +372,10 @@ export function DesktopWorkspace() {
     <header className="desktop-workspace__titlebar">
       <h1>寸链 · {project.name}</h1><span>Rev {project.currentRevisionId}</span><span className="desktop-workspace__pending">{saveState}</span>
       {project.sourceKind === 'user-intent' && (
-        <span className="desktop-workspace__source-badge" data-testid="project-source-note">依据：用户输入，无外部原文件</span>
+        <span className="desktop-workspace__source-badge" data-testid="project-source-note">{(() => {
+          const readings = agentReadSources(project.extractionDrafts.flatMap((d) => d.candidates.flatMap((c) => c.provenance ?? [])))
+          return readings.length === 0 ? '依据：用户输入，无外部原文件' : `依据：外部读数（${[...new Set(readings.map(readingSourceLabel))].join('；')}）`
+        })()}</span>
       )}
       <span className="desktop-workspace__batch">V4.0 · Beta</span>
     </header>

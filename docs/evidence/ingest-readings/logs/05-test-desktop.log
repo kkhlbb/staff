@@ -1,0 +1,15 @@
+
+> staff@0.4.0-beta test:desktop
+> vitest run --config vitest.desktop.config.ts
+
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+
+ Test Files  44 passed | 2 skipped (46)
+      Tests  307 passed | 17 skipped (324)
+   Start at  01:15:11
+   Duration  7.64s (tests 87%, import 11%, transform 1%)
+
+
+EXIT_CODE=0

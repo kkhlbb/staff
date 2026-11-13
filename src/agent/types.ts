@@ -24,6 +24,7 @@ export type AgentTaskState = (typeof AGENT_TASK_STATES)[number]
 
 /** 阶段 1 已实现的 agent:* 工具命令。模型只能发这些调用。 */
 export type AgentToolCommand =
+  | 'ingest_readings'
   | 'context'
   | 'confirmed'
   | 'apply'

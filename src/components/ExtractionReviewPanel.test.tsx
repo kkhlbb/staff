@@ -858,3 +858,29 @@ describe('L2 操作数计数用例（界面里数，不凭感觉估）', () => {
     expect(1 + multiSizes.length).toBeLessThanOrEqual(25)
   })
 })
+
+describe('agent-read 未核对防线（不依赖标记）', () => {
+  it.each(['candidate', 'quantity'] as const)('%s 级 provenance 缺 verification 标记仍显示出处且无组级确认', async (level) => {
+    const snap = await snapshot()
+    const reading = {
+      kind: 'agent-read', actorId: '张工', at: '2026-11-13T12:00:00Z', sessionSeq: 1,
+      turnId: 'turn-1', modelId: null,
+      source: { kind: 'pdf-page', revisionId: 'sr-1', sha256: 'a'.repeat(64), page: 2 },
+      statement: '用户看扫描件口述：L1 为 52.20 mm <不是文本层>',
+    } as unknown as import('../document-extraction/types').EvidenceRef
+    const candidate = ringCandidate({ evidence: [], ...(level === 'candidate' ? { provenance: [reading] } : {}),
+      data: { symbol: 'L1', name: null, nominal: { ...quantity, evidence: [], ...(level === 'quantity' ? { provenance: [reading] } : {}) }, upperDeviation: null, lowerDeviation: null },
+    })
+    snap.project.extractionDrafts = [{ ...draftFixture(), candidates: [candidate], decisions: [], issues: [] }]
+    const handler = { ...actions(), onConfirmBatch: vi.fn(async () => null) }
+    render(<ExtractionReviewPanel snapshot={snap} busy={false} actions={handler} />)
+    expect(screen.getByText('读数未核对（来源：第 2 页，张工 提供）')).toBeInTheDocument()
+    expect(screen.getByText(/用户看扫描件口述：L1 为 52.20 mm <不是文本层>/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /本组全部确认/ })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('选择候选 cand-h'))
+    expect(screen.queryByRole('button', { name: '批量确认选中项' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '确认' }))
+    await waitFor(() => expect(handler.onDecide).toHaveBeenCalledWith(expect.objectContaining({ candidateId: 'cand-h', action: 'confirm', confirmed: true })))
+    expect(handler.onConfirmBatch).not.toHaveBeenCalled()
+  })
+})
