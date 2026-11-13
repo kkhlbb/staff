@@ -13,12 +13,18 @@
  *    扩大页范围只追加新候选；决定随草稿持久化，跨重启保留。
  */
 import type {
+  ExtractionAttestUnitsRequest,
+  ExtractionAttestUnitsValue,
+  ExtractionBatchDecision,
+  ExtractionBatchValue,
   ExtractionCancelRequest,
   ExtractionCancelValue,
+  ExtractionConfirmBatchRequest,
   ExtractionDecideRequest,
   ExtractionDecideValue,
   ExtractionDeleteDraftRequest,
   ExtractionDeleteDraftValue,
+  ExtractionRevokeUnitsRequest,
   ExtractionRunRequest,
   ExtractionRunValue,
   IpcErrorCode,
@@ -32,14 +38,18 @@ import {
   EXTRACTOR_VERSION,
   MAX_EXTRACTION_CANDIDATES,
   MAX_EXTRACTION_ISSUES,
+  attestCandidateUnits,
   buildExtractionDraft,
   buildPdfTextLayer,
   confirmCandidate,
+  confirmCandidateBatch,
   editCandidateField,
   findCandidate,
   mergeExtractionDraft,
   rejectCandidate,
+  revokeAttestation,
   revokeConfirmation,
+  revokeUnitAttestations,
   isDraftSuperseded,
   type EditableField,
   type ExtractionCandidate,
@@ -48,6 +58,7 @@ import {
   type ExtractionEvidence,
   type QuantityValue,
   type RawPdfTextPage,
+  type UserAttestation,
 } from '../../src/document-extraction'
 import {
   extractPdfTextPages,
@@ -86,6 +97,10 @@ const EXTRACTION_ERROR_CODES: Record<ExtractionErrorCode, IpcErrorCode> = {
   // 等 attestation 接线时再按需要在契约里单独开码。
   ATTESTATION_SESSION_MISMATCH: 'EXTRACTION_EVIDENCE_REQUIRED',
   PROVENANCE_REVOKED: 'EXTRACTION_EVIDENCE_REQUIRED',
+  BATCH_NOT_ELIGIBLE: 'EXTRACTION_BATCH_REJECTED',
+  UNIT_STATEMENT_INVALID: 'EXTRACTION_UNIT_STATEMENT_INVALID',
+  ATTESTATION_NOT_FOUND: 'NOT_FOUND',
+  ATTESTATION_CONFIRMED: 'EXTRACTION_ATTESTATION_CONFIRMED',
 }
 
 function failure<T>(
@@ -583,6 +598,279 @@ export class ExtractionService {
         recovery,
       },
     }
+  }
+
+  /**
+   * L2 批量动作的公共提交：编码自校验 → 写恢复草稿 → 才切换会话快照。
+   *
+   * 与 deleteDraft 同一套原子顺序：先校验聚合可完整编码，再写恢复文件；任何一步失败
+   * 都返回错误且内存/磁盘都不变。批量动作的“整批拒绝”由纯函数保证，这里只负责提交。
+   */
+  private async stageUpdatedDraft(
+    session: ProjectSession,
+    updated: ExtractionDraft,
+    baseEditSeq: number,
+    projectPatch: Partial<ProjectFileProject> = {},
+  ): Promise<
+    IpcResult<{
+      acceptedSeq: number
+      recovery: ExtractionBatchValue['recovery']
+      warning?: string
+    }>
+  > {
+    const nextSnapshot: ProjectFileSnapshot = {
+      ...session.snapshot,
+      project: {
+        ...session.snapshot.project,
+        extractionDrafts: session.snapshot.project.extractionDrafts.map((item) =>
+          item.draftId === updated.draftId ? updated : item,
+        ),
+        ...projectPatch,
+      },
+    }
+    try {
+      const encoded = await encodeProjectFile(nextSnapshot)
+      if (!encoded.ok) {
+        return failure(
+          'INTERNAL',
+          '批量动作后的项目无法通过格式校验，已取消（0 条写入）',
+          `${encoded.error.code}: ${encoded.error.message}`,
+        )
+      }
+    } catch (error) {
+      return failure(
+        'INTERNAL',
+        '批量动作后的项目无法通过格式校验，已取消（0 条写入）',
+        error instanceof Error ? error.message : String(error),
+      )
+    }
+    const nextSeq = baseEditSeq + 1
+    let staged: Awaited<ReturnType<RecoveryStore['stage']>>
+    try {
+      staged = await this.deps.recovery.stage(
+        session.sessionId,
+        nextSnapshot,
+        nextSeq,
+        this.deps.controller.recoveryMeta(session, nextSnapshot),
+      )
+    } catch (error) {
+      return failure(
+        'INTERNAL',
+        '批量动作未能写入恢复文件，已取消（项目与草稿均未改变）',
+        error instanceof Error ? error.message : String(error),
+      )
+    }
+    session.snapshot = nextSnapshot
+    session.acceptedSeq = nextSeq
+    return {
+      ok: true,
+      value: {
+        acceptedSeq: nextSeq,
+        recovery: staged.state,
+        ...(staged.warning === undefined ? {} : { warning: staged.warning }),
+      },
+    }
+  }
+
+  /** 批量结果的逐条回执：每条候选自己的 decisionId 与动作后状态。 */
+  private batchDecisions(
+    draft: ExtractionDraft,
+    candidateIds: readonly string[],
+    decidedAt: string,
+  ): ExtractionBatchDecision[] {
+    return candidateIds.map((candidateId) => {
+      const candidate = findCandidate(draft, candidateId)
+      const decision = draft.decisions
+        .filter((item) => item.candidateId === candidateId && item.decidedAt === decidedAt)
+        .at(-1)
+      return {
+        candidateId,
+        decisionId: decision?.decisionId ?? '',
+        status: candidate?.status ?? 'stale',
+      }
+    })
+  }
+
+  /** L2：同组批量确认（互斥组整批拒绝，逐条写决定）。 */
+  async confirmBatch(
+    request: ExtractionConfirmBatchRequest,
+  ): Promise<IpcResult<ExtractionBatchValue>> {
+    return this.enqueue(request.sessionId, () => this.confirmBatchInner(request))
+  }
+
+  private async confirmBatchInner(
+    request: ExtractionConfirmBatchRequest,
+  ): Promise<IpcResult<ExtractionBatchValue>> {
+    const session = this.deps.projectService.getSession(request.sessionId)
+    if (session === null) return failure('STALE_SESSION', '会话已失效，请重新打开项目')
+    if (request.baseEditSeq !== session.acceptedSeq) {
+      return failure(
+        'STALE_EDIT',
+        '批量确认期间项目已发生其它编辑，请刷新后重试',
+        `acceptedSeq=${session.acceptedSeq}, baseEditSeq=${request.baseEditSeq}`,
+      )
+    }
+    const drafts = session.snapshot.project.extractionDrafts
+    const draft = drafts.find((item) => item.draftId === request.draftId)
+    if (draft === undefined) return failure('NOT_FOUND', '提取草稿不存在或已被替换')
+    if (isDraftSuperseded(draft, drafts)) {
+      return failure(
+        'EXTRACTION_DRAFT_SUPERSEDED',
+        '旧规则版本的草稿只读：请在最新版本草稿上复核后确认',
+      )
+    }
+    const decidedAt = this.now().toISOString()
+    const result = confirmCandidateBatch(draft, {
+      candidateIds: request.candidateIds,
+      actor: EXTRACTION_ACTOR,
+      decidedAt,
+      reason: '同组批量确认（逐条落盘）',
+    })
+    if (!result.ok) return failure(EXTRACTION_ERROR_CODES[result.code], result.message)
+    const staged = await this.stageUpdatedDraft(session, result.value.draft, request.baseEditSeq)
+    if (!staged.ok) return staged
+    const value: ExtractionBatchValue = {
+      acceptedSeq: staged.value.acceptedSeq,
+      draftId: result.value.draft.draftId,
+      candidateIds: [...result.value.candidateIds],
+      decisions: this.batchDecisions(result.value.draft, result.value.candidateIds, decidedAt),
+      snapshot: toSnapshotDto(session.snapshot),
+      recovery: staged.value.recovery,
+    }
+    if (staged.value.warning !== undefined) value.warning = staged.value.warning
+    return { ok: true, value }
+  }
+
+  /** L2：批量补单位（只对“仅差单位”；任一条不合格整批拒绝）。 */
+  async attestUnits(
+    request: ExtractionAttestUnitsRequest,
+  ): Promise<IpcResult<ExtractionAttestUnitsValue>> {
+    return this.enqueue(request.sessionId, () => this.attestUnitsInner(request))
+  }
+
+  private async attestUnitsInner(
+    request: ExtractionAttestUnitsRequest,
+  ): Promise<IpcResult<ExtractionAttestUnitsValue>> {
+    const session = this.deps.projectService.getSession(request.sessionId)
+    if (session === null) return failure('STALE_SESSION', '会话已失效，请重新打开项目')
+    if (request.baseEditSeq !== session.acceptedSeq) {
+      return failure(
+        'STALE_EDIT',
+        '批量补单位期间项目已发生其它编辑，请刷新后重试',
+        `acceptedSeq=${session.acceptedSeq}, baseEditSeq=${request.baseEditSeq}`,
+      )
+    }
+    const drafts = session.snapshot.project.extractionDrafts
+    const draft = drafts.find((item) => item.draftId === request.draftId)
+    if (draft === undefined) return failure('NOT_FOUND', '提取草稿不存在或已被替换')
+    if (isDraftSuperseded(draft, drafts)) {
+      return failure(
+        'EXTRACTION_DRAFT_SUPERSEDED',
+        '旧规则版本的草稿只读：请在最新版本草稿上补单位',
+      )
+    }
+    // 责任人/会话序号由 main 生成：renderer 不能替用户伪造“第几次输入”。
+    const project = session.snapshot.project
+    const actorId = project.actorId ?? EXTRACTION_ACTOR
+    const sessionSeq = Math.max(1, project.sessionSeq + 1)
+    const decidedAt = this.now().toISOString()
+    const result = attestCandidateUnits(draft, {
+      candidateIds: request.candidateIds,
+      statement: request.statement,
+      actor: actorId,
+      decidedAt,
+      sessionSeq,
+      sessionLabel: null,
+    })
+    if (!result.ok) return failure(EXTRACTION_ERROR_CODES[result.code], result.message)
+    const staged = await this.stageUpdatedDraft(session, result.value.draft, request.baseEditSeq, {
+      sessionSeq,
+      attestations: [...project.attestations, ...result.value.attestations],
+    })
+    if (!staged.ok) return staged
+    const value: ExtractionAttestUnitsValue = {
+      acceptedSeq: staged.value.acceptedSeq,
+      draftId: result.value.draft.draftId,
+      batchId: result.value.batchId,
+      unitText: result.value.unitText,
+      candidateIds: [...result.value.candidateIds],
+      decisions: this.batchDecisions(result.value.draft, result.value.candidateIds, decidedAt),
+      snapshot: toSnapshotDto(session.snapshot),
+      recovery: staged.value.recovery,
+    }
+    if (staged.value.warning !== undefined) value.warning = staged.value.warning
+    return { ok: true, value }
+  }
+
+  /** L2：撤销补单位（整批或逐条；出处只标撤销不删除）。 */
+  async revokeUnits(
+    request: ExtractionRevokeUnitsRequest,
+  ): Promise<IpcResult<ExtractionBatchValue>> {
+    return this.enqueue(request.sessionId, () => this.revokeUnitsInner(request))
+  }
+
+  private async revokeUnitsInner(
+    request: ExtractionRevokeUnitsRequest,
+  ): Promise<IpcResult<ExtractionBatchValue>> {
+    const session = this.deps.projectService.getSession(request.sessionId)
+    if (session === null) return failure('STALE_SESSION', '会话已失效，请重新打开项目')
+    if (request.baseEditSeq !== session.acceptedSeq) {
+      return failure(
+        'STALE_EDIT',
+        '撤销补单位期间项目已发生其它编辑，请刷新后重试',
+        `acceptedSeq=${session.acceptedSeq}, baseEditSeq=${request.baseEditSeq}`,
+      )
+    }
+    const drafts = session.snapshot.project.extractionDrafts
+    const draft = drafts.find((item) => item.draftId === request.draftId)
+    if (draft === undefined) return failure('NOT_FOUND', '提取草稿不存在或已被替换')
+    if (isDraftSuperseded(draft, drafts)) {
+      return failure('EXTRACTION_DRAFT_SUPERSEDED', '旧规则版本的草稿只读')
+    }
+    const decidedAt = this.now().toISOString()
+    const result = revokeUnitAttestations(draft, {
+      batchId: request.batchId ?? null,
+      candidateId: request.candidateId ?? null,
+      actor: EXTRACTION_ACTOR,
+      decidedAt,
+      reason: '用户在确认面板撤销补单位',
+    })
+    if (!result.ok) return failure(EXTRACTION_ERROR_CODES[result.code], result.message)
+    // 账本副本同步标撤销（出处不可抹：只追加撤销字段，不删除条目）。
+    const targetFieldPaths = new Set(
+      result.value.candidateIds.map((candidateId) => `candidate:${candidateId}:unit`),
+    )
+    const staleSeqs = new Set(
+      session.snapshot.project.attestations
+        .filter(
+          (attestation) =>
+            targetFieldPaths.has(attestation.fieldPath) && (attestation.revokedAt ?? null) === null,
+        )
+        .map((attestation) => `${attestation.fieldPath}|${attestation.statement}|${attestation.at}`),
+    )
+    const attestations = session.snapshot.project.attestations.map((attestation) => {
+      const key = `${attestation.fieldPath}|${attestation.statement}|${attestation.at}`
+      if (!staleSeqs.has(key)) return attestation
+      return revokeAttestation(attestation as UserAttestation, {
+        by: EXTRACTION_ACTOR,
+        at: decidedAt,
+        statement: '用户在确认面板撤销补单位',
+      })
+    })
+    const staged = await this.stageUpdatedDraft(session, result.value.draft, request.baseEditSeq, {
+      attestations,
+    })
+    if (!staged.ok) return staged
+    const value: ExtractionBatchValue = {
+      acceptedSeq: staged.value.acceptedSeq,
+      draftId: result.value.draft.draftId,
+      candidateIds: [...result.value.candidateIds],
+      decisions: this.batchDecisions(result.value.draft, result.value.candidateIds, decidedAt),
+      snapshot: toSnapshotDto(session.snapshot),
+      recovery: staged.value.recovery,
+    }
+    if (staged.value.warning !== undefined) value.warning = staged.value.warning
+    return { ok: true, value }
   }
 
   /**

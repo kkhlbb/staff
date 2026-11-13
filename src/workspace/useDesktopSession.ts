@@ -14,6 +14,11 @@ import type {
   ExtractionCancelValue,
   ExtractionDeleteDraftRequest,
   ExtractionDeleteDraftValue,
+  ExtractionConfirmBatchRequest,
+  ExtractionAttestUnitsRequest,
+  ExtractionAttestUnitsValue,
+  ExtractionRevokeUnitsRequest,
+  ExtractionBatchValue,
 } from '../../desktop/shared/contracts'
 import { DesktopSessionAdapter, type DesktopSessionState } from './desktopAdapter'
 import { draftToChain, workspaceReducer, type WorkspaceAction } from './draft'
@@ -433,6 +438,72 @@ export function useDesktopSession(options: { onOpenDxf?: () => void } = {}) {
         })
         report(result)
         return result.ok ? result.value : null
+      } finally {
+        locked.current = false; setBusy(false); void refresh()
+      }
+    },
+    /** L2：同组批量确认；互斥组整批拒绝（main 返回 0 写入，界面显示原因）。 */
+    confirmExtractionBatch: async (
+      request: Omit<ExtractionConfirmBatchRequest, 'sessionId' | 'baseEditSeq'>,
+    ): Promise<IpcResult<ExtractionBatchValue> | null> => {
+      const current = adapter.current
+      if (current === null) { setNotice('window.cunlian 不可用，请在桌面应用中执行文件操作。'); return null }
+      if (locked.current) return null
+      const state = current.getState()
+      if (state.sessionId === null) { setNotice(NO_WRITABLE_SESSION_NOTICE); return null }
+      locked.current = true; setBusy(true); setNotice('')
+      try {
+        const result = await current.confirmExtractionBatch({
+          sessionId: state.sessionId,
+          baseEditSeq: state.acceptedSeq,
+          ...request,
+        })
+        report(result)
+        return result
+      } finally {
+        locked.current = false; setBusy(false); void refresh()
+      }
+    },
+    /** L2：批量补单位；statement 逐字进 user-attestation，任一条不合格整批拒绝。 */
+    attestExtractionUnits: async (
+      request: Omit<ExtractionAttestUnitsRequest, 'sessionId' | 'baseEditSeq'>,
+    ): Promise<IpcResult<ExtractionAttestUnitsValue> | null> => {
+      const current = adapter.current
+      if (current === null) { setNotice('window.cunlian 不可用，请在桌面应用中执行文件操作。'); return null }
+      if (locked.current) return null
+      const state = current.getState()
+      if (state.sessionId === null) { setNotice(NO_WRITABLE_SESSION_NOTICE); return null }
+      locked.current = true; setBusy(true); setNotice('')
+      try {
+        const result = await current.attestExtractionUnits({
+          sessionId: state.sessionId,
+          baseEditSeq: state.acceptedSeq,
+          ...request,
+        })
+        report(result)
+        return result
+      } finally {
+        locked.current = false; setBusy(false); void refresh()
+      }
+    },
+    /** L2：撤销补单位（整批或逐条）；已确认候选需先撤销确认。 */
+    revokeExtractionUnits: async (
+      request: Omit<ExtractionRevokeUnitsRequest, 'sessionId' | 'baseEditSeq'>,
+    ): Promise<IpcResult<ExtractionBatchValue> | null> => {
+      const current = adapter.current
+      if (current === null) { setNotice('window.cunlian 不可用，请在桌面应用中执行文件操作。'); return null }
+      if (locked.current) return null
+      const state = current.getState()
+      if (state.sessionId === null) { setNotice(NO_WRITABLE_SESSION_NOTICE); return null }
+      locked.current = true; setBusy(true); setNotice('')
+      try {
+        const result = await current.revokeExtractionUnits({
+          sessionId: state.sessionId,
+          baseEditSeq: state.acceptedSeq,
+          ...request,
+        })
+        report(result)
+        return result
       } finally {
         locked.current = false; setBusy(false); void refresh()
       }

@@ -57,6 +57,8 @@ const ADDED_FUNCTIONS = [
   'cancelExtraction',
   // V3.6 多草稿：删除被取代的旧规则版本草稿（仍只增不改旧函数）。
   'deleteExtractionDraft',
+  // L2 确认效率：同组批量确认 / 批量补单位 / 撤销补单位（仍只增不改旧函数）。
+  'confirmExtractionBatch', 'attestExtractionUnits', 'revokeExtractionUnits',
   // V4 stage 1: only specific tool functions, no generic invoke escape.
   'getProjectContext', 'getConfirmedInputs', 'applyConfirmedInputs',
   'stageParameterChange', 'previewAndCheck',

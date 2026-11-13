@@ -7,6 +7,8 @@
  */
 import { z } from 'zod'
 import type {
+  ExtractionAttestUnitsValue,
+  ExtractionBatchValue,
   ExtractionCancelValue,
   ExtractionDecideValue,
   ExtractionDeleteDraftValue,
@@ -85,6 +87,37 @@ export const extractionSchemas = {
       draftId: idLike,
     })
     .strict(),
+  confirmBatch: z
+    .object({
+      sessionId: z.string().min(1).max(200),
+      baseEditSeq: z.number().int().nonnegative(),
+      draftId: idLike,
+      candidateIds: z.array(idLike).min(1).max(200),
+    })
+    .strict(),
+  attestUnits: z
+    .object({
+      sessionId: z.string().min(1).max(200),
+      baseEditSeq: z.number().int().nonnegative(),
+      draftId: idLike,
+      candidateIds: z.array(idLike).min(1).max(200),
+      statement: z.string().min(1).max(2000),
+    })
+    .strict(),
+  revokeUnits: z
+    .object({
+      sessionId: z.string().min(1).max(200),
+      baseEditSeq: z.number().int().nonnegative(),
+      draftId: idLike,
+      batchId: idLike.optional(),
+      candidateId: idLike.optional(),
+    })
+    .strict()
+    .refine(
+      (value) =>
+        (value.batchId === undefined) !== (value.candidateId === undefined),
+      { message: 'batchId 与 candidateId 必须二选一' },
+    ),
 } as const
 
 export interface ExtractionChannelDeps {
@@ -169,6 +202,45 @@ export function registerExtractionChannels(
       handle: async ({ sender }, params): Promise<ExtractionDeleteDraftValue> => {
         requireActive(sender.webContentsId, params.sessionId)
         return unwrap(await deps.service.deleteDraft(params))
+      },
+    },
+    ipcDeps,
+  )
+
+  installChannel(
+    ipc,
+    {
+      channel: IPC_CHANNELS.extractionConfirmBatch,
+      schema: extractionSchemas.confirmBatch,
+      handle: async ({ sender }, params): Promise<ExtractionBatchValue> => {
+        requireActive(sender.webContentsId, params.sessionId)
+        return unwrap(await deps.service.confirmBatch(params))
+      },
+    },
+    ipcDeps,
+  )
+
+  installChannel(
+    ipc,
+    {
+      channel: IPC_CHANNELS.extractionAttestUnits,
+      schema: extractionSchemas.attestUnits,
+      handle: async ({ sender }, params): Promise<ExtractionAttestUnitsValue> => {
+        requireActive(sender.webContentsId, params.sessionId)
+        return unwrap(await deps.service.attestUnits(params))
+      },
+    },
+    ipcDeps,
+  )
+
+  installChannel(
+    ipc,
+    {
+      channel: IPC_CHANNELS.extractionRevokeUnits,
+      schema: extractionSchemas.revokeUnits,
+      handle: async ({ sender }, params): Promise<ExtractionBatchValue> => {
+        requireActive(sender.webContentsId, params.sessionId)
+        return unwrap(await deps.service.revokeUnits(params))
       },
     },
     ipcDeps,

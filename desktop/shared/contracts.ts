@@ -86,6 +86,10 @@ export const IPC_CHANNELS = {
   extractionCancel: 'extraction:cancel',
   /** V3.6 多草稿：删除被取代（旧规则版本）的草稿。 */
   extractionDeleteDraft: 'extraction:delete-draft',
+  /** L2 确认效率：同组批量确认 / 批量补单位 / 撤销补单位（都逐条落盘）。 */
+  extractionConfirmBatch: 'extraction:confirm-batch',
+  extractionAttestUnits: 'extraction:attest-units',
+  extractionRevokeUnits: 'extraction:revoke-units',
   agentContext: 'agent:context',
   agentConfirmedInputs: 'agent:confirmed-inputs',
   agentApplyConfirmed: 'agent:apply-confirmed',
@@ -247,6 +251,12 @@ export type CommonErrorCode =
   /** V3.6 多草稿：旧规则版本草稿只读；最新草稿不许删。 */
   | 'EXTRACTION_DRAFT_SUPERSEDED'
   | 'EXTRACTION_DRAFT_LATEST'
+  /** L2：批量动作整批被拒（不合格条目/互斥组），0 条写入。 */
+  | 'EXTRACTION_BATCH_REJECTED'
+  /** L2：批量补单位的声明不可用（没有可识别单位 / 不是 mm / 自相矛盾）。 */
+  | 'EXTRACTION_UNIT_STATEMENT_INVALID'
+  /** L2：撤销补单位时目标已确认，必须先撤销确认。 */
+  | 'EXTRACTION_ATTESTATION_CONFIRMED'
 
 export type IpcErrorCode =
   | ContainerErrorCode
@@ -899,6 +909,80 @@ export interface ExtractionDeleteDraftValue {
   warning?: string
 }
 
+/* ------------------------------------------------------------------ */
+/* L2 确认效率：批量动作（同组全确认 / 批量补单位 / 撤销补单位）        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 批量动作的公共结果：**逐条**给出每条候选自己的 decisionId 与动作后状态。
+ *
+ * 不返回“批量通过”这类汇总决定；`decisions.length` 必须等于请求里去重后的
+ * candidateIds（批量确认/补单位）或命中撤销的候选数。
+ */
+export interface ExtractionBatchDecision {
+  candidateId: string
+  decisionId: string
+  status: 'pending' | 'blocked' | 'confirmed' | 'rejected' | 'stale'
+}
+
+export interface ExtractionBatchValue {
+  acceptedSeq: number
+  draftId: string
+  candidateIds: string[]
+  decisions: ExtractionBatchDecision[]
+  snapshot: SnapshotDto
+  recovery: RecoveryWriteState | 'none'
+  warning?: string
+}
+
+/**
+ * 同组批量确认。
+ *
+ * - 只接受仍为 pending、出处完整、且**不属于同符号多处赋值组**的候选；
+ * - 任一条不合格或选中了互斥组 → 整批拒绝（0 条写入），错误 message 指出是哪几条；
+ * - 全部合格时逐条调用与单条确认同一个纯函数，逐条写决定。
+ */
+export interface ExtractionConfirmBatchRequest {
+  sessionId: string
+  baseEditSeq: number
+  draftId: string
+  candidateIds: string[]
+}
+
+/**
+ * 批量补单位（只对“仅差单位”开放）。
+ *
+ * - `statement` 是用户给出的单位声明原话，逐字写进每条候选的 user-attestation；
+ * - 任一条不是“仅差单位” → 整批拒绝（0 条写入），message 指出是哪几条；
+ * - 补单位**不是确认**：候选补完回到待确认，仍要逐条/逐组确认。
+ * - actor/sessionSeq 由 main 生成（renderer 不能伪造）。
+ */
+export interface ExtractionAttestUnitsRequest {
+  sessionId: string
+  baseEditSeq: number
+  draftId: string
+  candidateIds: string[]
+  statement: string
+}
+
+export interface ExtractionAttestUnitsValue extends ExtractionBatchValue {
+  batchId: string
+  /** 声明里识别出的单位原文（只支持 mm，不换算）。 */
+  unitText: string
+}
+
+/**
+ * 撤销补单位：`batchId` 整批撤销，`candidateId` 逐条撤销（二选一）。
+ * 已确认的候选不能借撤销补单位绕过确认（先撤销确认）。
+ */
+export interface ExtractionRevokeUnitsRequest {
+  sessionId: string
+  baseEditSeq: number
+  draftId: string
+  batchId?: string
+  candidateId?: string
+}
+
 /**
  * preload 暴露到 `window.cunlian` 的 API。
  *
@@ -1426,6 +1510,18 @@ export interface CunlianApi {
   deleteExtractionDraft(
     request: ExtractionDeleteDraftRequest,
   ): Promise<IpcResult<ExtractionDeleteDraftValue>>
+  /** L2：同组批量确认（互斥组整批拒绝；逐条写决定）。 */
+  confirmExtractionBatch?(
+    request: ExtractionConfirmBatchRequest,
+  ): Promise<IpcResult<ExtractionBatchValue>>
+  /** L2：批量补单位（只对“仅差单位”；任一条不合格整批拒绝）。 */
+  attestExtractionUnits?(
+    request: ExtractionAttestUnitsRequest,
+  ): Promise<IpcResult<ExtractionAttestUnitsValue>>
+  /** L2：撤销补单位（按批次或逐条；已确认候选需先撤销确认）。 */
+  revokeExtractionUnits?(
+    request: ExtractionRevokeUnitsRequest,
+  ): Promise<IpcResult<ExtractionBatchValue>>
 
   /* ---- V4.0 阶段 3：任务侧栏与授权提交（可选，旧 preload 不提供时 UI 显示未装配） */
   agentStart?(request: AgentStartRequest): Promise<ToolResult<AgentStartValue>>

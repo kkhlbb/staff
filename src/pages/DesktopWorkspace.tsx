@@ -542,6 +542,9 @@ export function DesktopWorkspace() {
               onDecide: (request) => session.decideExtraction(request),
               onCancel: (requestId) => session.cancelExtraction(requestId),
               onDeleteDraft: (request) => session.deleteExtractionDraft(request),
+              onConfirmBatch: (request) => session.confirmExtractionBatch(request),
+              onAttestUnits: (request) => session.attestExtractionUnits(request),
+              onRevokeUnits: (request) => session.revokeExtractionUnits(request),
             }}
           />)}
         </div>)}

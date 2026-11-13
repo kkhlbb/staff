@@ -110,4 +110,38 @@ export {
   type RejectRequest,
   type RevokeRequest,
 } from './draft'
+export {
+  activeUnitAttestation,
+  activeUnitBatches,
+  attestationKey,
+  attestCandidateUnits,
+  confirmCandidateBatch,
+  hasActiveUnitAttestation,
+  revokeUnitAttestations,
+  unitBatchKey,
+  type AttestUnitsRequest,
+  type AttestUnitsValue,
+  type ConfirmBatchRequest,
+  type ConfirmBatchValue,
+  type RevokeUnitsRequest,
+  type RevokeUnitsValue,
+  type UnitBatchSummary,
+} from './batch'
+export {
+  NO_BATCH_BLOCKED_CODES,
+  batchConfirmCandidateIds,
+  batchUnitCandidateIds,
+  blockedGroupOrder,
+  groupConfirmCandidates,
+  isUnitOnlyCandidate,
+  multiAssignmentMembers,
+  type BatchCapability,
+  type ConfirmGroupKey,
+  type ConfirmGroupSummary,
+  type ConfirmGrouping,
+} from './confirmGroups'
+export {
+  parseUnitStatement,
+  type UnitStatementResolution,
+} from './unitScope'
 export { stableHash, stableId } from './ids'

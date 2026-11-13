@@ -146,6 +146,46 @@ export function detectUnitDeclarations(
 }
 
 /**
+ * 用户给的一句单位声明（L2 批量补单位）→ 可识别单位。
+ *
+ * 与文档抽取的区别：文档里必须出现「单位：」「Unit:」这类**显式标签**；用户声明是
+ * 人的一句话，允许「本表单位 mm」这种不带冒号的写法（仍要求出现“单位/unit”这个词，
+ * 且后面紧跟受支持的单位写法）。**不猜同义词、不做换算**：一句里出现两类单位
+ * （mm 与 in）一律 `conflict`，由调用方整批拒绝；找不到任何写法 → `none`。
+ */
+export interface UnitStatementResolution {
+  readonly status: 'single' | 'conflict' | 'none'
+  readonly unit: ParsedUnit | null
+  /** 命中的单位原文（逐字，供报错/留痕；不重写用户句子）。 */
+  readonly tokens: readonly string[]
+}
+
+/** 用户声明：`单位 mm` / `单位：mm` / `单位为毫米` / `Units: mm`。 */
+const USER_UNIT_ZH = new RegExp(`单位\\s*(?:[:：]|为|是)?\\s*(${UNIT_TEXT_SOURCE})`, 'dgi')
+const USER_UNIT_EN = new RegExp(
+  `(?:^|[\\s,;，；(（])units?\\s*(?:[:：]|为|是)?\\s*(${UNIT_TEXT_SOURCE})`,
+  'dgi',
+)
+
+export function parseUnitStatement(statement: string): UnitStatementResolution {
+  const text = statement.trim()
+  if (text === '') return { status: 'none', unit: null, tokens: [] }
+  const tokens: string[] = []
+  for (const pattern of [USER_UNIT_ZH, USER_UNIT_EN]) {
+    pattern.lastIndex = 0
+    let match = pattern.exec(text)
+    while (match !== null) {
+      tokens.push(match[1])
+      match = pattern.exec(text)
+    }
+  }
+  if (tokens.length === 0) return { status: 'none', unit: null, tokens: [] }
+  const kinds = new Set(tokens.map((token) => parseUnitToken(token).kind))
+  if (kinds.size > 1) return { status: 'conflict', unit: null, tokens }
+  return { status: 'single', unit: parseUnitToken(tokens[0]), tokens }
+}
+
+/**
  * 合并一处数值可用的全部声明。
  * - 按出处去重（同一句被页级与文档级同时看到时只算一条）；
  * - 只剩一种单位 → `inherited`；
