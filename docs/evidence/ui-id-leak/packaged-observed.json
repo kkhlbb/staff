@@ -1,0 +1,2307 @@
+{
+  "label": "packaged",
+  "executable": "out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链",
+  "viewport": [
+    960,
+    640
+  ],
+  "fixture": "Unmodified docs/evidence/v40-stage3/fixtures/stage3-seed.cunlian copied into isolated scratch; built-in offline normal demo; real approval and atomic commit.",
+  "screenshots": [
+    {
+      "file": "packaged-agent-submit-receipt-960x640.png",
+      "sha256": "ccf866a3a77f918c826f7a1d728385a2d10df0a96e36bcff16172e7662c6b4aa"
+    },
+    {
+      "file": "packaged-topbar-formal-version-960x640.png",
+      "sha256": "5826e9508b92138cae981f31d808127d37713cf20c28e5eb62ff64d729316778"
+    }
+  ],
+  "verdict": "pass",
+  "runtime": "ui-id-u1PBnn",
+  "seedSha256": "08d2ce0df81e7a282df45e0fef2fbe851b4a1a366c41b39f949ecc8652b8fb5a",
+  "initial": {
+    "topbar": "寸链 · 隔套 · 阶段3 侧栏走查 · 第 2 版\n已保存\nV4.0 · Beta",
+    "formalVersion": "第 2 版",
+    "session": {
+      "ok": true,
+      "value": {
+        "sessionId": "<generated>",
+        "editSeq": 0,
+        "savedSeq": 0,
+        "snapshot": {
+          "project": {
+            "id": "project-a",
+            "name": "隔套 · 阶段3 侧栏走查",
+            "currentRevisionId": "rev-a1",
+            "dimensionChain": {
+              "terms": [
+                {
+                  "id": "t-h",
+                  "symbol": "H",
+                  "name": "总长",
+                  "nominalQ": 522000,
+                  "lowerDeviationQ": -200,
+                  "upperDeviationQ": 200,
+                  "sign": 1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-b1",
+                  "symbol": "B1",
+                  "name": "左轴承",
+                  "nominalQ": 200000,
+                  "lowerDeviationQ": -100,
+                  "upperDeviationQ": 100,
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-s",
+                  "symbol": "S",
+                  "name": "隔套",
+                  "nominalQ": 120000,
+                  "lowerDeviationQ": -100,
+                  "upperDeviationQ": 100,
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-b2",
+                  "symbol": "B2",
+                  "name": "右轴承",
+                  "nominalQ": 200000,
+                  "lowerDeviationQ": -100,
+                  "upperDeviationQ": 100,
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                }
+              ],
+              "target": {
+                "minQ": 1000,
+                "maxQ": 3000
+              },
+              "assumptions": "合成示例数据"
+            },
+            "engineVersion": "0.1.0",
+            "createdAt": "2026-11-09T08:00:00.000Z",
+            "updatedAt": "2026-11-09T08:00:00.000Z",
+            "relationRevision": 1,
+            "relationReview": null,
+            "migration": null,
+            "baseline": null,
+            "schemaVersion": 10,
+            "sourceFormatVersion": 2,
+            "parts": [
+              {
+                "partId": "builtin:shaft-demo:spacer",
+                "kind": "builtin-demo",
+                "name": "隔套",
+                "currentModelRevisionId": null,
+                "origin": "builtin"
+              }
+            ],
+            "parameters": [
+              {
+                "parameterId": "param:spacer:inner-diameter",
+                "partId": "builtin:shaft-demo:spacer",
+                "key": "innerDiameter",
+                "valueQ": 200000,
+                "inputDecimals": 2,
+                "reviewStatus": "draft",
+                "parameterRevision": 1
+              },
+              {
+                "parameterId": "param:spacer:outer-diameter",
+                "partId": "builtin:shaft-demo:spacer",
+                "key": "outerDiameter",
+                "valueQ": 320000,
+                "inputDecimals": 2,
+                "reviewStatus": "draft",
+                "parameterRevision": 1
+              },
+              {
+                "parameterId": "param:spacer:length",
+                "partId": "builtin:shaft-demo:spacer",
+                "key": "length",
+                "valueQ": 120000,
+                "inputDecimals": 2,
+                "reviewStatus": "draft",
+                "parameterRevision": 1
+              }
+            ],
+            "modelRevisions": [],
+            "dimensionLinks": [
+              {
+                "kind": "parameter-binding",
+                "bindingId": "binding:spacer-length",
+                "termId": "t-s",
+                "partId": "builtin:shaft-demo:spacer",
+                "parameterId": "param:spacer:length",
+                "syncField": "nominal",
+                "createdAt": "2026-11-09T08:00:00.000Z"
+              }
+            ],
+            "drawings": [
+              {
+                "drawingId": "drawing:project-a:spacer",
+                "drawingDataVersion": 1,
+                "templateId": "spacer-a4-landscape",
+                "templateVersion": 1,
+                "partId": "builtin:shaft-demo:spacer",
+                "revisionId": "rev-a1",
+                "parameterIds": [
+                  "param:spacer:inner-diameter",
+                  "param:spacer:outer-diameter",
+                  "param:spacer:length"
+                ],
+                "paper": {
+                  "format": "A4",
+                  "orientation": "landscape",
+                  "widthMm": 297,
+                  "heightMm": 210
+                },
+                "scale": {
+                  "numerator": 1,
+                  "denominator": 1
+                },
+                "frameFields": {
+                  "partName": "隔套",
+                  "drawingNumber": "",
+                  "version": "",
+                  "material": "",
+                  "tolerance": "",
+                  "surface": "",
+                  "drafter": "",
+                  "date": ""
+                },
+                "status": "pending-review-draft",
+                "dataFingerprint": "3535c5f21e31c7b0d3e0240098216a4095943f0e64e73eee89cb5d74935be0e5"
+              }
+            ],
+            "requirementRevisions": [],
+            "activeRequirementRevisionId": null,
+            "currentRequirementCheck": null,
+            "extractionDrafts": [],
+            "sourceKind": "pdf",
+            "actorId": null,
+            "sessionSeq": 0,
+            "sessionLabel": null,
+            "attestations": []
+          },
+          "draft": {
+            "terms": [
+              {
+                "id": "t-h",
+                "symbol": "H",
+                "name": "总长",
+                "nominal": "52.20",
+                "lower": "-0.02",
+                "upper": "0.02",
+                "sign": 1,
+                "sourceNote": "",
+                "termRevision": 1
+              },
+              {
+                "id": "t-b1",
+                "symbol": "B1",
+                "name": "左轴承",
+                "nominal": "20.00",
+                "lower": "-0.01",
+                "upper": "0.01",
+                "sign": -1,
+                "sourceNote": "",
+                "termRevision": 1
+              },
+              {
+                "id": "t-s",
+                "symbol": "S",
+                "name": "隔套",
+                "nominal": "12.00",
+                "lower": "-0.01",
+                "upper": "0.01",
+                "sign": -1,
+                "sourceNote": "",
+                "termRevision": 1
+              },
+              {
+                "id": "t-b2",
+                "symbol": "B2",
+                "name": "右轴承",
+                "nominal": "20.00",
+                "lower": "-0.01",
+                "upper": "0.01",
+                "sign": -1,
+                "sourceNote": "",
+                "termRevision": 1
+              }
+            ],
+            "targetMin": "0.1000",
+            "targetMax": "0.3000",
+            "assumptions": "合成示例数据",
+            "relationRevision": 1
+          },
+          "documents": [
+            {
+              "id": "doc-1",
+              "projectId": "project-a",
+              "title": "taskbook-TB-2026-1110.pdf",
+              "latestRevisionId": "sr-1"
+            }
+          ],
+          "revisions": [
+            {
+              "id": "sr-1",
+              "projectId": "project-a",
+              "documentId": "doc-1",
+              "fileName": "taskbook-TB-2026-1110.pdf",
+              "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+              "byteSize": 42223,
+              "pageCount": 2,
+              "createdAt": "2026-11-09T08:00:00.000Z",
+              "blobKey": "blob-1"
+            }
+          ],
+          "bindings": [
+            {
+              "id": "bind-1",
+              "projectId": "project-a",
+              "termId": "t-s",
+              "revisionId": "sr-1",
+              "documentId": "doc-1",
+              "page": 1,
+              "rectPdf": [
+                10,
+                10,
+                110,
+                30
+              ],
+              "pageBoxPdf": [
+                0,
+                0,
+                595,
+                842
+              ],
+              "note": "",
+              "createdAt": "2026-11-09T08:00:00.000Z",
+              "reviewedTermRevision": null,
+              "reviewedAt": null,
+              "historicalAcceptance": null
+            }
+          ],
+          "blobs": [
+            {
+              "blobKey": "blob-1",
+              "projectId": "project-a",
+              "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+              "byteSize": 42223
+            }
+          ],
+          "events": [
+            {
+              "id": "event-1",
+              "projectId": "project-a",
+              "type": "source_import",
+              "createdAt": "2026-11-09T08:00:00.000Z"
+            },
+            {
+              "id": "parameter_binding_confirmed:fixture",
+              "projectId": "project-a",
+              "type": "parameter_binding_confirmed",
+              "createdAt": "2026-11-09T08:05:00.000Z",
+              "bindingId": "binding:spacer-length",
+              "parameterId": "param:spacer:length",
+              "termId": "t-s",
+              "parameterRevision": 1,
+              "termRevision": 1,
+              "drawingId": "drawing:project-a:spacer",
+              "drawingFingerprint": "3535c5f21e31c7b0d3e0240098216a4095943f0e64e73eee89cb5d74935be0e5",
+              "sourceBasis": "741c9d2df253b4de:",
+              "revisionIdAtCommit": "rev-a1",
+              "scope": "nominal-only"
+            }
+          ],
+          "analysisSnapshots": [
+            {
+              "id": "snap-1",
+              "projectId": "project-a",
+              "createdAt": "2026-11-09T08:00:00.000Z",
+              "engineVersion": "0.1.0",
+              "reviewRulesVersion": "rules-1",
+              "definition": {
+                "terms": [
+                  {
+                    "id": "t-h",
+                    "symbol": "H",
+                    "name": "总长",
+                    "nominalQ": 522000,
+                    "lowerDeviationQ": -200,
+                    "upperDeviationQ": 200,
+                    "sign": 1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  },
+                  {
+                    "id": "t-b1",
+                    "symbol": "B1",
+                    "name": "左轴承",
+                    "nominalQ": 200000,
+                    "lowerDeviationQ": -100,
+                    "upperDeviationQ": 100,
+                    "sign": -1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  },
+                  {
+                    "id": "t-s",
+                    "symbol": "S",
+                    "name": "隔套",
+                    "nominalQ": 120000,
+                    "lowerDeviationQ": -100,
+                    "upperDeviationQ": 100,
+                    "sign": -1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  },
+                  {
+                    "id": "t-b2",
+                    "symbol": "B2",
+                    "name": "右轴承",
+                    "nominalQ": 200000,
+                    "lowerDeviationQ": -100,
+                    "upperDeviationQ": 100,
+                    "sign": -1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  }
+                ],
+                "target": {
+                  "minQ": 1000,
+                  "maxQ": 3000
+                },
+                "assumptions": "合成示例数据"
+              },
+              "result": {
+                "nominalQ": 2000,
+                "minQ": 1500,
+                "maxQ": 2500,
+                "lowerDeviationQ": -500,
+                "upperDeviationQ": 500,
+                "toleranceQ": 1000,
+                "status": "within",
+                "lowerMarginQ": 500,
+                "upperMarginQ": 500,
+                "contributions": []
+              },
+              "review": {
+                "items": [],
+                "status": "pending",
+                "pendingCount": 0,
+                "summary": {
+                  "passed": 0,
+                  "pending": 0,
+                  "failed": 0
+                }
+              },
+              "projectName": "隔套间隙演示",
+              "inputFingerprint": "fingerprint-sample",
+              "draft": {
+                "terms": [
+                  {
+                    "id": "t-h",
+                    "symbol": "H",
+                    "name": "总长",
+                    "nominal": "52.20",
+                    "lower": "-0.02",
+                    "upper": "0.02",
+                    "sign": 1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  },
+                  {
+                    "id": "t-b1",
+                    "symbol": "B1",
+                    "name": "左轴承",
+                    "nominal": "20.00",
+                    "lower": "-0.01",
+                    "upper": "0.01",
+                    "sign": -1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  },
+                  {
+                    "id": "t-s",
+                    "symbol": "S",
+                    "name": "隔套",
+                    "nominal": "12.00",
+                    "lower": "-0.01",
+                    "upper": "0.01",
+                    "sign": -1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  },
+                  {
+                    "id": "t-b2",
+                    "symbol": "B2",
+                    "name": "右轴承",
+                    "nominal": "20.00",
+                    "lower": "-0.01",
+                    "upper": "0.01",
+                    "sign": -1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  }
+                ],
+                "targetMin": "0.1000",
+                "targetMax": "0.3000",
+                "assumptions": "合成示例数据",
+                "relationRevision": 1
+              },
+              "sourceManifest": {
+                "documents": [
+                  {
+                    "id": "doc-1",
+                    "projectId": "project-a",
+                    "title": "轴系装配图.pdf",
+                    "latestRevisionId": "sr-1"
+                  }
+                ],
+                "revisions": [
+                  {
+                    "id": "sr-1",
+                    "projectId": "project-a",
+                    "documentId": "doc-1",
+                    "fileName": "轴系装配图.pdf",
+                    "sha256": "42935aa87adbefedb0b7685341897283c12cde9db471826a3b3e6d6826b43f77",
+                    "byteSize": 32,
+                    "pageCount": 2,
+                    "createdAt": "2026-11-09T08:00:00.000Z",
+                    "blobKey": "blob-1"
+                  }
+                ],
+                "bindings": [],
+                "unboundTermIds": [],
+                "availability": "complete"
+              },
+              "baseline": null,
+              "comparison": null,
+              "status": "pending",
+              "pendingCount": 0
+            }
+          ],
+          "importSnapshots": [],
+          "migrationBackups": [],
+          "legacyArchive": null,
+          "fileRevisions": [
+            {
+              "revisionId": "rev-a1",
+              "parentId": null,
+              "createdAt": "2026-11-09T08:00:00.000Z",
+              "reason": "初始版本",
+              "project": {
+                "id": "project-a",
+                "name": "隔套间隙演示",
+                "currentRevisionId": "rev-a1",
+                "dimensionChain": {
+                  "terms": [
+                    {
+                      "id": "t-h",
+                      "symbol": "H",
+                      "name": "总长",
+                      "nominalQ": 522000,
+                      "lowerDeviationQ": -200,
+                      "upperDeviationQ": 200,
+                      "sign": 1,
+                      "sourceNote": "",
+                      "termRevision": 1
+                    },
+                    {
+                      "id": "t-b1",
+                      "symbol": "B1",
+                      "name": "左轴承",
+                      "nominalQ": 200000,
+                      "lowerDeviationQ": -100,
+                      "upperDeviationQ": 100,
+                      "sign": -1,
+                      "sourceNote": "",
+                      "termRevision": 1
+                    },
+                    {
+                      "id": "t-s",
+                      "symbol": "S",
+                      "name": "隔套",
+                      "nominalQ": 120000,
+                      "lowerDeviationQ": -100,
+                      "upperDeviationQ": 100,
+                      "sign": -1,
+                      "sourceNote": "",
+                      "termRevision": 1
+                    },
+                    {
+                      "id": "t-b2",
+                      "symbol": "B2",
+                      "name": "右轴承",
+                      "nominalQ": 200000,
+                      "lowerDeviationQ": -100,
+                      "upperDeviationQ": 100,
+                      "sign": -1,
+                      "sourceNote": "",
+                      "termRevision": 1
+                    }
+                  ],
+                  "target": {
+                    "minQ": 1000,
+                    "maxQ": 3000
+                  },
+                  "assumptions": "合成示例数据"
+                },
+                "engineVersion": "0.1.0",
+                "createdAt": "2026-11-09T08:00:00.000Z",
+                "updatedAt": "2026-11-09T08:00:00.000Z",
+                "relationRevision": 1,
+                "relationReview": null,
+                "migration": null,
+                "baseline": null,
+                "schemaVersion": 8,
+                "sourceFormatVersion": 2,
+                "parts": [
+                  {
+                    "partId": "builtin:shaft-demo:spacer",
+                    "kind": "builtin-demo",
+                    "name": "隔套",
+                    "currentModelRevisionId": null,
+                    "origin": "builtin"
+                  }
+                ],
+                "parameters": [
+                  {
+                    "parameterId": "param:spacer:inner-diameter",
+                    "partId": "builtin:shaft-demo:spacer",
+                    "key": "innerDiameter",
+                    "valueQ": 200000,
+                    "inputDecimals": 2,
+                    "reviewStatus": "draft",
+                    "parameterRevision": 1
+                  },
+                  {
+                    "parameterId": "param:spacer:outer-diameter",
+                    "partId": "builtin:shaft-demo:spacer",
+                    "key": "outerDiameter",
+                    "valueQ": 320000,
+                    "inputDecimals": 2,
+                    "reviewStatus": "draft",
+                    "parameterRevision": 1
+                  },
+                  {
+                    "parameterId": "param:spacer:length",
+                    "partId": "builtin:shaft-demo:spacer",
+                    "key": "length",
+                    "valueQ": 120000,
+                    "inputDecimals": 2,
+                    "reviewStatus": "draft",
+                    "parameterRevision": 1
+                  }
+                ],
+                "modelRevisions": [],
+                "dimensionLinks": [
+                  {
+                    "kind": "parameter-binding",
+                    "bindingId": "binding:spacer-length",
+                    "termId": "t-s",
+                    "partId": "builtin:shaft-demo:spacer",
+                    "parameterId": "param:spacer:length",
+                    "syncField": "nominal",
+                    "createdAt": "2026-11-09T08:00:00.000Z"
+                  }
+                ],
+                "drawings": [
+                  {
+                    "drawingId": "drawing:project-a:spacer",
+                    "drawingDataVersion": 1,
+                    "templateId": "spacer-a4-landscape",
+                    "templateVersion": 1,
+                    "partId": "builtin:shaft-demo:spacer",
+                    "revisionId": "rev-a1",
+                    "parameterIds": [
+                      "param:spacer:inner-diameter",
+                      "param:spacer:outer-diameter",
+                      "param:spacer:length"
+                    ],
+                    "paper": {
+                      "format": "A4",
+                      "orientation": "landscape",
+                      "widthMm": 297,
+                      "heightMm": 210
+                    },
+                    "scale": {
+                      "numerator": 1,
+                      "denominator": 1
+                    },
+                    "frameFields": {
+                      "partName": "隔套",
+                      "drawingNumber": "",
+                      "version": "",
+                      "material": "",
+                      "tolerance": "",
+                      "surface": "",
+                      "drafter": "",
+                      "date": ""
+                    },
+                    "status": "pending-review-draft",
+                    "dataFingerprint": "3535c5f21e31c7b0d3e0240098216a4095943f0e64e73eee89cb5d74935be0e5"
+                  }
+                ],
+                "requirementRevisions": [],
+                "activeRequirementRevisionId": null,
+                "currentRequirementCheck": null,
+                "extractionDrafts": []
+              }
+            }
+          ],
+          "missingAttachments": [],
+          "snapshotReferences": [
+            {
+              "snapshotId": "snap-1",
+              "revisionIds": [
+                "sr-1"
+              ],
+              "blobKeys": [
+                "blob-1"
+              ]
+            }
+          ],
+          "manifestMeta": {
+            "createdAt": "2026-11-09T08:00:00.000Z",
+            "writer": {
+              "appVersion": "0.0.0-test",
+              "electronVersion": "45.2.3",
+              "engineVersion": "0.1.0"
+            },
+            "migration": null
+          }
+        },
+        "path": "evidence.cunlian",
+        "fingerprint": "08d2ce0df81e7a282df45e0fef2fbe851b4a1a366c41b39f949ecc8652b8fb5a",
+        "recovery": "none"
+      }
+    }
+  },
+  "receipt": "已提交（工具回执） · 第 2 版",
+  "committed": {
+    "ok": true,
+    "value": {
+      "sessionId": "<generated>",
+      "editSeq": 1,
+      "savedSeq": 1,
+      "snapshot": {
+        "project": {
+          "id": "project-a",
+          "name": "隔套 · 阶段3 侧栏走查",
+          "currentRevisionId": "rev-a-<generated>",
+          "dimensionChain": {
+            "terms": [
+              {
+                "id": "t-h",
+                "symbol": "H",
+                "name": "总长",
+                "nominalQ": 522000,
+                "lowerDeviationQ": -200,
+                "upperDeviationQ": 200,
+                "sign": 1,
+                "sourceNote": "",
+                "termRevision": 1
+              },
+              {
+                "id": "t-b1",
+                "symbol": "B1",
+                "name": "左轴承",
+                "nominalQ": 200000,
+                "lowerDeviationQ": -100,
+                "upperDeviationQ": 100,
+                "sign": -1,
+                "sourceNote": "",
+                "termRevision": 1
+              },
+              {
+                "id": "t-s",
+                "symbol": "S",
+                "name": "隔套",
+                "nominalQ": 120400,
+                "lowerDeviationQ": -100,
+                "upperDeviationQ": 100,
+                "sign": -1,
+                "sourceNote": "",
+                "termRevision": 2
+              },
+              {
+                "id": "t-b2",
+                "symbol": "B2",
+                "name": "右轴承",
+                "nominalQ": 200000,
+                "lowerDeviationQ": -100,
+                "upperDeviationQ": 100,
+                "sign": -1,
+                "sourceNote": "",
+                "termRevision": 1
+              }
+            ],
+            "target": {
+              "minQ": 1000,
+              "maxQ": 3000
+            },
+            "assumptions": "合成示例数据"
+          },
+          "engineVersion": "0.1.0",
+          "createdAt": "2026-11-09T08:00:00.000Z",
+          "updatedAt": "2026-11-13T10:56:38.235Z",
+          "relationRevision": 1,
+          "relationReview": null,
+          "migration": null,
+          "baseline": null,
+          "schemaVersion": 10,
+          "sourceFormatVersion": 2,
+          "parts": [
+            {
+              "partId": "builtin:shaft-demo:spacer",
+              "kind": "builtin-demo",
+              "name": "隔套",
+              "currentModelRevisionId": null,
+              "origin": "builtin"
+            }
+          ],
+          "parameters": [
+            {
+              "parameterId": "param:spacer:inner-diameter",
+              "partId": "builtin:shaft-demo:spacer",
+              "key": "innerDiameter",
+              "valueQ": 200000,
+              "inputDecimals": 2,
+              "reviewStatus": "draft",
+              "parameterRevision": 1
+            },
+            {
+              "parameterId": "param:spacer:outer-diameter",
+              "partId": "builtin:shaft-demo:spacer",
+              "key": "outerDiameter",
+              "valueQ": 320000,
+              "inputDecimals": 2,
+              "reviewStatus": "draft",
+              "parameterRevision": 1
+            },
+            {
+              "parameterId": "param:spacer:length",
+              "partId": "builtin:shaft-demo:spacer",
+              "key": "length",
+              "valueQ": 120400,
+              "inputDecimals": 2,
+              "reviewStatus": "draft",
+              "parameterRevision": 2
+            }
+          ],
+          "modelRevisions": [],
+          "dimensionLinks": [
+            {
+              "kind": "parameter-binding",
+              "bindingId": "binding:spacer-length",
+              "termId": "t-s",
+              "partId": "builtin:shaft-demo:spacer",
+              "parameterId": "param:spacer:length",
+              "syncField": "nominal",
+              "createdAt": "2026-11-09T08:00:00.000Z"
+            }
+          ],
+          "drawings": [
+            {
+              "drawingId": "drawing:project-a:spacer",
+              "drawingDataVersion": 1,
+              "templateId": "spacer-a4-landscape",
+              "templateVersion": 1,
+              "partId": "builtin:shaft-demo:spacer",
+              "revisionId": "rev-a-<generated>",
+              "parameterIds": [
+                "param:spacer:inner-diameter",
+                "param:spacer:outer-diameter",
+                "param:spacer:length"
+              ],
+              "paper": {
+                "format": "A4",
+                "orientation": "landscape",
+                "widthMm": 297,
+                "heightMm": 210
+              },
+              "scale": {
+                "numerator": 1,
+                "denominator": 1
+              },
+              "frameFields": {
+                "partName": "隔套",
+                "drawingNumber": "",
+                "version": "草稿 · 第 2 版",
+                "material": "",
+                "tolerance": "",
+                "surface": "",
+                "drafter": "",
+                "date": ""
+              },
+              "status": "pending-review-draft",
+              "dataFingerprint": "442189ea3ae2a13f098a9d6c0aa57b1a6d6f8c95d0d1317d6eb7d9d170624152"
+            }
+          ],
+          "requirementRevisions": [],
+          "activeRequirementRevisionId": null,
+          "currentRequirementCheck": null,
+          "extractionDrafts": [],
+          "sourceKind": "pdf",
+          "actorId": null,
+          "sessionSeq": 0,
+          "sessionLabel": null,
+          "attestations": []
+        },
+        "draft": {
+          "terms": [
+            {
+              "id": "t-h",
+              "symbol": "H",
+              "name": "总长",
+              "nominal": "52.20",
+              "lower": "-0.02",
+              "upper": "0.02",
+              "sign": 1,
+              "sourceNote": "",
+              "termRevision": 1
+            },
+            {
+              "id": "t-b1",
+              "symbol": "B1",
+              "name": "左轴承",
+              "nominal": "20.00",
+              "lower": "-0.01",
+              "upper": "0.01",
+              "sign": -1,
+              "sourceNote": "",
+              "termRevision": 1
+            },
+            {
+              "id": "t-s",
+              "symbol": "S",
+              "name": "隔套",
+              "nominal": "12.00",
+              "lower": "-0.01",
+              "upper": "0.01",
+              "sign": -1,
+              "sourceNote": "",
+              "termRevision": 1
+            },
+            {
+              "id": "t-b2",
+              "symbol": "B2",
+              "name": "右轴承",
+              "nominal": "20.00",
+              "lower": "-0.01",
+              "upper": "0.01",
+              "sign": -1,
+              "sourceNote": "",
+              "termRevision": 1
+            }
+          ],
+          "targetMin": "0.1000",
+          "targetMax": "0.3000",
+          "assumptions": "合成示例数据",
+          "relationRevision": 1,
+          "basisRelationRevision": 1
+        },
+        "documents": [
+          {
+            "id": "doc-1",
+            "projectId": "project-a",
+            "title": "taskbook-TB-2026-1110.pdf",
+            "latestRevisionId": "sr-1"
+          }
+        ],
+        "revisions": [
+          {
+            "id": "sr-1",
+            "projectId": "project-a",
+            "documentId": "doc-1",
+            "fileName": "taskbook-TB-2026-1110.pdf",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "byteSize": 42223,
+            "pageCount": 2,
+            "createdAt": "2026-11-09T08:00:00.000Z",
+            "blobKey": "blob-1"
+          }
+        ],
+        "bindings": [
+          {
+            "id": "bind-1",
+            "projectId": "project-a",
+            "termId": "t-s",
+            "revisionId": "sr-1",
+            "documentId": "doc-1",
+            "page": 1,
+            "rectPdf": [
+              10,
+              10,
+              110,
+              30
+            ],
+            "pageBoxPdf": [
+              0,
+              0,
+              595,
+              842
+            ],
+            "note": "",
+            "createdAt": "2026-11-09T08:00:00.000Z",
+            "reviewedTermRevision": null,
+            "reviewedAt": null,
+            "historicalAcceptance": null
+          }
+        ],
+        "blobs": [
+          {
+            "blobKey": "blob-1",
+            "projectId": "project-a",
+            "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+            "byteSize": 42223
+          }
+        ],
+        "events": [
+          {
+            "id": "event-1",
+            "projectId": "project-a",
+            "type": "source_import",
+            "createdAt": "2026-11-09T08:00:00.000Z"
+          },
+          {
+            "id": "parameter_binding_confirmed:fixture",
+            "projectId": "project-a",
+            "type": "parameter_binding_confirmed",
+            "createdAt": "2026-11-09T08:05:00.000Z",
+            "bindingId": "binding:spacer-length",
+            "parameterId": "param:spacer:length",
+            "termId": "t-s",
+            "parameterRevision": 1,
+            "termRevision": 1,
+            "drawingId": "drawing:project-a:spacer",
+            "drawingFingerprint": "3535c5f21e31c7b0d3e0240098216a4095943f0e64e73eee89cb5d74935be0e5",
+            "sourceBasis": "741c9d2df253b4de:",
+            "revisionIdAtCommit": "rev-a1",
+            "scope": "nominal-only"
+          },
+          {
+            "id": "parameter_changed:rev-a-<generated>:param:spacer:length",
+            "projectId": "project-a",
+            "type": "parameter_changed",
+            "createdAt": "2026-11-13T10:56:38.235Z",
+            "parameterId": "param:spacer:length",
+            "before": "120000",
+            "after": "120400",
+            "reason": "Agent 授权提交",
+            "message": "length：120000q → 120400q",
+            "scope": "nominal-only"
+          },
+          {
+            "id": "parameter_binding_confirmed:rev-a-<generated>:binding:spacer-length",
+            "projectId": "project-a",
+            "type": "parameter_binding_confirmed",
+            "createdAt": "2026-11-13T10:56:38.235Z",
+            "bindingId": "binding:spacer-length",
+            "parameterId": "param:spacer:length",
+            "termId": "t-s",
+            "parameterRevision": 2,
+            "termRevision": 2,
+            "drawingId": "drawing:project-a:spacer",
+            "drawingFingerprint": "442189ea3ae2a13f098a9d6c0aa57b1a6d6f8c95d0d1317d6eb7d9d170624152",
+            "sourceBasis": "a74f85c208609a04:",
+            "revisionIdAtCommit": "rev-a-<generated>",
+            "reason": "Agent 授权提交",
+            "scope": "nominal-only",
+            "message": "确认参数 param:spacer:length 与环 t-s 的 nominal 同步。"
+          },
+          {
+            "id": "project_revision_committed:rev-a-<generated>:rev-a-<generated>",
+            "projectId": "project-a",
+            "type": "project_revision_committed",
+            "createdAt": "2026-11-13T10:56:38.235Z",
+            "reason": "Agent 授权提交",
+            "revisionIdAtCommit": "rev-a-<generated>",
+            "message": "参数变更确认提交。"
+          }
+        ],
+        "analysisSnapshots": [
+          {
+            "id": "snap-1",
+            "projectId": "project-a",
+            "createdAt": "2026-11-09T08:00:00.000Z",
+            "engineVersion": "0.1.0",
+            "reviewRulesVersion": "rules-1",
+            "definition": {
+              "terms": [
+                {
+                  "id": "t-h",
+                  "symbol": "H",
+                  "name": "总长",
+                  "nominalQ": 522000,
+                  "lowerDeviationQ": -200,
+                  "upperDeviationQ": 200,
+                  "sign": 1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-b1",
+                  "symbol": "B1",
+                  "name": "左轴承",
+                  "nominalQ": 200000,
+                  "lowerDeviationQ": -100,
+                  "upperDeviationQ": 100,
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-s",
+                  "symbol": "S",
+                  "name": "隔套",
+                  "nominalQ": 120000,
+                  "lowerDeviationQ": -100,
+                  "upperDeviationQ": 100,
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-b2",
+                  "symbol": "B2",
+                  "name": "右轴承",
+                  "nominalQ": 200000,
+                  "lowerDeviationQ": -100,
+                  "upperDeviationQ": 100,
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                }
+              ],
+              "target": {
+                "minQ": 1000,
+                "maxQ": 3000
+              },
+              "assumptions": "合成示例数据"
+            },
+            "result": {
+              "nominalQ": 2000,
+              "minQ": 1500,
+              "maxQ": 2500,
+              "lowerDeviationQ": -500,
+              "upperDeviationQ": 500,
+              "toleranceQ": 1000,
+              "status": "within",
+              "lowerMarginQ": 500,
+              "upperMarginQ": 500,
+              "contributions": []
+            },
+            "review": {
+              "items": [],
+              "status": "pending",
+              "pendingCount": 0,
+              "summary": {
+                "passed": 0,
+                "pending": 0,
+                "failed": 0
+              }
+            },
+            "projectName": "隔套间隙演示",
+            "inputFingerprint": "fingerprint-sample",
+            "draft": {
+              "terms": [
+                {
+                  "id": "t-h",
+                  "symbol": "H",
+                  "name": "总长",
+                  "nominal": "52.20",
+                  "lower": "-0.02",
+                  "upper": "0.02",
+                  "sign": 1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-b1",
+                  "symbol": "B1",
+                  "name": "左轴承",
+                  "nominal": "20.00",
+                  "lower": "-0.01",
+                  "upper": "0.01",
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-s",
+                  "symbol": "S",
+                  "name": "隔套",
+                  "nominal": "12.00",
+                  "lower": "-0.01",
+                  "upper": "0.01",
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-b2",
+                  "symbol": "B2",
+                  "name": "右轴承",
+                  "nominal": "20.00",
+                  "lower": "-0.01",
+                  "upper": "0.01",
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                }
+              ],
+              "targetMin": "0.1000",
+              "targetMax": "0.3000",
+              "assumptions": "合成示例数据",
+              "relationRevision": 1
+            },
+            "sourceManifest": {
+              "documents": [
+                {
+                  "id": "doc-1",
+                  "projectId": "project-a",
+                  "title": "轴系装配图.pdf",
+                  "latestRevisionId": "sr-1"
+                }
+              ],
+              "revisions": [
+                {
+                  "id": "sr-1",
+                  "projectId": "project-a",
+                  "documentId": "doc-1",
+                  "fileName": "轴系装配图.pdf",
+                  "sha256": "42935aa87adbefedb0b7685341897283c12cde9db471826a3b3e6d6826b43f77",
+                  "byteSize": 32,
+                  "pageCount": 2,
+                  "createdAt": "2026-11-09T08:00:00.000Z",
+                  "blobKey": "blob-1"
+                }
+              ],
+              "bindings": [],
+              "unboundTermIds": [],
+              "availability": "complete"
+            },
+            "baseline": null,
+            "comparison": null,
+            "status": "pending",
+            "pendingCount": 0
+          },
+          {
+            "id": "snapshot-a-<generated>",
+            "projectId": "project-a",
+            "projectName": "隔套 · 阶段3 侧栏走查",
+            "createdAt": "2026-11-13T10:56:38.235Z",
+            "engineVersion": "0.1.0",
+            "reviewRulesVersion": "1.0.0",
+            "inputFingerprint": "2ff06f3381198437",
+            "definition": {
+              "terms": [
+                {
+                  "id": "t-h",
+                  "symbol": "H",
+                  "name": "总长",
+                  "nominalQ": 522000,
+                  "lowerDeviationQ": -200,
+                  "upperDeviationQ": 200,
+                  "sign": 1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-b1",
+                  "symbol": "B1",
+                  "name": "左轴承",
+                  "nominalQ": 200000,
+                  "lowerDeviationQ": -100,
+                  "upperDeviationQ": 100,
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-s",
+                  "symbol": "S",
+                  "name": "隔套",
+                  "nominalQ": 120400,
+                  "lowerDeviationQ": -100,
+                  "upperDeviationQ": 100,
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 2
+                },
+                {
+                  "id": "t-b2",
+                  "symbol": "B2",
+                  "name": "右轴承",
+                  "nominalQ": 200000,
+                  "lowerDeviationQ": -100,
+                  "upperDeviationQ": 100,
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                }
+              ],
+              "target": {
+                "minQ": 1000,
+                "maxQ": 3000
+              },
+              "assumptions": "合成示例数据"
+            },
+            "draft": {
+              "terms": [
+                {
+                  "id": "t-h",
+                  "symbol": "H",
+                  "name": "总长",
+                  "nominal": "52.200",
+                  "lower": "-0.020",
+                  "upper": "0.020",
+                  "sign": 1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-b1",
+                  "symbol": "B1",
+                  "name": "左轴承",
+                  "nominal": "20.000",
+                  "lower": "-0.010",
+                  "upper": "0.010",
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                },
+                {
+                  "id": "t-s",
+                  "symbol": "S",
+                  "name": "隔套",
+                  "nominal": "12.040",
+                  "lower": "-0.010",
+                  "upper": "0.010",
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 2
+                },
+                {
+                  "id": "t-b2",
+                  "symbol": "B2",
+                  "name": "右轴承",
+                  "nominal": "20.000",
+                  "lower": "-0.010",
+                  "upper": "0.010",
+                  "sign": -1,
+                  "sourceNote": "",
+                  "termRevision": 1
+                }
+              ],
+              "targetMin": "0.100",
+              "targetMax": "0.300",
+              "assumptions": "合成示例数据",
+              "relationRevision": 1
+            },
+            "result": {
+              "nominalQ": 1600,
+              "minQ": 1100,
+              "maxQ": 2100,
+              "lowerDeviationQ": -500,
+              "upperDeviationQ": 500,
+              "toleranceQ": 1000,
+              "status": "within",
+              "lowerMarginQ": 100,
+              "upperMarginQ": 900,
+              "contributions": [
+                {
+                  "termId": "t-h",
+                  "toleranceQ": 400
+                },
+                {
+                  "termId": "t-b1",
+                  "toleranceQ": 200
+                },
+                {
+                  "termId": "t-s",
+                  "toleranceQ": 200
+                },
+                {
+                  "termId": "t-b2",
+                  "toleranceQ": 200
+                }
+              ]
+            },
+            "review": {
+              "rulesVersion": "1.0.0",
+              "findings": [
+                {
+                  "ruleId": "INPUT_VALID",
+                  "ruleVersion": "1.0.0",
+                  "scope": "chain",
+                  "subject": {
+                    "kind": "chain",
+                    "id": "chain",
+                    "label": "当前尺寸链"
+                  },
+                  "status": "passed",
+                  "basis": "当前输入通过业务校验，共 4 个组成环。",
+                  "action": null,
+                  "severity": "blocking",
+                  "needsAction": false,
+                  "target": {
+                    "kind": "chain"
+                  }
+                },
+                {
+                  "ruleId": "CALC_VALID",
+                  "ruleVersion": "1.0.0",
+                  "scope": "chain",
+                  "subject": {
+                    "kind": "chain",
+                    "id": "chain",
+                    "label": "当前尺寸链"
+                  },
+                  "status": "passed",
+                  "basis": "已由计算引擎 0.1.0 完成一维极值法计算。",
+                  "action": null,
+                  "severity": "blocking",
+                  "needsAction": false,
+                  "target": {
+                    "kind": "chain"
+                  }
+                },
+                {
+                  "ruleId": "RELATION_CONFIRMED",
+                  "ruleVersion": "1.0.0",
+                  "scope": "chain",
+                  "subject": {
+                    "kind": "chain",
+                    "id": "chain",
+                    "label": "当前尺寸链"
+                  },
+                  "status": "needs-human",
+                  "basis": "尚无当前尺寸关系与作用方向的显式确认凭据。",
+                  "action": "核对尺寸关系与作用方向后，在结果卡显式确认。",
+                  "severity": "blocking",
+                  "needsAction": true,
+                  "target": {
+                    "kind": "relation"
+                  }
+                },
+                {
+                  "ruleId": "TARGET_WITHIN",
+                  "ruleVersion": "1.0.0",
+                  "scope": "chain",
+                  "subject": {
+                    "kind": "chain",
+                    "id": "chain",
+                    "label": "当前尺寸链"
+                  },
+                  "status": "passed",
+                  "basis": "结果区间 [0.110, 0.210] mm 落在目标区间 [0.100, 0.300] mm 内。",
+                  "action": null,
+                  "severity": "info",
+                  "needsAction": false,
+                  "target": {
+                    "kind": "target"
+                  }
+                },
+                {
+                  "ruleId": "SOURCE_PRESENT",
+                  "ruleVersion": "1.0.0",
+                  "scope": "term",
+                  "subject": {
+                    "kind": "term",
+                    "id": "t-h",
+                    "label": "组成环 H",
+                    "termId": "t-h"
+                  },
+                  "status": "unchecked",
+                  "basis": "该组成环没有任何来源绑定；不影响数学结果，但证据不完整。",
+                  "action": "为该环绑定来源区域，或说明为何不需要来源。",
+                  "severity": "warning",
+                  "needsAction": true,
+                  "target": {
+                    "kind": "term",
+                    "termId": "t-h"
+                  }
+                },
+                {
+                  "ruleId": "SOURCE_PRESENT",
+                  "ruleVersion": "1.0.0",
+                  "scope": "term",
+                  "subject": {
+                    "kind": "term",
+                    "id": "t-b1",
+                    "label": "组成环 B1",
+                    "termId": "t-b1"
+                  },
+                  "status": "unchecked",
+                  "basis": "该组成环没有任何来源绑定；不影响数学结果，但证据不完整。",
+                  "action": "为该环绑定来源区域，或说明为何不需要来源。",
+                  "severity": "warning",
+                  "needsAction": true,
+                  "target": {
+                    "kind": "term",
+                    "termId": "t-b1"
+                  }
+                },
+                {
+                  "ruleId": "SOURCE_PRESENT",
+                  "ruleVersion": "1.0.0",
+                  "scope": "term",
+                  "subject": {
+                    "kind": "term",
+                    "id": "t-s",
+                    "label": "组成环 S",
+                    "termId": "t-s"
+                  },
+                  "status": "passed",
+                  "basis": "已绑定 1 处来源区域。",
+                  "action": null,
+                  "severity": "warning",
+                  "needsAction": false,
+                  "target": {
+                    "kind": "term",
+                    "termId": "t-s"
+                  }
+                },
+                {
+                  "ruleId": "SOURCE_PRESENT",
+                  "ruleVersion": "1.0.0",
+                  "scope": "term",
+                  "subject": {
+                    "kind": "term",
+                    "id": "t-b2",
+                    "label": "组成环 B2",
+                    "termId": "t-b2"
+                  },
+                  "status": "unchecked",
+                  "basis": "该组成环没有任何来源绑定；不影响数学结果，但证据不完整。",
+                  "action": "为该环绑定来源区域，或说明为何不需要来源。",
+                  "severity": "warning",
+                  "needsAction": true,
+                  "target": {
+                    "kind": "term",
+                    "termId": "t-b2"
+                  }
+                },
+                {
+                  "ruleId": "SOURCE_AVAILABLE",
+                  "ruleVersion": "1.0.0",
+                  "scope": "binding",
+                  "subject": {
+                    "kind": "binding",
+                    "id": "bind-1",
+                    "label": "组成环 S · taskbook-TB-2026-1110.pdf 第 1 页 · taskbook-TB-2026-1110.pdf",
+                    "termId": "t-s",
+                    "bindingId": "bind-1",
+                    "documentId": "doc-1",
+                    "revisionId": "sr-1",
+                    "page": 1
+                  },
+                  "status": "passed",
+                  "basis": "版本「taskbook-TB-2026-1110.pdf」的附件可读取（2 页）。",
+                  "action": null,
+                  "severity": "blocking",
+                  "needsAction": false,
+                  "target": {
+                    "kind": "binding",
+                    "bindingId": "bind-1",
+                    "termId": "t-s",
+                    "documentId": "doc-1",
+                    "revisionId": "sr-1",
+                    "page": 1
+                  }
+                },
+                {
+                  "ruleId": "SOURCE_CURRENT",
+                  "ruleVersion": "1.0.0",
+                  "scope": "binding",
+                  "subject": {
+                    "kind": "binding",
+                    "id": "bind-1",
+                    "label": "组成环 S · taskbook-TB-2026-1110.pdf 第 1 页 · taskbook-TB-2026-1110.pdf",
+                    "termId": "t-s",
+                    "bindingId": "bind-1",
+                    "documentId": "doc-1",
+                    "revisionId": "sr-1",
+                    "page": 1
+                  },
+                  "status": "passed",
+                  "basis": "绑定指向文档「taskbook-TB-2026-1110.pdf」的当前最新版本 sr-1。",
+                  "action": null,
+                  "severity": "blocking",
+                  "needsAction": false,
+                  "target": {
+                    "kind": "binding",
+                    "bindingId": "bind-1",
+                    "termId": "t-s",
+                    "documentId": "doc-1",
+                    "revisionId": "sr-1",
+                    "page": 1
+                  }
+                },
+                {
+                  "ruleId": "SOURCE_VALUE_REVIEWED",
+                  "ruleVersion": "1.0.0",
+                  "scope": "binding",
+                  "subject": {
+                    "kind": "binding",
+                    "id": "bind-1",
+                    "label": "组成环 S · taskbook-TB-2026-1110.pdf 第 1 页 · taskbook-TB-2026-1110.pdf",
+                    "termId": "t-s",
+                    "bindingId": "bind-1",
+                    "documentId": "doc-1",
+                    "revisionId": "sr-1",
+                    "page": 1
+                  },
+                  "status": "needs-human",
+                  "basis": "该来源区域尚未与本环当前修订 2 显式核对。",
+                  "action": "对照来源区域核对本环数值后，标记“已核对”。",
+                  "severity": "warning",
+                  "needsAction": true,
+                  "target": {
+                    "kind": "binding",
+                    "bindingId": "bind-1",
+                    "termId": "t-s",
+                    "documentId": "doc-1",
+                    "revisionId": "sr-1",
+                    "page": 1
+                  }
+                }
+              ],
+              "calculation": {
+                "status": "within",
+                "label": "计算满足",
+                "satisfied": true
+              },
+              "reviewComplete": false,
+              "pending": [
+                {
+                  "ruleId": "RELATION_CONFIRMED",
+                  "ruleVersion": "1.0.0",
+                  "scope": "chain",
+                  "subject": {
+                    "kind": "chain",
+                    "id": "chain",
+                    "label": "当前尺寸链"
+                  },
+                  "status": "needs-human",
+                  "basis": "尚无当前尺寸关系与作用方向的显式确认凭据。",
+                  "action": "核对尺寸关系与作用方向后，在结果卡显式确认。",
+                  "severity": "blocking",
+                  "needsAction": true,
+                  "target": {
+                    "kind": "relation"
+                  }
+                },
+                {
+                  "ruleId": "SOURCE_VALUE_REVIEWED",
+                  "ruleVersion": "1.0.0",
+                  "scope": "binding",
+                  "subject": {
+                    "kind": "binding",
+                    "id": "bind-1",
+                    "label": "组成环 S · taskbook-TB-2026-1110.pdf 第 1 页 · taskbook-TB-2026-1110.pdf",
+                    "termId": "t-s",
+                    "bindingId": "bind-1",
+                    "documentId": "doc-1",
+                    "revisionId": "sr-1",
+                    "page": 1
+                  },
+                  "status": "needs-human",
+                  "basis": "该来源区域尚未与本环当前修订 2 显式核对。",
+                  "action": "对照来源区域核对本环数值后，标记“已核对”。",
+                  "severity": "warning",
+                  "needsAction": true,
+                  "target": {
+                    "kind": "binding",
+                    "bindingId": "bind-1",
+                    "termId": "t-s",
+                    "documentId": "doc-1",
+                    "revisionId": "sr-1",
+                    "page": 1
+                  }
+                },
+                {
+                  "ruleId": "SOURCE_PRESENT",
+                  "ruleVersion": "1.0.0",
+                  "scope": "term",
+                  "subject": {
+                    "kind": "term",
+                    "id": "t-b1",
+                    "label": "组成环 B1",
+                    "termId": "t-b1"
+                  },
+                  "status": "unchecked",
+                  "basis": "该组成环没有任何来源绑定；不影响数学结果，但证据不完整。",
+                  "action": "为该环绑定来源区域，或说明为何不需要来源。",
+                  "severity": "warning",
+                  "needsAction": true,
+                  "target": {
+                    "kind": "term",
+                    "termId": "t-b1"
+                  }
+                },
+                {
+                  "ruleId": "SOURCE_PRESENT",
+                  "ruleVersion": "1.0.0",
+                  "scope": "term",
+                  "subject": {
+                    "kind": "term",
+                    "id": "t-b2",
+                    "label": "组成环 B2",
+                    "termId": "t-b2"
+                  },
+                  "status": "unchecked",
+                  "basis": "该组成环没有任何来源绑定；不影响数学结果，但证据不完整。",
+                  "action": "为该环绑定来源区域，或说明为何不需要来源。",
+                  "severity": "warning",
+                  "needsAction": true,
+                  "target": {
+                    "kind": "term",
+                    "termId": "t-b2"
+                  }
+                },
+                {
+                  "ruleId": "SOURCE_PRESENT",
+                  "ruleVersion": "1.0.0",
+                  "scope": "term",
+                  "subject": {
+                    "kind": "term",
+                    "id": "t-h",
+                    "label": "组成环 H",
+                    "termId": "t-h"
+                  },
+                  "status": "unchecked",
+                  "basis": "该组成环没有任何来源绑定；不影响数学结果，但证据不完整。",
+                  "action": "为该环绑定来源区域，或说明为何不需要来源。",
+                  "severity": "warning",
+                  "needsAction": true,
+                  "target": {
+                    "kind": "term",
+                    "termId": "t-h"
+                  }
+                }
+              ],
+              "canCreateReport": true,
+              "hasAnyBinding": true,
+              "byStatus": {
+                "passed": 6,
+                "failed": 0,
+                "unchecked": 3,
+                "needs-human": 2,
+                "not-applicable": 0
+              },
+              "groups": [
+                {
+                  "severity": "blocking",
+                  "label": "必须处理",
+                  "findings": [
+                    {
+                      "ruleId": "RELATION_CONFIRMED",
+                      "ruleVersion": "1.0.0",
+                      "scope": "chain",
+                      "subject": {
+                        "kind": "chain",
+                        "id": "chain",
+                        "label": "当前尺寸链"
+                      },
+                      "status": "needs-human",
+                      "basis": "尚无当前尺寸关系与作用方向的显式确认凭据。",
+                      "action": "核对尺寸关系与作用方向后，在结果卡显式确认。",
+                      "severity": "blocking",
+                      "needsAction": true,
+                      "target": {
+                        "kind": "relation"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "severity": "warning",
+                  "label": "建议处理",
+                  "findings": [
+                    {
+                      "ruleId": "SOURCE_VALUE_REVIEWED",
+                      "ruleVersion": "1.0.0",
+                      "scope": "binding",
+                      "subject": {
+                        "kind": "binding",
+                        "id": "bind-1",
+                        "label": "组成环 S · taskbook-TB-2026-1110.pdf 第 1 页 · taskbook-TB-2026-1110.pdf",
+                        "termId": "t-s",
+                        "bindingId": "bind-1",
+                        "documentId": "doc-1",
+                        "revisionId": "sr-1",
+                        "page": 1
+                      },
+                      "status": "needs-human",
+                      "basis": "该来源区域尚未与本环当前修订 2 显式核对。",
+                      "action": "对照来源区域核对本环数值后，标记“已核对”。",
+                      "severity": "warning",
+                      "needsAction": true,
+                      "target": {
+                        "kind": "binding",
+                        "bindingId": "bind-1",
+                        "termId": "t-s",
+                        "documentId": "doc-1",
+                        "revisionId": "sr-1",
+                        "page": 1
+                      }
+                    },
+                    {
+                      "ruleId": "SOURCE_PRESENT",
+                      "ruleVersion": "1.0.0",
+                      "scope": "term",
+                      "subject": {
+                        "kind": "term",
+                        "id": "t-b1",
+                        "label": "组成环 B1",
+                        "termId": "t-b1"
+                      },
+                      "status": "unchecked",
+                      "basis": "该组成环没有任何来源绑定；不影响数学结果，但证据不完整。",
+                      "action": "为该环绑定来源区域，或说明为何不需要来源。",
+                      "severity": "warning",
+                      "needsAction": true,
+                      "target": {
+                        "kind": "term",
+                        "termId": "t-b1"
+                      }
+                    },
+                    {
+                      "ruleId": "SOURCE_PRESENT",
+                      "ruleVersion": "1.0.0",
+                      "scope": "term",
+                      "subject": {
+                        "kind": "term",
+                        "id": "t-b2",
+                        "label": "组成环 B2",
+                        "termId": "t-b2"
+                      },
+                      "status": "unchecked",
+                      "basis": "该组成环没有任何来源绑定；不影响数学结果，但证据不完整。",
+                      "action": "为该环绑定来源区域，或说明为何不需要来源。",
+                      "severity": "warning",
+                      "needsAction": true,
+                      "target": {
+                        "kind": "term",
+                        "termId": "t-b2"
+                      }
+                    },
+                    {
+                      "ruleId": "SOURCE_PRESENT",
+                      "ruleVersion": "1.0.0",
+                      "scope": "term",
+                      "subject": {
+                        "kind": "term",
+                        "id": "t-h",
+                        "label": "组成环 H",
+                        "termId": "t-h"
+                      },
+                      "status": "unchecked",
+                      "basis": "该组成环没有任何来源绑定；不影响数学结果，但证据不完整。",
+                      "action": "为该环绑定来源区域，或说明为何不需要来源。",
+                      "severity": "warning",
+                      "needsAction": true,
+                      "target": {
+                        "kind": "term",
+                        "termId": "t-h"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "sourceManifest": {
+              "documents": [
+                {
+                  "id": "doc-1",
+                  "projectId": "project-a",
+                  "title": "taskbook-TB-2026-1110.pdf",
+                  "latestRevisionId": "sr-1"
+                }
+              ],
+              "revisions": [
+                {
+                  "id": "sr-1",
+                  "projectId": "project-a",
+                  "documentId": "doc-1",
+                  "fileName": "taskbook-TB-2026-1110.pdf",
+                  "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                  "byteSize": 42223,
+                  "pageCount": 2,
+                  "createdAt": "2026-11-09T08:00:00.000Z",
+                  "blobKey": "blob-1"
+                }
+              ],
+              "bindings": [
+                {
+                  "bindingId": "bind-1",
+                  "termId": "t-s",
+                  "termLabel": "S · 隔套",
+                  "termRevision": 2,
+                  "documentId": "doc-1",
+                  "documentTitle": "taskbook-TB-2026-1110.pdf",
+                  "revisionId": "sr-1",
+                  "fileName": "taskbook-TB-2026-1110.pdf",
+                  "revisionSha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff",
+                  "revisionByteSize": 42223,
+                  "revisionPageCount": 2,
+                  "page": 1,
+                  "rectPdf": [
+                    10,
+                    10,
+                    110,
+                    30
+                  ],
+                  "pageBoxPdf": [
+                    0,
+                    0,
+                    595,
+                    842
+                  ],
+                  "note": "",
+                  "reviewedTermRevision": null,
+                  "reviewedAt": null,
+                  "historicalAcceptance": null,
+                  "blobAvailable": true,
+                  "status": {
+                    "available": "passed",
+                    "current": "passed",
+                    "valueReviewed": "needs-human"
+                  }
+                }
+              ],
+              "unboundTermIds": [
+                "t-h",
+                "t-b1",
+                "t-b2"
+              ],
+              "availability": "complete"
+            },
+            "baseline": null,
+            "comparison": null,
+            "status": "pending",
+            "pendingCount": 5
+          }
+        ],
+        "importSnapshots": [],
+        "migrationBackups": [],
+        "legacyArchive": null,
+        "fileRevisions": [
+          {
+            "revisionId": "rev-a1",
+            "parentId": null,
+            "createdAt": "2026-11-09T08:00:00.000Z",
+            "reason": "初始版本",
+            "project": {
+              "id": "project-a",
+              "name": "隔套间隙演示",
+              "currentRevisionId": "rev-a1",
+              "dimensionChain": {
+                "terms": [
+                  {
+                    "id": "t-h",
+                    "symbol": "H",
+                    "name": "总长",
+                    "nominalQ": 522000,
+                    "lowerDeviationQ": -200,
+                    "upperDeviationQ": 200,
+                    "sign": 1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  },
+                  {
+                    "id": "t-b1",
+                    "symbol": "B1",
+                    "name": "左轴承",
+                    "nominalQ": 200000,
+                    "lowerDeviationQ": -100,
+                    "upperDeviationQ": 100,
+                    "sign": -1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  },
+                  {
+                    "id": "t-s",
+                    "symbol": "S",
+                    "name": "隔套",
+                    "nominalQ": 120000,
+                    "lowerDeviationQ": -100,
+                    "upperDeviationQ": 100,
+                    "sign": -1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  },
+                  {
+                    "id": "t-b2",
+                    "symbol": "B2",
+                    "name": "右轴承",
+                    "nominalQ": 200000,
+                    "lowerDeviationQ": -100,
+                    "upperDeviationQ": 100,
+                    "sign": -1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  }
+                ],
+                "target": {
+                  "minQ": 1000,
+                  "maxQ": 3000
+                },
+                "assumptions": "合成示例数据"
+              },
+              "engineVersion": "0.1.0",
+              "createdAt": "2026-11-09T08:00:00.000Z",
+              "updatedAt": "2026-11-09T08:00:00.000Z",
+              "relationRevision": 1,
+              "relationReview": null,
+              "migration": null,
+              "baseline": null,
+              "schemaVersion": 8,
+              "sourceFormatVersion": 2,
+              "parts": [
+                {
+                  "partId": "builtin:shaft-demo:spacer",
+                  "kind": "builtin-demo",
+                  "name": "隔套",
+                  "currentModelRevisionId": null,
+                  "origin": "builtin"
+                }
+              ],
+              "parameters": [
+                {
+                  "parameterId": "param:spacer:inner-diameter",
+                  "partId": "builtin:shaft-demo:spacer",
+                  "key": "innerDiameter",
+                  "valueQ": 200000,
+                  "inputDecimals": 2,
+                  "reviewStatus": "draft",
+                  "parameterRevision": 1
+                },
+                {
+                  "parameterId": "param:spacer:outer-diameter",
+                  "partId": "builtin:shaft-demo:spacer",
+                  "key": "outerDiameter",
+                  "valueQ": 320000,
+                  "inputDecimals": 2,
+                  "reviewStatus": "draft",
+                  "parameterRevision": 1
+                },
+                {
+                  "parameterId": "param:spacer:length",
+                  "partId": "builtin:shaft-demo:spacer",
+                  "key": "length",
+                  "valueQ": 120000,
+                  "inputDecimals": 2,
+                  "reviewStatus": "draft",
+                  "parameterRevision": 1
+                }
+              ],
+              "modelRevisions": [],
+              "dimensionLinks": [
+                {
+                  "kind": "parameter-binding",
+                  "bindingId": "binding:spacer-length",
+                  "termId": "t-s",
+                  "partId": "builtin:shaft-demo:spacer",
+                  "parameterId": "param:spacer:length",
+                  "syncField": "nominal",
+                  "createdAt": "2026-11-09T08:00:00.000Z"
+                }
+              ],
+              "drawings": [
+                {
+                  "drawingId": "drawing:project-a:spacer",
+                  "drawingDataVersion": 1,
+                  "templateId": "spacer-a4-landscape",
+                  "templateVersion": 1,
+                  "partId": "builtin:shaft-demo:spacer",
+                  "revisionId": "rev-a1",
+                  "parameterIds": [
+                    "param:spacer:inner-diameter",
+                    "param:spacer:outer-diameter",
+                    "param:spacer:length"
+                  ],
+                  "paper": {
+                    "format": "A4",
+                    "orientation": "landscape",
+                    "widthMm": 297,
+                    "heightMm": 210
+                  },
+                  "scale": {
+                    "numerator": 1,
+                    "denominator": 1
+                  },
+                  "frameFields": {
+                    "partName": "隔套",
+                    "drawingNumber": "",
+                    "version": "",
+                    "material": "",
+                    "tolerance": "",
+                    "surface": "",
+                    "drafter": "",
+                    "date": ""
+                  },
+                  "status": "pending-review-draft",
+                  "dataFingerprint": "3535c5f21e31c7b0d3e0240098216a4095943f0e64e73eee89cb5d74935be0e5"
+                }
+              ],
+              "requirementRevisions": [],
+              "activeRequirementRevisionId": null,
+              "currentRequirementCheck": null,
+              "extractionDrafts": []
+            }
+          },
+          {
+            "revisionId": "rev-a-<generated>",
+            "parentId": "rev-a1",
+            "createdAt": "2026-11-13T10:56:38.235Z",
+            "reason": "Agent 授权提交",
+            "project": {
+              "id": "project-a",
+              "name": "隔套 · 阶段3 侧栏走查",
+              "currentRevisionId": "rev-a-<generated>",
+              "dimensionChain": {
+                "terms": [
+                  {
+                    "id": "t-h",
+                    "symbol": "H",
+                    "name": "总长",
+                    "nominalQ": 522000,
+                    "lowerDeviationQ": -200,
+                    "upperDeviationQ": 200,
+                    "sign": 1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  },
+                  {
+                    "id": "t-b1",
+                    "symbol": "B1",
+                    "name": "左轴承",
+                    "nominalQ": 200000,
+                    "lowerDeviationQ": -100,
+                    "upperDeviationQ": 100,
+                    "sign": -1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  },
+                  {
+                    "id": "t-s",
+                    "symbol": "S",
+                    "name": "隔套",
+                    "nominalQ": 120400,
+                    "lowerDeviationQ": -100,
+                    "upperDeviationQ": 100,
+                    "sign": -1,
+                    "sourceNote": "",
+                    "termRevision": 2
+                  },
+                  {
+                    "id": "t-b2",
+                    "symbol": "B2",
+                    "name": "右轴承",
+                    "nominalQ": 200000,
+                    "lowerDeviationQ": -100,
+                    "upperDeviationQ": 100,
+                    "sign": -1,
+                    "sourceNote": "",
+                    "termRevision": 1
+                  }
+                ],
+                "target": {
+                  "minQ": 1000,
+                  "maxQ": 3000
+                },
+                "assumptions": "合成示例数据"
+              },
+              "engineVersion": "0.1.0",
+              "createdAt": "2026-11-09T08:00:00.000Z",
+              "updatedAt": "2026-11-13T10:56:38.235Z",
+              "relationRevision": 1,
+              "relationReview": null,
+              "migration": null,
+              "baseline": null,
+              "schemaVersion": 10,
+              "sourceFormatVersion": 2,
+              "parts": [
+                {
+                  "partId": "builtin:shaft-demo:spacer",
+                  "kind": "builtin-demo",
+                  "name": "隔套",
+                  "currentModelRevisionId": null,
+                  "origin": "builtin"
+                }
+              ],
+              "parameters": [
+                {
+                  "parameterId": "param:spacer:inner-diameter",
+                  "partId": "builtin:shaft-demo:spacer",
+                  "key": "innerDiameter",
+                  "valueQ": 200000,
+                  "inputDecimals": 2,
+                  "reviewStatus": "draft",
+                  "parameterRevision": 1
+                },
+                {
+                  "parameterId": "param:spacer:outer-diameter",
+                  "partId": "builtin:shaft-demo:spacer",
+                  "key": "outerDiameter",
+                  "valueQ": 320000,
+                  "inputDecimals": 2,
+                  "reviewStatus": "draft",
+                  "parameterRevision": 1
+                },
+                {
+                  "parameterId": "param:spacer:length",
+                  "partId": "builtin:shaft-demo:spacer",
+                  "key": "length",
+                  "valueQ": 120400,
+                  "inputDecimals": 2,
+                  "reviewStatus": "draft",
+                  "parameterRevision": 2
+                }
+              ],
+              "modelRevisions": [],
+              "dimensionLinks": [
+                {
+                  "kind": "parameter-binding",
+                  "bindingId": "binding:spacer-length",
+                  "termId": "t-s",
+                  "partId": "builtin:shaft-demo:spacer",
+                  "parameterId": "param:spacer:length",
+                  "syncField": "nominal",
+                  "createdAt": "2026-11-09T08:00:00.000Z"
+                }
+              ],
+              "drawings": [
+                {
+                  "drawingId": "drawing:project-a:spacer",
+                  "drawingDataVersion": 1,
+                  "templateId": "spacer-a4-landscape",
+                  "templateVersion": 1,
+                  "partId": "builtin:shaft-demo:spacer",
+                  "revisionId": "rev-a-<generated>",
+                  "parameterIds": [
+                    "param:spacer:inner-diameter",
+                    "param:spacer:outer-diameter",
+                    "param:spacer:length"
+                  ],
+                  "paper": {
+                    "format": "A4",
+                    "orientation": "landscape",
+                    "widthMm": 297,
+                    "heightMm": 210
+                  },
+                  "scale": {
+                    "numerator": 1,
+                    "denominator": 1
+                  },
+                  "frameFields": {
+                    "partName": "隔套",
+                    "drawingNumber": "",
+                    "version": "草稿 · 第 2 版",
+                    "material": "",
+                    "tolerance": "",
+                    "surface": "",
+                    "drafter": "",
+                    "date": ""
+                  },
+                  "status": "pending-review-draft",
+                  "dataFingerprint": "442189ea3ae2a13f098a9d6c0aa57b1a6d6f8c95d0d1317d6eb7d9d170624152"
+                }
+              ],
+              "requirementRevisions": [],
+              "activeRequirementRevisionId": null,
+              "currentRequirementCheck": null,
+              "extractionDrafts": [],
+              "sourceKind": "pdf",
+              "actorId": null,
+              "sessionSeq": 0,
+              "sessionLabel": null,
+              "attestations": []
+            },
+            "evidence": {
+              "analysisSnapshotId": "snapshot-a-<generated>",
+              "eventIds": [
+                "parameter_changed:rev-a-<generated>:param:spacer:length",
+                "parameter_binding_confirmed:rev-a-<generated>:binding:spacer-length",
+                "project_revision_committed:rev-a-<generated>:rev-a-<generated>"
+              ],
+              "sourceManifest": {
+                "documents": [
+                  {
+                    "documentId": "doc-1",
+                    "latestRevisionId": "sr-1"
+                  }
+                ],
+                "revisions": [
+                  {
+                    "revisionId": "sr-1",
+                    "documentId": "doc-1",
+                    "sha256": "6b6b02ebbe796168447ec18b698fa12db6a93eb7f5dd1ec5b9a9473879b6f0ff"
+                  }
+                ],
+                "bindings": [
+                  {
+                    "bindingId": "bind-1",
+                    "revisionId": "sr-1",
+                    "reviewedTermRevision": null
+                  }
+                ],
+                "missingBlobKeys": []
+              },
+              "restoredFromRevisionId": null
+            }
+          }
+        ],
+        "missingAttachments": [],
+        "snapshotReferences": [
+          {
+            "snapshotId": "snap-1",
+            "revisionIds": [
+              "sr-1"
+            ],
+            "blobKeys": [
+              "blob-1"
+            ]
+          }
+        ],
+        "manifestMeta": {
+          "createdAt": "2026-11-09T08:00:00.000Z",
+          "writer": {
+            "appVersion": "0.0.0-test",
+            "electronVersion": "45.2.3",
+            "engineVersion": "0.1.0"
+          },
+          "migration": null
+        }
+      },
+      "path": "evidence.cunlian",
+      "fingerprint": "f1d6e337f27e691da05b9cae3f16be5e3a98e8f8de37d9b5dda06f616bd8fd90",
+      "recovery": "none"
+    }
+  },
+  "leaks": {
+    "topbar": false,
+    "formalVersion": false,
+    "receipt": false
+  },
+  "expectedVersionLabel": "第 2 版",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

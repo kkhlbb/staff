@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChainDiagram } from '../components/ChainDiagram'
+import { uiDiagnosticText } from '../components/uiIdentity'
 import { ChainExpression } from '../components/ChainExpression'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DimensionTable } from '../components/DimensionTable'
@@ -482,7 +483,7 @@ function WorkspaceEditor({
 
       {snapshotMessage !== null ? (
         <p className="workspace__table-import-message" role="status">
-          {snapshotMessage}
+          {uiDiagnosticText(snapshotMessage)}
         </p>
       ) : null}
 
@@ -797,9 +798,8 @@ export function Workspace({
             <div>
               <h1 className="workspace__error-title">项目不存在</h1>
               <p>
-                发生了什么：找不到项目
-                <span className="workspace__mono">{projectId}</span>
-                （{bootstrap.error.message}）。它可能已被删除，或链接中的项目 ID
+                发生了什么：找不到所选项目。
+                它可能已被删除，或链接中的项目位置
                 不正确。
               </p>
               <p>接下来：返回项目列表，重新打开或新建一个项目。</p>

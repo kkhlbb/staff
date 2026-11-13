@@ -55,7 +55,7 @@ function buildRows(
 
   const rows = result.contributions.map((contribution, originalIndex) => ({
     ...contribution,
-    symbol: symbolById.get(contribution.termId) ?? contribution.termId,
+    symbol: symbolById.get(contribution.termId) ?? '未命名组成环',
     ratio: ratioByTermId.get(contribution.termId) ?? null,
     originalIndex,
   }))

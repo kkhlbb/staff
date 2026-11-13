@@ -251,7 +251,7 @@ describe('SourcePanel：导入、框选、刷新后打开确切 revision', () =>
       expect(element).not.toBeNull()
       return element as HTMLElement
     })
-    expect(fileLine.textContent).toContain(revisionA.id.slice(0, 8))
+    expect(fileLine.textContent).toContain(revisionA.sha256.slice(0, 12))
     expect(fileLine.textContent).not.toContain(revisionB.id.slice(0, 8))
     expect(screen.getByLabelText('页码跳转')).toHaveValue(2)
     expect(screen.getAllByText(/第 2 页孔公差框/).length).toBeGreaterThan(0)

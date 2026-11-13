@@ -419,6 +419,7 @@ describe('PdfViewer：可见错误与确切版本提示', () => {
     // 工具栏和确切版本说明仍然可见，方便用户判断打开的是哪个版本。
     expect(screen.getByLabelText('页码跳转')).toHaveValue(2)
     expect(screen.getByText(/打开的是这个确切版本/)).toBeInTheDocument()
-    expect(screen.getByText(/rev-exac/)).toBeInTheDocument()
+    expect(screen.getByText(/未命名版本/)).toBeInTheDocument()
+    expect(screen.queryByText(/rev-exac/)).not.toBeInTheDocument()
   })
 })

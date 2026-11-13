@@ -13,6 +13,7 @@
  * - 其余草稿折叠成一行，可展开查看候选（只读）或显式删除；删除必须二次确认。
  */
 import { Fragment, useMemo, useState } from 'react'
+import { uiDiagnosticText, uiSourceVersionLabel } from './uiIdentity'
 import type {
   ExtractionAttestUnitsValue,
   ExtractionBatchValue,
@@ -310,11 +311,11 @@ export function ExtractionReviewPanel({
     }
     setMessage(
       action === 'confirm'
-        ? `已确认候选 ${candidate.candidateId}（仅记录决定，不自动写入尺寸链/条款）。`
+        ? '已确认此候选（仅记录决定，不自动写入尺寸链/条款）。'
         : action === 'reject'
-          ? `已拒绝候选 ${candidate.candidateId}；不会复活，也不进入项目。`
+          ? '已拒绝此候选；不会复活，也不进入项目。'
           : action === 'revoke'
-            ? `已撤销候选 ${candidate.candidateId} 的确认；该候选回到待确认，同一符号其它处恢复可选。`
+            ? '已撤销此候选的确认；该候选回到待确认，同一符号其它处恢复可选。'
             : `已保存人工修改；该候选回到待确认，需要重新确认。`,
     )
     setRejecting(null)
@@ -460,7 +461,7 @@ export function ExtractionReviewPanel({
       })
       setSelected({})
       setMessage(
-        `已删除旧草稿 ${target.draftId}（${target.extractorVersion}）：只删了这一份草稿，来源 PDF、条款、绑定与图纸未改动；保存项目后写入文件。`,
+        `已删除旧草稿（${target.extractorVersion}）：只删了这一份草稿，来源 PDF、条款、绑定与图纸未改动；保存项目后写入文件。`,
       )
     } finally {
       setDeleting(null)
@@ -501,7 +502,7 @@ export function ExtractionReviewPanel({
         <div className="extraction-review__candidate-head">
           <input
             type="checkbox"
-            aria-label={`选择候选 ${candidate.candidateId}`}
+            aria-label={`选择候选 ${candidate.kind === 'ring' ? candidate.data.symbol : candidate.kind}`}
             checked={selected[candidate.candidateId] === true}
             disabled={readOnly || candidate.status === 'confirmed' || candidate.status === 'rejected'}
             onChange={(event) => {
@@ -540,7 +541,7 @@ export function ExtractionReviewPanel({
           <div key={index} className="extraction-review__warning" data-testid={`agent-read-source-${candidate.candidateId}`}>
             <strong>读数未核对（来源：{readingSourceLabel(reading)}）</strong>
             <p>读数说明（原话）：{reading.statement}</p>
-            <p>{reading.source.kind === 'pdf-page' ? `来源版本：${reading.source.revisionId}` : `图片：${reading.source.imageId}`} · SHA-256 {reading.source.sha256}</p>
+            <p>{reading.source.kind === 'pdf-page' ? `来源 PDF · 第 ${reading.source.page} 页` : '来源图片'} · 校验信息保存在项目文件中</p>
           </div>
         ))}
         {(readings.length === 0 || firstEvidence !== undefined) && <p className="extraction-review__evidence">
@@ -562,7 +563,7 @@ export function ExtractionReviewPanel({
             data-testid={`unit-source-${candidate.candidateId}`}
           >
             单位来源：用户声明 · 原话「{unitAttestation.statement}」· 第 {unitAttestation.sessionSeq} 次输入
-            （{unitAttestation.actorId} · {unitAttestation.turnId ?? '无轮次'}）
+            （{unitAttestation.actorId} · 用户声明）
           </p>
         )}
         {candidate.reasonCodes.length > 0 && (
@@ -775,7 +776,7 @@ export function ExtractionReviewPanel({
             >
               {revisions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.fileName} · {item.id} · {item.pageCount} 页
+                  {item.fileName} · {uiSourceVersionLabel(revisions, item.id)} · {item.pageCount} 页
                 </option>
               ))}
             </select>
@@ -820,14 +821,14 @@ export function ExtractionReviewPanel({
           </span>
           {outdated && (
             <p role="alert" className="extraction-review__warning">
-              当前选择的是旧版本（latest 为 {sourceDocument?.latestRevisionId}）。提取只读这个确切版本，不会自动改用 latest。
+              当前选择的是旧版本（最新为 {uiSourceVersionLabel(revisions, sourceDocument?.latestRevisionId)}）。提取只读这个确切版本，不会自动改用最新版。
             </p>
           )}
         </section>
       )}
 
-      {message !== '' && <p role="status" className="extraction-review__message">{message}</p>}
-      {error !== '' && <p role="alert" className="extraction-review__error">{error}</p>}
+      {message !== '' && <p role="status" className="extraction-review__message">{uiDiagnosticText(message)}</p>}
+      {error !== '' && <p role="alert" className="extraction-review__error">{uiDiagnosticText(error)}</p>}
 
       {scopes.length > 0 && selectedScope !== null && draft !== null && (
         <section aria-label="提取草稿">
@@ -840,19 +841,19 @@ export function ExtractionReviewPanel({
                   aria-pressed={scope.key === selectedScope.key}
                   onClick={() => setDraftId(scope.current.draftId)}
                 >
-                  草稿 {scope.current.draftId.slice(0, 14)} · {extractorVersionLabel(scope.current.extractorVersion)} · 第 {scope.current.pageRange.from}–{scope.current.pageRange.to} 页
+                  草稿 · {extractorVersionLabel(scope.current.extractorVersion)} · 第 {scope.current.pageRange.from}–{scope.current.pageRange.to} 页
                 </button>
               ))}
             </div>
           )}
           <p className="extraction-review__current" data-testid="extraction-current-draft">
-            当前显示：<code>{draft.extractorVersion}</code> · 草稿 <code>{draft.draftId}</code> · 第 {draft.pageRange.from}–{draft.pageRange.to} 页
+            当前显示：<code>{draft.extractorVersion}</code> · 提取草稿 · 第 {draft.pageRange.from}–{draft.pageRange.to} 页
             {selectedScope.superseded.length > 0
               ? `（该范围另有 ${selectedScope.superseded.length} 份旧草稿已折叠，只读）`
               : ''}
           </p>
           <p className="extraction-review__meta">
-            确切 PDF 版本 <code>{draft.sourceIdentity.revisionId}</code> · SHA-256{' '}
+            确切 PDF 版本 <span>{uiSourceVersionLabel(revisions, draft.sourceIdentity.revisionId)}</span> · SHA-256{' '}
             <code>{draft.sourceIdentity.sha256.slice(0, 12)}…</code> · 页范围 {draft.pageRange.from}–{draft.pageRange.to}
           </p>
           <p className="extraction-review__counts">
@@ -863,7 +864,7 @@ export function ExtractionReviewPanel({
             <ul className="extraction-review__issues" aria-label="提取问题">
               {draft.issues.map((issue) => (
                 <li key={issue.issueId} data-severity={issue.severity}>
-                  {issue.code}：{issue.message}
+                  {issue.code}：{uiDiagnosticText(issue.message)}
                   {issue.page === null ? '' : `（第 ${issue.page} 页）`}
                 </li>
               ))}
@@ -947,7 +948,7 @@ export function ExtractionReviewPanel({
                   {unitBatches.map((batch) => (
                     <div key={batch.batchId} className="extraction-review__unit-batch">
                       <span>
-                        补单位批次 {batch.batchId.slice(0, 18)}… · {batch.candidateIds.length} 条 · 单位来源：
+                        补单位批次 · {batch.candidateIds.length} 条 · 单位来源：
                         用户声明 · 声明「{batch.statement}」
                       </span>
                       {actions.onRevokeUnits !== undefined && (
@@ -1088,7 +1089,7 @@ export function ExtractionReviewPanel({
                     {expanded && (
                       <ul
                         className="extraction-review__candidates"
-                        aria-label={`旧草稿候选列表 ${old.draftId}`}
+                        aria-label={`旧草稿候选列表 ${old.extractorVersion}`}
                       >
                         {old.candidates.map((candidate) => renderCandidate(candidate, old, readOnlyReason))}
                       </ul>
@@ -1104,7 +1105,7 @@ export function ExtractionReviewPanel({
       {locate !== null && (
         <section aria-label="PDF 选区定位" className="extraction-review__locate">
           <p data-testid="extraction-locate-summary">
-            已定位 {locate.label} · 来源 PDF {locate.revisionId} 第 {locate.page} 页 · 选区 PDF 点 {formatRect(locate.rectPdf)}
+            已定位 {uiDiagnosticText(locate.label)} · 来源 PDF {uiSourceVersionLabel(revisions, locate.revisionId)} 第 {locate.page} 页 · 选区 PDF 点 {formatRect(locate.rectPdf)}
           </p>
           {locateRevision !== null && readBytes !== undefined ? (
             <PdfViewer

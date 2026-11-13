@@ -24,6 +24,7 @@ import {
   listSourceRevisions,
 } from '../sources/revisions'
 import type { SourceDocument, SourceRevision } from '../sources/types'
+import { uiDiagnosticText, uiSourceVersionLabel } from './uiIdentity'
 import { useDatabaseStaleVersion } from '../storage/databaseStale'
 import type { TermDraft } from '../workspace/draft'
 import { PdfViewer, type LoadRevisionBytes, type RenderPdfPage, type SaveBindingInput } from './PdfViewer'
@@ -72,7 +73,7 @@ function termLabel(term: TermDraft | undefined): string {
   if (term === undefined) {
     return '未选择组成环'
   }
-  return term.symbol.trim() || term.name.trim() || term.id
+  return term.symbol.trim() || term.name.trim() || '未命名组成环'
 }
 
 export function SourcePanel({
@@ -431,7 +432,7 @@ export function SourcePanel({
 
     setImportMessage(
       `已导入 ${imported.value.revision.fileName}，${imported.value.revision.pageCount} 页；` +
-        `生成不可变版本 ${imported.value.revision.id}（SHA-256 ${imported.value.revision.sha256.slice(0, 12)}…）。`,
+        '已生成不可变来源版本，可在文件与版本列表查看。',
     )
     setActiveRevisionId(imported.value.revision.id)
     setPage(1)
@@ -568,7 +569,7 @@ export function SourcePanel({
 
       {importError !== null ? (
         <p className="source-panel__error" role="alert">
-          导入失败：{importError}。现有版本指针和绑定未改变。
+          导入失败：{uiDiagnosticText(importError)}。现有版本指针和绑定未改变。
         </p>
       ) : null}
       {importMessage !== null ? (
@@ -583,7 +584,7 @@ export function SourcePanel({
       ) : null}
       {loadError !== null ? (
         <div className="source-panel__error" role="alert">
-          <p>读取来源列表失败：{loadError}</p>
+          <p>读取来源列表失败：{uiDiagnosticText(loadError)}</p>
           <button type="button" onClick={reload}>
             重新读取
           </button>
@@ -610,7 +611,7 @@ export function SourcePanel({
       ) : null}
       {editError !== null ? (
         <p className="source-panel__error" role="alert">
-          编辑绑定失败：{editError}。现有绑定与数值未改变。
+          编辑绑定失败：{uiDiagnosticText(editError)}。现有绑定与数值未改变。
         </p>
       ) : null}
 
@@ -773,7 +774,7 @@ export function SourcePanel({
                         <p>
                           接受时间：{formatDateTime(binding.historicalAcceptance.acceptedAt)}
                           ；接受时文档最新版本{' '}
-                          {binding.historicalAcceptance.latestRevisionId.slice(0, 8)}…
+                          {uiSourceVersionLabel(revisions, binding.historicalAcceptance.latestRevisionId)}
                         </p>
                       </div>
                     )}
@@ -853,7 +854,7 @@ export function SourcePanel({
                         </label>
                         {acceptError === null ? null : (
                           <p className="source-panel__error" role="alert">
-                            {acceptError}
+                            {uiDiagnosticText(acceptError)}
                           </p>
                         )}
                         <div className="source-panel__binding-actions">
@@ -931,7 +932,7 @@ export function SourcePanel({
                       )}
                     </div>
                     <span className="source-panel__binding-meta">
-                      版本 {binding.revisionId.slice(0, 8)}… · 区域{' '}
+                      {uiSourceVersionLabel(revisions, binding.revisionId)} · 区域{' '}
                       {binding.rectPdf.map((value) => value.toFixed(1)).join(', ')} PDF 点
                     </span>
                   </li>

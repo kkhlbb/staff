@@ -10,6 +10,7 @@ import path from 'node:path'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { DxfViewer } from './DxfViewer'
+import { expectNoUiInternalIds } from '../test/uiIdGuard'
 import { sceneToClient } from '../dxf-view/scene'
 import { USER_INPUT_BASIS } from '../drawing/types'
 
@@ -87,6 +88,7 @@ describe('DXF 看图组件（只读）', () => {
     )
     expect(screen.getByText(SAMPLE_2000_1X2)).toBeInTheDocument()
     expect(screen.getByText('DXF 2000')).toBeInTheDocument()
+    expectNoUiInternalIds(container)
     expect(screen.getByText(/编码 GBK（ANSI_936）/)).toBeInTheDocument()
     expect(screen.getByText('单位 mm（$INSUNITS=4）')).toBeInTheDocument()
     const layerBoxes = screen.getAllByRole('checkbox')

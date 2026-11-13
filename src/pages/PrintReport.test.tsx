@@ -31,7 +31,7 @@ import {
   withDatabase,
 } from '../storage/db'
 import { PrintReport } from './PrintReport'
-import { snapshotShortId } from '../history/snapshotId'
+
 import { createProjectBundle } from '../backup/projectBundle'
 import { restoreBackup } from '../backup/restore'
 
@@ -257,12 +257,13 @@ describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
         name: '案例 A 打印报告',
       }),
     ).toBeInTheDocument()
-    expect(within(report).getByText(project.id)).toBeInTheDocument()
+    expect(within(report).getAllByText(project.name)).toHaveLength(3)
+    expect(report.textContent).not.toContain(project.id)
     expect(within(report).getByText(ENGINE_VERSION)).toBeInTheDocument()
     expect(within(report).getByText(REVIEW_RULES_VERSION)).toBeInTheDocument()
     expect(
       within(report).getByTestId('report-snapshot-id'),
-    ).toHaveTextContent(snapshot.id)
+    ).toHaveTextContent(new Date(snapshot.createdAt).toLocaleString('zh-CN'))
     expect(within(report).getByText('快照创建时间')).toBeInTheDocument()
 
     // 2. 分析方法、单位、适用范围与关系确认状态。
@@ -382,7 +383,8 @@ describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
     expect(pageRule).toHaveTextContent('counter(pages)')
     expect(pageRule).toHaveTextContent('第 ')
     expect(pageRule).toHaveTextContent('页 / 共 ')
-    expect(pageRule).toHaveTextContent(`快照 ${snapshotShortId(snapshot.id)}`)
+    expect(pageRule).toHaveTextContent('分析快照')
+    expect(pageRule).not.toHaveTextContent(snapshot.id)
 
     // 独立打印视图用浏览器打印。
     await user.click(screen.getByRole('button', { name: '打印报告' }))
@@ -413,7 +415,7 @@ describe('PrintReport：由不可变快照生成的案例 A 报告', () => {
     expect(within(report).queryByText('已改名的工作项目')).toBeNull()
     expect(
       within(report).getByTestId('report-snapshot-id'),
-    ).toHaveTextContent(snapshot.id)
+    ).toHaveTextContent(new Date(snapshot.createdAt).toLocaleString('zh-CN'))
   })
 
   it('基线对比只读取快照冻结的 Diff，不按当前引擎重算', async () => {
@@ -582,7 +584,8 @@ describe('PrintReport：审查完成与错误状态', () => {
     )
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('分析快照不存在：snapshot-missing')
+    expect(alert).toHaveTextContent('分析快照不存在')
+    expect(alert).not.toHaveTextContent('snapshot-missing')
     expect(alert).toHaveTextContent('可能已被删除')
 
     await user.click(
@@ -616,7 +619,7 @@ describe('PrintReport：路由', () => {
     expect(await screen.findByTestId('print-report')).toBeInTheDocument()
     expect(
       screen.getByTestId('report-snapshot-id'),
-    ).toHaveTextContent(snapshot.id)
+    ).toHaveTextContent(new Date(snapshot.createdAt).toLocaleString('zh-CN'))
     expect(
       screen.getByRole('button', { name: '返回工作台' }),
     ).toBeInTheDocument()

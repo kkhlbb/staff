@@ -21,6 +21,7 @@ import { formatMm } from '../domain/units'
 import { formatQWithDecimals } from '../drawing/formatDimension'
 import { MmInput } from './MmInput'
 import './ChangeWorkbench.css'
+import { uiDiagnosticText, uiFileVersionLabel, uiSourceVersionLabel, uiVersionLabel } from './uiIdentity'
 
 export interface ChangeWorkbenchProps {
   snapshot: SnapshotDto
@@ -140,7 +141,7 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
       ? change.preview.requirement.check.status === 'satisfied'
         ? null
         : `条款检查为「${REQUIREMENT_STATUS_LABEL[change.preview.requirement.check.status]}」：` +
-          `${change.preview.requirement.evaluation.reasons.join('；') || '请先补齐条款证据'}；正式版本保持在上一次提交。`
+          `${uiDiagnosticText(change.preview.requirement.evaluation.reasons.join('；')) || '请先补齐条款证据'}；正式版本保持在上一次提交。`
       : null
   const confirmBlockedReason =
     change.staleReason !== null
@@ -278,7 +279,7 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
                     ? '草稿态待确认（尚未确认提交）'
                     : row.state === 'valid'
                       ? '已确认生效'
-                      : `待核：${row.reasons.join('；')}`}
+                      : `待核：${uiDiagnosticText(row.reasons.join('；'))}`}
                 </span>
                 <button type="button" disabled={busy} onClick={() => void run(() => props.onUnbind(row.bindingId))}>
                   解除绑定
@@ -290,7 +291,7 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
       </section>
 
       {change.notice !== '' && (
-        <p className="change-workbench__notice" role="status">{change.notice}</p>
+        <p className="change-workbench__notice" role="status">{uiDiagnosticText(change.notice)}</p>
       )}
       {change.staleReason !== null && (
         <div className="change-workbench__stale" role="alert">
@@ -302,7 +303,7 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
       {change.error !== null && (
         <div className="change-workbench__error" role="alert">
           <strong>{change.error.code}</strong>
-          <span>{change.error.message}</span>
+          <span>{uiDiagnosticText(change.error.message)}</span>
           <span>未提交的编辑仍保留。</span>
         </div>
       )}
@@ -317,7 +318,7 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
         />
       )}
 
-      {change.preview !== null && <PreviewBody preview={change.preview} />}
+      {change.preview !== null && <PreviewBody preview={change.preview} snapshot={snapshot} />}
 
       <section className="change-workbench__history" aria-label="从旧版本恢复">
         <h3>从旧版本恢复（生成新草稿，需重新确认）</h3>
@@ -327,7 +328,7 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
             .reverse()
             .map((revision) => (
               <li key={revision.revisionId}>
-                <span>Rev {revision.revisionId} · {revision.reason} · 父 {revision.parentId ?? '无'}</span>
+                <span>{uiFileVersionLabel(snapshot.fileRevisions, revision.revisionId)} · {uiDiagnosticText(revision.reason)} · 父版本：{revision.parentId === null ? '无' : uiFileVersionLabel(snapshot.fileRevisions, revision.parentId)}</span>
                 {revision.revisionId !== project.currentRevisionId && (
                   <button type="button" disabled={busy} onClick={() => void run(() => props.onRestore(revision.revisionId))}>
                     恢复为新草稿
@@ -359,8 +360,8 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
             <ul>
               {groups.sourceReview.map((row, index) => (
                 <li key={`${row.ruleId}-${index}`}>
-                  {row.ruleId}：{row.reason}
-                  {row.revisionId ? `（版本 ${row.revisionId} 第 ${row.page ?? '?'} 页）` : ''}
+                  {row.ruleId}：{uiDiagnosticText(row.reason)}
+                  {row.revisionId ? `（${uiSourceVersionLabel(snapshot.revisions, row.revisionId)} 第 ${row.page ?? '?'} 页）` : ''}
                 </li>
               ))}
             </ul>
@@ -396,10 +397,10 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
   )
 }
 
-function PreviewBody({ preview }: { preview: ChangePreviewValue }) {
+function PreviewBody({ preview, snapshot }: { preview: ChangePreviewValue; snapshot: SnapshotDto }) {
   return (
     <section className="change-workbench__preview" aria-label="变更预览">
-      <h3>预览：{preview.drawing.record.revisionId}</h3>
+      <h3>预览：草稿 · {uiVersionLabel(snapshot.fileRevisions.length + 1)}</h3>
       <table>
         <caption>参数与受影响环（旧 → 新）</caption>
         <thead>
@@ -427,16 +428,17 @@ function PreviewBody({ preview }: { preview: ChangePreviewValue }) {
       <p>旧结果：{resultText(preview.previousResult)}</p>
       <p>新结果：{resultText(preview.result)}</p>
       <p>
-        绑定标注：{preview.drawing.right.annotations.map((item) => `${item.annotationId}（${item.parameterId}）`).join('、') || '无'}
+        绑定标注：{preview.drawing.right.annotations.map((_, index) => `标注 ${index + 1}`).join('、') || '无'}
       </p>
       {preview.drawing.leftProblem !== null && (
-        <p className="change-workbench__pending">旧图不能重建：{preview.drawing.leftProblem}</p>
+        <p className="change-workbench__pending">旧图不能重建：{uiDiagnosticText(preview.drawing.leftProblem)}</p>
       )}
       <div className="change-workbench__compare" aria-label="双图并排">
         <figure>
-          <figcaption>旧版本 {preview.drawing.left?.revisionId ?? '不可用'} · {preview.drawing.left ? `${preview.drawing.left.scale.numerator}:${preview.drawing.left.scale.denominator}` : '—'}</figcaption>
+          <figcaption>旧版本 {preview.drawing.left ? uiFileVersionLabel(snapshot.fileRevisions, preview.drawing.left.revisionId) : '不可用'} · {preview.drawing.left ? `${preview.drawing.left.scale.numerator}:${preview.drawing.left.scale.denominator}` : '—'}</figcaption>
           <DrawingCanvas
             data={preview.drawing.left}
+            versionLabel={uiFileVersionLabel(snapshot.fileRevisions, preview.drawing.left?.revisionId)}
             selectedAnnotationId={null}
             onSelectAnnotation={() => undefined}
             zoom={0.3}
@@ -444,9 +446,10 @@ function PreviewBody({ preview }: { preview: ChangePreviewValue }) {
           />
         </figure>
         <figure>
-          <figcaption>当前草稿 {preview.drawing.right.revisionId} · {preview.drawing.right.scale.numerator}:{preview.drawing.right.scale.denominator}</figcaption>
+          <figcaption>当前草稿 · {uiVersionLabel(snapshot.fileRevisions.length + 1)} · {preview.drawing.right.scale.numerator}:{preview.drawing.right.scale.denominator}</figcaption>
           <DrawingCanvas
             data={preview.drawing.right}
+            versionLabel={uiVersionLabel(snapshot.fileRevisions.length + 1)}
             selectedAnnotationId={null}
             onSelectAnnotation={() => undefined}
             zoom={0.3}
@@ -454,7 +457,7 @@ function PreviewBody({ preview }: { preview: ChangePreviewValue }) {
         </figure>
       </div>
       {preview.blockers.length > 0 && (
-        <p className="change-workbench__error" role="alert">阻断：{preview.blockers.join('；')}</p>
+        <p className="change-workbench__error" role="alert">阻断：{uiDiagnosticText(preview.blockers.join('；'))}</p>
       )}
     </section>
   )

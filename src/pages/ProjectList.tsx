@@ -5,6 +5,7 @@ import {
 } from '../backup/projectBundle'
 import { inspectBackup, restoreBackup, type BackupInspection } from '../backup/restore'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { uiDiagnosticText } from '../components/uiIdentity'
 import { ImportWizard } from '../components/ImportWizard'
 import type { Project } from '../domain/types'
 import {
@@ -732,7 +733,7 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
       ) : null}
       {legacyError !== null ? (
         <p className="project-list__migration-error" role="alert">
-          {legacyError}
+          {uiDiagnosticText(legacyError)}
         </p>
       ) : null}
 
@@ -854,13 +855,13 @@ export function ProjectList({ onOpenProject }: ProjectListProps = {}) {
         <div className="project-list__errors" role="alert">
           {errors.map((error, index) => (
             <div key={`${error.message}-${index}`} className="project-list__error">
-              <p>{error.message}</p>
+              <p>{uiDiagnosticText(error.message)}</p>
               {error.reasons.map((reason, reasonIndex) => (
                 <p
                   key={`${reason}-${reasonIndex}`}
                   className="project-list__reason"
                 >
-                  {reason}
+                  {uiDiagnosticText(reason)}
                 </p>
               ))}
             </div>

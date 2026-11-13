@@ -113,7 +113,7 @@ function EntityInspector({
       <dt>空间</dt>
       <dd>
         {SPACE_LABEL[entity.space]}
-        {viaViewport === null ? '' : `（经视口 ${viaViewport}）`}
+        {viaViewport === null ? '' : '（经图纸视口）'}
       </dd>
       {entity.text !== undefined && (
         <>

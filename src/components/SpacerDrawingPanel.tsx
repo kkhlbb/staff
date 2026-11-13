@@ -1,4 +1,5 @@
 import { MmInput } from './MmInput'
+import { uiDiagnosticText } from './uiIdentity'
 import { AgentReadEvidenceList } from './AgentReadEvidenceList'
 import { provenanceOf } from '../sources/agentReadDisplay'
 /**
@@ -39,6 +40,8 @@ export interface SpacerDrawingPanelProps {
   sessionId: string | null
   acceptedSeq: number
   project: ProjectFileProject
+  displayVersionLabel?: string
+  committedVersionLabel?: string
   /**
    * 参数联动的合法草稿预览：main 已按候选参数重建 DrawingData。
    * 有值时画布/标注显示候选画面并明确标“未提交”；正式导出仍只读 project。
@@ -242,7 +245,7 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
 
       {showingDraft && (
         <p className="spacer-drawing__candidate" role="status">
-          候选参数预览（未提交）：标注与图形按当前参数联动草稿重画；正式图纸仍为 Rev {record?.revisionId ?? '—'}，
+          候选参数预览（未提交）：标注与图形按当前参数联动草稿重画；正式图纸仍为{record ? props.committedVersionLabel ?? '未命名版本' : '未生成'}，
           导出与提交不会使用候选值。
         </p>
       )}
@@ -355,13 +358,14 @@ export function SpacerDrawingPanel(props: SpacerDrawingPanelProps) {
 
       {(error ?? (rebuilt.ok ? null : rebuilt.message)) && (
         <p className="spacer-drawing__error" role="alert">
-          {error ?? (rebuilt.ok ? '' : `${rebuilt.message}${rebuilt.detail ? `（${rebuilt.detail}）` : ''}`)}
+          {uiDiagnosticText(error ?? (rebuilt.ok ? '' : `${rebuilt.message}${rebuilt.detail ? `（${rebuilt.detail}）` : ''}`))}
         </p>
       )}
 
       <div className="spacer-drawing__canvas">
         <DrawingCanvas
           data={displayData}
+          versionLabel={props.displayVersionLabel}
           selectedAnnotationId={selectedAnnotationId}
           zoom={zoom}
           onSelectAnnotation={(annotationId, parameterId) => {

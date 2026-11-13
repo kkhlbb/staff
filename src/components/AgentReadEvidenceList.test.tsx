@@ -9,7 +9,8 @@ describe('读数出处列表', () => {
     render(<AgentReadEvidenceList provenance={[image, image]} />)
     expect(screen.getAllByText('读数来源：图片，李工 提供')).toHaveLength(1)
     expect(screen.getByText(/逐字说明 <原话>/)).toBeInTheDocument()
-    expect(screen.getByText(/img-1 · SHA-256/)).toBeInTheDocument()
+    expect(screen.getByText(/来源图片 · 校验信息保存在项目文件中/)).toBeInTheDocument()
+    expect(screen.queryByText(/img-1/)).not.toBeInTheDocument()
     expect(screen.queryByText(/第 .* 页/)).not.toBeInTheDocument()
   })
   it('非 agent-read 不根据相似字段伪装读数出处', () => {

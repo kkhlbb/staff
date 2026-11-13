@@ -19,6 +19,7 @@ import type {
   LocateEvidenceValue,
 } from '../../desktop/shared/contracts'
 import { Panel } from './layout/Panel'
+import { uiDiagnosticText, uiFileVersionLabel, uiVersionLabel } from './uiIdentity'
 import { formatMm } from '../domain/units'
 import { SPACER_PARAMETER_LABELS } from '../drawing/types'
 import { REQUIREMENT_STATUS_LABEL, type RequirementCheckStatus } from '../requirements/types'
@@ -33,7 +34,7 @@ import {
   toolLabel,
 } from './agentWording'
 
-const parameterLabel = (key: string): string => SPACER_PARAMETER_LABELS[key as keyof typeof SPACER_PARAMETER_LABELS] ?? key
+const parameterLabel = (key: string): string => SPACER_PARAMETER_LABELS[key as keyof typeof SPACER_PARAMETER_LABELS] ?? '未命名参数'
 
 /** 意图候选的人话摘要：只显示用户给出的数值与原话，不推断。 */
 function intentCandidateLine(candidate: IntentDraftView['candidates'][number]): string {
@@ -66,6 +67,7 @@ export interface AgentSidebarProps {
   onToggle: () => void
   projectName: string | null
   revisionId: string | null
+  revisionSequence?: number
   onLocate: (value: LocateEvidenceValue) => void
   /** 提交成功后把 main 侧的新快照重新挂回工作台（可选；测试可不提供）。 */
   onProjectChanged?: () => void | Promise<void>
@@ -81,7 +83,7 @@ const DEMOS: { scenario: 'normal' | 'ask' | 'failure'; label: string; hint: stri
 ]
 
 
-export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate, onProjectChanged }: AgentSidebarProps): JSX.Element {
+export function AgentSidebar({ open, onToggle, projectName, revisionId, revisionSequence, onLocate, onProjectChanged }: AgentSidebarProps): JSX.Element {
   const api = window.cunlian
   const installed = api?.agentStart !== undefined && api.agentTaskState !== undefined
   const [provider, setProvider] = useState<AgentProviderStatusValue | null>(null)
@@ -211,12 +213,25 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
       previewFingerprint: preview.previewFingerprint,
     })
     if (committed.ok) {
-      setCommit({ ok: true, code: null, message: `已提交（工具回执） · 版本 ${committed.data.revisionId}` })
+      setCommit({ ok: true, code: null, message: `已提交（工具回执） · ${await committedVersionLabel(committed.data.revisionId)}` })
       setPreview(null)
+      // Display refresh only: main already committed; no new project/file mutation.
+      await onProjectChanged?.()
     } else {
       setCommit({ ok: false, code: committed.code, message: committed.message })
     }
     setBusy(false)
+  }
+
+  // Only read the committed record; never infer an ordinal from a preview or an ID.
+  async function committedVersionLabel(id: string): Promise<string> {
+    try {
+      const result = await api?.reattachSession?.()
+      if (result?.ok && 'snapshot' in result.value) {
+        return uiFileVersionLabel(result.value.snapshot.fileRevisions, id)
+      }
+    } catch { /* Missing display metadata cannot undo a successful commit. */ }
+    return uiVersionLabel()
   }
 
   const locate = async (request: { requirementRevisionId?: string; checkId?: string; parameterId?: string }): Promise<void> => {
@@ -224,7 +239,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     const result = await api.locateEvidence(request)
     if (!result.ok) { setLocateNote(`定位没有成功：${result.message}`); return }
     setLocateNote(result.data.kind === 'parameter'
-      ? `已定位参数 ${parameterLabel(result.data.key)} · 绑定环 ${result.data.termIds.join('、') || '无'}`
+      ? `已定位参数 ${parameterLabel(result.data.key)} · 关联组成环 ${result.data.termIds.length} 个`
       : `已定位 ${result.data.label} · 第 ${result.data.page} 页`)
     onLocate(result.data)
   }
@@ -388,7 +403,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
       previewFingerprint: intentPreviewValue.previewFingerprint,
     })
     setIntentCommit(committed.ok
-      ? { ok: true, message: `已保存为新版本（工具回执） · ${committed.data.revisionId}` }
+      ? { ok: true, message: `已保存为新版本（工具回执） · ${await committedVersionLabel(committed.data.revisionId)}` }
       : { ok: false, message: committed.message })
     if (committed.ok) {
       setAcknowledged(false)
@@ -425,7 +440,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
     <section className="agent-sidebar__section" aria-label="模型与项目">
       <dl>
         <div><dt>活动项目</dt><dd>{projectName ?? '未打开'}</dd></div>
-        <div><dt>正式版本</dt><dd>{revisionId ?? '—'}</dd></div>
+        <div><dt>正式版本</dt><dd>{uiVersionLabel(revisionSequence)}</dd></div>
         <div><dt>真实模型</dt><dd data-testid="agent-provider-status">
           {provider === null ? '读取中…' : provider.real.configured ? provider.real.provider : '未配置'}
         </dd></div>
@@ -451,8 +466,8 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
             <button type="button" disabled={busy} onClick={() => void testProvider()}>测试连接</button>
             <button type="button" disabled={busy} onClick={() => void clearKey()}>清除密钥</button>
           </div>
-          {settingsNote !== null && <p role="status" className="agent-sidebar__hint">{settingsNote}</p>}
-          {testNote !== null && <p role="status" className="agent-sidebar__hint" data-testid="agent-provider-test">{testNote}</p>}
+          {settingsNote !== null && <p role="status" className="agent-sidebar__hint">{uiDiagnosticText(settingsNote)}</p>}
+          {testNote !== null && <p role="status" className="agent-sidebar__hint" data-testid="agent-provider-test">{uiDiagnosticText(testNote)}</p>}
         </details>
       )}
     </section>
@@ -479,7 +494,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
         <button type="button" disabled={busy || !installed || actorId.trim() === ''} onClick={() => void createIntent()}>建立无任务书项目</button>
         <button type="button" disabled={busy || !installed || actorId.trim() === ''} title="假模型只把你说过的数字写进草稿；确认与提交仍由你完成" onClick={() => void startIntentDemo()}>对话建件（离线演示）</button>
       </div>
-      {intentNote !== null && <p role="status" className="agent-sidebar__hint" data-testid="intent-note">{intentNote}</p>}
+      {intentNote !== null && <p role="status" className="agent-sidebar__hint" data-testid="intent-note">{uiDiagnosticText(intentNote)}</p>}
       {intent !== null && (
         <div className="agent-sidebar__intent" data-testid="intent-draft">
           <p className="agent-sidebar__muted">
@@ -522,7 +537,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
           <div className="agent-sidebar__actions">
             <button type="button" className="agent-sidebar__primary" disabled={busy || !acknowledged} onClick={() => void commitIntent()}>确认并保存为新版本</button>
           </div>
-          {intentCommit !== null && <p role={intentCommit.ok ? 'status' : 'alert'} data-testid="intent-commit-result" className={intentCommit.ok ? 'agent-sidebar__ok' : 'agent-sidebar__blocked'}>{intentCommit.message}</p>}
+          {intentCommit !== null && <p role={intentCommit.ok ? 'status' : 'alert'} data-testid="intent-commit-result" className={intentCommit.ok ? 'agent-sidebar__ok' : 'agent-sidebar__blocked'}>{uiDiagnosticText(intentCommit.message)}</p>}
         </div>
       )}
     </section>
@@ -545,14 +560,14 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
         {running && <button type="button" disabled={busy} onClick={() => void cancel()}>取消</button>}
         {view !== null && (view.task.state === 'failed' || view.task.state === 'awaiting-input') && <button type="button" disabled={busy} onClick={() => void resume()}>继续</button>}
       </div>
-      {notice !== null && <p role="status" data-testid="agent-notice" className="agent-sidebar__hint">{notice}</p>}
+      {notice !== null && <p role="status" data-testid="agent-notice" className="agent-sidebar__hint">{uiDiagnosticText(notice)}</p>}
       {api?.exportApprovedVersion !== undefined && (
         <div className="agent-sidebar__actions">
           <button type="button" disabled={busy || revisionId === null} onClick={() => void exportSaved('svg')}>导出已保存版本 SVG</button>
           <button type="button" disabled={busy || revisionId === null} onClick={() => void exportSaved('pdf')}>导出 PDF</button>
         </div>
       )}
-      {exportNote !== null && <p role="status" className="agent-sidebar__hint" data-testid="agent-export-result">{exportNote}</p>}
+      {exportNote !== null && <p role="status" className="agent-sidebar__hint" data-testid="agent-export-result">{uiDiagnosticText(exportNote)}</p>}
     </section>
 
     <section className="agent-sidebar__section" aria-label="执行步骤">
@@ -562,7 +577,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
           {taskStateLabel(view.task.state)}{view.task.errorCode === null ? '' : ` · ${codeTitle(view.task.errorCode)}`}
         </p>
         {view.task.errorCode !== null && <p role="alert" className="agent-sidebar__blocked" data-testid="agent-task-why">
-          没有做成：{view.task.errorMessage ?? '工具没有给出可用的结果。'} 怎么办：{codeRemedy(view.task.errorCode)}
+          没有做成：{uiDiagnosticText(view.task.errorMessage ?? '工具没有给出可用的结果。')} 怎么办：{codeRemedy(view.task.errorCode)}
         </p>}
         <ol className="agent-sidebar__steps">
           {view.steps.map(step => <li key={step.stepId} className={step.errorCode === null ? 'agent-sidebar__step' : 'agent-sidebar__step agent-sidebar__step--failed'}>
@@ -577,7 +592,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
       <h3>模型回复（自然语言，不是回执）</h3>
       {view === null || (view.assistantText ?? '') === ''
         ? <p className="agent-sidebar__hint">暂无模型文本；结论只看工具回执与下方预览。</p>
-        : <p className="agent-sidebar__reply" data-testid="agent-model-text" style={{ whiteSpace: 'pre-wrap' }}>{view.assistantText}</p>}
+        : <p className="agent-sidebar__reply" data-testid="agent-model-text" style={{ whiteSpace: 'pre-wrap' }}>{uiDiagnosticText(view.assistantText ?? '')}</p>}
     </section>
 
     <section className="agent-sidebar__section" aria-label="待答问题">
@@ -587,7 +602,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
         : <ul className="agent-sidebar__questions">
           {view.questions.map((question, index) => <li key={`${question.code}-${index}`} role="alert">
             <strong data-testid="agent-question-reason">{codeTitle(question.code)}</strong>
-            <span>{toolLabel(question.tool)}：{question.message}</span>
+            <span>{toolLabel(question.tool)}：{uiDiagnosticText(question.message)}</span>
             <span className="agent-sidebar__muted">怎么办：{codeRemedy(question.code)}</span>
           </li>)}
         </ul>}
@@ -627,9 +642,9 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, onLocate
         {requirementBlocked && <p role="alert" className="agent-sidebar__blocked">条款检查没通过（原因见上）；确认保存已禁用，提交也会被主进程拦截。</p>}
       </>}
       {commit !== null && <p role={commit.ok ? 'status' : 'alert'} data-testid="agent-commit-result" className={commit.ok ? 'agent-sidebar__ok' : 'agent-sidebar__blocked'}>
-        {commit.ok ? commit.message : `保存没有完成：${commit.message} 怎么办：${codeRemedy(commit.code)}`}
+        {uiDiagnosticText(commit.ok ? commit.message : `保存没有完成：${commit.message} 怎么办：${codeRemedy(commit.code)}`)}
       </p>}
-      {locateNote !== null && <p role="status" className="agent-sidebar__hint">{locateNote}</p>}
+      {locateNote !== null && <p role="status" className="agent-sidebar__hint">{uiDiagnosticText(locateNote)}</p>}
     </section>
   </Panel>
 }

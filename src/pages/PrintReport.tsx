@@ -16,7 +16,7 @@ import {
   type ReviewFinding,
   type ReviewStatus,
 } from '../review/rules'
-import { snapshotShortId } from '../history/snapshotId'
+import { uiDiagnosticText, uiSourceVersionLabel } from '../components/uiIdentity'
 import './PrintReport.css'
 
 export interface PrintReportProps {
@@ -161,7 +161,7 @@ function PendingList({ findings }: PendingListProps) {
               <ReviewStatusBadge status={finding.status} />
             </td>
             <td>{REVIEW_SEVERITY_LABEL[finding.severity]}</td>
-            <td>{finding.basis}</td>
+            <td>{uiDiagnosticText(finding.basis)}</td>
             <td>{finding.action ?? '—'}</td>
           </tr>
         ))}
@@ -197,10 +197,8 @@ function ReportDocument({ snapshot }: ReportDocumentProps) {
   const statusLabel = reviewIncomplete
     ? `${review.calculation.label}（审查未完成，见待办）`
     : review.calculation.label
-  const shortId = snapshotShortId(snapshot.id)
-  // 每页页脚：页码 / 总页数 + 快照短 ID。@page 页边距盒由浏览器分页时生成，
-  // 因此不能用普通 DOM 元素代替；短 ID 已过滤为字母数字，避免 CSS 注入。
-  const pageRule = `@page { @bottom-center { content: "第 " counter(page) " 页 / 共 " counter(pages) " 页 · 快照 ${shortId}"; font-size: 8pt; color: #555; } }`
+  // 页脚只显示报告类型与页码；内部快照标识保留在项目文件。
+  const pageRule = '@page { @bottom-center { content: "第 " counter(page) " 页 / 共 " counter(pages) " 页 · 分析快照"; font-size: 8pt; color: #555; } }'
 
   return (
     <>
@@ -221,13 +219,13 @@ function ReportDocument({ snapshot }: ReportDocumentProps) {
             <dd>{snapshot.projectName}</dd>
           </div>
           <div>
-            <dt>项目 ID</dt>
-            <dd className="print-report__mono">{snapshot.projectId}</dd>
+            <dt>项目</dt>
+            <dd>{snapshot.projectName}</dd>
           </div>
           <div>
-            <dt>分析快照 ID</dt>
+            <dt>分析快照</dt>
             <dd className="print-report__mono" data-testid="report-snapshot-id">
-              {snapshot.id}
+              {formatTime(snapshot.createdAt)}
             </dd>
           </div>
           <div>
@@ -430,7 +428,7 @@ function ReportDocument({ snapshot }: ReportDocumentProps) {
             {snapshot.sourceManifest.unboundTermIds.length > 0 ? (
               <p className="print-report__basis">
                 以下组成环没有来源绑定，来源审查为未检查：
-                {snapshot.sourceManifest.unboundTermIds.join('、')}。
+                {snapshot.sourceManifest.unboundTermIds.map(id => chain.terms.find(term => term.id === id)?.symbol || '未命名组成环').join('、')}。
               </p>
             ) : null}
             <table className="print-report__table" aria-label="来源清单">
@@ -438,7 +436,7 @@ function ReportDocument({ snapshot }: ReportDocumentProps) {
                 <tr>
                   <th scope="col">组成环</th>
                   <th scope="col">文档 / 文件</th>
-                  <th scope="col">版本 ID</th>
+                  <th scope="col">来源版本</th>
                   <th scope="col">页</th>
                   <th scope="col">区域（PDF 坐标）</th>
                   <th scope="col">可读</th>
@@ -454,19 +452,19 @@ function ReportDocument({ snapshot }: ReportDocumentProps) {
                     data-testid={`report-source-${entry.bindingId}`}
                   >
                     <th scope="row">
-                      {entry.termLabel ?? entry.termId}
+                      {entry.termLabel ?? '未命名组成环'}
                       <span className="print-report__rule-id">
                         环修订 {entry.termRevision ?? '—'}
                       </span>
                     </th>
                     <td>
-                      {entry.documentTitle ?? entry.documentId}
+                      {entry.documentTitle ?? '未命名文档'}
                       <span className="print-report__rule-id">
                         {entry.fileName ?? '文件记录缺失'}
                       </span>
                     </td>
                     <td className="print-report__mono print-report__small">
-                      {entry.revisionId}
+                      {uiSourceVersionLabel(snapshot.sourceManifest.revisions, entry.revisionId)}
                       {entry.revisionSha256 !== null ? (
                         <>
                           <br />
@@ -584,8 +582,8 @@ function ReportDocument({ snapshot }: ReportDocumentProps) {
       </section>
 
       <footer className="print-report__footer">
-        轴系轴向公差链分析与修改追踪工具 · 报告由不可变分析快照生成（快照 ID：
-        <span className="print-report__mono">{snapshot.id}</span>）
+        轴系轴向公差链分析与修改追踪工具 · 报告由不可变分析快照生成（创建时间：
+        <span>{formatTime(snapshot.createdAt)}</span>）
       </footer>
       </article>
     </>
@@ -626,7 +624,7 @@ export function PrintReport({
           setState({
             status: 'error',
             kind: 'not_found',
-            message: `分析快照不存在：${snapshotId}`,
+            message: '分析快照不存在，请返回快照列表重新选择。',
           })
           return
         }
@@ -702,7 +700,7 @@ export function PrintReport({
         <section className="print-report__blocked" role="alert">
           <h1>{notFound ? '分析快照不存在' : '本地存储不可用'}</h1>
           <p>
-            发生了什么：{state.message}
+            发生了什么：{uiDiagnosticText(state.message)}
             {notFound
               ? '。快照可能已被删除（删除项目会同时删除其快照），或报告链接不正确。'
               : '。浏览器无法打开本地数据库，报告数据可能没有读取成功。'}

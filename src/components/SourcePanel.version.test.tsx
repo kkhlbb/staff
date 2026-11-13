@@ -301,7 +301,7 @@ describe('新版来源逐绑定三选一', () => {
 
     await waitFor(() => {
       const fileLine = document.querySelector('.pdf-viewer__file')
-      expect(fileLine?.textContent).toContain(v1.id.slice(0, 8))
+      expect(fileLine?.textContent).toContain(v1.sha256.slice(0, 12))
     })
     expect(screen.getByLabelText('页码跳转')).toHaveValue(1)
   })

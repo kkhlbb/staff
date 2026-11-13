@@ -1,0 +1,13 @@
+
+> staff@0.4.0-beta test
+> vitest run src/pages/DesktopWorkspace.test.tsx -t UI-ID guard
+
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+
+ Test Files  1 passed (1)
+      Tests  2 passed | 50 skipped (52)
+   Start at  02:55:43
+   Duration  519ms (environment 38%, tests 26%, import 18%, transform 11%, setup 7%)
+

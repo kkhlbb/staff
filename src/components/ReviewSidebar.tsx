@@ -14,6 +14,7 @@ import {
   REVIEW_STATUS_LABEL,
 } from '../review/rules'
 import './ReviewSidebar.css'
+import { uiDiagnosticText } from './uiIdentity'
 
 export interface ReviewSidebarProps {
   summary: ReviewSummary
@@ -100,16 +101,16 @@ export function ReviewSidebar({ summary, stale = false, onLocate }: ReviewSideba
                       type="button"
                       className="review-sidebar__item-main"
                       onClick={() => onLocate?.(finding)}
-                      aria-label={`定位：${REVIEW_RULE_LABEL[finding.ruleId]}，${finding.subject.label}`}
+                      aria-label={`定位：${REVIEW_RULE_LABEL[finding.ruleId]}，${uiDiagnosticText(finding.subject.label)}`}
                     >
                       <span className="review-sidebar__rule">{REVIEW_RULE_LABEL[finding.ruleId]}</span>
                       <code className="review-sidebar__rule-id">{finding.ruleId}</code>
                       <span className={statusClass(finding.status)}>
                         {REVIEW_STATUS_LABEL[finding.status]}
                       </span>
-                      <span className="review-sidebar__subject">{finding.subject.label}</span>
+                      <span className="review-sidebar__subject">{uiDiagnosticText(finding.subject.label)}</span>
                     </button>
-                    <p className="review-sidebar__basis">依据：{finding.basis}</p>
+                    <p className="review-sidebar__basis">依据：{uiDiagnosticText(finding.basis)}</p>
                     {finding.action === null ? null : (
                       <p className="review-sidebar__action">处理：{finding.action}</p>
                     )}
@@ -143,11 +144,11 @@ export function ReviewSidebar({ summary, stale = false, onLocate }: ReviewSideba
                   {REVIEW_RULE_LABEL[finding.ruleId]}
                   <code className="review-sidebar__rule-id">{finding.ruleId}</code>
                 </td>
-                <td>{finding.subject.label}</td>
+                <td>{uiDiagnosticText(finding.subject.label)}</td>
                 <td className={statusClass(finding.status)}>
                   {REVIEW_STATUS_LABEL[finding.status]}
                 </td>
-                <td>{finding.basis}</td>
+                <td>{uiDiagnosticText(finding.basis)}</td>
                 <td>{finding.ruleVersion}</td>
               </tr>
             ))}

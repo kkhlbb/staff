@@ -5,7 +5,8 @@
  * selectedAnnotationId）。zoom 只是容器 CSS 变换，不改变图纸数据或尺寸。
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { renderDrawingSvg } from '../drawing/renderDrawingSvg'
+import { escapeXml, renderDrawingSvg } from '../drawing/renderDrawingSvg'
+import { uiDiagnosticText } from './uiIdentity'
 import type { DrawingData } from '../drawing/types'
 import './DrawingCanvas.css'
 
@@ -16,19 +17,24 @@ export interface DrawingCanvasProps {
   zoom: number | 'fit'
   /** 无图纸时显示的原因。 */
   emptyReason?: string
+  /** Presentation only; legacy blank frame versions must not expose their internal ID. */
+  versionLabel?: string
 }
 
 export function DrawingCanvas(props: DrawingCanvasProps) {
   const host = useRef<HTMLDivElement>(null)
   const outer = useRef<HTMLDivElement>(null)
   const [fitScale, setFitScale] = useState(1)
-  const markup = useMemo(
-    () =>
-      props.data === null
-        ? ''
-        : renderDrawingSvg(props.data, { selectedAnnotationId: props.selectedAnnotationId }),
-    [props.data, props.selectedAnnotationId],
-  )
+  const markup = useMemo(() => {
+    if (props.data === null) return ''
+    const svg = renderDrawingSvg(props.data, { selectedAnnotationId: props.selectedAnnotationId })
+    const version = props.data.frame.fields.version
+    if (version.includes(props.data.revisionId) || /rev-[a-z0-9]-|[0-9a-f]{32,}/i.test(version)) {
+      // Only replace the visible version cell. Metadata, persisted frame and fingerprint stay intact.
+      return svg.replaceAll(`>${escapeXml(version)}<`, `>草稿 · ${escapeXml(props.versionLabel ?? '未命名版本')}<`)
+    }
+    return svg
+  }, [props.data, props.selectedAnnotationId, props.versionLabel])
 
   useEffect(() => {
     // 选中变化后把焦点留在同一标注上，键盘用户不会丢失位置。
@@ -67,7 +73,7 @@ export function DrawingCanvas(props: DrawingCanvasProps) {
   if (props.data === null) {
     return (
       <div className="drawing-canvas drawing-canvas--empty" aria-label="工程图预览">
-        <p>{props.emptyReason ?? '尚无工程图'}</p>
+        <p>{uiDiagnosticText(props.emptyReason ?? '尚无工程图')}</p>
       </div>
     )
   }

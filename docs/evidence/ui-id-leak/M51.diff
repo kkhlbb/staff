@@ -1,0 +1,13 @@
+diff --git a/Users/aston/.hermes/profiles/daedalus/cache/scratch/ui-id-m51-original.tsx b/src/pages/DesktopWorkspace.tsx
+index 6571bf6..8c5efde 100644
+--- a/Users/aston/.hermes/profiles/daedalus/cache/scratch/ui-id-m51-original.tsx
++++ b/src/pages/DesktopWorkspace.tsx
+@@ -366,7 +366,7 @@ export function DesktopWorkspace() {
+   </main>
+   return <main className="desktop-workspace" style={style} aria-label="寸链桌面工作台">
+     <header className="desktop-workspace__titlebar">
+-      <h1>寸链 · {project.name} · {versionLabel}</h1><span className="desktop-workspace__pending">{saveState}</span>
++      <h1>寸链 · {project.name} · {`${project.currentRevisionId}`}</h1><span className="desktop-workspace__pending">{saveState}</span>
+       {project.sourceKind === 'user-intent' && (
+         <span className="desktop-workspace__source-badge" data-testid="project-source-note">{(() => {
+           const readings = agentReadSources(project.extractionDrafts.flatMap((d) => d.candidates.flatMap((c) => c.provenance ?? [])))

@@ -9,6 +9,7 @@ import type { ChainResult } from '../domain/types'
 import { formatMm } from '../domain/units'
 import { REQUIREMENT_STATUS_LABEL, isPdfRequirementSource } from '../requirements/types'
 import './RequirementStatusPanel.css'
+import { uiDiagnosticText } from './uiIdentity'
 
 const STATUS_CLASS: Record<string, string> = {
   satisfied: 'requirement-panel__status--ok',
@@ -80,13 +81,13 @@ export function RequirementStatusPanel(props: {
         {revision !== null && (
           isPdfRequirementSource(revision.source) ? (
             <p>
-              条款版本 {revision.revisionId}（父 {revision.parentRevisionId ?? '无'}）· 来源{' '}
-              {revision.source.revisionId} 第 {revision.source.page} 页 · SHA-256{' '}
+              条款：未命名版本（父版本：{revision.parentRevisionId === null ? '无' : '未命名版本'}）· 来源 PDF{' '}
+              第 {revision.source.page} 页 · SHA-256{' '}
               {revision.source.sha256.slice(0, 12)}…
             </p>
           ) : (
             <p>
-              条款版本 {revision.revisionId}（父 {revision.parentRevisionId ?? '无'}）· 来源：用户输入（第{' '}
+              条款：未命名版本（父版本：{revision.parentRevisionId === null ? '无' : '未命名版本'}）· 来源：用户输入（第{' '}
               {revision.source.attestation.sessionSeq} 次）· 原话「{revision.source.attestation.statement}」
             </p>
           )
@@ -95,7 +96,7 @@ export function RequirementStatusPanel(props: {
         {check.reasonCodes.length > 0 && (
           <ul>
             {props.requirement.evaluation.reasons.map((reason, index) => (
-              <li key={`${check.reasonCodes[index] ?? index}`}>{reason}</li>
+              <li key={`${check.reasonCodes[index] ?? index}`}>{uiDiagnosticText(reason)}</li>
             ))}
           </ul>
         )}

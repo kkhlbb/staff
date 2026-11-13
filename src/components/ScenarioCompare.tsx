@@ -168,7 +168,7 @@ export function ScenarioCompare({ baseline, working, diff: frozenDiff }: Scenari
                     data-testid={`compare-change-${change.termId}-${change.field}`}
                   >
                     <th scope="row">
-                      {symbolByTermId.get(change.termId) ?? change.termId}
+                      {symbolByTermId.get(change.termId) ?? '未命名组成环'}
                     </th>
                     <td>{TERM_FIELD_LABEL[change.field]}</td>
                     <td>{formatFieldValue(change, 'before')}</td>
