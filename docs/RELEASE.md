@@ -1,4 +1,4 @@
-# 发布说明 · 寸链 0.4.0 beta（macOS / Apple 芯片）
+# 发布说明 · 寸链 0.4.1 beta（macOS / Apple 芯片）
 
 本文件说明**未签名产物**的获取、校验与安装方式，以及这一版能做与不能做的事。
 签名与公证**未做**，这是有意的：项目按开源自用发布，不为分发购买 Apple Developer 账号。
@@ -7,14 +7,14 @@
 
 | 文件 | 大小 | SHA-256 |
 |---|---|---|
-| `cunlian-v0.4.0-beta-macOS-arm64.zip` | 121,231,204 字节 | `568383a64cbb66aa1393de4c7495aa4975ef8a2e88e9ecf2accad7c2275d4907` |
+| `cunlian-v0.4.1-beta-macOS-arm64.zip` | 121,246,056 字节 | `9cf5080b68f6c9917f33a9d29467c5fbaa0f923874a390ee19659d51a49b43a3` |
 
-`CFBundleShortVersionString` = `0.4.0-beta`，arm64，未签名未公证（`adhoc, linker-signed`）。解压后 `.app` 约 258 MB。
+`CFBundleShortVersionString` = `0.4.1-beta`，arm64，未签名未公证（`adhoc, linker-signed`）。解压后 `.app` 约 258 MB。
 
 下载后先校验，再解压：
 
 ```bash
-shasum -a 256 cunlian-v0.4.0-beta-macOS-arm64.zip
+shasum -a 256 cunlian-v0.4.1-beta-macOS-arm64.zip
 # 必须与上表一致；不一致就别用
 ```
 
@@ -41,6 +41,12 @@ npm run package:desktop -- --arch=arm64
 需要 Node.js 20+。
 
 ## 4 这一版能做什么
+
+### 4.0 本版（0.4.1）新增
+- **读数入口**：没有文本层的扫描件/图片，读数由人或将来的视觉模型提供，走 `agent-read` 出处；候选固定标「读数未核对」，**不提供批量确认**
+- **提取正确性修复**：`L₁ = 100⁺⁰·²₋₀.₁` 不再被抽成 `1001`，非对称公差如实建模
+- **界面不再露内部 ID**：顶栏/侧栏/回执一律显示「第 N 版」，并有覆盖六个界面的通用守卫
+- **布局契约**：CSS 变量 + 三容器原语 + 尺寸预算表；960×640 下中央区保证 ≥360px，三档断点自动回归
 
 ### 4.1 从任务书建项目
 - 带文本层的 PDF → 候选参数 / 组成环 / 公式 / 闭区间要求，每条带页、选区、原文片段
@@ -81,7 +87,9 @@ npm run package:desktop -- --arch=arm64
 
 - **不支持**：扫描件 / 图片 PDF、DOCX、形位公差与 GD&T、统计公差（RSS / 蒙特卡洛）、多链联合求解、非回转体零件、STEP 导出、DWG、Windows
 - **只能**在「隔套 + 一条一维轴向链 + 一条毫米闭区间」上工作
-- 真实文档抽取可确认率 **42.0%**（6 份公开语料 269 页，138 候选 / 58 可确认）；**评测语料不是任务书**，真实任务书样本一份都没有
+- 真实文档抽取：**140 候选 / 58 可确认 = 41.4%**（6 份公开语料 269 页）；**评测语料不是任务书**，真实任务书样本一份都没有
+- **正确性只在 19 条上核过**（真值集逐条对原件）：错值 0；**其余 39 条 pending 与其它字段尚未逐条核验**
+- 扫描件**不做 OCR**：读数必须由人（或将来的视觉模型）提供，系统不识别图像内容
 - 尺寸标注**不是参数化的**：改图后必须重新出图，CAD 里不会自动改数
 - `%%c` 直径符号是 DXF 标准控制码，AutoCAD 系认；部分看图软件不认，会显示成方块
 - 真模型验收用的是 **DeepSeek**（`openai-compatible-1` 适配器），不是 GPT
@@ -103,8 +111,8 @@ npm run package:desktop -- --arch=arm64
 ## 8 怎么验证这一版
 
 ```bash
-npm test              # 1219 用例 / 110 文件
-npm run test:desktop  # 290 通过（另 17 条真模型用例默认跳过，需密钥）
+npm test              # 1342 用例 / 119 文件
+npm run test:desktop  # 307 通过（另 17 条真模型用例默认跳过，需密钥）
 npm run test:mcp      # 22 用例
 npm run typecheck && npm run lint && npm run build
 ```
