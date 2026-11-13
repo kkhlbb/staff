@@ -128,6 +128,7 @@ describe('真实文档度量与基线', () => {
         )
       }
       expect(diffs).toEqual([])
+      expect(measured.summary.correctness).toEqual({pendingChecked:19,wrongPending:0,wrongRate:0})
       expect(measured.summary.documents).toBe(6)
       expect(measured.summary.candidates.confirmed).toBe(0)
     },

@@ -1,0 +1,44 @@
+{
+  "results": [
+    {
+      "id": "M43",
+      "mutation": "const {line,decorations} = {line:originalLine,decorations:[]}",
+      "red": {
+        "exit": 1,
+        "log": "docs/evidence/supersub-fix/logs/M43-red.log"
+      },
+      "green": {
+        "exit": 0,
+        "log": "docs/evidence/supersub-fix/logs/M43-green.log"
+      }
+    },
+    {
+      "id": "M44",
+      "mutation": "const lower = make(String(-Number(decoration.upper ?? '0')))",
+      "red": {
+        "exit": 1,
+        "log": "docs/evidence/supersub-fix/logs/M44-red.log"
+      },
+      "green": {
+        "exit": 0,
+        "log": "docs/evidence/supersub-fix/logs/M44-green.log"
+      }
+    },
+    {
+      "id": "M45",
+      "mutation": "  if (decorations.some(d=>d.ambiguous)) return {line,decorations:[]}\n  return {line:{...line,normalizedText:chars.join('')},decorations}",
+      "red": {
+        "exit": 1,
+        "log": "docs/evidence/supersub-fix/logs/M45-red.log"
+      },
+      "green": {
+        "exit": 0,
+        "log": "docs/evidence/supersub-fix/logs/M45-green.log"
+      }
+    }
+  ],
+  "restored": true,
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

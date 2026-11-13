@@ -1,0 +1,1368 @@
+{
+  "corpus": {
+    "manifest": "corpus-manifest.json",
+    "documents": 6
+  },
+  "rules": {
+    "extractorVersion": "document-extractor-8",
+    "maxExtractionPages": 100,
+    "maxExtractionCandidates": 200,
+    "maxExtractionIssues": 200,
+    "readBudget": {
+      "maxTextItems": 200000,
+      "timeoutMs": 300000
+    },
+    "unitAttestation": {
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "actor": "local-operator"
+    }
+  },
+  "documents": [
+    {
+      "id": "r1",
+      "file": "r1-assembly-course.pdf",
+      "language": "zh",
+      "pages": 74,
+      "textItems": 4409,
+      "textChars": 9805,
+      "pageRange": {
+        "from": 1,
+        "to": 74
+      },
+      "extractorVersion": "document-extractor-8",
+      "candidates": {
+        "total": 15,
+        "pending": 8,
+        "blocked": 7,
+        "confirmed": 0,
+        "byKind": [
+          {
+            "code": "ring",
+            "count": 8
+          },
+          {
+            "code": "formula",
+            "count": 7
+          }
+        ]
+      },
+      "blockedReasonCodes": [
+        {
+          "code": "FORMULA_UNSUPPORTED",
+          "count": 7
+        }
+      ],
+      "issues": {
+        "total": 56,
+        "blocked": 54,
+        "warning": 2,
+        "byCode": [
+          {
+            "code": "UNKNOWN_UNIT",
+            "count": 53
+          },
+          {
+            "code": "AMBIGUOUS_ASSIGNMENT",
+            "count": 2
+          },
+          {
+            "code": "NO_TEXT_LAYER",
+            "count": 1
+          }
+        ],
+        "noTextLayerPages": [
+          40
+        ]
+      },
+      "pageLimit": null,
+      "unitAttestation": {
+        "statement": "本表单位 mm（2026-11-12 复核）",
+        "actor": "local-operator",
+        "turnId": "real-doc-attest-1",
+        "sessionSeq": 1,
+        "batchId": "unit-batch-0ad9265dcb30c45b",
+        "declared": 4,
+        "converted": 4,
+        "decisionCount": 4,
+        "preservedBlocked": {
+          "FORMULA_UNSUPPORTED": 7,
+          "NUMBER_UNSUPPORTED": 0,
+          "UNSUPPORTED_UNIT": 0
+        },
+        "before": {
+          "pending": 4,
+          "blocked": 11,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 7
+            },
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 4
+            }
+          ]
+        },
+        "after": {
+          "pending": 8,
+          "blocked": 7,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 7
+            }
+          ]
+        },
+        "reverted": {
+          "pending": 4,
+          "blocked": 11,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 7
+            },
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 4
+            }
+          ]
+        },
+        "revokeRestored": true
+      },
+      "correctness": {
+        "pendingChecked": 0,
+        "wrongPending": 0,
+        "details": []
+      }
+    },
+    {
+      "id": "r2",
+      "file": "r2-tolerance-domain.pdf",
+      "language": "zh",
+      "pages": 5,
+      "textItems": 6105,
+      "textChars": 11447,
+      "pageRange": {
+        "from": 1,
+        "to": 5
+      },
+      "extractorVersion": "document-extractor-8",
+      "candidates": {
+        "total": 24,
+        "pending": 16,
+        "blocked": 8,
+        "confirmed": 0,
+        "byKind": [
+          {
+            "code": "ring",
+            "count": 17
+          },
+          {
+            "code": "formula",
+            "count": 7
+          }
+        ]
+      },
+      "blockedReasonCodes": [
+        {
+          "code": "FORMULA_UNSUPPORTED",
+          "count": 7
+        },
+        {
+          "code": "SUBSCRIPT_AMBIGUOUS",
+          "count": 1
+        },
+        {
+          "code": "UNKNOWN_UNIT",
+          "count": 1
+        }
+      ],
+      "issues": {
+        "total": 6,
+        "blocked": 0,
+        "warning": 6,
+        "byCode": [
+          {
+            "code": "AMBIGUOUS_ASSIGNMENT",
+            "count": 6
+          }
+        ],
+        "noTextLayerPages": []
+      },
+      "pageLimit": null,
+      "unitAttestation": {
+        "statement": "本表单位 mm（2026-11-12 复核）",
+        "actor": "local-operator",
+        "turnId": "real-doc-attest-2",
+        "sessionSeq": 2,
+        "batchId": "unit-batch-1e78cafab218533c",
+        "declared": 6,
+        "converted": 6,
+        "decisionCount": 6,
+        "preservedBlocked": {
+          "FORMULA_UNSUPPORTED": 7,
+          "NUMBER_UNSUPPORTED": 0,
+          "UNSUPPORTED_UNIT": 0
+        },
+        "before": {
+          "pending": 10,
+          "blocked": 14,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 7
+            },
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 7
+            },
+            {
+              "code": "SUBSCRIPT_AMBIGUOUS",
+              "count": 1
+            }
+          ]
+        },
+        "after": {
+          "pending": 16,
+          "blocked": 8,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 7
+            },
+            {
+              "code": "SUBSCRIPT_AMBIGUOUS",
+              "count": 1
+            },
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 1
+            }
+          ]
+        },
+        "reverted": {
+          "pending": 10,
+          "blocked": 14,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 7
+            },
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 7
+            },
+            {
+              "code": "SUBSCRIPT_AMBIGUOUS",
+              "count": 1
+            }
+          ]
+        },
+        "revokeRestored": true
+      },
+      "correctness": {
+        "pendingChecked": 7,
+        "wrongPending": 0,
+        "details": [
+          {
+            "docId": "r2",
+            "page": 2,
+            "rect": [
+              451.293,
+              511.01271266300995,
+              512.487,
+              523.3291493479607
+            ],
+            "originalText": "L₀ = 0⁰₀ mm",
+            "expectedQ": 0,
+            "cropFile": "crops/r2-p2-1.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-accd3353bbe04c5d",
+                "status": "pending",
+                "nominal": "0",
+                "valueQ": 0,
+                "upperDeviation": "0",
+                "lowerDeviation": "0",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r2",
+            "page": 2,
+            "rect": [
+              288.17699999999996,
+              495.00171266300987,
+              362.18,
+              507.3181493479606
+            ],
+            "originalText": "L₁ = 100⁺⁰·²₋₀.₁ mm",
+            "expectedQ": 1000000,
+            "cropFile": "crops/r2-p2-2.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-d337c07dc3ee1c4b",
+                "status": "pending",
+                "nominal": "100",
+                "valueQ": 1000000,
+                "upperDeviation": "+0.2",
+                "lowerDeviation": "-0.1",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r2",
+            "page": 3,
+            "rect": [
+              372.368,
+              339.88000000000005,
+              447.474,
+              352.01000000000005
+            ],
+            "originalText": "L′_b = 5.2⁺⁰·¹₀ mm",
+            "expectedQ": 52000,
+            "cropFile": "crops/r2-p3-3.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-66d1f6bff0b14da9",
+                "status": "pending",
+                "nominal": "5.2",
+                "valueQ": 52000,
+                "upperDeviation": "+0.1",
+                "lowerDeviation": "0",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r2",
+            "page": 3,
+            "rect": [
+              296.037,
+              261.53571266300986,
+              453.781,
+              273.8521493479606
+            ],
+            "originalText": "Zₘₐₓ = 5.2 + 0.1 − 4.9 = 0.4 (mm)",
+            "expectedQ": 4000,
+            "cropFile": "crops/r2-p3-4.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-c18611b6813b3978",
+                "status": "pending",
+                "nominal": "0.4",
+                "valueQ": 4000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r2",
+            "page": 3,
+            "rect": [
+              345.913,
+              10.796712663009915,
+              425.25299999999993,
+              23.113149347960643
+            ],
+            "originalText": "δ_{L_b} = 0.10 mm",
+            "expectedQ": 1000,
+            "cropFile": "crops/r2-p3-5.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-10d374cd80d0af87",
+                "status": "pending",
+                "nominal": "0.10",
+                "valueQ": 1000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r2",
+            "page": 3,
+            "rect": [
+              67.32600000000001,
+              8.408000000000015,
+              146.762,
+              21.17314934796059
+            ],
+            "originalText": "L₃ = 43⁺⁰·²₀ mm",
+            "expectedQ": 430000,
+            "cropFile": "crops/r2-p3-6.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-0e5e5c3581207d6b",
+                "status": "pending",
+                "nominal": "43",
+                "valueQ": 430000,
+                "upperDeviation": "+0.2",
+                "lowerDeviation": "0",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r2",
+            "page": 4,
+            "rect": [
+              22.496000000000002,
+              668.50071266301,
+              212.843,
+              680.8171493479606
+            ],
+            "originalText": "δ_{L_z} = δ_{L_0} − δ_{L_b} = 0.25 − 0.10 = 0.15 (mm)",
+            "expectedQ": 1500,
+            "cropFile": "crops/r2-p4-7.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-de3447193bdd8c3b",
+                "status": "pending",
+                "nominal": "0.15",
+                "valueQ": 1500,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "r3",
+      "file": "r3-rv-3dcs.pdf",
+      "language": "zh",
+      "pages": 4,
+      "textItems": 1570,
+      "textChars": 6529,
+      "pageRange": {
+        "from": 1,
+        "to": 4
+      },
+      "extractorVersion": "document-extractor-8",
+      "candidates": {
+        "total": 3,
+        "pending": 1,
+        "blocked": 2,
+        "confirmed": 0,
+        "byKind": [
+          {
+            "code": "formula",
+            "count": 2
+          },
+          {
+            "code": "ring",
+            "count": 1
+          }
+        ]
+      },
+      "blockedReasonCodes": [
+        {
+          "code": "FORMULA_UNSUPPORTED",
+          "count": 2
+        }
+      ],
+      "issues": {
+        "total": 0,
+        "blocked": 0,
+        "warning": 0,
+        "byCode": [],
+        "noTextLayerPages": []
+      },
+      "pageLimit": null,
+      "unitAttestation": {
+        "statement": "本表单位 mm（2026-11-12 复核）",
+        "actor": "local-operator",
+        "turnId": "real-doc-attest-3",
+        "sessionSeq": 3,
+        "batchId": "unit-batch-73a6dfeb407be271",
+        "declared": 1,
+        "converted": 1,
+        "decisionCount": 1,
+        "preservedBlocked": {
+          "FORMULA_UNSUPPORTED": 2,
+          "NUMBER_UNSUPPORTED": 0,
+          "UNSUPPORTED_UNIT": 0
+        },
+        "before": {
+          "pending": 0,
+          "blocked": 3,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 2
+            },
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 1
+            }
+          ]
+        },
+        "after": {
+          "pending": 1,
+          "blocked": 2,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 2
+            }
+          ]
+        },
+        "reverted": {
+          "pending": 0,
+          "blocked": 3,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 2
+            },
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 1
+            }
+          ]
+        },
+        "revokeRestored": true
+      },
+      "correctness": {
+        "pendingChecked": 0,
+        "wrongPending": 0,
+        "details": []
+      }
+    },
+    {
+      "id": "r4",
+      "file": "r4-mtt1097.pdf",
+      "language": "zh",
+      "pages": 170,
+      "textItems": 94214,
+      "textChars": 206682,
+      "pageRange": {
+        "from": 1,
+        "to": 170
+      },
+      "extractorVersion": "document-extractor-8",
+      "candidates": {
+        "total": 7,
+        "pending": 2,
+        "blocked": 5,
+        "confirmed": 0,
+        "byKind": [
+          {
+            "code": "formula",
+            "count": 3
+          },
+          {
+            "code": "part-dimension",
+            "count": 2
+          },
+          {
+            "code": "ring",
+            "count": 2
+          }
+        ]
+      },
+      "blockedReasonCodes": [
+        {
+          "code": "FORMULA_UNSUPPORTED",
+          "count": 3
+        },
+        {
+          "code": "NUMBER_UNSUPPORTED",
+          "count": 2
+        }
+      ],
+      "issues": {
+        "total": 5,
+        "blocked": 3,
+        "warning": 2,
+        "byCode": [
+          {
+            "code": "NO_TEXT_LAYER",
+            "count": 3
+          },
+          {
+            "code": "CHUNK_PROCESSED",
+            "count": 2
+          }
+        ],
+        "noTextLayerPages": [
+          1,
+          2,
+          6
+        ]
+      },
+      "pageLimit": null,
+      "unitAttestation": {
+        "statement": "本表单位 mm（2026-11-12 复核）",
+        "actor": "local-operator",
+        "turnId": "real-doc-attest-4",
+        "sessionSeq": 4,
+        "batchId": "unit-batch-3fbd9ca3627d8091",
+        "declared": 1,
+        "converted": 1,
+        "decisionCount": 1,
+        "preservedBlocked": {
+          "FORMULA_UNSUPPORTED": 3,
+          "NUMBER_UNSUPPORTED": 2,
+          "UNSUPPORTED_UNIT": 0
+        },
+        "before": {
+          "pending": 1,
+          "blocked": 6,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 3
+            },
+            {
+              "code": "NUMBER_UNSUPPORTED",
+              "count": 2
+            },
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 1
+            }
+          ]
+        },
+        "after": {
+          "pending": 2,
+          "blocked": 5,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 3
+            },
+            {
+              "code": "NUMBER_UNSUPPORTED",
+              "count": 2
+            }
+          ]
+        },
+        "reverted": {
+          "pending": 1,
+          "blocked": 6,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 3
+            },
+            {
+              "code": "NUMBER_UNSUPPORTED",
+              "count": 2
+            },
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 1
+            }
+          ]
+        },
+        "revokeRestored": true
+      },
+      "correctness": {
+        "pendingChecked": 0,
+        "wrongPending": 0,
+        "details": []
+      }
+    },
+    {
+      "id": "r5",
+      "file": "r5-tolerance-analysis.pdf",
+      "language": "en",
+      "pages": 8,
+      "textItems": 4053,
+      "textChars": 32426,
+      "pageRange": {
+        "from": 1,
+        "to": 8
+      },
+      "extractorVersion": "document-extractor-8",
+      "candidates": {
+        "total": 4,
+        "pending": 4,
+        "blocked": 0,
+        "confirmed": 0,
+        "byKind": [
+          {
+            "code": "ring",
+            "count": 4
+          }
+        ]
+      },
+      "blockedReasonCodes": [],
+      "issues": {
+        "total": 0,
+        "blocked": 0,
+        "warning": 0,
+        "byCode": [],
+        "noTextLayerPages": []
+      },
+      "pageLimit": null,
+      "unitAttestation": {
+        "statement": "本表单位 mm（2026-11-12 复核）",
+        "actor": "local-operator",
+        "turnId": "real-doc-attest-5",
+        "sessionSeq": 5,
+        "batchId": "unit-batch-bf68051f7ff780bd",
+        "declared": 2,
+        "converted": 2,
+        "decisionCount": 2,
+        "preservedBlocked": {
+          "FORMULA_UNSUPPORTED": 0,
+          "NUMBER_UNSUPPORTED": 0,
+          "UNSUPPORTED_UNIT": 0
+        },
+        "before": {
+          "pending": 2,
+          "blocked": 2,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 2
+            }
+          ]
+        },
+        "after": {
+          "pending": 4,
+          "blocked": 0,
+          "confirmed": 0,
+          "reasonCodes": []
+        },
+        "reverted": {
+          "pending": 2,
+          "blocked": 2,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 2
+            }
+          ]
+        },
+        "revokeRestored": true
+      },
+      "correctness": {
+        "pendingChecked": 2,
+        "wrongPending": 0,
+        "details": [
+          {
+            "docId": "r5",
+            "page": 2,
+            "rect": [
+              495.60072,
+              712.26,
+              555.3223320000002,
+              724.7770800000001
+            ],
+            "originalText": "L₁ = 50 mm",
+            "expectedQ": 500000,
+            "cropFile": "crops/r5-p2-1.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-a3b19a8dd1220837",
+                "status": "pending",
+                "nominal": "50",
+                "valueQ": 500000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r5",
+            "page": 2,
+            "rect": [
+              59.64156000000003,
+              700.74,
+              379.013868,
+              713.27628
+            ],
+            "originalText": "L₂ = 27 mm",
+            "expectedQ": 270000,
+            "cropFile": "crops/r5-p2-2.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-57535c85c6d3842b",
+                "status": "pending",
+                "nominal": "27",
+                "valueQ": 270000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "r6",
+      "file": "r6-segments-assembly.pdf",
+      "language": "en",
+      "pages": 8,
+      "textItems": 2871,
+      "textChars": 18791,
+      "pageRange": {
+        "from": 1,
+        "to": 8
+      },
+      "extractorVersion": "document-extractor-8",
+      "candidates": {
+        "total": 87,
+        "pending": 70,
+        "blocked": 17,
+        "confirmed": 0,
+        "byKind": [
+          {
+            "code": "ring",
+            "count": 73
+          },
+          {
+            "code": "formula",
+            "count": 14
+          }
+        ]
+      },
+      "blockedReasonCodes": [
+        {
+          "code": "FORMULA_UNSUPPORTED",
+          "count": 13
+        },
+        {
+          "code": "AMBIGUOUS_DEVIATION",
+          "count": 2
+        },
+        {
+          "code": "SUBSCRIPT_AMBIGUOUS",
+          "count": 1
+        },
+        {
+          "code": "UNSUPPORTED_UNIT",
+          "count": 1
+        }
+      ],
+      "issues": {
+        "total": 32,
+        "blocked": 16,
+        "warning": 16,
+        "byCode": [
+          {
+            "code": "AMBIGUOUS_ASSIGNMENT",
+            "count": 16
+          },
+          {
+            "code": "UNKNOWN_UNIT",
+            "count": 14
+          },
+          {
+            "code": "AMBIGUOUS_DEVIATION",
+            "count": 2
+          }
+        ],
+        "noTextLayerPages": []
+      },
+      "pageLimit": null,
+      "unitAttestation": {
+        "statement": "本表单位 mm（2026-11-12 复核）",
+        "actor": "local-operator",
+        "turnId": "real-doc-attest-6",
+        "sessionSeq": 6,
+        "batchId": "unit-batch-e660ca87902988a9",
+        "declared": 29,
+        "converted": 29,
+        "decisionCount": 29,
+        "preservedBlocked": {
+          "FORMULA_UNSUPPORTED": 13,
+          "NUMBER_UNSUPPORTED": 0,
+          "UNSUPPORTED_UNIT": 1
+        },
+        "before": {
+          "pending": 41,
+          "blocked": 46,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 29
+            },
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 13
+            },
+            {
+              "code": "AMBIGUOUS_DEVIATION",
+              "count": 2
+            },
+            {
+              "code": "SUBSCRIPT_AMBIGUOUS",
+              "count": 1
+            },
+            {
+              "code": "UNSUPPORTED_UNIT",
+              "count": 1
+            }
+          ]
+        },
+        "after": {
+          "pending": 70,
+          "blocked": 17,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 13
+            },
+            {
+              "code": "AMBIGUOUS_DEVIATION",
+              "count": 2
+            },
+            {
+              "code": "SUBSCRIPT_AMBIGUOUS",
+              "count": 1
+            },
+            {
+              "code": "UNSUPPORTED_UNIT",
+              "count": 1
+            }
+          ]
+        },
+        "reverted": {
+          "pending": 41,
+          "blocked": 46,
+          "confirmed": 0,
+          "reasonCodes": [
+            {
+              "code": "UNKNOWN_UNIT",
+              "count": 29
+            },
+            {
+              "code": "FORMULA_UNSUPPORTED",
+              "count": 13
+            },
+            {
+              "code": "AMBIGUOUS_DEVIATION",
+              "count": 2
+            },
+            {
+              "code": "SUBSCRIPT_AMBIGUOUS",
+              "count": 1
+            },
+            {
+              "code": "UNSUPPORTED_UNIT",
+              "count": 1
+            }
+          ]
+        },
+        "revokeRestored": true
+      },
+      "correctness": {
+        "pendingChecked": 10,
+        "wrongPending": 0,
+        "details": [
+          {
+            "docId": "r6",
+            "page": 1,
+            "rect": [
+              56.7000000000001,
+              296.21999999999997,
+              366.7679999999999,
+              311.21999999999997
+            ],
+            "originalText": "A = 230 ± 0.3 mm",
+            "expectedQ": 2300000,
+            "cropFile": "crops/r6-p1-1.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-d7ffc11c9b01772e",
+                "status": "pending",
+                "nominal": "230",
+                "valueQ": 2300000,
+                "upperDeviation": "+0.3",
+                "lowerDeviation": "-0.3",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 1,
+            "rect": [
+              157.26,
+              268.125,
+              231.24,
+              283.62
+            ],
+            "originalText": "A₂ = 765.41 mm",
+            "expectedQ": 7654100,
+            "cropFile": "crops/r6-p1-2.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-929b4d0999e5aa9b",
+                "status": "pending",
+                "nominal": "765.41",
+                "valueQ": 7654100,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 1,
+            "rect": [
+              56.69999999999999,
+              268.125,
+              130.56,
+              283.62
+            ],
+            "originalText": "A₁ = 759.48 mm",
+            "expectedQ": 7594800,
+            "cropFile": "crops/r6-p1-3.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-43131c64f4c08186",
+                "status": "pending",
+                "nominal": "759.48",
+                "valueQ": 7594800,
+                "upperDeviation": "+0.1",
+                "lowerDeviation": "-0.1",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 1,
+            "rect": [
+              257.94,
+              268.125,
+              322.8,
+              283.62
+            ],
+            "originalText": "A₃ = 1753 mm",
+            "expectedQ": 17530000,
+            "cropFile": "crops/r6-p1-4.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-d49b18054605b313",
+                "status": "pending",
+                "nominal": "1753",
+                "valueQ": 17530000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 2,
+            "rect": [
+              213.84,
+              581.025,
+              400.65599999999995,
+              596.52
+            ],
+            "originalText": "T_{avA} = T₀/m(m−Ring Qty.) = 0.6/3 = 0.2 mm",
+            "expectedQ": 2000,
+            "cropFile": "crops/r6-p2-5.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-c426b928d5623e4e",
+                "status": "pending",
+                "nominal": "0.2",
+                "valueQ": 2000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 2,
+            "rect": [
+              389.34,
+              553.425,
+              468.24,
+              568.92
+            ],
+            "originalText": "T₂ = 0.2 mm",
+            "expectedQ": 2000,
+            "cropFile": "crops/r6-p2-6.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-7dc49292c06724a0",
+                "status": "pending",
+                "nominal": "0.2",
+                "valueQ": 2000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 2,
+            "rect": [
+              370.6799999999999,
+              553.425,
+              468.24,
+              568.92
+            ],
+            "originalText": "T₁ = T₂ = 0.2 mm",
+            "expectedQ": 2000,
+            "cropFile": "crops/r6-p2-7.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-b438f13d46eda8ef",
+                "status": "pending",
+                "nominal": "0.2",
+                "valueQ": 2000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 2,
+            "rect": [
+              215.40000000000003,
+              539.625,
+              391.79999999999995,
+              555.12
+            ],
+            "originalText": "T₃ = T₀ − T₁ − T₂ = 0.6 − 0.2 − 0.2 = 0.2 mm",
+            "expectedQ": 2000,
+            "cropFile": "crops/r6-p2-8.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-4910fe730edf8d45",
+                "status": "pending",
+                "nominal": "0.2",
+                "valueQ": 2000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 2,
+            "rect": [
+              201.60000000000002,
+              470.625,
+              405.696,
+              486.12
+            ],
+            "originalText": "A₀ₘₐₓ = 1753.1 − 759.38 − 765.31 = 228.41 mm",
+            "expectedQ": 2284100,
+            "cropFile": "crops/r6-p2-9.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-dd5566142970e986",
+                "status": "pending",
+                "nominal": "228.41",
+                "valueQ": 2284100,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 2,
+            "rect": [
+              202.26000000000002,
+              456.825,
+              405.03599999999994,
+              472.32
+            ],
+            "originalText": "A₀ₘᵢₙ = 1752.9 − 759.58 − 765.51 = 227.81 mm",
+            "expectedQ": 2278100,
+            "cropFile": "crops/r6-p2-10.png",
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "matches": [
+              {
+                "candidateId": "ring-007db38d57e0d39b",
+                "status": "pending",
+                "nominal": "227.81",
+                "valueQ": 2278100,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "documents": 6,
+    "pages": 269,
+    "textItems": 113222,
+    "candidates": {
+      "total": 140,
+      "pending": 101,
+      "blocked": 39,
+      "confirmed": 0
+    },
+    "correctness": {
+      "pendingChecked": 19,
+      "wrongPending": 0,
+      "wrongRate": 0
+    },
+    "confirmableRate": 0.721429,
+    "blockedRate": 0.278571,
+    "reasonCodeTop5": [
+      {
+        "code": "FORMULA_UNSUPPORTED",
+        "count": 32
+      },
+      {
+        "code": "AMBIGUOUS_DEVIATION",
+        "count": 2
+      },
+      {
+        "code": "NUMBER_UNSUPPORTED",
+        "count": 2
+      },
+      {
+        "code": "SUBSCRIPT_AMBIGUOUS",
+        "count": 2
+      },
+      {
+        "code": "UNKNOWN_UNIT",
+        "count": 1
+      }
+    ],
+    "pageLimitDocuments": [],
+    "noTextLayerPages": 4,
+    "rules": {
+      "extractorVersion": "document-extractor-8",
+      "maxExtractionPages": 100,
+      "maxExtractionCandidates": 200,
+      "maxExtractionIssues": 200,
+      "readBudget": {
+        "maxTextItems": 200000,
+        "timeoutMs": 300000
+      },
+      "unitAttestation": {
+        "statement": "本表单位 mm（2026-11-12 复核）",
+        "actor": "local-operator"
+      }
+    },
+    "pageRangeProbe": [
+      {
+        "id": "r4@1-20",
+        "forDocument": "r4",
+        "pageRange": {
+          "from": 1,
+          "to": 20
+        },
+        "candidates": {
+          "total": 1,
+          "pending": 0,
+          "blocked": 1,
+          "confirmed": 0,
+          "byKind": [
+            {
+              "code": "ring",
+              "count": 1
+            }
+          ]
+        },
+        "blockedReasonCodes": [
+          {
+            "code": "UNKNOWN_UNIT",
+            "count": 1
+          }
+        ],
+        "issues": {
+          "total": 3,
+          "blocked": 3,
+          "warning": 0,
+          "byCode": [
+            {
+              "code": "NO_TEXT_LAYER",
+              "count": 3
+            }
+          ],
+          "noTextLayerPages": [
+            1,
+            2,
+            6
+          ]
+        }
+      }
+    ]
+  },
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

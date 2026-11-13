@@ -59,7 +59,7 @@ describe('read_taskbook', () => {
   it('真实 PDF：候选带页/选区/原文出处，出处完整性由 isProvenanceCompleteness 判', async () => {
     const result = await runReadTaskbook({ pdfPath: PDF, pageFrom: 1, pageTo: 2 })
     expect(result.pageCount).toBe(2)
-    expect(result.extractorVersion).toBe('document-extractor-6')
+    expect(result.extractorVersion).toBe('document-extractor-8')
     const candidates = result.candidates as Record<string, unknown>[]
     expect(candidates.length).toBeGreaterThan(0)
     for (const candidate of candidates) {

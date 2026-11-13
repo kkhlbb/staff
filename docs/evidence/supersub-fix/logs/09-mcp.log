@@ -1,0 +1,16 @@
+$ sandbox-exec -p '(version 1)(allow default)(deny network*)' npm run test:mcp
+
+> staff@0.4.0-beta test:mcp
+> vitest run --config vitest.mcp.config.ts
+
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+
+ Test Files  3 passed (3)
+      Tests  22 passed (22)
+   Start at  00:01:24
+   Duration  797ms (tests 76%, import 17%, transform 6%)
+
+
+exit=0

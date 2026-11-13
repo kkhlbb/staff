@@ -1,0 +1,43 @@
+$ node node_modules/vitest/vitest.mjs run src/document-extraction/__tests__/scriptsGeometry.test.ts -t M43
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/document-extraction/__tests__/scriptsGeometry.test.ts (15 tests | 2 failed | 13 skipped) 6ms
+   ❯ geometric scripts safety (15)
+     × M43 real r2 crop #1: never nominal 1001 or 430 4ms
+     × M43 real r2 crop #5: never nominal 1001 or 430 1ms
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 13 skipped (15)
+   Start at  23:49:11
+   Duration  128ms (setup 54%, transform 17%, import 17%, tests 10%, worker 2%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/document-extraction/__tests__/scriptsGeometry.test.ts > geometric scripts safety > M43 real r2 crop #1: never nominal 1001 or 430
+AssertionError: expected [ '1001' ] to not include '1001'
+ ❯ src/document-extraction/__tests__/scriptsGeometry.test.ts:35:55
+     33|   const draft=extract(f.page,{pages:[f.layerPage]} as unknown as PdfTe…
+     34|   const candidates=draft.candidates.filter(c=>c.kind==='ring')
+     35|   expect(candidates.map(c=>c.data.nominal?.text)).not.toContain(index=…
+       |                                                       ^
+     36|   const c=candidates.find(c=>c.data.nominal?.text===f.truth.nominal)
+     37|   expect(c).toBeDefined()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/document-extraction/__tests__/scriptsGeometry.test.ts > geometric scripts safety > M43 real r2 crop #5: never nominal 1001 or 430
+AssertionError: expected [ '430' ] to not include '430'
+ ❯ src/document-extraction/__tests__/scriptsGeometry.test.ts:35:55
+     33|   const draft=extract(f.page,{pages:[f.layerPage]} as unknown as PdfTe…
+     34|   const candidates=draft.candidates.filter(c=>c.kind==='ring')
+     35|   expect(candidates.map(c=>c.data.nominal?.text)).not.toContain(index=…
+       |                                                       ^
+     36|   const c=candidates.find(c=>c.data.nominal?.text===f.truth.nominal)
+     37|   expect(c).toBeDefined()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+exit=1

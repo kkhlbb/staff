@@ -1,0 +1,43 @@
+$ sandbox-exec -p '(version 1)(allow default)(deny network*)' npm run metrics:real-docs
+
+> staff@0.4.0-beta metrics:real-docs
+> node scripts/real-doc-metrics.mjs
+
+correctness: {"pendingChecked":19,"wrongPending":0,"wrongRate":0}
+提取器 document-extractor-8｜页数上限 100｜候选上限 200｜问题上限 200
+文本读取预算（仅度量放大，不影响规则）：maxTextItems=200000，timeoutMs=300000
+
+文档                            语言  页数   文本项    候选  pending  blocked  可确认率   阻塞率     PageLimit
+----------------------------  --  ---  -----  --  -------  -------  -----  ------  ---------
+r1 r1-assembly-course.pdf     zh  74   4409   15  4        11       26.7%  73.3%   -        
+r2 r2-tolerance-domain.pdf    zh  5    6105   24  10       14       41.7%  58.3%   -        
+r3 r3-rv-3dcs.pdf             zh  4    1570   3   0        3        0.0%   100.0%  -        
+r4 r4-mtt1097.pdf             zh  170  94214  7   1        6        14.3%  85.7%   -        
+r5 r5-tolerance-analysis.pdf  en  8    4053   4   2        2        50.0%  50.0%   -        
+r6 r6-segments-assembly.pdf   en  8    2871   87  41       46       47.1%  52.9%   -        
+
+r1 阻塞原因码：FORMULA_UNSUPPORTED×7, UNKNOWN_UNIT×4
+r1 问题码：UNKNOWN_UNIT×53, AMBIGUOUS_ASSIGNMENT×2, NO_TEXT_LAYER×1；无文本层页：40
+r2 阻塞原因码：FORMULA_UNSUPPORTED×7, UNKNOWN_UNIT×7, SUBSCRIPT_AMBIGUOUS×1
+r2 问题码：AMBIGUOUS_ASSIGNMENT×6；无文本层页：无
+r3 阻塞原因码：FORMULA_UNSUPPORTED×2, UNKNOWN_UNIT×1
+r3 问题码：无；无文本层页：无
+r4 阻塞原因码：FORMULA_UNSUPPORTED×3, NUMBER_UNSUPPORTED×2, UNKNOWN_UNIT×1
+r4 问题码：NO_TEXT_LAYER×3, CHUNK_PROCESSED×2；无文本层页：1,2,6
+r5 阻塞原因码：UNKNOWN_UNIT×2
+r5 问题码：无；无文本层页：无
+r6 阻塞原因码：UNKNOWN_UNIT×29, FORMULA_UNSUPPORTED×13, AMBIGUOUS_DEVIATION×2, SUBSCRIPT_AMBIGUOUS×1, UNSUPPORTED_UNIT×1
+r6 问题码：AMBIGUOUS_ASSIGNMENT×16, UNKNOWN_UNIT×14, AMBIGUOUS_DEVIATION×2；无文本层页：无
+
+汇总：6 份 / 269 页 / 候选 140（pending 58｜blocked 82｜confirmed 0）
+可确认率 = pending/候选 = 58/140 = 41.4%；阻塞率 = 58.6%
+PAGE_LIMIT 文档：无；NO_TEXT_LAYER 页数：4
+原因码 Top5：UNKNOWN_UNIT×44, FORMULA_UNSUPPORTED×32, AMBIGUOUS_DEVIATION×2, NUMBER_UNSUPPORTED×2, SUBSCRIPT_AMBIGUOUS×2
+
+页范围探针 r4@1-20：候选 1（pending 0｜blocked 1）；阻塞原因码 UNKNOWN_UNIT×1；问题码 NO_TEXT_LAYER×3；无文本层页 1,2,6
+
+语料目录：/Users/aston/DSH/tmp/cunlian-v36/real-docs（manifest：docs/evidence/real-doc-baseline/corpus-manifest.json）
+已写 docs/evidence/real-doc-baseline/metrics.json
+BASELINE MATCH：与 docs/evidence/real-doc-baseline/baseline.json 完全一致（6 份文档）
+
+exit=0

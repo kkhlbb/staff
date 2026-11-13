@@ -38,8 +38,11 @@ import type { PdfPageBox, PdfRect } from '../sources/pdfCoordinates'
  *    - 无文本层的页仍只在该页标 `NO_TEXT_LAYER`，其余页照常出候选；
  *    - `sourceIdentity` 仍是原 PDF 的 revisionId + sha256，不因切块变化。
  *    语义变了 → 升版本（旧草稿不与新候选混并）。
+ * 8：几何上下标与 nominal 隔离；不确定项 SUBSCRIPT_AMBIGUOUS 阻塞；
+ *    非对称/单侧公差复用 upperDeviation / lowerDeviation，不猜成对称。
+ *    真值正确性度量与数量分开，详见 docs/evidence/ground-truth。
  */
-export const EXTRACTOR_VERSION = 'document-extractor-6'
+export const EXTRACTOR_VERSION = 'document-extractor-8'
 
 /**
  * 页数上限：单个提取块最多多少页。页跨度超过它时按顺序切块，
@@ -73,6 +76,7 @@ export const EXTRACTION_REASON_CODES = [
   'RANGE_CONFLICT',
   'AMBIGUOUS_ASSIGNMENT',
   'AMBIGUOUS_DEVIATION',
+  'SUBSCRIPT_AMBIGUOUS',
   'DEVIATION_SIGN_MISSING',
   /** 同一赋值里多个等号的结果值互不一致（`A = 10 = 12 mm`）：阻塞整条，不挑一个。 */
   'INCONSISTENT_REDUNDANT_VALUE',

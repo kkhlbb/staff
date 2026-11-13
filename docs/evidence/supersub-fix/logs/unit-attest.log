@@ -1,0 +1,24 @@
+correctness: {"pendingChecked":19,"wrongPending":0,"wrongRate":0}
+批量补单位度量：声明「本表单位 mm（2026-11-12 复核）」（只对“仅差单位”开放；补完逐条记 user-attestation，随后整批撤销核对）
+
+文档                            候选  未声明 pending  未声明 blocked  声明后 pending  声明后 blocked  补上条数  撤销后 pending  撤销后 blocked  撤销一致
+----------------------------  --  -----------  -----------  -----------  -----------  ----  -----------  -----------  ----
+r1 r1-assembly-course.pdf     15  4            11           8            7            4     4            11           是   
+r2 r2-tolerance-domain.pdf    24  10           14           16           8            6     10           14           是   
+r3 r3-rv-3dcs.pdf             3   0            3            1            2            1     0            3            是   
+r4 r4-mtt1097.pdf             7   1            6            2            5            1     1            6            是   
+r5 r5-tolerance-analysis.pdf  4   2            2            4            0            2     2            2            是   
+r6 r6-segments-assembly.pdf   87  41           46           70           17           29    41           46           是   
+
+可确认率 = 声明后 pending/候选 = 101/140 = 72.1%
+汇总：候选 140｜未声明 pending 58 / blocked 82｜声明后 pending 101 / blocked 39｜补上 43 条｜撤销后 pending 58 / blocked 82
+r1 声明「本表单位 mm（2026-11-12 复核）」｜actor=local-operator｜sessionSeq=1｜turnId=real-doc-attest-1｜batchId=unit-batch-0ad9265dcb30c…｜决定 4 条｜三类不支持保持：FORMULA_UNSUPPORTED×7、NUMBER_UNSUPPORTED×0、UNSUPPORTED_UNIT×0
+r2 声明「本表单位 mm（2026-11-12 复核）」｜actor=local-operator｜sessionSeq=2｜turnId=real-doc-attest-2｜batchId=unit-batch-1e78cafab2185…｜决定 6 条｜三类不支持保持：FORMULA_UNSUPPORTED×7、NUMBER_UNSUPPORTED×0、UNSUPPORTED_UNIT×0
+r3 声明「本表单位 mm（2026-11-12 复核）」｜actor=local-operator｜sessionSeq=3｜turnId=real-doc-attest-3｜batchId=unit-batch-73a6dfeb407be…｜决定 1 条｜三类不支持保持：FORMULA_UNSUPPORTED×2、NUMBER_UNSUPPORTED×0、UNSUPPORTED_UNIT×0
+r4 声明「本表单位 mm（2026-11-12 复核）」｜actor=local-operator｜sessionSeq=4｜turnId=real-doc-attest-4｜batchId=unit-batch-3fbd9ca3627d8…｜决定 1 条｜三类不支持保持：FORMULA_UNSUPPORTED×3、NUMBER_UNSUPPORTED×2、UNSUPPORTED_UNIT×0
+r5 声明「本表单位 mm（2026-11-12 复核）」｜actor=local-operator｜sessionSeq=5｜turnId=real-doc-attest-5｜batchId=unit-batch-bf68051f7ff78…｜决定 2 条｜三类不支持保持：FORMULA_UNSUPPORTED×0、NUMBER_UNSUPPORTED×0、UNSUPPORTED_UNIT×0
+r6 声明「本表单位 mm（2026-11-12 复核）」｜actor=local-operator｜sessionSeq=6｜turnId=real-doc-attest-6｜batchId=unit-batch-e660ca8790298…｜决定 29 条｜三类不支持保持：FORMULA_UNSUPPORTED×13、NUMBER_UNSUPPORTED×0、UNSUPPORTED_UNIT×1
+
+语料目录：/Users/aston/DSH/tmp/cunlian-v36/real-docs（manifest：docs/evidence/real-doc-baseline/corpus-manifest.json）
+已写 docs/evidence/supersub-fix/unit-attest/metrics.json
+本模式不比较 baseline、不覆盖 real-doc-baseline/metrics.json：声明后数字本就有意改变。

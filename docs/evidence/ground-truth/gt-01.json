@@ -1,0 +1,311 @@
+{
+  "entries": [
+    {
+      "docId": "r2",
+      "page": 2,
+      "rect": [
+        451.293,
+        511.01271266300995,
+        512.487,
+        523.3291493479607
+      ],
+      "originalText": "L₀ = 0⁰₀ mm",
+      "nominal": "0",
+      "upperDeviation": "0",
+      "lowerDeviation": "0",
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p2-1.png"
+    },
+    {
+      "docId": "r2",
+      "page": 2,
+      "rect": [
+        288.17699999999996,
+        495.00171266300987,
+        362.18,
+        507.3181493479606
+      ],
+      "originalText": "L₁ = 100⁺⁰·²₋₀.₁ mm",
+      "nominal": "100",
+      "upperDeviation": "+0.2",
+      "lowerDeviation": "-0.1",
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p2-2.png"
+    },
+    {
+      "docId": "r2",
+      "page": 3,
+      "rect": [
+        372.368,
+        339.88000000000005,
+        447.474,
+        352.01000000000005
+      ],
+      "originalText": "L′_b = 5.2⁺⁰·¹₀ mm",
+      "nominal": "5.2",
+      "upperDeviation": "+0.1",
+      "lowerDeviation": "0",
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p3-3.png"
+    },
+    {
+      "docId": "r2",
+      "page": 3,
+      "rect": [
+        296.037,
+        261.53571266300986,
+        453.781,
+        273.8521493479606
+      ],
+      "originalText": "Zₘₐₓ = 5.2 + 0.1 − 4.9 = 0.4 (mm)",
+      "nominal": "0.4",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p3-4.png"
+    },
+    {
+      "docId": "r2",
+      "page": 3,
+      "rect": [
+        345.913,
+        10.796712663009915,
+        425.25299999999993,
+        23.113149347960643
+      ],
+      "originalText": "δ_{L_b} = 0.10 mm",
+      "nominal": "0.10",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p3-5.png"
+    },
+    {
+      "docId": "r2",
+      "page": 3,
+      "rect": [
+        67.32600000000001,
+        8.408000000000015,
+        146.762,
+        21.17314934796059
+      ],
+      "originalText": "L₃ = 43⁺⁰·²₀ mm",
+      "nominal": "43",
+      "upperDeviation": "+0.2",
+      "lowerDeviation": "0",
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p3-6.png"
+    },
+    {
+      "docId": "r2",
+      "page": 4,
+      "rect": [
+        22.496000000000002,
+        668.50071266301,
+        212.843,
+        680.8171493479606
+      ],
+      "originalText": "δ_{L_z} = δ_{L_0} − δ_{L_b} = 0.25 − 0.10 = 0.15 (mm)",
+      "nominal": "0.15",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p4-7.png"
+    },
+    {
+      "docId": "r5",
+      "page": 2,
+      "rect": [
+        495.60072,
+        712.26,
+        555.3223320000002,
+        724.7770800000001
+      ],
+      "originalText": "L₁ = 50 mm",
+      "nominal": "50",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r5-p2-1.png"
+    },
+    {
+      "docId": "r5",
+      "page": 2,
+      "rect": [
+        59.64156000000003,
+        700.74,
+        379.013868,
+        713.27628
+      ],
+      "originalText": "L₂ = 27 mm",
+      "nominal": "27",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r5-p2-2.png"
+    },
+    {
+      "docId": "r6",
+      "page": 1,
+      "rect": [
+        56.7000000000001,
+        296.21999999999997,
+        366.7679999999999,
+        311.21999999999997
+      ],
+      "originalText": "A = 230 ± 0.3 mm",
+      "nominal": "230",
+      "upperDeviation": "+0.3",
+      "lowerDeviation": "-0.3",
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r6-p1-1.png"
+    },
+    {
+      "docId": "r6",
+      "page": 1,
+      "rect": [
+        157.26,
+        268.125,
+        231.24,
+        283.62
+      ],
+      "originalText": "A₂ = 765.41 mm",
+      "nominal": "765.41",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r6-p1-2.png"
+    },
+    {
+      "docId": "r6",
+      "page": 1,
+      "rect": [
+        56.69999999999999,
+        268.125,
+        130.56,
+        283.62
+      ],
+      "originalText": "A₁ = 759.48 mm",
+      "nominal": "759.48",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r6-p1-3.png"
+    },
+    {
+      "docId": "r6",
+      "page": 1,
+      "rect": [
+        257.94,
+        268.125,
+        322.8,
+        283.62
+      ],
+      "originalText": "A₃ = 1753 mm",
+      "nominal": "1753",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r6-p1-4.png"
+    },
+    {
+      "docId": "r6",
+      "page": 2,
+      "rect": [
+        213.84,
+        581.025,
+        400.65599999999995,
+        596.52
+      ],
+      "originalText": "T_{avA} = T₀/m(m−Ring Qty.) = 0.6/3 = 0.2 mm",
+      "nominal": "0.2",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r6-p2-5.png"
+    },
+    {
+      "docId": "r6",
+      "page": 2,
+      "rect": [
+        389.34,
+        553.425,
+        468.24,
+        568.92
+      ],
+      "originalText": "T₂ = 0.2 mm",
+      "nominal": "0.2",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r6-p2-6.png"
+    },
+    {
+      "docId": "r6",
+      "page": 2,
+      "rect": [
+        370.6799999999999,
+        553.425,
+        468.24,
+        568.92
+      ],
+      "originalText": "T₁ = T₂ = 0.2 mm",
+      "nominal": "0.2",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r6-p2-7.png"
+    },
+    {
+      "docId": "r6",
+      "page": 2,
+      "rect": [
+        215.40000000000003,
+        539.625,
+        391.79999999999995,
+        555.12
+      ],
+      "originalText": "T₃ = T₀ − T₁ − T₂ = 0.6 − 0.2 − 0.2 = 0.2 mm",
+      "nominal": "0.2",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r6-p2-8.png"
+    },
+    {
+      "docId": "r6",
+      "page": 2,
+      "rect": [
+        201.60000000000002,
+        470.625,
+        405.696,
+        486.12
+      ],
+      "originalText": "A₀ₘₐₓ = 1753.1 − 759.38 − 765.31 = 228.41 mm",
+      "nominal": "228.41",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r6-p2-9.png"
+    },
+    {
+      "docId": "r6",
+      "page": 2,
+      "rect": [
+        202.26000000000002,
+        456.825,
+        405.03599999999994,
+        472.32
+      ],
+      "originalText": "A₀ₘᵢₙ = 1752.9 − 759.58 − 765.51 = 227.81 mm",
+      "nominal": "227.81",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r6-p2-10.png"
+    }
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

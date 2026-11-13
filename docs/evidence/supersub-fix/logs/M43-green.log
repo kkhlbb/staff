@@ -1,0 +1,12 @@
+$ node node_modules/vitest/vitest.mjs run src/document-extraction/__tests__/scriptsGeometry.test.ts -t M43
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+
+ Test Files  1 passed (1)
+      Tests  2 passed | 13 skipped (15)
+   Start at  23:49:11
+   Duration  122ms (setup 55%, import 18%, transform 17%, tests 8%, worker 2%)
+
+
+exit=0

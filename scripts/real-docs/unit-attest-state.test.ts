@@ -2,12 +2,12 @@
  * 「批量补单位做成真状态变更」：真实 6 份语料回归（专用配置 vitest.realdocs.config.ts）。
  *
  * 这张卡要证明的不是“操作变少”，而是**账真的动了**：
- * - 未声明：候选/待确认/阻塞 = 138 / 58 / 80；
- * - 一句「本表单位 mm」真跑 `attestCandidateUnits` 后：138 / 103 / 35；
+ * - v8 未声明：候选/待确认/阻塞 = 140 / 58 / 82；
+ * - 一句「本表单位 mm」真跑 `attestCandidateUnits` 后：140 / 101 / 39；
  * - 每条转过去的候选带 user-attestation（actorId + sessionSeq + turnId + 原话逐字），
  *   且出处完整性判据 `isProvenanceCompleteness` 为真；
  * - 三类“公式/数值/单位不支持”32 / 2 / 1 一条都不许被带上；
- * - 按 batchId 整批撤销后逐项回到 58 / 80，连跑两次一致。
+ * - 按 batchId 整批撤销后逐项回到 58 / 82，连跑两次一致。
  *
  * 不依赖网络；语料缺失/被替换由 verifyCorpus 直接失败，不静默跳过。
  */
@@ -101,26 +101,28 @@ function unitAttestations(refs: readonly EvidenceRef[]): UserAttestation[] {
 
 describe('批量补单位：真状态变更（真实 6 份语料）', () => {
   it(
-    '138/58/80 → 138/103/35 → 撤销回 138/58/80，两次一致；三类不支持保持阻塞',
+    'v8: 140/58/82 → 140/101/39 → 撤销回 140/58/82，两次一致；不支持和歧义保持阻塞',
     { timeout: 300_000 },
     async () => {
       const ext = await loadExtraction()
       const docs = await buildDrafts()
       expect(docs).toHaveLength(6)
-      expect(docs.every((doc) => doc.extractorVersion === 'document-extractor-6')).toBe(true)
+      expect(docs.every((doc) => doc.extractorVersion === 'document-extractor-8')).toBe(true)
 
       const sum = (pick: (state: DocState) => number) =>
         docs.reduce((total, state) => total + pick(state), 0)
 
       // ---------- 未声明 ----------
       const beforeCounts = statusCounts(docs.flatMap((doc) => doc.draft.candidates))
-      expect(beforeCounts).toMatchObject({ pending: 58, blocked: 80, confirmed: 0 })
-      expect(sum((doc) => doc.draft.candidates.length)).toBe(138)
+      expect(beforeCounts).toMatchObject({ pending: 58, blocked: 82, confirmed: 0 })
+      expect(sum((doc) => doc.draft.candidates.length)).toBe(140)
       expect(blockedCodeCounts(docs.flatMap((doc) => doc.draft.candidates))).toEqual({
-        UNKNOWN_UNIT: 45,
+        UNKNOWN_UNIT: 44,
         FORMULA_UNSUPPORTED: 32,
         NUMBER_UNSUPPORTED: 2,
         UNSUPPORTED_UNIT: 1,
+        SUBSCRIPT_AMBIGUOUS: 2,
+        AMBIGUOUS_DEVIATION: 2,
       })
 
       // ---------- 批量声明 mm（真跑两遍，逐项一致） ----------
@@ -153,12 +155,15 @@ describe('批量补单位：真状态变更（真实 6 份语料）', () => {
       const firstRun = runOnce('first')
       const afterCandidates = firstRun.flatMap((item) => item.attest.draft.candidates)
       const afterCounts = statusCounts(afterCandidates)
-      expect(afterCounts).toMatchObject({ pending: 103, blocked: 35, confirmed: 0 })
-      expect(afterCandidates).toHaveLength(138)
+      expect(afterCounts).toMatchObject({ pending: 101, blocked: 39, confirmed: 0 })
+      expect(afterCandidates).toHaveLength(140)
       expect(blockedCodeCounts(afterCandidates)).toEqual({
+        UNKNOWN_UNIT: 1,
         FORMULA_UNSUPPORTED: 32,
         NUMBER_UNSUPPORTED: 2,
         UNSUPPORTED_UNIT: 1,
+        SUBSCRIPT_AMBIGUOUS: 2,
+        AMBIGUOUS_DEVIATION: 2,
       })
 
       const table = firstRun
@@ -179,7 +184,7 @@ describe('批量补单位：真状态变更（真实 6 份语料）', () => {
           ),
         })),
       )
-      expect(converted).toHaveLength(45)
+      expect(converted).toHaveLength(43)
       for (const item of converted) {
         const candidate = item.candidate
         expect(candidate, candidate === undefined ? 'missing' : candidate.candidateId).toBeDefined()
@@ -214,7 +219,7 @@ describe('批量补单位：真状态变更（真实 6 份语料）', () => {
         }
       }
 
-      // ---------- 整批撤销：逐项回到 58 / 80 ----------
+      // ---------- 整批撤销：逐项回到 58 / 82 ----------
       const revokeAll = (drafts: AttestedRun[], label: string): void => {
         for (const item of drafts) {
           const result = ext.revokeUnitAttestations(item.attest.draft, {

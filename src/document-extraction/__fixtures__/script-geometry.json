@@ -1,0 +1,4999 @@
+[
+  {
+    "truth": {
+      "docId": "r2",
+      "page": 2,
+      "rect": [
+        451.293,
+        511.01271266300995,
+        512.487,
+        523.3291493479607
+      ],
+      "originalText": "L₀ = 0⁰₀ mm",
+      "nominal": "0",
+      "upperDeviation": "0",
+      "lowerDeviation": "0",
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p2-1.png"
+    },
+    "layerPage": {
+      "page": 2,
+      "pageBoxPdf": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "text": "(",
+          "normalizedText": "(",
+          "x": 486.87,
+          "y": 531.0400000000001,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 231,
+          "hasGeometry": true
+        },
+        {
+          "text": "1)",
+          "normalizedText": "1)",
+          "x": 492.304,
+          "y": 529.4870000000001,
+          "width": 19.98900000000002,
+          "height": 9.704,
+          "itemIndex": 232,
+          "hasGeometry": true
+        },
+        {
+          "text": "",
+          "normalizedText": "",
+          "x": 451.293,
+          "y": 513.4760000000001,
+          "width": 0,
+          "height": 0,
+          "itemIndex": 237,
+          "hasGeometry": false
+        },
+        {
+          "text": "L",
+          "normalizedText": "L",
+          "x": 451.293,
+          "y": 513.4760000000001,
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "itemIndex": 238,
+          "hasGeometry": true
+        },
+        {
+          "text": "0",
+          "normalizedText": "0",
+          "x": 459.118,
+          "y": 512.7780000000001,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 239,
+          "hasGeometry": true
+        },
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 464.455,
+          "y": 512.7780000000001,
+          "width": 0.5819999999999936,
+          "height": 0,
+          "itemIndex": 240,
+          "hasGeometry": false
+        },
+        {
+          "text": "=0",
+          "normalizedText": "=0",
+          "x": 465.037,
+          "y": 513.4760000000001,
+          "width": 17.758000000000024,
+          "height": 9.704,
+          "itemIndex": 241,
+          "hasGeometry": true
+        },
+        {
+          "text": "0",
+          "normalizedText": "0",
+          "x": 479.495,
+          "y": 518.0180000000001,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 242,
+          "hasGeometry": true
+        },
+        {
+          "text": "0",
+          "normalizedText": "0",
+          "x": 479.495,
+          "y": 512.7780000000001,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 243,
+          "hasGeometry": true
+        },
+        {
+          "text": "mm,",
+          "normalizedText": "mm,",
+          "x": 484.735,
+          "y": 513.4760000000001,
+          "width": 27.75199999999999,
+          "height": 9.704,
+          "itemIndex": 244,
+          "hasGeometry": true
+        }
+      ],
+      "lines": [
+        {
+          "page": 2,
+          "y": 513.4760000000001,
+          "rawText": "L0 =00mm,",
+          "normalizedText": "L0 =00mm,",
+          "items": [
+            {
+              "text": "L",
+              "normalizedText": "L",
+              "x": 451.293,
+              "y": 513.4760000000001,
+              "width": 9.704,
+              "height": 9.853149347960581,
+              "itemIndex": 238,
+              "hasGeometry": true
+            },
+            {
+              "text": "0",
+              "normalizedText": "0",
+              "x": 459.118,
+              "y": 512.7780000000001,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 239,
+              "hasGeometry": true
+            },
+            {
+              "text": " ",
+              "normalizedText": " ",
+              "x": 464.455,
+              "y": 512.7780000000001,
+              "width": 0.5819999999999936,
+              "height": 0,
+              "itemIndex": 240,
+              "hasGeometry": false
+            },
+            {
+              "text": "=0",
+              "normalizedText": "=0",
+              "x": 465.037,
+              "y": 513.4760000000001,
+              "width": 17.758000000000024,
+              "height": 9.704,
+              "itemIndex": 241,
+              "hasGeometry": true
+            },
+            {
+              "text": "0",
+              "normalizedText": "0",
+              "x": 479.495,
+              "y": 512.7780000000001,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 243,
+              "hasGeometry": true
+            },
+            {
+              "text": "mm,",
+              "normalizedText": "mm,",
+              "x": 484.735,
+              "y": 513.4760000000001,
+              "width": 27.75199999999999,
+              "height": 9.704,
+              "itemIndex": 244,
+              "hasGeometry": true
+            }
+          ],
+          "spans": [
+            {
+              "start": 0,
+              "end": 1,
+              "itemIndex": 238
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "itemIndex": 239
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "itemIndex": 240
+            },
+            {
+              "start": 3,
+              "end": 5,
+              "itemIndex": 241
+            },
+            {
+              "start": 5,
+              "end": 6,
+              "itemIndex": 243
+            },
+            {
+              "start": 6,
+              "end": 9,
+              "itemIndex": 244
+            }
+          ],
+          "rectPdf": [
+            451.293,
+            511.01271266300995,
+            512.487,
+            523.3291493479607
+          ]
+        },
+        {
+          "page": 2,
+          "y": 271.956,
+          "rawText": "L2 可满足100mm+0.2就可保证L0=00mm.",
+          "normalizedText": "L2 可满足100mm+0.2就可保证L0=00mm.",
+          "items": [
+            {
+              "text": "L",
+              "normalizedText": "L",
+              "x": 275.078,
+              "y": 271.956,
+              "width": 9.704,
+              "height": 9.853149347960581,
+              "itemIndex": 363,
+              "hasGeometry": true
+            },
+            {
+              "text": "2",
+              "normalizedText": "2",
+              "x": 282.902,
+              "y": 271.25800000000004,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 364,
+              "hasGeometry": true
+            },
+            {
+              "text": " ",
+              "normalizedText": " ",
+              "x": 288.239,
+              "y": 271.25800000000004,
+              "width": 3.008000000000038,
+              "height": 0,
+              "itemIndex": 365,
+              "hasGeometry": false
+            },
+            {
+              "text": "可满足",
+              "normalizedText": "可满足",
+              "x": 291.247,
+              "y": 273.218,
+              "width": 30.663999999999966,
+              "height": 9.704,
+              "itemIndex": 366,
+              "hasGeometry": true
+            },
+            {
+              "text": "1",
+              "normalizedText": "1",
+              "x": 322.686,
+              "y": 271.956,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 367,
+              "hasGeometry": true
+            },
+            {
+              "text": "0",
+              "normalizedText": "0",
+              "x": 327.926,
+              "y": 271.956,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 368,
+              "hasGeometry": true
+            },
+            {
+              "text": "0mm",
+              "normalizedText": "0mm",
+              "x": 333.166,
+              "y": 271.956,
+              "width": 28.335000000000015,
+              "height": 9.704,
+              "itemIndex": 369,
+              "hasGeometry": true
+            },
+            {
+              "text": "+0.",
+              "normalizedText": "+0.",
+              "x": 361.209,
+              "y": 271.25800000000004,
+              "width": 14.361000000000022,
+              "height": 5.337,
+              "itemIndex": 372,
+              "hasGeometry": true
+            },
+            {
+              "text": "2",
+              "normalizedText": "2",
+              "x": 371.786,
+              "y": 271.25800000000004,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 373,
+              "hasGeometry": true
+            },
+            {
+              "text": "就可保证",
+              "normalizedText": "就可保证",
+              "x": 382.751,
+              "y": 273.218,
+              "width": 41.143,
+              "height": 9.704,
+              "itemIndex": 375,
+              "hasGeometry": true
+            },
+            {
+              "text": "L",
+              "normalizedText": "L",
+              "x": 424.9,
+              "y": 271.956,
+              "width": 9.704,
+              "height": 9.853149347960581,
+              "itemIndex": 377,
+              "hasGeometry": true
+            },
+            {
+              "text": "0",
+              "normalizedText": "0",
+              "x": 432.724,
+              "y": 271.25800000000004,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 378,
+              "hasGeometry": true
+            },
+            {
+              "text": "=0",
+              "normalizedText": "=0",
+              "x": 438.449,
+              "y": 271.956,
+              "width": 17.564000000000007,
+              "height": 9.704,
+              "itemIndex": 379,
+              "hasGeometry": true
+            },
+            {
+              "text": "0",
+              "normalizedText": "0",
+              "x": 452.713,
+              "y": 271.25800000000004,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 381,
+              "hasGeometry": true
+            },
+            {
+              "text": "mm.",
+              "normalizedText": "mm.",
+              "x": 457.953,
+              "y": 271.956,
+              "width": 27.75300000000002,
+              "height": 9.704,
+              "itemIndex": 382,
+              "hasGeometry": true
+            }
+          ],
+          "spans": [
+            {
+              "start": 0,
+              "end": 1,
+              "itemIndex": 363
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "itemIndex": 364
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "itemIndex": 365
+            },
+            {
+              "start": 3,
+              "end": 6,
+              "itemIndex": 366
+            },
+            {
+              "start": 6,
+              "end": 7,
+              "itemIndex": 367
+            },
+            {
+              "start": 7,
+              "end": 8,
+              "itemIndex": 368
+            },
+            {
+              "start": 8,
+              "end": 11,
+              "itemIndex": 369
+            },
+            {
+              "start": 11,
+              "end": 14,
+              "itemIndex": 372
+            },
+            {
+              "start": 14,
+              "end": 15,
+              "itemIndex": 373
+            },
+            {
+              "start": 15,
+              "end": 19,
+              "itemIndex": 375
+            },
+            {
+              "start": 19,
+              "end": 20,
+              "itemIndex": 377
+            },
+            {
+              "start": 20,
+              "end": 21,
+              "itemIndex": 378
+            },
+            {
+              "start": 21,
+              "end": 23,
+              "itemIndex": 379
+            },
+            {
+              "start": 23,
+              "end": 24,
+              "itemIndex": 381
+            },
+            {
+              "start": 24,
+              "end": 27,
+              "itemIndex": 382
+            }
+          ],
+          "rectPdf": [
+            275.078,
+            269.49271266300985,
+            485.706,
+            282.922
+          ]
+        }
+      ]
+    },
+    "page": {
+      "page": 2,
+      "view": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "str": "(",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            486.87,
+            531.0400000000001
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "1)",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            492.304,
+            529.4870000000001
+          ],
+          "width": 19.98900000000002,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            451.293,
+            513.4760000000001
+          ],
+          "width": 0,
+          "height": 0,
+          "hasEOL": true
+        },
+        {
+          "str": "L",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            451.293,
+            513.4760000000001
+          ],
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "hasEOL": false
+        },
+        {
+          "str": "0",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            459.118,
+            512.7780000000001
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": " ",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            464.455,
+            512.7780000000001
+          ],
+          "width": 0.5819999999999936,
+          "height": 0,
+          "hasEOL": false
+        },
+        {
+          "str": "=0",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            465.037,
+            513.4760000000001
+          ],
+          "width": 17.758000000000024,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "0",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            479.495,
+            518.0180000000001
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": true
+        },
+        {
+          "str": "0",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            479.495,
+            512.7780000000001
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "mm,",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            484.735,
+            513.4760000000001
+          ],
+          "width": 27.75199999999999,
+          "height": 9.704,
+          "hasEOL": false
+        }
+      ]
+    }
+  },
+  {
+    "truth": {
+      "docId": "r2",
+      "page": 2,
+      "rect": [
+        288.17699999999996,
+        495.00171266300987,
+        362.18,
+        507.3181493479606
+      ],
+      "originalText": "L₁ = 100⁺⁰·²₋₀.₁ mm",
+      "nominal": "100",
+      "upperDeviation": "+0.2",
+      "lowerDeviation": "-0.1",
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p2-2.png"
+    },
+    "layerPage": {
+      "page": 2,
+      "pageBoxPdf": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "text": "",
+          "normalizedText": "",
+          "x": 298.331,
+          "y": 514.738,
+          "width": 0,
+          "height": 0,
+          "itemIndex": 233,
+          "hasGeometry": false
+        },
+        {
+          "text": "若装配要求既无间隙又无过盈",
+          "normalizedText": "若装配要求既无间隙又无过盈",
+          "x": 298.331,
+          "y": 514.738,
+          "width": 135.84899999999993,
+          "height": 9.704,
+          "itemIndex": 234,
+          "hasGeometry": true
+        },
+        {
+          "text": "",
+          "normalizedText": "",
+          "x": 288.17699999999996,
+          "y": 497.46500000000003,
+          "width": 0,
+          "height": 0,
+          "itemIndex": 247,
+          "hasGeometry": false
+        },
+        {
+          "text": "L",
+          "normalizedText": "L",
+          "x": 288.17699999999996,
+          "y": 497.46500000000003,
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "itemIndex": 248,
+          "hasGeometry": true
+        },
+        {
+          "text": "1",
+          "normalizedText": "1",
+          "x": 296.002,
+          "y": 496.767,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 249,
+          "hasGeometry": true
+        },
+        {
+          "text": "=1",
+          "normalizedText": "=1",
+          "x": 301.727,
+          "y": 497.46500000000003,
+          "width": 17.564000000000007,
+          "height": 9.704,
+          "itemIndex": 250,
+          "hasGeometry": true
+        },
+        {
+          "text": "0",
+          "normalizedText": "0",
+          "x": 314.826,
+          "y": 497.46500000000003,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 251,
+          "hasGeometry": true
+        },
+        {
+          "text": "0",
+          "normalizedText": "0",
+          "x": 320.066,
+          "y": 497.46500000000003,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 252,
+          "hasGeometry": true
+        },
+        {
+          "text": "+0.",
+          "normalizedText": "+0.",
+          "x": 327.926,
+          "y": 502.007,
+          "width": 14.361000000000022,
+          "height": 5.337,
+          "itemIndex": 253,
+          "hasGeometry": true
+        },
+        {
+          "text": "2",
+          "normalizedText": "2",
+          "x": 338.503,
+          "y": 502.007,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 254,
+          "hasGeometry": true
+        },
+        {
+          "text": "-0.",
+          "normalizedText": "-0.",
+          "x": 328.023,
+          "y": 496.767,
+          "width": 14.361000000000022,
+          "height": 5.337,
+          "itemIndex": 255,
+          "hasGeometry": true
+        },
+        {
+          "text": "1",
+          "normalizedText": "1",
+          "x": 338.6,
+          "y": 496.767,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 256,
+          "hasGeometry": true
+        },
+        {
+          "text": "mm",
+          "normalizedText": "mm",
+          "x": 343.743,
+          "y": 497.46500000000003,
+          "width": 18.436999999999998,
+          "height": 9.704,
+          "itemIndex": 257,
+          "hasGeometry": true
+        },
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 362.18,
+          "y": 497.46500000000003,
+          "width": 2.2309999999999945,
+          "height": 0,
+          "itemIndex": 258,
+          "hasGeometry": false
+        },
+        {
+          "text": "代入式",
+          "normalizedText": "代入式",
+          "x": 364.411,
+          "y": 498.72700000000003,
+          "width": 30.663999999999966,
+          "height": 9.704,
+          "itemIndex": 259,
+          "hasGeometry": true
+        }
+      ],
+      "lines": [
+        {
+          "page": 2,
+          "y": 497.46500000000003,
+          "rawText": "L1=1001mm 代入式",
+          "normalizedText": "L1=1001mm 代入式",
+          "items": [
+            {
+              "text": "L",
+              "normalizedText": "L",
+              "x": 288.17699999999996,
+              "y": 497.46500000000003,
+              "width": 9.704,
+              "height": 9.853149347960581,
+              "itemIndex": 248,
+              "hasGeometry": true
+            },
+            {
+              "text": "1",
+              "normalizedText": "1",
+              "x": 296.002,
+              "y": 496.767,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 249,
+              "hasGeometry": true
+            },
+            {
+              "text": "=1",
+              "normalizedText": "=1",
+              "x": 301.727,
+              "y": 497.46500000000003,
+              "width": 17.564000000000007,
+              "height": 9.704,
+              "itemIndex": 250,
+              "hasGeometry": true
+            },
+            {
+              "text": "0",
+              "normalizedText": "0",
+              "x": 314.826,
+              "y": 497.46500000000003,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 251,
+              "hasGeometry": true
+            },
+            {
+              "text": "0",
+              "normalizedText": "0",
+              "x": 320.066,
+              "y": 497.46500000000003,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 252,
+              "hasGeometry": true
+            },
+            {
+              "text": "1",
+              "normalizedText": "1",
+              "x": 338.6,
+              "y": 496.767,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 256,
+              "hasGeometry": true
+            },
+            {
+              "text": "mm",
+              "normalizedText": "mm",
+              "x": 343.743,
+              "y": 497.46500000000003,
+              "width": 18.436999999999998,
+              "height": 9.704,
+              "itemIndex": 257,
+              "hasGeometry": true
+            },
+            {
+              "text": " ",
+              "normalizedText": " ",
+              "x": 362.18,
+              "y": 497.46500000000003,
+              "width": 2.2309999999999945,
+              "height": 0,
+              "itemIndex": 258,
+              "hasGeometry": false
+            },
+            {
+              "text": "代入式",
+              "normalizedText": "代入式",
+              "x": 364.411,
+              "y": 498.72700000000003,
+              "width": 30.663999999999966,
+              "height": 9.704,
+              "itemIndex": 259,
+              "hasGeometry": true
+            }
+          ],
+          "spans": [
+            {
+              "start": 0,
+              "end": 1,
+              "itemIndex": 248
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "itemIndex": 249
+            },
+            {
+              "start": 2,
+              "end": 4,
+              "itemIndex": 250
+            },
+            {
+              "start": 4,
+              "end": 5,
+              "itemIndex": 251
+            },
+            {
+              "start": 5,
+              "end": 6,
+              "itemIndex": 252
+            },
+            {
+              "start": 6,
+              "end": 7,
+              "itemIndex": 256
+            },
+            {
+              "start": 7,
+              "end": 9,
+              "itemIndex": 257
+            },
+            {
+              "start": 9,
+              "end": 10,
+              "itemIndex": 258
+            },
+            {
+              "start": 10,
+              "end": 13,
+              "itemIndex": 259
+            }
+          ],
+          "rectPdf": [
+            288.17699999999996,
+            495.00171266300987,
+            395.075,
+            508.43100000000004
+          ]
+        }
+      ]
+    },
+    "page": {
+      "page": 2,
+      "view": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "str": "",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            298.331,
+            514.738
+          ],
+          "width": 0,
+          "height": 0,
+          "hasEOL": true
+        },
+        {
+          "str": "若装配要求既无间隙又无过盈",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            298.331,
+            514.738
+          ],
+          "width": 135.84899999999993,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            288.17699999999996,
+            497.46500000000003
+          ],
+          "width": 0,
+          "height": 0,
+          "hasEOL": true
+        },
+        {
+          "str": "L",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            288.17699999999996,
+            497.46500000000003
+          ],
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "hasEOL": false
+        },
+        {
+          "str": "1",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            296.002,
+            496.767
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "=1",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            301.727,
+            497.46500000000003
+          ],
+          "width": 17.564000000000007,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "0",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            314.826,
+            497.46500000000003
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "0",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            320.066,
+            497.46500000000003
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "+0.",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            327.926,
+            502.007
+          ],
+          "width": 14.361000000000022,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "2",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            338.503,
+            502.007
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": true
+        },
+        {
+          "str": "-0.",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            328.023,
+            496.767
+          ],
+          "width": 14.361000000000022,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "1",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            338.6,
+            496.767
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "mm",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            343.743,
+            497.46500000000003
+          ],
+          "width": 18.436999999999998,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": " ",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            362.18,
+            497.46500000000003
+          ],
+          "width": 2.2309999999999945,
+          "height": 0,
+          "hasEOL": false
+        },
+        {
+          "str": "代入式",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            364.411,
+            498.72700000000003
+          ],
+          "width": 30.663999999999966,
+          "height": 9.704,
+          "hasEOL": false
+        }
+      ]
+    }
+  },
+  {
+    "truth": {
+      "docId": "r2",
+      "page": 3,
+      "rect": [
+        372.368,
+        339.88000000000005,
+        447.474,
+        352.01000000000005
+      ],
+      "originalText": "L′_b = 5.2⁺⁰·¹₀ mm",
+      "nominal": "5.2",
+      "upperDeviation": "+0.1",
+      "lowerDeviation": "0",
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p3-3.png"
+    },
+    "layerPage": {
+      "page": 3,
+      "pageBoxPdf": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 381.10200000000003,
+          "y": 359.38500000000005,
+          "width": 1.0669999999999504,
+          "height": 0,
+          "itemIndex": 540,
+          "hasGeometry": false
+        },
+        {
+          "text": "0",
+          "normalizedText": "0",
+          "x": 382.169,
+          "y": 358.12300000000005,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 541,
+          "hasGeometry": true
+        },
+        {
+          "text": ".",
+          "normalizedText": ".",
+          "x": 386.147,
+          "y": 358.12300000000005,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 542,
+          "hasGeometry": true
+        },
+        {
+          "text": "1mm,",
+          "normalizedText": "1mm,",
+          "x": 392.649,
+          "y": 358.12300000000005,
+          "width": 37.941,
+          "height": 9.704,
+          "itemIndex": 543,
+          "hasGeometry": true
+        },
+        {
+          "text": "则 可 确 定 出",
+          "normalizedText": "则 可 确 定 出",
+          "x": 426.417,
+          "y": 359.38500000000005,
+          "width": 53.174999999999976,
+          "height": 9.704,
+          "itemIndex": 544,
+          "hasGeometry": true
+        },
+        {
+          "text": "′",
+          "normalizedText": "′",
+          "x": 371.398,
+          "y": 346.848,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 554,
+          "hasGeometry": true
+        },
+        {
+          "text": "b",
+          "normalizedText": "b",
+          "x": 372.368,
+          "y": 341.608,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 555,
+          "hasGeometry": true
+        },
+        {
+          "text": "=5",
+          "normalizedText": "=5",
+          "x": 377.802,
+          "y": 342.30600000000004,
+          "width": 17.56399999999995,
+          "height": 9.704,
+          "itemIndex": 556,
+          "hasGeometry": true
+        },
+        {
+          "text": ".",
+          "normalizedText": ".",
+          "x": 389.64,
+          "y": 342.30600000000004,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 557,
+          "hasGeometry": true
+        },
+        {
+          "text": "2",
+          "normalizedText": "2",
+          "x": 396.142,
+          "y": 342.30600000000004,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 558,
+          "hasGeometry": true
+        },
+        {
+          "text": "+0.",
+          "normalizedText": "+0.",
+          "x": 404.002,
+          "y": 346.848,
+          "width": 14.361000000000022,
+          "height": 5.337,
+          "itemIndex": 559,
+          "hasGeometry": true
+        },
+        {
+          "text": "1",
+          "normalizedText": "1",
+          "x": 414.578,
+          "y": 346.848,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 560,
+          "hasGeometry": true
+        },
+        {
+          "text": "0",
+          "normalizedText": "0",
+          "x": 402.643,
+          "y": 341.608,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 561,
+          "hasGeometry": true
+        },
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 407.97999999999996,
+          "y": 341.608,
+          "width": 11.741000000000042,
+          "height": 0,
+          "itemIndex": 562,
+          "hasGeometry": false
+        },
+        {
+          "text": "mm.",
+          "normalizedText": "mm.",
+          "x": 419.721,
+          "y": 342.30600000000004,
+          "width": 27.752999999999965,
+          "height": 9.704,
+          "itemIndex": 563,
+          "hasGeometry": true
+        }
+      ],
+      "lines": [
+        {
+          "page": 3,
+          "y": 341.608,
+          "rawText": "b=5.20 mm.",
+          "normalizedText": "b=5.20 mm.",
+          "items": [
+            {
+              "text": "b",
+              "normalizedText": "b",
+              "x": 372.368,
+              "y": 341.608,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 555,
+              "hasGeometry": true
+            },
+            {
+              "text": "=5",
+              "normalizedText": "=5",
+              "x": 377.802,
+              "y": 342.30600000000004,
+              "width": 17.56399999999995,
+              "height": 9.704,
+              "itemIndex": 556,
+              "hasGeometry": true
+            },
+            {
+              "text": ".",
+              "normalizedText": ".",
+              "x": 389.64,
+              "y": 342.30600000000004,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 557,
+              "hasGeometry": true
+            },
+            {
+              "text": "2",
+              "normalizedText": "2",
+              "x": 396.142,
+              "y": 342.30600000000004,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 558,
+              "hasGeometry": true
+            },
+            {
+              "text": "0",
+              "normalizedText": "0",
+              "x": 402.643,
+              "y": 341.608,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 561,
+              "hasGeometry": true
+            },
+            {
+              "text": " ",
+              "normalizedText": " ",
+              "x": 407.97999999999996,
+              "y": 341.608,
+              "width": 11.741000000000042,
+              "height": 0,
+              "itemIndex": 562,
+              "hasGeometry": false
+            },
+            {
+              "text": "mm.",
+              "normalizedText": "mm.",
+              "x": 419.721,
+              "y": 342.30600000000004,
+              "width": 27.752999999999965,
+              "height": 9.704,
+              "itemIndex": 563,
+              "hasGeometry": true
+            }
+          ],
+          "spans": [
+            {
+              "start": 0,
+              "end": 1,
+              "itemIndex": 555
+            },
+            {
+              "start": 1,
+              "end": 3,
+              "itemIndex": 556
+            },
+            {
+              "start": 3,
+              "end": 4,
+              "itemIndex": 557
+            },
+            {
+              "start": 4,
+              "end": 5,
+              "itemIndex": 558
+            },
+            {
+              "start": 5,
+              "end": 6,
+              "itemIndex": 561
+            },
+            {
+              "start": 6,
+              "end": 7,
+              "itemIndex": 562
+            },
+            {
+              "start": 7,
+              "end": 10,
+              "itemIndex": 563
+            }
+          ],
+          "rectPdf": [
+            372.368,
+            339.88000000000005,
+            447.474,
+            352.01000000000005
+          ]
+        }
+      ]
+    },
+    "page": {
+      "page": 3,
+      "view": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "str": " ",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            381.10200000000003,
+            359.38500000000005
+          ],
+          "width": 1.0669999999999504,
+          "height": 0,
+          "hasEOL": false
+        },
+        {
+          "str": "0",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            382.169,
+            358.12300000000005
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": ".",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            386.147,
+            358.12300000000005
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "1mm,",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            392.649,
+            358.12300000000005
+          ],
+          "width": 37.941,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "则 可 确 定 出",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            426.417,
+            359.38500000000005
+          ],
+          "width": 53.174999999999976,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "′",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            371.398,
+            346.848
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": true
+        },
+        {
+          "str": "b",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            372.368,
+            341.608
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "=5",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            377.802,
+            342.30600000000004
+          ],
+          "width": 17.56399999999995,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": ".",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            389.64,
+            342.30600000000004
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "2",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            396.142,
+            342.30600000000004
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "+0.",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            404.002,
+            346.848
+          ],
+          "width": 14.361000000000022,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "1",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            414.578,
+            346.848
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": true
+        },
+        {
+          "str": "0",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            402.643,
+            341.608
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": " ",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            407.97999999999996,
+            341.608
+          ],
+          "width": 11.741000000000042,
+          "height": 0,
+          "hasEOL": false
+        },
+        {
+          "str": "mm.",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            419.721,
+            342.30600000000004
+          ],
+          "width": 27.752999999999965,
+          "height": 9.704,
+          "hasEOL": false
+        }
+      ]
+    }
+  },
+  {
+    "truth": {
+      "docId": "r2",
+      "page": 3,
+      "rect": [
+        296.037,
+        261.53571266300986,
+        453.781,
+        273.8521493479606
+      ],
+      "originalText": "Zₘₐₓ = 5.2 + 0.1 − 4.9 = 0.4 (mm)",
+      "nominal": "0.4",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p3-4.png"
+    },
+    "layerPage": {
+      "page": 3,
+      "pageBoxPdf": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "text": "",
+          "normalizedText": "",
+          "x": 298.428,
+          "y": 280.884,
+          "width": 0,
+          "height": 0,
+          "itemIndex": 581,
+          "hasGeometry": false
+        },
+        {
+          "text": "最大修配量为",
+          "normalizedText": "最大修配量为",
+          "x": 298.428,
+          "y": 280.884,
+          "width": 62.102999999999966,
+          "height": 9.704,
+          "itemIndex": 582,
+          "hasGeometry": true
+        },
+        {
+          "text": "",
+          "normalizedText": "",
+          "x": 296.037,
+          "y": 263.999,
+          "width": 0,
+          "height": 0,
+          "itemIndex": 583,
+          "hasGeometry": false
+        },
+        {
+          "text": "Z",
+          "normalizedText": "Z",
+          "x": 296.037,
+          "y": 263.999,
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "itemIndex": 584,
+          "hasGeometry": true
+        },
+        {
+          "text": "m",
+          "normalizedText": "m",
+          "x": 304.929,
+          "y": 263.30100000000004,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 585,
+          "hasGeometry": true
+        },
+        {
+          "text": "a",
+          "normalizedText": "a",
+          "x": 308.519,
+          "y": 263.30100000000004,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 586,
+          "hasGeometry": true
+        },
+        {
+          "text": "x",
+          "normalizedText": "x",
+          "x": 311.33299999999997,
+          "y": 263.30100000000004,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 587,
+          "hasGeometry": true
+        },
+        {
+          "text": "=5",
+          "normalizedText": "=5",
+          "x": 316.767,
+          "y": 263.999,
+          "width": 17.564000000000007,
+          "height": 9.704,
+          "itemIndex": 588,
+          "hasGeometry": true
+        },
+        {
+          "text": ".",
+          "normalizedText": ".",
+          "x": 328.605,
+          "y": 263.999,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 589,
+          "hasGeometry": true
+        },
+        {
+          "text": "2+0",
+          "normalizedText": "2+0",
+          "x": 335.10699999999997,
+          "y": 263.999,
+          "width": 25.423000000000037,
+          "height": 9.704,
+          "itemIndex": 590,
+          "hasGeometry": true
+        },
+        {
+          "text": ".",
+          "normalizedText": ".",
+          "x": 354.805,
+          "y": 263.999,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 591,
+          "hasGeometry": true
+        },
+        {
+          "text": "1-4",
+          "normalizedText": "1-4",
+          "x": 361.306,
+          "y": 263.999,
+          "width": 25.424000000000014,
+          "height": 9.704,
+          "itemIndex": 592,
+          "hasGeometry": true
+        },
+        {
+          "text": ".",
+          "normalizedText": ".",
+          "x": 381.004,
+          "y": 263.999,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 593,
+          "hasGeometry": true
+        },
+        {
+          "text": "9=0",
+          "normalizedText": "9=0",
+          "x": 387.506,
+          "y": 263.999,
+          "width": 25.423000000000037,
+          "height": 9.704,
+          "itemIndex": 594,
+          "hasGeometry": true
+        },
+        {
+          "text": ".",
+          "normalizedText": ".",
+          "x": 407.204,
+          "y": 263.999,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 595,
+          "hasGeometry": true
+        },
+        {
+          "text": "4",
+          "normalizedText": "4",
+          "x": 413.705,
+          "y": 263.999,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 596,
+          "hasGeometry": true
+        },
+        {
+          "text": "(",
+          "normalizedText": "(",
+          "x": 421.371,
+          "y": 265.552,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 597,
+          "hasGeometry": true
+        },
+        {
+          "text": "mm)",
+          "normalizedText": "mm)",
+          "x": 426.223,
+          "y": 263.999,
+          "width": 27.55799999999997,
+          "height": 9.704,
+          "itemIndex": 598,
+          "hasGeometry": true
+        },
+        {
+          "text": ";",
+          "normalizedText": ";",
+          "x": 449.511,
+          "y": 265.552,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 599,
+          "hasGeometry": true
+        }
+      ],
+      "lines": [
+        {
+          "page": 3,
+          "y": 263.999,
+          "rawText": "Zmax=5.2+0.1-4.9=0.4mm)",
+          "normalizedText": "Zmax=5.2+0.1-4.9=0.4mm)",
+          "items": [
+            {
+              "text": "Z",
+              "normalizedText": "Z",
+              "x": 296.037,
+              "y": 263.999,
+              "width": 9.704,
+              "height": 9.853149347960581,
+              "itemIndex": 584,
+              "hasGeometry": true
+            },
+            {
+              "text": "m",
+              "normalizedText": "m",
+              "x": 304.929,
+              "y": 263.30100000000004,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 585,
+              "hasGeometry": true
+            },
+            {
+              "text": "a",
+              "normalizedText": "a",
+              "x": 308.519,
+              "y": 263.30100000000004,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 586,
+              "hasGeometry": true
+            },
+            {
+              "text": "x",
+              "normalizedText": "x",
+              "x": 311.33299999999997,
+              "y": 263.30100000000004,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 587,
+              "hasGeometry": true
+            },
+            {
+              "text": "=5",
+              "normalizedText": "=5",
+              "x": 316.767,
+              "y": 263.999,
+              "width": 17.564000000000007,
+              "height": 9.704,
+              "itemIndex": 588,
+              "hasGeometry": true
+            },
+            {
+              "text": ".",
+              "normalizedText": ".",
+              "x": 328.605,
+              "y": 263.999,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 589,
+              "hasGeometry": true
+            },
+            {
+              "text": "2+0",
+              "normalizedText": "2+0",
+              "x": 335.10699999999997,
+              "y": 263.999,
+              "width": 25.423000000000037,
+              "height": 9.704,
+              "itemIndex": 590,
+              "hasGeometry": true
+            },
+            {
+              "text": ".",
+              "normalizedText": ".",
+              "x": 354.805,
+              "y": 263.999,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 591,
+              "hasGeometry": true
+            },
+            {
+              "text": "1-4",
+              "normalizedText": "1-4",
+              "x": 361.306,
+              "y": 263.999,
+              "width": 25.424000000000014,
+              "height": 9.704,
+              "itemIndex": 592,
+              "hasGeometry": true
+            },
+            {
+              "text": ".",
+              "normalizedText": ".",
+              "x": 381.004,
+              "y": 263.999,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 593,
+              "hasGeometry": true
+            },
+            {
+              "text": "9=0",
+              "normalizedText": "9=0",
+              "x": 387.506,
+              "y": 263.999,
+              "width": 25.423000000000037,
+              "height": 9.704,
+              "itemIndex": 594,
+              "hasGeometry": true
+            },
+            {
+              "text": ".",
+              "normalizedText": ".",
+              "x": 407.204,
+              "y": 263.999,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 595,
+              "hasGeometry": true
+            },
+            {
+              "text": "4",
+              "normalizedText": "4",
+              "x": 413.705,
+              "y": 263.999,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 596,
+              "hasGeometry": true
+            },
+            {
+              "text": "mm)",
+              "normalizedText": "mm)",
+              "x": 426.223,
+              "y": 263.999,
+              "width": 27.55799999999997,
+              "height": 9.704,
+              "itemIndex": 598,
+              "hasGeometry": true
+            }
+          ],
+          "spans": [
+            {
+              "start": 0,
+              "end": 1,
+              "itemIndex": 584
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "itemIndex": 585
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "itemIndex": 586
+            },
+            {
+              "start": 3,
+              "end": 4,
+              "itemIndex": 587
+            },
+            {
+              "start": 4,
+              "end": 6,
+              "itemIndex": 588
+            },
+            {
+              "start": 6,
+              "end": 7,
+              "itemIndex": 589
+            },
+            {
+              "start": 7,
+              "end": 10,
+              "itemIndex": 590
+            },
+            {
+              "start": 10,
+              "end": 11,
+              "itemIndex": 591
+            },
+            {
+              "start": 11,
+              "end": 14,
+              "itemIndex": 592
+            },
+            {
+              "start": 14,
+              "end": 15,
+              "itemIndex": 593
+            },
+            {
+              "start": 15,
+              "end": 18,
+              "itemIndex": 594
+            },
+            {
+              "start": 18,
+              "end": 19,
+              "itemIndex": 595
+            },
+            {
+              "start": 19,
+              "end": 20,
+              "itemIndex": 596
+            },
+            {
+              "start": 20,
+              "end": 23,
+              "itemIndex": 598
+            }
+          ],
+          "rectPdf": [
+            296.037,
+            261.53571266300986,
+            453.781,
+            273.8521493479606
+          ]
+        }
+      ]
+    },
+    "page": {
+      "page": 3,
+      "view": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "str": "",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            298.428,
+            280.884
+          ],
+          "width": 0,
+          "height": 0,
+          "hasEOL": true
+        },
+        {
+          "str": "最大修配量为",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            298.428,
+            280.884
+          ],
+          "width": 62.102999999999966,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            296.037,
+            263.999
+          ],
+          "width": 0,
+          "height": 0,
+          "hasEOL": true
+        },
+        {
+          "str": "Z",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            296.037,
+            263.999
+          ],
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "hasEOL": false
+        },
+        {
+          "str": "m",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            304.929,
+            263.30100000000004
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "a",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            308.519,
+            263.30100000000004
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "x",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            311.33299999999997,
+            263.30100000000004
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "=5",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            316.767,
+            263.999
+          ],
+          "width": 17.564000000000007,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": ".",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            328.605,
+            263.999
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "2+0",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            335.10699999999997,
+            263.999
+          ],
+          "width": 25.423000000000037,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": ".",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            354.805,
+            263.999
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "1-4",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            361.306,
+            263.999
+          ],
+          "width": 25.424000000000014,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": ".",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            381.004,
+            263.999
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "9=0",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            387.506,
+            263.999
+          ],
+          "width": 25.423000000000037,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": ".",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            407.204,
+            263.999
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "4",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            413.705,
+            263.999
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "(",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            421.371,
+            265.552
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "mm)",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            426.223,
+            263.999
+          ],
+          "width": 27.55799999999997,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": ";",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            449.511,
+            265.552
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        }
+      ]
+    }
+  },
+  {
+    "truth": {
+      "docId": "r2",
+      "page": 3,
+      "rect": [
+        345.913,
+        10.796712663009915,
+        425.25299999999993,
+        23.113149347960643
+      ],
+      "originalText": "δ_{L_b} = 0.10 mm",
+      "nominal": "0.10",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p3-5.png"
+    },
+    "layerPage": {
+      "page": 3,
+      "pageBoxPdf": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "text": "",
+          "normalizedText": "",
+          "x": 345.913,
+          "y": 13.26000000000006,
+          "width": 0,
+          "height": 0,
+          "itemIndex": 756,
+          "hasGeometry": false
+        },
+        {
+          "text": "δ",
+          "normalizedText": "δ",
+          "x": 345.913,
+          "y": 13.26000000000006,
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "itemIndex": 757,
+          "hasGeometry": true
+        },
+        {
+          "text": "L",
+          "normalizedText": "L",
+          "x": 352.699,
+          "y": 12.563000000000061,
+          "width": 5.337,
+          "height": 5.419029067401651,
+          "itemIndex": 758,
+          "hasGeometry": true
+        },
+        {
+          "text": "b",
+          "normalizedText": "b",
+          "x": 356.746,
+          "y": 10.305000000000003,
+          "width": 4.658,
+          "height": 4.658,
+          "itemIndex": 759,
+          "hasGeometry": true
+        },
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 361.404,
+          "y": 10.305000000000003,
+          "width": 1.649000000000001,
+          "height": 0,
+          "itemIndex": 760,
+          "hasGeometry": false
+        },
+        {
+          "text": "=0",
+          "normalizedText": "=0",
+          "x": 363.053,
+          "y": 13.26000000000006,
+          "width": 18.04900000000002,
+          "height": 9.704,
+          "itemIndex": 761,
+          "hasGeometry": true
+        },
+        {
+          "text": ".",
+          "normalizedText": ".",
+          "x": 375.376,
+          "y": 13.26000000000006,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 762,
+          "hasGeometry": true
+        },
+        {
+          "text": "1",
+          "normalizedText": "1",
+          "x": 381.878,
+          "y": 13.26000000000006,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 763,
+          "hasGeometry": true
+        },
+        {
+          "text": "0mm,",
+          "normalizedText": "0mm,",
+          "x": 387.118,
+          "y": 13.26000000000006,
+          "width": 38.13499999999996,
+          "height": 9.704,
+          "itemIndex": 764,
+          "hasGeometry": true
+        },
+        {
+          "text": "则 补 偿 环 间 隔 尺 寸",
+          "normalizedText": "则 补 偿 环 间 隔 尺 寸",
+          "x": 421.274,
+          "y": 14.522000000000059,
+          "width": 85.97299999999996,
+          "height": 9.704,
+          "itemIndex": 765,
+          "hasGeometry": true
+        }
+      ],
+      "lines": [
+        {
+          "page": 3,
+          "y": 13.26000000000006,
+          "rawText": "δL=0.10mm,则 补 偿 环 间 隔 尺 寸",
+          "normalizedText": "δL=0.10mm,则 补 偿 环 间 隔 尺 寸",
+          "items": [
+            {
+              "text": "δ",
+              "normalizedText": "δ",
+              "x": 345.913,
+              "y": 13.26000000000006,
+              "width": 9.704,
+              "height": 9.853149347960581,
+              "itemIndex": 757,
+              "hasGeometry": true
+            },
+            {
+              "text": "L",
+              "normalizedText": "L",
+              "x": 352.699,
+              "y": 12.563000000000061,
+              "width": 5.337,
+              "height": 5.419029067401651,
+              "itemIndex": 758,
+              "hasGeometry": true
+            },
+            {
+              "text": "=0",
+              "normalizedText": "=0",
+              "x": 363.053,
+              "y": 13.26000000000006,
+              "width": 18.04900000000002,
+              "height": 9.704,
+              "itemIndex": 761,
+              "hasGeometry": true
+            },
+            {
+              "text": ".",
+              "normalizedText": ".",
+              "x": 375.376,
+              "y": 13.26000000000006,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 762,
+              "hasGeometry": true
+            },
+            {
+              "text": "1",
+              "normalizedText": "1",
+              "x": 381.878,
+              "y": 13.26000000000006,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 763,
+              "hasGeometry": true
+            },
+            {
+              "text": "0mm,",
+              "normalizedText": "0mm,",
+              "x": 387.118,
+              "y": 13.26000000000006,
+              "width": 38.13499999999996,
+              "height": 9.704,
+              "itemIndex": 764,
+              "hasGeometry": true
+            },
+            {
+              "text": "则 补 偿 环 间 隔 尺 寸",
+              "normalizedText": "则 补 偿 环 间 隔 尺 寸",
+              "x": 421.274,
+              "y": 14.522000000000059,
+              "width": 85.97299999999996,
+              "height": 9.704,
+              "itemIndex": 765,
+              "hasGeometry": true
+            }
+          ],
+          "spans": [
+            {
+              "start": 0,
+              "end": 1,
+              "itemIndex": 757
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "itemIndex": 758
+            },
+            {
+              "start": 2,
+              "end": 4,
+              "itemIndex": 761
+            },
+            {
+              "start": 4,
+              "end": 5,
+              "itemIndex": 762
+            },
+            {
+              "start": 5,
+              "end": 6,
+              "itemIndex": 763
+            },
+            {
+              "start": 6,
+              "end": 10,
+              "itemIndex": 764
+            },
+            {
+              "start": 10,
+              "end": 25,
+              "itemIndex": 765
+            }
+          ],
+          "rectPdf": [
+            345.913,
+            10.796712663009915,
+            507.24699999999996,
+            24.22600000000006
+          ]
+        }
+      ]
+    },
+    "page": {
+      "page": 3,
+      "view": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "str": "",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            345.913,
+            13.26000000000006
+          ],
+          "width": 0,
+          "height": 0,
+          "hasEOL": true
+        },
+        {
+          "str": "δ",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            345.913,
+            13.26000000000006
+          ],
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "hasEOL": false
+        },
+        {
+          "str": "L",
+          "transform": [
+            5.337,
+            0,
+            0.9393119999999999,
+            5.337,
+            352.699,
+            12.563000000000061
+          ],
+          "width": 5.337,
+          "height": 5.419029067401651,
+          "hasEOL": false
+        },
+        {
+          "str": "b",
+          "transform": [
+            4.658,
+            0,
+            0,
+            4.658,
+            356.746,
+            10.305000000000003
+          ],
+          "width": 4.658,
+          "height": 4.658,
+          "hasEOL": false
+        },
+        {
+          "str": " ",
+          "transform": [
+            4.658,
+            0,
+            0,
+            4.658,
+            361.404,
+            10.305000000000003
+          ],
+          "width": 1.649000000000001,
+          "height": 0,
+          "hasEOL": false
+        },
+        {
+          "str": "=0",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            363.053,
+            13.26000000000006
+          ],
+          "width": 18.04900000000002,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": ".",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            375.376,
+            13.26000000000006
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "1",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            381.878,
+            13.26000000000006
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "0mm,",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            387.118,
+            13.26000000000006
+          ],
+          "width": 38.13499999999996,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "则 补 偿 环 间 隔 尺 寸",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            421.274,
+            14.522000000000059
+          ],
+          "width": 85.97299999999996,
+          "height": 9.704,
+          "hasEOL": false
+        }
+      ]
+    }
+  },
+  {
+    "truth": {
+      "docId": "r2",
+      "page": 3,
+      "rect": [
+        67.32600000000001,
+        8.408000000000015,
+        146.762,
+        21.17314934796059
+      ],
+      "originalText": "L₃ = 43⁺⁰·²₀ mm",
+      "nominal": "43",
+      "upperDeviation": "+0.2",
+      "lowerDeviation": "0",
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p3-6.png"
+    },
+    "layerPage": {
+      "page": 3,
+      "pageBoxPdf": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "text": "",
+          "normalizedText": "",
+          "x": 68.781,
+          "y": 27.62200000000003,
+          "width": 0,
+          "height": 0,
+          "itemIndex": 288,
+          "hasGeometry": false
+        },
+        {
+          "text": "L",
+          "normalizedText": "L",
+          "x": 68.781,
+          "y": 27.62200000000003,
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "itemIndex": 289,
+          "hasGeometry": true
+        },
+        {
+          "text": "1",
+          "normalizedText": "1",
+          "x": 76.605,
+          "y": 26.92400000000005,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 290,
+          "hasGeometry": true
+        },
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 81.94200000000001,
+          "y": 26.92400000000005,
+          "width": 1.7469999999999999,
+          "height": 0,
+          "itemIndex": 291,
+          "hasGeometry": false
+        },
+        {
+          "text": "=3",
+          "normalizedText": "=3",
+          "x": 83.68900000000001,
+          "y": 27.13600000000004,
+          "width": 17.951999999999998,
+          "height": 9.704,
+          "itemIndex": 292,
+          "hasGeometry": true
+        },
+        {
+          "text": "0",
+          "normalizedText": "0",
+          "x": 97.17699999999999,
+          "y": 27.62200000000003,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 293,
+          "hasGeometry": true
+        },
+        {
+          "text": "0",
+          "normalizedText": "0",
+          "x": 103.581,
+          "y": 32.16400000000006,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 294,
+          "hasGeometry": true
+        },
+        {
+          "text": "-",
+          "normalizedText": "-",
+          "x": 104.357,
+          "y": 26.73000000000009,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 295,
+          "hasGeometry": true
+        },
+        {
+          "text": "0.",
+          "normalizedText": "0.",
+          "x": 108.142,
+          "y": 26.92400000000005,
+          "width": 9.800000000000004,
+          "height": 5.337,
+          "itemIndex": 296,
+          "hasGeometry": true
+        },
+        {
+          "text": "2",
+          "normalizedText": "2",
+          "x": 114.158,
+          "y": 26.92400000000005,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 297,
+          "hasGeometry": true
+        },
+        {
+          "text": "mm;",
+          "normalizedText": "mm;",
+          "x": 119.883,
+          "y": 27.62200000000003,
+          "width": 28.432000000000023,
+          "height": 9.704,
+          "itemIndex": 298,
+          "hasGeometry": true
+        },
+        {
+          "text": "",
+          "normalizedText": "",
+          "x": 141.45999999999998,
+          "y": 27.62200000000003,
+          "width": 0,
+          "height": 0,
+          "itemIndex": 299,
+          "hasGeometry": false
+        },
+        {
+          "text": "L",
+          "normalizedText": "L",
+          "x": 141.45999999999998,
+          "y": 27.62200000000003,
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "itemIndex": 300,
+          "hasGeometry": true
+        },
+        {
+          "text": "2",
+          "normalizedText": "2",
+          "x": 149.285,
+          "y": 26.92400000000005,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 301,
+          "hasGeometry": true
+        },
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 154.62199999999999,
+          "y": 26.92400000000005,
+          "width": 1.7460000000000093,
+          "height": 0,
+          "itemIndex": 302,
+          "hasGeometry": false
+        },
+        {
+          "text": "",
+          "normalizedText": "",
+          "x": 67.32600000000001,
+          "y": 11.320000000000006,
+          "width": 0,
+          "height": 0,
+          "itemIndex": 309,
+          "hasGeometry": false
+        },
+        {
+          "text": "L",
+          "normalizedText": "L",
+          "x": 67.32600000000001,
+          "y": 11.320000000000006,
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "itemIndex": 310,
+          "hasGeometry": true
+        },
+        {
+          "text": "3",
+          "normalizedText": "3",
+          "x": 75.15,
+          "y": 10.62200000000003,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 311,
+          "hasGeometry": true
+        },
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 80.48700000000001,
+          "y": 10.62200000000003,
+          "width": 1.7459999999999951,
+          "height": 0,
+          "itemIndex": 312,
+          "hasGeometry": false
+        },
+        {
+          "text": "=4",
+          "normalizedText": "=4",
+          "x": 82.233,
+          "y": 10.834000000000016,
+          "width": 17.951999999999984,
+          "height": 9.704,
+          "itemIndex": 313,
+          "hasGeometry": true
+        },
+        {
+          "text": "3",
+          "normalizedText": "3",
+          "x": 95.721,
+          "y": 11.320000000000006,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 314,
+          "hasGeometry": true
+        },
+        {
+          "text": "+",
+          "normalizedText": "+",
+          "x": 102.80499999999999,
+          "y": 15.66800000000008,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 315,
+          "hasGeometry": true
+        },
+        {
+          "text": "0.",
+          "normalizedText": "0.",
+          "x": 106.589,
+          "y": 15.86200000000004,
+          "width": 9.800999999999995,
+          "height": 5.337,
+          "itemIndex": 316,
+          "hasGeometry": true
+        },
+        {
+          "text": "2",
+          "normalizedText": "2",
+          "x": 112.605,
+          "y": 15.86200000000004,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 317,
+          "hasGeometry": true
+        },
+        {
+          "text": "0",
+          "normalizedText": "0",
+          "x": 102.223,
+          "y": 10.62200000000003,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 318,
+          "hasGeometry": true
+        },
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 107.56,
+          "y": 10.62200000000003,
+          "width": 10.769999999999996,
+          "height": 0,
+          "itemIndex": 319,
+          "hasGeometry": false
+        },
+        {
+          "text": "mm;",
+          "normalizedText": "mm;",
+          "x": 118.33,
+          "y": 11.320000000000006,
+          "width": 28.431999999999995,
+          "height": 9.704,
+          "itemIndex": 320,
+          "hasGeometry": true
+        },
+        {
+          "text": "",
+          "normalizedText": "",
+          "x": 139.908,
+          "y": 11.320000000000006,
+          "width": 0,
+          "height": 0,
+          "itemIndex": 321,
+          "hasGeometry": false
+        },
+        {
+          "text": "L",
+          "normalizedText": "L",
+          "x": 139.908,
+          "y": 11.320000000000006,
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "itemIndex": 322,
+          "hasGeometry": true
+        },
+        {
+          "text": "4",
+          "normalizedText": "4",
+          "x": 147.732,
+          "y": 10.62200000000003,
+          "width": 5.337,
+          "height": 5.337,
+          "itemIndex": 323,
+          "hasGeometry": true
+        },
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 153.069,
+          "y": 10.62200000000003,
+          "width": 1.747000000000014,
+          "height": 0,
+          "itemIndex": 324,
+          "hasGeometry": false
+        }
+      ],
+      "lines": [
+        {
+          "page": 3,
+          "y": 11.320000000000006,
+          "rawText": "L3 =430 mm;L4 =3-0.05mm.b ",
+          "normalizedText": "L3 =430 mm;L4 =3-0.05mm.b ",
+          "items": [
+            {
+              "text": "L",
+              "normalizedText": "L",
+              "x": 67.32600000000001,
+              "y": 11.320000000000006,
+              "width": 9.704,
+              "height": 9.853149347960581,
+              "itemIndex": 310,
+              "hasGeometry": true
+            },
+            {
+              "text": "3",
+              "normalizedText": "3",
+              "x": 75.15,
+              "y": 10.62200000000003,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 311,
+              "hasGeometry": true
+            },
+            {
+              "text": " ",
+              "normalizedText": " ",
+              "x": 80.48700000000001,
+              "y": 10.62200000000003,
+              "width": 1.7459999999999951,
+              "height": 0,
+              "itemIndex": 312,
+              "hasGeometry": false
+            },
+            {
+              "text": "=4",
+              "normalizedText": "=4",
+              "x": 82.233,
+              "y": 10.834000000000016,
+              "width": 17.951999999999984,
+              "height": 9.704,
+              "itemIndex": 313,
+              "hasGeometry": true
+            },
+            {
+              "text": "3",
+              "normalizedText": "3",
+              "x": 95.721,
+              "y": 11.320000000000006,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 314,
+              "hasGeometry": true
+            },
+            {
+              "text": "0",
+              "normalizedText": "0",
+              "x": 102.223,
+              "y": 10.62200000000003,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 318,
+              "hasGeometry": true
+            },
+            {
+              "text": " ",
+              "normalizedText": " ",
+              "x": 107.56,
+              "y": 10.62200000000003,
+              "width": 10.769999999999996,
+              "height": 0,
+              "itemIndex": 319,
+              "hasGeometry": false
+            },
+            {
+              "text": "mm;",
+              "normalizedText": "mm;",
+              "x": 118.33,
+              "y": 11.320000000000006,
+              "width": 28.431999999999995,
+              "height": 9.704,
+              "itemIndex": 320,
+              "hasGeometry": true
+            },
+            {
+              "text": "L",
+              "normalizedText": "L",
+              "x": 139.908,
+              "y": 11.320000000000006,
+              "width": 9.704,
+              "height": 9.853149347960581,
+              "itemIndex": 322,
+              "hasGeometry": true
+            },
+            {
+              "text": "4",
+              "normalizedText": "4",
+              "x": 147.732,
+              "y": 10.62200000000003,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 323,
+              "hasGeometry": true
+            },
+            {
+              "text": " ",
+              "normalizedText": " ",
+              "x": 153.069,
+              "y": 10.62200000000003,
+              "width": 1.747000000000014,
+              "height": 0,
+              "itemIndex": 324,
+              "hasGeometry": false
+            },
+            {
+              "text": "=3",
+              "normalizedText": "=3",
+              "x": 154.816,
+              "y": 10.834000000000016,
+              "width": 17.951999999999984,
+              "height": 9.704,
+              "itemIndex": 325,
+              "hasGeometry": true
+            },
+            {
+              "text": "-",
+              "normalizedText": "-",
+              "x": 170.244,
+              "y": 10.42800000000007,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 327,
+              "hasGeometry": true
+            },
+            {
+              "text": "0.",
+              "normalizedText": "0.",
+              "x": 174.029,
+              "y": 10.62200000000003,
+              "width": 9.800000000000004,
+              "height": 5.337,
+              "itemIndex": 328,
+              "hasGeometry": true
+            },
+            {
+              "text": "0",
+              "normalizedText": "0",
+              "x": 180.045,
+              "y": 10.62200000000003,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 329,
+              "hasGeometry": true
+            },
+            {
+              "text": "5",
+              "normalizedText": "5",
+              "x": 183.053,
+              "y": 10.62200000000003,
+              "width": 5.337,
+              "height": 5.337,
+              "itemIndex": 330,
+              "hasGeometry": true
+            },
+            {
+              "text": "mm.",
+              "normalizedText": "mm.",
+              "x": 188.778,
+              "y": 11.320000000000006,
+              "width": 28.431999999999995,
+              "height": 9.704,
+              "itemIndex": 331,
+              "hasGeometry": true
+            },
+            {
+              "text": "b",
+              "normalizedText": "b",
+              "x": 356.746,
+              "y": 10.305000000000003,
+              "width": 4.658,
+              "height": 4.658,
+              "itemIndex": 759,
+              "hasGeometry": true
+            },
+            {
+              "text": " ",
+              "normalizedText": " ",
+              "x": 361.404,
+              "y": 10.305000000000003,
+              "width": 1.649000000000001,
+              "height": 0,
+              "itemIndex": 760,
+              "hasGeometry": false
+            }
+          ],
+          "spans": [
+            {
+              "start": 0,
+              "end": 1,
+              "itemIndex": 310
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "itemIndex": 311
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "itemIndex": 312
+            },
+            {
+              "start": 3,
+              "end": 5,
+              "itemIndex": 313
+            },
+            {
+              "start": 5,
+              "end": 6,
+              "itemIndex": 314
+            },
+            {
+              "start": 6,
+              "end": 7,
+              "itemIndex": 318
+            },
+            {
+              "start": 7,
+              "end": 8,
+              "itemIndex": 319
+            },
+            {
+              "start": 8,
+              "end": 11,
+              "itemIndex": 320
+            },
+            {
+              "start": 11,
+              "end": 12,
+              "itemIndex": 322
+            },
+            {
+              "start": 12,
+              "end": 13,
+              "itemIndex": 323
+            },
+            {
+              "start": 13,
+              "end": 14,
+              "itemIndex": 324
+            },
+            {
+              "start": 14,
+              "end": 16,
+              "itemIndex": 325
+            },
+            {
+              "start": 16,
+              "end": 17,
+              "itemIndex": 327
+            },
+            {
+              "start": 17,
+              "end": 19,
+              "itemIndex": 328
+            },
+            {
+              "start": 19,
+              "end": 20,
+              "itemIndex": 329
+            },
+            {
+              "start": 20,
+              "end": 21,
+              "itemIndex": 330
+            },
+            {
+              "start": 21,
+              "end": 24,
+              "itemIndex": 331
+            },
+            {
+              "start": 24,
+              "end": 25,
+              "itemIndex": 759
+            },
+            {
+              "start": 25,
+              "end": 26,
+              "itemIndex": 760
+            }
+          ],
+          "rectPdf": [
+            67.32600000000001,
+            8.408000000000015,
+            361.404,
+            21.17314934796059
+          ]
+        }
+      ]
+    },
+    "page": {
+      "page": 3,
+      "view": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "str": "",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            68.781,
+            27.62200000000003
+          ],
+          "width": 0,
+          "height": 0,
+          "hasEOL": true
+        },
+        {
+          "str": "L",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            68.781,
+            27.62200000000003
+          ],
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "hasEOL": false
+        },
+        {
+          "str": "1",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            76.605,
+            26.92400000000005
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": " ",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            81.94200000000001,
+            26.92400000000005
+          ],
+          "width": 1.7469999999999999,
+          "height": 0,
+          "hasEOL": false
+        },
+        {
+          "str": "=3",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            83.68900000000001,
+            27.13600000000004
+          ],
+          "width": 17.951999999999998,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "0",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            97.17699999999999,
+            27.62200000000003
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "0",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            103.581,
+            32.16400000000006
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": true
+        },
+        {
+          "str": "-",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            104.357,
+            26.73000000000009
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "0.",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            108.142,
+            26.92400000000005
+          ],
+          "width": 9.800000000000004,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "2",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            114.158,
+            26.92400000000005
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "mm;",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            119.883,
+            27.62200000000003
+          ],
+          "width": 28.432000000000023,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            141.45999999999998,
+            27.62200000000003
+          ],
+          "width": 0,
+          "height": 0,
+          "hasEOL": true
+        },
+        {
+          "str": "L",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            141.45999999999998,
+            27.62200000000003
+          ],
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "hasEOL": false
+        },
+        {
+          "str": "2",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            149.285,
+            26.92400000000005
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": " ",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            154.62199999999999,
+            26.92400000000005
+          ],
+          "width": 1.7460000000000093,
+          "height": 0,
+          "hasEOL": false
+        },
+        {
+          "str": "",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            67.32600000000001,
+            11.320000000000006
+          ],
+          "width": 0,
+          "height": 0,
+          "hasEOL": true
+        },
+        {
+          "str": "L",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            67.32600000000001,
+            11.320000000000006
+          ],
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "hasEOL": false
+        },
+        {
+          "str": "3",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            75.15,
+            10.62200000000003
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": " ",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            80.48700000000001,
+            10.62200000000003
+          ],
+          "width": 1.7459999999999951,
+          "height": 0,
+          "hasEOL": false
+        },
+        {
+          "str": "=4",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            82.233,
+            10.834000000000016
+          ],
+          "width": 17.951999999999984,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "3",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            95.721,
+            11.320000000000006
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "+",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            102.80499999999999,
+            15.66800000000008
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "0.",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            106.589,
+            15.86200000000004
+          ],
+          "width": 9.800999999999995,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": "2",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            112.605,
+            15.86200000000004
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": true
+        },
+        {
+          "str": "0",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            102.223,
+            10.62200000000003
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": " ",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            107.56,
+            10.62200000000003
+          ],
+          "width": 10.769999999999996,
+          "height": 0,
+          "hasEOL": false
+        },
+        {
+          "str": "mm;",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            118.33,
+            11.320000000000006
+          ],
+          "width": 28.431999999999995,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            139.908,
+            11.320000000000006
+          ],
+          "width": 0,
+          "height": 0,
+          "hasEOL": true
+        },
+        {
+          "str": "L",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            139.908,
+            11.320000000000006
+          ],
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "hasEOL": false
+        },
+        {
+          "str": "4",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            147.732,
+            10.62200000000003
+          ],
+          "width": 5.337,
+          "height": 5.337,
+          "hasEOL": false
+        },
+        {
+          "str": " ",
+          "transform": [
+            5.337,
+            0,
+            0,
+            5.337,
+            153.069,
+            10.62200000000003
+          ],
+          "width": 1.747000000000014,
+          "height": 0,
+          "hasEOL": false
+        }
+      ]
+    }
+  },
+  {
+    "truth": {
+      "docId": "r2",
+      "page": 4,
+      "rect": [
+        22.496000000000002,
+        668.50071266301,
+        212.843,
+        680.8171493479606
+      ],
+      "originalText": "δ_{L_z} = δ_{L_0} − δ_{L_b} = 0.25 − 0.10 = 0.15 (mm)",
+      "nominal": "0.15",
+      "upperDeviation": null,
+      "lowerDeviation": null,
+      "verifiedBy": "render-crop",
+      "cropFile": "crops/r2-p4-7.png"
+    },
+    "layerPage": {
+      "page": 4,
+      "pageBoxPdf": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "text": "δ",
+          "normalizedText": "δ",
+          "x": 22.496000000000002,
+          "y": 670.964,
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "itemIndex": 0,
+          "hasGeometry": true
+        },
+        {
+          "text": "L",
+          "normalizedText": "L",
+          "x": 29.282000000000004,
+          "y": 670.2660000000001,
+          "width": 5.337,
+          "height": 5.419029067401651,
+          "itemIndex": 1,
+          "hasGeometry": true
+        },
+        {
+          "text": "z",
+          "normalizedText": "z",
+          "x": 33.037,
+          "y": 668.008,
+          "width": 4.658,
+          "height": 4.658,
+          "itemIndex": 2,
+          "hasGeometry": true
+        },
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 37.695,
+          "y": 668.008,
+          "width": 0.8729999999999976,
+          "height": 0,
+          "itemIndex": 3,
+          "hasGeometry": false
+        },
+        {
+          "text": "=",
+          "normalizedText": "=",
+          "x": 38.568,
+          "y": 670.964,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 4,
+          "hasGeometry": true
+        },
+        {
+          "text": "",
+          "normalizedText": "",
+          "x": 45.59,
+          "y": 670.964,
+          "width": 0,
+          "height": 0,
+          "itemIndex": 5,
+          "hasGeometry": false
+        },
+        {
+          "text": "δ",
+          "normalizedText": "δ",
+          "x": 45.59,
+          "y": 670.964,
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "itemIndex": 6,
+          "hasGeometry": true
+        },
+        {
+          "text": "L",
+          "normalizedText": "L",
+          "x": 52.376,
+          "y": 670.2660000000001,
+          "width": 5.337,
+          "height": 5.419029067401651,
+          "itemIndex": 7,
+          "hasGeometry": true
+        },
+        {
+          "text": "0",
+          "normalizedText": "0",
+          "x": 56.228,
+          "y": 668.008,
+          "width": 4.658,
+          "height": 4.658,
+          "itemIndex": 8,
+          "hasGeometry": true
+        },
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 60.886,
+          "y": 668.008,
+          "width": 1.357999999999997,
+          "height": 0,
+          "itemIndex": 9,
+          "hasGeometry": false
+        },
+        {
+          "text": "-",
+          "normalizedText": "-",
+          "x": 62.244,
+          "y": 670.964,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 10,
+          "hasGeometry": true
+        },
+        {
+          "text": "",
+          "normalizedText": "",
+          "x": 69.266,
+          "y": 670.964,
+          "width": 0,
+          "height": 0,
+          "itemIndex": 11,
+          "hasGeometry": false
+        },
+        {
+          "text": "δ",
+          "normalizedText": "δ",
+          "x": 69.266,
+          "y": 670.964,
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "itemIndex": 12,
+          "hasGeometry": true
+        },
+        {
+          "text": "L",
+          "normalizedText": "L",
+          "x": 76.053,
+          "y": 670.2660000000001,
+          "width": 5.337,
+          "height": 5.419029067401651,
+          "itemIndex": 13,
+          "hasGeometry": true
+        },
+        {
+          "text": "b",
+          "normalizedText": "b",
+          "x": 80.099,
+          "y": 668.008,
+          "width": 4.658,
+          "height": 4.658,
+          "itemIndex": 14,
+          "hasGeometry": true
+        },
+        {
+          "text": " ",
+          "normalizedText": " ",
+          "x": 84.757,
+          "y": 668.008,
+          "width": 1.1640000000000015,
+          "height": 0,
+          "itemIndex": 15,
+          "hasGeometry": false
+        },
+        {
+          "text": "=0",
+          "normalizedText": "=0",
+          "x": 85.921,
+          "y": 670.964,
+          "width": 17.563999999999993,
+          "height": 9.704,
+          "itemIndex": 16,
+          "hasGeometry": true
+        },
+        {
+          "text": ".",
+          "normalizedText": ".",
+          "x": 97.759,
+          "y": 670.964,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 17,
+          "hasGeometry": true
+        },
+        {
+          "text": "2",
+          "normalizedText": "2",
+          "x": 104.25999999999999,
+          "y": 670.964,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 18,
+          "hasGeometry": true
+        },
+        {
+          "text": "5-0",
+          "normalizedText": "5-0",
+          "x": 109.5,
+          "y": 670.964,
+          "width": 25.424,
+          "height": 9.704,
+          "itemIndex": 19,
+          "hasGeometry": true
+        },
+        {
+          "text": ".",
+          "normalizedText": ".",
+          "x": 129.198,
+          "y": 670.964,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 20,
+          "hasGeometry": true
+        },
+        {
+          "text": "1",
+          "normalizedText": "1",
+          "x": 135.70000000000002,
+          "y": 670.964,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 21,
+          "hasGeometry": true
+        },
+        {
+          "text": "0=0",
+          "normalizedText": "0=0",
+          "x": 140.94,
+          "y": 670.964,
+          "width": 25.42299999999998,
+          "height": 9.704,
+          "itemIndex": 22,
+          "hasGeometry": true
+        },
+        {
+          "text": ".",
+          "normalizedText": ".",
+          "x": 160.638,
+          "y": 670.964,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 23,
+          "hasGeometry": true
+        },
+        {
+          "text": "1",
+          "normalizedText": "1",
+          "x": 167.139,
+          "y": 670.964,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 24,
+          "hasGeometry": true
+        },
+        {
+          "text": "5",
+          "normalizedText": "5",
+          "x": 172.379,
+          "y": 670.964,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 25,
+          "hasGeometry": true
+        },
+        {
+          "text": "(",
+          "normalizedText": "(",
+          "x": 180.045,
+          "y": 672.517,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 26,
+          "hasGeometry": true
+        },
+        {
+          "text": "mm)",
+          "normalizedText": "mm)",
+          "x": 185.091,
+          "y": 670.964,
+          "width": 27.75199999999999,
+          "height": 9.704,
+          "itemIndex": 27,
+          "hasGeometry": true
+        },
+        {
+          "text": ",",
+          "normalizedText": ",",
+          "x": 208.573,
+          "y": 672.517,
+          "width": 9.704,
+          "height": 9.704,
+          "itemIndex": 28,
+          "hasGeometry": true
+        },
+        {
+          "text": "补偿环尺",
+          "normalizedText": "补偿环尺",
+          "x": 214.007,
+          "y": 672.226,
+          "width": 41.72599999999997,
+          "height": 9.704,
+          "itemIndex": 29,
+          "hasGeometry": true
+        }
+      ],
+      "lines": [
+        {
+          "page": 4,
+          "y": 670.964,
+          "rawText": "δL=δL-δL=0.25-0.10=0.15mm)补偿环尺",
+          "normalizedText": "δL=δL-δL=0.25-0.10=0.15mm)补偿环尺",
+          "items": [
+            {
+              "text": "δ",
+              "normalizedText": "δ",
+              "x": 22.496000000000002,
+              "y": 670.964,
+              "width": 9.704,
+              "height": 9.853149347960581,
+              "itemIndex": 0,
+              "hasGeometry": true
+            },
+            {
+              "text": "L",
+              "normalizedText": "L",
+              "x": 29.282000000000004,
+              "y": 670.2660000000001,
+              "width": 5.337,
+              "height": 5.419029067401651,
+              "itemIndex": 1,
+              "hasGeometry": true
+            },
+            {
+              "text": "=",
+              "normalizedText": "=",
+              "x": 38.568,
+              "y": 670.964,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 4,
+              "hasGeometry": true
+            },
+            {
+              "text": "δ",
+              "normalizedText": "δ",
+              "x": 45.59,
+              "y": 670.964,
+              "width": 9.704,
+              "height": 9.853149347960581,
+              "itemIndex": 6,
+              "hasGeometry": true
+            },
+            {
+              "text": "L",
+              "normalizedText": "L",
+              "x": 52.376,
+              "y": 670.2660000000001,
+              "width": 5.337,
+              "height": 5.419029067401651,
+              "itemIndex": 7,
+              "hasGeometry": true
+            },
+            {
+              "text": "-",
+              "normalizedText": "-",
+              "x": 62.244,
+              "y": 670.964,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 10,
+              "hasGeometry": true
+            },
+            {
+              "text": "δ",
+              "normalizedText": "δ",
+              "x": 69.266,
+              "y": 670.964,
+              "width": 9.704,
+              "height": 9.853149347960581,
+              "itemIndex": 12,
+              "hasGeometry": true
+            },
+            {
+              "text": "L",
+              "normalizedText": "L",
+              "x": 76.053,
+              "y": 670.2660000000001,
+              "width": 5.337,
+              "height": 5.419029067401651,
+              "itemIndex": 13,
+              "hasGeometry": true
+            },
+            {
+              "text": "=0",
+              "normalizedText": "=0",
+              "x": 85.921,
+              "y": 670.964,
+              "width": 17.563999999999993,
+              "height": 9.704,
+              "itemIndex": 16,
+              "hasGeometry": true
+            },
+            {
+              "text": ".",
+              "normalizedText": ".",
+              "x": 97.759,
+              "y": 670.964,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 17,
+              "hasGeometry": true
+            },
+            {
+              "text": "2",
+              "normalizedText": "2",
+              "x": 104.25999999999999,
+              "y": 670.964,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 18,
+              "hasGeometry": true
+            },
+            {
+              "text": "5-0",
+              "normalizedText": "5-0",
+              "x": 109.5,
+              "y": 670.964,
+              "width": 25.424,
+              "height": 9.704,
+              "itemIndex": 19,
+              "hasGeometry": true
+            },
+            {
+              "text": ".",
+              "normalizedText": ".",
+              "x": 129.198,
+              "y": 670.964,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 20,
+              "hasGeometry": true
+            },
+            {
+              "text": "1",
+              "normalizedText": "1",
+              "x": 135.70000000000002,
+              "y": 670.964,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 21,
+              "hasGeometry": true
+            },
+            {
+              "text": "0=0",
+              "normalizedText": "0=0",
+              "x": 140.94,
+              "y": 670.964,
+              "width": 25.42299999999998,
+              "height": 9.704,
+              "itemIndex": 22,
+              "hasGeometry": true
+            },
+            {
+              "text": ".",
+              "normalizedText": ".",
+              "x": 160.638,
+              "y": 670.964,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 23,
+              "hasGeometry": true
+            },
+            {
+              "text": "1",
+              "normalizedText": "1",
+              "x": 167.139,
+              "y": 670.964,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 24,
+              "hasGeometry": true
+            },
+            {
+              "text": "5",
+              "normalizedText": "5",
+              "x": 172.379,
+              "y": 670.964,
+              "width": 9.704,
+              "height": 9.704,
+              "itemIndex": 25,
+              "hasGeometry": true
+            },
+            {
+              "text": "mm)",
+              "normalizedText": "mm)",
+              "x": 185.091,
+              "y": 670.964,
+              "width": 27.75199999999999,
+              "height": 9.704,
+              "itemIndex": 27,
+              "hasGeometry": true
+            },
+            {
+              "text": "补偿环尺",
+              "normalizedText": "补偿环尺",
+              "x": 214.007,
+              "y": 672.226,
+              "width": 41.72599999999997,
+              "height": 9.704,
+              "itemIndex": 29,
+              "hasGeometry": true
+            }
+          ],
+          "spans": [
+            {
+              "start": 0,
+              "end": 1,
+              "itemIndex": 0
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "itemIndex": 1
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "itemIndex": 4
+            },
+            {
+              "start": 3,
+              "end": 4,
+              "itemIndex": 6
+            },
+            {
+              "start": 4,
+              "end": 5,
+              "itemIndex": 7
+            },
+            {
+              "start": 5,
+              "end": 6,
+              "itemIndex": 10
+            },
+            {
+              "start": 6,
+              "end": 7,
+              "itemIndex": 12
+            },
+            {
+              "start": 7,
+              "end": 8,
+              "itemIndex": 13
+            },
+            {
+              "start": 8,
+              "end": 10,
+              "itemIndex": 16
+            },
+            {
+              "start": 10,
+              "end": 11,
+              "itemIndex": 17
+            },
+            {
+              "start": 11,
+              "end": 12,
+              "itemIndex": 18
+            },
+            {
+              "start": 12,
+              "end": 15,
+              "itemIndex": 19
+            },
+            {
+              "start": 15,
+              "end": 16,
+              "itemIndex": 20
+            },
+            {
+              "start": 16,
+              "end": 17,
+              "itemIndex": 21
+            },
+            {
+              "start": 17,
+              "end": 20,
+              "itemIndex": 22
+            },
+            {
+              "start": 20,
+              "end": 21,
+              "itemIndex": 23
+            },
+            {
+              "start": 21,
+              "end": 22,
+              "itemIndex": 24
+            },
+            {
+              "start": 22,
+              "end": 23,
+              "itemIndex": 25
+            },
+            {
+              "start": 23,
+              "end": 26,
+              "itemIndex": 27
+            },
+            {
+              "start": 26,
+              "end": 30,
+              "itemIndex": 29
+            }
+          ],
+          "rectPdf": [
+            22.496000000000002,
+            668.50071266301,
+            255.73299999999998,
+            681.93
+          ]
+        }
+      ]
+    },
+    "page": {
+      "page": 4,
+      "view": [
+        0,
+        0,
+        533.2,
+        722.418
+      ],
+      "items": [
+        {
+          "str": "δ",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            22.496000000000002,
+            670.964
+          ],
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "hasEOL": false
+        },
+        {
+          "str": "L",
+          "transform": [
+            5.337,
+            0,
+            0.9393119999999999,
+            5.337,
+            29.282000000000004,
+            670.2660000000001
+          ],
+          "width": 5.337,
+          "height": 5.419029067401651,
+          "hasEOL": false
+        },
+        {
+          "str": "z",
+          "transform": [
+            4.658,
+            0,
+            0,
+            4.658,
+            33.037,
+            668.008
+          ],
+          "width": 4.658,
+          "height": 4.658,
+          "hasEOL": false
+        },
+        {
+          "str": " ",
+          "transform": [
+            4.658,
+            0,
+            0,
+            4.658,
+            37.695,
+            668.008
+          ],
+          "width": 0.8729999999999976,
+          "height": 0,
+          "hasEOL": false
+        },
+        {
+          "str": "=",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            38.568,
+            670.964
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            45.59,
+            670.964
+          ],
+          "width": 0,
+          "height": 0,
+          "hasEOL": true
+        },
+        {
+          "str": "δ",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            45.59,
+            670.964
+          ],
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "hasEOL": false
+        },
+        {
+          "str": "L",
+          "transform": [
+            5.337,
+            0,
+            0.9393119999999999,
+            5.337,
+            52.376,
+            670.2660000000001
+          ],
+          "width": 5.337,
+          "height": 5.419029067401651,
+          "hasEOL": false
+        },
+        {
+          "str": "0",
+          "transform": [
+            4.658,
+            0,
+            0,
+            4.658,
+            56.228,
+            668.008
+          ],
+          "width": 4.658,
+          "height": 4.658,
+          "hasEOL": false
+        },
+        {
+          "str": " ",
+          "transform": [
+            4.658,
+            0,
+            0,
+            4.658,
+            60.886,
+            668.008
+          ],
+          "width": 1.357999999999997,
+          "height": 0,
+          "hasEOL": false
+        },
+        {
+          "str": "-",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            62.244,
+            670.964
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            69.266,
+            670.964
+          ],
+          "width": 0,
+          "height": 0,
+          "hasEOL": true
+        },
+        {
+          "str": "δ",
+          "transform": [
+            9.704,
+            0,
+            1.707904,
+            9.704,
+            69.266,
+            670.964
+          ],
+          "width": 9.704,
+          "height": 9.853149347960581,
+          "hasEOL": false
+        },
+        {
+          "str": "L",
+          "transform": [
+            5.337,
+            0,
+            0.9393119999999999,
+            5.337,
+            76.053,
+            670.2660000000001
+          ],
+          "width": 5.337,
+          "height": 5.419029067401651,
+          "hasEOL": false
+        },
+        {
+          "str": "b",
+          "transform": [
+            4.658,
+            0,
+            0,
+            4.658,
+            80.099,
+            668.008
+          ],
+          "width": 4.658,
+          "height": 4.658,
+          "hasEOL": false
+        },
+        {
+          "str": " ",
+          "transform": [
+            4.658,
+            0,
+            0,
+            4.658,
+            84.757,
+            668.008
+          ],
+          "width": 1.1640000000000015,
+          "height": 0,
+          "hasEOL": false
+        },
+        {
+          "str": "=0",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            85.921,
+            670.964
+          ],
+          "width": 17.563999999999993,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": ".",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            97.759,
+            670.964
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "2",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            104.25999999999999,
+            670.964
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "5-0",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            109.5,
+            670.964
+          ],
+          "width": 25.424,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": ".",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            129.198,
+            670.964
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "1",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            135.70000000000002,
+            670.964
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "0=0",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            140.94,
+            670.964
+          ],
+          "width": 25.42299999999998,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": ".",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            160.638,
+            670.964
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "1",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            167.139,
+            670.964
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "5",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            172.379,
+            670.964
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "(",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            180.045,
+            672.517
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "mm)",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            185.091,
+            670.964
+          ],
+          "width": 27.75199999999999,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": ",",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            208.573,
+            672.517
+          ],
+          "width": 9.704,
+          "height": 9.704,
+          "hasEOL": false
+        },
+        {
+          "str": "补偿环尺",
+          "transform": [
+            9.704,
+            0,
+            0,
+            9.704,
+            214.007,
+            672.226
+          ],
+          "width": 41.72599999999997,
+          "height": 9.704,
+          "hasEOL": true
+        }
+      ]
+    }
+  }
+]

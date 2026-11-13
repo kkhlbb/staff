@@ -1,0 +1,80 @@
+
+> staff@0.4.0-beta package:desktop
+> node scripts/package-desktop.mjs
+
+❯ Checking your system
+2026-11-13T07:45:58.287Z electron-forge:check-system checking system, create ~/.skip-forge-system-check to stop doing this
+❯ Checking package manager version
+2026-11-13T07:45:58.287Z electron-forge:package-manager Resolved package manager to npm. (Derived from npm_config_user_agent: npm/11.20.0 node/v26.12.1 darwin arm64 workspaces/false, lockfile: npm)
+✔ Found npm@11.20.0
+✔ Checking your system
+❯ Preparing to package application
+2026-11-13T07:45:58.413Z electron-forge:project-resolver searching for project in: /Users/aston/DSH/staff
+2026-11-13T07:45:58.413Z electron-forge:project-resolver package.json with forge dependency found in /Users/aston/DSH/staff/package.json
+2026-11-13T07:45:58.443Z electron-forge:plugin:vite hooking process events
+✔ Preparing to package application
+❯ Running packaging hooks
+❯ Running generateAssets hook
+✔ Running generateAssets hook
+❯ Running prePackage hook
+❯ [plugin-vite] Building production Vite bundles
+❯ Building main and preload targets...
+❯ Building renderer targets...
+❯ Building desktop/main/index.ts
+❯ Building desktop/preload/index.ts
+❯ Building main_window
+❯ Building drawing_print
+✔ Built target desktop/preload/index.ts
+✔ Built target drawing_print
+✔ Built target desktop/main/index.ts
+✔ Building main and preload targets...
+✔ Built target main_window
+✔ Building renderer targets...
+✔ [plugin-vite] Building production Vite bundles
+✔ Running prePackage hook
+✔ Running packaging hooks
+❯ Packaging application
+› Determining targets...
+2026-11-13T07:45:58.801Z electron-forge:packager packaging with options {
+  asar: true,
+  overwrite: true,
+  ignore: [Function (anonymous)],
+  quiet: true,
+  name: '寸链',
+  appBundleId: 'com.kkhlbb.cunlian',
+  dir: '/Users/aston/DSH/staff',
+  arch: [ 'arm64' ],
+  platform: 'darwin',
+  afterFinalizePackageTargets: [ [AsyncFunction (anonymous)] ],
+  afterComplete: [ [AsyncFunction (anonymous)] ],
+  afterCopy: [ [AsyncFunction (anonymous)] ],
+  afterExtract: [ [AsyncFunction (anonymous)] ],
+  afterPrune: [ [AsyncFunction (anonymous)] ],
+  out: '/Users/aston/DSH/staff/out',
+  electronVersion: '45.2.3'
+}
+2026-11-13T07:45:58.803Z electron-forge:packager targets: [ { platform: 'darwin', arch: 'arm64' } ]
+❯ Packaging for arm64 on darwin
+❯ Copying files
+2026-11-13T07:45:58.803Z @electron/get:index Checking the cache (undefined) for electron-v45.2.3-darwin-arm64.zip (https://github.com/electron/electron/releases/download/v45.2.3/electron-v45.2.3-darwin-arm64.zip)
+2026-11-13T07:45:58.803Z @electron/get:index Cache hit
+2026-11-13T07:45:58.804Z @electron/get:index Downloading https://github.com/electron/electron/releases/download/v45.2.3/SHASUMS256.txt to /var/folders/r1/wdm1m5zj4zl9bjxzk8sh_jdh0000gn/T/electron-download-rVm0wS/SHASUMS256.txt with options: undefined
+2026-11-13T07:45:58.813Z @electron/get:index Artifact in cache didn't match checksums [TypeError: fetch failed] {
+  [cause]: Error: getaddrinfo ENOTFOUND github.com
+      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: 'github.com'
+  }
+}
+2026-11-13T07:45:58.813Z @electron/get:index falling back to re-download
+2026-11-13T07:45:58.813Z @electron/get:index Downloading https://github.com/electron/electron/releases/download/v45.2.3/electron-v45.2.3-darwin-arm64.zip to /var/folders/r1/wdm1m5zj4zl9bjxzk8sh_jdh0000gn/T/electron-download-zUPRYU/electron-v45.2.3-darwin-arm64.zip with options: undefined
+✖ Copying files [FAILED: fetch failed]
+✖ Packaging for arm64 on darwin [FAILED: fetch failed]
+✖ Packaging application [FAILED: fetch failed]
+
+An unhandled rejection has occurred inside Forge:
+TypeError: fetch failed
+
+2026-11-13T07:45:58.815Z electron-forge:plugin:vite handling process exit with: { cleanup: true }

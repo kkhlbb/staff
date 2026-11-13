@@ -215,6 +215,10 @@ async function main() {
           revokeReason: '度量：整批撤销补单位，核对回到未声明状态',
         }
   const measured = await measureCorpus({ manifestPath, corpusDir, unitAttestation })
+  console.log(`correctness: ${JSON.stringify(measured.summary.correctness)}`)
+  if (measured.summary.correctness.wrongPending > 0) {
+    throw new Error(`GROUND_TRUTH_MISMATCH: wrongPending=${measured.summary.correctness.wrongPending}; refusing baseline acceptance`)
+  }
   const evidenceJson = await loadEvidenceJson()
 
   if (unitAttestation !== null) {
