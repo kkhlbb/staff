@@ -45,6 +45,7 @@ import { registerDrawingChannels } from './drawingChannels'
 import { DXF_VIEW_MAX_BYTES, registerDxfChannels } from './dxfChannels'
 import { registerChangeChannels } from './changeChannels'
 import { registerSourceChannels } from './sourceChannels'
+import { registerSketchChannels } from './sketchChannels'
 import { registerRequirementChannels } from './requirementChannels'
 import { registerExtractionChannels } from './extractionChannels'
 import { ExtractionService } from './extractionService'
@@ -393,6 +394,24 @@ async function pickSourcePdfFor(windowId: number): Promise<string | null> {
   return picked.filePaths[0] ?? null
 }
 
+/** 手绘草图：对话框允许选 PNG/JPEG/HEIC——HEIC 要能被选中，才能在导入时明确提示转换命令。 */
+async function pickSketchImageFor(windowId: number): Promise<string | null> {
+  const owner = BrowserWindow.fromId(windowId) ?? BrowserWindow.getFocusedWindow()
+  const options = {
+    title: '导入手绘草图图片',
+    properties: ['openFile' as const],
+    filters: [{ name: '图片（PNG / JPEG / HEIC）', extensions: ['png', 'PNG', 'jpg', 'JPG', 'jpeg', 'JPEG', 'heic', 'HEIC', 'heif', 'HEIF'] }],
+  }
+  const picked =
+    owner === null
+      ? await dialog.showOpenDialog(options)
+      : await dialog.showOpenDialog(owner, options)
+  if (picked.canceled || picked.filePaths.length !== 1) {
+    return null
+  }
+  return picked.filePaths[0] ?? null
+}
+
 /** C：导出对话框只允许对应后缀；路径只来自系统对话框。 */
 async function pickDrawingExportPath(
   windowId: number,
@@ -642,6 +661,16 @@ function installIpcHandlers(): void {
     pickSourcePath: pickSourcePdfFor,
     io: createModelFileIo(),
     inspectPdf: (bytes) => inspectSourcePdf(bytes),
+    log: logStage,
+  })
+
+  registerSketchChannels(ipc, {
+    guard,
+    controller,
+    projectService,
+    recovery,
+    pickImagePath: pickSketchImageFor,
+    io: createModelFileIo(),
     log: logStage,
   })
 

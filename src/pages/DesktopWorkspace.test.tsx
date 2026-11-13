@@ -429,6 +429,15 @@ beforeEach(async () => {
       ok: false as const,
       error: { code: 'CANCELLED' as const, message: '取消' },
     })),
+    // 草图入口：默认取消；用例按需覆盖。
+    importSketchImage: vi.fn<CunlianApi['importSketchImage']>(async () => ({
+      ok: false as const,
+      error: { code: 'CANCELLED' as const, message: '取消' },
+    })),
+    ingestSketchReadings: vi.fn<CunlianApi['ingestSketchReadings']>(async () => ({
+      ok: false as const,
+      error: { code: 'INVALID_REQUEST' as const, message: 'mock 不提供草图读数' },
+    })),
     stageRequirementEdit: vi.fn<CunlianApi['stageRequirementEdit']>(async request => ({
       ok: true as const,
       value: {

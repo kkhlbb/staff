@@ -1,0 +1,198 @@
+/* 草图读数面板：三栏在局部滚动区内自适应；不新增固定像素宽度。 */
+.sketch-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  height: 100%;
+}
+
+.sketch-panel__header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line, #d8d8d8);
+}
+
+.sketch-panel__header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.sketch-panel__notice {
+  margin: 0;
+  font-weight: 600;
+}
+
+.sketch-panel__hint {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.sketch-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sketch-panel__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1.4fr);
+  gap: 8px;
+  min-height: 0;
+  flex: 1;
+  padding: 0 12px 12px;
+}
+
+@media (max-width: 1123px) {
+  .sketch-panel__body {
+    grid-template-columns: minmax(0, 1fr);
+    overflow: auto;
+  }
+}
+
+.sketch-panel__list,
+.sketch-panel__form {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--line, #d8d8d8);
+  border-radius: 6px;
+}
+
+.sketch-panel__list ul,
+.sketch-panel__form ol {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sketch-panel__list button[aria-pressed='true'] {
+  font-weight: 600;
+  outline: 2px solid currentColor;
+}
+
+.sketch-panel__stage-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.sketch-panel__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.sketch-panel__stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  background: repeating-conic-gradient(#f4f4f4 0% 25%, #ffffff 0% 50%) 50% / 16px 16px;
+  border: 1px solid var(--line, #d8d8d8);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.sketch-panel__canvas {
+  position: absolute;
+  user-select: none;
+  pointer-events: none;
+}
+
+.sketch-panel__box {
+  position: absolute;
+  border: 2px solid #b3261e;
+  background: rgba(179, 38, 30, 0.08);
+  pointer-events: none;
+  font-size: 12px;
+  color: #b3261e;
+}
+
+.sketch-panel__box span {
+  position: absolute;
+  top: -18px;
+  left: 0;
+  background: #b3261e;
+  color: #fff;
+  padding: 0 4px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.sketch-panel__box--draft {
+  border-style: dashed;
+}
+
+/* 已提交读数（只读回显）：位置来自项目文件里的原图像素 rect。 */
+.sketch-panel__box--saved {
+  border-color: #1e6f3a;
+  background: rgba(30, 111, 58, 0.08);
+  color: #1e6f3a;
+}
+
+.sketch-panel__box--saved span {
+  background: #1e6f3a;
+}
+
+.sketch-panel__drag {
+  position: absolute;
+  border: 1px dashed #1a73e8;
+  background: rgba(26, 115, 232, 0.08);
+  pointer-events: none;
+}
+
+.sketch-panel__placeholder {
+  margin: auto;
+  opacity: 0.7;
+}
+
+.sketch-panel__stage-status {
+  margin: 0;
+  font-size: 12px;
+  color: #444;
+}
+
+.sketch-panel__form label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.sketch-panel__form input {
+  min-width: 0;
+  font-size: 14px;
+}
+
+.sketch-panel__form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sketch-panel__submit {
+  font-weight: 600;
+}
+
+.sketch-panel__error {
+  color: #b3261e;
+}
+
+.sketch-panel__form li {
+  font-size: 13px;
+}

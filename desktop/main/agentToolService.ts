@@ -1028,6 +1028,8 @@ export class AgentToolService {
       const plan = planApplication(draft, {
         source: draft.sourceIdentity,
         revisions: session.snapshot.revisions.map((r) => ({ revisionId: r.id, sha256: r.sha256 })),
+        // 草图读数的 imageId 就是不可变图片版本 id；按 id+sha256 核验同一份字节。
+        images: session.snapshot.revisions.map((r) => ({ imageId: r.id, sha256: r.sha256 })),
         candidateIds: draft.candidates.map((candidate) => candidate.candidateId),
         session: this.intentPlanSession(project),
       })
@@ -1501,6 +1503,8 @@ export class AgentToolService {
       // M08: this MUST be the authoritative gate; no parallel confirmation implementation.
       const plan = planApplication(draft, { source: draft.sourceIdentity, candidateIds: req.candidateIds,
         session: this.intentPlanSession(session.snapshot.project),
+        // 草图读数的 imageId 就是不可变图片版本 id；按 id+sha256 核验同一份字节。
+        images: session.snapshot.revisions.map((r) => ({ imageId: r.id, sha256: r.sha256 })),
         revisions: session.snapshot.revisions.map((r) => ({ revisionId: r.id, sha256: r.sha256 })) })
       if (!plan.ok) throw new MappingError(plan.code === 'GROUP_ALREADY_CONFIRMED' ? 'CONSTRAINT_VIOLATED' : plan.code === 'SOURCE_STALE' ? 'SOURCE_CHANGED' : 'NOT_CONFIRMED', plan.message, { causeCode: plan.code })
       // M09: formal basis validation cannot be replaced by a cached plan token.

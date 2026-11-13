@@ -215,8 +215,16 @@ export interface AgentReadEvidence {
   readonly turnId: string
   readonly modelId: string | null
   readonly source: { readonly kind: 'pdf-page'; readonly revisionId: string; readonly sha256: string; readonly page: number }
-    | { readonly kind: 'image'; readonly imageId: string; readonly sha256: string }
+    | { readonly kind: 'image'; readonly imageId: string; readonly sha256: string
+      /** 草图框选位置：原图像素矩形 [x,y,width,height]；null = 用户未框选（无位置）。 */
+      readonly region?: AgentReadRegion }
   readonly statement: string
+}
+
+/** 图片读数在草图上的位置；index 是本次提交内的第 N 个框选（从 1 起）。 */
+export interface AgentReadRegion {
+  readonly index: number
+  readonly rect: readonly [number, number, number, number] | null
 }
 
 export type EvidenceRefKind = 'pdf-text' | 'pdf-ocr' | 'image-ocr' | 'user-attestation' | 'agent-read'
@@ -264,7 +272,13 @@ export function isProvenanceCompleteness(ref: EvidenceRef | null | undefined): b
       s !== undefined && typeof s.sha256 === 'string' && /^[a-f0-9]{64}$/iu.test(s.sha256) &&
       (s.kind === 'pdf-page' ? typeof s.revisionId === 'string' && s.revisionId.trim() !== '' &&
         Number.isSafeInteger(s.page) && s.page > 0 :
-        s.kind === 'image' && typeof s.imageId === 'string' && s.imageId.trim() !== '')
+        s.kind === 'image' && typeof s.imageId === 'string' && s.imageId.trim() !== '' &&
+        (s.region === undefined || (
+          Number.isSafeInteger(s.region.index) && s.region.index >= 1 &&
+          (s.region.rect === null || (Array.isArray(s.region.rect) && s.region.rect.length === 4 &&
+            s.region.rect.every((value) => Number.isSafeInteger(value) && value >= 0) &&
+            (s.region.rect[2] as number) >= 1 && (s.region.rect[3] as number) >= 1))
+        )))
   }
   if (kind === 'pdf-text') {
     const evidence = ref as ExtractionEvidence

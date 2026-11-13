@@ -75,6 +75,8 @@ const ADDED_FUNCTIONS = [
   // ADR-001 第 3 步：无任务书入口（用户界面触发；仍只增不改旧函数）。
   'intentCreateProject', 'intentState', 'intentApply', 'intentPreview',
   'intentConfirmCandidate', 'intentIssueApproval',
+  // 手绘草图入口：图片导入 + 图上框选读数（仍只增不改旧函数）。
+  'importSketchImage', 'ingestSketchReadings',
 ] as const
 
 describe('B2/C preload 契约', () => {

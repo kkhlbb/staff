@@ -87,7 +87,7 @@ try {
     await send('Emulation.setDeviceMetricsOverride', { width: b.width, height: b.height, deviceScaleFactor: 1, mobile: false })
     await sleep(600)
     // Every actual tab is measured, including extraction/history/tables; no content hidden for the test.
-    for (const tab of ['工程图', '3D', '来源 PDF', '尺寸链', '历史报告', '任务书提取']) {
+    for (const tab of ['工程图', '3D', '来源 PDF', '尺寸链', '历史报告', '任务书提取', '草图读数']) {
       await click('[role="tab"]', tab)
       const observed = await evaluate(`(() => {
         const rect = s => { const r=document.querySelector(s).getBoundingClientRect(); return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom} }

@@ -1,0 +1,5 @@
+--- src/sketch/readings.ts
++++ src/sketch/readings.ts
+-  if (!hasExactKeys(reading, READING_KEYS)) {
++  if (!hasExactKeys(reading, [...READING_KEYS, 'mmPerPixel', 'pixelsPerMm', 'scale', 'ratio'])) {
+# 接受像素→毫米系数＝允许无标定量取；守卫必须拒绝。

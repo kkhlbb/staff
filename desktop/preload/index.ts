@@ -36,6 +36,8 @@ import {
   type SessionReattachValue,
   type SourceReadValue,
   type SourceImportValue,
+  type SketchImageImportValue,
+  type SketchIngestValue,
   type RequirementEditValue,
   type RequirementConfirmValue,
   type ExtractionRunValue,
@@ -236,6 +238,14 @@ const api: CunlianApi = {
   importSource: (request) =>
     ipcRenderer.invoke(IPC_CHANNELS.sourceImport, request) as Promise<
       IpcResult<SourceImportValue>
+    >,
+  importSketchImage: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.sketchImageImport, request) as Promise<
+      IpcResult<SketchImageImportValue>
+    >,
+  ingestSketchReadings: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.sketchIngestReadings, request) as Promise<
+      IpcResult<SketchIngestValue>
     >,
   stageRequirementEdit: (request) =>
     ipcRenderer.invoke(IPC_CHANNELS.requirementEdit, request) as Promise<

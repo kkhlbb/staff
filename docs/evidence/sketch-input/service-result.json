@@ -1,0 +1,40 @@
+{
+  "verdict": "pass",
+  "checks": [
+    {
+      "id": "image-imported",
+      "imageId": "sr-<generated>",
+      "sha256": "f079f114bd68b2b5302ee2b44cfc2a51d8bea24d46db7302dce41e599b63714b",
+      "width": 2400,
+      "height": 1696,
+      "bytesInProject": true
+    },
+    {
+      "id": "three-unverified-readings",
+      "draftId": "<generated>",
+      "candidates": 5
+    },
+    {
+      "id": "batch-rejected-zero-write"
+    },
+    {
+      "id": "drawing-source-image",
+      "svg": "docs/evidence/sketch-input/隔套-图纸-1_1.svg"
+    },
+    {
+      "id": "four-orientation",
+      "rows": 4
+    },
+    {
+      "id": "boundaries",
+      "tooLarge": "TOO_LARGE",
+      "heic": "UNSUPPORTED_IMAGE_FORMAT",
+      "unboxed": "no-position"
+    }
+  ],
+  "scope": "真实通道 + 真实文件 + 真实提交；UI 截图见 desktop/tests/e2e/sketchInput.mjs。",
+  "limitation": "合成夹具，非真实手绘照片。未做 OCR、未做比例标定、HEIC 不支持。",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

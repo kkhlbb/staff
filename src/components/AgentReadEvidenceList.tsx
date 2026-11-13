@@ -7,7 +7,7 @@ export function AgentReadEvidenceList({ provenance }: { provenance?: readonly un
   return <ul aria-label="读数出处">{readings.map((reading, index) => (
     <li key={index}>
       <strong>读数来源：{readingSourceLabel(reading)}</strong>
-      <p>读数说明（原话）：{reading.statement}</p>
+      <p>{reading.source.kind === 'image' ? '读数说明（用户输入）' : '读数说明（原话）'}：{reading.statement}</p>
       <small>{reading.source.kind === 'pdf-page' ? `来源 PDF · 第 ${reading.source.page} 页` : '来源图片'} · 校验信息保存在项目文件中</small>
     </li>
   ))}</ul>

@@ -1,0 +1,51 @@
+{
+  "verdict": "pass",
+  "checks": [
+    {
+      "id": "sketch-selection-visible",
+      "notice": "图上不测量，尺寸由你输入；框选只用来记住位置",
+      "savedLabels": [
+        "第 1 个框选 · L1",
+        "第 2 个框选 · L2",
+        "第 3 个框选 · L3"
+      ]
+    },
+    {
+      "id": "real-drag-box",
+      "text": "已选出原图像素框 [668, 1077, 469, 185]（469×185 像素）"
+    },
+    {
+      "id": "unverified-badge-visible",
+      "sample": "读数未核对（来源：图片，第 1 个框选，验收绘图员 提供）"
+    },
+    {
+      "id": "committed-drawing-source-visible",
+      "sample": "读数来源：图片，第 3 个框选，验收绘图员 提供；图片，第 1 个框选，验收绘图员 提供；图片，第 2 个框选，验收绘图员 提供技术要求 / 缺项1. 本图为待复核草稿：",
+      "drawingRect": {
+        "x": 279,
+        "y": 574,
+        "width": 112,
+        "height": 79
+      },
+      "note": "此视口下工程图画布被上方表单压扁（既有布局），标题栏放大证据见 06：同一份真实导出 SVG 的渲染。"
+    },
+    {
+      "id": "exported-svg-title-block",
+      "source": "docs/evidence/sketch-input/隔套-图纸-1_1.svg",
+      "note": "真实导出物渲染；不是重画，也不是 OCR。"
+    }
+  ],
+  "screenshots": [
+    "docs/evidence/sketch-input/screenshots/01-sketch-selection.png",
+    "docs/evidence/sketch-input/screenshots/02-drag-box-pixel-rect.png",
+    "docs/evidence/sketch-input/screenshots/03-unverified-readings.png",
+    "docs/evidence/sketch-input/screenshots/04-drawing-tab.png",
+    "docs/evidence/sketch-input/screenshots/05-committed-selection.png",
+    "docs/evidence/sketch-input/screenshots/06-exported-svg-title-block.png"
+  ],
+  "scope": "Packaged UI opens real service-evidence containers; no DOM injection, no synthetic overlay.",
+  "limitation": "合成夹具，非真实手绘照片。未做 OCR、未做比例标定；HEIC 不支持（main 明确拒绝）。",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}
