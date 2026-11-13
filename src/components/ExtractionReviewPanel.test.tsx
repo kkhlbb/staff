@@ -8,6 +8,16 @@ import type { SnapshotDto } from '../../desktop/shared/contracts'
 import { createSampleSnapshot } from '../project-file/__fixtures__/sampleProjectFile'
 import type { ExtractionCandidate, ExtractionDraft, ExtractionEvidence, QuantityValue } from '../document-extraction'
 import { ExtractionReviewPanel, type ExtractionReviewActions } from './ExtractionReviewPanel'
+import { expectNoUiInternalIds, UI_REVISION_ID, UI_HEX_ID } from '../test/uiIdGuard'
+
+it('UI-ID guard: 确认面板含高熵候选与版本时不泄漏', async () => {
+  const value = await snapshot()
+  const draft = value.project.extractionDrafts[0]
+  value.project.extractionDrafts = [{ ...draft, draftId: UI_HEX_ID, sourceIdentity: { ...draft.sourceIdentity, revisionId: UI_REVISION_ID }, candidates: draft.candidates.map((candidate, index) => index === 0 ? { ...candidate, candidateId: UI_HEX_ID } : candidate) }]
+  const { container } = render(<ExtractionReviewPanel snapshot={value} busy={false} actions={actions()} readBytes={vi.fn()} />)
+  expect(container.textContent).toContain('总长')
+  expectNoUiInternalIds(container)
+})
 
 const evidence: ExtractionEvidence = {
   documentId: 'doc-1',
@@ -355,11 +365,11 @@ describe('V3.6 提取审阅面板', () => {
     fireEvent.change(within(pendingRow).getByRole('textbox', { name: '拒绝理由' }), { target: { value: '原文不清' } })
     expect(within(pendingRow).getByRole('button', { name: '确认拒绝' })).toBeEnabled()
 
-    fireEvent.click(within(pendingRow).getByLabelText(/选择候选 cand-h/))
-    fireEvent.click(within(rowFor(list, /原文：轴向装配间隙/)).getByLabelText(/选择候选 cand-c/))
+    fireEvent.click(within(pendingRow).getByRole('checkbox'))
+    fireEvent.click(within(rowFor(list, /原文：轴向装配间隙/)).getByRole('checkbox'))
     // 已确认/已拒绝的候选不能进入批量选择。
-    expect(within(rowFor(list, /原文：S 隔套 12.00/)).getByLabelText(/选择候选 cand-s/)).toBeDisabled()
-    expect(within(rowFor(list, /原文：B1 左轴承 20.00/)).getByLabelText(/选择候选 cand-b1/)).toBeDisabled()
+    expect(within(rowFor(list, /原文：S 隔套 12.00/)).getByRole('checkbox')).toBeDisabled()
+    expect(within(rowFor(list, /原文：B1 左轴承 20.00/)).getByRole('checkbox')).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: '批量拒绝选中项' }))
     await waitFor(() => expect(handler.onDecide).toHaveBeenCalledTimes(2))
     expect(handler.onDecide).toHaveBeenNthCalledWith(1, expect.objectContaining({ candidateId: 'cand-h', action: 'reject' }))
@@ -370,7 +380,7 @@ describe('V3.6 提取审阅面板', () => {
     render(<ExtractionReviewPanel snapshot={await snapshot()} busy={false} actions={actions()} />)
     const list = screen.getByRole('list', { name: '提取候选列表' })
     fireEvent.click(within(rowFor(list, /原文：H 总长 52.20/)).getByRole('button', { name: '定位到 PDF 选区' }))
-    expect(screen.getByTestId('extraction-locate-summary').textContent).toContain('来源 PDF sr-1 第 1 页')
+    expect(screen.getByTestId('extraction-locate-summary').textContent).toContain('来源 PDF 第 1 版 第 1 页')
     expect(screen.getByTestId('extraction-locate-summary').textContent).toContain('[100, 600, 140, 615]')
   })
 
@@ -438,7 +448,7 @@ describe('V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次�
     render(<ExtractionReviewPanel snapshot={await twoDraftSnapshot('old-first')} busy={false} actions={actions()} />)
     const current = screen.getByTestId('extraction-current-draft')
     expect(current.textContent).toContain('document-extractor-2')
-    expect(current.textContent).toContain('draft-new')
+    expect(current.textContent).not.toContain('draft-new')
     expect(current.textContent).not.toContain('document-extractor-1')
     const list = screen.getByRole('list', { name: '提取候选列表' })
     expect(within(list).getAllByRole('listitem')).toHaveLength(1)
@@ -456,7 +466,7 @@ describe('V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次�
   it('展开旧草稿：候选可看、确认/编辑/拒绝禁用并写明原因，定位仍可用', async () => {
     render(<ExtractionReviewPanel snapshot={await twoDraftSnapshot('old-first')} busy={false} actions={actions()} />)
     fireEvent.click(screen.getByRole('button', { name: '展开查看旧草稿候选' }))
-    const oldList = screen.getByRole('list', { name: '旧草稿候选列表 draft-old' })
+    const oldList = screen.getByRole('list', { name: '旧草稿候选列表 document-extractor-1' })
     const rows = within(oldList).getAllByRole('listitem')
     expect(rows).toHaveLength(4)
     expect(
@@ -466,11 +476,11 @@ describe('V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次�
     expect(within(rows[0]!).getByRole('button', { name: '确认' }).getAttribute('title')).toContain('旧规则版本')
     expect(within(rows[0]!).getByRole('button', { name: '拒绝…' })).toBeDisabled()
     expect(within(rows[0]!).getByRole('button', { name: '编辑…' })).toBeDisabled()
-    expect(within(rows[0]!).getByLabelText(/选择候选 cand-h/)).toBeDisabled()
+    expect(within(rows[0]!).getByRole('checkbox')).toBeDisabled()
     const locateButton = within(rows[0]!).getByRole('button', { name: '定位到 PDF 选区' })
     expect(locateButton).toBeEnabled()
     fireEvent.click(locateButton)
-    expect(screen.getByTestId('extraction-locate-summary').textContent).toContain('来源 PDF sr-1 第 1 页')
+    expect(screen.getByTestId('extraction-locate-summary').textContent).toContain('来源 PDF 第 1 版 第 1 页')
   })
 
   it('删除先二次确认：写明已确认决定数，确认后才发删除请求', async () => {
@@ -482,7 +492,7 @@ describe('V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次�
     expect(handler.onDeleteDraft).not.toHaveBeenCalled()
     fireEvent.click(within(box).getByRole('button', { name: '确认删除' }))
     await waitFor(() => expect(handler.onDeleteDraft).toHaveBeenCalledWith({ draftId: 'draft-old' }))
-    expect(screen.getByRole('status').textContent).toContain('已删除旧草稿 draft-old')
+    expect(screen.getByRole('status').textContent).toContain('已删除旧草稿（document-extractor-1）')
   })
 
   it('无已确认决定的旧草稿：确认框写明“无已确认决定”', async () => {
@@ -742,8 +752,8 @@ describe('L2 分组与批量动作（面板）', () => {
       },
     }))
     render(<ExtractionReviewPanel snapshot={await corpusShapedSnapshot()} busy={false} actions={handler} />)
-    fireEvent.click(screen.getByLabelText('选择候选 m-0-0'))
-    fireEvent.click(screen.getByLabelText('选择候选 m-0-1'))
+    fireEvent.click(screen.getAllByLabelText('选择候选 M0')[0]!)
+    fireEvent.click(screen.getAllByLabelText('选择候选 M0')[1]!)
     fireEvent.click(screen.getByRole('button', { name: '批量确认选中项' }))
     await waitFor(() =>
       expect(screen.getByText(/同一符号多处赋值只能确认一处，批量确认不适用于这些组/)).toBeInTheDocument(),
@@ -822,7 +832,7 @@ describe('L2 分组与批量动作（面板）', () => {
     expect(line.textContent).toContain('本表单位 mm（2026-11-12 复核）')
     expect(line.textContent).toContain('第 1 次输入')
     expect(line.textContent).toContain('local-operator')
-    expect(line.textContent).toContain('extraction-panel-1')
+    expect(line.textContent).not.toContain('extraction-panel-1')
     // 未补单位的候选不出现这行（不把原文单位伪装成用户声明）。
     expect(screen.queryByTestId('unit-source-u-single-1')).toBeNull()
   })
@@ -839,7 +849,7 @@ describe('L2 操作数计数用例（界面里数，不凭感觉估）', () => {
     await waitFor(() => expect(handler.onConfirmBatch).toHaveBeenCalledTimes(1))
     const multiSizes = [3, 2, 3, 3, 3, 4, 4, 2, 2, 2, 2]
     multiSizes.forEach((_size, groupIndex) => {
-      const row = screen.getByLabelText(`选择候选 m-${groupIndex}-0`).closest('li')!
+      const row = screen.getAllByLabelText(`选择候选 M${groupIndex}`)[0]!.closest('li')!
       ops.click(within(row as HTMLElement).getByRole('button', { name: '确认' }))
     })
     await waitFor(() => expect(handler.onDecide).toHaveBeenCalledTimes(multiSizes.length))
@@ -877,7 +887,7 @@ describe('agent-read 未核对防线（不依赖标记）', () => {
     expect(screen.getByText('读数未核对（来源：第 2 页，张工 提供）')).toBeInTheDocument()
     expect(screen.getByText(/用户看扫描件口述：L1 为 52.20 mm <不是文本层>/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /本组全部确认/ })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByLabelText('选择候选 cand-h'))
+    fireEvent.click(screen.getByLabelText('选择候选 L1'))
     expect(screen.queryByRole('button', { name: '批量确认选中项' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '确认' }))
     await waitFor(() => expect(handler.onDecide).toHaveBeenCalledWith(expect.objectContaining({ candidateId: 'cand-h', action: 'confirm', confirmed: true })))

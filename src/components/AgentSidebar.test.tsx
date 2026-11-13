@@ -19,6 +19,39 @@ import {
   writeAgentPanelOpen,
 } from './agentPanel'
 import { AgentSidebar } from './AgentSidebar'
+import { expectNoUiInternalIds, UI_REVISION_ID, UI_HEX_ID } from '../test/uiIdGuard'
+import { createSampleSnapshot } from '../project-file/__fixtures__/sampleProjectFile'
+
+it('提交回执只从已提交历史取真实序号，不把 acceptedSeq 当版本号', async () => {
+  const snapshot = await createSampleSnapshot()
+  snapshot.fileRevisions.push({ ...snapshot.fileRevisions[0], revisionId: 'rev-a77' })
+  snapshot.project.currentRevisionId = 'rev-a77'
+  const api = apiWith()
+  api.reattachSession = vi.fn<CunlianApi['reattachSession']>(async () => ({ ok: true, value: { sessionId: 'session-test', editSeq: 91, savedSeq: 91, snapshot, path: '/guard.cunlian', fingerprint: 'hash', recovery: 'pending' } }))
+  window.cunlian = api
+  const onProjectChanged = vi.fn()
+  const { container } = render(<AgentSidebar open onToggle={() => undefined} projectName="守卫项目" revisionId={UI_REVISION_ID} revisionSequence={1} onLocate={() => undefined} onProjectChanged={onProjectChanged} />)
+  expect(screen.getByText('第 1 版')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /正常改图/ }))
+  fireEvent.click(await screen.findByRole('button', { name: '确认保存' }))
+  expect(await screen.findByTestId('agent-commit-result')).toHaveTextContent('已提交（工具回执） · 第 2 版')
+  expect(onProjectChanged).toHaveBeenCalledOnce()
+  expectNoUiInternalIds(container)
+})
+
+it('UI-ID guard: Agent 侧栏失败/提问/提交回执不泄漏身份', async () => {
+  const api = apiWith()
+  vi.mocked(api.agentTaskState!).mockResolvedValue({ ok: true, data: view({ task: task({ taskId: UI_HEX_ID, errorMessage: `记录 ${UI_REVISION_ID} 参数锁定` }), questions: [{ code: 'INVALID_INPUT', tool: 'stage', message: `记录 ${UI_HEX_ID} 需补充` }] }), requestId: 'r', objectVersion: UI_REVISION_ID })
+  vi.mocked(api.commitApprovedDraft!).mockResolvedValue({ ok: true, data: { revisionId: UI_REVISION_ID, acceptedSeq: 3, path: '/guard.cunlian', fingerprint: UI_HEX_ID, analysisSnapshotId: UI_HEX_ID, requirementStatus: null, warnings: [] }, requestId: 'r', objectVersion: UI_REVISION_ID })
+  window.cunlian = api
+  const { container } = render(<AgentSidebar open onToggle={() => undefined} projectName="守卫项目" revisionId={UI_REVISION_ID} onLocate={() => undefined} />)
+  fireEvent.click(screen.getByRole('button', { name: /正常改图/ }))
+  await screen.findByTestId('agent-question-reason')
+  expectNoUiInternalIds(container)
+  fireEvent.click(await screen.findByRole('button', { name: '确认保存' }))
+  await screen.findByTestId('agent-commit-result')
+  expectNoUiInternalIds(container)
+})
 
 afterEach(() => {
   window.localStorage.clear()
@@ -278,7 +311,7 @@ describe('V4.0 阶段3：任务侧栏渲染契约', () => {
     }))
     const confirm = await screen.findByRole('button', { name: '确认保存' })
     fireEvent.click(confirm)
-    await waitFor(() => expect(screen.getByTestId('agent-commit-result').textContent).toContain('已提交（工具回执） · 版本 rev-a77'))
+    await waitFor(() => expect(screen.getByTestId('agent-commit-result').textContent).toContain('已提交（工具回执） · 未命名版本'))
     expect(api.issueAgentApproval).toHaveBeenCalledWith({ previewId: 'preview-1' })
     expect(api.commitApprovedDraft).toHaveBeenCalledWith({ approvalId: 'approval-1', draftId: 'draft-1', previewFingerprint: preview.previewFingerprint })
   })

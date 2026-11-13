@@ -1,4 +1,5 @@
 import { MmInput } from './MmInput'
+import { uiSourceVersionLabel, uiDiagnosticText } from './uiIdentity'
 import { useCallback, useState } from 'react'
 import type { SnapshotDto } from '../../desktop/shared/contracts'
 import type { RequirementRevisionHistoryEntry, RequirementSourceLocation } from '../requirements/history'
@@ -122,7 +123,7 @@ export function DesktopSourceView({ snapshot, sessionId, requirementSource, loca
     page: highlightRequirement.page,
     rectPdf: highlightRequirement.rectPdf,
     pageBoxPdf: highlightRequirement.pageBoxPdf,
-    note: `任务书条款选区 · ${highlightRequirement.requirementRevisionId}`,
+    note: '任务书条款选区',
     createdAt: '',
     reviewedTermRevision: null,
     reviewedAt: null,
@@ -138,14 +139,14 @@ export function DesktopSourceView({ snapshot, sessionId, requirementSource, loca
   return <div className="desktop-workspace__content"><h2>来源 PDF</h2>
     <p>读取当前会话内的确切附件版本；有绑定不代表来源已审查。</p>
     {snapshot.revisions.length === 0 && locate === null && requirementSource === null ? <p role="status">没有来源 PDF。资料导入本批次未实现。</p> : <>
-      {snapshot.revisions.length === 0 && location.revisionId === '' ? null : <label>来源版本 <select aria-label="来源版本" value={location.revisionId} onChange={event => setLocation({ revisionId: event.target.value, page: 1, termId: null, requirementRevisionId: null })}>{revision === undefined && location.revisionId !== '' ? <option value={location.revisionId}>{location.revisionId}（不在项目文件中）</option> : null}{snapshot.revisions.map(rev => <option key={rev.id} value={rev.id}>{rev.fileName} · {rev.id}</option>)}</select></label>}
+      {snapshot.revisions.length === 0 && location.revisionId === '' ? null : <label>来源版本 <select aria-label="来源版本" value={location.revisionId} onChange={event => setLocation({ revisionId: event.target.value, page: 1, termId: null, requirementRevisionId: null })}>{revision === undefined && location.revisionId !== '' ? <option value={location.revisionId}>未命名版本（不在项目文件中）</option> : null}{snapshot.revisions.map(rev => <option key={rev.id} value={rev.id}>{rev.fileName} · {uiSourceVersionLabel(snapshot.revisions, rev.id)}</option>)}</select></label>}
       {snapshot.documents.map(doc => <button key={doc.id} type="button" onClick={() => onImportVersion(doc.id)}>导入「{doc.title}」新版…</button>)}
-      <ul className="desktop-workspace__locations">{snapshot.bindings.map(binding => <li key={binding.id}><span>{snapshot.project.dimensionChain.terms.find(term => term.id === binding.termId)?.symbol ?? binding.termId} · 第 {binding.page} 页 · {binding.revisionId} </span><button disabled={!snapshot.revisions.some(rev => rev.id === binding.revisionId)} onClick={() => { setLocation({ revisionId: binding.revisionId, page: binding.page, termId: binding.termId, requirementRevisionId: null }); setZoom(1); setRotation(0) }}>查看原图位置</button></li>)}
-        {requirementSource && <li><span>任务书条款（活动）· 第 {requirementSource.page} 页 · {requirementSource.revisionId}（{requirementSource.label}）</span><button onClick={() => { setLocation({ revisionId: requirementSource.revisionId, page: requirementSource.page, termId: '__requirement__', requirementRevisionId: requirementSource.requirementRevisionId }); setZoom(1); setRotation(0) }}>定位任务书</button></li>}
-        {locate && locate.requirementRevisionId !== requirementSource?.requirementRevisionId && <li><span>任务书条款历史版本 · 第 {locate.page} 页 · {locate.revisionId}（{locate.label}）</span><button onClick={() => { setLocation({ revisionId: locate.revisionId, page: locate.page, termId: '__requirement__', requirementRevisionId: locate.requirementRevisionId }); setZoom(1); setRotation(0) }}>定位此历史版本</button></li>}
+      <ul className="desktop-workspace__locations">{snapshot.bindings.map(binding => <li key={binding.id}><span>{snapshot.project.dimensionChain.terms.find(term => term.id === binding.termId)?.symbol ?? '未命名组成环'} · 第 {binding.page} 页 · {uiSourceVersionLabel(snapshot.revisions, binding.revisionId)} </span><button disabled={!snapshot.revisions.some(rev => rev.id === binding.revisionId)} onClick={() => { setLocation({ revisionId: binding.revisionId, page: binding.page, termId: binding.termId, requirementRevisionId: null }); setZoom(1); setRotation(0) }}>查看原图位置</button></li>)}
+        {requirementSource && <li><span>任务书条款（活动）· 第 {requirementSource.page} 页 · {uiSourceVersionLabel(snapshot.revisions, requirementSource.revisionId)}</span><button onClick={() => { setLocation({ revisionId: requirementSource.revisionId, page: requirementSource.page, termId: '__requirement__', requirementRevisionId: requirementSource.requirementRevisionId }); setZoom(1); setRotation(0) }}>定位任务书</button></li>}
+        {locate && locate.requirementRevisionId !== requirementSource?.requirementRevisionId && <li><span>任务书条款历史版本 · 第 {locate.page} 页 · {uiSourceVersionLabel(snapshot.revisions, locate.revisionId)}</span><button onClick={() => { setLocation({ revisionId: locate.revisionId, page: locate.page, termId: '__requirement__', requirementRevisionId: locate.requirementRevisionId }); setZoom(1); setRotation(0) }}>定位此历史版本</button></li>}
       </ul>
-      {selectedRequirement !== null && <p data-testid="requirement-locate-summary">已定位 {selectedRequirement.label} · 来源 PDF {selectedRequirement.revisionId} 第 {selectedRequirement.page} 页 · 选区 PDF 点 {formatRequirementRect(selectedRequirement.rectPdf)}</p>}
-      {requirementIssue !== null ? <p role="alert" data-testid="requirement-locate-error">来源缺失：{requirementIssue.message}</p> : missing ? <p role="alert">附件不可用：此版本已声明缺失，无法显示原图。</p> : revision ? <PdfViewer readOnly revision={revision}
+      {selectedRequirement !== null && <p data-testid="requirement-locate-summary">已定位任务书条款 · 来源 PDF {uiSourceVersionLabel(snapshot.revisions, selectedRequirement.revisionId)} 第 {selectedRequirement.page} 页 · 选区 PDF 点 {formatRequirementRect(selectedRequirement.rectPdf)}</p>}
+      {requirementIssue !== null ? <p role="alert" data-testid="requirement-locate-error">来源缺失：{uiDiagnosticText(requirementIssue.message)}</p> : missing ? <p role="alert">附件不可用：此版本已声明缺失，无法显示原图。</p> : revision ? <PdfViewer readOnly revision={revision}
         bindings={[...snapshot.bindings, ...(requirementBinding ? [requirementBinding] : [])]}
         selectedTermId={location.termId} page={location.page} zoom={zoom} rotation={rotation}
         onPageChange={page => setLocation(current => ({ ...current, page }))} onZoomChange={setZoom} onRotationChange={setRotation} loadBytes={loadBytes}
@@ -163,12 +164,13 @@ export function DesktopHistoryView({ snapshot, requirementHistory = [], onLocate
     <p className="desktop-workspace__pending">导入的历史记录/冻结结果，不代表当前已确认</p>
     {requirementHistory.length > 0 && onLocateRequirement && <RequirementRevisionHistory
       items={requirementHistory}
+      sourceRevisions={snapshot.revisions}
       onLocate={onLocateRequirement}
       testIdPrefix="history-requirement"
     />}
     {!snapshot.analysisSnapshots.length && <p>暂无 AnalysisSnapshot。新建冻结快照本批次未接入。</p>}
-    {snapshot.analysisSnapshots.map(item => <article key={item.id} className="desktop-workspace__history-item" aria-label={`历史报告 ${item.id}`}>
-      <h3>{item.projectName} · {item.id}</h3><p>{item.createdAt} · 引擎 {item.engineVersion} · 规则 {item.reviewRulesVersion}</p>
+    {snapshot.analysisSnapshots.map(item => <article key={item.id} className="desktop-workspace__history-item" aria-label={`历史报告 ${item.projectName} · ${item.createdAt}`}>
+      <h3>{item.projectName} · 分析快照</h3><p>{item.createdAt} · 引擎 {item.engineVersion} · 规则 {item.reviewRulesVersion}</p>
       <ChainExpression draft={item.draft} />
       <dl><div><dt>冻结极值范围</dt><dd>{formatMm(item.result.minQ)} 至 {formatMm(item.result.maxQ)} mm</dd></div>
         <div><dt>冻结计算判定</dt><dd>{statusLabel[item.result.status]}</dd></div>

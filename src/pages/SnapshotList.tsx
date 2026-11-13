@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { AnalysisSnapshot, SnapshotListItem } from '../history/snapshots'
 import { listAnalysisSnapshots } from '../history/snapshots'
 import { getProject } from '../storage/projects'
+import { uiDiagnosticText } from '../components/uiIdentity'
 import './SnapshotList.css'
 
 export interface SnapshotListProps {
@@ -70,7 +71,7 @@ export function SnapshotList({
         if (project.value === null) {
           setState({
             status: 'error',
-            message: `项目不存在：${projectId}`,
+            message: '项目不存在，请返回项目列表重新选择。',
             notFound: true,
           })
           return
@@ -147,7 +148,7 @@ export function SnapshotList({
       <main className="snapshot-list">
         <section className="snapshot-list__blocked" role="alert">
           <h1>{state.notFound ? '项目不存在' : '无法加载分析快照'}</h1>
-          <p>{state.message}</p>
+          <p>{uiDiagnosticText(state.message)}</p>
           <div className="snapshot-list__actions">
             {state.notFound ? null : (
               <button type="button" onClick={() => setReloadToken((value) => value + 1)}>
@@ -224,8 +225,8 @@ export function SnapshotList({
                   <time dateTime={snapshot.createdAt}>
                     {formatTime(snapshot.createdAt)}
                   </time>
-                  <span className="snapshot-list__id" title={snapshot.id}>
-                    {snapshot.id}
+                  <span className="snapshot-list__id">
+                    {snapshot.projectName} · 分析快照
                   </span>
                 </td>
                 <td data-testid={`snapshot-status-${snapshot.id}`}>

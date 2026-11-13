@@ -9,6 +9,31 @@ import { createSpacerSnapshot } from '../project-file/__fixtures__/spacerProject
 import { createRequirementProject, createTwoVersionRequirementProject } from '../requirements/__fixtures__/requirementFixture'
 import { toSnapshotDto, decodeProjectFile, encodeProjectFile } from '../project-file/codec'
 import { DesktopWorkspace } from './DesktopWorkspace'
+import { expectNoUiInternalIds, UI_REVISION_ID, UI_HEX_ID } from '../test/uiIdGuard'
+
+it('UI-ID guard: 主工作台与图纸面板真实输出不泄漏身份', async () => {
+  opened.snapshot = await createSpacerSnapshot()
+  const old = opened.snapshot.project.currentRevisionId
+  opened.snapshot.project.currentRevisionId = UI_REVISION_ID
+
+  opened.snapshot.fileRevisions.forEach(rev => { if (rev.revisionId === old) rev.revisionId = UI_REVISION_ID })
+  render(<DesktopWorkspace />)
+  await waitFor(() => expect(screen.getByRole('button', { name: '打开内置示例 · 尺寸链示例（A）' })).toBeEnabled())
+  fireEvent.click(screen.getByRole('button', { name: '打开内置示例 · 尺寸链示例（A）' }))
+  const workbench = await screen.findByRole('main', { name: '寸链桌面工作台' })
+  expect(within(workbench).getByRole('heading', { name: /寸链 ·/ })).toBeInTheDocument()
+  expectNoUiInternalIds(workbench)
+  const drawing = screen.getByRole('tabpanel', { name: '工程图' })
+  expect(drawing.textContent).toContain('隔套')
+  expectNoUiInternalIds(drawing)
+})
+
+it('UI-ID guard: 启动项目列表不显示内部版本', async () => {
+  vi.mocked(api.listRecent).mockResolvedValue({ ok: true, value: { items: [{ recentId: UI_HEX_ID, projectId: UI_HEX_ID, name: '守卫项目', path: '/guard.cunlian', rev: UI_REVISION_ID, missing: false, lastOpenedAt: '2026-11-09T08:00:00Z' }] } })
+  render(<DesktopWorkspace />)
+  await screen.findByText('守卫项目')
+  expectNoUiInternalIds(screen.getByRole('main', { name: '寸链启动页' }))
+})
 import { buildSpacerDrawing } from '../drawing/spacerDrawing'
 import { parseSpacerParameters } from '../parts/spacerParameters'
 import type { ProjectFileDrawingRecord } from '../project-file/types'
@@ -459,7 +484,7 @@ describe('A-04b 会话接线', () => {
   it('启动页列出最近/恢复，失效项只重新定位，Rev 不伪造', async () => {
     render(<DesktopWorkspace />)
     await screen.findByText('有尚未保存的恢复草稿')
-    expect(screen.getByText(/Rev 不可用/)).toBeInTheDocument()
+    expect(screen.getByText(/未命名版本/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '重新定位' }))
     await waitFor(() => expect(api.relinkRecent).toHaveBeenCalledWith({ recentId: 'recent-1' }))
     expect(api.openProject).not.toHaveBeenCalled()
@@ -565,10 +590,11 @@ describe('A-04b 会话接线', () => {
 })
 
 describe('A-04c 实质页面', () => {
-  it('最近项目显示 main 返回的真实 Rev', async () => {
+  it('最近项目缺正式序号时显示未命名版本，不回显 main 的内部 Rev', async () => {
     vi.mocked(api.listRecent).mockResolvedValue({ ok: true, value: { items: [{ recentId: 'r', projectId: 'p', name: '项目', path: '/p.cunlian', lastOpenedAt: 'now', missing: false, rev: 'rev-real-7' }] } })
     render(<DesktopWorkspace />)
-    expect(await screen.findByText(/Rev rev-real-7/)).toBeInTheDocument()
+    expect(await screen.findByText(/未命名版本/)).toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('rev-real-7')
   })
   it('启动重新挂接 main 会话，沿用序号 stage，重挂接不伪报已保存', async () => {
     vi.mocked(api.reattachSession).mockResolvedValue({ ok: true, value: { ...opened, editSeq: 7, savedSeq: 0, path: '/p.cunlian', recovery: 'pending' } })
@@ -1137,7 +1163,7 @@ describe('V3.5 第 3 阶段：草稿候选画面与提交门禁', () => {
     fireEvent.click(within(screen.getByLabelText('参数联动')).getByRole('button', { name: '建立/更新草稿' }))
     await waitFor(() => expect(api.stageChangeDraft).toHaveBeenCalled())
     fireEvent.click(within(screen.getByLabelText('参数联动')).getByRole('button', { name: '预览变更' }))
-    expect(await screen.findByText('预览：rev-d-mock-1')).toBeInTheDocument()
+    expect(await screen.findByText(`预览：草稿 · 第 ${opened.snapshot.fileRevisions.length + 1} 版`)).toBeInTheDocument()
 
     const bench = screen.getByLabelText('参数联动')
     const confirm = within(bench).getByRole('button', { name: '确认提交（一次原子写入）' })
@@ -1195,7 +1221,7 @@ describe('D 参数联动工作台（renderer mock 接线）', () => {
     bench = screen.getByLabelText('参数联动')
     fireEvent.click(within(bench).getByRole('button', { name: '预览变更' }))
     await waitFor(() => expect(api.previewChange).toHaveBeenCalled())
-    expect(await screen.findByText('预览：rev-d-mock-1')).toBeInTheDocument()
+    expect(await screen.findByText(`预览：草稿 · 第 ${opened.snapshot.fileRevisions.length + 1} 版`)).toBeInTheDocument()
     expect(screen.getAllByText(/-1\.850 ～ -1\.750/).length).toBeGreaterThan(0)
 
     const group = screen.getByLabelText('复核与变更分组')
@@ -1208,7 +1234,7 @@ describe('D 参数联动工作台（renderer mock 接线）', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '确认提交（一次原子写入）' }))
     await waitFor(() => expect(api.applyChange).toHaveBeenCalled())
-    expect(await screen.findByText(/已提交新版本 rev-d-mock-1/)).toBeInTheDocument()
+    expect(await screen.findByText(/已提交新版本 未命名版本/)).toBeInTheDocument()
   })
 
   // 缺陷 1：旧预览失效必须写明原因；“从未预览”与“预览作废”不能共用一套文案。
@@ -1238,7 +1264,7 @@ describe('D 参数联动工作台（renderer mock 接线）', () => {
     await waitFor(() => expect(within(bench()).getByRole('button', { name: '预览变更' })).toBeEnabled())
 
     fireEvent.click(within(bench()).getByRole('button', { name: '预览变更' }))
-    expect(await screen.findByText('预览：rev-d-mock-1')).toBeInTheDocument()
+    expect(await screen.findByText(`预览：草稿 · 第 ${opened.snapshot.fileRevisions.length + 1} 版`)).toBeInTheDocument()
 
     await stageLength('15.00')
 
@@ -1249,7 +1275,7 @@ describe('D 参数联动工作台（renderer mock 接线）', () => {
     expect(confirmButton()).toHaveAttribute('title', expect.stringContaining('旧预览已作废'))
     // 已作废 ≠ 从未预览：不再显示“尚未预览”。
     expect(within(bench()).queryByText(/尚未预览/)).toBeNull()
-    expect(screen.queryByText('预览：rev-d-mock-1')).toBeNull()
+    expect(screen.queryByText(`预览：草稿 · 第 ${opened.snapshot.fileRevisions.length + 1} 版`)).toBeNull()
   })
 
   it('D-UI-2 从未预览：不出现“已作废”文案，灰按钮用 title 与文本说明尚未预览', async () => {
@@ -1272,7 +1298,7 @@ describe('D 参数联动工作台（renderer mock 接线）', () => {
     await stageLength('14.00')
     await waitFor(() => expect(within(bench()).getByRole('button', { name: '预览变更' })).toBeEnabled())
     fireEvent.click(within(bench()).getByRole('button', { name: '预览变更' }))
-    expect(await screen.findByText('预览：rev-d-mock-1')).toBeInTheDocument()
+    expect(await screen.findByText(`预览：草稿 · 第 ${opened.snapshot.fileRevisions.length + 1} 版`)).toBeInTheDocument()
     await stageLength('15.00')
     expect(await within(bench()).findByRole('alert')).toHaveTextContent('基准已变化')
 
@@ -1318,11 +1344,11 @@ describe('D 参数联动工作台（renderer mock 接线）', () => {
 
     fireEvent.click(within(bench()).getByRole('button', { name: '预览变更' }))
     await waitFor(() => expect(api.previewChange).toHaveBeenCalled())
-    expect(await screen.findByText('预览：rev-d-mock-1')).toBeInTheDocument()
+    expect(await screen.findByText(`预览：草稿 · 第 ${opened.snapshot.fileRevisions.length + 1} 版`)).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '确认提交（一次原子写入）' }))
     await waitFor(() => expect(api.applyChange).toHaveBeenCalled())
-    expect(await screen.findByText(/已提交新版本 rev-d-mock-1/)).toBeInTheDocument()
+    expect(await screen.findByText(/已提交新版本 未命名版本/)).toBeInTheDocument()
 
     await waitFor(() => expect(bench()).toHaveTextContent('已确认生效'))
     const panel = bench()
@@ -1405,20 +1431,20 @@ describe('V3.5 补缺：历史条款版本定位（复核区入口）', () => {
     expect(screen.getByLabelText('来源版本')).toHaveValue('sr-1')
     expect(screen.getByLabelText('页码跳转')).toHaveValue(2)
     let summary = await screen.findByTestId('requirement-locate-summary')
-    expect(summary).toHaveTextContent('reqrev-1')
-    expect(summary).toHaveTextContent('来源 PDF sr-1 第 2 页')
+    expect(summary).toHaveTextContent('已定位任务书条款')
+    expect(summary).toHaveTextContent('来源 PDF 第 1 版 第 2 页')
     expect(summary).toHaveTextContent('[10, 10, 110, 30]')
 
     fireEvent.click(within(history).getByTestId('locate-revision-requirement-history-reqrev-2'))
     expect(screen.getByLabelText('来源版本')).toHaveValue('sr-taskbook-2')
     expect(screen.getByLabelText('页码跳转')).toHaveValue(1)
     summary = await screen.findByTestId('requirement-locate-summary')
-    expect(summary).toHaveTextContent('reqrev-2')
-    expect(summary).toHaveTextContent('来源 PDF sr-taskbook-2 第 1 页')
+    expect(summary).toHaveTextContent('已定位任务书条款')
+    expect(summary).toHaveTextContent('来源 PDF 第 1 版 第 1 页')
     expect(summary).toHaveTextContent('[20, 40, 220, 80]')
     // 两个版本不都指向活动版本。
-    expect(within(history).getByTestId('requirement-history-row-reqrev-1')).toHaveTextContent('sr-1')
-    expect(within(history).getByTestId('requirement-history-row-reqrev-2')).toHaveTextContent('sr-taskbook-2')
+    expect(within(history).getByTestId('requirement-history-row-reqrev-1')).toHaveTextContent('第 1 版')
+    expect(within(history).getByTestId('requirement-history-row-reqrev-2')).toHaveTextContent('第 2 版')
 
     // 只读定位：不改活动条款，不触发任何写入。
     expect(api.confirmRequirement).not.toHaveBeenCalled()
@@ -1431,7 +1457,7 @@ describe('V3.5 补缺：历史条款版本定位（复核区入口）', () => {
     fireEvent.click(screen.getByRole('tab', { name: '历史报告' }))
     const historyPage = screen.getByTestId('history-requirement-section')
     expect(within(historyPage).getByTestId('history-requirement-row-reqrev-1')).toHaveTextContent(
-      'sr-1',
+      '第 1 版',
     )
   })
 
@@ -1449,7 +1475,7 @@ describe('V3.5 补缺：历史条款版本定位（复核区入口）', () => {
     expect(screen.getByLabelText('来源版本')).toHaveValue('sr-1')
     expect(screen.getByLabelText('页码跳转')).toHaveValue(2)
     const summary = await screen.findByTestId('requirement-locate-summary')
-    expect(summary).toHaveTextContent('reqrev-1')
+    expect(summary).toHaveTextContent('已定位任务书条款')
     expect(summary).toHaveTextContent('[10, 10, 110, 30]')
   })
 
@@ -1466,8 +1492,8 @@ describe('V3.5 补缺：历史条款版本定位（复核区入口）', () => {
 
     fireEvent.click(within(history).getByTestId('locate-revision-requirement-history-reqrev-1'))
     const error = await screen.findByTestId('requirement-locate-error')
-    expect(error).toHaveTextContent('reqrev-1')
-    expect(error).toHaveTextContent('sr-1')
+    expect(error).toHaveTextContent('来源缺失')
+    expect(error).not.toHaveTextContent('sr-1')
     expect(error).toHaveTextContent('不在项目文件中')
     // 没有渲染 PDF 查看器（不会静默打开另一个版本）。
     expect(document.querySelector('.pdf-viewer')).toBeNull()

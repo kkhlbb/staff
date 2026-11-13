@@ -1,0 +1,39 @@
+
+> staff@0.4.0-beta test
+> vitest run src/pages/DesktopWorkspace.test.tsx src/pages/PrintReport.test.tsx src/components/ExtractionReviewPanel.test.tsx src/test/uiIdGuard.test.tsx
+
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+stderr | src/pages/DesktopWorkspace.test.tsx
+Warning: Please use the `legacy` build in Node.js environments.
+
+ ❯ src/pages/DesktopWorkspace.test.tsx (52 tests | 1 failed) 4271ms
+   ❯ V3.5 补缺：历史条款版本定位（复核区入口） (3)
+     × 建第二个版本后，旧版本仍打开自己的 PDF 版本与选区；两版本分别取各自值 51ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/DesktopWorkspace.test.tsx > V3.5 补缺：历史条款版本定位（复核区入口） > 建第二个版本后，旧版本仍打开自己的 PDF 版本与选区；两版本分别取各自值
+Error: expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  第 1 版
+Received:
+  未命名版本无（首版）2026-11-09T09:00:00.000Z0.100 ～ 0.300 mm轴系装配图.pdf · 未命名版本第 2 页[10, 10, 110, 30]历史版本定位该版本来源 PDF
+ ❯ src/pages/DesktopWorkspace.test.tsx:1446:77
+    1444|     expect(summary).toHaveTextContent('[20, 40, 220, 80]')
+    1445|     // 两个版本不都指向活动版本。
+    1446|     expect(within(history).getByTestId('requirement-history-row-reqrev…
+       |                                                                             ^
+    1447|     expect(within(history).getByTestId('requirement-history-row-reqrev…
+    1448|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  1 failed | 89 passed (90)
+   Start at  02:40:57
+   Duration  4.77s (tests 80%, environment 12%, import 4%, transform 3%, setup 2%)
+

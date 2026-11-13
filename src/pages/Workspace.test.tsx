@@ -438,7 +438,8 @@ describe('Workspace：按 projectId 打开与返回列表', () => {
     )
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('项目不存在：missing-project')
+    expect(alert).toHaveTextContent('项目不存在')
+    expect(alert).not.toHaveTextContent('missing-project')
     expect(alert).toHaveTextContent('它可能已被删除')
     expect(
       screen.queryByRole('button', { name: '增加行' }),

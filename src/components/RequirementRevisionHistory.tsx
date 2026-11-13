@@ -5,6 +5,7 @@
  * 版本、页码与选区；点击只请求打开该版本的来源，不改活动条款、不写入项目。
  */
 import { formatMm } from '../domain/units'
+import { uiDiagnosticText, uiSourceVersionLabel, uiVersionLabel } from './uiIdentity'
 import type { RequirementRevisionHistoryEntry } from '../requirements/history'
 import './RequirementRevisionHistory.css'
 
@@ -17,12 +18,14 @@ export function RequirementRevisionHistory({
   onLocate,
   locateDisabled = false,
   testIdPrefix = 'requirement-history',
+  sourceRevisions = [],
 }: {
   items: readonly RequirementRevisionHistoryEntry[]
   onLocate: (revisionId: string) => void
   locateDisabled?: boolean
   /** 同一组件可能出现在复核区与历史报告页，测试 id / key 前缀分开。 */
   testIdPrefix?: string
+  sourceRevisions?: readonly { id: string; documentId: string; createdAt: string }[]
 }) {
   if (items.length === 0) return null
   return (
@@ -54,7 +57,7 @@ export function RequirementRevisionHistory({
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {items.map((item, index) => (
               <tr
                 key={item.revisionId}
                 data-testid={`${testIdPrefix}-row-${item.revisionId}`}
@@ -65,13 +68,13 @@ export function RequirementRevisionHistory({
                 }
               >
                 <th scope="row">
-                  <code className="requirement-history__id">{item.revisionId}</code>
+                  <span>{uiVersionLabel(index + 1)}</span>
                 </th>
                 <td>
                   {item.parentRevisionId === null ? (
                     <span className="requirement-history__muted">无（首版）</span>
                   ) : (
-                    <code className="requirement-history__id">{item.parentRevisionId}</code>
+                    <span>{uiVersionLabel(items.findIndex(parent => parent.revisionId === item.parentRevisionId) + 1)}</span>
                   )}
                 </td>
                 <td>{item.confirmedAt}</td>
@@ -86,7 +89,7 @@ export function RequirementRevisionHistory({
                       {item.sourceFileName === null ? null : (
                         <span className="requirement-history__file">{item.sourceFileName} · </span>
                       )}
-                      <code className="requirement-history__id">{item.sourceRevisionId}</code>
+                      <span>{uiSourceVersionLabel(sourceRevisions, item.sourceRevisionId)}</span>
                     </>
                   )}
                 </td>
@@ -108,7 +111,7 @@ export function RequirementRevisionHistory({
                   )}
                   {item.issue === null ? null : (
                     <p className="requirement-history__issue" role="alert">
-                      来源缺失：{item.issue.message}
+                      来源缺失：{uiDiagnosticText(item.issue.message)}
                     </p>
                   )}
                 </td>
@@ -116,7 +119,7 @@ export function RequirementRevisionHistory({
                   <button
                     type="button"
                     data-testid={`locate-revision-${testIdPrefix}-${item.revisionId}`}
-                    aria-label={`定位条款版本 ${item.revisionId} 的来源 PDF`}
+                    aria-label={`定位${uiVersionLabel(index + 1)}的来源 PDF`}
                     disabled={locateDisabled}
                     onClick={() => onLocate(item.revisionId)}
                   >

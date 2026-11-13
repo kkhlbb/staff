@@ -174,7 +174,7 @@ describe('ScenarioCompare：文档第 8 节案例 A → B', () => {
       'compare-change-internal-b2-upperDeviationQ',
     )
     expect(within(fallbackRow).getByRole('rowheader')).toHaveTextContent(
-      'internal-b2',
+      '未命名组成环',
     )
   })
 

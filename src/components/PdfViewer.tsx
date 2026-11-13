@@ -15,6 +15,7 @@ import {
   type PdfRect,
 } from '../sources/pdfCoordinates'
 import { PdfInspectError } from '../sources/pdfInspect'
+import { uiDiagnosticText } from './uiIdentity'
 import {
   openPdfForRendering,
   renderPageToCanvas,
@@ -482,7 +483,7 @@ export function PdfViewer({
       </div>
 
       <p className="pdf-viewer__file">
-        {revision.fileName} · v{revision.id.slice(0, 8)} · SHA-256{' '}
+        {revision.fileName} · 未命名版本 · SHA-256{' '}
         {revision.sha256.slice(0, 12)}… · 打开的是这个确切版本，不跟随同名最新版
       </p>
 
@@ -493,12 +494,12 @@ export function PdfViewer({
       ) : null}
       {loadError !== null ? (
         <p className="pdf-viewer__error" role="alert">
-          {loadError}
+          {uiDiagnosticText(loadError)}
         </p>
       ) : null}
       {activeRenderError !== null ? (
         <p className="pdf-viewer__error" role="alert">
-          {activeRenderError}
+          {uiDiagnosticText(activeRenderError)}
         </p>
       ) : null}
 
@@ -562,7 +563,7 @@ export function PdfViewer({
           ) : null}
           {saveError !== null ? (
             <p className="pdf-viewer__error" role="alert">
-              {saveError}
+              {uiDiagnosticText(saveError)}
             </p>
           ) : null}
           {saveMessage !== null ? (

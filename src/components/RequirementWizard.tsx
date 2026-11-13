@@ -279,7 +279,7 @@ export function RequirementWizard(props: RequirementWizardProps) {
                 >
                   {revisionsOfDocument.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.fileName} · {item.id} · {item.pageCount} 页 · {item.sha256.slice(0, 12)}…
+                      {item.fileName} · 未命名版本 · {item.pageCount} 页 · {item.sha256.slice(0, 12)}…
                     </option>
                   ))}
                 </select>
