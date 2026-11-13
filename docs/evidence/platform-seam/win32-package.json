@@ -1,0 +1,49 @@
+{
+  "generator": "platform-seam-win32-package-1",
+  "command": "npx electron-forge package --platform=win32 --arch=x64",
+  "packageDirExists": true,
+  "executable": {
+    "name": "寸链.exe",
+    "bytes": 249831936
+  },
+  "executableKind": "PE32+ executable (GUI) x86-64, for MS Windows",
+  "resources": [
+    "app.asar"
+  ],
+  "asar": {
+    "bytes": 5996966,
+    "sha256": "6635fe298712409824a55b48d554574fd53fb008babc350064348915e88cf3ef"
+  },
+  "asarFiles": 33,
+  "macSpecificEntries": [],
+  "macSpecificCount": 0,
+  "pdfWorker": {
+    "exit": 0,
+    "pass": true
+  },
+  "pdfWorkerChecks": [
+    "PASS package.json 在 asar 内",
+    "PASS package.json main 字段存在: .vite/build/main.cjs",
+    "PASS main.cjs 在 asar 内: /.vite/build/main.cjs",
+    "PASS main.cjs 引用了 pdf worker 文件名: pdf.worker.mjs",
+    "PASS worker 文件在 main.cjs 同目录且非空: /.vite/build/pdf.worker.mjs (1327591 bytes)",
+    "PASS worker 与本机 pdfjs-dist 同版本字节一致: node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+    "PASS worker 模块注册 globalThis.pdfjsWorker: /.vite/build/pdf.worker.mjs"
+  ],
+  "pdfWorkerEntry": "/.vite/build/pdf.worker.mjs",
+  "pdfWorkerBytes": 1327591,
+  "pdfWorkerSha256": "b4c8353ded0d88d2e2009574a29eb4e0c3ff7e942ecdf51ef5f71566a9667f31",
+  "forgeExit": 0,
+  "forgeStages": [
+    "❯ Finalizing package",
+    "✔ Finalizing package",
+    "✔ Packaging for x64 on win32",
+    "✔ Packaging application",
+    "❯ Running postPackage hook",
+    "✔ Running postPackage hook"
+  ],
+  "verdict": "pass",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

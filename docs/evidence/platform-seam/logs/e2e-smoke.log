@@ -1,0 +1,10 @@
+PASS 窗口标题为 寸链
+PASS 渲染出桌面壳内容
+FAIL window.cunlian 只暴露具体函数 got=["agentCancel","agentPreviewSummary","agentProviderStatus","agentResume","agentStart","agentTaskState","applyChange","applyConfirmedInputs","attestExtractionUnits","bindParameter","cancelExtraction","clearAgentProviderKey","commitApprovedDraft","commitModel","commitV2","compareDrawings","confirmExtractionBatch","confirmRequirement","decideExtraction","deleteExtractionDraft","exportApprovedVersion","exportDrawingDxf2000","exportDrawingDxfR12","exportDrawingPdf","exportDrawingSvg","getConfirmedInputs","getProjectContext","importSketchImage","importSource","ingestSketchReadings","inspectV2","intentApply","intentConfirmCandidate","intentCreateProject","intentIssueApproval","intentPreview","intentState","issueAgentApproval","linkModel","listRecent","listRecovery","locateEvidence","newProject","onAgentEvent","onEditorFlush","onMenuAction","openDxf","openProject","pickModel","previewAndCheck","previewChange","readAttachment","readModel","reattachSession","releaseModel","relinkRecent","requestClose","respondEditorFlush","restoreRecovery","restoreRevisionDraft","revealProject","revokeExtractionUnits","runExtraction","saveAgentProvider","saveProject","saveProjectAs","stageChangeDraft","stageDraft","stageParameterChange","stageRequirementEdit","takePendingDxf","testAgentProvider","unbindParameter","updateSpacerDrawing"]
+PASS 没有通用 IPC 转义口 / Node 全局
+PASS 页面没有远程资源请求
+PASS 子框架拿不到 preload 桥
+PASS requestClose 经编辑屏障后返回 closed
+PASS renderer 实际收到 editor:flush
+PASS 关闭流程结束后窗口销毁
+E2E_RESULT=FAIL(window.cunlian 只暴露具体函数)

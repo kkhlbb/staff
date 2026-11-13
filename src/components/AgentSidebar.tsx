@@ -268,7 +268,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, revision
     if (result.ok) {
       setProvider(result.data)
       setApiKey('')
-      setSettingsNote(result.data.real.configured ? '已保存：配置与密钥齐备（密钥存 Keychain，不落盘）' : '已保存配置，但仍缺密钥')
+      setSettingsNote(result.data.real.configured ? '已保存：配置与密钥齐备（密钥存系统安全存储，不落盘）' : '已保存配置，但仍缺密钥')
     } else {
       setSettingsNote(`保存没有成功：${result.message} 检查 base_url、模型 ID 与密钥后重试。`)
     }
@@ -291,7 +291,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, revision
     if (api?.clearAgentProviderKey === undefined) return
     setBusy(true); setSettingsNote(null); setTestNote(null)
     const result = await api.clearAgentProviderKey()
-    if (result.ok) { setProvider(result.data); setSettingsNote('已从 Keychain 删除密钥') }
+    if (result.ok) { setProvider(result.data); setSettingsNote('已从系统安全存储删除密钥') }
     else setSettingsNote(`清除没有成功：${result.message}`)
     setBusy(false)
   }
@@ -444,7 +444,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, revision
         <div><dt>真实模型</dt><dd data-testid="agent-provider-status">
           {provider === null ? '读取中…' : provider.real.configured ? provider.real.provider : '未配置'}
         </dd></div>
-        <div><dt>密钥</dt><dd>{provider === null ? '—' : provider.real.keyPresent === true ? `已存 Keychain` : '未保存'}</dd></div>
+        <div><dt>密钥</dt><dd>{provider === null ? '—' : provider.real.keyPresent === true ? `已存安全存储` : '未保存'}</dd></div>
         <div><dt>离线演示</dt><dd>{provider === null ? '读取中…' : provider.demo.label}</dd></div>
       </dl>
       {!installed && <p role="alert">当前 preload 未提供 Agent 任务接口；不提供假的执行入口。</p>}
@@ -457,10 +457,10 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, revision
           <label>模型 ID
             <input value={model} onChange={event => setModel(event.target.value)} aria-label="模型 ID" placeholder="deepseek-chat" />
           </label>
-          <label>密钥（只写 Keychain）
+          <label>密钥（只写安全存储）
             <input type="password" value={apiKey} onChange={event => setApiKey(event.target.value)} aria-label="模型密钥" autoComplete="off" placeholder="留空表示不修改" />
           </label>
-          <p className="agent-sidebar__hint">发送范围：结构化参数、条款摘录与必要选区文字；不发送整份 PDF。密钥只存 macOS Keychain，不进项目文件、日志或证据。</p>
+          <p className="agent-sidebar__hint">发送范围：结构化参数、条款摘录与必要选区文字；不发送整份 PDF。密钥只存系统安全存储（macOS Keychain / Windows DPAPI），不进项目文件、日志或证据。</p>
           <div className="agent-sidebar__actions">
             <button type="button" disabled={busy} onClick={() => void saveProvider()}>保存配置</button>
             <button type="button" disabled={busy} onClick={() => void testProvider()}>测试连接</button>

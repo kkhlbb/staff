@@ -1,0 +1,100 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ desktop/tests/modelKeyStore.test.ts (12 tests | 4 failed) 132ms
+   ❯ 密钥迁移：旧 Keychain → safeStorage (4)
+     × 预置旧记录 → 首次读取成功 → 密文文件里有 → 删掉旧记录仍能读 38ms
+     × 迁移之后不再每次回读旧 Keychain（旧记录被改也不影响） 1ms
+     × 删除会一并清掉旧记录：不会在下次读取时被迁回来 17ms
+   ❯ ModelConfig 接 safeStorage 后状态口径不变 (2)
+     × 旧 Keychain 有密钥时首次加载即迁移，configured 为 true 18ms
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 8 passed (12)
+   Start at  10:07:04
+   Duration  231ms (tests 86%, transform 9%, import 4%, worker 1%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  desktop/tests/modelKeyStore.test.ts > 密钥迁移：旧 Keychain → safeStorage > 预置旧记录 → 首次读取成功 → 密文文件里有 → 删掉旧记录仍能读
+AssertionError: expected null to be 'sk-platform-seam-key-0001' // Object.is equality
+
+- Expected:
+"sk-platform-seam-key-0001"
+
++ Received:
+null
+
+ ❯ desktop/tests/modelKeyStore.test.ts:131:35
+    129|
+    130|     const s = store(dir, { legacy: LEGACY })
+    131|     expect(await s.read(account)).toBe(SECRET)
+       |                                   ^
+    132|
+    133|     // safeStorage 里确实存下了（密文，不含明文）。
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  desktop/tests/modelKeyStore.test.ts > 密钥迁移：旧 Keychain → safeStorage > 迁移之后不再每次回读旧 Keychain（旧记录被改也不影响）
+AssertionError: expected null to be 'sk-platform-seam-key-0001' // Object.is equality
+
+- Expected:
+"sk-platform-seam-key-0001"
+
++ Received:
+null
+
+ ❯ desktop/tests/modelKeyStore.test.ts:158:35
+    156|     }
+    157|     const s = store(dir, { legacy: counting })
+    158|     expect(await s.read(account)).toBe(SECRET)
+       |                                   ^
+    159|     expect(legacyReads).toBe(1)
+    160|     expect(await s.read(account)).toBe(SECRET)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  desktop/tests/modelKeyStore.test.ts > 密钥迁移：旧 Keychain → safeStorage > 删除会一并清掉旧记录：不会在下次读取时被迁回来
+AssertionError: expected null to be 'sk-platform-seam-key-0001' // Object.is equality
+
+- Expected:
+"sk-platform-seam-key-0001"
+
++ Received:
+null
+
+ ❯ desktop/tests/modelKeyStore.test.ts:169:35
+    167|     await LEGACY.write(account, SECRET)
+    168|     const s = store(dir, { legacy: LEGACY })
+    169|     expect(await s.read(account)).toBe(SECRET)
+       |                                   ^
+    170|     await s.remove(account)
+    171|     expect(await LEGACY.read(account)).toBeNull()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  desktop/tests/modelKeyStore.test.ts > ModelConfig 接 safeStorage 后状态口径不变 > 旧 Keychain 有密钥时首次加载即迁移，configured 为 true
+AssertionError: expected { configured: false, …(8) } to match object { keyPresent: true }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "keyPresent": true,
++   "keyPresent": false,
+  }
+
+ ❯ desktop/tests/modelKeyStore.test.ts:213:40
+    211|     const config = new ModelConfig({ rootDir: dir, keychain: s, env: {…
+    212|     await config.ensureLoaded()
+    213|     expect(config.getProviderStatus()).toMatchObject({ keyPresent: tru…
+       |                                        ^
+    214|     expect(await config.resolveApiKey()).toBe(SECRET)
+    215|     expect(await s.accounts()).toEqual([account])
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+EXIT_CODE=1

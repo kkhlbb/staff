@@ -1,0 +1,19 @@
+{
+  "generator": "platform-seam-mutations-1",
+  "mutations": [
+    {
+      "id": "M38",
+      "target": "desktop/main/keychain.ts",
+      "change": "删掉旧 Keychain 回退迁移",
+      "result": "red",
+      "suite": "desktop/tests/modelKeyStore.test.ts"
+    },
+    {
+      "id": "M40",
+      "target": "src/agent/redact.ts",
+      "change": "去掉 Windows 路径脱敏",
+      "result": "red",
+      "suite": "src/agent/redact.test.ts"
+    }
+  ]
+}
