@@ -567,6 +567,22 @@ export type ProjectFileProjectV1 = Omit<
 }
 
 /**
+ * 一版图纸当时的导出字节摘要（任务卡 B：图能从任一版本重出且字节一致）。
+ *
+ * 只存摘要，不存第二份图：SVG / DXF 生成器是纯函数，同一份 DrawingData 必得
+ * 同一份字节；重出时按该版本的冻结输入重建，再与这里逐字节对照。
+ * 旧版本没有该字段表示“当时没有冻结导出摘要”，重出只能证明与数据指纹一致，
+ * 不能声称与当时导出的文件字节一致。
+ */
+export interface ProjectFileDrawingExportDigest {
+  generatorVersion: string
+  templateId: 'spacer-a4-landscape'
+  templateVersion: number
+  svg: { sha256: string; byteSize: number }
+  dxf2000: { sha256: string; byteSize: number }
+}
+
+/**
  * D：版本证据引用。只引用、不复制第二套可写结果：
  * - analysisSnapshotId 指向同次提交冻结的 AnalysisSnapshot；
  * - eventIds 指向同次提交的变更事件；
@@ -575,6 +591,22 @@ export type ProjectFileProjectV1 = Omit<
  *
  * 旧 schema3/4/5 版本没有该字段；缺字段表示“未记录”，不补造。
  */
+/**
+ * 一版图纸当时的导出字节摘要（任务卡 B：图能从任一版本重出且字节一致）。
+ *
+ * 只存摘要，不存第二份图：SVG / DXF 生成器是纯函数，同一份 DrawingData 必得
+ * 同一份字节；重出时按该版本的冻结输入重建，再与这里逐字节对照。
+ * 旧版本没有该字段表示“当时没有冻结导出摘要”，重出只能证明与数据指纹一致，
+ * 不能声称与当时导出的文件字节一致。
+ */
+export interface ProjectFileDrawingExportDigest {
+  generatorVersion: string
+  templateId: 'spacer-a4-landscape'
+  templateVersion: number
+  svg: { sha256: string; byteSize: number }
+  dxf2000: { sha256: string; byteSize: number }
+}
+
 export interface ProjectFileRevisionEvidence {
   analysisSnapshotId: string | null
   eventIds: string[]
@@ -588,6 +620,8 @@ export interface ProjectFileRevisionEvidence {
   /** V3.5：本版本冻结的活动条款与同次检查；旧版本没有该字段。 */
   requirementRevisionId?: string | null
   checkId?: string | null
+  /** 本版本创建时的导出字节摘要；旧版本缺省。 */
+  drawingExports?: ProjectFileDrawingExportDigest
 }
 
 /** `revisions/<encoded-id>.json`：项目文件版本基准。 */

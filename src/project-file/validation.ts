@@ -1080,6 +1080,10 @@ const migrationBackupSchema = z
   })
   .passthrough()
 
+const fileDigestSchema = z
+  .object({ sha256: sha256Schema, byteSize: nonNegativeInt })
+  .strict()
+
 const fileRevisionSchema = z
   .object({
     revisionId: idSchema,
@@ -1120,6 +1124,17 @@ const fileRevisionSchema = z
         restoredFromRevisionId: idSchema.nullable(),
         requirementRevisionId: idSchema.nullable().optional(),
         checkId: idSchema.nullable().optional(),
+        /** 版本创建时的 SVG / DXF 2000 字节摘要；旧版本缺省（纯加法）。 */
+        drawingExports: z
+          .object({
+            generatorVersion: z.string().min(1).max(120),
+            templateId: z.literal('spacer-a4-landscape'),
+            templateVersion: z.number().int().positive(),
+            svg: fileDigestSchema,
+            dxf2000: fileDigestSchema,
+          })
+          .strict()
+          .optional(),
       })
       .strict()
       .optional(),

@@ -558,6 +558,7 @@ function WorkspaceEditor({
             dispatch={dispatch}
             result={result}
             target={target}
+            chain={displayChain}
             terms={displayChain?.terms}
             cellErrors={cellErrors}
             stale={stale}

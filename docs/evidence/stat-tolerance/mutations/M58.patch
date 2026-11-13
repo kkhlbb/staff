@@ -1,0 +1,13 @@
+--- src/revisions/frozenExport.ts
++++ src/revisions/frozenExport.ts
+-  if (record.templateVersion !== SPACER_TEMPLATE_VERSION) {
+    return {
+      ok: false,
+      reason:
+        `该版本模板版本 v${record.templateVersion} 不在当前构建支持范围（v${SPACER_TEMPLATE_VERSION}），` +
+        '不能重建；不拿当前模板冒充旧图',
+    }
+  }
++  // M58: 忽略冻结模板版本，直接用当前模板
+  void SPACER_TEMPLATE_VERSION
+# 重出不再校验冻结模板版本；“模板版本不受支持必须报不能重建”用例必须红。

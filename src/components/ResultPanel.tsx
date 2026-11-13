@@ -14,6 +14,7 @@ import {
   ContributionTable,
   type ContributionTermLabel,
 } from './ContributionTable'
+import { StatisticalReference } from './StatisticalReference'
 
 export interface ResultPanelProps {
   draft: WorkspaceDraft
@@ -21,6 +22,8 @@ export interface ResultPanelProps {
   result: ChainResult | null
   /** 与 ChainDefinition['target'] 同类型，由调用方从 chain.target 直接传入。 */
   target: ChainDefinition['target']
+  /** 与 result 同一次有效计算的链；只用于并列的统计参考，不参与判定。 */
+  chain?: ChainDefinition | null
   /** 与 result 同一次有效计算的组成环代号；stale 时由调用方传上次有效链。 */
   terms?: readonly ContributionTermLabel[]
   cellErrors: CellErrors
@@ -281,6 +284,7 @@ export function ResultPanel({
   dispatch,
   result,
   target,
+  chain = null,
   terms,
   cellErrors,
   stale,
@@ -438,6 +442,8 @@ export function ResultPanel({
           </dd>
         </div>
       </dl>
+
+      <StatisticalReference chain={chain} result={result} />
 
       <ResultChart
         result={result}

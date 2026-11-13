@@ -1,0 +1,215 @@
+{
+  "revisionId": "rev-2",
+  "parentId": "rev-1",
+  "createdAt": "2026-11-09T10:00:00.000Z",
+  "reason": "长度 12.00 → 12.05",
+  "project": {
+    "id": "project-a",
+    "schemaVersion": 10,
+    "name": "隔套间隙演示",
+    "currentRevisionId": "rev-2",
+    "dimensionChain": {
+      "terms": [
+        {
+          "id": "t-h",
+          "symbol": "H",
+          "name": "总长",
+          "nominalQ": 522000,
+          "lowerDeviationQ": -200,
+          "upperDeviationQ": 200,
+          "sign": 1,
+          "sourceNote": "",
+          "termRevision": 1
+        },
+        {
+          "id": "t-b1",
+          "symbol": "B1",
+          "name": "左轴承",
+          "nominalQ": 200000,
+          "lowerDeviationQ": -100,
+          "upperDeviationQ": 100,
+          "sign": -1,
+          "sourceNote": "",
+          "termRevision": 1
+        },
+        {
+          "id": "t-s",
+          "symbol": "S",
+          "name": "隔套",
+          "nominalQ": 120500,
+          "lowerDeviationQ": -100,
+          "upperDeviationQ": 100,
+          "sign": -1,
+          "sourceNote": "",
+          "termRevision": 2
+        },
+        {
+          "id": "t-b2",
+          "symbol": "B2",
+          "name": "右轴承",
+          "nominalQ": 200000,
+          "lowerDeviationQ": -100,
+          "upperDeviationQ": 100,
+          "sign": -1,
+          "sourceNote": "",
+          "termRevision": 1
+        }
+      ],
+      "target": {
+        "minQ": 1000,
+        "maxQ": 3000
+      },
+      "assumptions": "合成示例数据"
+    },
+    "engineVersion": "0.1.0",
+    "createdAt": "2026-11-09T08:00:00.000Z",
+    "updatedAt": "2026-11-09T10:00:00.000Z",
+    "relationRevision": 2,
+    "relationReview": null,
+    "migration": null,
+    "baseline": null,
+    "sourceFormatVersion": 2,
+    "parts": [
+      {
+        "partId": "builtin:shaft-demo:spacer",
+        "kind": "builtin-demo",
+        "name": "隔套",
+        "currentModelRevisionId": null,
+        "origin": "builtin"
+      }
+    ],
+    "parameters": [
+      {
+        "parameterId": "param:spacer:inner-diameter",
+        "partId": "builtin:shaft-demo:spacer",
+        "key": "innerDiameter",
+        "valueQ": 200000,
+        "inputDecimals": 2,
+        "reviewStatus": "draft",
+        "parameterRevision": 2
+      },
+      {
+        "parameterId": "param:spacer:outer-diameter",
+        "partId": "builtin:shaft-demo:spacer",
+        "key": "outerDiameter",
+        "valueQ": 320000,
+        "inputDecimals": 2,
+        "reviewStatus": "draft",
+        "parameterRevision": 2
+      },
+      {
+        "parameterId": "param:spacer:length",
+        "partId": "builtin:shaft-demo:spacer",
+        "key": "length",
+        "valueQ": 120500,
+        "inputDecimals": 2,
+        "reviewStatus": "draft",
+        "parameterRevision": 2
+      }
+    ],
+    "modelRevisions": [],
+    "dimensionLinks": [
+      {
+        "kind": "parameter-binding",
+        "bindingId": "binding:spacer-length",
+        "termId": "t-s",
+        "partId": "builtin:shaft-demo:spacer",
+        "parameterId": "param:spacer:length",
+        "syncField": "nominal",
+        "createdAt": "2026-11-09T08:00:00.000Z"
+      }
+    ],
+    "drawings": [
+      {
+        "drawingId": "drawing:project-a:spacer",
+        "drawingDataVersion": 1,
+        "templateId": "spacer-a4-landscape",
+        "templateVersion": 1,
+        "partId": "builtin:shaft-demo:spacer",
+        "revisionId": "rev-2",
+        "parameterIds": [
+          "param:spacer:inner-diameter",
+          "param:spacer:outer-diameter",
+          "param:spacer:length"
+        ],
+        "paper": {
+          "format": "A4",
+          "orientation": "landscape",
+          "widthMm": 297,
+          "heightMm": 210
+        },
+        "scale": {
+          "numerator": 1,
+          "denominator": 1
+        },
+        "frameFields": {
+          "partName": "隔套",
+          "drawingNumber": "",
+          "version": "草稿 · 第 2 版",
+          "material": "",
+          "tolerance": "",
+          "surface": "",
+          "drafter": "",
+          "date": "",
+          "basis": ""
+        },
+        "status": "pending-review-draft",
+        "dataFingerprint": "1e2af4869016a71be9b17b833f9acd25cdb6e5be56be359151105657628e5f97"
+      }
+    ],
+    "requirementRevisions": [],
+    "activeRequirementRevisionId": null,
+    "currentRequirementCheck": null,
+    "extractionDrafts": [],
+    "sourceKind": "pdf",
+    "actorId": null,
+    "sessionSeq": 0,
+    "sessionLabel": null,
+    "attestations": []
+  },
+  "evidence": {
+    "analysisSnapshotId": "snapshot-2",
+    "eventIds": [
+      "parameter_changed:rev-2:param:spacer:length",
+      "parameter_binding_confirmed:rev-2:binding:spacer-length",
+      "project_revision_committed:rev-2:rev-2"
+    ],
+    "sourceManifest": {
+      "documents": [
+        {
+          "documentId": "doc-1",
+          "latestRevisionId": "sr-1"
+        }
+      ],
+      "revisions": [
+        {
+          "revisionId": "sr-1",
+          "documentId": "doc-1",
+          "sha256": "42935aa87adbefedb0b7685341897283c12cde9db471826a3b3e6d6826b43f77"
+        }
+      ],
+      "bindings": [
+        {
+          "bindingId": "bind-1",
+          "revisionId": "sr-1",
+          "reviewedTermRevision": null
+        }
+      ],
+      "missingBlobKeys": []
+    },
+    "restoredFromRevisionId": null,
+    "drawingExports": {
+      "generatorVersion": "drawing-export-generator-v1",
+      "templateId": "spacer-a4-landscape",
+      "templateVersion": 1,
+      "svg": {
+        "sha256": "e595c83bed4759adb29150018d3d519acd9e86d71ded452b6ecadb685218132c",
+        "byteSize": 8770
+      },
+      "dxf2000": {
+        "sha256": "13f2e9bda52cdcad764ee8f87ce790d3dc6670244453e85871f1e1325467a416",
+        "byteSize": 21210
+      }
+    }
+  }
+}

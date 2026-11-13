@@ -1,0 +1,13 @@
+--- src/domain/calculate.ts
++++ src/domain/calculate.ts
+-    status =
+      minQ >= chain.target.minQ && maxQ <= chain.target.maxQ ? 'within' : 'outside'
++    // M57: 用统计法（±3σ_C）替代极值判定
+    const sigmaC = Math.sqrt(
+      contributions.reduce((sum, item) => sum + (item.toleranceQ / 6) ** 2, 0),
+    )
+    status =
+      nominalQ - 3 * sigmaC >= chain.target.minQ && nominalQ + 3 * sigmaC <= chain.target.maxQ
+        ? 'within'
+        : 'outside'
+# 判定改为统计区间；极值判据用例与“统计不替代判定”用例必须红。

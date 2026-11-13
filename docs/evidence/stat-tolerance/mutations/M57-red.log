@@ -1,0 +1,87 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/domain/calculate.test.ts (15 tests | 3 failed) 27ms
+   ❯ 文档第 8 节验收案例 (4)
+     × 案例 A：不满足目标，上下裕量分别为 +0.0500 / −0.0900 3ms
+     × 案例 C：负间隙，目标边界相等算 within 0ms
+   ❯ 特殊输入 (5)
+     × status 只由数值与目标决定，不读取确认凭据 0ms
+ ❯ src/domain/statistics.test.ts (8 tests | 1 failed) 88ms
+   ❯ 统计绝不替代条款判定 (1)
+     × 统计区间落在允许区间内、极值区间超出时，status 仍是 outside 2ms
+
+ Test Files  2 failed (2)
+      Tests  4 failed | 19 passed (23)
+   Start at  09:23:21
+   Duration  202ms (tests 44%, setup 27%, import 24%, transform 5%, worker 1%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/domain/calculate.test.ts > 文档第 8 节验收案例 > 案例 A：不满足目标，上下裕量分别为 +0.0500 / −0.0900
+AssertionError: expected 'within' to be 'outside' // Object.is equality
+
+Expected: "outside"
+Received: "within"
+
+ ❯ src/domain/calculate.test.ts:85:27
+     83|     expect(result.upperDeviationQ).toBe(parseMm('+0.1900'))
+     84|     expect(result.toleranceQ).toBe(parseMm('0.2400'))
+     85|     expect(result.status).toBe('outside')
+       |                           ^
+     86|     expect(result.lowerMarginQ).toBe(parseMm('+0.0500'))
+     87|     expect(result.upperMarginQ).toBe(parseMm('-0.0900'))
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/domain/calculate.test.ts > 文档第 8 节验收案例 > 案例 C：负间隙，目标边界相等算 within
+AssertionError: expected 'outside' to be 'within' // Object.is equality
+
+Expected: "within"
+Received: "outside"
+
+ ❯ src/domain/calculate.test.ts:125:27
+    123|     expect(result.upperDeviationQ).toBe(parseMm('0.0000'))
+    124|     expect(result.toleranceQ).toBe(parseMm('0.1500'))
+    125|     expect(result.status).toBe('within')
+       |                           ^
+    126|     expect(result.lowerMarginQ).toBe(parseMm('0.0000'))
+    127|     expect(result.upperMarginQ).toBe(parseMm('0.0000'))
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/domain/calculate.test.ts > 特殊输入 > status 只由数值与目标决定，不读取确认凭据
+AssertionError: expected 'within' to be 'outside' // Object.is equality
+
+Expected: "outside"
+Received: "within"
+
+ ❯ src/domain/calculate.test.ts:203:72
+    201|
+    202|   it('status 只由数值与目标决定，不读取确认凭据', () => {
+    203|     expect(calculateChain({ ...caseA(), assumptions: '任意说明' }).status)…
+       |                                                                        ^
+    204|     expect(calculateChain({ ...caseB(), assumptions: '' }).status).toB…
+    205|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/domain/statistics.test.ts > 统计绝不替代条款判定 > 统计区间落在允许区间内、极值区间超出时，status 仍是 outside
+AssertionError: expected 'within' to be 'outside' // Object.is equality
+
+Expected: "outside"
+Received: "within"
+
+ ❯ src/domain/statistics.test.ts:185:27
+    183|     }
+    184|     const result = calculateChain(chain)
+    185|     expect(result.status).toBe('outside')
+       |                           ^
+    186|     expect(result.minQ).toBe(500)
+    187|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+EXIT_CODE=1
