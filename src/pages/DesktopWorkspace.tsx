@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback, type CSSProperties, type KeyboardEvent } from 'react'
 import { useDesktopSession } from '../workspace/useDesktopSession'
 import { agentReadSources, readingSourceLabel } from '../sources/agentReadDisplay'
 import { useBuiltinAssemblyView } from '../workspace/useBuiltinAssemblyView'
@@ -46,11 +46,12 @@ import { LAYOUT_BREAKPOINTS, layoutBudgetForWidth, treeWidthLimit } from '../com
 import { Panel } from '../components/layout/Panel'
 import { SplitPane, Splitter } from '../components/layout/SplitPane'
 import { ScrollArea } from '../components/layout/ScrollArea'
+import { SketchPanel } from '../components/SketchPanel'
 import './Workspace.css'
 import './DesktopWorkspace.css'
 import '../components/AgentSidebar.css'
 
-const tabs = ['工程图', '3D', '来源 PDF', '尺寸链', '历史报告', '任务书提取'] as const
+const tabs = ['工程图', '3D', '来源 PDF', '尺寸链', '历史报告', '任务书提取', '草图读数'] as const
 const groups = ['零件', '工程图', '尺寸链', '来源资料', '版本历史'] as const
 
 export function DesktopWorkspace() {
@@ -198,6 +199,13 @@ export function DesktopWorkspace() {
     if (!result.ok) throw new Error(`附件不可用 · ${result.error.code}：${result.error.message}`)
     return result.value.bytes
   }
+  /** 草图面板按 imageId 读回图片字节；只走会话内附件，不接受路径。 */
+  const readSketchBytes = useCallback(async (revisionId: string) => {
+    if (sessionId === null || window.cunlian === undefined) {
+      return { ok: false as const, error: { code: 'NOT_FOUND' as const, message: '会话不可用，请重新打开项目' } }
+    }
+    return window.cunlian.readAttachment({ sessionId, revisionId })
+  }, [sessionId])
   const [locate, setLocate] = useState<import('../components/DesktopSessionViews').RequirementSourceLocation | null>(null)
   const locateNonce = useRef(0)
 
@@ -535,7 +543,7 @@ export function DesktopWorkspace() {
                 <button type="button" onClick={() => demo.activate()}>查看内置轴系示例</button>
               </div>
             </div>)}
-          {index > 1 && tab === index && snapshot && (index === 2 ? <DesktopSourceView key={`${session.state!.sessionId}:${locate?.locateNonce ?? 'none'}`} snapshot={snapshot} sessionId={session.state!.sessionId!} requirementSource={requirementSource} locate={locate} onImportVersion={(documentId) => void session.importSource(documentId)} /> : index === 3 ? <DesktopChainView snapshot={snapshot} edit={session.edit} disabled={session.busy} /> : index === 4 ? <DesktopHistoryView snapshot={snapshot} requirementHistory={requirementHistory} onLocateRequirement={locateRequirementRevision} /> : <ExtractionReviewPanel
+          {index > 1 && tab === index && snapshot && (index === 2 ? <DesktopSourceView key={`${session.state!.sessionId}:${locate?.locateNonce ?? 'none'}`} snapshot={snapshot} sessionId={session.state!.sessionId!} requirementSource={requirementSource} locate={locate} onImportVersion={(documentId) => void session.importSource(documentId)} /> : index === 3 ? <DesktopChainView snapshot={snapshot} edit={session.edit} disabled={session.busy} /> : index === 4 ? <DesktopHistoryView snapshot={snapshot} requirementHistory={requirementHistory} onLocateRequirement={locateRequirementRevision} /> : index === 5 ? <ExtractionReviewPanel
             snapshot={snapshot}
             busy={session.busy}
             readBytes={readExtractionBytes}
@@ -548,6 +556,12 @@ export function DesktopWorkspace() {
               onAttestUnits: (request) => session.attestExtractionUnits(request),
               onRevokeUnits: (request) => session.revokeExtractionUnits(request),
             }}
+          /> : <SketchPanel
+            snapshot={snapshot}
+            disabled={session.busy}
+            onImport={session.importSketchImage}
+            onSubmit={session.ingestSketch}
+            readAttachment={readSketchBytes}
           />)}
         </ScrollArea>)}
       </Panel>

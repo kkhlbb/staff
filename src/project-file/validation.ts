@@ -617,7 +617,15 @@ const provenanceRefSchema = z.union([
     statement: z.string().min(1).max(4000),
     source: z.discriminatedUnion('kind', [
       z.object({ kind: z.literal('pdf-page'), revisionId: idSchema, sha256: sha256Schema, page: z.number().int().min(1) }).strict(),
-      z.object({ kind: z.literal('image'), imageId: idSchema, sha256: sha256Schema }).strict(),
+      z.object({ kind: z.literal('image'), imageId: idSchema, sha256: sha256Schema,
+        /** 草图入口：第 N 个框选的原图像素矩形；null = 用户未框选。 */
+        region: z.object({
+          index: z.number().int().min(1),
+          rect: z.tuple([
+            z.number().int().min(0), z.number().int().min(0),
+            z.number().int().min(1), z.number().int().min(1),
+          ]).nullable(),
+        }).strict().optional() }).strict(),
     ]),
   }).strict(),
   pdfTextProvenanceSchema,

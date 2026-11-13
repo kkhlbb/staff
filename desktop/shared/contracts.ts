@@ -33,6 +33,7 @@ import type {
   RequirementRevision,
 } from '../../src/requirements/types'
 import type { PdfPageBox, PdfRect } from '../../src/sources/pdfCoordinates'
+import type { ExtractionCandidate } from '../../src/document-extraction/types'
 
 /** 批次 A 全部 IPC 通道（与任务卡 §3 表格逐项对应）。 */
 export const IPC_CHANNELS = {
@@ -78,6 +79,9 @@ export const IPC_CHANNELS = {
   changeRestore: 'change:restore',
   /** V3.5：桌面 PDF 导入/换版与任务书条款。 */
   sourceImport: 'source:import',
+  /** 手绘草图入口：图片导入（PNG/JPEG，字节进 .cunlian）与图上框选读数。 */
+  sketchImageImport: 'sketch:image-import',
+  sketchIngestReadings: 'sketch:ingest-readings',
   requirementEdit: 'requirement:edit',
   requirementConfirm: 'requirement:confirm',
   /** V3.6：任务书 PDF 提取（main 精确版本读取、页范围/预算/取消）与逐条决定。 */
@@ -204,6 +208,8 @@ export type CommonErrorCode =
   | 'INVALID_REQUIREMENT_INPUT'
   | 'SOURCE_NOT_FOUND'
   | 'SOURCE_UNREADABLE'
+  /** 手绘草图：只收 PNG/JPEG；HEIC 与按文件头认不出的格式明确拒绝。 */
+  | 'UNSUPPORTED_IMAGE_FORMAT'
   | 'PAGE_OUT_OF_RANGE'
   | 'INVALID_REGION'
   | 'STL_EMPTY'
@@ -738,6 +744,57 @@ export interface SourceImportValue {
   pageCount: number
   /** 供框选页身份校验；字节仍只由 readAttachment 按 revisionId 读取。 */
   pages: SourcePdfPageInfo[]
+  snapshot: SnapshotDto
+  recovery: RecoveryWriteState | 'none'
+  warning?: string
+}
+
+/**
+ * 草图图片导入结果：imageId 就是不可变的图片版本 id（= revisionId），
+ * 字节已作为附件存进 .cunlian，renderer 只能按 imageId 读回。
+ */
+export interface SketchImageImportValue {
+  acceptedSeq: number
+  imageId: string
+  revisionId: string
+  documentId: string
+  blobKey: string
+  fileName: string
+  sha256: string
+  byteSize: number
+  width: number
+  height: number
+  /** EXIF 原始方向码；1/3/6/8 支持，2/4/5/7 需用户先转正。 */
+  orientation: number
+  snapshot: SnapshotDto
+  recovery: RecoveryWriteState | 'none'
+  warning?: string
+}
+
+/** 图上框选读数提交：rect 一律原图像素；不框选传 null（存“未框选，无位置”）。 */
+export interface SketchIngestRequest {
+  sessionId: string
+  baseEditSeq: number
+  payload: {
+    projectId?: string
+    draftId?: string
+    source: { kind: 'image'; imageId: string; sha256: string }
+    readings: {
+      kind: 'dimension'
+      symbol: string
+      nominalQ: number
+      upperDeviationQ: number
+      lowerDeviationQ: number
+      unit: 'mm'
+    }[]
+    boxes: { symbol: string; rect: [number, number, number, number] | null }[]
+  }
+}
+
+export interface SketchIngestValue {
+  acceptedSeq: number
+  draftId: string
+  candidates: ExtractionCandidate[]
   snapshot: SnapshotDto
   recovery: RecoveryWriteState | 'none'
   warning?: string
@@ -1492,6 +1549,15 @@ export interface CunlianApi {
   /* ---- V3.5：桌面 PDF 与任务书条款（新增，旧函数不变） ----------------- */
   /** 系统对话框选 PDF；main 读字节、算 SHA-256、解析页数/页框并原子接纳。 */
   importSource(request: SourceImportRequest): Promise<IpcResult<SourceImportValue>>
+  /** 手绘草图：系统对话框选 PNG/JPEG，字节作为附件存进项目文件；HEIC/超限明确拒绝。 */
+  importSketchImage(request: {
+    sessionId: string
+    baseEditSeq: number
+  }): Promise<IpcResult<SketchImageImportValue>>
+  /** 手绘草图：提交图上框选的读数（原图像素 rect），一律进未核对候选。 */
+  ingestSketchReadings(
+    request: SketchIngestRequest,
+  ): Promise<IpcResult<SketchIngestValue>>
   /** 登记/更新未确认条款表单；任何变化递增代数并使旧预览失效。 */
   stageRequirementEdit(
     request: RequirementEditRequest,

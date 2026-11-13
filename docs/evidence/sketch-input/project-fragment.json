@@ -1,0 +1,196 @@
+{
+  "note": "由真实提交文件解码后节选；保留 kind=agent-read、source.kind=image、imageId、sha256、rect、statement。",
+  "chainTerms": [
+    {
+      "provenance": [
+        {
+          "kind": "agent-read",
+          "actorId": "验收绘图员",
+          "at": "2026-11-13T10:00:00.000Z",
+          "sessionSeq": 2,
+          "turnId": "sketch:<generated>",
+          "modelId": null,
+          "source": {
+            "kind": "image",
+            "imageId": "sr-<generated>",
+            "sha256": "f079f114bd68b2b5302ee2b44cfc2a51d8bea24d46db7302dce41e599b63714b",
+            "region": {
+              "index": 3,
+              "rect": [
+                1500,
+                1200,
+                250,
+                140
+              ]
+            }
+          },
+          "statement": "手绘草图读数：符号 L3，第 3 个框选（用户输入，非图像识别）"
+        }
+      ],
+      "id": "intent-term-107fa86625cf47e8",
+      "symbol": "L3",
+      "name": "L3",
+      "nominalQ": 430000,
+      "lowerDeviationQ": 0,
+      "upperDeviationQ": 2000,
+      "sign": 1,
+      "sourceNote": "",
+      "termRevision": 1
+    },
+    {
+      "provenance": [
+        {
+          "kind": "agent-read",
+          "actorId": "验收绘图员",
+          "at": "2026-11-13T10:00:00.000Z",
+          "sessionSeq": 2,
+          "turnId": "sketch:<generated>",
+          "modelId": null,
+          "source": {
+            "kind": "image",
+            "imageId": "sr-<generated>",
+            "sha256": "f079f114bd68b2b5302ee2b44cfc2a51d8bea24d46db7302dce41e599b63714b",
+            "region": {
+              "index": 1,
+              "rect": [
+                120,
+                300,
+                240,
+                130
+              ]
+            }
+          },
+          "statement": "手绘草图读数：符号 L1，第 1 个框选（用户输入，非图像识别）"
+        }
+      ],
+      "id": "intent-term-0e7fa54031a6dcbe",
+      "symbol": "L1",
+      "name": "L1",
+      "nominalQ": 300000,
+      "lowerDeviationQ": -2000,
+      "upperDeviationQ": 0,
+      "sign": -1,
+      "sourceNote": "",
+      "termRevision": 1
+    },
+    {
+      "provenance": [
+        {
+          "kind": "agent-read",
+          "actorId": "验收绘图员",
+          "at": "2026-11-13T10:00:00.000Z",
+          "sessionSeq": 2,
+          "turnId": "sketch:<generated>",
+          "modelId": null,
+          "source": {
+            "kind": "image",
+            "imageId": "sr-<generated>",
+            "sha256": "f079f114bd68b2b5302ee2b44cfc2a51d8bea24d46db7302dce41e599b63714b",
+            "region": {
+              "index": 2,
+              "rect": [
+                700,
+                480,
+                280,
+                120
+              ]
+            }
+          },
+          "statement": "手绘草图读数：符号 L2，第 2 个框选（用户输入，非图像识别）"
+        }
+      ],
+      "id": "intent-term-117fa9f9abbb1253",
+      "symbol": "L2",
+      "name": "L2",
+      "nominalQ": 50000,
+      "lowerDeviationQ": -1000,
+      "upperDeviationQ": 0,
+      "sign": -1,
+      "sourceNote": "",
+      "termRevision": 1
+    }
+  ],
+  "proofs": [
+    {
+      "symbol": "L3",
+      "nominalQ": 430000,
+      "provenance": [
+        {
+          "kind": "agent-read",
+          "actorId": "验收绘图员",
+          "statement": "手绘草图读数：符号 L3，第 3 个框选（用户输入，非图像识别）",
+          "modelId": null,
+          "source": {
+            "kind": "image",
+            "imageId": "sr-<generated>",
+            "sha256": "f079f114bd68b2b5302ee2b44cfc2a51d8bea24d46db7302dce41e599b63714b",
+            "region": {
+              "index": 3,
+              "rect": [
+                1500,
+                1200,
+                250,
+                140
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "L1",
+      "nominalQ": 300000,
+      "provenance": [
+        {
+          "kind": "agent-read",
+          "actorId": "验收绘图员",
+          "statement": "手绘草图读数：符号 L1，第 1 个框选（用户输入，非图像识别）",
+          "modelId": null,
+          "source": {
+            "kind": "image",
+            "imageId": "sr-<generated>",
+            "sha256": "f079f114bd68b2b5302ee2b44cfc2a51d8bea24d46db7302dce41e599b63714b",
+            "region": {
+              "index": 1,
+              "rect": [
+                120,
+                300,
+                240,
+                130
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "L2",
+      "nominalQ": 50000,
+      "provenance": [
+        {
+          "kind": "agent-read",
+          "actorId": "验收绘图员",
+          "statement": "手绘草图读数：符号 L2，第 2 个框选（用户输入，非图像识别）",
+          "modelId": null,
+          "source": {
+            "kind": "image",
+            "imageId": "sr-<generated>",
+            "sha256": "f079f114bd68b2b5302ee2b44cfc2a51d8bea24d46db7302dce41e599b63714b",
+            "region": {
+              "index": 2,
+              "rect": [
+                700,
+                480,
+                280,
+                120
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

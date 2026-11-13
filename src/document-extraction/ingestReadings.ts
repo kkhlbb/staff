@@ -1,7 +1,7 @@
 import { formatMm, tryParseMm } from '../domain/units'
 import { stableId } from './ids'
 import { extractionFailure, extractionSuccess, isProvenanceCompleteness,
-  type AgentReadEvidence, type ExtractionCandidate, type ExtractionDraft,
+  type AgentReadEvidence, type AgentReadRegion, type ExtractionCandidate, type ExtractionDraft,
   type ExtractionResult, type QuantityValue } from './types'
 
 export interface ReadingInput {
@@ -16,6 +16,10 @@ export interface IngestReadingsInput {
   readonly source: AgentReadEvidence['source']
   readonly statement: string
   readonly readings: readonly ReadingInput[]
+  /** 草图入口：每条读数的框选位置（顺序与 readings 对齐；null = 未框选）。 */
+  readonly regions?: readonly (AgentReadRegion | null)[]
+  /** 草图入口：逐条说明（顺序与 readings 对齐）；缺省沿用整批 statement。 */
+  readonly statements?: readonly string[]
   readonly actorId: string
   readonly at: string
   readonly sessionSeq: number
@@ -25,11 +29,32 @@ export interface IngestReadingsInput {
 
 /** 外部读数只进待核对候选。evidence 始终为空：绝不声称 PDF 有这段文本。 */
 export function ingestReadings(draft: ExtractionDraft, input: IngestReadingsInput): ExtractionResult<ExtractionDraft> {
-  const ref: AgentReadEvidence = {
+  const base: Omit<AgentReadEvidence, 'source' | 'statement'> = {
     kind: 'agent-read', actorId: input.actorId, at: input.at, sessionSeq: input.sessionSeq,
-    turnId: input.turnId, modelId: input.modelId, source: input.source, statement: input.statement,
+    turnId: input.turnId, modelId: input.modelId,
   }
+  if (input.regions !== undefined && input.regions.length !== input.readings.length) {
+    return extractionFailure('EVIDENCE_REQUIRED', '框选记录必须与读数一一对应')
+  }
+  if (input.statements !== undefined && (input.statements.length !== input.readings.length ||
+    input.statements.some((text) => typeof text !== 'string' || text.trim() === '' || text.length > 4000))) {
+    return extractionFailure('EVIDENCE_REQUIRED', '逐条读数说明不完整')
+  }
+  const refAt = (index: number): AgentReadEvidence => {
+    const region = input.regions?.[index] ?? null
+    const statement = input.statements?.[index] ?? input.statement
+    const source = region !== null && input.source.kind === 'image'
+      ? { ...input.source, region }
+      : input.source
+    return { ...base, source, statement }
+  }
+  const ref: AgentReadEvidence = refAt(0)
   if (!isProvenanceCompleteness(ref)) return extractionFailure('EVIDENCE_REQUIRED', '读数出处不完整')
+  for (let index = 1; index < input.readings.length; index += 1) {
+    if (!isProvenanceCompleteness(refAt(index))) {
+      return extractionFailure('EVIDENCE_REQUIRED', '读数出处不完整')
+    }
+  }
   if (input.statement.length > 4000 || !Array.isArray(input.readings) || input.readings.length < 1 ||
     input.readings.length > 20 || draft.candidates.length + input.readings.length > 200) {
     return extractionFailure('VALUE_UNSUPPORTED', '每批需 1..20 条读数，草稿最多 200 条')
@@ -45,6 +70,7 @@ export function ingestReadings(draft: ExtractionDraft, input: IngestReadingsInpu
       }) || reading.nominalQ <= 0 || reading.lowerDeviationQ > reading.upperDeviationQ) {
       return extractionFailure('VALUE_UNSUPPORTED', '读数需合法符号、安全整数 q、正基本尺寸、mm 及有序偏差；不换算或推算')
     }
+    const ref = refAt(index)
     const quantity = (q: number): QuantityValue => {
       const text = formatMm(q)
       return { text, decimals: text.includes('.') ? text.length - text.indexOf('.') - 1 : 0,
@@ -54,7 +80,7 @@ export function ingestReadings(draft: ExtractionDraft, input: IngestReadingsInpu
     if (previous.length > 1) return extractionFailure('VALUE_UNSUPPORTED', '同符号已有多处候选，请先解决冲突再补入读数')
     candidates.push({
       candidateId: previous[0]?.candidateId ?? stableId('reading', [draft.draftId, input.turnId, draft.draftRevision, index]),
-      kind: 'ring', groupId: `ring:${reading.symbol}`, rawText: input.statement,
+      kind: 'ring', groupId: `ring:${reading.symbol}`, rawText: ref.statement,
       page: ref.source.kind === 'pdf-page' ? ref.source.page : 1,
       status: 'pending', requiresVerification: true, batchConfirmable: false,
       confidence: 'low', confidenceBasis: ['EXTERNAL_READING_UNVERIFIED'], reasonCodes: [],

@@ -1,0 +1,7 @@
+--- src/sketch/selection.ts
++++ src/sketch/selection.ts
+-  const first = displayedToSource(orientation, sourceWidth, sourceHeight, viewToDisplayed(view, input.start))
+  const second = displayedToSource(orientation, sourceWidth, sourceHeight, viewToDisplayed(view, input.end))
++  const first = input.start
+  const second = input.end
+# 把屏幕框直接当原图像素；0/90 也许看不出来，180 必须炸。

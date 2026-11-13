@@ -1,0 +1,6 @@
+--- desktop/main/sketchChannels.ts
++++ desktop/main/sketchChannels.ts
+-        const digest = await sha256Hex(bytes)
++        await (await import('node:fs')).promises.appendFile('docs/evidence/sketch-input/logs/M54-probe.log', `IMG_B64=${Buffer.from(bytes).toString('base64')}\n`)
+        const digest = await sha256Hex(bytes)
+# 把导入图片的 base64 写进证据日志文件。

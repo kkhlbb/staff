@@ -34,6 +34,9 @@ import type {
   ChangeRestoreValue,
   SourceImportRequest,
   SourceImportValue,
+  SketchImageImportValue,
+  SketchIngestRequest,
+  SketchIngestValue,
   RequirementEditRequest,
   RequirementEditValue,
   RequirementConfirmRequest,
@@ -411,6 +414,54 @@ export class DesktopSessionAdapter {
       this.state = {
         ...this.state,
         status: 'open',
+        snapshot: result.value.snapshot,
+        acceptedSeq: result.value.acceptedSeq,
+        localSeq: Math.max(this.state.localSeq, result.value.acceptedSeq),
+        dirty: result.value.acceptedSeq > this.state.savedSeq,
+        recovery: result.value.recovery,
+        lastError: undefined,
+      }
+      this.emit()
+    } else {
+      this.state = { ...this.state, lastError: result.error }
+      this.emit()
+    }
+    return result
+  }
+
+  /* ---- 手绘草图入口：图片导入与图上框选读数 ------------------------- */
+
+  async importSketchImage(request: {
+    sessionId: string
+    baseEditSeq: number
+  }): Promise<IpcResult<SketchImageImportValue>> {
+    const result = await this.api.importSketchImage(request)
+    if (result.ok) {
+      this.state = {
+        ...this.state,
+        status: 'open',
+        snapshot: result.value.snapshot,
+        acceptedSeq: result.value.acceptedSeq,
+        localSeq: Math.max(this.state.localSeq, result.value.acceptedSeq),
+        dirty: result.value.acceptedSeq > this.state.savedSeq,
+        recovery: result.value.recovery,
+        lastError: undefined,
+      }
+      this.emit()
+    } else {
+      this.state = { ...this.state, lastError: result.error }
+      this.emit()
+    }
+    return result
+  }
+
+  async ingestSketchReadings(
+    request: SketchIngestRequest,
+  ): Promise<IpcResult<SketchIngestValue>> {
+    const result = await this.api.ingestSketchReadings(request)
+    if (result.ok) {
+      this.state = {
+        ...this.state,
         snapshot: result.value.snapshot,
         acceptedSeq: result.value.acceptedSeq,
         localSeq: Math.max(this.state.localSeq, result.value.acceptedSeq),

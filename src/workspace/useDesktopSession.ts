@@ -19,6 +19,7 @@ import type {
   ExtractionAttestUnitsValue,
   ExtractionRevokeUnitsRequest,
   ExtractionBatchValue,
+  SketchIngestRequest,
 } from '../../desktop/shared/contracts'
 import { DesktopSessionAdapter, type DesktopSessionState } from './desktopAdapter'
 import { draftToChain, workspaceReducer, type WorkspaceAction } from './draft'
@@ -362,6 +363,57 @@ export function useDesktopSession(options: { onOpenDxf?: () => void } = {}) {
           sessionId: session.sessionId,
           baseEditSeq: session.acceptedSeq,
           ...(documentId === undefined ? {} : { documentId }),
+        })
+        report(result)
+        return result
+      } finally {
+        locked.current = false; setBusy(false); void refresh()
+      }
+    },
+    /** 手绘草图：导入图片（对话框在 main；HEIC/超限由 main 明确拒绝）。 */
+    importSketchImage: async () => {
+      const current = adapter.current
+      if (current === null) { setNotice('window.cunlian 不可用，请在桌面应用中执行文件操作。'); return null }
+      if (locked.current) return null
+      locked.current = true; setBusy(true); setNotice('')
+      try {
+        const flushed = await current.flushStage()
+        if (!flushed.ok) return flushed
+        const session = current.getState()
+        if (session.sessionId === null) {
+          setNotice(NO_WRITABLE_SESSION_NOTICE)
+          return null
+        }
+        const result = await current.importSketchImage({
+          sessionId: session.sessionId,
+          baseEditSeq: session.acceptedSeq,
+        })
+        report(result)
+        return result
+      } finally {
+        locked.current = false; setBusy(false); void refresh()
+      }
+    },
+    /** 手绘草图：提交框选读数；位置是原图像素，读数由用户输入。 */
+    ingestSketch: async (
+      payload: SketchIngestRequest['payload'],
+    ) => {
+      const current = adapter.current
+      if (current === null) { setNotice('window.cunlian 不可用，请在桌面应用中执行文件操作。'); return null }
+      if (locked.current) return null
+      locked.current = true; setBusy(true); setNotice('')
+      try {
+        const flushed = await current.flushStage()
+        if (!flushed.ok) return flushed
+        const session = current.getState()
+        if (session.sessionId === null) {
+          setNotice(NO_WRITABLE_SESSION_NOTICE)
+          return null
+        }
+        const result = await current.ingestSketchReadings({
+          sessionId: session.sessionId,
+          baseEditSeq: session.acceptedSeq,
+          payload,
         })
         report(result)
         return result

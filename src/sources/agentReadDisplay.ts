@@ -7,7 +7,8 @@ export interface AgentReadSource {
   readonly statement: string
   readonly source:
     | { readonly kind: 'pdf-page'; readonly revisionId: string; readonly sha256: string; readonly page: number }
-    | { readonly kind: 'image'; readonly imageId: string; readonly sha256: string }
+    | { readonly kind: 'image'; readonly imageId: string; readonly sha256: string
+      readonly region?: { readonly index: number; readonly rect: readonly [number, number, number, number] | null } }
 }
 
 export function agentReadSources(refs: readonly unknown[]): AgentReadSource[] {
@@ -35,5 +36,10 @@ export function candidateReadSources(candidate: ExtractionCandidate): AgentReadS
 }
 
 export function readingSourceLabel(reading: AgentReadSource): string {
-  return `${reading.source.kind === 'pdf-page' ? `第 ${reading.source.page} 页` : '图片'}，${reading.actorId} 提供`
+  if (reading.source.kind === 'pdf-page') return `第 ${reading.source.page} 页，${reading.actorId} 提供`
+  const region = reading.source.region
+  const place = region === undefined ? '图片'
+    : region.rect === null ? '图片，未框选，无位置'
+      : `图片，第 ${region.index} 个框选`
+  return `${place}，${reading.actorId} 提供`
 }
