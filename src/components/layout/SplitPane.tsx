@@ -33,4 +33,3 @@ export function Splitter({ label, value, min, max, onChange, horizontal = false,
     }}
     onPointerUp={() => { drag.current = null }} onPointerCancel={() => { drag.current = null }} />
 }
-
