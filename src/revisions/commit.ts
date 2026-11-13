@@ -30,6 +30,7 @@ import { PROJECT_FILE_SCHEMA_VERSION } from '../project-file/types'
 import type { RequirementCheck } from '../requirements/types'
 import { stableFingerprint } from './canonical'
 import { nextRelationRevision } from './compute'
+import { computeDrawingExportDigest } from './frozenExport'
 import type { ChangeComputation } from './types'
 
 export interface CommitOptions {
@@ -347,6 +348,8 @@ export function buildCommitCandidate(
       missingBlobKeys: base.missingAttachments.map((item) => item.blobKey),
     },
     restoredFromRevisionId: options.restoredFromRevisionId,
+    // 本版本创建时的导出字节摘要：重出时必须逐字节相同（任务卡 B）。
+    drawingExports: computeDrawingExportDigest(computation.drawing.data),
     ...(options.requirement === undefined
       ? {}
       : {

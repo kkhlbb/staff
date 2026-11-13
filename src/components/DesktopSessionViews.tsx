@@ -11,6 +11,7 @@ import type { SourceRevision } from '../sources/types'
 import { ChainExpression } from './ChainExpression'
 import { PdfViewer } from './PdfViewer'
 import { RequirementRevisionHistory } from './RequirementRevisionHistory'
+import { StatisticalReference } from './StatisticalReference'
 
 const statusLabel = { within: '满足目标（非审查结论）', outside: '超出目标', 'no-target': '未设目标' }
 
@@ -66,6 +67,7 @@ export function DesktopChainView({ snapshot, edit, disabled }: {
         <div><dt>封闭环公差</dt><dd>{formatMm(result.toleranceQ)} mm</dd></div>
       </dl></> : <p role="alert">{draft.terms.length ? '输入无效，当前结果不可用；请修正表格或目标区间中标出的字段。' : '空链，尚无计算结果。'}</p>}
     </section>
+    <StatisticalReference chain={parsed.ok ? parsed.chain : null} result={result} />
     <p id="desktop-chain-write-reason">增删环、审查确认与新建分析快照本批次未接入；不会修改既有冻结历史。</p>
     <div className="desktop-workspace__actions">{['增加组成环', '删除组成环', '确认审查', '冻结分析快照'].map(label => <button key={label} disabled aria-describedby="desktop-chain-write-reason">{label}</button>)}</div>
   </div>

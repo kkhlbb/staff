@@ -1,0 +1,6 @@
+--- src/domain/statistics.ts
++++ src/domain/statistics.ts
+-  let state = seed >>> 0
++  // M56: 忽略种子，每次不同
+  let state = (Math.random() * 0xffffffff) >>> 0
+# 忽略种子；同种子三次一致与换种子不同两种用例都会红。

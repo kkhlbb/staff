@@ -69,6 +69,11 @@ export interface DrawingGenerationInput {
     inputDecimals: number
     reviewStatus: 'draft' | 'pending' | 'confirmed'
     sourceNote?: string
+    /**
+     * 读数/来源出处必须随冻结输入一起保留：它参与参数快照与图纸指纹。
+     * 缺了它重建出的 fingerprint 会与保存值不符（旧版实现在这里丢过）。
+     */
+    provenance?: readonly import('../document-extraction/types').EvidenceRef[]
   }[]
   scale: { numerator: number; denominator: number }
   frameFields: ProjectFileDrawingRecord['frameFields']

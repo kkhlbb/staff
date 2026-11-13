@@ -41,6 +41,7 @@ export function rebuildFromGenerationInput(
         valueQ: parameter.valueQ,
         inputDecimals: parameter.inputDecimals,
         reviewStatus: parameter.reviewStatus,
+        ...(parameter.provenance === undefined ? {} : { provenance: parameter.provenance }),
         ...(parameter.sourceNote === undefined || parameter.sourceNote === ''
           ? {}
           : { sourceNote: parameter.sourceNote }),
