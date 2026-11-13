@@ -252,29 +252,37 @@ async function ambiguousSnapshot(): Promise<SnapshotDto> {
   }
 }
 
+function rowFor(list: HTMLElement, text: string | RegExp): HTMLElement {
+  const row = within(list)
+    .getAllByRole('listitem')
+    .find((item) => within(item).queryAllByText(text).length > 0)
+  if (row === undefined) throw new Error(`找不到包含 ${String(text)} 的候选行`)
+  return row
+}
+
 describe('V3.6 同一符号多处赋值（面板）', () => {
   it('显示「同一符号第 k/N 处」与互斥提示；已确认一处后其余处确认按钮置灰', async () => {
     render(<ExtractionReviewPanel snapshot={await ambiguousSnapshot()} busy={false} actions={actions()} />)
     const list = screen.getByRole('list', { name: '提取候选列表' })
     const rows = within(list).getAllByRole('listitem')
     expect(rows).toHaveLength(3)
-    expect(within(rows[0]!).getByText('同一符号第 1/3 处')).toBeInTheDocument()
-    expect(within(rows[1]!).getByText('同一符号第 2/3 处')).toBeInTheDocument()
-    expect(within(rows[2]!).getByText('同一符号第 3/3 处')).toBeInTheDocument()
-    expect(within(rows[0]!).getByText('已确认')).toBeInTheDocument()
-    expect(within(rows[1]!).getByText(/同一符号只能确认一处/)).toBeInTheDocument()
-    expect(within(rows[1]!).getByText(/已确认第 1\/3 处，需先撤销该确认才能选此处/)).toBeInTheDocument()
-    expect(within(rows[1]!).getByRole('button', { name: '确认' })).toBeDisabled()
-    expect(within(rows[1]!).getByRole('button', { name: '确认' }).getAttribute('title')).toContain('请先撤销')
-    expect(within(rows[2]!).getByRole('button', { name: '确认' })).toBeDisabled()
-    expect(within(rows[0]!).getByRole('button', { name: '撤销确认' })).toBeEnabled()
+    const first = rowFor(list, '同一符号第 1/3 处')
+    const second = rowFor(list, '同一符号第 2/3 处')
+    const third = rowFor(list, '同一符号第 3/3 处')
+    expect(within(first).getByText('已确认')).toBeInTheDocument()
+    expect(within(second).getByText(/同一符号只能确认一处/)).toBeInTheDocument()
+    expect(within(second).getByText(/已确认第 1\/3 处，需先撤销该确认才能选此处/)).toBeInTheDocument()
+    expect(within(second).getByRole('button', { name: '确认' })).toBeDisabled()
+    expect(within(second).getByRole('button', { name: '确认' }).getAttribute('title')).toContain('请先撤销')
+    expect(within(third).getByRole('button', { name: '确认' })).toBeDisabled()
+    expect(within(first).getByRole('button', { name: '撤销确认' })).toBeEnabled()
   })
 
-  it('撤销确认发出 action=revoke（不带 confirmed），不提供批量确认', async () => {
+  it('撤销确认发出 action=revoke（不带 confirmed），互斥组不提供本组批量确认', async () => {
     const handler = actions()
     render(<ExtractionReviewPanel snapshot={await ambiguousSnapshot()} busy={false} actions={handler} />)
     const list = screen.getByRole('list', { name: '提取候选列表' })
-    const first = within(list).getAllByRole('listitem')[0]!
+    const first = rowFor(list, '同一符号第 1/3 处')
     fireEvent.click(within(first).getByRole('button', { name: '撤销确认' }))
     expect(handler.onDecide).toHaveBeenCalledWith({
       draftId: 'draft-test',
@@ -282,7 +290,8 @@ describe('V3.6 同一符号多处赋值（面板）', () => {
       editRevision: 0,
       action: 'revoke',
     })
-    expect(screen.queryByRole('button', { name: /全部确认|批量确认/ })).toBeNull()
+    // 未装配批量动作回调时，界面不渲染任何批量确认/补单位按钮（不放假按钮）。
+    expect(screen.queryByRole('button', { name: /全部确认|批量确认|批量补单位/ })).toBeNull()
   })
 })
 
@@ -301,26 +310,29 @@ describe('V3.6 提取审阅面板', () => {
     const list = screen.getByRole('list', { name: '提取候选列表' })
     const rows = within(list).getAllByRole('listitem')
     expect(rows).toHaveLength(4)
-    expect(rows[0]?.getAttribute('data-status')).toBe('pending')
-    expect(within(rows[0]!).getByText('待确认')).toBeInTheDocument()
-    expect(within(rows[0]!).getByText('组成环 · H · 总长')).toBeInTheDocument()
-    expect(within(rows[0]!).getByText(/原文：H 总长 52.20/)).toBeInTheDocument()
-    expect(within(rows[0]!).getByText(/第 1 页 · 选区 PDF 点/)).toBeInTheDocument()
-    expect(within(rows[1]!).getByText('阻塞')).toBeInTheDocument()
-    expect(within(rows[2]!).getByText('已拒绝')).toBeInTheDocument()
-    expect(within(rows[2]!).getByText(/理由：长度需人工核对/)).toBeInTheDocument()
-    expect(within(rows[3]!).getByText('已确认')).toBeInTheDocument()
+    const pending = rowFor(list, /原文：H 总长 52.20/)
+    expect(pending.getAttribute('data-status')).toBe('pending')
+    expect(within(pending).getByText('待确认')).toBeInTheDocument()
+    expect(within(pending).getByText('组成环 · H · 总长')).toBeInTheDocument()
+    expect(within(pending).getByText(/第 1 页 · 选区 PDF 点/)).toBeInTheDocument()
+    const blocked = rowFor(list, /原文：轴向装配间隙/)
+    expect(within(blocked).getByText('阻塞')).toBeInTheDocument()
+    const rejected = rowFor(list, /原文：S 隔套 12.00/)
+    expect(within(rejected).getByText('已拒绝')).toBeInTheDocument()
+    expect(within(rejected).getByText(/理由：长度需人工核对/)).toBeInTheDocument()
+    const confirmed = rowFor(list, /原文：B1 左轴承 20.00/)
+    expect(within(confirmed).getByText('已确认')).toBeInTheDocument()
     // 阻塞候选不能确认；已确认/已拒绝不能再确认。
-    expect(within(rows[1]!).getByRole('button', { name: '确认' })).toBeDisabled()
-    expect(within(rows[3]!).getByRole('button', { name: '确认' })).toBeDisabled()
-    expect(within(rows[2]!).getByRole('button', { name: '确认' })).toBeDisabled()
+    expect(within(blocked).getByRole('button', { name: '确认' })).toBeDisabled()
+    expect(within(confirmed).getByRole('button', { name: '确认' })).toBeDisabled()
+    expect(within(rejected).getByRole('button', { name: '确认' })).toBeDisabled()
   })
 
-  it('确认必须逐条点击：发送 confirmed:true 与当前 editRevision，没有批量确认按钮', async () => {
+  it('确认必须逐条点击：发送 confirmed:true 与当前 editRevision；未装配批量回调时无批量确认', async () => {
     const handler = actions()
     render(<ExtractionReviewPanel snapshot={await snapshot()} busy={false} actions={handler} />)
     const list = screen.getByRole('list', { name: '提取候选列表' })
-    const first = within(list).getAllByRole('listitem')[0]!
+    const first = rowFor(list, /原文：H 总长 52.20/)
     fireEvent.click(within(first).getByRole('button', { name: '确认' }))
     expect(handler.onDecide).toHaveBeenCalledWith({
       draftId: 'draft-test',
@@ -336,18 +348,18 @@ describe('V3.6 提取审阅面板', () => {
     const handler = actions()
     render(<ExtractionReviewPanel snapshot={await snapshot()} busy={false} actions={handler} />)
     const list = screen.getByRole('list', { name: '提取候选列表' })
-    const rows = within(list).getAllByRole('listitem')
-    fireEvent.click(within(rows[0]!).getByRole('button', { name: '拒绝…' }))
-    const confirmReject = within(rows[0]!).getByRole('button', { name: '确认拒绝' })
+    const pendingRow = rowFor(list, /原文：H 总长 52.20/)
+    fireEvent.click(within(pendingRow).getByRole('button', { name: '拒绝…' }))
+    const confirmReject = within(pendingRow).getByRole('button', { name: '确认拒绝' })
     expect(confirmReject).toBeDisabled()
-    fireEvent.change(within(rows[0]!).getByRole('textbox', { name: '拒绝理由' }), { target: { value: '原文不清' } })
-    expect(within(rows[0]!).getByRole('button', { name: '确认拒绝' })).toBeEnabled()
+    fireEvent.change(within(pendingRow).getByRole('textbox', { name: '拒绝理由' }), { target: { value: '原文不清' } })
+    expect(within(pendingRow).getByRole('button', { name: '确认拒绝' })).toBeEnabled()
 
-    fireEvent.click(within(rows[0]!).getByLabelText(/选择候选 cand-h/))
-    fireEvent.click(within(rows[1]!).getByLabelText(/选择候选 cand-c/))
+    fireEvent.click(within(pendingRow).getByLabelText(/选择候选 cand-h/))
+    fireEvent.click(within(rowFor(list, /原文：轴向装配间隙/)).getByLabelText(/选择候选 cand-c/))
     // 已确认/已拒绝的候选不能进入批量选择。
-    expect(within(rows[2]!).getByLabelText(/选择候选 cand-s/)).toBeDisabled()
-    expect(within(rows[3]!).getByLabelText(/选择候选 cand-b1/)).toBeDisabled()
+    expect(within(rowFor(list, /原文：S 隔套 12.00/)).getByLabelText(/选择候选 cand-s/)).toBeDisabled()
+    expect(within(rowFor(list, /原文：B1 左轴承 20.00/)).getByLabelText(/选择候选 cand-b1/)).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: '批量拒绝选中项' }))
     await waitFor(() => expect(handler.onDecide).toHaveBeenCalledTimes(2))
     expect(handler.onDecide).toHaveBeenNthCalledWith(1, expect.objectContaining({ candidateId: 'cand-h', action: 'reject' }))
@@ -357,7 +369,7 @@ describe('V3.6 提取审阅面板', () => {
   it('定位显示确切版本、页码与选区 PDF 点', async () => {
     render(<ExtractionReviewPanel snapshot={await snapshot()} busy={false} actions={actions()} />)
     const list = screen.getByRole('list', { name: '提取候选列表' })
-    fireEvent.click(within(within(list).getAllByRole('listitem')[0]!).getByRole('button', { name: '定位到 PDF 选区' }))
+    fireEvent.click(within(rowFor(list, /原文：H 总长 52.20/)).getByRole('button', { name: '定位到 PDF 选区' }))
     expect(screen.getByTestId('extraction-locate-summary').textContent).toContain('来源 PDF sr-1 第 1 页')
     expect(screen.getByTestId('extraction-locate-summary').textContent).toContain('[100, 600, 140, 615]')
   })
@@ -501,3 +513,290 @@ describe('V3.6 多草稿：默认最新 + 旧草稿折叠只读 + 删除二次�
   })
 })
 
+
+/* ------------------------------------------------------------------ */
+/* L2 确认效率：分组 / 批量补单位 / 批量确认 / 互斥拒绝 / 操作数计数    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 结构同 6 份真实语料的聚合夹具（数字与度量一致，只是合成、不读 PDF）：
+ * - 待确认 58 = 单值 28 + 同符号多处 30（11 组）；
+ * - 仅差单位 45 = 单值 13 + 同符号多处 32（16 组，每组 2 处）；
+ * - 阻塞其余 35 = FORMULA_UNSUPPORTED 32 + NUMBER_UNSUPPORTED 2 + UNSUPPORTED_UNIT 1。
+ * 这样分组数字与 corpus 度量逐项对得上，界面计数用例才有意义。
+ */
+function corpusShapedDraft(): ExtractionDraft {
+  const base = draftFixture()
+  const candidates: ExtractionCandidate[] = []
+  const unitBlocked = (
+    id: string,
+    symbol: string,
+    extra: { groupId?: string; occurrence?: { index: number; total: number } } = {},
+  ): ExtractionCandidate => {
+    const row = ringCandidate({
+      candidateId: id,
+      symbol,
+      ...(extra.groupId === undefined ? {} : { groupId: extra.groupId }),
+      ...(extra.occurrence === undefined ? {} : { occurrence: extra.occurrence }),
+    })
+    if (row.kind !== 'ring') throw new Error('fixture 必须是组成环')
+    return {
+      ...row,
+      status: 'blocked',
+      reasonCodes: ['UNKNOWN_UNIT'],
+      data: {
+        ...row.data,
+        nominal:
+          row.data.nominal === null
+            ? null
+            : { ...row.data.nominal, unit: null, unitText: null, valueQ: null },
+      },
+    }
+  }
+  const pendingSingles = 28
+  const multiSizes = [3, 2, 3, 3, 3, 4, 4, 2, 2, 2, 2]
+  for (let index = 0; index < pendingSingles; index += 1) {
+    candidates.push(ringCandidate({ candidateId: `s-${index}`, symbol: `S${index}` }))
+  }
+  multiSizes.forEach((size, groupIndex) => {
+    for (let position = 0; position < size; position += 1) {
+      candidates.push(
+        ringCandidate({
+          candidateId: `m-${groupIndex}-${position}`,
+          symbol: `M${groupIndex}`,
+          groupId: `ring:M${groupIndex}`,
+          occurrence: { index: position + 1, total: size },
+        }),
+      )
+    }
+  })
+  for (let index = 0; index < 13; index += 1) {
+    candidates.push(unitBlocked(`u-single-${index}`, `U${index}`))
+  }
+  for (let groupIndex = 0; groupIndex < 16; groupIndex += 1) {
+    for (let position = 0; position < 2; position += 1) {
+      candidates.push(
+        unitBlocked(`u-multi-${groupIndex}-${position}`, `UM${groupIndex}`, {
+          groupId: `ring:UM${groupIndex}`,
+          occurrence: { index: position + 1, total: 2 },
+        }),
+      )
+    }
+  }
+  for (let index = 0; index < 32; index += 1) {
+    candidates.push(
+      ringCandidate({
+        candidateId: `b-formula-${index}`,
+        symbol: `F${index}`,
+        status: 'blocked',
+        reasonCodes: ['FORMULA_UNSUPPORTED'],
+      }),
+    )
+  }
+  for (let index = 0; index < 2; index += 1) {
+    candidates.push(
+      ringCandidate({
+        candidateId: `b-number-${index}`,
+        symbol: `N${index}`,
+        status: 'blocked',
+        reasonCodes: ['NUMBER_UNSUPPORTED'],
+      }),
+    )
+  }
+  candidates.push(
+    ringCandidate({
+      candidateId: 'b-unit-0',
+      symbol: 'X',
+      status: 'blocked',
+      reasonCodes: ['UNSUPPORTED_UNIT'],
+    }),
+  )
+  return { ...base, candidates, decisions: [], issues: [] }
+}
+
+async function corpusShapedSnapshot(): Promise<SnapshotDto> {
+  const base = await createSampleSnapshot()
+  return {
+    ...base,
+    project: {
+      ...base.project,
+      activeRequirementRevisionId: null,
+      currentRequirementCheck: null,
+      extractionDrafts: [corpusShapedDraft()],
+    },
+  }
+}
+
+function batchActions() {
+  const handler: ExtractionReviewActions = {
+    ...actions(),
+    onConfirmBatch: vi.fn(async (request: { draftId: string; candidateIds: string[] }) => ({
+      ok: true as const,
+      value: {
+        acceptedSeq: 3,
+        draftId: request.draftId,
+        candidateIds: request.candidateIds,
+        decisions: request.candidateIds.map((candidateId) => ({
+          candidateId,
+          decisionId: `decision-confirm-${candidateId}`,
+          status: 'confirmed' as const,
+        })),
+        snapshot: null as never,
+        recovery: 'written' as const,
+      },
+    })),
+    onAttestUnits: vi.fn(async (request: { draftId: string; candidateIds: string[]; statement: string }) => ({
+      ok: true as const,
+      value: {
+        acceptedSeq: 4,
+        draftId: request.draftId,
+        batchId: 'unit-batch-test',
+        unitText: 'mm',
+        candidateIds: request.candidateIds,
+        decisions: request.candidateIds.map((candidateId) => ({
+          candidateId,
+          decisionId: `decision-attest-${candidateId}`,
+          status: 'pending' as const,
+        })),
+        snapshot: null as never,
+        recovery: 'written' as const,
+      },
+    })),
+    onRevokeUnits: vi.fn(async () => null),
+  }
+  return handler
+}
+
+/** 统计“点击/输入”操作数：一次点击算 1，一次输入提交（change）算 1（不是每字符）。 */
+function opsCounter() {
+  const state = { clicks: 0, inputs: 0 }
+  return {
+    state,
+    click(element: HTMLElement) {
+      state.clicks += 1
+      fireEvent.click(element)
+    },
+    type(element: HTMLElement, value: string) {
+      state.inputs += 1
+      fireEvent.change(element, { target: { value } })
+    },
+  }
+}
+
+describe('L2 分组与批量动作（面板）', () => {
+  it('分组数字与语料逐项一致；三类“只能补原文”的组没有任何批量按钮', async () => {
+    render(<ExtractionReviewPanel snapshot={await corpusShapedSnapshot()} busy={false} actions={batchActions()} />)
+    const confirmable = screen.getByTestId('group-summary-confirmable')
+    expect(confirmable.textContent).toContain('可确认 58')
+    expect(confirmable.textContent).toContain('单值 28')
+    expect(confirmable.textContent).toContain('同符号多处 30')
+    expect(confirmable.textContent).toContain('11 组')
+    const units = screen.getByTestId('group-summary-units')
+    expect(units.textContent).toContain('仅差单位 45')
+    expect(units.textContent).toContain('单值 13')
+    expect(units.textContent).toContain('同符号多处 32')
+    const blocked = screen.getByTestId('group-summary-blocked')
+    expect(blocked.textContent).toContain('阻塞其余 35')
+    expect(blocked.textContent).toContain('FORMULA_UNSUPPORTED 32')
+    expect(blocked.textContent).toContain('NUMBER_UNSUPPORTED 2')
+    expect(blocked.textContent).toContain('UNSUPPORTED_UNIT 1')
+    expect(blocked.textContent).toContain('只能补原文或放弃')
+    // 三类阻塞组头都只有折叠按钮，没有批量动作。
+    for (const code of ['FORMULA_UNSUPPORTED', 'NUMBER_UNSUPPORTED', 'UNSUPPORTED_UNIT']) {
+      const head = screen.getByRole('button', { name: new RegExp(`折叠 阻塞 · ${code}`) }).closest('li')!
+      expect(within(head as HTMLElement).getAllByRole('button')).toHaveLength(1)
+    }
+    // 折叠后再展开，组内条目顺序不变（两次打开一致）。
+    const candidateRows = () => within(screen.getByRole('list', { name: '提取候选列表' })).getAllByRole('listitem')
+    const firstOrder = candidateRows().map((item) => item.textContent?.slice(0, 40))
+    fireEvent.click(screen.getByRole('button', { name: /折叠 可确认 · 单值/ }))
+    expect(candidateRows()).toHaveLength(firstOrder.length - 28)
+    fireEvent.click(screen.getByRole('button', { name: /展开 可确认 · 单值/ }))
+    const secondOrder = candidateRows().map((item) => item.textContent?.slice(0, 40))
+    expect(secondOrder).toEqual(firstOrder)
+  })
+
+  it('单值组「本组全部确认」一次请求逐条落盘；同符号多处组没有本组批量按钮', async () => {
+    const handler = batchActions()
+    render(<ExtractionReviewPanel snapshot={await corpusShapedSnapshot()} busy={false} actions={handler} />)
+    fireEvent.click(screen.getByRole('button', { name: '本组全部确认（28 条）' }))
+    await waitFor(() => expect(handler.onConfirmBatch).toHaveBeenCalledTimes(1))
+    expect(handler.onConfirmBatch).toHaveBeenCalledWith({
+      draftId: 'draft-test',
+      candidateIds: Array.from({ length: 28 }, (_, index) => `s-${index}`),
+    })
+    await waitFor(() =>
+      expect(screen.getByText(/已批量确认 28 条：每条各有一条决定（未合并）/)).toBeInTheDocument(),
+    )
+    // 同符号多处组从头到尾没有本组批量按钮（只有单值组有）。
+    expect(screen.getAllByRole('button', { name: /本组全部确认/ })).toHaveLength(1)
+  })
+
+  it('选中互斥组里的候选再批量确认 → main 整批拒绝，面板原样显示原因且不显示“已批量确认”', async () => {
+    const handler = batchActions()
+    handler.onConfirmBatch = vi.fn(async (request) => ({
+      ok: false as const,
+      error: {
+        code: 'EXTRACTION_GROUP_CONFLICT' as const,
+        message: `同一符号多处赋值只能确认一处，批量确认不适用于这些组，整批未执行（0 条写入）：M0（${request.candidateIds.join('、')}）`,
+      },
+    }))
+    render(<ExtractionReviewPanel snapshot={await corpusShapedSnapshot()} busy={false} actions={handler} />)
+    fireEvent.click(screen.getByLabelText('选择候选 m-0-0'))
+    fireEvent.click(screen.getByLabelText('选择候选 m-0-1'))
+    fireEvent.click(screen.getByRole('button', { name: '批量确认选中项' }))
+    await waitFor(() =>
+      expect(screen.getByText(/同一符号多处赋值只能确认一处，批量确认不适用于这些组/)).toBeInTheDocument(),
+    )
+    expect(screen.getByText(/整批未执行（0 条写入）/)).toBeInTheDocument()
+    expect(screen.queryByText(/已批量确认/)).toBeNull()
+  })
+
+  it('批量补单位：一句声明逐字提交，覆盖 45 条“仅差单位”，不碰其它组', async () => {
+    const handler = batchActions()
+    render(<ExtractionReviewPanel snapshot={await corpusShapedSnapshot()} busy={false} actions={handler} />)
+    fireEvent.click(screen.getByRole('button', { name: '批量补单位（45 条）…' }))
+    fireEvent.change(screen.getByLabelText('单位声明'), { target: { value: '本表单位 mm' } })
+    fireEvent.click(screen.getByRole('button', { name: '确认补单位（45 条）' }))
+    await waitFor(() => expect(handler.onAttestUnits).toHaveBeenCalledTimes(1))
+    const called = vi.mocked(handler.onAttestUnits!).mock.calls[0]![0]
+    expect(called.statement).toBe('本表单位 mm')
+    expect(called.candidateIds).toHaveLength(45)
+    expect(called.candidateIds).toContain('u-single-0')
+    expect(called.candidateIds).toContain('u-multi-15-1')
+    expect(called.candidateIds).not.toContain('s-0')
+    expect(called.candidateIds).not.toContain('b-formula-0')
+    await waitFor(() => expect(screen.getByText(/已为 45 条“仅差单位”候选补上 mm/)).toBeInTheDocument())
+  })
+})
+
+describe('L2 操作数计数用例（界面里数，不凭感觉估）', () => {
+  it('从打开面板到完成 58 条确认：改前 58 次点击 → 改后 12 次点击；加补单位共 15 次操作', async () => {
+    const handler = batchActions()
+    render(<ExtractionReviewPanel snapshot={await corpusShapedSnapshot()} busy={false} actions={handler} />)
+    const ops = opsCounter()
+
+    // 改后路径：1 次批量确认单值 28 条 + 11 个互斥组各选一处（每组 1 次单独确认）。
+    ops.click(screen.getByRole('button', { name: '本组全部确认（28 条）' }))
+    await waitFor(() => expect(handler.onConfirmBatch).toHaveBeenCalledTimes(1))
+    const multiSizes = [3, 2, 3, 3, 3, 4, 4, 2, 2, 2, 2]
+    multiSizes.forEach((_size, groupIndex) => {
+      const row = screen.getByLabelText(`选择候选 m-${groupIndex}-0`).closest('li')!
+      ops.click(within(row as HTMLElement).getByRole('button', { name: '确认' }))
+    })
+    await waitFor(() => expect(handler.onDecide).toHaveBeenCalledTimes(multiSizes.length))
+
+    // 额外：45 条“仅差单位”用 3 次操作（开表单 / 输入声明 / 确认补单位）。
+    ops.click(screen.getByRole('button', { name: '批量补单位（45 条）…' }))
+    ops.type(screen.getByLabelText('单位声明'), '本表单位 mm')
+    ops.click(screen.getByRole('button', { name: '确认补单位（45 条）' }))
+    await waitFor(() => expect(handler.onAttestUnits).toHaveBeenCalledTimes(1))
+
+    expect(ops.state).toEqual({ clicks: 14, inputs: 1 })
+    // 58 条确认本身的点击 = 1 批量 + 11 次逐组选择（补单位那 2 次点击 + 1 次输入另计）。
+    expect(ops.state.clicks - 2).toBe(12)
+    // 必须人工单独决策的条目数 = 11 组（每组只能选一处），改前是 58 条逐条点。
+    expect(multiSizes).toHaveLength(11)
+    expect(1 + multiSizes.length).toBeLessThanOrEqual(25)
+  })
+})

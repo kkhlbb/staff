@@ -605,7 +605,12 @@ export interface ExtractionChunkRef {
   readonly to: number
 }
 
-export type DecisionAction = 'confirm' | 'reject' | 'edit' | 'revoke'
+/**
+ * 决定动作。
+ * - `attest-unit`：用户给出单位声明，把声明逐字记成 user-attestation 出处并补齐单位
+ *   （L2 批量补单位；不是“确认候选”，补完仍要逐条/逐组确认）。
+ */
+export type DecisionAction = 'confirm' | 'reject' | 'edit' | 'revoke' | 'attest-unit'
 
 export interface ExtractionDecision {
   readonly decisionId: string
@@ -622,6 +627,13 @@ export interface ExtractionDecision {
   readonly evidence: readonly ExtractionEvidence[]
   /** ADR-001：决定时的出处集合；旧决定缺省时由 evidence 映射。 */
   readonly provenance?: readonly EvidenceRef[]
+  /**
+   * 批量动作批次号（纯加法，读旧决定时为 null）。
+   *
+   * 只有批量补单位写它：同一批的所有决定共享一个 batchId，界面的「整批撤销」
+   * 按它定位；“逐条撤销”只看 candidateId，不依赖批次。
+   */
+  readonly batchId?: string | null
   readonly invalidatedByEditRevision: number | null
 }
 
@@ -679,6 +691,14 @@ export type ExtractionErrorCode =
   | 'ATTESTATION_SESSION_MISMATCH'
   /** user-attestation 已被显式撤销：出处仍在，但不再有效。 */
   | 'PROVENANCE_REVOKED'
+  /** 批量补单位：批内有候选不是“仅差单位”，整批未执行（message 指出是哪几条）。 */
+  | 'BATCH_NOT_ELIGIBLE'
+  /** 批量补单位：用户声明里找不到可识别的单位，或不是 mm。 */
+  | 'UNIT_STATEMENT_INVALID'
+  /** 批量撤销补单位：找不到仍有效的补单位决定。 */
+  | 'ATTESTATION_NOT_FOUND'
+  /** 批量撤销补单位：目标候选已有有效确认，必须先撤销确认。 */
+  | 'ATTESTATION_CONFIRMED'
 
 export type ExtractionResult<T> =
   | { readonly ok: true; readonly value: T }

@@ -1,0 +1,52 @@
+{
+  "steps": [
+    {
+      "step": "grouped",
+      "confirmable": "可确认 44： 单值 19（可批量确认）· 同符号多处 25（9 组，只能人工选一处）",
+      "units": "仅差单位 29： 单值 5 · 同符号多处 24 批量补单位（29 条）…",
+      "blocked": "阻塞其余 14：FORMULA_UNSUPPORTED 13 · UNSUPPORTED_UNIT 1（公式不支持 / 数值不支持 / 单位不支持只能补原文或放弃，不提供批量动作）",
+      "groupHeads": [
+        "▾ 可确认 · 单值 19",
+        "▾ 可确认 · 同符号多处 25",
+        "▾ 仅差单位 · 单值 5",
+        "▾ 仅差单位 · 同符号多处 24",
+        "▾ 阻塞 · FORMULA_UNSUPPORTED 13",
+        "▾ 阻塞 · UNSUPPORTED_UNIT 1"
+      ]
+    },
+    {
+      "step": "attested",
+      "pending": 73,
+      "blocked": 14,
+      "attestUnits": 29,
+      "statements": [
+        "本表单位 mm（2026-11-12 复核）"
+      ],
+      "batches": [
+        "unit-batch-2638da096d636b7b"
+      ]
+    },
+    {
+      "step": "revoked",
+      "pending": 44,
+      "blocked": 43,
+      "revoked": 29,
+      "unknownUnit": 29
+    },
+    {
+      "step": "group-refused",
+      "selectedCandidateIds": [
+        "ring-aa653f38c5fe6efa",
+        "ring-d63617859e76fae7"
+      ],
+      "error": "EXTRACTION_GROUP_CONFLICT：同一符号多处赋值只能确认一处，批量确认不适用于这些组，整批未执行（0 条写入）：T1（ring-aa653f38c5fe6efa T1（第 1/3 处）、ring-d63617859e76fae7 T1（第 2/3 处））",
+      "confirmed": 0,
+      "decisions": 0,
+      "selected": 2
+    }
+  ],
+  "passed": true,
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

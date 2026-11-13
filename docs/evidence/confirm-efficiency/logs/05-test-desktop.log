@@ -1,0 +1,16 @@
+$ npm run test:desktop
+
+> staff@0.4.0-beta test:desktop
+> vitest run --config vitest.desktop.config.ts
+
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+
+ Test Files  43 passed | 2 skipped (45)
+      Tests  297 passed | 17 skipped (314)
+   Start at  21:01:26
+   Duration  7.55s (tests 88%, import 10%, transform 1%)
+
+
+EXIT=0

@@ -42,6 +42,8 @@ import {
   type ExtractionDecideValue,
   type ExtractionCancelValue,
   type ExtractionDeleteDraftValue,
+  type ExtractionAttestUnitsValue,
+  type ExtractionBatchValue,
   type AgentStartRequest,
   type AgentStartValue,
   type AgentTaskView,
@@ -263,6 +265,18 @@ const api: CunlianApi = {
   deleteExtractionDraft: (request) =>
     ipcRenderer.invoke(IPC_CHANNELS.extractionDeleteDraft, request) as Promise<
       IpcResult<ExtractionDeleteDraftValue>
+    >,
+  confirmExtractionBatch: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.extractionConfirmBatch, request) as Promise<
+      IpcResult<ExtractionBatchValue>
+    >,
+  attestExtractionUnits: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.extractionAttestUnits, request) as Promise<
+      IpcResult<ExtractionAttestUnitsValue>
+    >,
+  revokeExtractionUnits: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.extractionRevokeUnits, request) as Promise<
+      IpcResult<ExtractionBatchValue>
     >,
   agentStart: (request: AgentStartRequest) =>
     ipcRenderer.invoke(IPC_CHANNELS.agentStart, request) as Promise<ToolResult<AgentStartValue>>,

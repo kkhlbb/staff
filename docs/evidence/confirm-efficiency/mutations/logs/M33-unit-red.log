@@ -1,0 +1,35 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/staff
+
+ ❯ src/document-extraction/__tests__/confirmBatch.test.ts (16 tests | 1 failed) 8ms
+   ❯ 批量补单位 (4)
+     × 任一条不是“仅差单位” → 整批拒绝、指出是哪几条、0 写入（M33 靶子） 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/document-extraction/__tests__/confirmBatch.test.ts > 批量补单位 > 任一条不是“仅差单位” → 整批拒绝、指出是哪几条、0 写入（M33 靶子）
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/document-extraction/__tests__/confirmBatch.test.ts:303:23
+    301|       sessionSeq: 1,
+    302|     })
+    303|     expect(result.ok).toBe(false)
+       |                       ^
+    304|     if (result.ok) return
+    305|     expect(result.code).toBe('BATCH_NOT_ELIGIBLE')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 15 passed (16)
+   Start at  20:51:08
+   Duration  136ms (setup 45%, transform 31%, import 11%, tests 11%, worker 2%)
+
+EXIT=1

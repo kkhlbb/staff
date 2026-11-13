@@ -46,6 +46,11 @@ import type {
   ExtractionCancelValue,
   ExtractionDeleteDraftRequest,
   ExtractionDeleteDraftValue,
+  ExtractionConfirmBatchRequest,
+  ExtractionAttestUnitsRequest,
+  ExtractionAttestUnitsValue,
+  ExtractionRevokeUnitsRequest,
+  ExtractionBatchValue,
 } from '../../desktop/shared/contracts'
 
 export interface DesktopSessionState {
@@ -504,6 +509,65 @@ export class DesktopSessionAdapter {
       this.emit()
     }
     return result
+  }
+
+  /**
+   * L2 批量动作的公共收尾：成功时重同步权威快照；失败时只记录错误（快照不动）。
+   * “整批拒绝 = 0 写入”由 main 保证，这里不自行改快照。
+   */
+  private applyBatchResult<T extends { snapshot: SnapshotDto; acceptedSeq: number; recovery: RecoveryWriteState | 'none' }>(
+    result: IpcResult<T>,
+  ): IpcResult<T> {
+    if (result.ok) {
+      this.state = {
+        ...this.state,
+        status: 'open',
+        snapshot: result.value.snapshot,
+        acceptedSeq: result.value.acceptedSeq,
+        localSeq: Math.max(this.state.localSeq, result.value.acceptedSeq),
+        dirty: result.value.acceptedSeq > this.state.savedSeq,
+        recovery: result.value.recovery,
+        lastError: undefined,
+      }
+      this.emit()
+    } else {
+      this.state = { ...this.state, lastError: result.error }
+      this.emit()
+    }
+    return result
+  }
+
+  /** L2：同组批量确认（互斥组整批拒绝）。 */
+  async confirmExtractionBatch(
+    request: ExtractionConfirmBatchRequest,
+  ): Promise<IpcResult<ExtractionBatchValue>> {
+    const api = this.api
+    if (api.confirmExtractionBatch === undefined) {
+      return { ok: false, error: { code: 'UNSUPPORTED_VERSION', message: '当前 preload 未提供批量确认' } }
+    }
+    return this.applyBatchResult(await api.confirmExtractionBatch(request))
+  }
+
+  /** L2：批量补单位（只对“仅差单位”）。 */
+  async attestExtractionUnits(
+    request: ExtractionAttestUnitsRequest,
+  ): Promise<IpcResult<ExtractionAttestUnitsValue>> {
+    const api = this.api
+    if (api.attestExtractionUnits === undefined) {
+      return { ok: false, error: { code: 'UNSUPPORTED_VERSION', message: '当前 preload 未提供批量补单位' } }
+    }
+    return this.applyBatchResult(await api.attestExtractionUnits(request))
+  }
+
+  /** L2：撤销补单位（整批或逐条）。 */
+  async revokeExtractionUnits(
+    request: ExtractionRevokeUnitsRequest,
+  ): Promise<IpcResult<ExtractionBatchValue>> {
+    const api = this.api
+    if (api.revokeExtractionUnits === undefined) {
+      return { ok: false, error: { code: 'UNSUPPORTED_VERSION', message: '当前 preload 未提供撤销补单位' } }
+    }
+    return this.applyBatchResult(await api.revokeExtractionUnits(request))
   }
 
   /** 条款确认已由 main 原子写盘；成功只重同步权威快照与保存状态。 */

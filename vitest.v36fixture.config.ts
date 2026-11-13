@@ -13,6 +13,7 @@ export default defineConfig({
       'scripts/v36-ui-seed.ts',
       'scripts/v36-ambiguous-seed.ts',
       'scripts/v36-drafts-seed.ts',
+      'scripts/confirm-efficiency-seed.ts',
     ],
     environment: 'node',
     setupFiles: [],

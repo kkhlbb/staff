@@ -12,8 +12,10 @@
  * - 默认显示 extractorVersion 最高的草稿，顶部明确写出当前显示哪个草稿（版本 + 草稿 id）；
  * - 其余草稿折叠成一行，可展开查看候选（只读）或显式删除；删除必须二次确认。
  */
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import type {
+  ExtractionAttestUnitsValue,
+  ExtractionBatchValue,
   ExtractionCancelValue,
   ExtractionDecideValue,
   ExtractionDeleteDraftValue,
@@ -24,9 +26,14 @@ import type {
 import {
   EXTRACTOR_VERSION,
   activeConfirmedDecisionCount,
+  activeUnitAttestation,
+  activeUnitBatches,
+  batchConfirmCandidateIds,
+  batchUnitCandidateIds,
   canDeleteDraft,
   compareExtractorVersions,
   extractorVersionLabel,
+  groupConfirmCandidates,
   groupExtractionDrafts,
   type EditableField,
   type ExtractionCandidate,
@@ -62,6 +69,26 @@ export interface ExtractionReviewActions {
   onCancel: (requestId: string) => Promise<ExtractionCancelValue | null>
   /** 删除一份被取代的旧规则版本草稿；返回 null 表示失败（错误由外层提示）。 */
   onDeleteDraft: (request: { draftId: string }) => Promise<ExtractionDeleteDraftValue | null>
+  /**
+   * L2 批量动作。缺省表示当前环境未装配（旧测试/非桌面环境）：界面不渲染任何批量按钮，
+   * 绝不给出“看起来能批量、点了没反应”的假按钮。
+   *
+   * 返回值是完整 IpcResult：整批拒绝的原因（main 生成的 message）要原样显示在面板里。
+   */
+  onConfirmBatch?: (request: {
+    draftId: string
+    candidateIds: string[]
+  }) => Promise<IpcResult<ExtractionBatchValue> | null>
+  onAttestUnits?: (request: {
+    draftId: string
+    candidateIds: string[]
+    statement: string
+  }) => Promise<IpcResult<ExtractionAttestUnitsValue> | null>
+  onRevokeUnits?: (request: {
+    draftId: string
+    batchId?: string
+    candidateId?: string
+  }) => Promise<IpcResult<ExtractionBatchValue> | null>
 }
 
 export interface ExtractionReviewPanelProps {
@@ -181,6 +208,10 @@ export function ExtractionReviewPanel({
   const [locate, setLocate] = useState<
     { revisionId: string; page: number; rectPdf: readonly [number, number, number, number]; pageBoxPdf: readonly [number, number, number, number]; label: string } | null
   >(null)
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, true>>({})
+  const [unitFormOpen, setUnitFormOpen] = useState(false)
+  const [unitStatement, setUnitStatement] = useState('')
+  const [batchRunning, setBatchRunning] = useState<string | null>(null)
 
   // 同一 PDF 版本 + 同一页范围为一组；组内默认显示版本最高的草稿，其余折叠成旧草稿行。
   const scopes = useMemo(() => groupExtractionDrafts(drafts), [drafts])
@@ -198,6 +229,24 @@ export function ExtractionReviewPanel({
     for (const candidate of draft?.candidates ?? []) base[candidate.status] += 1
     return base
   }, [draft])
+  const grouping = useMemo(
+    () => (draft === null ? null : groupConfirmCandidates(draft.candidates)),
+    [draft],
+  )
+  const unitBatches = useMemo(
+    () => (draft === null ? [] : activeUnitBatches(draft)),
+    [draft],
+  )
+  /**
+   * “仅差单位”批量补单位的目标集合：两个仅差单位组（单值 + 同符号多处）的全部成员。
+   * 公式/数值/单位不支持与可确认组永远不在集合里。
+   */
+  const unitOnlyIds = useMemo(() => {
+    if (grouping === null) return []
+    return grouping.groups
+      .filter((group) => group.capability === 'attest-unit')
+      .flatMap((group) => [...batchUnitCandidateIds(group)])
+  }, [grouping])
   const selectedIds = Object.keys(selected).filter((id) => draft?.candidates.some((candidate) => candidate.candidateId === id))
 
   async function run(): Promise<void> {
@@ -292,6 +341,96 @@ export function ExtractionReviewPanel({
     setMessage(`已批量拒绝 ${selectedIds.length} 条候选（逐条记录理由）。`)
   }
 
+  /**
+   * 批量确认：一次请求，main 逐条写决定。
+   * 拒绝时把 main 的 message 原样显示（含“哪几条/哪个互斥组”），快照不动。
+   */
+  async function confirmBatch(ids: readonly string[], key: string): Promise<void> {
+    if (draft === null || actions.onConfirmBatch === undefined || batchRunning !== null) return
+    if (ids.length === 0) return
+    setError('')
+    setMessage('')
+    setBatchRunning(key)
+    try {
+      const result = await actions.onConfirmBatch({ draftId: draft.draftId, candidateIds: [...ids] })
+      if (result === null) {
+        setError('批量确认未执行：请检查错误提示或项目会话。')
+        return
+      }
+      if (!result.ok) {
+        setError(`${result.error.code}：${result.error.message}`)
+        return
+      }
+      setSelected({})
+      setMessage(
+        `已批量确认 ${result.value.decisions.length} 条：每条各有一条决定（未合并），决定仍可逐条撤销。`,
+      )
+    } finally {
+      setBatchRunning(null)
+    }
+  }
+
+  /** 批量补单位：user-attestation 的 statement 逐字来自输入框；任一条不合格整批拒绝。 */
+  async function attestUnits(): Promise<void> {
+    if (
+      draft === null ||
+      actions.onAttestUnits === undefined ||
+      batchRunning !== null ||
+      unitStatement.trim() === ''
+    ) {
+      return
+    }
+    setError('')
+    setMessage('')
+    setBatchRunning('attest-units')
+    try {
+      const result = await actions.onAttestUnits({
+        draftId: draft.draftId,
+        candidateIds: [...unitOnlyIds],
+        statement: unitStatement,
+      })
+      if (result === null) {
+        setError('批量补单位未执行：请检查错误提示或项目会话。')
+        return
+      }
+      if (!result.ok) {
+        setError(`${result.error.code}：${result.error.message}`)
+        return
+      }
+      setUnitFormOpen(false)
+      setUnitStatement('')
+      setMessage(
+        `已为 ${result.value.decisions.length} 条“仅差单位”候选补上 ${result.value.unitText}（逐条记 user-attestation，声明原话逐字保存）；补完仍是待确认，需要再确认。`,
+      )
+    } finally {
+      setBatchRunning(null)
+    }
+  }
+
+  /** 撤销补单位：整批（batchId）或逐条（candidateId）。 */
+  async function revokeUnits(selector: { batchId?: string; candidateId?: string }): Promise<void> {
+    if (draft === null || actions.onRevokeUnits === undefined || batchRunning !== null) return
+    setError('')
+    setMessage('')
+    setBatchRunning(selector.batchId ?? selector.candidateId ?? 'revoke')
+    try {
+      const result = await actions.onRevokeUnits({ draftId: draft.draftId, ...selector })
+      if (result === null) {
+        setError('撤销补单位未执行：请检查错误提示或项目会话。')
+        return
+      }
+      if (!result.ok) {
+        setError(`${result.error.code}：${result.error.message}`)
+        return
+      }
+      setMessage(
+        `已撤销 ${result.value.decisions.length} 条补单位：单位回到未定，候选回到阻塞；出处只标撤销、原话保留。`,
+      )
+    } finally {
+      setBatchRunning(null)
+    }
+  }
+
   /** 删除旧草稿：二次确认框里的按钮才会走到这里；失败零写入由 main 保证。 */
   async function deleteOldDraft(target: ExtractionDraft): Promise<void> {
     if (deleting !== null) return
@@ -340,6 +479,7 @@ export function ExtractionReviewPanel({
       ? groupMembers.find((item) => item.candidateId !== candidate.candidateId && item.status === 'confirmed')
       : undefined
     const groupConflict = confirmedSibling !== undefined
+    const activeUnit = activeUnitAttestation(owner, { candidateId: candidate.candidateId })
     return (
       <li
         key={candidate.candidateId}
@@ -417,7 +557,9 @@ export function ExtractionReviewPanel({
                 ? '拒绝'
                 : decision.action === 'revoke'
                   ? '撤销确认'
-                  : '人工修改'
+                  : decision.action === 'attest-unit'
+                    ? '补单位（用户声明）'
+                    : '人工修改'
           return (
             <p className="extraction-review__decision">
               决定：{actionLabel} · {decision.actor} · {decision.decidedAt}
@@ -466,6 +608,20 @@ export function ExtractionReviewPanel({
               onClick={() => void decide(candidate, 'revoke')}
             >
               撤销确认
+            </button>
+          )}
+          {!readOnly && activeUnit !== null && actions.onRevokeUnits !== undefined && (
+            <button
+              type="button"
+              disabled={busy || batchRunning !== null || candidate.status === 'confirmed'}
+              title={
+                candidate.status === 'confirmed'
+                  ? '该候选已确认，撤销补单位会破坏确认依据；请先撤销确认'
+                  : `撤销这一条补单位（声明「${activeUnit.reason ?? ''}」）；出处只标撤销、原话保留`
+              }
+              onClick={() => void revokeUnits({ candidateId: candidate.candidateId })}
+            >
+              撤销补单位
             </button>
           )}
           <button
@@ -686,15 +842,156 @@ export function ExtractionReviewPanel({
               ))}
             </ul>
           )}
+          {grouping !== null && (
+            <section className="extraction-review__groups" aria-label="按原因码分组">
+              <p className="extraction-review__groups-title">
+                按原因码分组（组内按页/位置固定顺序，两次打开一致）
+              </p>
+              <p className="extraction-review__groups-line" data-testid="group-summary-confirmable">
+                可确认 {grouping.counts.pending}：
+                单值 {grouping.counts.confirmableSingle}（可批量确认）·
+                同符号多处 {grouping.counts.confirmableMulti}（
+                {grouping.pendingIndividualDecisions} 组，只能人工选一处）
+              </p>
+              <p className="extraction-review__groups-line" data-testid="group-summary-units">
+                仅差单位 {grouping.counts.unitOnlySingle + grouping.counts.unitOnlyMulti}：
+                单值 {grouping.counts.unitOnlySingle} · 同符号多处 {grouping.counts.unitOnlyMulti}
+                {actions.onAttestUnits !== undefined && unitOnlyIds.length > 0 && (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      disabled={busy || batchRunning !== null}
+                      onClick={() => {
+                        setUnitFormOpen((current) => !current)
+                        setError('')
+                        setMessage('')
+                      }}
+                    >
+                      批量补单位（{unitOnlyIds.length} 条）…
+                    </button>
+                  </>
+                )}
+              </p>
+              {unitFormOpen && actions.onAttestUnits !== undefined && (
+                <div className="extraction-review__inline" role="group" aria-label="批量补单位">
+                  <input
+                    aria-label="单位声明"
+                    value={unitStatement}
+                    placeholder="例：本表单位 mm"
+                    onChange={(event) => setUnitStatement(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    disabled={unitStatement.trim() === '' || batchRunning !== null || busy}
+                    onClick={() => void attestUnits()}
+                  >
+                    确认补单位（{unitOnlyIds.length} 条）
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUnitFormOpen(false)
+                      setUnitStatement('')
+                    }}
+                  >
+                    取消
+                  </button>
+                  <span className="extraction-review__hint">
+                    只补「仅差单位」两组；声明原话逐字存入 user-attestation。任一条不是“仅差单位”会整批拒绝并指出是哪几条。
+                    公式/数值/单位不支持三类不在批量范围内。
+                  </span>
+                </div>
+              )}
+              <p className="extraction-review__groups-line" data-testid="group-summary-blocked">
+                阻塞其余 {grouping.counts.blocked - grouping.counts.unitOnlySingle - grouping.counts.unitOnlyMulti}：
+                {grouping.counts.blockedByCode
+                  .map((item) => `${item.code} ${item.count}`)
+                  .join(' · ')}
+                （公式不支持 / 数值不支持 / 单位不支持只能补原文或放弃，不提供批量动作）
+              </p>
+              {unitBatches.length > 0 && (
+                <div className="extraction-review__unit-batches" role="group" aria-label="补单位批次">
+                  {unitBatches.map((batch) => (
+                    <div key={batch.batchId} className="extraction-review__unit-batch">
+                      <span>
+                        补单位批次 {batch.batchId.slice(0, 18)}… · {batch.candidateIds.length} 条 · 声明「
+                        {batch.statement}」
+                      </span>
+                      {actions.onRevokeUnits !== undefined && (
+                        <button
+                          type="button"
+                          disabled={busy || batchRunning !== null}
+                          onClick={() => void revokeUnits({ batchId: batch.batchId })}
+                        >
+                          整批撤销
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
           <div className="extraction-review__batch">
             <span>已选 {selectedIds.length} 项</span>
+            {actions.onConfirmBatch !== undefined && (
+              <button
+                type="button"
+                onClick={() => void confirmBatch(selectedIds, 'confirm-selected')}
+                disabled={busy || batchRunning !== null || selectedIds.length === 0}
+              >
+                批量确认选中项
+              </button>
+            )}
             <button type="button" onClick={() => void rejectSelected()} disabled={busy || selectedIds.length === 0}>
               批量拒绝选中项
             </button>
-            <span className="extraction-review__hint">不提供批量确认：每条必须单独核对原文后确认。</span>
+            <span className="extraction-review__hint">
+              批量确认逐条写决定；选中任何“同符号多处赋值”的候选会被整批拒绝（0 条写入）。
+              阻塞候选不能批量确认，只能补原文或放弃。
+            </span>
           </div>
           <ul className="extraction-review__candidates" aria-label="提取候选列表">
-            {draft.candidates.map((candidate) => renderCandidate(candidate, draft, null))}
+            {grouping === null
+              ? draft.candidates.map((candidate) => renderCandidate(candidate, draft, null))
+              : grouping.groups.map((group) => {
+                  const collapsed = collapsedGroups[group.key] === true
+                  const batchIds = batchConfirmCandidateIds(group)
+                  return (
+                    <Fragment key={group.key}>
+                      <li role="presentation" className="extraction-review__group-head">
+                        <button
+                          type="button"
+                          aria-expanded={!collapsed}
+                          aria-label={`${collapsed ? '展开' : '折叠'} ${group.title}`}
+                          onClick={() =>
+                            setCollapsedGroups((current) => {
+                              const next = { ...current }
+                              if (collapsed) delete next[group.key]
+                              else next[group.key] = true
+                              return next
+                            })
+                          }
+                        >
+                          {collapsed ? '▸' : '▾'} {group.title}
+                        </button>
+                        {group.capability === 'confirm' && actions.onConfirmBatch !== undefined && (
+                          <button
+                            type="button"
+                            disabled={busy || batchRunning !== null || batchIds.length === 0}
+                            onClick={() => void confirmBatch(batchIds, `group:${group.key}`)}
+                          >
+                            本组全部确认（{batchIds.length} 条）
+                          </button>
+                        )}
+                        <span className="extraction-review__group-hint">{group.hint}</span>
+                      </li>
+                      {!collapsed &&
+                        group.candidates.map((candidate) => renderCandidate(candidate, draft, null))}
+                    </Fragment>
+                  )
+                })}
           </ul>
 
           {selectedScope.superseded.length > 0 && (

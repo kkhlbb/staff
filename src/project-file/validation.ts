@@ -740,7 +740,7 @@ const extractionDecisionSchema = z
   .object({
     decisionId: idSchema,
     candidateId: idSchema,
-    action: z.enum(['confirm', 'reject', 'edit', 'revoke']),
+    action: z.enum(['confirm', 'reject', 'edit', 'revoke', 'attest-unit']),
     candidateEditRevision: nonNegativeInt,
     decidedAt: z.string().min(1),
     actor: z.string().min(1).max(200),
@@ -749,6 +749,11 @@ const extractionDecisionSchema = z
     evidence: z.array(extractionEvidenceSchema).max(64),
     /** ADR-001（schema9，纯加法）：决定时的出处集合；读旧 schema8 时缺省。 */
     provenance: z.array(provenanceRefSchema).max(64).optional(),
+    /**
+     * L2 批量补单位的批次号（纯加法，读旧决定时缺省）。
+     * 同一批的决定共享它，界面「整批撤销」按它定位。
+     */
+    batchId: z.string().min(1).max(200).nullable().optional(),
     invalidatedByEditRevision: nonNegativeInt.nullable(),
   })
   .strict()
@@ -1976,7 +1981,9 @@ export function validateExtractionDraftReferences(
    * 出处是否仍指向草稿的 PDF 版本（I3）：
    * - pdf-text / pdf-ocr：revisionId + sha256 + blobKey 全等（行为与改前一致）；
    * - image-ocr：锚在图片自身，项目文件层无图片库可核对，只要求完整（下一步接图片存储）；
-   * - user-attestation：不因文件变化失效，但已显式撤销的出处不能再作为依据。
+   * - user-attestation：不因文件变化失效。**已显式撤销的断言仍允许留在出处里**
+   *   （I4：出处不可抹，撤销只追加 revokedAt/revokedBy 留痕）；它能不能当依据由
+   *   planApplication 判（PROVENANCE_REVOKED），不是这里判“指向别的版本”。
    */
   const provenanceMatchesDraft = (
     ref: ExtractionEvidence | { readonly kind: 'pdf-ocr' | 'image-ocr' | 'user-attestation' } | { readonly kind?: 'pdf-text' },
@@ -1984,9 +1991,7 @@ export function validateExtractionDraftReferences(
   ): boolean => {
     const kind = (ref as { readonly kind?: string }).kind
     if (kind === 'image-ocr') return true
-    if (kind === 'user-attestation') {
-      return ((ref as { readonly revokedAt?: string | null }).revokedAt ?? null) === null
-    }
+    if (kind === 'user-attestation') return true
     return evidenceMatchesSource(ref as ExtractionEvidence, draft)
   }
 
