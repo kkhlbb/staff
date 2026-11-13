@@ -71,7 +71,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
+  width: var(--layout-importwizard-74-width);
   height: 18px;
   border-radius: 50%;
   background: #e2e8f0;
@@ -264,7 +264,7 @@
 
 .import-wizard__template-row input,
 .import-wizard__template-row select {
-  min-width: 220px;
+  min-width: var(--layout-importwizard-267-min-width);
 }
 
 .import-wizard__mapping-grid {
@@ -461,6 +461,7 @@
   z-index: 70;
 }
 
+/* W11: CSS 原生 media 条件不支持 var()；保留既有断点，避免改变非桌面页面行为。 */
 @media (max-width: 640px) {
   .import-wizard__backdrop {
     padding: 0;

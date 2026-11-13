@@ -1,0 +1,5 @@
+--- a/src/pages/DesktopWorkspace.tsx
++++ b/src/pages/DesktopWorkspace.tsx
+@@
+-rightWidth === null ? 'var(--panel-sidebar-w)'
++rightWidth === null ? '424px'

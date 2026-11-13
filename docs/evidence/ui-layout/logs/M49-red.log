@@ -1,0 +1,6 @@
+{"viewport":[960,640],"tab":"工程图","scrollWidth":960,"clientWidth":960,"pageHeight":640,"centerMin":0,"center":{"x":238,"y":212.890625,"width":436,"height":394.109375,"right":674,"bottom":607},"sidebar":{"x":680,"y":212.890625,"width":280,"height":394.109375,"right":960,"bottom":607},"tree":{"x":0,"y":212.890625,"width":232,"height":394.109375,"right":232,"bottom":607},"bottom":{"x":0,"y":607,"width":960,"height":33,"right":960,"bottom":640},"collapsed":true,"bottomToken":33}
+AssertionError [ERR_ASSERTION]: central min-width contract missing: 0 < 360
+    at file:///Users/aston/DSH/staff/desktop/tests/e2e/layout.mjs:104:7
+LAYOUT_RESULT=FAIL checks=0
+
+EXIT_CODE=1

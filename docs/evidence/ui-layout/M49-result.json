@@ -1,0 +1,9 @@
+{
+  "verdict": "fail",
+  "checks": [],
+  "screenshots": [],
+  "error": "AssertionError [ERR_ASSERTION]: central min-width contract missing: 0 < 360\n    at file:layout.mjs:104:7",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

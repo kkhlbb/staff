@@ -190,6 +190,7 @@
   font-size: 11px;
 }
 
+/* W16: CSS 原生 media 条件不支持 var()；保留既有断点，避免改变非桌面页面行为。 */
 @media (max-width: 1200px) {
   .spacer-drawing {
     grid-template-rows: auto auto auto minmax(180px, 1fr) auto auto;

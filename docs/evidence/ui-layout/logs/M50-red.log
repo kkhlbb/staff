@@ -1,0 +1,6 @@
+{"viewport":[960,640],"tab":"工程图","scrollWidth":1028,"clientWidth":960,"pageHeight":640,"centerMin":360,"center":{"x":238,"y":212.890625,"width":360,"height":394.109375,"right":598,"bottom":607},"sidebar":{"x":604,"y":212.890625,"width":424,"height":394.109375,"right":1028,"bottom":607},"tree":{"x":0,"y":212.890625,"width":232,"height":394.109375,"right":232,"bottom":607},"bottom":{"x":0,"y":607,"width":960,"height":33,"right":960,"bottom":640},"collapsed":true,"bottomToken":33}
+AssertionError [ERR_ASSERTION]: horizontal overflow at 960: 1028 > 960
+    at file:///Users/aston/DSH/staff/desktop/tests/e2e/layout.mjs:102:7
+LAYOUT_RESULT=FAIL checks=0
+
+EXIT_CODE=1

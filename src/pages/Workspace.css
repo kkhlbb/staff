@@ -1,6 +1,6 @@
 .workspace {
   width: 100%;
-  max-width: 1680px;
+  max-width: var(--layout-workspace-3-max-width);
   margin: 0 auto;
   padding: 24px clamp(16px, 2vw, 32px) 48px;
 }
@@ -347,7 +347,7 @@
 
 .dimension-table__table {
   width: 100%;
-  min-width: 1040px;
+  min-width: var(--layout-workspace-350-min-width);
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -384,7 +384,7 @@
 }
 
 .dimension-table__row-select {
-  width: 28px;
+  width: var(--layout-workspace-387-width);
   height: 28px;
   padding: 0;
   border-color: transparent;
@@ -402,18 +402,18 @@
 
 .dimension-table__field {
   display: flex;
-  min-width: 82px;
+  min-width: var(--layout-workspace-405-min-width);
   flex-direction: column;
   gap: 3px;
 }
 
 .dimension-table__input {
   width: 100%;
-  min-width: 82px;
+  min-width: var(--layout-workspace-412-min-width);
 }
 
 .dimension-table__select {
-  max-width: 150px;
+  max-width: var(--layout-workspace-416-max-width);
 }
 
 .dimension-table__limit {
@@ -424,7 +424,7 @@
 
 .dimension-table__actions {
   display: flex;
-  min-width: 74px;
+  min-width: var(--layout-workspace-427-min-width);
   flex-wrap: wrap;
   gap: 4px;
 }
@@ -435,7 +435,7 @@
 }
 
 .dimension-table__error {
-  max-width: 170px;
+  max-width: var(--layout-workspace-438-max-width);
   color: var(--danger);
   font-size: 12px;
 }
@@ -663,6 +663,7 @@
   font-size: 12.5px;
 }
 
+/* W43: CSS 原生 media 条件不支持 var()；保留既有断点，避免改变非桌面页面行为。 */
 @media (max-width: 1180px) {
   .workspace__grid {
     grid-template-columns: minmax(0, 1fr);
@@ -679,14 +680,15 @@
 
   .dimension-table__field,
   .dimension-table__input {
-    min-width: 64px;
+    min-width: var(--layout-workspace-682-min-width);
   }
 
   .dimension-table__select {
-    max-width: 132px;
+    max-width: var(--layout-workspace-686-max-width);
   }
 }
 
+/* W46: CSS 原生 media 条件不支持 var()；保留既有断点，避免改变非桌面页面行为。 */
 @media (max-width: 720px) {
   .workspace {
     padding: 16px 12px 32px;
@@ -723,7 +725,7 @@
 
   /* 窄屏保留完整表格列，由 .dimension-table__scroll 横向滚动，页面不滚动。 */
   .dimension-table__table {
-    min-width: 820px;
+    min-width: var(--layout-workspace-726-min-width);
   }
 
   .result-panel__values {
@@ -742,6 +744,7 @@
   }
 }
 
+/* W48: CSS 原生 media 条件不支持 var()；保留既有断点，避免改变非桌面页面行为。 */
 @media (max-width: 480px) {
   .result-panel__target {
     grid-template-columns: minmax(0, 1fr);
@@ -797,6 +800,7 @@
 
 .source-panel__file-input {
   position: absolute;
+/* W49: 辅助技术专用 sr-only 1px 盒，不参与可见布局预算。 */
   width: 1px;
   height: 1px;
   padding: 0;
@@ -977,7 +981,7 @@
 }
 
 .pdf-viewer__page-field input {
-  width: 74px;
+  width: var(--layout-workspace-980-width);
 }
 
 .pdf-viewer__page-count {
@@ -1119,6 +1123,7 @@
   color: var(--accent);
 }
 
+/* W51: CSS 原生 media 条件不支持 var()；保留既有断点，避免改变非桌面页面行为。 */
 @media (max-width: 1180px) {
   .source-panel__grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1140,6 +1145,7 @@
   }
 }
 
+/* W52: CSS 原生 media 条件不支持 var()；保留既有断点，避免改变非桌面页面行为。 */
 @media (max-width: 720px) {
   .source-panel__header {
     flex-direction: column;

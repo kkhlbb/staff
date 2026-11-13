@@ -1,0 +1,76 @@
+{
+  "commands": [
+    {
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "summary": [],
+      "log": "logs/01-typecheck.log"
+    },
+    {
+      "command": "npm run typecheck:desktop",
+      "exitCode": 0,
+      "summary": [],
+      "log": "logs/02-typecheck-desktop.log"
+    },
+    {
+      "command": "npm run lint",
+      "exitCode": 0,
+      "summary": [],
+      "log": "logs/03-lint.log"
+    },
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "summary": [
+        " Test Files  116 passed (116)",
+        "      Tests  1324 passed (1324)"
+      ],
+      "log": "logs/04-test.log"
+    },
+    {
+      "command": "npm run test:desktop",
+      "exitCode": 0,
+      "summary": [
+        " Test Files  44 passed | 2 skipped (46)",
+        "      Tests  307 passed | 17 skipped (324)"
+      ],
+      "log": "logs/05-test-desktop.log"
+    },
+    {
+      "command": "npm run test:mcp",
+      "exitCode": 0,
+      "summary": [
+        " Test Files  3 passed (3)",
+        "      Tests  22 passed (22)"
+      ],
+      "log": "logs/06-test-mcp.log"
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0,
+      "summary": [
+        "✓ built in 227ms"
+      ],
+      "log": "logs/07-build.log"
+    },
+    {
+      "command": "npm run package:desktop",
+      "exitCode": 0,
+      "summary": [
+        "RESULT PASS 打包产物中的 pdf worker 可被 main.cjs 运行时加载"
+      ],
+      "log": "logs/08-package-desktop.log"
+    },
+    {
+      "command": "npm run test:desktop:layout",
+      "exitCode": 0,
+      "summary": [
+        "LAYOUT_RESULT=PASS checks=64"
+      ],
+      "log": "logs/09-test-desktop-layout.log"
+    }
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

@@ -1,0 +1,9 @@
+{
+  "verdict": "fail",
+  "checks": [],
+  "screenshots": [],
+  "error": "AssertionError [ERR_ASSERTION]: horizontal overflow at 960: 1028 > 960\n    at file:layout.mjs:102:7",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

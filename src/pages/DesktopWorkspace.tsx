@@ -41,40 +41,16 @@ import {
 import type { ProjectFileVisualReferenceLink } from '../project-file/types'
 import { isVisualReferenceLink } from '../project-file/types'
 import { REQUIREMENT_STATUS_LABEL, isPdfRequirementSource } from '../requirements/types'
+import { LAYOUT_BREAKPOINTS, layoutBudgetForWidth, treeWidthLimit } from '../components/layout/budgets'
+import { Panel } from '../components/layout/Panel'
+import { SplitPane, Splitter } from '../components/layout/SplitPane'
+import { ScrollArea } from '../components/layout/ScrollArea'
 import './Workspace.css'
 import './DesktopWorkspace.css'
 import '../components/AgentSidebar.css'
 
 const tabs = ['工程图', '3D', '来源 PDF', '尺寸链', '历史报告', '任务书提取'] as const
 const groups = ['零件', '工程图', '尺寸链', '来源资料', '版本历史'] as const
-
-/** 只调整布局，不维护工程数据或计算状态。 */
-function Splitter({ label, value, min, max, onChange, horizontal = false, reverse = false }: {
-  label: string; value: number; min: number; max: number; onChange: (value: number) => void
-  horizontal?: boolean; reverse?: boolean
-}) {
-  const drag = useRef<{ start: number; value: number } | null>(null)
-  const clamp = (next: number) => onChange(Math.max(min, Math.min(max, next)))
-  return <div className={`desktop-workspace__splitter${horizontal ? ' desktop-workspace__splitter--horizontal' : ''}`}
-    role="separator" tabIndex={0} aria-label={label} aria-orientation={horizontal ? 'horizontal' : 'vertical'}
-    aria-valuemin={min} aria-valuemax={max} aria-valuenow={value}
-    onKeyDown={event => {
-      const delta = event.key === (horizontal ? 'ArrowDown' : 'ArrowRight') ? 8
-        : event.key === (horizontal ? 'ArrowUp' : 'ArrowLeft') ? -8 : 0
-      if (delta || event.key === 'Home' || event.key === 'End') {
-        event.preventDefault()
-        clamp(event.key === 'Home' ? min : event.key === 'End' ? max : value + delta * (reverse ? -1 : 1))
-      }
-    }}
-    onPointerDown={event => {
-      drag.current = { start: horizontal ? event.clientY : event.clientX, value }
-      event.currentTarget.setPointerCapture(event.pointerId)
-    }}
-    onPointerMove={event => {
-      if (drag.current) clamp(drag.current.value + ((horizontal ? event.clientY : event.clientX) - drag.current.start) * (reverse ? -1 : 1))
-    }}
-    onPointerUp={() => { drag.current = null }} onPointerCancel={() => { drag.current = null }} />
-}
 
 export function DesktopWorkspace() {
   const [dxfSource, setDxfSource] = useState<DxfOpenValue | null>(null)
@@ -180,20 +156,26 @@ export function DesktopWorkspace() {
     | null
   >(null)
   const [leftOpen, setLeftOpen] = useState(() => !window.matchMedia?.('(max-width: 600px)').matches)
-  const [rightOpen, setRightOpen] = useState(() => !window.matchMedia?.('(max-width: 1100px)').matches)
+  const [rightOpen, setRightOpen] = useState(true)
   const [agentOpen, setAgentOpen] = useState(readAgentPanelOpen)
+  const [viewportWidth, setViewportWidth] = useState(window.innerWidth)
+  const [layoutBudget, setLayoutBudget] = useState(() => layoutBudgetForWidth(window.innerWidth))
   const [leftWidth, setLeftWidth] = useState(232)
-  const [rightWidth, setRightWidth] = useState(312)
-  const [reviewOpen, setReviewOpen] = useState(false)
-  /**
-   * V3.6 体验补丁：复核区默认高度 200 → 340，让「条款版本历史」不再被 200px
-   * 硬裁成 2 行。默认值随窗口收口（见 `--review-height`）：
-   *   max(200px, min(340px, 100dvh - 360px))
-   * 900 高窗口给 340px（够 5 行），640 高窗口给 280px（够 4 行），
-   * 同时保证复核区自身可滚动、不溢出。用户拖动分隔条后按用户选的像素渲染。
-   */
-  const [reviewHeight, setReviewHeight] = useState(340)
+  const [rightWidth, setRightWidth] = useState<number | null>(null)
+  const [reviewOpen, setReviewOpen] = useState(() => !layoutBudgetForWidth(window.innerWidth).collapsed)
+  const [reviewHeight, setReviewHeight] = useState(280)
   const [reviewHeightTouched, setReviewHeightTouched] = useState(false)
+  // 断点变化只重置布局预算，不触碰项目/抽取/提交状态。
+  useEffect(() => {
+    const compact = window.matchMedia?.(`(max-width: ${LAYOUT_BREAKPOINTS.compactMax}px)`)
+    const wide = window.matchMedia?.(`(min-width: ${LAYOUT_BREAKPOINTS.wideMin}px)`)
+    const reset = () => { const budget = layoutBudgetForWidth(window.innerWidth); setLayoutBudget(budget); setReviewOpen(!budget.collapsed); setRightWidth(null); setReviewHeightTouched(false) }
+    const resize = () => { setViewportWidth(window.innerWidth); setLeftWidth(value => Math.min(value, treeWidthLimit(window.innerWidth))) }
+    window.addEventListener('resize', resize)
+    compact?.addEventListener?.('change', reset)
+    wide?.addEventListener?.('change', reset)
+    return () => { window.removeEventListener('resize', resize); compact?.removeEventListener?.('change', reset); wide?.removeEventListener?.('change', reset) }
+  }, [])
   const [requirementOpen, setRequirementOpen] = useState(false)
   const [locateError, setLocateError] = useState<string | null>(null)
   // V3.6：提取定位只读读取确切版本字节；不接受本地路径或任意 blobKey。
@@ -233,10 +215,11 @@ export function DesktopWorkspace() {
     const next = event.key === 'ArrowRight' ? (tab + 1) % tabs.length : event.key === 'ArrowLeft' ? (tab + tabs.length - 1) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null
     if (next !== null) { event.preventDefault(); setTab(next); tabRefs.current[next]?.focus() }
   }
+  const effectiveReviewHeight = reviewHeightTouched ? reviewHeight : layoutBudget.collapsed ? 280 : layoutBudget.bottom
   const reviewHeightCss = reviewHeightTouched
     ? `${reviewHeight}px`
-    : `max(200px, min(${reviewHeight}px, calc(100dvh - 360px)))`
-  const style = { '--tree-width': `${leftOpen ? leftWidth : 0}px`, '--properties-width': `${rightOpen ? rightWidth : 0}px`, '--review-height': reviewHeightCss } as CSSProperties
+    : 'var(--panel-bottom-h)'
+  const style = { '--tree-width': `${leftOpen ? leftWidth : 0}px`, '--properties-width': rightOpen ? (rightWidth === null ? 'var(--panel-sidebar-w)' : `${rightWidth}px`) : '0px', '--review-height': reviewHeightCss } as CSSProperties
   const parsed = snapshot ? draftToChain(resolveDraft(snapshot).draft) : null
   const result = parsed?.ok ? calculateChain(parsed.chain) : null
   const calculation = result ? ({ within: '满足目标（非审查结论）', outside: '超出目标', 'no-target': '未设目标' }[result.status]) : '输入无效，未计算'
@@ -452,16 +435,16 @@ export function DesktopWorkspace() {
         writeAgentPanelOpen(next)
       }}>{agentOpen ? '收起' : '展开'}任务侧栏</button>
     </nav>
-    <div className="desktop-workspace__body">
-      <aside id="desktop-tree" className="desktop-workspace__tree" aria-label="项目树" hidden={!leftOpen}>
+    <SplitPane className="desktop-workspace__body">
+      <Panel as="aside" id="desktop-tree" className="desktop-workspace__tree" aria-label="项目树" hidden={!leftOpen}>
         <h2>项目树</h2>
         {groups.map(group => <details key={group} open>
           <summary>{group}</summary>
           {entries[group].length ? entries[group].map(item => <button key={item.id} aria-pressed={selected?.id === item.id} onClick={() => { setSelection(item.id); if (group === '尺寸链') setTab(3); if (group === '版本历史') setTab(4) }}>{item.label}</button>) : <p>{group === '零件' ? '尚未打开轴系示例 · B1' : group === '工程图' ? '暂无工程图' : `暂无${group}`}</p>}
         </details>)}
-      </aside>
-      {leftOpen ? <Splitter label="项目树宽度" value={leftWidth} min={180} max={280} onChange={setLeftWidth} /> : <div />}
-      <section className="desktop-workspace__center" aria-label="中央工作区">
+      </Panel>
+      {leftOpen ? <Splitter label="项目树宽度" value={leftWidth} min={180} max={treeWidthLimit(viewportWidth)} onChange={setLeftWidth} /> : <div />}
+      <Panel className="desktop-workspace__center" aria-label="中央工作区" minWidth="var(--panel-center-min)">
         <div role="tablist" aria-label="工作视图" className="desktop-workspace__tabs">
           {tabs.map((name, index) => <button key={name} ref={node => { tabRefs.current[index] = node }} role="tab" id={`desktop-tab-${index}`} aria-controls={`desktop-panel-${index}`} aria-selected={tab === index} tabIndex={tab === index ? 0 : -1} onKeyDown={tabKey} onClick={() => setTab(index)}
             aria-labelledby={`desktop-tab-${index}-label`}
@@ -473,7 +456,7 @@ export function DesktopWorkspace() {
         </div>
         {/* 角标数字的完整说明放在 tablist 之外：不污染 tablist 的子元素语义，aria-describedby 仍可跨节点引用。 */}
         {extractionBadge !== null && extractionBadgeTitle !== null && <span id="desktop-extraction-pending-desc" className="desktop-workspace__sr-only">{extractionBadgeTitle}</span>}
-        {tabs.map((name, index) => <div key={name} role="tabpanel" id={`desktop-panel-${index}`} aria-labelledby={`desktop-tab-${index}`} tabIndex={0} hidden={tab !== index} className="desktop-workspace__canvas">
+        {tabs.map((name, index) => <ScrollArea key={name} role="tabpanel" id={`desktop-panel-${index}`} aria-labelledby={`desktop-tab-${index}`} tabIndex={0} hidden={tab !== index} className="desktop-workspace__canvas">
           {index === 0 && <div className="desktop-workspace__drawing-tab">
             <ChangeWorkbench
               key={`${session.state?.sessionId ?? 'none'}:${project.currentRevisionId}`}
@@ -551,10 +534,10 @@ export function DesktopWorkspace() {
               onRevokeUnits: (request) => session.revokeExtractionUnits(request),
             }}
           />)}
-        </div>)}
-      </section>
-      {rightOpen ? <Splitter label="属性栏宽度" value={rightWidth} min={240} max={340} reverse onChange={setRightWidth} /> : <div />}
-      <aside id="desktop-properties" className="desktop-workspace__properties" aria-label="属性栏" hidden={!rightOpen}>
+        </ScrollArea>)}
+      </Panel>
+      {rightOpen ? <Splitter label="属性栏宽度" value={rightWidth ?? layoutBudget.sidebar} min={240} max={layoutBudget.sidebar} reverse onChange={setRightWidth} /> : <div />}
+      <Panel as="aside" id="desktop-properties" className="desktop-workspace__properties" aria-label="属性栏" hidden={!rightOpen}>
         <h2>属性 · {selected?.label ?? '未选择'}</h2><p>选择项目树中的对象查看会话快照。</p>
         <dl><dt>项目版本</dt><dd>{project.currentRevisionId}</dd>{selected?.properties.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl>
         {selectedPart && <section className="desktop-workspace__part-note" aria-label="示例部件只读说明">
@@ -612,10 +595,10 @@ export function DesktopWorkspace() {
           </section>
         })()}
         <p className="desktop-workspace__pending">○ 尚无审查结论</p>
-      </aside>
-    </div>
-    {reviewOpen && <Splitter label="复核区高度" value={reviewHeight} min={200} max={480} horizontal reverse onChange={value => { setReviewHeightTouched(true); setReviewHeight(value) }} />}
-    <section className={`desktop-workspace__review${reviewOpen ? ' desktop-workspace__review--open' : ''}`} aria-label="复核与变更">
+      </Panel>
+    </SplitPane>
+    {reviewOpen && <Splitter label="复核区高度" value={effectiveReviewHeight} min={200} max={480} horizontal reverse onChange={value => { setReviewHeightTouched(true); setReviewHeight(value) }} />}
+    <Panel className={`desktop-workspace__review${reviewOpen ? ' desktop-workspace__review--open' : ''}`} aria-label="复核与变更">
       <button className="desktop-workspace__review-toggle" aria-expanded={reviewOpen} aria-controls="desktop-review-content" onClick={() => setReviewOpen(!reviewOpen)}>{reviewOpen ? '▾' : '▸'} 复核与变更 <span>计算 {calculation} · 来源 {sourceState} · 图纸 {project.drawings.length > 0 ? '待复核草稿' : '未生成'}</span></button>
       <div id="desktop-review-content" hidden={!reviewOpen} className="desktop-workspace__review-groups">
         <section><h3>变更</h3>{session.change.preview ? <><p>预览 {session.change.preview.drawing.record.revisionId}：受影响环 {session.change.preview.affectedTermIds.length} 个；旧结果 {formatMm(session.change.preview.previousResult.minQ)} ～ {formatMm(session.change.preview.previousResult.maxQ)} mm → 新结果 {formatMm(session.change.preview.result.minQ)} ～ {formatMm(session.change.preview.result.maxQ)} mm。</p><p>受影响环不是错误；确认前可在“工程图”页查看逐环 diff。</p></> : <p>尚无变更预览。</p>}{session.change.staleReason && <p role="alert">预览已过期：{session.change.staleReason}</p>}</section>
@@ -660,7 +643,7 @@ export function DesktopWorkspace() {
         />
         <section><h3>待办</h3><p>来源 {sourceState}。尚无桌面审查结论。</p></section>
       </div>
-    </section>
+    </Panel>
     {requirementOpen && snapshot && sessionId && <RequirementWizard
       snapshot={snapshot}
       sessionId={sessionId}

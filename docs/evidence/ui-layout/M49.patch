@@ -1,0 +1,5 @@
+--- a/src/pages/DesktopWorkspace.tsx
++++ b/src/pages/DesktopWorkspace.tsx
+@@
+-aria-label="中央工作区" minWidth="var(--panel-center-min)"
++aria-label="中央工作区"

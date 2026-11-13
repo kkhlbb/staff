@@ -1,6 +1,6 @@
 .print-report {
   width: 100%;
-  max-width: 1120px;
+  max-width: var(--layout-printreport-3-max-width);
   margin: 0 auto;
   padding: 24px clamp(16px, 2vw, 32px) 48px;
 }
@@ -37,7 +37,7 @@
 }
 
 .print-report__blocked {
-  max-width: 720px;
+  max-width: var(--layout-printreport-40-max-width);
   margin: 48px auto;
   padding: 24px;
   border: 1px solid #fecaca;
@@ -366,7 +366,7 @@
 }
 
 .print-report__review-summary > div {
-  min-width: 88px;
+  min-width: var(--layout-printreport-369-min-width);
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -473,6 +473,7 @@
   }
 }
 
+/* W28: CSS 原生 media 条件不支持 var()；保留既有断点，避免改变非桌面页面行为。 */
 @media (max-width: 720px) {
   .print-report {
     padding: 16px 12px 32px;

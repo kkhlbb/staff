@@ -44,7 +44,7 @@
 .requirement-history__table {
   border-collapse: collapse;
   font-size: 0.78rem;
-  min-width: 900px;
+  min-width: var(--layout-requirementrevisionhistory-47-min-width);
   width: 100%;
 }
 
@@ -98,5 +98,5 @@
 .requirement-history__issue {
   margin: 4px 0 0;
   color: #fca5a5;
-  max-width: 260px;
+  max-width: var(--layout-requirementrevisionhistory-101-max-width);
 }

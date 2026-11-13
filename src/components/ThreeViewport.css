@@ -27,7 +27,7 @@
 }
 .three-viewport__toolbar button {
   min-height: 32px;
-  min-width: 28px;
+  min-width: var(--layout-threeviewport-30-min-width);
 }
 .three-viewport__gap {
   flex: 0 1 8px;
@@ -50,12 +50,12 @@
 }
 .three-viewport__slider input[type='range'] {
   flex: 1 1 auto;
-  min-width: 72px;
+  min-width: var(--layout-threeviewport-53-min-width);
   width: auto;
   min-height: 32px;
 }
 .three-viewport__slider output {
-  min-width: 40px;
+  min-width: var(--layout-threeviewport-58-min-width);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }

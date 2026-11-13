@@ -1,0 +1,272 @@
+{
+  "baseline": "a86cf8a",
+  "originalCount": 52,
+  "variables": 36,
+  "retained": 16,
+  "complete": true,
+  "entries": [
+    {
+      "file": "src/components/AgentSidebar.css",
+      "line": 15,
+      "declaration": "min-width: 300px"
+    },
+    {
+      "file": "src/components/AgentSidebar.css",
+      "line": 234,
+      "declaration": "max-width: 1000px"
+    },
+    {
+      "file": "src/components/AgentSidebar.css",
+      "line": 237,
+      "declaration": "min-width: 280px"
+    },
+    {
+      "file": "src/components/AgentSidebar.css",
+      "line": 241,
+      "declaration": "max-width: 700px"
+    },
+    {
+      "file": "src/components/DxfViewer.css",
+      "line": 106,
+      "declaration": "width: 12px"
+    },
+    {
+      "file": "src/components/DxfViewer.css",
+      "line": 155,
+      "declaration": "min-width: 52px"
+    },
+    {
+      "file": "src/components/DxfViewer.css",
+      "line": 240,
+      "declaration": "width: 1px"
+    },
+    {
+      "file": "src/components/ExtractionReviewPanel.css",
+      "line": 348,
+      "declaration": "min-width: 220px"
+    },
+    {
+      "file": "src/components/ImportWizard.css",
+      "line": 74,
+      "declaration": "width: 18px"
+    },
+    {
+      "file": "src/components/ImportWizard.css",
+      "line": 267,
+      "declaration": "min-width: 220px"
+    },
+    {
+      "file": "src/components/ImportWizard.css",
+      "line": 464,
+      "declaration": "max-width: 640px"
+    },
+    {
+      "file": "src/components/ModelViewport.css",
+      "line": 30,
+      "declaration": "min-width: 28px"
+    },
+    {
+      "file": "src/components/RequirementRevisionHistory.css",
+      "line": 47,
+      "declaration": "min-width: 900px"
+    },
+    {
+      "file": "src/components/RequirementRevisionHistory.css",
+      "line": 101,
+      "declaration": "max-width: 260px"
+    },
+    {
+      "file": "src/components/RequirementWizard.css",
+      "line": 60,
+      "declaration": "min-width: 180px"
+    },
+    {
+      "file": "src/components/SpacerDrawingPanel.css",
+      "line": 193,
+      "declaration": "max-width: 1200px"
+    },
+    {
+      "file": "src/components/ThreeViewport.css",
+      "line": 30,
+      "declaration": "min-width: 28px"
+    },
+    {
+      "file": "src/components/ThreeViewport.css",
+      "line": 53,
+      "declaration": "min-width: 72px"
+    },
+    {
+      "file": "src/components/ThreeViewport.css",
+      "line": 58,
+      "declaration": "min-width: 40px"
+    },
+    {
+      "file": "src/index.css",
+      "line": 41,
+      "declaration": "min-width: 320px"
+    },
+    {
+      "file": "src/pages/DesktopWorkspace.css",
+      "line": 53,
+      "declaration": "width: 280px"
+    },
+    {
+      "file": "src/pages/DesktopWorkspace.css",
+      "line": 114,
+      "declaration": "width: 112px"
+    },
+    {
+      "file": "src/pages/DesktopWorkspace.css",
+      "line": 130,
+      "declaration": "max-width: 600px"
+    },
+    {
+      "file": "src/pages/DesktopWorkspace.css",
+      "line": 208,
+      "declaration": "width: 1px"
+    },
+    {
+      "file": "src/pages/PrintReport.css",
+      "line": 3,
+      "declaration": "max-width: 1120px"
+    },
+    {
+      "file": "src/pages/PrintReport.css",
+      "line": 40,
+      "declaration": "max-width: 720px"
+    },
+    {
+      "file": "src/pages/PrintReport.css",
+      "line": 369,
+      "declaration": "min-width: 88px"
+    },
+    {
+      "file": "src/pages/PrintReport.css",
+      "line": 476,
+      "declaration": "max-width: 720px"
+    },
+    {
+      "file": "src/pages/ProjectList.css",
+      "line": 3,
+      "declaration": "max-width: 1100px"
+    },
+    {
+      "file": "src/pages/ProjectList.css",
+      "line": 46,
+      "declaration": "width: 1px"
+    },
+    {
+      "file": "src/pages/ProjectList.css",
+      "line": 259,
+      "declaration": "max-width: 640px"
+    },
+    {
+      "file": "src/pages/SnapshotList.css",
+      "line": 3,
+      "declaration": "max-width: 1120px"
+    },
+    {
+      "file": "src/pages/SnapshotList.css",
+      "line": 32,
+      "declaration": "max-width: 760px"
+    },
+    {
+      "file": "src/pages/SnapshotList.css",
+      "line": 133,
+      "declaration": "max-width: 720px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 3,
+      "declaration": "max-width: 1680px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 350,
+      "declaration": "min-width: 1040px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 387,
+      "declaration": "width: 28px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 405,
+      "declaration": "min-width: 82px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 412,
+      "declaration": "min-width: 82px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 416,
+      "declaration": "max-width: 150px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 427,
+      "declaration": "min-width: 74px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 438,
+      "declaration": "max-width: 170px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 666,
+      "declaration": "max-width: 1180px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 682,
+      "declaration": "min-width: 64px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 686,
+      "declaration": "max-width: 132px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 690,
+      "declaration": "max-width: 720px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 726,
+      "declaration": "min-width: 820px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 745,
+      "declaration": "max-width: 480px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 800,
+      "declaration": "width: 1px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 980,
+      "declaration": "width: 74px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 1122,
+      "declaration": "max-width: 1180px"
+    },
+    {
+      "file": "src/pages/Workspace.css",
+      "line": 1143,
+      "declaration": "max-width: 720px"
+    }
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

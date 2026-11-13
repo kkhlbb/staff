@@ -5,14 +5,14 @@
 .agent-sidebar {
   position: fixed;
   z-index: 30;
-  top: 104px;
-  right: 12px;
+  top: anchor(--workspace-body top, 220px);
+  right: 0;
   bottom: 12px;
   display: flex;
   flex-direction: column;
   gap: 0;
-  width: min(380px, 46vw);
-  min-width: 300px;
+  width: clamp(var(--panel-sidebar-min), var(--panel-sidebar-w), var(--panel-sidebar-max));
+  min-width: var(--panel-sidebar-min);
   overflow: auto;
   background: var(--surface, #fff);
   border: 1px solid var(--border, #d9e0e9);
@@ -231,13 +231,15 @@
   font-size: 0.72rem;
 }
 
+/* W02: CSS 原生 media 条件不支持 var()；保留既有断点，避免改变非桌面页面行为。 */
 @media (max-width: 1000px) {
   .agent-sidebar {
-    width: min(320px, 40vw);
-    min-width: 280px;
+    width: clamp(var(--panel-sidebar-min), var(--panel-sidebar-w), var(--panel-sidebar-max));
+    min-width: var(--panel-sidebar-min);
   }
 }
 
+/* W04: CSS 原生 media 条件不支持 var()；保留既有断点，避免改变非桌面页面行为。 */
 @media (max-width: 700px) {
   .agent-sidebar {
     left: 12px;

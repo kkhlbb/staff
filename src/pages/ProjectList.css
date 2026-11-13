@@ -1,6 +1,6 @@
 .project-list {
   width: 100%;
-  max-width: 1100px;
+  max-width: var(--layout-projectlist-3-max-width);
   margin: 0 auto;
   padding: 32px clamp(16px, 3vw, 40px) 56px;
 }
@@ -43,6 +43,7 @@
 
 .project-list__file-input {
   position: absolute;
+/* W30: 辅助技术专用 sr-only 1px 盒，不参与可见布局预算。 */
   width: 1px;
   height: 1px;
   overflow: hidden;
@@ -256,6 +257,7 @@
   border-color: var(--danger);
 }
 
+/* W31: CSS 原生 media 条件不支持 var()；保留既有断点，避免改变非桌面页面行为。 */
 @media (max-width: 640px) {
   .project-list {
     padding-top: 20px;

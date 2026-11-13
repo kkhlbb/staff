@@ -1,0 +1,50 @@
+:root {
+  --panel-sidebar-w: 320px;
+  --panel-sidebar-min: 240px;
+  --panel-sidebar-max: 400px;
+  --panel-center-min: 560px;
+  --panel-bottom-h: 280px;
+  --panel-bottom-collapsed-h: 33px;
+  --gap: 8px;
+  --layout-splitter: 6px;
+  --layout-dxfviewer-106-width: 12px;
+  --layout-dxfviewer-155-min-width: 52px;
+  --layout-extractionreviewpanel-348-min-width: 220px;
+  --layout-importwizard-74-width: 18px;
+  --layout-importwizard-267-min-width: 220px;
+  --layout-modelviewport-30-min-width: 28px;
+  --layout-requirementrevisionhistory-47-min-width: 900px;
+  --layout-requirementrevisionhistory-101-max-width: 260px;
+  --layout-requirementwizard-60-min-width: 180px;
+  --layout-threeviewport-30-min-width: 28px;
+  --layout-threeviewport-53-min-width: 72px;
+  --layout-threeviewport-58-min-width: 40px;
+  --layout-index-41-min-width: 320px;
+  --layout-desktopworkspace-53-width: 280px;
+  --layout-desktopworkspace-114-width: 112px;
+  --layout-printreport-3-max-width: 1120px;
+  --layout-printreport-40-max-width: 720px;
+  --layout-printreport-369-min-width: 88px;
+  --layout-projectlist-3-max-width: 1100px;
+  --layout-snapshotlist-3-max-width: 1120px;
+  --layout-snapshotlist-32-max-width: 760px;
+  --layout-snapshotlist-133-max-width: 720px;
+  --layout-workspace-3-max-width: 1680px;
+  --layout-workspace-350-min-width: 1040px;
+  --layout-workspace-387-width: 28px;
+  --layout-workspace-405-min-width: 82px;
+  --layout-workspace-412-min-width: 82px;
+  --layout-workspace-416-max-width: 150px;
+  --layout-workspace-427-min-width: 74px;
+  --layout-workspace-438-max-width: 170px;
+  --layout-workspace-682-min-width: 64px;
+  --layout-workspace-686-max-width: 132px;
+  --layout-workspace-726-min-width: 820px;
+  --layout-workspace-980-width: 74px;
+}
+@media (max-width: 1123px) {
+  :root { --panel-sidebar-w: 280px; --panel-center-min: 360px; --panel-bottom-h: 280px; }
+}
+@media (min-width: 1400px) {
+  :root { --panel-sidebar-w: 360px; --panel-center-min: 700px; --panel-bottom-h: 320px; }
+}

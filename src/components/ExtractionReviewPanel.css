@@ -345,7 +345,7 @@
 }
 
 .extraction-review__inline input {
-  min-width: 220px;
+  min-width: var(--layout-extractionreviewpanel-348-min-width);
 }
 
 .extraction-review__locate {
