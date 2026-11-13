@@ -35,6 +35,7 @@ import {
   extractorVersionLabel,
   groupConfirmCandidates,
   groupExtractionDrafts,
+  unitAttestationOf,
   type EditableField,
   type ExtractionCandidate,
   type ExtractionDraft,
@@ -480,6 +481,7 @@ export function ExtractionReviewPanel({
       : undefined
     const groupConflict = confirmedSibling !== undefined
     const activeUnit = activeUnitAttestation(owner, { candidateId: candidate.candidateId })
+    const unitAttestation = unitAttestationOf(candidate)
     return (
       <li
         key={candidate.candidateId}
@@ -538,6 +540,15 @@ export function ExtractionReviewPanel({
                 .map(({ field, value }) => `${FIELD_LABEL[field] ?? field}=${value.text}${value.unitText ? ` ${value.unitText}` : ''}${value.unit === null ? '（单位未确认）' : ''}`)
                 .join(' · ')}
         </p>
+        {unitAttestation !== null && (
+          <p
+            className="extraction-review__unit-source"
+            data-testid={`unit-source-${candidate.candidateId}`}
+          >
+            单位来源：用户声明 · 原话「{unitAttestation.statement}」· 第 {unitAttestation.sessionSeq} 次输入
+            （{unitAttestation.actorId} · {unitAttestation.turnId ?? '无轮次'}）
+          </p>
+        )}
         {candidate.reasonCodes.length > 0 && (
           <p className="extraction-review__reasons">原因码：{candidate.reasonCodes.join('、')}</p>
         )}
@@ -915,8 +926,8 @@ export function ExtractionReviewPanel({
                   {unitBatches.map((batch) => (
                     <div key={batch.batchId} className="extraction-review__unit-batch">
                       <span>
-                        补单位批次 {batch.batchId.slice(0, 18)}… · {batch.candidateIds.length} 条 · 声明「
-                        {batch.statement}」
+                        补单位批次 {batch.batchId.slice(0, 18)}… · {batch.candidateIds.length} 条 · 单位来源：
+                        用户声明 · 声明「{batch.statement}」
                       </span>
                       {actions.onRevokeUnits !== undefined && (
                         <button

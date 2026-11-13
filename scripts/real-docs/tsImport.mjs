@@ -58,3 +58,9 @@ export async function loadEvidenceJson() {
   register()
   return await import('../evidence-json.ts')
 }
+
+/** 项目文件编解码（用于回读 `.cunlian` 里真实落盘的出处，不另写一份解析）。 */
+export async function loadProjectCodec() {
+  register()
+  return await import('../../src/project-file/codec.ts')
+}

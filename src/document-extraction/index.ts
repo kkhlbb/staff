@@ -118,6 +118,7 @@ export {
   confirmCandidateBatch,
   hasActiveUnitAttestation,
   revokeUnitAttestations,
+  unitAttestationOf,
   unitBatchKey,
   type AttestUnitsRequest,
   type AttestUnitsValue,

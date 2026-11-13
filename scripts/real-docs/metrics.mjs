@@ -167,6 +167,25 @@ function countStatuses(candidates) {
   return counts
 }
 
+/** 状态 + 阻塞原因码的快照，用于“补单位前 / 后 / 撤销后”逐项核对。 */
+function statusSnapshot(candidates) {
+  const counts = countStatuses(candidates)
+  return {
+    pending: counts.pending,
+    blocked: counts.blocked,
+    confirmed: counts.confirmed,
+    reasonCodes: countBy(
+      candidates
+        .filter((candidate) => candidate.status === 'blocked')
+        .flatMap((candidate) => candidate.reasonCodes),
+    ),
+  }
+}
+
+function sameJson(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
 function countBy(values) {
   const map = new Map()
   for (const value of values) map.set(value, (map.get(value) ?? 0) + 1)
@@ -193,8 +212,14 @@ function issueSummary(issues) {
   }
 }
 
-/** 每份文档一行：页数、候选、状态、阻塞原因码、问题码。 */
-async function measureDocument(entry, modules) {
+/**
+ * 每份文档一行：页数、候选、状态、阻塞原因码、问题码。
+ *
+ * `unitAttestation` 非空时，按用户声明**真跑一遍**补单位（领域层同一函数），
+ * 再按 batchId 整批撤销；三组数字（前 / 后 / 撤销后）都记在行里。任一步失败、
+ * 或撤销后与原状态不一致，直接抛错——绝不只算操作成本、不改状态。
+ */
+async function measureDocument(entry, modules, unitAttestation = null) {
   const { buildExtractionDraft, buildPdfTextLayer, MAX_EXTRACTION_PAGES } = modules
   const { extractPdfTextPages } = await loadPdfTextExtract()
   const pages = await countPages(entry.bytes)
@@ -230,8 +255,17 @@ async function measureDocument(entry, modules) {
     pageRange: { from: 1, to: pages },
     layer,
   })
-  const statuses = countStatuses(draft.candidates)
-  const blockedCandidates = draft.candidates.filter((candidate) => candidate.status === 'blocked')
+  let measuredDraft = draft
+  let unitDetail = null
+  if (unitAttestation !== null) {
+    const result = attachUnitsAndVerify(draft, modules, unitAttestation)
+    measuredDraft = result.attestedDraft
+    unitDetail = result.detail
+  }
+  const statuses = countStatuses(measuredDraft.candidates)
+  const blockedCandidates = measuredDraft.candidates.filter(
+    (candidate) => candidate.status === 'blocked',
+  )
   const pageLimitIssues = draft.issues.filter((issue) => issue.code === 'PAGE_LIMIT')
   const row = {
     id: entry.doc.id,
@@ -243,17 +277,111 @@ async function measureDocument(entry, modules) {
     pageRange: draft.pageRange,
     extractorVersion: draft.extractorVersion,
     candidates: {
-      total: draft.candidates.length,
+      total: measuredDraft.candidates.length,
       pending: statuses.pending,
       blocked: statuses.blocked,
       confirmed: statuses.confirmed,
-      byKind: kindCounts(draft.candidates),
+      byKind: kindCounts(measuredDraft.candidates),
     },
     blockedReasonCodes: countBy(blockedCandidates.flatMap((candidate) => candidate.reasonCodes)),
     issues: issueSummary(draft.issues),
     pageLimit: pageLimitIssues.length > 0 ? { maxPages: MAX_EXTRACTION_PAGES, blocked: true } : null,
   }
-  return { row, layer, source, pages }
+  if (unitDetail !== null) row.unitAttestation = unitDetail
+  return { row, draft: measuredDraft, layer, source, pages }
+}
+
+/**
+ * 对一份草稿做「批量补单位 → 整批撤销」并逐项核对。
+ *
+ * 硬边界（任一失败就抛错，不产出“看起来对”的数字）：
+ * 1. 只有 `isUnitOnlyCandidate` 的候选进批；公式/数值/单位不支持一条都不进来；
+ * 2. 补单位后候选必须真的变 pending，且每条数值出处都能过完整性判据（由领域层保证）；
+ * 3. 三类“不支持”的阻塞数在补单位前后必须完全不变；
+ * 4. 撤销后 pending / blocked / 阻塞原因码必须与补单位前逐项相同。
+ */
+export function attachUnitsAndVerify(draft, modules, options) {
+  const { attestCandidateUnits, isUnitOnlyCandidate, revokeUnitAttestations, NO_BATCH_BLOCKED_CODES } =
+    modules
+  const before = statusSnapshot(draft.candidates)
+  const ids = draft.candidates
+    .filter((candidate) => isUnitOnlyCandidate(candidate))
+    .map((candidate) => candidate.candidateId)
+  if (ids.length === 0) {
+    throw new CorpusError('UNIT_ATTEST_EMPTY', `${options.label}: 没有任何“仅差单位”候选，拒绝伪造补单位记录`)
+  }
+  const attested = attestCandidateUnits(draft, {
+    candidateIds: ids,
+    statement: options.statement,
+    actor: options.actor,
+    decidedAt: options.at,
+    sessionSeq: options.sessionSeq,
+    turnId: options.turnId,
+    sessionLabel: null,
+  })
+  if (!attested.ok) {
+    throw new CorpusError('UNIT_ATTEST_FAILED', `${options.label}: ${attested.code}: ${attested.message}`)
+  }
+  const afterCandidates = attested.value.draft.candidates
+  const after = statusSnapshot(afterCandidates)
+  const converted = ids.filter(
+    (candidateId) =>
+      afterCandidates.find((candidate) => candidate.candidateId === candidateId)?.status ===
+      'pending',
+  ).length
+  if (converted !== ids.length) {
+    throw new CorpusError(
+      'UNIT_ATTEST_INCOMPLETE',
+      `${options.label}: 仅 ${converted}/${ids.length} 条真的从 blocked 变成 pending，拒绝接受`,
+    )
+  }
+  const preserved = {}
+  for (const code of NO_BATCH_BLOCKED_CODES) {
+    const beforeCount = before.reasonCodes.find((item) => item.code === code)?.count ?? 0
+    const afterCount = after.reasonCodes.find((item) => item.code === code)?.count ?? 0
+    if (beforeCount !== afterCount) {
+      throw new CorpusError(
+        'UNIT_ATTEST_SCOPE',
+        `${options.label}: ${code} 的阻塞数从 ${beforeCount} 变成 ${afterCount}；补单位不许碰这三类`,
+      )
+    }
+    preserved[code] = afterCount
+  }
+  const revoke = revokeUnitAttestations(attested.value.draft, {
+    batchId: attested.value.batchId,
+    actor: options.actor,
+    decidedAt: options.at,
+    reason: options.revokeReason,
+  })
+  if (!revoke.ok) {
+    throw new CorpusError('UNIT_REVOKE_FAILED', `${options.label}: ${revoke.code}: ${revoke.message}`)
+  }
+  const reverted = statusSnapshot(revoke.value.draft.candidates)
+  if (!sameJson(before, reverted)) {
+    throw new CorpusError(
+      'UNIT_REVOKE_INCOMPLETE',
+      `${options.label}: 撤销后没有回到补单位前（前 ${JSON.stringify(before)}；撤销后 ${JSON.stringify(reverted)}）`,
+    )
+  }
+  return {
+    attestedDraft: attested.value.draft,
+    revertedDraft: revoke.value.draft,
+    detail: {
+      statement: options.statement,
+      actor: options.actor,
+      turnId: options.turnId,
+      sessionSeq: options.sessionSeq,
+      batchId: attested.value.batchId,
+      declared: ids.length,
+      converted,
+      decisionCount: attested.value.decisionIds.length,
+      preservedBlocked: preserved,
+      before,
+      after,
+      reverted,
+      revokeRestored: true,
+    },
+  }
 }
 
 /** 汇总：可确认率 = pending / 候选总数；页码/文本层计数单独列。 */
@@ -288,7 +416,12 @@ export function summarize(rows, probe, rules) {
  * 完整度量：校验语料 → 逐份跑提取器 → 汇总 → 对 PAGE_LIMIT 文档追加前 20 页探针。
  * 返回可以直接写进 metrics.json 的对象（不含时间戳，保证可逐字节比较）。
  */
-export async function measureCorpus({ manifestPath, corpusDir, pageRangeProbePages = PAGE_RANGE_PROBE_PAGES }) {
+export async function measureCorpus({
+  manifestPath,
+  corpusDir,
+  pageRangeProbePages = PAGE_RANGE_PROBE_PAGES,
+  unitAttestation = null,
+}) {
   const manifest = loadManifest(manifestPath)
   const verified = verifyCorpus(manifest, corpusDir)
   const modules = await loadExtraction()
@@ -299,11 +432,27 @@ export async function measureCorpus({ manifestPath, corpusDir, pageRangeProbePag
     maxExtractionIssues: modules.MAX_EXTRACTION_ISSUES,
     readBudget: READ_BUDGET,
   }
+  if (unitAttestation !== null) {
+    rules.unitAttestation = {
+      statement: unitAttestation.statement,
+      actor: unitAttestation.actor,
+    }
+  }
   const rows = []
   const probes = []
-  for (const entry of verified) {
-    const measured = await measureDocument(entry, modules)
+  for (const [index, entry] of verified.entries()) {
+    const perDocument =
+      unitAttestation === null
+        ? null
+        : {
+            ...unitAttestation,
+            label: `${entry.doc.id} ${entry.doc.file}`,
+            sessionSeq: index + 1,
+            turnId: `real-doc-attest-${index + 1}`,
+          }
+    const measured = await measureDocument(entry, modules, perDocument)
     rows.push(measured.row)
+
     // 1-20 页探针的对象：页跨度超过上限、确实会被切块的文档（当前为 r4，170 页）。
     // 旧口径按“出现 PAGE_LIMIT 的文档”触发；document-extractor-6 起不再产生 PAGE_LIMIT，
     // 因此改为按“是否切块”判定。探针本身（前 20 页单独扫一次）保持原样，

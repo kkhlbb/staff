@@ -238,7 +238,12 @@ describe('L2 main：批量确认 / 批量补单位 / 撤销补单位', () => {
         const attestation = candidate.data.nominal?.provenance?.find(
           (ref) => ref.kind === 'user-attestation',
         )
-        expect(attestation).toMatchObject({ statement, sessionSeq: 1, actorId: 'local-operator' })
+        expect(attestation).toMatchObject({
+          statement,
+          sessionSeq: 1,
+          actorId: 'local-operator',
+          turnId: 'extraction-panel-1',
+        })
       }
       const decision = draft.decisions.find((item) => item.action === 'attest-unit')
       expect(decision).toMatchObject({ reason: statement, batchId: run.value.batchId })

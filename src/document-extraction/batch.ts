@@ -224,6 +224,11 @@ export interface AttestUnitsRequest {
   readonly decidedAt: string
   readonly sessionSeq: number
   readonly sessionLabel?: string | null
+  /**
+   * 哪一轮输入说的（由 main 生成，renderer/模型不能提供）。
+   * 提取面板的一次提交就是一轮输入；旧断言没有该字段按 null 读，新断言必须带上。
+   */
+  readonly turnId: string
 }
 
 export interface AttestUnitsValue {
@@ -288,6 +293,9 @@ export function attestCandidateUnits(
   if (!Number.isSafeInteger(request.sessionSeq) || request.sessionSeq < 1) {
     return extractionFailure('ATTESTATION_SESSION_MISMATCH', '批量补单位必须带当前输入会话序号（第几次输入）')
   }
+  if (typeof request.turnId !== 'string' || request.turnId.trim() === '') {
+    return extractionFailure('ATTESTATION_TURN_REQUIRED', '批量补单位必须绑定当前输入轮次（turnId），不能为空')
+  }
   const statement = request.statement
   if (typeof statement !== 'string' || statement.trim() === '') {
     return extractionFailure('UNIT_STATEMENT_INVALID', '批量补单位必须填写一句单位声明（例：本表单位 mm）')
@@ -346,6 +354,7 @@ export function attestCandidateUnits(
       at: request.decidedAt,
       sessionSeq: request.sessionSeq,
       sessionLabel: request.sessionLabel ?? null,
+      turnId: request.turnId,
       statement,
       fieldPath: fieldPathOf(candidateId),
     }
@@ -406,6 +415,16 @@ export function attestCandidateUnits(
       return extractionFailure(
         'BATCH_NOT_ELIGIBLE',
         `候选 ${candidateId} 补单位失败，整批未执行：${error instanceof Error ? error.message : String(error)}`,
+      )
+    }
+
+    // 补单位后出处必须齐全：新 user-attestation 真的挂在每个缺单位数值上，
+    // 才能把候选从 blocked 转 pending。缺一项就整批拒绝，绝不“先转状态再补证据”。
+    const stillMissing = provenanceMissing(nextCandidate)
+    if (stillMissing !== null) {
+      return extractionFailure(
+        'EVIDENCE_REQUIRED',
+        `候选 ${candidateId} 补单位后出处仍不完整（字段 ${stillMissing}），整批未执行（0 条写入）`,
       )
     }
 
@@ -709,14 +728,26 @@ export function revokeUnitAttestations(
 
 /** 供测试断言：出处里是否还有有效（未撤销）的补单位断言。 */
 export function hasActiveUnitAttestation(candidate: ExtractionCandidate): boolean {
-  return candidateNumericFields(candidate).some(({ value }) =>
-    valueProvenance(value).some(
-      (ref) =>
+  return unitAttestationOf(candidate) !== null
+}
+
+/**
+ * 取候选身上仍有效（未撤销）的补单位断言，供界面显示「单位来源：用户声明」+ 原话。
+ * 只读，不改判据；没有就返回 null（不伪装成从原文读到的单位）。
+ */
+export function unitAttestationOf(candidate: ExtractionCandidate): UserAttestation | null {
+  for (const { value } of candidateNumericFields(candidate)) {
+    for (const ref of valueProvenance(value)) {
+      if (
         ref.kind === 'user-attestation' &&
         ref.fieldPath === fieldPathOf(candidate.candidateId) &&
-        (ref.revokedAt ?? null) === null,
-    ),
-  )
+        (ref.revokedAt ?? null) === null
+      ) {
+        return ref
+      }
+    }
+  }
+  return null
 }
 
 /** 供界面显示：一批补单位决定里语句/时间的身份键（不参与校验）。 */

@@ -768,6 +768,64 @@ describe('L2 分组与批量动作（面板）', () => {
     expect(called.candidateIds).not.toContain('b-formula-0')
     await waitFor(() => expect(screen.getByText(/已为 45 条“仅差单位”候选补上 mm/)).toBeInTheDocument())
   })
+
+  it('补过单位的候选在界面上写明「单位来源：用户声明」+ 原话与轮次（不伪装成原文）', async () => {
+    const draft = corpusShapedDraft()
+    const target = draft.candidates.find((item) => item.candidateId === 'u-single-0')
+    if (target === undefined || target.kind !== 'ring') throw new Error('夹具缺少 u-single-0')
+    const attestation = {
+      kind: 'user-attestation' as const,
+      actorId: 'local-operator',
+      at: '2026-11-12T00:00:00.000Z',
+      sessionSeq: 1,
+      sessionLabel: null,
+      statement: '本表单位 mm（2026-11-12 复核）',
+      fieldPath: 'candidate:u-single-0:unit',
+      turnId: 'extraction-panel-1',
+    }
+    const attestedCandidate: ExtractionCandidate = {
+      ...target,
+      status: 'pending',
+      reasonCodes: [],
+      data: {
+        ...target.data,
+        nominal:
+          target.data.nominal === null
+            ? null
+            : {
+                ...target.data.nominal,
+                unit: 'mm',
+                unitText: 'mm',
+                valueQ: 522000,
+                provenance: [...(target.data.nominal.provenance ?? []), attestation],
+              },
+      },
+    }
+    const snapshot = await corpusShapedSnapshot()
+    const shown: SnapshotDto = {
+      ...snapshot,
+      project: {
+        ...snapshot.project,
+        extractionDrafts: [
+          {
+            ...draft,
+            candidates: draft.candidates.map((item) =>
+              item.candidateId === 'u-single-0' ? attestedCandidate : item,
+            ),
+          },
+        ],
+      },
+    }
+    render(<ExtractionReviewPanel snapshot={shown} busy={false} actions={batchActions()} />)
+    const line = screen.getByTestId('unit-source-u-single-0')
+    expect(line.textContent).toContain('单位来源：用户声明')
+    expect(line.textContent).toContain('本表单位 mm（2026-11-12 复核）')
+    expect(line.textContent).toContain('第 1 次输入')
+    expect(line.textContent).toContain('local-operator')
+    expect(line.textContent).toContain('extraction-panel-1')
+    // 未补单位的候选不出现这行（不把原文单位伪装成用户声明）。
+    expect(screen.queryByTestId('unit-source-u-single-1')).toBeNull()
+  })
 })
 
 describe('L2 操作数计数用例（界面里数，不凭感觉估）', () => {

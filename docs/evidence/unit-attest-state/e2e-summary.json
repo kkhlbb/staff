@@ -1,0 +1,88 @@
+{
+  "statement": "本表单位 mm（2026-11-12 复核）",
+  "steps": [
+    {
+      "step": "before",
+      "pending": 44,
+      "blocked": 43,
+      "groupsUnits": "仅差单位 29： 单值 5 · 同符号多处 24 批量补单位（29 条）…"
+    },
+    {
+      "step": "attested",
+      "pending": 73,
+      "blocked": 14,
+      "decisions": 29,
+      "attestations": 29,
+      "turnIds": [
+        "extraction-panel-1"
+      ]
+    },
+    {
+      "step": "unit-source",
+      "text": "单位来源：用户声明 · 原话「本表单位 mm（2026-11-12 复核）」· 第 1 次输入 （local-operator · extraction-panel-1）"
+    },
+    {
+      "step": "saved-after-attest",
+      "pending": 73,
+      "blocked": 14,
+      "attestations": 29,
+      "activeAttestations": 29,
+      "revokedAttestations": 0,
+      "sample": [
+        {
+          "actorId": "local-operator",
+          "sessionSeq": 1,
+          "turnId": "extraction-panel-1",
+          "statement": "本表单位 mm（2026-11-12 复核）",
+          "fieldPath": "candidate:ring-88bc225de99a28ef:unit",
+          "revokedAt": null
+        },
+        {
+          "actorId": "local-operator",
+          "sessionSeq": 1,
+          "turnId": "extraction-panel-1",
+          "statement": "本表单位 mm（2026-11-12 复核）",
+          "fieldPath": "candidate:ring-587135a310649d6d:unit",
+          "revokedAt": null
+        }
+      ]
+    },
+    {
+      "step": "revoked",
+      "pending": 44,
+      "blocked": 43,
+      "revokeDecisions": 29,
+      "revokedAttestations": 29
+    },
+    {
+      "step": "saved-after-revoke",
+      "pending": 44,
+      "blocked": 43,
+      "attestations": 29,
+      "activeAttestations": 0,
+      "revokedAttestations": 29,
+      "sample": [
+        {
+          "actorId": "local-operator",
+          "sessionSeq": 1,
+          "turnId": "extraction-panel-1",
+          "statement": "本表单位 mm（2026-11-12 复核）",
+          "fieldPath": "candidate:ring-88bc225de99a28ef:unit",
+          "revokedAt": "2026-11-13T05:20:56.693Z"
+        },
+        {
+          "actorId": "local-operator",
+          "sessionSeq": 1,
+          "turnId": "extraction-panel-1",
+          "statement": "本表单位 mm（2026-11-12 复核）",
+          "fieldPath": "candidate:ring-587135a310649d6d:unit",
+          "revokedAt": "2026-11-13T05:20:56.693Z"
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

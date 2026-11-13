@@ -1,0 +1,14 @@
+diff --git a/src/document-extraction/confirmGroups.ts b/src/document-extraction/confirmGroups.ts
+index 0a61dc8..765fcbd 100644
+--- a/src/document-extraction/confirmGroups.ts
++++ b/src/document-extraction/confirmGroups.ts
+@@ -145,7 +145,8 @@ function unitPendingField(candidate: ExtractionCandidate): boolean {
+  */
+ export function isUnitOnlyCandidate(candidate: ExtractionCandidate): boolean {
+   if (candidate.status !== 'blocked') return false
+-  if (candidate.reasonCodes.length !== 1 || candidate.reasonCodes[0] !== 'UNKNOWN_UNIT') {
++  // M35 变异：允许 FORMULA_UNSUPPORTED 也进入批量补单位（范围被放宽）。
++  if (candidate.reasonCodes.length === 0) {
+     return false
+   }
+   return unitPendingField(candidate)

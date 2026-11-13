@@ -955,7 +955,8 @@ export interface ExtractionConfirmBatchRequest {
  * - `statement` 是用户给出的单位声明原话，逐字写进每条候选的 user-attestation；
  * - 任一条不是“仅差单位” → 整批拒绝（0 条写入），message 指出是哪几条；
  * - 补单位**不是确认**：候选补完回到待确认，仍要逐条/逐组确认。
- * - actor/sessionSeq 由 main 生成（renderer 不能伪造）。
+ * - actor/sessionSeq 由 main 生成（renderer 不能伪造）；turnId 也由 main 生成
+ *   （提取面板的一次提交就是一轮输入，形如 `extraction-panel-<sessionSeq>`）。
  */
 export interface ExtractionAttestUnitsRequest {
   sessionId: string

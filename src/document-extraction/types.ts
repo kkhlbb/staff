@@ -695,6 +695,8 @@ export type ExtractionErrorCode =
   | 'BATCH_NOT_ELIGIBLE'
   /** 批量补单位：用户声明里找不到可识别的单位，或不是 mm。 */
   | 'UNIT_STATEMENT_INVALID'
+  /** 批量补单位：缺少“哪一轮输入”（turnId）；由 main 生成，不能为空。 */
+  | 'ATTESTATION_TURN_REQUIRED'
   /** 批量撤销补单位：找不到仍有效的补单位决定。 */
   | 'ATTESTATION_NOT_FOUND'
   /** 批量撤销补单位：目标候选已有有效确认，必须先撤销确认。 */

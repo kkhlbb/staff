@@ -1,0 +1,784 @@
+{
+  "schemaVersion": 1,
+  "task": "批量补单位做成真状态变更（项目文件出处）",
+  "file": "UNIT-ATTEST.cunlian",
+  "note": "从 encodeProjectFile 写出的 .cunlian 字节 decodeProjectFile 回读；无绝对路径、无 PDF 正文，仅出处身份与声明原话。",
+  "extractorVersion": "document-extractor-6",
+  "counts": {
+    "documents": 6,
+    "candidates": 138,
+    "pending": 103,
+    "blocked": 35,
+    "userAttestations": 45
+  },
+  "attestations": [
+    {
+      "documentId": "doc-1",
+      "candidateId": "ring-4c0a2da712e7ea71",
+      "actorId": "local-operator",
+      "sessionSeq": 1,
+      "turnId": "unit-attest-seed-1",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-4c0a2da712e7ea71:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-1",
+      "candidateId": "ring-a35e60853686dcff",
+      "actorId": "local-operator",
+      "sessionSeq": 1,
+      "turnId": "unit-attest-seed-1",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-a35e60853686dcff:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "-0",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-1",
+      "candidateId": "ring-147191f7adb93515",
+      "actorId": "local-operator",
+      "sessionSeq": 1,
+      "turnId": "unit-attest-seed-1",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-147191f7adb93515:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "4",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-1",
+      "candidateId": "ring-fd2eecfc4964179e",
+      "actorId": "local-operator",
+      "sessionSeq": 1,
+      "turnId": "unit-attest-seed-1",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-fd2eecfc4964179e:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.20",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-2",
+      "candidateId": "ring-727a7b83c6d7658d",
+      "actorId": "local-operator",
+      "sessionSeq": 2,
+      "turnId": "unit-attest-seed-2",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-727a7b83c6d7658d:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "100",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-2",
+      "candidateId": "ring-dc3126831065fd6d",
+      "actorId": "local-operator",
+      "sessionSeq": 2,
+      "turnId": "unit-attest-seed-2",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-dc3126831065fd6d:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "5",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-2",
+      "candidateId": "ring-ff5393da5199e384",
+      "actorId": "local-operator",
+      "sessionSeq": 2,
+      "turnId": "unit-attest-seed-2",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-ff5393da5199e384:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "5.2",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-2",
+      "candidateId": "ring-9df03f1de9c7c9b7",
+      "actorId": "local-operator",
+      "sessionSeq": 2,
+      "turnId": "unit-attest-seed-2",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-9df03f1de9c7c9b7:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.25",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-2",
+      "candidateId": "ring-7a750830e286bcd6",
+      "actorId": "local-operator",
+      "sessionSeq": 2,
+      "turnId": "unit-attest-seed-2",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-7a750830e286bcd6:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "5.050",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-2",
+      "candidateId": "ring-e93f864c26d5a4ae",
+      "actorId": "local-operator",
+      "sessionSeq": 2,
+      "turnId": "unit-attest-seed-2",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-e93f864c26d5a4ae:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.20",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-2",
+      "candidateId": "ring-76db087c9abdc34a",
+      "actorId": "local-operator",
+      "sessionSeq": 2,
+      "turnId": "unit-attest-seed-2",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-76db087c9abdc34a:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "1",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-2",
+      "candidateId": "ring-a964d1fadca408f4",
+      "actorId": "local-operator",
+      "sessionSeq": 2,
+      "turnId": "unit-attest-seed-2",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-a964d1fadca408f4:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "1",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-3",
+      "candidateId": "ring-c6a3f05f4bf61b15",
+      "actorId": "local-operator",
+      "sessionSeq": 3,
+      "turnId": "unit-attest-seed-3",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-c6a3f05f4bf61b15:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "1",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-4",
+      "candidateId": "ring-7a9d9a9af96f62ac",
+      "actorId": "local-operator",
+      "sessionSeq": 4,
+      "turnId": "unit-attest-seed-4",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-7a9d9a9af96f62ac:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "2",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-5",
+      "candidateId": "ring-f1752235b8bcbf7f",
+      "actorId": "local-operator",
+      "sessionSeq": 5,
+      "turnId": "unit-attest-seed-5",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-f1752235b8bcbf7f:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "1",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-5",
+      "candidateId": "ring-e923be98188beb56",
+      "actorId": "local-operator",
+      "sessionSeq": 5,
+      "turnId": "unit-attest-seed-5",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-e923be98188beb56:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "1",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-75e79227251978d1",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-75e79227251978d1:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.2",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-4217957efba734c4",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-4217957efba734c4:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "135",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-ad7dc43eb5fbec44",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-ad7dc43eb5fbec44:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.14",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-f8740b58d18f25ee",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-f8740b58d18f25ee:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-f8ee1c9e30fdf21c",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-f8ee1c9e30fdf21c:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-fdfcd12c621b8072",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-fdfcd12c621b8072:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "-0.02",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-cf60b4b39163d885",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-cf60b4b39163d885:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.04",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-b54e621b9b8a39f5",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-b54e621b9b8a39f5:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-5c32eb2089d36c1a",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-5c32eb2089d36c1a:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-96d98172365ba42c",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-96d98172365ba42c:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "135",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-1d7b3856065617a8",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-1d7b3856065617a8:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-bd1bd974c7471cd2",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-bd1bd974c7471cd2:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "135",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-df6a08c22da704dc",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-df6a08c22da704dc:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.02",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-5acd479e7584c50c",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-5acd479e7584c50c:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.06",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-94d8d5a14eefbfe3",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-94d8d5a14eefbfe3:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.1",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-02dc9387635acbb5",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-02dc9387635acbb5:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "-0.1",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-7a1bc048b482adce",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-7a1bc048b482adce:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-662a5e8b71e3fb95",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-662a5e8b71e3fb95:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "-0.025",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-696e1a901760e796",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-696e1a901760e796:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.09",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-24abda055c873e97",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-24abda055c873e97:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.142",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-0f9c0310caa1fd52",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-0f9c0310caa1fd52:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "-0.2505",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-7f4106296ba523af",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-7f4106296ba523af:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-8dc180d345f2c9f9",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-8dc180d345f2c9f9:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.05",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-c32ab5c19e151ac7",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-c32ab5c19e151ac7:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-3dbbc815d011ab0b",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-3dbbc815d011ab0b:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.042",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-a27970d597cdecb7",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-a27970d597cdecb7:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "-0.048",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-a35319dc3cbaf296",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-a35319dc3cbaf296:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-9c81f685f95e0233",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-9c81f685f95e0233:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "0.072",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    },
+    {
+      "documentId": "doc-6",
+      "candidateId": "ring-ae06ec4b96128a49",
+      "actorId": "local-operator",
+      "sessionSeq": 6,
+      "turnId": "unit-attest-seed-6",
+      "statement": "本表单位 mm（2026-11-12 复核）",
+      "fieldPath": "candidate:ring-ae06ec4b96128a49:unit",
+      "values": [
+        {
+          "field": "nominal",
+          "text": "-0.0805",
+          "unit": "mm",
+          "unitText": "mm"
+        }
+      ]
+    }
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}
