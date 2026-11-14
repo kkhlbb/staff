@@ -63,6 +63,8 @@ export const IPC_CHANNELS = {
   drawingUpdateSpacer: 'drawing:update-spacer',
   drawingExportPdf: 'drawing:export-pdf',
   drawingExportSvg: 'drawing:export-svg',
+  stepExport: 'cad:export-step',
+  stepCancel: 'cad:cancel-step',
   /** DXF 导出 v1：R12（默认）/ 2000。 */
   drawingExportDxfR12: 'drawing:export-dxf-r12',
   drawingExportDxf2000: 'drawing:export-dxf-2000',
@@ -233,6 +235,9 @@ export type CommonErrorCode =
   | 'PRINT_TIMEOUT'
   | 'PDF_EXPORT_FAILED'
   | 'SVG_EXPORT_FAILED'
+  | 'STEP_EXPORT_FAILED'
+  | 'UNSUPPORTED_GEOMETRY'
+  | 'COMMITTED_UNCONFIRMED'
   /** D：参数联动。 */
   | 'STALE_BASE'
   | 'STALE_DRAFT'
@@ -544,6 +549,37 @@ export interface DrawingExportRequest {
   baseEditSeq: number
   drawingId: string
   drawingFingerprint: string
+}
+
+export interface StepExportRequest {
+  sessionId: string
+  baseEditSeq: number
+  revisionId: string
+  partId: string
+  expectedInputFingerprint: string
+  jobId: string
+}
+
+export interface StepCancelRequest {
+  sessionId: string
+  jobId: string
+}
+
+export interface StepExportValue {
+  fileName: string
+  byteSize: number
+  sha256: string
+  revisionId: string
+  inputFingerprint: string
+  geometryFingerprint: string
+  kernelVersion: string
+  wasmSha256: string
+  generatorVersion: string
+  schema: 'AP214IS'
+  unit: 'mm'
+  /** New generation, not a historical byte reproduction. */
+  historicalByteIdentical: null
+  warnings: string[]
 }
 
 export interface DrawingExportValue {
@@ -1396,6 +1432,8 @@ export type LocateEvidenceValue =
     }
 
 export interface CunlianApi {
+  stepExport(request: StepExportRequest): Promise<IpcResult<StepExportValue>>
+  stepCancel(request: StepCancelRequest): Promise<IpcResult<{ cancelled: boolean }>>
   getProjectContext(): Promise<ToolResult<AgentContextValue>>
   getConfirmedInputs(request: { draftId: string }): Promise<ToolResult<ConfirmedInputsView>>
   applyConfirmedInputs(request: ApplyConfirmedInputsRequest): Promise<ToolResult<AgentDraftValue>>

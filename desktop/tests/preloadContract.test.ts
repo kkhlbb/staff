@@ -30,6 +30,7 @@ const LEGACY_FUNCTIONS = [
 ] as const
 
 const ADDED_FUNCTIONS = [
+  'stepExport', 'stepCancel',
   'pickModel',
   'readModel',
   'commitModel',
@@ -101,5 +102,10 @@ describe('B2/C preload 契约', () => {
     expect(source).toContain('IPC_CHANNELS.modelLink')
     // source:read 仍只服务 readAttachment 一处，模型读取走 modelRead。
     expect(source.match(/IPC_CHANNELS\.sourceRead/g) ?? []).toHaveLength(1)
+  })
+
+  it('STEP uses dedicated export/cancel channels, not current drawing export', () => {
+    expect(source).toMatch(/stepExport:.*IPC_CHANNELS\.stepExport, request/)
+    expect(source).toMatch(/stepCancel:.*IPC_CHANNELS\.stepCancel, request/)
   })
 })

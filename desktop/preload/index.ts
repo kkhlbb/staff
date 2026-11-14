@@ -18,6 +18,7 @@ import {
   type ModelPickValue,
   type ModelReadValue,
   type DrawingExportValue,
+  type StepExportValue,
   type DrawingUpdateValue,
   type DxfOpenValue,
   type ChangeApplyValue,
@@ -87,6 +88,8 @@ function subscribe<T>(
 }
 
 const api: CunlianApi = {
+  stepExport: (request) => ipcRenderer.invoke(IPC_CHANNELS.stepExport, request) as Promise<IpcResult<StepExportValue>>,
+  stepCancel: (request) => ipcRenderer.invoke(IPC_CHANNELS.stepCancel, request) as Promise<IpcResult<{ cancelled: boolean }>>,
   newProject: (request) =>
     ipcRenderer.invoke(
       IPC_CHANNELS.projectNew,
