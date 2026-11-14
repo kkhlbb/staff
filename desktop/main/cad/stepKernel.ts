@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Worker } from 'node:worker_threads'
+import { loadLocalStepWasm } from './stepLocalWasm'
 import { STEP_ASSET_HASHES, STEP_GENERATOR_VERSION, STEP_KERNEL_VERSION } from './stepAssetManifest'
 
 export interface StepInput { innerDiameter: number; outerDiameter: number; length: number }
@@ -42,10 +43,14 @@ export async function generateStep(input: StepInput, options: { signal?: AbortSi
       catch { throw new Error(`STEP_ASSET_MISSING: ${name}`) }
       if (createHash('sha256').update(bytes).digest('hex') !== expected) throw new Error(`STEP_ASSET_HASH: ${name}`)
     }
+    const localWasm = await loadLocalStepWasm()
     if (options.signal?.aborted) throw new Error('STEP_CANCELLED')
     return await new Promise<StepResult>((resolve, reject) => {
       const worker = new Worker(path.join(assetDirectory, 'step-worker.cjs'), {
-        workerData: { input: snapshot, assetDirectory, hashes: STEP_ASSET_HASHES },
+        workerData: { input: snapshot, assetDirectory, hashes: STEP_ASSET_HASHES, localWasm },
+        // Do not inherit inspector/loader flags or the main-process environment.
+        execArgv: [], env: {},
+        resourceLimits: { maxOldGenerationSizeMb: 256, maxYoungGenerationSizeMb: 32, stackSizeMb: 4 },
       })
       let settled = false
       const finish = (error?: Error, bytes?: Uint8Array) => {
@@ -56,8 +61,8 @@ export async function generateStep(input: StepInput, options: { signal?: AbortSi
         // Do not resolve/reject until the worker has actually exited and its heap is released.
         void worker.terminate().then(() => {
           if (error) reject(error)
-          else resolve({ bytes: bytes!, kernelVersion: STEP_KERNEL_VERSION, wasmSha256: STEP_ASSET_HASHES['replicad_single.wasm'],
-            generatorVersion: `${STEP_GENERATOR_VERSION};worker-sha256=${STEP_ASSET_HASHES['step-worker.cjs']}` })
+          else resolve({ bytes: bytes!, kernelVersion: localWasm ? 'user-selected-local-wasm (unverified source identity)' : STEP_KERNEL_VERSION, wasmSha256: localWasm?.sha256 ?? STEP_ASSET_HASHES['replicad_single.wasm'],
+            generatorVersion: `${STEP_GENERATOR_VERSION};worker-sha256=${STEP_ASSET_HASHES['step-worker.cjs']}${localWasm ? ';local-wasm-opt-in-v1' : ''}` })
         }, reject)
       }
       const cancel = () => finish(new Error('STEP_CANCELLED'))
@@ -67,7 +72,7 @@ export async function generateStep(input: StepInput, options: { signal?: AbortSi
       worker.once('exit', code => { if (!settled) finish(new Error(`STEP_WORKER_EXIT: ${code}`)) })
       worker.once('message', (message: { error?: string; bytes?: Uint8Array }) => {
         if (message.error) finish(new Error(message.error))
-        else if (!(message.bytes instanceof Uint8Array) || !message.bytes.length) finish(new Error('STEP_WORKER_INVALID_RESULT'))
+        else if (!(message.bytes instanceof Uint8Array) || !message.bytes.length || message.bytes.length > 16 * 1024 * 1024) finish(new Error('STEP_WORKER_INVALID_RESULT'))
         else finish(undefined, message.bytes)
       })
       if (options.signal?.aborted) cancel()

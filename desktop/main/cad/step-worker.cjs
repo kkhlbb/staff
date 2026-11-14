@@ -17,10 +17,67 @@ const assert = require('node:assert/strict');
   assert.ok(input.outerDiameter - input.innerDiameter >= 200, 'STEP_UNSUPPORTED');
   const d = input.innerDiameter / 10000, D = input.outerDiameter / 10000, L = input.length / 10000;
   assert.ok(Math.max(D, L) / Math.min(d / 2, (D - d) / 2, L) <= 10000, 'STEP_UNSUPPORTED');
-  const oc = await require(path.join(assetDirectory, 'replicad_single.cjs'))({
-    wasmBinary: fs.readFileSync(path.join(assetDirectory, 'replicad_single.wasm')),
-    print: () => {}, printErr: () => {},
-  });
+  const originalWasm = fs.readFileSync(path.join(assetDirectory, 'replicad_single.wasm'));
+  let wasmBinary = originalWasm;
+  if (workerData.localWasm) {
+    const local = workerData.localWasm;
+    assert.ok(local.bytes instanceof Uint8Array && local.bytes.length >= 8 && local.bytes.length <= 64 * 1024 * 1024, 'STEP_LOCAL_SIZE');
+    assert.equal(crypto.createHash('sha256').update(local.bytes).digest('hex'), local.sha256, 'STEP_LOCAL_HASH');
+    wasmBinary = Buffer.from(local.bytes);
+    let module;
+    try { module = new WebAssembly.Module(wasmBinary); } catch { throw new Error('STEP_LOCAL_COMPILE'); }
+    const reference = new WebAssembly.Module(originalWasm);
+    for (const kind of ['imports', 'exports']) {
+      assert.deepEqual(WebAssembly.Module[kind](module), WebAssembly.Module[kind](reference), 'STEP_LOCAL_ABI');
+    }
+    // V8 resourceLimits do NOT bound WASM linear memory. Require a declared
+    // single nonshared 32-bit memory maximum <=512MiB before instantiation.
+    let cursor = 8, memories = 0;
+    function uleb(end) {
+      let value = 0, shift = 0, byte;
+      do {
+        assert.ok(cursor < end && shift < 35, 'STEP_LOCAL_MEMORY');
+        byte = wasmBinary[cursor++]; value += (byte & 127) * 2 ** shift; shift += 7;
+      } while (byte & 128);
+      return value;
+    }
+    while (cursor < wasmBinary.length) {
+      const id = wasmBinary[cursor++], size = uleb(wasmBinary.length), end = cursor + size;
+      assert.ok(end <= wasmBinary.length, 'STEP_LOCAL_MEMORY');
+      if (id === 4) {
+        assert.equal(uleb(end), 1, 'STEP_LOCAL_TABLE');
+        assert.equal(wasmBinary[cursor++], 0x70, 'STEP_LOCAL_TABLE');
+        assert.equal(uleb(end), 1, 'STEP_LOCAL_TABLE');
+        const initial = uleb(end), maximum = uleb(end);
+        assert.ok(initial <= maximum && maximum <= 1000000 && cursor === end, 'STEP_LOCAL_TABLE');
+      }
+      if (id === 5) {
+        assert.equal(uleb(end), 1, 'STEP_LOCAL_MEMORY');
+        assert.equal(uleb(end), 1, 'STEP_LOCAL_MEMORY');
+        const initial = uleb(end), maximum = uleb(end);
+        assert.ok(initial <= maximum && maximum <= 8192 && cursor === end, 'STEP_LOCAL_MEMORY');
+        memories++;
+      }
+      cursor = end;
+    }
+    assert.equal(memories, 1, 'STEP_LOCAL_MEMORY');
+  }
+  let oc;
+  try {
+    oc = await require(path.join(assetDirectory, 'replicad_single.cjs'))({
+      // This pinned glue ignores wasmBinary. Force the exact validated snapshot;
+      // synchronous instantiation cannot fall back to a file or a network fetch.
+      instantiateWasm(imports, receive) {
+        const instance = new WebAssembly.Instance(new WebAssembly.Module(wasmBinary), imports);
+        receive(instance);
+        return instance.exports;
+      },
+      print: () => {}, printErr: () => {},
+    });
+  } catch { throw new Error(workerData.localWasm ? 'STEP_LOCAL_INSTANTIATE' : 'STEP_INSTANTIATE'); }
+  for (const name of ['Message_ProgressRange', 'gp_Ax2', 'gp_Pnt', 'gp_Dir', 'BRepPrimAPI_MakeCylinder', 'BRepAlgoAPI_Cut', 'BRepCheck_Analyzer', 'STEPControl_Writer']) {
+    assert.equal(typeof oc[name], 'function', 'STEP_LOCAL_API: ' + name);
+  }
   const range = new oc.Message_ProgressRange();
   const axis = new oc.gp_Ax2(new oc.gp_Pnt(-L / 2, 0, 0), new oc.gp_Dir(1, 0, 0));
   // Divide integer diameter q directly by 20000: never truncate odd q.
