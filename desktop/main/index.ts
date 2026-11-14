@@ -43,6 +43,8 @@ import { registerProjectChannels } from './channels'
 import { registerModelChannels } from './modelChannels'
 import { createModelFileIo } from './modelIo'
 import { registerDrawingChannels } from './drawingChannels'
+import { registerStepChannels } from './stepChannels'
+import { StepExportStore } from './stepExportStore'
 import { DXF_VIEW_MAX_BYTES, registerDxfChannels } from './dxfChannels'
 import { registerChangeChannels } from './changeChannels'
 import { registerSourceChannels } from './sourceChannels'
@@ -695,6 +697,22 @@ function installIpcHandlers(): void {
     service: extractionService,
     issuePlanToken: (windowId, draftId) => agentTools.issueAfterDecision(windowId, draftId),
     log: logStage,
+  })
+
+  registerStepChannels(ipc, {
+    guard, controller, projectService, exportStore: new StepExportStore(), log: logStage,
+    isWindowAlive: id => { const w = windows.get(id); return w !== undefined && !w.window.isDestroyed() },
+    pickExportPath: async (id, suggestedName) => {
+      const owner = windows.get(id)?.window
+      if (!owner || owner.isDestroyed()) throw new IpcFailure('STALE_SESSION', '窗口已不存在')
+      const picked = await dialog.showSaveDialog(owner, { title: '导出所选历史版本 STEP（按历史参数新生成）', defaultPath: suggestedName, filters: [{ name: 'STEP AP214IS', extensions: ['step'] }] })
+      return picked.canceled ? null : picked.filePath ?? null
+    },
+    confirmOverwrite: async (id, target) => {
+      const owner = windows.get(id)?.window
+      if (!owner || owner.isDestroyed()) throw new IpcFailure('STALE_SESSION', '窗口已不存在')
+      return (await dialog.showMessageBox(owner, { type: 'warning', title: '确认覆盖 STEP', message: `替换已有文件 ${path.basename(target)}？`, buttons: ['取消', '替换'], defaultId: 0, cancelId: 0 })).response === 1
+    },
   })
 
   const migrationService = new MigrationService({

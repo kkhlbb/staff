@@ -23,10 +23,22 @@ if (packaged.status !== 0) {
   process.exit(packaged.status ?? 1)
 }
 
-const asserted = spawnSync(
-  process.execPath,
-  [path.join(root, 'scripts', 'assert-packaged-pdf-worker.mjs')],
-  { cwd: root, stdio: 'inherit' },
-)
-if (asserted.error) throw asserted.error
-process.exit(asserted.status ?? 1)
+const option = (name, fallback) => {
+  const args = process.argv.slice(2)
+  const inline = args.find(a => a.startsWith(`--${name}=`))
+  const i = args.indexOf(`--${name}`)
+  return inline ? inline.slice(name.length + 3) : i >= 0 ? args[i + 1] : fallback
+}
+const platform = option('platform', process.platform)
+const arch = option('arch', process.arch)
+const output = path.join(root, 'out', `寸链-${platform}-${arch}`)
+const resources = platform === 'darwin' ? path.join(output, '寸链.app/Contents/Resources') : path.join(output, 'resources')
+for (const [script, target] of [
+  ['assert-packaged-pdf-worker.mjs', path.join(resources, 'app.asar')],
+  ['assert-packaged-step.mjs', resources],
+]) {
+  const asserted = spawnSync(process.execPath, [path.join(root, 'scripts', script), target], { cwd: root, stdio: 'inherit' })
+  if (asserted.error) throw asserted.error
+  if (asserted.status !== 0) process.exit(asserted.status ?? 1)
+}
+process.exit(0)
