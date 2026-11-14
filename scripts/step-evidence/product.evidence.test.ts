@@ -17,6 +17,8 @@ it('explicit evidence generation only; never in ordinary test include',async()=>
   snapshot.project.parameters=snapshot.project.parameters.map(p=>({...p,reviewStatus:'pending'}))
   snapshot.project.drawings=[]; snapshot.project.dimensionLinks=[]
   for(const r of snapshot.fileRevisions) r.project=structuredClone(snapshot.project)
+  // Persist a genuinely different current model; historical export must still use 12mm.
+  snapshot.project.parameters=snapshot.project.parameters.map(p=>p.key==='length'?{...p,valueQ:990000,parameterRevision:p.parameterRevision+1}:p)
   const encoded=await encodeProjectFile(snapshot)
   if(!encoded.ok) throw Error(JSON.stringify(encoded.error))
   const suffix=inner.endsWith('1')?'odd':'base'

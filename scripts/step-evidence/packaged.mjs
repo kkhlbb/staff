@@ -41,12 +41,16 @@ try {
  let opened
  for(let i=0;i<100;i++){try{opened=await renderer(`window.cunlian ? window.cunlian.openProject({}) : null`);if(opened)break}catch{}await sleep(100)}
  assert.ok(opened?.ok,JSON.stringify(opened));await fs.writeFile(path.join(out,'opened.json'),JSON.stringify(opened,null,2),{flag:'wx'})
- const request={sessionId:opened.value.sessionId,baseEditSeq:0,revisionId:base.input.revisionId,partId:base.input.partId,expectedInputFingerprint:base.input.inputFingerprint,jobId:'packaged-1'}
+ const request={sessionId:opened.value.sessionId,baseEditSeq:opened.value.editSeq,revisionId:base.input.revisionId,partId:base.input.partId,expectedInputFingerprint:base.input.inputFingerprint,jobId:'packaged-1'}
  const target=path.join(out,'packaged.step')
  await main(`globalThis.__stepEvidenceElectron.dialog.showSaveDialog=async()=>({canceled:false,filePath:${JSON.stringify(target)}});globalThis.__stepEvidenceElectron.dialog.showMessageBox=async()=>({response:1});true`)
  const receipt=await renderer(`window.cunlian.stepExport(${JSON.stringify(request)})`)
  await fs.writeFile(path.join(out,'receipt.json'),JSON.stringify(receipt,null,2),{flag:'wx'});assert.ok(receipt.ok,JSON.stringify(receipt))
  const bytes=await fs.readFile(target);assert.equal(createHash('sha256').update(bytes).digest('hex'),receipt.value.sha256);assert.equal(bytes.length,receipt.value.byteSize)
+ assert.deepEqual(receipt.value.generationInput,base.input)
+ const currentLengthQ=opened.value.snapshot.project.parameters.find(p=>p.key==='length').valueQ
+ assert.notEqual(currentLengthQ,receipt.value.generationInput.lengthQ)
+ await fs.writeFile(path.join(out,'historical-freeze-audit.json'),JSON.stringify({currentLengthQ,selectedFrozenLengthQ:receipt.value.generationInput.lengthQ,inputMatchesSelectedFrozenReceipt:true,historicalByteIdentical:receipt.value.historicalByteIdentical},null,2),{flag:'wx'})
  // Actual packaged resource omission, then restore, with no development-tree fallback.
  const wasm=path.join(assets,'replicad_single.wasm');await fs.rename(wasm,wasm+'.mutation-hidden');renamed=true
  const badTarget=path.join(out,'must-not-exist.step')
@@ -60,6 +64,48 @@ try {
  await main(`globalThis.__stepEvidenceElectron.dialog.showSaveDialog=async()=>({canceled:false,filePath:${JSON.stringify(greenTarget)}});true`)
  const restored=await renderer(`window.cunlian.stepExport(${JSON.stringify({...request,jobId:'restored-wasm'})})`)
  await fs.writeFile(path.join(out,'restored-receipt.json'),JSON.stringify(restored,null,2),{flag:'wx'}); assert.ok(restored.ok,JSON.stringify(restored))
+ assert.equal(createHash('sha256').update(await fs.readFile(greenTarget)).digest('hex'),restored.value.sha256)
+ // Omit/corrupt every own runtime asset in this package, then restore bytes in finally.
+ const resourceChecks=[]
+ for(const name of ['replicad_single.cjs','replicad_single.js','replicad_single.wasm','step-worker.cjs']) {
+  const resource=path.join(assets,name),original=await fs.readFile(resource)
+  for(const mode of ['missing','corrupt']) {
+   const mutationTarget=path.join(out,`${mode}-${name}.step`)
+   if(mode==='missing')await fs.rename(resource,resource+'.probe-hidden')
+   else await fs.writeFile(resource,'corrupt evidence-only resource')
+   try {
+    await main(`globalThis.__stepEvidenceElectron.dialog.showSaveDialog=async()=>({canceled:false,filePath:${JSON.stringify(mutationTarget)}});true`)
+    const result=await renderer(`window.cunlian.stepExport(${JSON.stringify({...request,jobId:`${mode}-${name}`})})`)
+    await fs.writeFile(path.join(out,`${mode}-${name}-receipt.json`),JSON.stringify(result,null,2),{flag:'wx'})
+    assert.equal(result.ok,false);assert.equal(result.error.code,'STEP_EXPORT_FAILED');assert.match(result.error.message,mode==='missing'?/STEP_ASSET_MISSING/:/STEP_ASSET_HASH/)
+    await assert.rejects(fs.stat(mutationTarget),{code:'ENOENT'})
+    resourceChecks.push({name,mode,rejected:true,targetAbsent:true})
+   } finally {
+    if(mode==='missing')await fs.rename(resource+'.probe-hidden',resource)
+    else await fs.writeFile(resource,original)
+   }
+   assert.deepEqual(await fs.readFile(resource),original)
+  }
+ }
+ await fs.writeFile(path.join(out,'resource-mutation-audit.json'),JSON.stringify(resourceChecks,null,2),{flag:'wx'})
+ // A valid WASM with only an added inert custom section is still refused by pinned integrity.
+ // This is an executable replacement BLOCKER probe, NOT proof of LGPL relink compliance.
+ const originalWasm=await fs.readFile(wasm)
+ const sectionName=Buffer.from('cunlian-replacement-probe')
+ const candidate=Buffer.concat([originalWasm,Buffer.from([0,sectionName.length+1,sectionName.length]),sectionName])
+ assert.equal(WebAssembly.validate(candidate),true)
+ await fs.writeFile(path.join(out,'replacement-probe.wasm'),candidate,{flag:'wx'})
+ const replacementTarget=path.join(out,'replacement-must-not-exist.step')
+ try {
+  await fs.writeFile(wasm,candidate)
+  await main(`globalThis.__stepEvidenceElectron.dialog.showSaveDialog=async()=>({canceled:false,filePath:${JSON.stringify(replacementTarget)}});true`)
+  const replacement=await renderer(`window.cunlian.stepExport(${JSON.stringify({...request,jobId:'replacement-probe'})})`)
+  await fs.writeFile(path.join(out,'replacement-receipt.json'),JSON.stringify(replacement,null,2),{flag:'wx'})
+  assert.equal(replacement.ok,false);assert.equal(replacement.error.code,'STEP_EXPORT_FAILED');assert.match(replacement.error.message,/STEP_ASSET_HASH/)
+  await assert.rejects(fs.stat(replacementTarget),{code:'ENOENT'})
+  await fs.writeFile(path.join(out,'replacement-audit.json'),JSON.stringify({wasmValid:true,originalSha256:createHash('sha256').update(originalWasm).digest('hex'),candidateSha256:createHash('sha256').update(candidate).digest('hex'),status:'BLOCKED_DIRECT_BINARY_REPLACEMENT',reason:'Pinned integrity rejects different bytes; modified OCCT source/relink not tested.'},null,2),{flag:'wx'})
+ } finally { await fs.writeFile(wasm,originalWasm) }
+ assert.deepEqual(await fs.readFile(wasm),originalWasm)
  // Switch to a separately persisted odd-q historical version; real kernel geometry must change.
  const odd=JSON.parse(await fs.readFile(path.join(fixtureDirectory,'odd-receipt.json'),'utf8'))
  await main(`globalThis.__stepEvidenceElectron.dialog.showOpenDialog=async()=>({canceled:false,filePaths:[${JSON.stringify(path.join(fixtureDirectory,'odd.cunlian'))}]});true`)
@@ -69,6 +115,8 @@ try {
  const oddRequest={sessionId:openedOdd.value.sessionId,baseEditSeq:openedOdd.value.editSeq,revisionId:odd.input.revisionId,partId:odd.input.partId,expectedInputFingerprint:odd.input.inputFingerprint,jobId:'odd-packaged'}
  const oddReceipt=await renderer(`window.cunlian.stepExport(${JSON.stringify(oddRequest)})`)
  await fs.writeFile(path.join(out,'odd-receipt.json'),JSON.stringify(oddReceipt,null,2),{flag:'wx'});assert.ok(oddReceipt.ok,JSON.stringify(oddReceipt));assert.notEqual(oddReceipt.value.geometryFingerprint,receipt.value.geometryFingerprint)
+ assert.deepEqual(oddReceipt.value.generationInput,odd.input)
+ assert.equal(createHash('sha256').update(await fs.readFile(oddTarget)).digest('hex'),oddReceipt.value.sha256)
  // A switched-out session must fail BEFORE even opening a save dialog.
  const cancelTarget=path.join(out,'cancelled-must-not-exist.step')
  const beforeFiles=(await fs.readdir(out)).filter(n=>n.endsWith('.step') || n.endsWith('.step-tmp')).sort()
