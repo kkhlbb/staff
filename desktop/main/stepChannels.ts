@@ -63,7 +63,7 @@ export function registerStepChannels(ipc:IpcMainLike,deps:StepChannelDeps): void
    catch(e) {
     ensure()
     const message=e instanceof Error?e.message:String(e)
-    const reason=/STEP_[A-Z_]+/.exec(message)?.[0] ?? 'STEP_KERNEL_FAILED'
+    const reason=/\bSTEP_LOCAL_(?:CONFIG|FILE|SIZE|HASH|COMPILE|ABI|MEMORY|TABLE|INSTANTIATE|API)\b/.exec(message)?.[0] ?? /STEP_[A-Z_]+/.exec(message)?.[0] ?? 'STEP_KERNEL_FAILED'
     throw new IpcFailure(message.includes('UNSUPPORTED')?'UNSUPPORTED_GEOMETRY':message.includes('CANCELLED')?'CANCELLED':'STEP_EXPORT_FAILED',`STEP 内核未生成有效文件：${reason}`)
    }
    ensure(); job.committing=true

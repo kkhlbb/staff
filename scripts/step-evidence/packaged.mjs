@@ -5,10 +5,18 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-const [executable,fixtureDirectory,out] = process.argv.slice(2)
+const [executable,fixtureDirectory,out,localCandidateDirectory,expectedLocalError,consent='1'] = process.argv.slice(2)
 if(!executable || !out) throw Error('Usage: node packaged.mjs <app executable> <product fixture directory> <new evidence dir>')
 await fs.mkdir(out,{recursive:true})
 const env={...process.env};delete env.ELECTRON_RUN_AS_NODE
+for(const name of ['CUNLIAN_STEP_LOCAL_OPT_IN','CUNLIAN_STEP_LOCAL_WASM','CUNLIAN_STEP_LOCAL_SHA256'])delete env[name]
+let localCandidate
+if(localCandidateDirectory) {
+ localCandidate=JSON.parse(await fs.readFile(path.join(localCandidateDirectory,'candidate.json'),'utf8'))
+ if(consent!=='unset')env.CUNLIAN_STEP_LOCAL_OPT_IN=consent
+ env.CUNLIAN_STEP_LOCAL_WASM=path.resolve(localCandidateDirectory,'modified.wasm')
+ env.CUNLIAN_STEP_LOCAL_SHA256=localCandidate.sha256
+}
 const app=spawn(executable,['--inspect=9491','--remote-debugging-port=9492',`--user-data-dir=${path.join(out,'user-data')}`],{env,stdio:['ignore','pipe','pipe']})
 let output='';app.stdout.on('data',x=>output+=x);app.stderr.on('data',x=>output+=x)
 const sleep=ms=>new Promise(r=>setTimeout(r,ms))
@@ -17,7 +25,21 @@ async function connect(port) {
  for(let i=0;i<120;i++) {
   try {
    const list=await(await fetch(`http://127.0.0.1:${port}/json/list`)).json();const t=list.find(x=>x.webSocketDebuggerUrl)
-   if(t) {const socket=new WebSocket(t.webSocketDebuggerUrl);await new Promise((r,j)=>{socket.addEventListener('open',r,{once:true});socket.addEventListener('error',j,{once:true})});sockets.push(socket);let id=0;const pending=new Map();socket.addEventListener('message',e=>{const v=JSON.parse(e.data);if(v.id) {pending.get(v.id)?.(v);pending.delete(v.id)}});return async expression=>{const n=++id;const p=new Promise((r,j)=>{pending.set(n,r);setTimeout(()=>{if(pending.has(n)){pending.delete(n);j(Error('inspector timeout'))}},40000).unref()});socket.send(JSON.stringify({id:n,method:'Runtime.evaluate',params:{expression,returnByValue:true,awaitPromise:true}}));const result=await p;if(result.result?.exceptionDetails)throw Error(JSON.stringify(result.result.exceptionDetails));return result.result?.result?.value} }
+   if(t) {
+    const socket=new WebSocket(t.webSocketDebuggerUrl)
+    await new Promise((r,j)=>{socket.addEventListener('open',r,{once:true});socket.addEventListener('error',j,{once:true})})
+    sockets.push(socket);let id=0;const pending=new Map()
+    socket.addEventListener('message',e=>{const v=JSON.parse(e.data),p=pending.get(v.id);if(p){clearTimeout(p.timer);pending.delete(v.id);p.resolve(v)}})
+    socket.addEventListener('close',()=>{for(const p of pending.values()){clearTimeout(p.timer);p.reject(Error('inspector closed'))}pending.clear()})
+    return async expression=>{
+     if(socket.readyState!==WebSocket.OPEN)throw Error('inspector not open')
+     const n=++id
+     const p=new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pending.delete(n);reject(Error('inspector timeout'))},40000);pending.set(n,{resolve,reject,timer})})
+     socket.send(JSON.stringify({id:n,method:'Runtime.evaluate',params:{expression,returnByValue:true,awaitPromise:true}}))
+     const result=await p;if(result.result?.exceptionDetails)throw Error(JSON.stringify(result.result.exceptionDetails))
+     return result.result?.result?.value
+    }
+   }
   } catch { /* bounded wait for actual ready */ }
   await sleep(100)
  }
@@ -45,8 +67,31 @@ try {
  const target=path.join(out,'packaged.step')
  await main(`globalThis.__stepEvidenceElectron.dialog.showSaveDialog=async()=>({canceled:false,filePath:${JSON.stringify(target)}});globalThis.__stepEvidenceElectron.dialog.showMessageBox=async()=>({response:1});true`)
  const receipt=await renderer(`window.cunlian.stepExport(${JSON.stringify(request)})`)
- await fs.writeFile(path.join(out,'receipt.json'),JSON.stringify(receipt,null,2),{flag:'wx'});assert.ok(receipt.ok,JSON.stringify(receipt))
+ await fs.writeFile(path.join(out,'receipt.json'),JSON.stringify(receipt,null,2),{flag:'wx'})
+ if(expectedLocalError) {
+  assert.equal(receipt.ok,false);assert.equal(receipt.error.code,'STEP_EXPORT_FAILED');assert.ok(receipt.error.message.includes(expectedLocalError),JSON.stringify(receipt))
+  assert.equal(receipt.error.message.includes(env.CUNLIAN_STEP_LOCAL_WASM),false)
+  await assert.rejects(fs.stat(target),{code:'ENOENT'})
+  console.log(JSON.stringify({status:'PASS',expectedLocalError,noFallback:true,targetAbsent:true,pathRedacted:true}))
+ } else {
+ assert.ok(receipt.ok,JSON.stringify(receipt))
  const bytes=await fs.readFile(target);assert.equal(createHash('sha256').update(bytes).digest('hex'),receipt.value.sha256);assert.equal(bytes.length,receipt.value.byteSize)
+ if(localCandidate) {
+  assert.equal(receipt.value.wasmSha256,localCandidate.sha256)
+  assert.match(receipt.value.kernelVersion,/user-selected-local-wasm/)
+  assert.ok(bytes.toString('ascii').includes('USER PATCHED STEP translator 8.0'))
+  // Snapshotting and revalidation apply to the user file as well; never fallback.
+  const selected=env.CUNLIAN_STEP_LOCAL_WASM,original=await fs.readFile(selected),failureTarget=path.join(out,'local-hash-must-not-exist.step')
+  try {
+   await fs.writeFile(selected,Buffer.alloc(64,1))
+   await main(`globalThis.__stepEvidenceElectron.dialog.showSaveDialog=async()=>({canceled:false,filePath:${JSON.stringify(failureTarget)}});true`)
+   const failure=await renderer(`window.cunlian.stepExport(${JSON.stringify({...request,jobId:'local-changed-file'})})`)
+   await fs.writeFile(path.join(out,'local-changed-receipt.json'),JSON.stringify(failure,null,2),{flag:'wx'})
+   assert.equal(failure.ok,false);assert.match(failure.error.message,/STEP_LOCAL_HASH/)
+   await assert.rejects(fs.stat(failureTarget),{code:'ENOENT'})
+  } finally {await fs.writeFile(selected,original)}
+ }
+ else assert.equal(bytes.toString('ascii').includes('USER PATCHED'),false)
  assert.deepEqual(receipt.value.generationInput,base.input)
  const currentLengthQ=opened.value.snapshot.project.parameters.find(p=>p.key==='length').valueQ
  assert.notEqual(currentLengthQ,receipt.value.generationInput.lengthQ)
@@ -133,6 +178,7 @@ try {
  assert.deepEqual(afterFiles,beforeFiles);assert.equal(afterFiles.filter(n=>n.endsWith('.step-tmp')).length,0)
  await fs.writeFile(path.join(out,'cancelled-disk-audit.json'),JSON.stringify({beforeFiles,afterFiles,targetAbsent:true,ownTemporaryFiles:[],staleRejectedBeforeDialog:true,currentFrozenRevision:oddRequest.revisionId,scope:'Export directory only; not a whole-disk no-write claim; native dialogs stubbed.'},null,2),{flag:'wx'})
  console.log(JSON.stringify({status:'PASS',scope:'real packaged Electron main/preload IPC/worker/save; native dialogs stubbed via debugger, NOT native dialog UX verification',probe,target,receipt:receipt.value,missingWasmRejected:true,restored:true,cancelled:true},null,2))
+ }
 } finally {
  if(renamed)await fs.rename(path.join(assets,'replicad_single.wasm.mutation-hidden'),path.join(assets,'replicad_single.wasm'))
  if(main) {try{await main(`setTimeout(()=>globalThis.__stepEvidenceElectron.app.exit(0),30);true`)}catch{}}

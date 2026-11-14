@@ -28,6 +28,14 @@ async function setup() {
  registerStepChannels(h.ipc, { guard: h.guard, controller: h.controller, projectService: h.projectService, exportStore: store, pickExportPath: pick, confirmOverwrite: confirm, generate })
  return { request, target, generate, pick, confirm, session, store }
 }
+it.each(['COMPILE', 'ABI', 'MEMORY', 'TABLE', 'INSTANTIATE'])('reports nested local %s failure without exposing paths or writing target', async reason => {
+ const c = await setup(); await fs.writeFile(c.target, 'old')
+ c.generate.mockRejectedValue(Error(`STEP_KERNEL_FAILED: STEP_LOCAL_${reason}: /private/user-library.wasm`))
+ const failure = await h.invoke(IPC_CHANNELS.stepExport, c.request)
+ expect(failure).toMatchObject({ok:false,error:{code:'STEP_EXPORT_FAILED',message:`STEP 内核未生成有效文件：STEP_LOCAL_${reason}`}})
+ expect(JSON.stringify(failure)).not.toContain('/private/user-library.wasm')
+ expect(await fs.readFile(c.target, 'utf8')).toBe('old')
+})
 it('writes selected frozen q, never current, and leaves project/history/recovery unchanged', async () => {
  const c = await setup(); c.session.snapshot.project.parameters[2].valueQ = 999999
  const before = JSON.stringify(c.session.snapshot)

@@ -70,3 +70,30 @@ npm run check:release:step 明确非零退出并列blockers；普通package仅�
 不表示许可通过。打包断言要求NOTICE、部分SBOM、完整许可、替换/来源文档字节
 与源码一致，要求SBOM状态blocked/incomplete、资产sha与运行manifest匹配。
 删除或篡改任何告知均须失败；不能移除门禁以获得绿灯。
+
+## 220a45f之后的阻塞缩减（发布状态不变）
+
+新来源材料见 ../step-followup/replacement-20261114-research/REPORT.zh-CN.md。
+父任务独立逐文件重算该目录清单36511项，零不一致；报告和归档摘要均可核对。
+实际从固定官方 OCCT 源副本应用9个 taucad patches，26文件变化，保存逐文件
+前后sha与统一diff；libembind补丁结果与固定上游expected.sha256一致。这些现在是
+候选修改源码实物，不再只有未应用补丁的原始树；仍无证据确认目标npm采用这些字节。
+LLVM/Binaryen缺失的固定commit完整归档已实际下载并校验，许可原文落盘。
+
+本机实际编译原OCCT Standard_Strtod.cxx，再修改该组件、重编/重链接运行，
+两版输出与对象/native link map保留；这仅证明native数值组件，不是WASM或产品
+重链接。窄C ABI方案 narrow/spacer.cpp、build.py、smoke.cjs已落盘，真实头文件
+语法检查通过；构建前检exit2明确缺emcc/em++/emcmake/cmake。手写窄接口无需
+全量绑定工具；若走上游生成器则还缺Python3.14、PyYAML6.0.3、Cerberus1.3.8、
+libclang18.1.1和LLVM17解析头。仅批准后才将固定SDK6.0.5和CMake4.3.2放项目局部，
+用现有make；不需要全局安装、Docker或Ninja。源码依赖保守闭包23个toolkit，
+TKDESTEP经XCAF引入可视化支持，不能承诺只三库或无字体/图形依赖。候选构建
+尚需真实configure/link求值，报告不冒充可重复构建成功。
+
+新增本地WASM opt-in将随包默认资源与用户修改资源分开：固定默认资源严格hash
+仍不变；用户独立同意、绝对路径和摘要，受限读取字节快照，固定worker/glue/API
+检查及资源限额。测试采用真实数据段行为修改和内存最大值修改，不是custom section。
+具体入口/安全边界/限制见step-kernel-replacement.md。其可运行结果不等于完整
+对应源码/应用对象/重链接及法律供给路径都已证实；四项release blocker继续保留。
+旧npm仍缺历史构建digest/平台/日志、完整生成CPP、实际最终link map/对象清单；
+新窄核也尚无完整WASM构建/两次复现结果，因此没有改为complete或解除分发门禁。
