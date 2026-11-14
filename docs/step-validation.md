@@ -100,3 +100,79 @@ subprocess已在snapshot-final执行（stdout也记录路径）；仅以cwd-corr
 bb06575：历史/当前分离与四资源缺失损坏、替换阻塞、全量回归结果。
 最终本节仅收尾文档，不改产品；首个diff --check指出本文件EOF多一空行，
 已移除并单独复查，不混淆为测试或许可失败，也不重写前面提交/日志。
+
+## 220a45f之后：受控替换机制及固定源码续追
+
+本轮起点实核 agent/step-spacer / 220a45ff7989a63c5065ea834f571424691b5d46，
+工作区干净。完整读本索引、许可来源、原发布门禁、provenance研究报告及替换文档。
+新证据独立根 ../step-followup/replacement-20261114/，不覆盖旧证据；其中final/
+为最终新源码快照/新包/新产物，根logs/保存先红后绿与早期失败，不用最终结果覆盖。
+
+实现提交 d750833：独立主进程启动opt-in、用户本地WASM绝对路径/sha，读取同一
+fd的有界快照，固定默认四资源仍先严格hash，worker内验证ABI/API、内存/表上限。
+新核身份标明user-selected/unverified，回执sha为实际用户字节。execArgv与环境
+不继承、V8限额256/32/4MiB，本地WASM内存最大512MiB/表100万项、文件64MiB、
+结果16MiB；保留30秒/并发/取消等待terminate及所有几何断言。不是OS sandbox或
+总RSS硬限，不宣称能安全执行任意恶意库；只接受用户信任的兼容WASM，不接JS。
+
+测试先行发现两处真实问题并修正：
+1. 固定glue忽略wasmBinary，修改候选虽回执sha正确却仍跑默认核；行为断言真实
+   2失败，改为instantiateWasm只实例化校验快照后绿，不接受无行为custom section。
+2. 成包负例的worker外层错误掩盖STEP_LOCAL具体原因；先保存4项成包失败与5条
+   单测失败，再以白名单局部原因脱敏输出修正。fe3c347含此修复/验证脚本/来源更新。
+   完整argv/退出码/原始stdout/stderr保存在根logs与final/logs。
+
+最终实际命令结果：
+  npm test                          exit0，128文件/1455通过（根logs/app-tests）
+  npm run test:desktop              exit0，52通过/2跳过文件，373通过/17跳过
+  npm run test:mcp                  exit0，3文件/22通过（根logs/mcp）
+  npm run typecheck                 exit0（根logs/typecheck）
+  npm run typecheck:desktop         exit0（final/logs/typecheck-desktop）
+  npm run lint                     exit0（final/logs/lint）
+  npm run build                    exit0，仍有>500kB chunk警告（根logs/build）
+  npm run test:step-license         exit0，10通过（final/logs/license）
+  npm run package:desktop -- --arch=arm64   exit0（final/logs/package；新snapshot内）
+  vitest.step-evidence.config.ts    exit0，1采集用例（final/product，非复用旧输出）
+  packaged.mjs 默认/本地核各       exit0，真实新包IPC/worker/磁盘，原生对话框桩化
+  local-negatives.mjs              exit0，10项新包负例全符合期望、无目标、路径脱敏
+  local-native.mjs                 exit0，8份新STEP各原生reader exit0/ACCEPTED
+  sandbox-exec deny network* 内核   exit0，4文件/12通过；正常监听控制组可用、限制组EPERM
+  主加载器OS拒读/可读控制组        各exit0；拒读STEP_LOCAL_FILE，不改权限、不提权
+  npm run check:package:step        exit0，变异恢复后默认资源和随包告知仍严格通过
+  npm run check:release:step        exit1，四项blocker不变；不是许可通过
+
+三套主测试合计1850通过/17真实模型跳过。目标复验不重复累加进此总数。
+10项成包负例：缺opt-in、错opt-in、非法二进制、错ABI、超内存、超表、错sha、
+缺文件、符号链接、目录。默认与本地核两套均另有四资源各缺/坏8项拒绝和恢复、
+当前99mm/历史12mm冻结、stale拒绝、取消零导出写入、自有step-tmp零残留。
+本地核额外实测用户文件改变后HASH拒绝，finally恢复原字节；没有默认回退。
+final下12个新包进程真实退出均code0/signal=null；审计脚本检查调试监听为空。
+
+候选不是custom section：真实数据段translator/processor字符串变为USER PATCHED，
+真实memory maximum从4GiB减到512MiB；三份本地核STEP均实际含修改后的processor。
+八份原生读回保留原线性1e-6mm/体积阈值，奇数q仍10.00005mm；原生bitset绑定
+TypeError/repairFreeImportProven=false、同家族而非异厂商、原生框仅桩化限制未消失。
+完整OCCT源重编/产品重链接仍未测，不用二进制数据段探针冒充LGPL全部闭环。
+
+整Electron套sandbox的早期取证exit13，在inspector阶段中断，未得到导出验证，
+不计通过；记录在根logs/negative-os-deny-read。改用同一实际主加载器做OS拒读
+与可读控制验证（各exit0），只宣称该加载器权限行为，不算全应用sandbox验收。
+取证脚本随后修正socket关闭/超时处理，避免未完成top-level await吞掉诊断。
+
+固定源码续追新目录 ../step-followup/replacement-20261114-research/：
+官方固定LLVM/Binaryen源码归档、许可原文实际下载；全部9个OCCT补丁在隔离副本
+落盘、26文件改变并保存前后sha/diff，libembind匹配上游expected hash。父任务
+独立重算36511文件零不一致，且实际重跑修改native数值组件输出MODIFIED_OCCT_STRTOD。
+候选源不等于目标确证对应源；native Strtod重链接也不等于产品WASM重链接。
+窄C ABI构建/烟测脚本已落盘并做真实头文件语法检查，但完整build前检exit2：
+缺emcc/em++/emcmake/cmake。最小局部工具方案、23toolkit依赖闭包、绑定生成额外
+缺件/许可见该报告；没有安装大型SDK或全局工具，也没有声称configure/link已成功。
+
+最终包：../step-followup/replacement-20261114/final/snapshot/out/寸链-darwin-arm64/寸链.app。
+app.asar SHA256 d93f7cf0a7b966167c60db25ee8c767e19634dfb7ccdcec7b551a25896eb0d6b。
+用户候选 SHA256 0b4722cbb3ab0faef9166ce61113e5fa9fa2a70c33f159fac5cae64c305c7893。
+本地核STEP SHA256 c70b3db015d96b9284b3351374440c44315e5def63da0fc26e85be2443525029。
+脚本/产物/日志hash与完整退出码聚合见新证据根audit.json、artifact-hashes.json。
+最终snapshot逐文件清单2097项；收尾仅新增取证辅助脚本/索引，不改已测产品代码。
+发布门禁脚本字节及SBOM四blocker属性与220a45f作自动比较，维持BLOCKED/INCOMPLETE。
+未merge/push/delete/发布/付费/改权限/全局安装；未接触共享staff/gt-expand。
