@@ -4,7 +4,7 @@ import groundTruth from '../../docs/evidence/ground-truth/gt-01.json'
 const truth = groundTruth.entries
 import { compareGroundTruth } from './metrics.mjs'
 function candidate(valueQ:number,status='pending',page=2) {
- return {kind:'ring',candidateId:'test',status,reasonCodes:[],data:{nominal:{text:'test',valueQ,evidence:[{page,rectPdf:[310,496,325,507]}]}}}
+ return {kind:'ring',candidateId:'test',status,reasonCodes:[],data:{nominal:{text:'test',valueQ,evidence:[{page,rectPdf:[310,496,325,507]}]},upperDeviation:{text:'+0.2',valueQ:2000},lowerDeviation:{text:'-0.1',valueQ:-1000}}}
 }
 describe('crop ground truth correctness',()=>{
  it('exactly 19 verified crops: r2 7 / r5 2 / r6 10',()=>{

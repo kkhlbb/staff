@@ -1,0 +1,11 @@
+{
+  "asar": "out/寸链-darwin-arm64/寸链.app/Contents/Resources/app.asar",
+  "sha256": "6635fe298712409824a55b48d554574fd53fb008babc350064348915e88cf3ef",
+  "main": ".vite/build/main.cjs",
+  "extractorVersionMarker": "document-extractor-8",
+  "markerPresent": true,
+  "scope": "asar identity and PDF-worker static assertions, not packaged GUI interaction",
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

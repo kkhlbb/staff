@@ -1,0 +1,7 @@
+
+> staff@0.4.1-beta lint
+> eslint .
+
+
+EXIT_CODE=0
+SIGNAL=null

@@ -1,0 +1,27 @@
+{
+  "rows": [
+    {
+      "id": "M59",
+      "redExitCode": 1,
+      "redSignal": null,
+      "assertionKilled": true,
+      "greenExitCode": 0,
+      "greenSignal": null,
+      "sourceRestored": true,
+      "sourceSha256": "a5168b37f2bcc6b5fe3368cad44967ff5caec7392b4d53d1d57fb60121f4af0a"
+    },
+    {
+      "id": "M60",
+      "redExitCode": 1,
+      "redSignal": null,
+      "assertionKilled": true,
+      "greenExitCode": 0,
+      "greenSignal": null,
+      "sourceRestored": true,
+      "sourceSha256": "a5168b37f2bcc6b5fe3368cad44967ff5caec7392b4d53d1d57fb60121f4af0a"
+    }
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

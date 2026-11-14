@@ -212,38 +212,79 @@ function issueSummary(issues) {
   }
 }
 
-/** Compare nominal q against crop-verified truth by page and nominal-source geometry, never by value. */
+/** Exact decimal -> q; no floating-point tolerance or rounding. */
+function truthQ(value) {
+  const text = String(value)
+  if (!/^[+\-]?\d+(?:\.\d{1,4})?$/u.test(text)) throw new Error(`Invalid ground truth number: ${text}`)
+  const [integer, fraction = ''] = text.replace(/^[+\-]/u, '').split('.')
+  return Number(BigInt(integer) * 10000n + BigInt(fraction.padEnd(4, '0'))) * (text.startsWith('-') ? -1 : 1)
+}
+
+/** A crop must exist and really be a PNG before any field counts as checked. */
+function validTruthCrop(truth) {
+  if (truth.verifiedBy !== 'render-crop' || !truth.originalText?.trim() ||
+      typeof truth.cropFile !== 'string' || !/^crops\/[\w./-]+\.png$/u.test(truth.cropFile) ||
+      truth.cropFile.split('/').includes('..')) return false
+  const file = new URL(`../../docs/evidence/ground-truth/${truth.cropFile}`, import.meta.url)
+  return existsSync(file) && readFileSync(file).subarray(0, 8).toString('hex') === '89504e470d0a1a0a'
+}
+
+/** Match by document/page/geometry (and stable ID where recorded), NEVER by numeric value. */
 export function compareGroundTruth(docId, candidates, truths) {
-  const details = truths.filter(t=>t.docId===docId).map(truth=>{
-    const located = candidates.filter(c=>c.kind==='ring' && c.data.nominal?.evidence.some(e=>{
-      if(e.page!==truth.page) return false
-      const [x0,y0,x1,y1]=e.rectPdf
-      const x=(x0+x1)/2, y=(y0+y1)/2
-      return x>=truth.rect[0] && x<=truth.rect[2] && y>=truth.rect[1] && y<=truth.rect[3]
-    }))
-    // Symbol-chain candidates can share a nominal rectangle (T1=T2=0.2).
-    // Disambiguate by the symbol-source x anchor, never by the extracted number.
+  const checked = new Set()
+  const details = truths.filter(t => t.docId === docId).map(truth => {
+    const located = candidates.filter(c => c.kind === 'ring' &&
+      (!truth.candidateId || c.candidateId === truth.candidateId) && c.data.nominal?.evidence.some(e => {
+        if (e.page !== truth.page) return false
+        const [x0, y0, x1, y1] = e.rectPdf
+        const x = (x0 + x1) / 2, y = (y0 + y1) / 2
+        return x >= truth.rect[0] && x <= truth.rect[2] && y >= truth.rect[1] && y <= truth.rect[3]
+      }))
     const distance = c => {
-      const anchor = c.evidence?.find(e=>e.page===truth.page) ?? c.data.nominal.evidence.find(e=>e.page===truth.page)
-      return Math.abs(anchor.rectPdf[0]-truth.rect[0])
+      const anchor = c.evidence?.find(e => e.page === truth.page) ?? c.data.nominal.evidence.find(e => e.page === truth.page)
+      return Math.abs(anchor.rectPdf[0] - truth.rect[0])
     }
     const nearest = Math.min(...located.map(distance))
-    const matches = located.filter(c=>distance(c)===nearest)
-    const pending=matches.filter(c=>c.status==='pending')
-    // Decimal -> q without binary floating point or precision relaxation.
-    const text=String(truth.nominal)
-    if(!/^[+\-]?\d+(?:\.\d{1,4})?$/u.test(text)) throw new Error(`Invalid ground truth nominal: ${text}`)
-    const [integer,fraction='']=text.replace(/^[+\-]/u,'').split('.')
-    const expectedQ=Number(BigInt(integer)*10000n+BigInt(fraction.padEnd(4,'0'))) * (text.startsWith('-')?-1:1)
-    return {docId,page:truth.page,rect:truth.rect,originalText:truth.originalText,expectedQ,
-      cropFile:truth.cropFile, pendingChecked:pending.length,
-      wrongPending:pending.filter(c=>c.data.nominal.valueQ!==expectedQ).length,
-      matches:matches.map(c=>({candidateId:c.candidateId,status:c.status,nominal:c.data.nominal?.text,
-        valueQ:c.data.nominal?.valueQ,upperDeviation:c.data.upperDeviation?.text??null,
-        lowerDeviation:c.data.lowerDeviation?.text??null,reasonCodes:c.reasonCodes}))}
+    const matches = located.filter(c => distance(c) === nearest)
+    const pending = matches.filter(c => c.status === 'pending' && !checked.has(c.candidateId))
+    const cropValid = validTruthCrop(truth) && (truth.deviationSources ?? []).every(source =>
+      validTruthCrop({ ...source, verifiedBy: 'render-crop' }))
+    // Ambiguous or absent crop evidence is not a successful verification.
+    const verified = cropValid && pending.length === 1 ? pending : []
+    const expectedQ = truthQ(truth.nominal)
+    const fields = ['nominal', 'upperDeviation', 'lowerDeviation']
+    const comparisons = verified.map(c => {
+      checked.add(c.candidateId)
+      const differences = fields.flatMap(field => {
+        const expected = truth[field]
+        const actual = c.data[field]?.valueQ ?? null
+        const expectedValueQ = expected === null ? null : truthQ(expected)
+        return actual === expectedValueQ ? [] : [{ field, expected: expectedValueQ, actual }]
+      })
+      return { candidateId: c.candidateId, differences }
+    })
+    return { docId, page: truth.page, rect: truth.rect, originalText: truth.originalText, expectedQ,
+      cropFile: truth.cropFile ?? null, cropValid, pendingChecked: verified.length,
+      wrongPending: comparisons.filter(c => c.differences.length > 0).length,
+      nominalWrong: comparisons.filter(c => c.differences.some(d => d.field === 'nominal')).length,
+      upperDeviationChecked: truth.upperDeviation === null ? 0 : verified.length,
+      lowerDeviationChecked: truth.lowerDeviation === null ? 0 : verified.length,
+      comparisons,
+      matches: matches.map(c => ({ candidateId: c.candidateId, status: c.status, nominal: c.data.nominal?.text,
+        valueQ: c.data.nominal?.valueQ, upperDeviation: c.data.upperDeviation?.text ?? null,
+        lowerDeviation: c.data.lowerDeviation?.text ?? null, reasonCodes: c.reasonCodes })) }
   })
-  return {pendingChecked:details.reduce((n,d)=>n+d.pendingChecked,0),
-    wrongPending:details.reduce((n,d)=>n+d.wrongPending,0),details}
+  const unchecked = candidates.filter(c => c.status === 'pending' && !checked.has(c.candidateId)).map(c => c.candidateId)
+  const uncheckedDetails = unchecked.map(candidateId => ({ candidateId, reason:
+    details.some(d => !d.cropValid && d.matches.some(c => c.candidateId === candidateId))
+      ? 'missing-or-invalid-crop' : details.some(d => d.matches.some(c => c.candidateId === candidateId))
+        ? 'ambiguous-match' : 'no-verified-truth-match' }))
+  const uncheckedReasons = Object.fromEntries(countBy(uncheckedDetails.map(d => d.reason)).map(d => [d.code, d.count]))
+  const sum = field => details.reduce((n, d) => n + d[field], 0)
+  return { gtVersion: 'gt-02', pendingTotal: candidates.filter(c => c.status === 'pending').length,
+    pendingChecked: checked.size, wrongPending: sum('wrongPending'), nominalChecked: checked.size,
+    nominalWrong: sum('nominalWrong'), upperDeviationChecked: sum('upperDeviationChecked'),
+    lowerDeviationChecked: sum('lowerDeviationChecked'), unchecked, uncheckedReasons, uncheckedDetails, details }
 }
 
 /**
@@ -437,9 +478,19 @@ export function summarize(rows, probe, rules) {
     textItems: sum((row) => row.textItems),
     candidates: { total: totalCandidates, pending, blocked, confirmed },
     correctness: {
-      pendingChecked: sum(row=>row.correctness?.pendingChecked ?? 0),
-      wrongPending: sum(row=>row.correctness?.wrongPending ?? 0),
-      wrongRate: ratio(sum(row=>row.correctness?.wrongPending ?? 0), sum(row=>row.correctness?.pendingChecked ?? 0)),
+      gtVersion: 'gt-02',
+      pendingTotal: pending,
+      pendingChecked: sum(row => row.correctness?.pendingChecked ?? 0),
+      wrongPending: sum(row => row.correctness?.wrongPending ?? 0),
+      wrongRate: ratio(sum(row => row.correctness?.wrongPending ?? 0), sum(row => row.correctness?.pendingChecked ?? 0)),
+      nominalChecked: sum(row => row.correctness?.nominalChecked ?? 0),
+      nominalWrong: sum(row => row.correctness?.nominalWrong ?? 0),
+      upperDeviationChecked: sum(row => row.correctness?.upperDeviationChecked ?? 0),
+      lowerDeviationChecked: sum(row => row.correctness?.lowerDeviationChecked ?? 0),
+      unchecked: rows.flatMap(row => row.correctness?.unchecked ?? []),
+      uncheckedReasons: Object.fromEntries(countBy(rows.flatMap(row =>
+        (row.correctness?.uncheckedDetails ?? []).map(d => d.reason))).map(d => [d.code, d.count])),
+      uncheckedDetails: rows.flatMap(row => (row.correctness?.uncheckedDetails ?? []).map(d => ({ docId: row.id, ...d }))),
     },
     confirmableRate: ratio(pending, totalCandidates),
     blockedRate: ratio(blocked, totalCandidates),
@@ -462,7 +513,7 @@ export async function measureCorpus({
   unitAttestation = null,
 }) {
   const manifest = loadManifest(manifestPath)
-  const groundTruth = JSON.parse(readFileSync(new URL('../../docs/evidence/ground-truth/gt-01.json', import.meta.url), 'utf8')).entries
+  const groundTruth = JSON.parse(readFileSync(new URL('../../docs/evidence/ground-truth/gt-02.json', import.meta.url), 'utf8')).entries
   const verified = verifyCorpus(manifest, corpusDir)
   const modules = await loadExtraction()
   const rules = {

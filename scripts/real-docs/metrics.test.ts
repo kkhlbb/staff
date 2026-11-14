@@ -128,7 +128,10 @@ describe('真实文档度量与基线', () => {
         )
       }
       expect(diffs).toEqual([])
-      expect(measured.summary.correctness).toEqual({pendingChecked:19,wrongPending:0,wrongRate:0})
+      expect(measured.summary.correctness).toMatchObject({gtVersion:'gt-02',pendingTotal:58,pendingChecked:58,wrongPending:0,wrongRate:0,nominalChecked:58,upperDeviationChecked:20,lowerDeviationChecked:20,unchecked:[],uncheckedReasons:{}})
+      expect(measured.documents.map(row=>[row.id,row.candidates.pending])).toEqual([
+        ['r1',4],['r2',10],['r3',0],['r4',1],['r5',2],['r6',41],
+      ])
       expect(measured.summary.documents).toBe(6)
       expect(measured.summary.candidates.confirmed).toBe(0)
     },

@@ -1,0 +1,7 @@
+
+> staff@0.4.1-beta typecheck
+> tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.mcp.json --noEmit
+
+
+EXIT_CODE=0
+SIGNAL=null

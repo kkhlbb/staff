@@ -76,9 +76,163 @@
       },
       "pageLimit": null,
       "correctness": {
-        "pendingChecked": 0,
+        "gtVersion": "gt-02",
+        "pendingTotal": 4,
+        "pendingChecked": 4,
         "wrongPending": 0,
-        "details": []
+        "nominalChecked": 4,
+        "nominalWrong": 0,
+        "upperDeviationChecked": 0,
+        "lowerDeviationChecked": 0,
+        "unchecked": [],
+        "uncheckedReasons": {},
+        "uncheckedDetails": [],
+        "details": [
+          {
+            "docId": "r1",
+            "page": 30,
+            "rect": [
+              422.107,
+              429.71075,
+              553.87579,
+              459.72200000000004
+            ],
+            "originalText": "A₃ = 12 mm",
+            "expectedQ": 120000,
+            "cropFile": "crops/gt-02/r1-01-p30.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-0bcf4ce29406b848",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-0bcf4ce29406b848",
+                "status": "pending",
+                "nominal": "12",
+                "valueQ": 120000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r1",
+            "page": 30,
+            "rect": [
+              79.2,
+              429.71075,
+              210.944781,
+              459.72200000000004
+            ],
+            "originalText": "A₁ = 34 mm",
+            "expectedQ": 340000,
+            "cropFile": "crops/gt-02/r1-02-p30.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-0fc1f387f31324b1",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-0fc1f387f31324b1",
+                "status": "pending",
+                "nominal": "34",
+                "valueQ": 340000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r1",
+            "page": 30,
+            "rect": [
+              246.387,
+              429.71075,
+              378.245781,
+              459.72200000000004
+            ],
+            "originalText": "A₂ = 22 mm",
+            "expectedQ": 220000,
+            "cropFile": "crops/gt-02/r1-03-p30.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-7cf8c40dd28d9c5b",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-7cf8c40dd28d9c5b",
+                "status": "pending",
+                "nominal": "22",
+                "valueQ": 220000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r1",
+            "page": 30,
+            "rect": [
+              176.202,
+              266.78275,
+              326.901186,
+              295.909
+            ],
+            "originalText": "T₀ = 0.35 mm",
+            "expectedQ": 3500,
+            "cropFile": "crops/gt-02/r1-04-p30.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-2033bab4daad661e",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-2033bab4daad661e",
+                "status": "pending",
+                "nominal": "0.35",
+                "valueQ": 3500,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          }
+        ]
       }
     },
     {
@@ -137,8 +291,17 @@
       },
       "pageLimit": null,
       "correctness": {
-        "pendingChecked": 7,
+        "gtVersion": "gt-02",
+        "pendingTotal": 10,
+        "pendingChecked": 10,
         "wrongPending": 0,
+        "nominalChecked": 10,
+        "nominalWrong": 0,
+        "upperDeviationChecked": 7,
+        "lowerDeviationChecked": 7,
+        "unchecked": [],
+        "uncheckedReasons": {},
+        "uncheckedDetails": [],
         "details": [
           {
             "docId": "r2",
@@ -146,14 +309,24 @@
             "rect": [
               451.293,
               511.01271266300995,
-              512.487,
+              482.795,
               523.3291493479607
             ],
             "originalText": "L₀ = 0⁰₀ mm",
             "expectedQ": 0,
-            "cropFile": "crops/r2-p2-1.png",
+            "cropFile": "crops/gt-02/r2-01-p2.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-accd3353bbe04c5d",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-accd3353bbe04c5d",
@@ -172,14 +345,24 @@
             "rect": [
               288.17699999999996,
               495.00171266300987,
-              362.18,
+              329.77,
               507.3181493479606
             ],
             "originalText": "L₁ = 100⁺⁰·²₋₀.₁ mm",
             "expectedQ": 1000000,
-            "cropFile": "crops/r2-p2-2.png",
+            "cropFile": "crops/gt-02/r2-02-p2.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-d337c07dc3ee1c4b",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-d337c07dc3ee1c4b",
@@ -194,18 +377,100 @@
           },
           {
             "docId": "r2",
+            "page": 2,
+            "rect": [
+              387.25,
+              138.3977126630099,
+              429.522,
+              150.71414934796064
+            ],
+            "originalText": "L₂ = 100 (上 −0.1，下 +0.2) mm",
+            "expectedQ": 1000000,
+            "cropFile": "crops/gt-02/r2-03-p2.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-5dc8e496bb8c207c",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-5dc8e496bb8c207c",
+                "status": "pending",
+                "nominal": "100",
+                "valueQ": 1000000,
+                "upperDeviation": "-0.1",
+                "lowerDeviation": "+0.2",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r2",
+            "page": 3,
+            "rect": [
+              283.193,
+              652.8180000000001,
+              306.385,
+              664.9480000000001
+            ],
+            "originalText": "L_b = 5 (上 −0.1，下 +0.2) mm",
+            "expectedQ": 50000,
+            "cropFile": "crops/gt-02/r2-04-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-2976e3e8795d7caa",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-2976e3e8795d7caa",
+                "status": "pending",
+                "nominal": "5",
+                "valueQ": 50000,
+                "upperDeviation": "-0.1",
+                "lowerDeviation": "+0.2",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r2",
             "page": 3,
             "rect": [
               372.368,
               339.88000000000005,
-              447.474,
+              405.846,
               352.01000000000005
             ],
             "originalText": "L′_b = 5.2⁺⁰·¹₀ mm",
             "expectedQ": 52000,
-            "cropFile": "crops/r2-p3-3.png",
+            "cropFile": "crops/gt-02/r2-05-p3.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-66d1f6bff0b14da9",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-66d1f6bff0b14da9",
@@ -224,14 +489,24 @@
             "rect": [
               296.037,
               261.53571266300986,
-              453.781,
+              423.409,
               273.8521493479606
             ],
-            "originalText": "Zₘₐₓ = 5.2 + 0.1 − 4.9 = 0.4 (mm)",
+            "originalText": "Z_max = 5.2 + 0.1 − 4.9 = 0.4 (mm)",
             "expectedQ": 4000,
-            "cropFile": "crops/r2-p3-4.png",
+            "cropFile": "crops/gt-02/r2-06-p3.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-c18611b6813b3978",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-c18611b6813b3978",
@@ -248,16 +523,62 @@
             "docId": "r2",
             "page": 3,
             "rect": [
+              68.781,
+              24.710000000000036,
+              106.881,
+              37.47514934796061
+            ],
+            "originalText": "L₁ = 30⁰₋₀.₂ mm",
+            "expectedQ": 300000,
+            "cropFile": "crops/gt-02/r2-07-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-cec76813127ac529",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-cec76813127ac529",
+                "status": "pending",
+                "nominal": "30",
+                "valueQ": 300000,
+                "upperDeviation": "0",
+                "lowerDeviation": "-0.2",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r2",
+            "page": 3,
+            "rect": [
               345.913,
               10.796712663009915,
               425.25299999999993,
               23.113149347960643
             ],
-            "originalText": "δ_{L_b} = 0.10 mm",
+            "originalText": "δ_L′b = 0.10 mm",
             "expectedQ": 1000,
-            "cropFile": "crops/r2-p3-5.png",
+            "cropFile": "crops/gt-02/r2-08-p3.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-10d374cd80d0af87",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-10d374cd80d0af87",
@@ -276,14 +597,24 @@
             "rect": [
               67.32600000000001,
               8.408000000000015,
-              146.762,
+              105.42500000000001,
               21.17314934796059
             ],
             "originalText": "L₃ = 43⁺⁰·²₀ mm",
             "expectedQ": 430000,
-            "cropFile": "crops/r2-p3-6.png",
+            "cropFile": "crops/gt-02/r2-09-p3.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-0e5e5c3581207d6b",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-0e5e5c3581207d6b",
@@ -302,14 +633,24 @@
             "rect": [
               22.496000000000002,
               668.50071266301,
-              212.843,
+              182.083,
               680.8171493479606
             ],
-            "originalText": "δ_{L_z} = δ_{L_0} − δ_{L_b} = 0.25 − 0.10 = 0.15 (mm)",
+            "originalText": "δ_Lz = δ_L0 − δ_Lb = 0.25 − 0.10 = 0.15 (mm)",
             "expectedQ": 1500,
-            "cropFile": "crops/r2-p4-7.png",
+            "cropFile": "crops/gt-02/r2-10-p4.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-de3447193bdd8c3b",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-de3447193bdd8c3b",
@@ -372,8 +713,17 @@
       },
       "pageLimit": null,
       "correctness": {
+        "gtVersion": "gt-02",
+        "pendingTotal": 0,
         "pendingChecked": 0,
         "wrongPending": 0,
+        "nominalChecked": 0,
+        "nominalWrong": 0,
+        "upperDeviationChecked": 0,
+        "lowerDeviationChecked": 0,
+        "unchecked": [],
+        "uncheckedReasons": {},
+        "uncheckedDetails": [],
         "details": []
       }
     },
@@ -445,9 +795,55 @@
       },
       "pageLimit": null,
       "correctness": {
-        "pendingChecked": 0,
+        "gtVersion": "gt-02",
+        "pendingTotal": 1,
+        "pendingChecked": 1,
         "wrongPending": 0,
-        "details": []
+        "nominalChecked": 1,
+        "nominalWrong": 0,
+        "upperDeviationChecked": 0,
+        "lowerDeviationChecked": 0,
+        "unchecked": [],
+        "uncheckedReasons": {},
+        "uncheckedDetails": [],
+        "details": [
+          {
+            "docId": "r4",
+            "page": 108,
+            "rect": [
+              73.65400000000001,
+              125.26971266300987,
+              112.04400000000001,
+              137.5861493479606
+            ],
+            "originalText": "R = 0.5 mm",
+            "expectedQ": 5000,
+            "cropFile": "crops/gt-02/r4-01-p108.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-9261177b48f068c5",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-9261177b48f068c5",
+                "status": "pending",
+                "nominal": "0.5",
+                "valueQ": 5000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          }
+        ]
       }
     },
     {
@@ -489,8 +885,17 @@
       },
       "pageLimit": null,
       "correctness": {
+        "gtVersion": "gt-02",
+        "pendingTotal": 2,
         "pendingChecked": 2,
         "wrongPending": 0,
+        "nominalChecked": 2,
+        "nominalWrong": 0,
+        "upperDeviationChecked": 0,
+        "lowerDeviationChecked": 0,
+        "unchecked": [],
+        "uncheckedReasons": {},
+        "uncheckedDetails": [],
         "details": [
           {
             "docId": "r5",
@@ -503,9 +908,19 @@
             ],
             "originalText": "L₁ = 50 mm",
             "expectedQ": 500000,
-            "cropFile": "crops/r5-p2-1.png",
+            "cropFile": "crops/gt-02/r5-01-p2.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-a3b19a8dd1220837",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-a3b19a8dd1220837",
@@ -529,9 +944,19 @@
             ],
             "originalText": "L₂ = 27 mm",
             "expectedQ": 270000,
-            "cropFile": "crops/r5-p2-2.png",
+            "cropFile": "crops/gt-02/r5-02-p2.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-57535c85c6d3842b",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-57535c85c6d3842b",
@@ -619,8 +1044,17 @@
       },
       "pageLimit": null,
       "correctness": {
-        "pendingChecked": 10,
+        "gtVersion": "gt-02",
+        "pendingTotal": 41,
+        "pendingChecked": 41,
         "wrongPending": 0,
+        "nominalChecked": 41,
+        "nominalWrong": 0,
+        "upperDeviationChecked": 13,
+        "lowerDeviationChecked": 13,
+        "unchecked": [],
+        "uncheckedReasons": {},
+        "uncheckedDetails": [],
         "details": [
           {
             "docId": "r6",
@@ -633,9 +1067,19 @@
             ],
             "originalText": "A = 230 ± 0.3 mm",
             "expectedQ": 2300000,
-            "cropFile": "crops/r6-p1-1.png",
+            "cropFile": "crops/gt-02/r6-01-p1.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-d7ffc11c9b01772e",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-d7ffc11c9b01772e",
@@ -652,32 +1096,6 @@
             "docId": "r6",
             "page": 1,
             "rect": [
-              157.26,
-              268.125,
-              231.24,
-              283.62
-            ],
-            "originalText": "A₂ = 765.41 mm",
-            "expectedQ": 7654100,
-            "cropFile": "crops/r6-p1-2.png",
-            "pendingChecked": 1,
-            "wrongPending": 0,
-            "matches": [
-              {
-                "candidateId": "ring-929b4d0999e5aa9b",
-                "status": "pending",
-                "nominal": "765.41",
-                "valueQ": 7654100,
-                "upperDeviation": null,
-                "lowerDeviation": null,
-                "reasonCodes": []
-              }
-            ]
-          },
-          {
-            "docId": "r6",
-            "page": 1,
-            "rect": [
               56.69999999999999,
               268.125,
               130.56,
@@ -685,9 +1103,19 @@
             ],
             "originalText": "A₁ = 759.48 mm",
             "expectedQ": 7594800,
-            "cropFile": "crops/r6-p1-3.png",
+            "cropFile": "crops/gt-02/r6-02-p1.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-43131c64f4c08186",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-43131c64f4c08186",
@@ -704,6 +1132,42 @@
             "docId": "r6",
             "page": 1,
             "rect": [
+              157.26,
+              268.125,
+              231.24,
+              283.62
+            ],
+            "originalText": "A₂ = 765.41 mm",
+            "expectedQ": 7654100,
+            "cropFile": "crops/gt-02/r6-03-p1.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-929b4d0999e5aa9b",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-929b4d0999e5aa9b",
+                "status": "pending",
+                "nominal": "765.41",
+                "valueQ": 7654100,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 1,
+            "rect": [
               257.94,
               268.125,
               322.8,
@@ -711,9 +1175,19 @@
             ],
             "originalText": "A₃ = 1753 mm",
             "expectedQ": 17530000,
-            "cropFile": "crops/r6-p1-4.png",
+            "cropFile": "crops/gt-02/r6-04-p1.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-d49b18054605b313",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-d49b18054605b313",
@@ -735,11 +1209,21 @@
               400.65599999999995,
               596.52
             ],
-            "originalText": "T_{avA} = T₀/m(m−Ring Qty.) = 0.6/3 = 0.2 mm",
+            "originalText": "T_avA = T₀/m (m−Ring Qty.) = 0.6/3 = 0.2 mm",
             "expectedQ": 2000,
-            "cropFile": "crops/r6-p2-5.png",
+            "cropFile": "crops/gt-02/r6-05-p2.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-c426b928d5623e4e",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-c426b928d5623e4e",
@@ -763,9 +1247,19 @@
             ],
             "originalText": "T₂ = 0.2 mm",
             "expectedQ": 2000,
-            "cropFile": "crops/r6-p2-6.png",
+            "cropFile": "crops/gt-02/r6-06-p2.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-7dc49292c06724a0",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-7dc49292c06724a0",
@@ -789,9 +1283,19 @@
             ],
             "originalText": "T₁ = T₂ = 0.2 mm",
             "expectedQ": 2000,
-            "cropFile": "crops/r6-p2-7.png",
+            "cropFile": "crops/gt-02/r6-07-p2.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-b438f13d46eda8ef",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-b438f13d46eda8ef",
@@ -815,9 +1319,19 @@
             ],
             "originalText": "T₃ = T₀ − T₁ − T₂ = 0.6 − 0.2 − 0.2 = 0.2 mm",
             "expectedQ": 2000,
-            "cropFile": "crops/r6-p2-8.png",
+            "cropFile": "crops/gt-02/r6-08-p2.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-4910fe730edf8d45",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-4910fe730edf8d45",
@@ -839,11 +1353,21 @@
               405.696,
               486.12
             ],
-            "originalText": "A₀ₘₐₓ = 1753.1 − 759.38 − 765.31 = 228.41 mm",
+            "originalText": "A₀max = 1753.1 − 759.38 − 765.31 = 228.41 mm",
             "expectedQ": 2284100,
-            "cropFile": "crops/r6-p2-9.png",
+            "cropFile": "crops/gt-02/r6-09-p2.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-dd5566142970e986",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-dd5566142970e986",
@@ -865,17 +1389,1143 @@
               405.03599999999994,
               472.32
             ],
-            "originalText": "A₀ₘᵢₙ = 1752.9 − 759.58 − 765.51 = 227.81 mm",
+            "originalText": "A₀min = 1752.9 − 759.58 − 765.51 = 227.81 mm",
             "expectedQ": 2278100,
-            "cropFile": "crops/r6-p2-10.png",
+            "cropFile": "crops/gt-02/r6-10-p2.png",
+            "cropValid": true,
             "pendingChecked": 1,
             "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-007db38d57e0d39b",
+                "differences": []
+              }
+            ],
             "matches": [
               {
                 "candidateId": "ring-007db38d57e0d39b",
                 "status": "pending",
                 "nominal": "227.81",
                 "valueQ": 2278100,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 2,
+            "rect": [
+              96.35999999999993,
+              442.005,
+              188.856,
+              457.5
+            ],
+            "originalText": "A₀ = 228.11 ± 0.3 mm",
+            "expectedQ": 2281100,
+            "cropFile": "crops/gt-02/r6-11-p2.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-ce1aaac4a88d1d56",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-ce1aaac4a88d1d56",
+                "status": "pending",
+                "nominal": "228.11",
+                "valueQ": 2281100,
+                "upperDeviation": "+0.3",
+                "lowerDeviation": "-0.3",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 2,
+            "rect": [
+              457.67999999999995,
+              133.92,
+              538.6800000000001,
+              148.92
+            ],
+            "originalText": "T = 0.04 mm",
+            "expectedQ": 400,
+            "cropFile": "crops/gt-02/r6-12-p2.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-a08719bb553e31c5",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-a08719bb553e31c5",
+                "status": "pending",
+                "nominal": "0.04",
+                "valueQ": 400,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 2,
+            "rect": [
+              56.70000000000016,
+              76.845,
+              238.38,
+              92.34
+            ],
+            "originalText": "B₁ = (125×COS10°+230/2) = 238.1 mm",
+            "expectedQ": 2381000,
+            "cropFile": "crops/gt-02/r6-13-p2.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-7fe1503f1612f391",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-7fe1503f1612f391",
+                "status": "pending",
+                "nominal": "238.1",
+                "valueQ": 2381000,
+                "upperDeviation": "+0.07",
+                "lowerDeviation": "-0.07",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 2,
+            "rect": [
+              401.2800000000001,
+              76.845,
+              510.24,
+              92.34
+            ],
+            "originalText": "B₃ = 488.88 mm",
+            "expectedQ": 4888800,
+            "cropFile": "crops/gt-02/r6-14-p2.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-bf14aa7d630e688f",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-bf14aa7d630e688f",
+                "status": "pending",
+                "nominal": "488.88",
+                "valueQ": 4888800,
+                "upperDeviation": "+0.05",
+                "lowerDeviation": "-0.05",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 2,
+            "rect": [
+              251.99999999999997,
+              76.845,
+              387.60000000000014,
+              92.34
+            ],
+            "originalText": "B₂ = (33×COS10°) = 32.5 mm",
+            "expectedQ": 325000,
+            "cropFile": "crops/gt-02/r6-15-p2.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-d40621d59164e0a7",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-d40621d59164e0a7",
+                "status": "pending",
+                "nominal": "32.5",
+                "valueQ": 325000,
+                "upperDeviation": "+0.03",
+                "lowerDeviation": "-0.03",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 2,
+            "rect": [
+              444.41999999999996,
+              62.68500000000001,
+              538.5600000000001,
+              78.18
+            ],
+            "originalText": "a₁ = 759.48 ± 0.1 mm",
+            "expectedQ": 7594800,
+            "cropFile": "crops/gt-02/r6-16-p2.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-830ddc2459d6daf6",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-830ddc2459d6daf6",
+                "status": "pending",
+                "nominal": "759.48",
+                "valueQ": 7594800,
+                "upperDeviation": "+0.1",
+                "lowerDeviation": "-0.1",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 3,
+            "rect": [
+              126.96,
+              508.185,
+              188.22,
+              523.6800000000001
+            ],
+            "originalText": "T₃ = 0.97 mm",
+            "expectedQ": 9700,
+            "cropFile": "crops/gt-02/r6-17-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-488eb2538f5c6555",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-488eb2538f5c6555",
+                "status": "pending",
+                "nominal": "0.97",
+                "valueQ": 9700,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 3,
+            "rect": [
+              56.700000000000045,
+              508.185,
+              123.96000000000001,
+              523.6800000000001
+            ],
+            "originalText": "T₁ = 0.115 mm",
+            "expectedQ": 1150,
+            "cropFile": "crops/gt-02/r6-18-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-a55ea798cf1c06aa",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-a55ea798cf1c06aa",
+                "status": "pending",
+                "nominal": "0.115",
+                "valueQ": 1150,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 3,
+            "rect": [
+              405.5400000000001,
+              457.545,
+              472.8,
+              473.04
+            ],
+            "originalText": "T₃ = 0.10 mm",
+            "expectedQ": 1000,
+            "cropFile": "crops/gt-02/r6-19-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-7d6ca5d4f72ac32a",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-7d6ca5d4f72ac32a",
+                "status": "pending",
+                "nominal": "0.10",
+                "valueQ": 1000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 3,
+            "rect": [
+              165.99659999999997,
+              425.480925,
+              439.42859999999996,
+              440.4483
+            ],
+            "originalText": "T₀ = √(T₁²−T₂²−T₃²) = √(0.41²−0.06²−0.10²) = 0.182 mm",
+            "expectedQ": 1820,
+            "cropFile": "crops/gt-02/r6-20-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-7c3a2688aa2aa6ea",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-7c3a2688aa2aa6ea",
+                "status": "pending",
+                "nominal": "0.182",
+                "valueQ": 1820,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 3,
+            "rect": [
+              177.72000000000003,
+              406.965,
+              238.92,
+              422.46
+            ],
+            "originalText": "T₀ = 0.2 mm",
+            "expectedQ": 2000,
+            "cropFile": "crops/gt-02/r6-21-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-26a60e3972786e13",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-26a60e3972786e13",
+                "status": "pending",
+                "nominal": "0.2",
+                "valueQ": 2000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 3,
+            "rect": [
+              244.02,
+              310.365,
+              363.27600000000007,
+              325.86
+            ],
+            "originalText": "Δ₀ = [0.1+(−0.1)]/2 = 0 mm",
+            "expectedQ": 0,
+            "cropFile": "crops/gt-02/r6-22-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-fca8c6c84e545e7a",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-fca8c6c84e545e7a",
+                "status": "pending",
+                "nominal": "0",
+                "valueQ": 0,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 3,
+            "rect": [
+              238.02000000000004,
+              296.565,
+              369.276,
+              312.06
+            ],
+            "originalText": "Δ₁ = [0.07+(−0.07)]/2 = 0 mm",
+            "expectedQ": 0,
+            "cropFile": "crops/gt-02/r6-23-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-f4827e4602061724",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-f4827e4602061724",
+                "status": "pending",
+                "nominal": "0",
+                "valueQ": 0,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 3,
+            "rect": [
+              238.01999999999995,
+              282.765,
+              369.276,
+              298.26
+            ],
+            "originalText": "Δ₃ = [0.05+(−0.05)]/2 = 0 mm",
+            "expectedQ": 0,
+            "cropFile": "crops/gt-02/r6-24-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-fa006873d4ff5ecd",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-fa006873d4ff5ecd",
+                "status": "pending",
+                "nominal": "0",
+                "valueQ": 0,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 3,
+            "rect": [
+              262.67999999999995,
+              268.965,
+              344.67599999999993,
+              284.46
+            ],
+            "originalText": "Δ₂ = 0−0−0 = 0 mm",
+            "expectedQ": 0,
+            "cropFile": "crops/gt-02/r6-25-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-16b6e70418c544e2",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-16b6e70418c544e2",
+                "status": "pending",
+                "nominal": "0",
+                "valueQ": 0,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 3,
+            "rect": [
+              85.20000000000005,
+              149.385,
+              264.6,
+              164.88
+            ],
+            "originalText": "ES₀ = Δ₀+T₀/2 = 0+0.182/2 = 0.091 mm",
+            "expectedQ": 910,
+            "cropFile": "crops/gt-02/r6-26-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-53e823707b27f1ae",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-53e823707b27f1ae",
+                "status": "pending",
+                "nominal": "0.091",
+                "valueQ": 910,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 3,
+            "rect": [
+              264.6,
+              149.385,
+              448.8,
+              164.88
+            ],
+            "originalText": "EI₀ = Δ₀−T₀/2 = 0−0.182/2 = −0.091 mm",
+            "expectedQ": -910,
+            "cropFile": "crops/gt-02/r6-27-p3.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-a53ada50a4f5b976",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-a53ada50a4f5b976",
+                "status": "pending",
+                "nominal": "-0.091",
+                "valueQ": -910,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 4,
+            "rect": [
+              114.41999999999999,
+              490.305,
+              538.6679999999996,
+              505.8
+            ],
+            "originalText": "B₁ = 260 ± 0.07 mm",
+            "expectedQ": 2600000,
+            "cropFile": "crops/gt-02/r6-28-p4.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-7dc47c5adab23990",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-7dc47c5adab23990",
+                "status": "pending",
+                "nominal": "260",
+                "valueQ": 2600000,
+                "upperDeviation": "+0.07",
+                "lowerDeviation": "-0.07",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 4,
+            "rect": [
+              234.48000000000002,
+              274.545,
+              372.876,
+              290.04
+            ],
+            "originalText": "T₀ = +0.07−(−0.07) = 0.14 mm",
+            "expectedQ": 1400,
+            "cropFile": "crops/gt-02/r6-29-p4.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-46b43975d3c420b7",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-46b43975d3c420b7",
+                "status": "pending",
+                "nominal": "0.14",
+                "valueQ": 1400,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 4,
+            "rect": [
+              69.65999999999998,
+              212.14499999999998,
+              499.05599999999987,
+              227.64
+            ],
+            "originalText": "T₂ = 0.10 mm",
+            "expectedQ": 1000,
+            "cropFile": "crops/gt-02/r6-30-p4.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-7f738e3e023b6664",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-7f738e3e023b6664",
+                "status": "pending",
+                "nominal": "0.10",
+                "valueQ": 1000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 4,
+            "rect": [
+              81.54,
+              212.14499999999998,
+              499.05599999999987,
+              227.64
+            ],
+            "originalText": "T₁ = T₂ = 0.10 mm",
+            "expectedQ": 1000,
+            "cropFile": "crops/gt-02/r6-31-p4.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-a9cab7502c31fe3e",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-a9cab7502c31fe3e",
+                "status": "pending",
+                "nominal": "0.10",
+                "valueQ": 1000,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 4,
+            "rect": [
+              81.30000000000004,
+              198.345,
+              148.62,
+              213.84
+            ],
+            "originalText": "T₂ = 0.09 mm",
+            "expectedQ": 900,
+            "cropFile": "crops/gt-02/r6-32-p4.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-9bab8f3fb5b7d951",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-9bab8f3fb5b7d951",
+                "status": "pending",
+                "nominal": "0.09",
+                "valueQ": 900,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 4,
+            "rect": [
+              91.38,
+              106.24499999999999,
+              129.18,
+              121.74
+            ],
+            "originalText": "B₁ = 125 ± 0.045 mm",
+            "expectedQ": 1250000,
+            "cropFile": "crops/gt-02/r6-33-p4.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-8baca661a7f4aef7",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-8baca661a7f4aef7",
+                "status": "pending",
+                "nominal": "125",
+                "valueQ": 1250000,
+                "upperDeviation": "+0.045",
+                "lowerDeviation": "-0.045",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 4,
+            "rect": [
+              367.86,
+              60.585,
+              538.5600000000002,
+              76.08
+            ],
+            "originalText": "ES₀ = Δ₀+T₀/2 = 0+0.135/2 = 0.07 mm",
+            "expectedQ": 700,
+            "cropFile": "crops/gt-02/r6-34-p4.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-bd9e1978e6ee1d3e",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-bd9e1978e6ee1d3e",
+                "status": "pending",
+                "nominal": "0.07",
+                "valueQ": 700,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 4,
+            "rect": [
+              57.7519725,
+              60.866150000000005,
+              254.0103114999999,
+              75.2139
+            ],
+            "originalText": "T₀ = √(T₁²+T₂²) = √(0.10²+0.09²) = 0.135 mm",
+            "expectedQ": 1350,
+            "cropFile": "crops/gt-02/r6-35-p4.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-96628f7ae78c8cb8",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-96628f7ae78c8cb8",
+                "status": "pending",
+                "nominal": "0.135",
+                "valueQ": 1350,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 5,
+            "rect": [
+              429.53999999999996,
+              756.465,
+              538.6560000000001,
+              771.96
+            ],
+            "originalText": "B₁upper = 135 ± 0.05 mm",
+            "expectedQ": 1350000,
+            "cropFile": "crops/gt-02/r6-36-p5.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-a5089f3973406adf",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-a5089f3973406adf",
+                "status": "pending",
+                "nominal": "135",
+                "valueQ": 1350000,
+                "upperDeviation": "+0.05",
+                "lowerDeviation": "-0.05",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 5,
+            "rect": [
+              64.62,
+              742.665,
+              171.72,
+              758.16
+            ],
+            "originalText": "B₁below = 125 ± 0.045 mm",
+            "expectedQ": 1250000,
+            "cropFile": "crops/gt-02/r6-37-p5.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-f8bcbf072565a071",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-f8bcbf072565a071",
+                "status": "pending",
+                "nominal": "125",
+                "valueQ": 1250000,
+                "upperDeviation": "+0.045",
+                "lowerDeviation": "-0.045",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 5,
+            "rect": [
+              166.02,
+              147.3,
+              492.70799999999997,
+              162.3
+            ],
+            "originalText": "B₁upper = 125 ± 0.045 mm",
+            "expectedQ": 1250000,
+            "cropFile": "crops/gt-02/r6-38-p5.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-22de8859b9c4df13",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-22de8859b9c4df13",
+                "status": "pending",
+                "nominal": "125",
+                "valueQ": 1250000,
+                "upperDeviation": "+0.045",
+                "lowerDeviation": "-0.045",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 6,
+            "rect": [
+              145.2,
+              478.2,
+              246.156,
+              493.2
+            ],
+            "originalText": "B₁.on = 125 ± 0.045 mm",
+            "expectedQ": 1250000,
+            "cropFile": "crops/gt-02/r6-39-p6.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 1,
+            "lowerDeviationChecked": 1,
+            "comparisons": [
+              {
+                "candidateId": "ring-13c418563bb4c134",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-13c418563bb4c134",
+                "status": "pending",
+                "nominal": "125",
+                "valueQ": 1250000,
+                "upperDeviation": "+0.045",
+                "lowerDeviation": "-0.045",
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 6,
+            "rect": [
+              146.70000000000005,
+              429.765,
+              448.536,
+              445.26
+            ],
+            "originalText": "Δ₀ = Δ₁+Δ₂ = [0.052+(−0.048)]/2+[0.045+(−0.045)]/2 = 0.002 mm",
+            "expectedQ": 20,
+            "cropFile": "crops/gt-02/r6-40-p6.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-f2fcfd1fc37ae9fd",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-f2fcfd1fc37ae9fd",
+                "status": "pending",
+                "nominal": "0.002",
+                "valueQ": 20,
+                "upperDeviation": null,
+                "lowerDeviation": null,
+                "reasonCodes": []
+              }
+            ]
+          },
+          {
+            "docId": "r6",
+            "page": 6,
+            "rect": [
+              206.88,
+              364.605,
+              400.476,
+              380.1
+            ],
+            "originalText": "EI₀ = Δ₀−T₀/2 = 0.002−0.135/2 = −0.07 mm",
+            "expectedQ": -700,
+            "cropFile": "crops/gt-02/r6-41-p6.png",
+            "cropValid": true,
+            "pendingChecked": 1,
+            "wrongPending": 0,
+            "nominalWrong": 0,
+            "upperDeviationChecked": 0,
+            "lowerDeviationChecked": 0,
+            "comparisons": [
+              {
+                "candidateId": "ring-c1d9aa2b063470ad",
+                "differences": []
+              }
+            ],
+            "matches": [
+              {
+                "candidateId": "ring-c1d9aa2b063470ad",
+                "status": "pending",
+                "nominal": "-0.07",
+                "valueQ": -700,
                 "upperDeviation": null,
                 "lowerDeviation": null,
                 "reasonCodes": []
@@ -897,9 +2547,18 @@
       "confirmed": 0
     },
     "correctness": {
-      "pendingChecked": 19,
+      "gtVersion": "gt-02",
+      "pendingTotal": 58,
+      "pendingChecked": 58,
       "wrongPending": 0,
-      "wrongRate": 0
+      "wrongRate": 0,
+      "nominalChecked": 58,
+      "nominalWrong": 0,
+      "upperDeviationChecked": 20,
+      "lowerDeviationChecked": 20,
+      "unchecked": [],
+      "uncheckedReasons": {},
+      "uncheckedDetails": []
     },
     "confirmableRate": 0.414286,
     "blockedRate": 0.585714,
@@ -982,7 +2641,7 @@
       }
     ]
   },
-  "baselineReason": "v8：几何上下标隔离、非对称公差，字号比0.8至0.95可疑项保守阻塞；19条裁片按几何定位、逐q核对nominal；符号链按符号出处定位避免重复计数",
+  "baselineReason": "gt-02 原件裁片核验扩展到全部58条 pending；20组显式上下偏差另核，4组补充跨页原件出处；只更新正确性度量，抽取规则与候选计数未变",
   "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
   "generatedAtKind": "run-time",
   "runTimeFields": []

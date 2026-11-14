@@ -1,0 +1,26 @@
+docs/evidence/ground-truth/logs/baseline-update.log:7: trailing whitespace.
++r1 r1-assembly-course.pdf     zh  74   4409   15  4        11       26.7%  73.3%   -        
+docs/evidence/ground-truth/logs/baseline-update.log:8: trailing whitespace.
++r2 r2-tolerance-domain.pdf    zh  5    6105   24  10       14       41.7%  58.3%   -        
+docs/evidence/ground-truth/logs/baseline-update.log:9: trailing whitespace.
++r3 r3-rv-3dcs.pdf             zh  4    1570   3   0        3        0.0%   100.0%  -        
+docs/evidence/ground-truth/logs/baseline-update.log:10: trailing whitespace.
++r4 r4-mtt1097.pdf             zh  170  94214  7   1        6        14.3%  85.7%   -        
+docs/evidence/ground-truth/logs/baseline-update.log:11: trailing whitespace.
++r5 r5-tolerance-analysis.pdf  en  8    4053   4   2        2        50.0%  50.0%   -        
+docs/evidence/ground-truth/logs/baseline-update.log:12: trailing whitespace.
++r6 r6-segments-assembly.pdf   en  8    2871   87  41       46       47.1%  52.9%   -        
+docs/evidence/ground-truth/logs/build.log:18: trailing whitespace.
++[plugin builtin:vite-reporter] 
+docs/evidence/ground-truth/logs/metrics.log:7: trailing whitespace.
++r1 r1-assembly-course.pdf     zh  74   4409   15  4        11       26.7%  73.3%   -        
+docs/evidence/ground-truth/logs/metrics.log:8: trailing whitespace.
++r2 r2-tolerance-domain.pdf    zh  5    6105   24  10       14       41.7%  58.3%   -        
+docs/evidence/ground-truth/logs/metrics.log:9: trailing whitespace.
++r3 r3-rv-3dcs.pdf             zh  4    1570   3   0        3        0.0%   100.0%  -        
+docs/evidence/ground-truth/logs/metrics.log:10: trailing whitespace.
++r4 r4-mtt1097.pdf             zh  170  94214  7   1        6        14.3%  85.7%   -        
+docs/evidence/ground-truth/logs/metrics.log:11: trailing whitespace.
++r5 r5-tolerance-analysis.pdf  en  8    4053   4   2        2        50.0%  50.0%   -        
+docs/evidence/ground-truth/logs/metrics.log:12: trailing whitespace.
++r6 r6-segments-assembly.pdf   en  8    2871   87  41       46       47.1%  52.9%   -        

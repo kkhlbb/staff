@@ -1,0 +1,68 @@
+{
+  "baseline": "bd596cf",
+  "extractionMetricsUnchanged": true,
+  "gt01Unchanged": true,
+  "gt01Sha256": "5f3c57fb7582e011bdd37b90ebe602827c334a8d041dc3e5c8e460fa3c526ec3",
+  "gt01CropsUnchanged": true,
+  "distribution": [
+    {
+      "docId": "r1",
+      "pending": 4,
+      "checked": 4,
+      "upperDeviationChecked": 0,
+      "lowerDeviationChecked": 0
+    },
+    {
+      "docId": "r2",
+      "pending": 10,
+      "checked": 10,
+      "upperDeviationChecked": 7,
+      "lowerDeviationChecked": 7
+    },
+    {
+      "docId": "r3",
+      "pending": 0,
+      "checked": 0,
+      "upperDeviationChecked": 0,
+      "lowerDeviationChecked": 0
+    },
+    {
+      "docId": "r4",
+      "pending": 1,
+      "checked": 1,
+      "upperDeviationChecked": 0,
+      "lowerDeviationChecked": 0
+    },
+    {
+      "docId": "r5",
+      "pending": 2,
+      "checked": 2,
+      "upperDeviationChecked": 0,
+      "lowerDeviationChecked": 0
+    },
+    {
+      "docId": "r6",
+      "pending": 41,
+      "checked": 41,
+      "upperDeviationChecked": 13,
+      "lowerDeviationChecked": 13
+    }
+  ],
+  "correctness": {
+    "gtVersion": "gt-02",
+    "pendingTotal": 58,
+    "pendingChecked": 58,
+    "wrongPending": 0,
+    "wrongRate": 0,
+    "nominalChecked": 58,
+    "nominalWrong": 0,
+    "upperDeviationChecked": 20,
+    "lowerDeviationChecked": 20,
+    "unchecked": [],
+    "uncheckedReasons": {},
+    "uncheckedDetails": []
+  },
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}
