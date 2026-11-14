@@ -73,7 +73,9 @@ worktree 的局部 asset（源码/Forge `.vite/build` 两种位置）解析。
 `npm run test:step-kernel` 实际执行 WASM；`npm run test:desktop` 前自动准备资源。
 `npm run check:package:step -- <实际 Resources/resources 目录>` 检查 app.asar、
 外置资源哈希、完整许可文本；此脚本只验证资源，不声称成包运行通过。
-普通测试不写 docs/evidence。可用 `STEP_KERNEL_EVIDENCE_DIR` 显式指定仓库外输出。
+普通测试不写 docs/evidence，也不通过环境变量兼做采集器。独立采集入口为
+`vitest.step-evidence.config.ts`（必须显式设置新的 STEP_EVIDENCE_DIR），原生读回与
+成包走查见 `scripts/step-evidence/`；普通 test include 不包含这些脚本。
 
 本轮 red/green、安装和 typecheck 日志及20/32/12与奇数内径q=200001两件
 位于用户指定仓库外 `step-product-evidence/kernel/`；首次缺模块 RED 与随后

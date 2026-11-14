@@ -15,9 +15,12 @@ const stepFileOps: FileOps = { ...nodeFileOps, async writeExclusive(target, byte
    if (r.bytesWritten <= 0) throw Error('short write')
    offset += r.bytesWritten
   }
-  await handle.sync(); complete = true
+  await handle.sync(); await handle.close(); complete = true
  } finally {
-  try { await handle.close() } finally { if (!complete) await fs.unlink(target) }
+  if (!complete) {
+   try { await handle.close() } catch { /* original write/sync/close failure retained */ }
+   await fs.unlink(target)
+  }
  }
 } }
 export class StepExportStore {

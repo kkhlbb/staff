@@ -34,6 +34,17 @@ it('rejects changed target, symlink, directory and missing parent before writes'
  for (const target of [link, f.d, path.join(f.d,'missing','x.step')]) await expect(f.store.save(target, f.bytes, null)).rejects.toThrow()
  expect(await fs.readFile(f.target, 'utf8')).toBe('external')
 })
+it('rejects corrupt temporary readback and removes its own file, preserving target', async()=>{
+ const f=await fixture();const store=new StepExportStore({...nodeFileOps,readFile:async p=>p.endsWith('.step-tmp')?new Uint8Array([99]):nodeFileOps.readFile(p)})
+ await expect(store.save(f.target,f.bytes,f.expected)).rejects.toMatchObject({code:'VERIFY_FAILED'})
+ expect(await fs.readFile(f.target,'utf8')).toBe('original');expect(await fs.readdir(f.d)).toEqual(['隔套 名称.step'])
+})
+it('committed readback failure is explicitly unconfirmed and not an untouched-target claim', async()=>{
+ const f=await fixture();let renamed=false
+ const store=new StepExportStore({...nodeFileOps,rename:async(a,b)=>{await nodeFileOps.rename(a,b);renamed=true},readFile:async p=>{if(renamed)throw Error('read');return nodeFileOps.readFile(p)}})
+ await expect(store.save(f.target,f.bytes,f.expected)).rejects.toMatchObject({code:'COMMITTED_UNCONFIRMED'})
+ expect(await fs.readFile(f.target)).toEqual(Buffer.from(f.bytes))
+})
 it('detects last-kind substitution even when prior target was missing', async () => {
  const f = await fixture(); const target = path.join(f.d, 'new.step'); let checks = 0
  const store = new StepExportStore({ ...nodeFileOps, statKind: async p => p === target && ++checks > 1 ? 'symlink' : nodeFileOps.statKind(p) })

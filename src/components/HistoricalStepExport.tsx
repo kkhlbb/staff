@@ -72,6 +72,10 @@ export function HistoricalStepExport({ snapshot, sessionId, baseEditSeq, api = w
       <p>{receipt.fileName} · {receipt.byteSize} 字节 · SHA-256 {receipt.sha256}</p>
       <p>{receipt.schema} · {receipt.unit} · {receipt.kernelVersion} · {receipt.generatorVersion}</p>
       <p>WASM SHA-256 {receipt.wasmSha256} · 输入指纹 {receipt.inputFingerprint} · 几何指纹 {receipt.geometryFingerprint}</p>
+      <details><summary>冻结输入与回执（技术审计，可复制留存）</summary>
+        <p>仅包含身份摘要与名义参数；不是历史证据回填，也不会自动创建随附文件。</p>
+        <textarea aria-label="STEP 冻结回执" readOnly rows={8} style={{ width: '100%' }} value={JSON.stringify(receipt, null, 2)} />
+      </details>
       {receipt.warnings.map((warning, index) => <p key={index}>{uiDiagnosticText(warning)}</p>)}
     </div>}
   </section>

@@ -4,12 +4,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { createSpacerSnapshot } from '../project-file/__fixtures__/spacerProjectFile'
 import type { CunlianApi, IpcResult, StepExportValue } from '../../desktop/shared/contracts'
 import { HistoricalStepExport } from './HistoricalStepExport'
+import { selectSpacerStepInputFromSnapshot } from '../cad/selectSpacerStepInput'
 
 async function fixture() {
   const snapshot = await createSpacerSnapshot({ length: '12.0001' })
   snapshot.fileRevisions[0].project = structuredClone(snapshot.fileRevisions[0].project)
   snapshot.fileRevisions[0].project.parameters = structuredClone(snapshot.project.parameters).map(p => ({ ...p, reviewStatus: 'confirmed' }))
   const stepExport = vi.fn<CunlianApi['stepExport']>(async request => ({ ok: true, value: {
+    generationInput: selectSpacerStepInputFromSnapshot(snapshot, request.revisionId, request.partId),
     fileName: 'real.step', byteSize: 9000, sha256: 'a'.repeat(64), revisionId: request.revisionId,
     inputFingerprint: request.expectedInputFingerprint, geometryFingerprint: 'geom',
     kernelVersion: 'OCCT', wasmSha256: 'b'.repeat(64), generatorVersion: 'spacer-step-generator-v1',
@@ -27,9 +29,10 @@ describe('historical STEP UI', () => {
     expect(button).toBeDisabled()
     fireEvent.change(screen.getByLabelText('STEP 正式历史版本'), { target: { value: snapshot.fileRevisions[0].revisionId } })
     fireEvent.click(button)
-    await screen.findByText(/real.step/)
+    await screen.findByText(/real.step/, { selector: 'p' })
     expect(api.stepExport).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'session', baseEditSeq: 7, revisionId: snapshot.fileRevisions[0].revisionId, jobId: expect.any(String), expectedInputFingerprint: expect.any(String) }))
-    expect(screen.getByText(/测试回执警告/)).toBeInTheDocument()
+    expect(screen.getByText(/测试回执警告/, { selector: 'p' })).toBeInTheDocument()
+    expect((screen.getByLabelText('STEP 冻结回执') as HTMLTextAreaElement).value).toContain('historical-frozen')
     expect(screen.getByText(/非当时 STEP 字节重出/)).toBeInTheDocument()
   })
   it('does not invent cancellation while export is still running', async () => {

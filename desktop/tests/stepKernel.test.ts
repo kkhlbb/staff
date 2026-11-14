@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { Worker } from 'node:worker_threads'
 import { setImmediate as nextTurn } from 'node:timers/promises'
 import { generateStep } from '../main/cad/stepKernel'
-import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 const good = { innerDiameter: 200000, outerDiameter: 320000, length: 120000 }
@@ -83,13 +83,5 @@ describe('fixed low-level STEP worker', () => {
     expect(result.wasmSha256).toBe('a9335919fa64bfeaee3e241d3139ad134022682429c6688e20d8ca12093d33d9')
     expect(result.kernelVersion).toBe('replicad-opencascadejs@1.2.1 / OCCT 8.0')
     expect(result.generatorVersion).toMatch(/^spacer-ap214is-v1/)
-    if (process.env.STEP_KERNEL_EVIDENCE_DIR) {
-      mkdirSync(process.env.STEP_KERNEL_EVIDENCE_DIR, { recursive: true })
-      writeFileSync(`${process.env.STEP_KERNEL_EVIDENCE_DIR}/spacer-${innerDiameter}.step`, result.bytes, { flag: 'wx' })
-      writeFileSync(`${process.env.STEP_KERNEL_EVIDENCE_DIR}/spacer-${innerDiameter}-metadata.json`, JSON.stringify({
-        inputQ: { ...good, innerDiameter }, kernelVersion: result.kernelVersion, wasmSha256: result.wasmSha256,
-        generatorVersion: result.generatorVersion, byteLength: result.bytes.byteLength,
-      }, null, 2) + '\n', { flag: 'wx' })
-    }
   }, 30000)
 })

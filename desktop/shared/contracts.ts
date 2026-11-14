@@ -566,6 +566,8 @@ export interface StepCancelRequest {
 }
 
 export interface StepExportValue {
+  /** Sanitized frozen identity and nominal q; accompanying receipt, no private source content. */
+  generationInput: import('../../src/cad/types').CadGenerationInput
   fileName: string
   byteSize: number
   sha256: string

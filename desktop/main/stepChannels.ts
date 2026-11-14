@@ -63,11 +63,12 @@ export function registerStepChannels(ipc:IpcMainLike,deps:StepChannelDeps): void
    catch(e) {
     ensure()
     const message=e instanceof Error?e.message:String(e)
-    throw new IpcFailure(message.includes('UNSUPPORTED')?'UNSUPPORTED_GEOMETRY':message.includes('CANCELLED')?'CANCELLED':'STEP_EXPORT_FAILED',`STEP 内核未生成有效文件：${message}`)
+    const reason=/STEP_[A-Z_]+/.exec(message)?.[0] ?? 'STEP_KERNEL_FAILED'
+    throw new IpcFailure(message.includes('UNSUPPORTED')?'UNSUPPORTED_GEOMETRY':message.includes('CANCELLED')?'CANCELLED':'STEP_EXPORT_FAILED',`STEP 内核未生成有效文件：${reason}`)
    }
    ensure(); job.committing=true
    const saved=await deps.exportStore.save(target,generated.bytes,previous)
-   return {fileName:path.basename(target),byteSize:generated.bytes.length,sha256:saved.sha256,revisionId:input.revisionId,inputFingerprint:input.inputFingerprint,geometryFingerprint:input.geometryFingerprint,kernelVersion:generated.kernelVersion,wasmSha256:generated.wasmSha256,generatorVersion:generated.generatorVersion,schema:'AP214IS',unit:'mm',historicalByteIdentical:null,warnings:[...saved.warnings,'按所选历史参数新生成，非当时 STEP 字节重出；仅名义几何，无 PMI。',...(input.source.kind==='user-intent'?['用户输入，无外部原件。']:[]),...(input.parameters.some(x=>x.reviewStatus==='pending')?['历史参数待复核；未自动确认。']:[])]}
+   return {generationInput:input,fileName:path.basename(target),byteSize:generated.bytes.length,sha256:saved.sha256,revisionId:input.revisionId,inputFingerprint:input.inputFingerprint,geometryFingerprint:input.geometryFingerprint,kernelVersion:generated.kernelVersion,wasmSha256:generated.wasmSha256,generatorVersion:generated.generatorVersion,schema:'AP214IS',unit:'mm',historicalByteIdentical:null,warnings:[...saved.warnings,'按所选历史参数新生成，非当时 STEP 字节重出；仅名义几何，无 PMI。',...(input.source.kind==='user-intent'?['用户输入，无外部原件。']:[]),...(input.parameters.some(x=>x.reviewStatus==='pending')?['历史参数待复核；未自动确认。']:[])]}
   } finally {clearInterval(watch);jobs.delete(p.sessionId)}
  }},deps)
 }
