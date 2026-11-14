@@ -93,3 +93,10 @@ subprocess已在snapshot-final执行（stdout也记录路径）；仅以cwd-corr
 未声称通过。既有React重复key、pdfjs legacy、jsdom能力提示及大chunk警告保留。
 未碰共享gt-expand树及其变更；未merge/push/delete/发布/付费/改权限或全局安装。
 
+## 分段提交与收尾检查
+
+9fc177c：接续审阅的既有输入及成包取消补验。
+51970c9：许可来源、部分SBOM、告知打包断言和分发阻塞门禁。
+bb06575：历史/当前分离与四资源缺失损坏、替换阻塞、全量回归结果。
+最终本节仅收尾文档，不改产品；首个diff --check指出本文件EOF多一空行，
+已移除并单独复查，不混淆为测试或许可失败，也不重写前面提交/日志。
