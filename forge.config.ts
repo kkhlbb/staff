@@ -1,5 +1,6 @@
 import type { ForgeConfig } from '@electron-forge/shared-types'
 import { VitePlugin } from '@electron-forge/plugin-vite'
+import { prepareStepAssets } from './scripts/step-assets.mjs'
 
 /**
  * 离线打包：本机网络不可用时，@electron/get 仍会去取 SHASUMS256.txt 而失败。
@@ -13,6 +14,7 @@ const config: ForgeConfig = {
     name: '寸链',
     appBundleId: 'com.kkhlbb.cunlian',
     asar: true,
+    extraResource: [prepareStepAssets()],
     ...(electronZipDir === undefined ? {} : { electronZipDir }),
   },
   rebuildConfig: {},

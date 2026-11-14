@@ -36,6 +36,34 @@ Electron 打包产物体内还包含 Chromium 与 Node.js 的第三方组件，�
 
 它们随产物一同分发，无需额外处理。
 
+## STEP：Open CASCADE Technology（本地接入，发布阻塞）
+
+本应用通过固定 `replicad-opencascadejs@1.2.1`（Steve Genoud）使用
+Open CASCADE Technology (OCCT)。npm 包声明 LGPL-2.1-only；OCCT 适用
+LGPL 2.1 及 OCCT additional exception。应用 MIT 不覆盖内核；例外不取消
+库的 LGPL 义务。未使用高层 replicad 包。
+
+完整文本随外置运行资源放在 `step-kernel/LICENSE_LGPL_21.txt` 与
+`step-kernel/OCCT_LGPL_EXCEPTION.txt`，源码副本位于
+`desktop/main/cad/licenses/`，逐字复制批准 spike 已保存的官方 V8_0_0 文本：
+
+- https://raw.githubusercontent.com/Open-Cascade-SAS/OCCT/V8_0_0/LICENSE_LGPL_21.txt
+- https://raw.githubusercontent.com/Open-Cascade-SAS/OCCT/V8_0_0/OCCT_LGPL_EXCEPTION.txt
+- 包源码：https://github.com/sgenoud/replicad/tree/5e4ad9bb5a35bb9ae0571e91c25fa1897ba0570c/packages/replicad-opencascadejs
+- 构建参考：https://github.com/taucad/opencascade.js/tree/v3.1.0
+
+运行字节自报 OCCT 8.0；不能由此证明精确补丁/提交。固定 WASM SHA-256：
+`a9335919fa64bfeaee3e241d3139ad134022682429c6688e20d8ca12093d33d9`。
+npm build script 引用 `ghcr.io/taucad/opencascade.js:3.1.0-single-threaded`，
+不等于已核实对应容器 digest、完整源码、补丁、工具链或完整 SBOM。
+
+**发布阻塞，尚未闭合：**本地实现/测试不等于批准分发。分发前需确定与字节对应
+的完整 source/build provenance，按适用 LGPL 路径提供库源码、修改及构建信息；
+审查静态组合组件与 Emscripten 运行时许可；落实并验证 LGPL 第6节适用的替换/
+重链接及调试修改库权利。上游 URL 不是完整源码供给。当前固定哈希是完整性
+机制，**不是已验证合规的库替换机制**；发布兼容替换途径及说明仍待解决。
+不声称法律合规认证、完整 SBOM 或再分发许可已通过。
+
 ## 如何自行核对
 
 ```bash
