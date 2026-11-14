@@ -1,0 +1,30 @@
+# NOTICE — STEP 内核及许可边界
+
+寸链自身源代码继续按根目录 LICENSE 的 MIT 许可；本告知不改写第三方许可。
+本产品的隔套 STEP 出口使用 Open CASCADE Technology，经 replicad-opencascadejs
+1.2.1 / OpenCascade.js 绑定运行。未使用 MIT 的高层 replicad 包，不能由其 MIT
+推导 WASM 的许可。外置 step-kernel 中的 OCCT/绑定遵循 LGPL-2.1，OCCT 另有
+additional exception；完整原文见 LICENSE_LGPL_21.txt、OCCT_LGPL_EXCEPTION.txt
+及 REPLICAD_OCJS_LICENSE.txt。exception 只涉及头文件材料，不免除整个库义务。
+
+发布状态：BLOCKED_PROVENANCE_AND_LGPL_SOURCE_SUPPLY。
+这份本地研究包不是完整对应源码交付，不是法律认证或分发授权。
+STEP-SBOM.cdx.json 是机器可读的部分清单；精确静态对象/ports 清单未知，不能当完整SBOM。
+
+已核实 npm 1.2.1 tarball SRI：
+sha512-nFWkL5+24JiN1sv5fLGhdQr3FKCOLR3PIBkeZJcLm37p4eraEtD7Jueo8dP2BoqClJwb9hTSkf2QMli3GVqhpg==
+固定源码仓库提交：5e4ad9bb5a35bb9ae0571e91c25fa1897ba0570c（sgenoud/replicad）。
+该提交内的 dist 与 npm 单线程 JS/CJS/WASM 逐字节相同；这不是可重复构建证明。
+运行自报 OCCT 8.0，不能用它认定补丁号。
+
+构建脚本引用的 taucad/opencascade.js v3.1.0 解析到
+341fa789f49ce73db76a0209d89ae518cc64a52d；此参考 DEPS 固定 OCCT V8_0_1
+b8f597c677811d1f9f4d8a97f5ae2825c0353a42，但目标 npm WASM 的历史容器 digest、
+实际平台和生成绑定未取得，因此不能把这个参考源树冒充目标精确对应源码。
+必要源码、补丁、工具链及未闭环项见 docs/step-license-provenance.md。
+
+不以应用条款禁止对修改版 LGPL 库的替换、重新链接或为调试这些修改而进行的
+逆向工程。对应用 MIT 授权保持原样；不声称已满足 LGPL 第6节技术/供给义务。
+当前完整性固定哈希会拒绝直接换入不同字节的 WASM；没有隐藏开关绕过校验。
+替换验证、可执行本地探针和仍阻塞的源构建路径见 docs/step-kernel-replacement.md。
+在完整对应源码、必要对象/绑定、可重链接步骤和实际运行验证闭合前不得分发。

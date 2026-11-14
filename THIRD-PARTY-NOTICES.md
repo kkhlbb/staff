@@ -64,6 +64,22 @@ npm build script 引用 `ghcr.io/taucad/opencascade.js:3.1.0-single-threaded`，
 机制，**不是已验证合规的库替换机制**；发布兼容替换途径及说明仍待解决。
 不声称法律合规认证、完整 SBOM 或再分发许可已通过。
 
+## 固定资产补充核查（仍阻塞，不是分发许可）
+
+显著使用告知见根目录 `NOTICE`；本项目 MIT 不改，OCCT/绑定仍按自身许可。
+新增 `STEP-SBOM.cdx.json` 是 STEP 专用部分清单，明确 `INCOMPLETE`，不是整个
+Electron 产品或完整 WASM 静态组件认证。上述 V8_0_0 链接只说明早期许可文本
+取得位置，不是目标精确源码证明；固定构建参考实际指向 V8_0_1，文本相同。
+
+npm tarball SRI、固定 gitHead 中 dist 与实装字节已核对；源码/构建证据、候选
+静态组件许可与尚缺材料见 `docs/step-license-provenance.md`。不把当前容器 tag
+或主分支 URL 当作 npm 构建时的精确来源。额外保留 npm 原始 LGPL 及候选
+Emscripten/runtime/OCCT嵌入条款全文于外置资源，均未被根目录 MIT 替换。
+
+用户替换/重链接与调试权利、可执行探针及阻塞见 `docs/step-kernel-replacement.md`。
+直接替换当前仍被完整性hash拒绝，修改库源重编/重链接未证明，不宣称已合规。
+`npm run check:release:step` 必须非零退出，普通打包绿灯仅表示本地资源核验。
+
 ## 如何自行核对
 
 ```bash

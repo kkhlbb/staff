@@ -9,6 +9,17 @@ export const assetDirectory = path.join(root, 'node_modules/.cache/step-kernel')
 const manifestText = readFileSync(path.join(root, 'desktop/main/cad/stepAssetManifest.ts'), 'utf8')
 export const hashes = Object.fromEntries([...manifestText.matchAll(/'([^']+)': '([0-9a-f]{64})'/g)].map(m => [m[1], m[2]]))
 if (Object.keys(hashes).length !== 4) throw new Error('STEP_MANIFEST_INVALID')
+export const legalFiles = {
+  'LICENSE_LGPL_21.txt': 'desktop/main/cad/licenses/LICENSE_LGPL_21.txt',
+  'OCCT_LGPL_EXCEPTION.txt': 'desktop/main/cad/licenses/OCCT_LGPL_EXCEPTION.txt',
+  'REPLICAD_OCJS_LICENSE.txt': 'desktop/main/cad/licenses/REPLICAD_OCJS_LICENSE.txt',
+  'THIRD-PARTY-NOTICES.md': 'THIRD-PARTY-NOTICES.md',
+  NOTICE: 'NOTICE',
+  'STEP-SBOM.cdx.json': 'STEP-SBOM.cdx.json',
+  'STEP-CANDIDATE-LICENSES.txt': 'licenses/STEP-CANDIDATE-LICENSES.txt',
+  'step-license-provenance.md': 'docs/step-license-provenance.md',
+  'step-kernel-replacement.md': 'docs/step-kernel-replacement.md',
+}
 export function verifyAssets(directory) {
   for (const [name, expected] of Object.entries(hashes)) {
     const bytes = readFileSync(path.join(directory, name))
@@ -16,8 +27,16 @@ export function verifyAssets(directory) {
   }
   const pkg = JSON.parse(readFileSync(path.join(directory, 'package.json'), 'utf8'))
   if (pkg.type !== 'module') throw new Error('STEP_ASSET_MODULE_TYPE')
-  for (const name of ['LICENSE_LGPL_21.txt', 'OCCT_LGPL_EXCEPTION.txt', 'THIRD-PARTY-NOTICES.md']) {
-    if (!readFileSync(path.join(directory, name), 'utf8').trim()) throw new Error(`STEP_LICENSE_MISSING: ${name}`)
+  for (const [name, source] of Object.entries(legalFiles)) {
+    const actual = readFileSync(path.join(directory, name))
+    if (!actual.length || !actual.equals(readFileSync(path.join(root, source)))) throw new Error(`STEP_LICENSE_CHANGED: ${name}`)
+  }
+  const bom = JSON.parse(readFileSync(path.join(directory, 'STEP-SBOM.cdx.json'), 'utf8'))
+  const properties = Object.fromEntries(bom.metadata.properties.map(p => [p.name, p.value]))
+  if (bom.bomFormat !== 'CycloneDX' || properties['cunlian:completeness'] !== 'INCOMPLETE' || properties['cunlian:distributionApproval'] !== 'BLOCKED_PROVENANCE_AND_LGPL_SOURCE_SUPPLY') throw new Error('STEP_LICENSE_GATE_INVALID')
+  for (const [name, expected] of Object.entries(hashes)) {
+    const component = bom.components.find(c => c['bom-ref'] === `asset:${name}`)
+    if (component?.hashes?.find(h => h.alg === 'SHA-256')?.content !== expected) throw new Error(`STEP_SBOM_HASH: ${name}`)
   }
 }
 export function prepareStepAssets() {
@@ -30,8 +49,7 @@ export function prepareStepAssets() {
     copyFileSync(source, path.join(assetDirectory, name))
   }
   writeFileSync(path.join(assetDirectory, 'package.json'), '{"type":"module","private":true}\n')
-  for (const name of ['LICENSE_LGPL_21.txt', 'OCCT_LGPL_EXCEPTION.txt']) copyFileSync(path.join(root, 'desktop/main/cad/licenses', name), path.join(assetDirectory, name))
-  copyFileSync(path.join(root, 'THIRD-PARTY-NOTICES.md'), path.join(assetDirectory, 'THIRD-PARTY-NOTICES.md'))
+  for (const [name, source] of Object.entries(legalFiles)) copyFileSync(path.join(root, source), path.join(assetDirectory, name))
   verifyAssets(assetDirectory)
   return assetDirectory
 }
