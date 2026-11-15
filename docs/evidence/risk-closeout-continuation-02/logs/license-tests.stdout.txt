@@ -1,0 +1,30 @@
+
+> staff@0.4.1-beta test:step-license
+> node --test scripts/step-license.test.mjs
+
+✔ rejects absent and altered legal asset LICENSE_LGPL_21.txt (30.321167ms)
+✔ rejects absent and altered legal asset OCCT_LGPL_EXCEPTION.txt (29.053ms)
+✔ rejects absent and altered legal asset THIRD-PARTY-NOTICES.md (29.124916ms)
+✔ rejects absent and altered legal asset NOTICE (30.837792ms)
+✔ rejects absent and altered legal asset STEP-SBOM.cdx.json (29.400375ms)
+✔ rejects absent and altered legal asset STEP-CANDIDATE-LICENSES.txt (29.675458ms)
+✔ rejects absent and altered legal asset STEP-NARROW-RUNTIME-NOTICES.txt (30.686583ms)
+✔ rejects absent and altered legal asset STEP-TRANSITIVE-NOTICES.txt (31.223666ms)
+✔ rejects absent and altered legal asset APP-RUNTIME-NOTICES.txt (33.135167ms)
+✔ rejects absent and altered legal asset ELECTRON-LICENSE.txt (32.406083ms)
+✔ rejects absent and altered legal asset ELECTRON-CHROMIUM-LICENSES.html (32.832917ms)
+✔ rejects absent and altered legal asset SOURCE-SUPPLY.zh-CN.md (31.943ms)
+✔ rejects absent and altered legal asset step-narrow-runtime.md (32.263208ms)
+✔ rejects absent and altered legal asset step-license-provenance.md (32.998625ms)
+✔ rejects absent and altered legal asset step-kernel-replacement.md (31.916917ms)
+✔ rejects legacy or unknown executable kernel files in new resources (21.873375ms)
+✔ release gate verifies the selected packaged assets rather than borrowing source provenance (99.309125ms)
+✔ local packaging verification does not approve release (51.090084ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 755.2995

@@ -1,0 +1,31 @@
+
+> staff@0.4.1-beta pretest:desktop
+> node scripts/step-assets.mjs
+
+/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/.cache/step-narrow-v1
+
+> staff@0.4.1-beta test:desktop
+> vitest run --config vitest.desktop.config.ts
+
+
+ RUN  v5.1.0 /Users/aston/DSH/tmp/cunlian-v4/risk-closeout
+
+ ❯ desktop/tests/modelAdapter.test.ts (11 tests | 10 failed) 50036ms
+   ❯ V4.0 阶段4：OpenAI 兼容适配器 (11)
+     × SSE 流式返回文本与 tool_calls，并上报 usage；请求体只带 tools、不带密钥 5010ms
+     × 非流式 JSON 回执同样解析 content/tool_calls 5004ms
+     × 401 映射为连接/认证错误，消息不含密钥且不重试 5002ms
+     × 5xx 是网络层可重试错误：两次 500 后成功 5004ms
+     × 4xx 参数错误映射为 INVALID_INPUT 且不重试 5003ms
+     × 连接失败按 maxRetries 重试后抛 CONNECTION_FAILED 5004ms
+     × 超时抛 TIMEOUT，并在消息里报告毫秒上限 5002ms
+     × 取消在途请求抛 CANCELLED，不再重试 5002ms
+     × 未配置密钥时不发请求，直接 CONNECTION_FAILED 5002ms
+     × 连接测试只发合成文本：无 tools、无项目资料 5001ms
+
+ Test Files  1 failed | 54 passed | 1 skipped (56)
+      Tests  10 failed | 370 passed | 15 skipped (395)
+     Errors  10 errors
+   Start at  02:35:20
+   Duration  55.88s (tests 94%, import 5%, transform 1%)
+

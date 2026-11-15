@@ -1,0 +1,6 @@
+Collecting fonttools
+  Using cached fonttools-4.60.2-cp39-cp39-macosx_10_9_universal2.whl (2.9 MB)
+Collecting brotli
+  Downloading brotli-1.2.1-cp39-cp39-macosx_10_9_universal2.whl (863 kB)
+Installing collected packages: fonttools, brotli
+Successfully installed brotli-1.2.1 fonttools-4.60.2

@@ -1,0 +1,21 @@
+
+> staff@0.4.1-beta pretest:desktop
+> node scripts/step-assets.mjs
+
+/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/.cache/step-narrow-v1
+
+> staff@0.4.1-beta test:desktop
+> vitest run --config vitest.desktop.config.ts
+
+
+ RUN  v5.1.0 /Users/aston/DSH/tmp/cunlian-v4/risk-closeout
+
+
+ Test Files  55 passed | 1 skipped (56)
+      Tests  380 passed | 15 skipped (395)
+   Start at  02:36:37
+   Duration  8.95s (tests 88%, import 11%, transform 1%)
+
+    Isolate  56 workers spawned · ~101ms startup each (spawn + environment, per file)
+             at least ~529ms faster with isolate: false — reuses workers across files instead of one per file
+

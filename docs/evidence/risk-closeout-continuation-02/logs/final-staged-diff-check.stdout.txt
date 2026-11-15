@@ -1,0 +1,20 @@
+docs/evidence/risk-closeout-continuation-02/logs/actual-resources-release-gate.stdout.txt:4: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/app-typecheck.stdout.txt:4: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/build.stderr.txt:1: trailing whitespace.
++[plugin builtin:vite-reporter] 
+docs/evidence/risk-closeout-continuation-02/logs/desktop-typecheck.stdout.txt:4: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/final-actual-resources-gate.stdout.txt:4: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/final-full-browser.stdout.txt:16: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/final-lint.stdout.txt:4: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/font-audit-tools.stderr.txt:2: trailing whitespace.
++Usage:   
+docs/evidence/risk-closeout-continuation-02/logs/full-browser.stdout.txt:16: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/full-desktop-loopback.stdout.txt:21: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/full-desktop.stderr.txt:279: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/full-desktop.stdout.txt:31: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/full-mcp.stdout.txt:13: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/gate-green.stdout.txt:9: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/gate-red.stderr.txt:34: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/gate-red.stdout.txt:13: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/lint.stdout.txt:4: new blank line at EOF.
+docs/evidence/risk-closeout-continuation-02/logs/release-gate-after-smoke.stdout.txt:4: new blank line at EOF.

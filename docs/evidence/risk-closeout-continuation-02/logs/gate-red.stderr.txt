@@ -1,0 +1,34 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  desktop/tests/a40Gate.test.ts > A40 gate regression: mechanical cases must run without model permission > keeps exactly the two original mechanical cases outside the real-model gate
+AssertionError: expected undefined to be defined
+ ❯ desktop/tests/a40Gate.test.ts:25:21
+     23|     const offline = suites.find((call) => call.arguments[0] && ts.isSt…
+     24|       && call.arguments[0].text === 'A40 离线机械验收（不调用模型）')
+     25|     expect(offline).toBeDefined()
+       |                     ^
+     26|     expect(offline?.expression.getText(source)).toBe('describe')
+     27|     expect(offline && tests(offline)).toEqual([
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  desktop/tests/a40Gate.test.ts > A40 gate regression: mechanical cases must run without model permission > retains the real API gate for all twelve remaining A40 scenarios and their probe
+AssertionError: expected [ …(14) ] to have a length of 12 but got 14
+
+- Expected
++ Received
+
+- 12
++ 14
+
+ ❯ desktop/tests/a40Gate.test.ts:36:35
+     34|     const gated = suites.find((call) => call.expression.getText(source…
+     35|     expect(gated).toBeDefined()
+     36|     expect(gated && tests(gated)).toHaveLength(12)
+       |                                   ^
+     37|     expect(gated?.getText(source)).toContain('adapterFor().testConnect…
+     38|     expect(text).toContain("process.env.V40_REAL_MODEL === '1' && KEY …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+

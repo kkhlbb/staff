@@ -1,0 +1,8 @@
+{
+  "status": "LOCAL_MATERIALS_VERIFIED",
+  "supplyFiles": 113,
+  "resourceFiles": 21,
+  "sourceCommit": "3654c73e47c53d077522540fe978c545bab5651f",
+  "releaseApproval": "BLOCKED",
+  "legalCertification": false
+}

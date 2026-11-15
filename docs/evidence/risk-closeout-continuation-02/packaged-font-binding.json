@@ -1,0 +1,28 @@
+{
+  "results": [
+    {
+      "name": "NotoSansSC-Cunlian-subset.woff2",
+      "member": "/.vite/renderer/drawing_print/fonts/NotoSansSC-Cunlian-subset.woff2",
+      "bytes": 38920,
+      "sha256": "52dd75b392552a0eaea882e1d7a6fd4f2da108b6f3c27667692f61faf166191c",
+      "sameAsCurrentSource": true
+    },
+    {
+      "name": "NotoSansMath-Cunlian-symbols.woff2",
+      "member": "/.vite/renderer/drawing_print/fonts/NotoSansMath-Cunlian-symbols.woff2",
+      "bytes": 3112,
+      "sha256": "33f512e3d4594830ed6865a799be9f44774aeb8a6b2733f85b56de45e37bdf48",
+      "sameAsCurrentSource": true
+    },
+    {
+      "name": "LICENSE-OFL-1.1.txt",
+      "member": "/.vite/renderer/drawing_print/fonts/LICENSE-OFL-1.1.txt",
+      "bytes": 4301,
+      "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+      "sameAsCurrentSource": true
+    }
+  ],
+  "generatedValueKind": "<generated> denotes an automatically generated identifier; not product data",
+  "generatedAtKind": "run-time",
+  "runTimeFields": []
+}

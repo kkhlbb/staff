@@ -1,0 +1,13 @@
+
+ RUN  v5.1.0 /Users/aston/DSH/tmp/cunlian-v4/risk-closeout
+
+ ❯ desktop/tests/a40Gate.test.ts (2 tests | 2 failed) 8ms
+   ❯ A40 gate regression: mechanical cases must run without model permission (2)
+     × keeps exactly the two original mechanical cases outside the real-model gate 2ms
+     × retains the real API gate for all twelve remaining A40 scenarios and their probe 6ms
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  02:34:04
+   Duration  245ms (import 70%, transform 25%, tests 5%, worker 1%)
+
