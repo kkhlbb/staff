@@ -20,6 +20,7 @@ if(localCandidateDirectory) {
 const launchArgs=['--inspect=9491','--remote-debugging-port=9492',`--user-data-dir=${path.join(out,'user-data')}`]
 const profile=process.env.STEP_EVIDENCE_OS_PROFILE
 const app=spawn(profile?'sandbox-exec':executable,profile?['-f',profile,executable,...launchArgs]:launchArgs,{env,cwd:path.resolve(out),stdio:['ignore','pipe','pipe']})
+const appExit=new Promise(resolve=>{app.once('exit',(code,signal)=>resolve({code,signal}));app.once('error',error=>resolve({code:null,signal:null,error:error.message}))})
 let output='';app.stdout.on('data',x=>output+=x);app.stderr.on('data',x=>output+=x)
 const sleep=ms=>new Promise(r=>setTimeout(r,ms))
 const sockets=[]
@@ -208,7 +209,8 @@ try {
  if(renamed)await fs.rename(path.join(assets,'spacer.wasm.mutation-hidden'),path.join(assets,'spacer.wasm'))
  if(main) {try{await main(`setTimeout(()=>globalThis.__stepEvidenceElectron.app.exit(0),30);true`)}catch{}}
  for(const socket of sockets)socket.close()
- const exit=await Promise.race([new Promise(r=>app.once('exit',(code,signal)=>r({code,signal}))),sleep(5000).then(()=>null)])
- if(!exit)app.kill('SIGKILL')
+ let exit=await Promise.race([appExit,sleep(5000).then(()=>null)])
+ if(!exit){app.kill('SIGKILL');exit=await appExit}
  await fs.writeFile(path.join(out,'electron.log'),output,{flag:'wx'});await fs.writeFile(path.join(out,'process-exit.json'),JSON.stringify(exit),{flag:'wx'})
+ assert.equal(exit.code,0,'packaged process must exit normally');assert.equal(exit.signal,null)
 }
