@@ -1,5 +1,13 @@
 # 当前产品窄核告知（历史记录在后）
 
+本次分发收尾补充：准确供给/包内路径见 `SOURCE-SUPPLY.zh-CN.md`（源码 `docs/step-source-supply.md`）。
+新包内 `Contents/Resources/step-narrow-v1/` 另含 STEP-TRANSITIVE-NOTICES.txt、APP-RUNTIME-NOTICES.txt、
+ELECTRON-LICENSE.txt、ELECTRON-CHROMIUM-LICENSES.html。旧历史段落所称 Resources 根目录自动存在 Electron 许可不准确：
+前阶段发行只在 .app 旁置这两份文件，本次特意复制原文入 .app 防止丢失。
+逐源/传递头文件/系统对象通知保留原条款，生成 JS 采用保守源文件超集，仍不宣称法律审查或完整 SBOM 通过。
+FORMAL_SOURCE_DELIVERY、TRANSITIVE_NOTICE_REVIEW、LGPL_LEGAL_REVIEW 保持人工门禁；本地材料没有公开发布。
+
+
 本产品STEP出口现在使用固定源OCCT 8.0.1窄C ABI，不再通过npm旧绑定运行。
 OCCT为LGPL2.1及OCCT header exception；应用/手写wrapper/worker保持MIT边界，
 Emscripten glue与musl/LLVM/dlmalloc/Strtod等各依原文，不统称MIT。
