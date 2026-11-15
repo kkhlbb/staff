@@ -14,8 +14,8 @@ const config: ForgeConfig = {
     name: '寸链',
     appBundleId: 'com.kkhlbb.cunlian',
     asar: true,
-    // Historical npm kernel and old cache stay on disk, never in new packages.
-    ignore: [/[/\\]node_modules[/\\]replicad-opencascadejs(?:[/\\]|$)/, /[/\\]node_modules[/\\]\.cache(?:[/\\]|$)/, /[/\\]vendor(?:[/\\]|$)/],
+    // Preserve Vite's package allowlist: no node_modules (old npm/cache) or vendor.
+    ignore: file => Boolean(file) && !file.startsWith('/.vite'),
     extraResource: [prepareStepAssets()],
     ...(electronZipDir === undefined ? {} : { electronZipDir }),
   },
