@@ -1,0 +1,37 @@
+staff@0.4.1-beta /Users/aston/DSH/tmp/cunlian-v4/risk-closeout
+├─┬ @electron-forge/shared-types@8.0.1
+│ └─┬ @electron/packager@20.3.0
+│   ├─┬ @electron/asar@4.3.2
+│   │ ├─┬ glob@14.0.6
+│   │ │ └── minimatch@11.0.8 deduped
+│   │ └── minimatch@11.0.8 deduped
+│   └─┬ @electron/universal@3.0.6
+│     └── @electron/asar@4.3.2 deduped
+├─┬ @eslint/js@10.0.1
+│ └── eslint@10.15.0 deduped
+├─┬ eslint-plugin-react-hooks@7.1.1
+│ └── eslint@10.15.0 deduped
+├─┬ eslint-plugin-react-refresh@0.5.7
+│ └── eslint@10.15.0 deduped
+├─┬ eslint@10.15.0
+│ ├─┬ @eslint-community/eslint-utils@4.10.1
+│ │ └── eslint@10.15.0 deduped
+│ ├─┬ @eslint/config-array@0.23.6
+│ │ └── minimatch@11.0.8 deduped
+│ └── minimatch@11.0.8
+└─┬ typescript-eslint@8.72.2
+  ├─┬ @typescript-eslint/eslint-plugin@8.72.2
+  │ ├─┬ @typescript-eslint/type-utils@8.72.2
+  │ │ └── eslint@10.15.0 deduped
+  │ └── eslint@10.15.0 deduped
+  ├─┬ @typescript-eslint/parser@8.72.2
+  │ └── eslint@10.15.0 deduped
+  ├─┬ @typescript-eslint/typescript-estree@8.72.2
+  │ └── minimatch@10.2.6 invalid: "11.0.8" from node_modules/@typescript-eslint/typescript-estree
+  ├─┬ @typescript-eslint/utils@8.72.2
+  │ └── eslint@10.15.0 deduped
+  └── eslint@10.15.0 deduped
+
+npm error code ELSPROBLEMS
+npm error invalid: minimatch@10.2.6 /Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/typescript-estree/node_modules/minimatch
+npm error A complete log of this run can be found in: /Users/aston/.npm/_logs/2026-11-15T09_12_50_225Z-debug-0.log

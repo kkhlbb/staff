@@ -1,0 +1,15 @@
+{
+  "cancellation": {
+    "ok": true,
+    "value": {
+      "cancelled": true
+    }
+  },
+  "result": {
+    "ok": false,
+    "error": {
+      "code": "CANCELLED",
+      "message": "已取消 STEP 导出；未提交文件"
+    }
+  }
+}

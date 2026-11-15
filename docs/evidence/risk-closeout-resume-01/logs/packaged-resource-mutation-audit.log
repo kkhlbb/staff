@@ -1,0 +1,38 @@
+[
+  {
+    "name": "spacer.cjs",
+    "mode": "missing",
+    "rejected": true,
+    "targetAbsent": true
+  },
+  {
+    "name": "spacer.cjs",
+    "mode": "corrupt",
+    "rejected": true,
+    "targetAbsent": true
+  },
+  {
+    "name": "spacer.wasm",
+    "mode": "missing",
+    "rejected": true,
+    "targetAbsent": true
+  },
+  {
+    "name": "spacer.wasm",
+    "mode": "corrupt",
+    "rejected": true,
+    "targetAbsent": true
+  },
+  {
+    "name": "step-worker.cjs",
+    "mode": "missing",
+    "rejected": true,
+    "targetAbsent": true
+  },
+  {
+    "name": "step-worker.cjs",
+    "mode": "corrupt",
+    "rejected": true,
+    "targetAbsent": true
+  }
+]

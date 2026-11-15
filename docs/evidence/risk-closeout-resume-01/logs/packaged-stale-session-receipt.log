@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "STALE_SESSION",
+    "message": "会话或窗口已失效"
+  }
+}

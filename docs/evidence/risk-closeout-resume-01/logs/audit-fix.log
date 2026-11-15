@@ -1,0 +1,424 @@
+{
+  "add": [
+    {
+      "name": "@isaacs/nonrecursive-glob-match",
+      "version": "1.1.0",
+      "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@isaacs/nonrecursive-glob-match"
+    },
+    {
+      "name": "minimatch",
+      "version": "10.2.6",
+      "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/typescript-estree/node_modules/minimatch"
+    }
+  ],
+  "added": 2,
+  "audited": 387,
+  "change": [
+    {
+      "from": {
+        "name": "typescript-eslint",
+        "version": "8.72.1",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/typescript-eslint"
+      },
+      "to": {
+        "name": "typescript-eslint",
+        "version": "8.72.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/typescript-eslint"
+      }
+    },
+    {
+      "from": {
+        "name": "path-scurry",
+        "version": "2.0.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/path-scurry"
+      },
+      "to": {
+        "name": "path-scurry",
+        "version": "3.0.0",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/path-scurry"
+      }
+    },
+    {
+      "from": {
+        "name": "minimatch",
+        "version": "10.2.6",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/minimatch"
+      },
+      "to": {
+        "name": "minimatch",
+        "version": "11.0.8",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/minimatch"
+      }
+    },
+    {
+      "from": {
+        "name": "glob",
+        "version": "13.0.7",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/glob"
+      },
+      "to": {
+        "name": "glob",
+        "version": "14.0.6",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/glob"
+      }
+    },
+    {
+      "from": {
+        "name": "eslint",
+        "version": "10.14.0",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/eslint"
+      },
+      "to": {
+        "name": "eslint",
+        "version": "10.15.0",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/eslint"
+      }
+    },
+    {
+      "from": {
+        "name": "brace-expansion",
+        "version": "5.0.12",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/brace-expansion"
+      },
+      "to": {
+        "name": "brace-expansion",
+        "version": "5.0.13",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/brace-expansion"
+      }
+    },
+    {
+      "from": {
+        "name": "@typescript-eslint/visitor-keys",
+        "version": "8.72.1",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/visitor-keys"
+      },
+      "to": {
+        "name": "@typescript-eslint/visitor-keys",
+        "version": "8.72.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/visitor-keys"
+      }
+    },
+    {
+      "from": {
+        "name": "@typescript-eslint/utils",
+        "version": "8.72.1",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/utils"
+      },
+      "to": {
+        "name": "@typescript-eslint/utils",
+        "version": "8.72.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/utils"
+      }
+    },
+    {
+      "from": {
+        "name": "@typescript-eslint/typescript-estree",
+        "version": "8.72.1",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/typescript-estree"
+      },
+      "to": {
+        "name": "@typescript-eslint/typescript-estree",
+        "version": "8.72.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/typescript-estree"
+      }
+    },
+    {
+      "from": {
+        "name": "@typescript-eslint/types",
+        "version": "8.72.1",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/types"
+      },
+      "to": {
+        "name": "@typescript-eslint/types",
+        "version": "8.72.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/types"
+      }
+    },
+    {
+      "from": {
+        "name": "@typescript-eslint/type-utils",
+        "version": "8.72.1",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/type-utils"
+      },
+      "to": {
+        "name": "@typescript-eslint/type-utils",
+        "version": "8.72.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/type-utils"
+      }
+    },
+    {
+      "from": {
+        "name": "@typescript-eslint/tsconfig-utils",
+        "version": "8.72.1",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/tsconfig-utils"
+      },
+      "to": {
+        "name": "@typescript-eslint/tsconfig-utils",
+        "version": "8.72.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/tsconfig-utils"
+      }
+    },
+    {
+      "from": {
+        "name": "@typescript-eslint/scope-manager",
+        "version": "8.72.1",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/scope-manager"
+      },
+      "to": {
+        "name": "@typescript-eslint/scope-manager",
+        "version": "8.72.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/scope-manager"
+      }
+    },
+    {
+      "from": {
+        "name": "@typescript-eslint/project-service",
+        "version": "8.72.1",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/project-service"
+      },
+      "to": {
+        "name": "@typescript-eslint/project-service",
+        "version": "8.72.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/project-service"
+      }
+    },
+    {
+      "from": {
+        "name": "@typescript-eslint/parser",
+        "version": "8.72.1",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/parser"
+      },
+      "to": {
+        "name": "@typescript-eslint/parser",
+        "version": "8.72.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/parser"
+      }
+    },
+    {
+      "from": {
+        "name": "@typescript-eslint/eslint-plugin",
+        "version": "8.72.1",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/eslint-plugin"
+      },
+      "to": {
+        "name": "@typescript-eslint/eslint-plugin",
+        "version": "8.72.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@typescript-eslint/eslint-plugin"
+      }
+    },
+    {
+      "from": {
+        "name": "@eslint/config-array",
+        "version": "0.23.5",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@eslint/config-array"
+      },
+      "to": {
+        "name": "@eslint/config-array",
+        "version": "0.23.6",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@eslint/config-array"
+      }
+    },
+    {
+      "from": {
+        "name": "@electron/asar",
+        "version": "4.3.1",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@electron/asar"
+      },
+      "to": {
+        "name": "@electron/asar",
+        "version": "4.3.2",
+        "path": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/node_modules/@electron/asar"
+      }
+    }
+  ],
+  "changed": 18,
+  "funding": 107,
+  "remove": [],
+  "removed": 0,
+  "audit": {
+    "auditReportVersion": 2,
+    "vulnerabilities": {
+      "@typescript-eslint/eslint-plugin": {
+        "name": "@typescript-eslint/eslint-plugin",
+        "severity": "moderate",
+        "isDirect": false,
+        "via": [
+          "@typescript-eslint/type-utils",
+          "@typescript-eslint/utils"
+        ],
+        "effects": [
+          "typescript-eslint"
+        ],
+        "range": "6.16.0 - 8.72.2",
+        "nodes": [
+          "node_modules/@typescript-eslint/eslint-plugin"
+        ],
+        "fixAvailable": {
+          "name": "typescript-eslint",
+          "version": "8.36.0",
+          "isSemVerMajor": true
+        }
+      },
+      "@typescript-eslint/parser": {
+        "name": "@typescript-eslint/parser",
+        "severity": "moderate",
+        "isDirect": false,
+        "via": [
+          "@typescript-eslint/typescript-estree"
+        ],
+        "effects": [
+          "typescript-eslint"
+        ],
+        "range": "6.16.0 - 8.72.2",
+        "nodes": [
+          "node_modules/@typescript-eslint/parser"
+        ],
+        "fixAvailable": {
+          "name": "typescript-eslint",
+          "version": "8.36.0",
+          "isSemVerMajor": true
+        }
+      },
+      "@typescript-eslint/type-utils": {
+        "name": "@typescript-eslint/type-utils",
+        "severity": "moderate",
+        "isDirect": false,
+        "via": [
+          "@typescript-eslint/typescript-estree",
+          "@typescript-eslint/utils"
+        ],
+        "effects": [
+          "@typescript-eslint/eslint-plugin"
+        ],
+        "range": "6.16.0 - 8.72.2",
+        "nodes": [
+          "node_modules/@typescript-eslint/type-utils"
+        ],
+        "fixAvailable": {
+          "name": "typescript-eslint",
+          "version": "8.36.0",
+          "isSemVerMajor": true
+        }
+      },
+      "@typescript-eslint/typescript-estree": {
+        "name": "@typescript-eslint/typescript-estree",
+        "severity": "moderate",
+        "isDirect": false,
+        "via": [
+          "minimatch"
+        ],
+        "effects": [
+          "@typescript-eslint/parser",
+          "@typescript-eslint/type-utils",
+          "@typescript-eslint/utils",
+          "typescript-eslint"
+        ],
+        "range": "6.16.0 - 8.72.2",
+        "nodes": [
+          "node_modules/@typescript-eslint/typescript-estree"
+        ],
+        "fixAvailable": {
+          "name": "typescript-eslint",
+          "version": "8.36.0",
+          "isSemVerMajor": true
+        }
+      },
+      "@typescript-eslint/utils": {
+        "name": "@typescript-eslint/utils",
+        "severity": "moderate",
+        "isDirect": false,
+        "via": [
+          "@typescript-eslint/typescript-estree"
+        ],
+        "effects": [
+          "@typescript-eslint/eslint-plugin",
+          "@typescript-eslint/type-utils",
+          "typescript-eslint"
+        ],
+        "range": "6.16.0 - 8.72.2",
+        "nodes": [
+          "node_modules/@typescript-eslint/utils"
+        ],
+        "fixAvailable": {
+          "name": "typescript-eslint",
+          "version": "8.36.0",
+          "isSemVerMajor": true
+        }
+      },
+      "minimatch": {
+        "name": "minimatch",
+        "severity": "moderate",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1244623,
+            "name": "minimatch",
+            "dependency": "minimatch",
+            "title": "minimatch has potential denial of service via globparts amplification",
+            "url": "https://github.com/advisories/GHSA-g3hv-75wg-m249",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-405"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": ">=7.0.0 <11.0.1"
+          }
+        ],
+        "effects": [
+          "@typescript-eslint/typescript-estree"
+        ],
+        "range": "7.0.0 - 11.0.0",
+        "nodes": [
+          "node_modules/@typescript-eslint/typescript-estree/node_modules/minimatch"
+        ],
+        "fixAvailable": {
+          "name": "typescript-eslint",
+          "version": "8.36.0",
+          "isSemVerMajor": true
+        }
+      },
+      "typescript-eslint": {
+        "name": "typescript-eslint",
+        "severity": "moderate",
+        "isDirect": true,
+        "via": [
+          "@typescript-eslint/eslint-plugin",
+          "@typescript-eslint/parser",
+          "@typescript-eslint/typescript-estree",
+          "@typescript-eslint/utils"
+        ],
+        "effects": [],
+        "range": "<=8.72.2",
+        "nodes": [
+          "node_modules/typescript-eslint"
+        ],
+        "fixAvailable": {
+          "name": "typescript-eslint",
+          "version": "8.36.0",
+          "isSemVerMajor": true
+        }
+      }
+    },
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 7,
+        "high": 0,
+        "critical": 0,
+        "total": 7
+      },
+      "dependencies": {
+        "prod": 10,
+        "dev": 375,
+        "optional": 6,
+        "peer": 8,
+        "peerOptional": 0,
+        "total": 386
+      }
+    }
+  }
+}

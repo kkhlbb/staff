@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "UNSUPPORTED_GEOMETRY",
+    "message": "STEP 内核未生成有效文件：STEP_UNSUPPORTED_GEOMETRY"
+  }
+}

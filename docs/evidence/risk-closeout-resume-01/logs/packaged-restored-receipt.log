@@ -1,0 +1,74 @@
+{
+  "ok": true,
+  "value": {
+    "generationInput": {
+      "template": "spacer-hollow-cylinder",
+      "generatorVersion": "spacer-step-generator-v1",
+      "unit": "mm",
+      "axis": "X",
+      "origin": "part-center",
+      "innerDiameterQ": 200000,
+      "outerDiameterQ": 320000,
+      "lengthQ": 120000,
+      "revisionId": "rev-a1",
+      "projectId": "project-a",
+      "partId": "builtin:shaft-demo:spacer",
+      "parameters": [
+        {
+          "parameterId": "param:spacer:inner-diameter",
+          "key": "innerDiameter",
+          "parameterRevision": 1,
+          "reviewStatus": "pending",
+          "source": {
+            "kind": "unrecorded",
+            "fingerprint": "9ee14047c45fedc3"
+          }
+        },
+        {
+          "parameterId": "param:spacer:outer-diameter",
+          "key": "outerDiameter",
+          "parameterRevision": 1,
+          "reviewStatus": "pending",
+          "source": {
+            "kind": "unrecorded",
+            "fingerprint": "9ee14047c45fedc3"
+          }
+        },
+        {
+          "parameterId": "param:spacer:length",
+          "key": "length",
+          "parameterRevision": 1,
+          "reviewStatus": "pending",
+          "source": {
+            "kind": "unrecorded",
+            "fingerprint": "9ee14047c45fedc3"
+          }
+        }
+      ],
+      "source": {
+        "kind": "pdf",
+        "fingerprint": "2a8c491636b7679e"
+      },
+      "fileStatus": "historical-frozen",
+      "historicalByteIdentical": null,
+      "geometryFingerprint": "fd0ffa6ed9b187a5",
+      "inputFingerprint": "1c0815a99dd85e9c"
+    },
+    "fileName": "restored.step",
+    "byteSize": 9316,
+    "sha256": "8b453bb9a35fd6966480ed3e568dc9a2c79a1be8866d2af88db168946b8754d8",
+    "revisionId": "rev-a1",
+    "inputFingerprint": "1c0815a99dd85e9c",
+    "geometryFingerprint": "fd0ffa6ed9b187a5",
+    "kernelVersion": "OCCT 8.0.1 narrow C ABI / source b8f597c",
+    "wasmSha256": "c309d6a202aab5b2b2a498bdd1515b8b03f470ea238dfb99ba5ccb00b8a80108",
+    "generatorVersion": "spacer-ap214is-v2-narrow;worker-sha256=2eb428ddaa2a22c243d60e2ab8a14dfe696a0a0594acf3d75cbbf54d711ed36c",
+    "schema": "AP214IS",
+    "unit": "mm",
+    "historicalByteIdentical": null,
+    "warnings": [
+      "按所选历史参数新生成，非当时 STEP 字节重出；仅名义几何，无 PMI。",
+      "历史参数待复核；未自动确认。"
+    ]
+  }
+}

@@ -1,0 +1,76 @@
+
+> staff@0.4.1-beta package:desktop
+> node scripts/package-desktop.mjs --arch=arm64
+
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.20.0
+✔ Checking your system
+❯ Preparing to package application
+✔ Preparing to package application
+❯ Running packaging hooks
+❯ Running generateAssets hook
+✔ Running generateAssets hook
+❯ Running prePackage hook
+❯ [plugin-vite] Building production Vite bundles
+❯ Building main and preload targets...
+❯ Building renderer targets...
+❯ Building desktop/main/index.ts
+❯ Building desktop/preload/index.ts
+❯ Building main_window
+❯ Building drawing_print
+✔ Built target desktop/preload/index.ts
+✔ Built target drawing_print
+✔ Built target desktop/main/index.ts
+✔ Building main and preload targets...
+✔ Built target main_window
+✔ Building renderer targets...
+✔ [plugin-vite] Building production Vite bundles
+✔ Running prePackage hook
+✔ Running packaging hooks
+❯ Packaging application
+› Determining targets...
+❯ Packaging for arm64 on darwin
+❯ Copying files
+✔ Copying files
+❯ Preparing native dependencies
+✔ Preparing native dependencies
+❯ Finalizing package
+✔ Finalizing package
+✔ Packaging for arm64 on darwin
+✔ Packaging application
+❯ Running postPackage hook
+✔ Running postPackage hook
+PASS package.json 在 asar 内
+PASS package.json main 字段存在: .vite/build/main.cjs
+PASS main.cjs 在 asar 内: /.vite/build/main.cjs
+PASS main.cjs 引用了 pdf worker 文件名: pdf.worker.mjs
+PASS worker 文件在 main.cjs 同目录且非空: /.vite/build/pdf.worker.mjs (1327591 bytes)
+PASS worker 与本机 pdfjs-dist 同版本字节一致: node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs
+PASS worker 模块注册 globalThis.pdfjsWorker: /.vite/build/pdf.worker.mjs
+{
+  "asar": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/out/寸链-darwin-arm64/寸链.app/Contents/Resources/app.asar",
+  "main": ".vite/build/main.cjs",
+  "workerNamesInMain": [
+    "pdf.worker.mjs"
+  ],
+  "worker": {
+    "entry": "/.vite/build/pdf.worker.mjs",
+    "byteSize": 1327591,
+    "sha256": "b4c8353ded0d88d2e2009574a29eb4e0c3ff7e942ecdf51ef5f71566a9667f31",
+    "statSize": 1327591,
+    "unpacked": false
+  }
+}
+RESULT PASS 打包产物中的 pdf worker 可被 main.cjs 运行时加载
+{
+  "status": "PACKAGED_STEP_ASSETS_VERIFIED",
+  "directory": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/out/寸链-darwin-arm64/寸链.app/Contents/Resources/step-narrow-v1",
+  "hashes": {
+    "spacer.cjs": "96ff4cea09e0fcbc3cbdcd07e83c6e03470735db01bcab32b689972b4e57b94f",
+    "spacer.wasm": "c309d6a202aab5b2b2a498bdd1515b8b03f470ea238dfb99ba5ccb00b8a80108",
+    "step-worker.cjs": "2eb428ddaa2a22c243d60e2ab8a14dfe696a0a0594acf3d75cbbf54d711ed36c"
+  },
+  "runtimeExecution": "NOT_TESTED_BY_THIS_SCRIPT",
+  "distributionApproval": "BLOCKED_PROVENANCE_AND_LGPL_SOURCE_SUPPLY"
+}

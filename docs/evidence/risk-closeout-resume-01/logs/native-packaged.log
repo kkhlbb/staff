@@ -1,0 +1,137 @@
+{
+  "fileName": "packaged.step",
+  "sha256": "676b5f601278f122160d165c59719844ea4494c1f964f9f9f1faac586faf8a5f",
+  "oracle": {
+    "q": [
+      200000,
+      320000,
+      120000
+    ],
+    "d": "20",
+    "D": "32",
+    "L": "12",
+    "pi": "3.14159265358979323846264338327950288419716939937510582097498",
+    "volume": "5881.06144752009294240206841349922939921710111563019809686518",
+    "bbox": [
+      "-6",
+      "-16",
+      "-16",
+      "6",
+      "16",
+      "16"
+    ]
+  },
+  "linearThresholdMm": 1e-06,
+  "repairFreeImportProven": false,
+  "scope": "Native OCP/OCCT 8.0.1, same kernel family; not second-vendor interoperability; default transfer may heal internally.",
+  "readStatus": "IFSelect_ReturnStatus.IFSelect_RetDone",
+  "nativeHeader": " --  Step Model Header : 3 Entities :\n  HeaderSection_FileDescription\n  HeaderSection_FileName\n  HeaderSection_FileSchema\n --  --        STEP MODEL    HEADER  CONTENT      --  --\n --   Dumped with Protocol : StepData_FileProtocol   --\nHEADER;\nFILE_DESCRIPTION(('Open CASCADE Model'),'2;1');\nFILE_NAME('Open CASCADE Shape Model','2026-11-15T01:18:40',('Author'),(\n    'Open CASCADE'),'Open CASCADE STEP processor 8.0','Open CASCADE 8.0'\n  ,'Unknown');\nFILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));\nENDSEC;\n",
+  "sourceUnits": [
+    [
+      "millimetre"
+    ],
+    [
+      "radian"
+    ],
+    [
+      "steradian"
+    ]
+  ],
+  "shapeProcessFlagsUnobservable": "TypeError('Unable to convert function return value to a Python type! The signature was\\n\\t(self: OCP.OCP.XSControl.XSControl_Reader) -> tuple[std::__1::bitset<18ul>, bool]\\n\\nDid you forget to `#include <pybind11/stl.h>`? Or <pybind11/complex.h>,\\n<pybind11/functional.h>, <pybind11/chrono.h>, etc. Some automatic\\nconversions are optional and require extra headers to be included\\nwhen compiling your pybind11 module.')",
+  "roots": 1,
+  "transferred": 1,
+  "shapeCount": 1,
+  "loadPrinted": "",
+  "transferPrinted": "",
+  "loadChecks": [],
+  "transferChecks": [],
+  "valid": true,
+  "solidCount": 1,
+  "shellCount": 1,
+  "faceCount": 4,
+  "closed": true,
+  "surfaces": [
+    {
+      "type": "cylinder",
+      "radius": 16.0,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD"
+    },
+    {
+      "type": "plane",
+      "x": 6.0
+    },
+    {
+      "type": "plane",
+      "x": -6.0
+    },
+    {
+      "type": "cylinder",
+      "radius": 10.0,
+      "orientation": "TopAbs_Orientation.TopAbs_REVERSED"
+    }
+  ],
+  "radiiMm": [
+    10.0,
+    16.0
+  ],
+  "bboxMm": [
+    -6.0,
+    -16.0,
+    -16.0,
+    6.0,
+    16.0,
+    16.0
+  ],
+  "volumeMm3": 5881.061447520218,
+  "volumeErrorMm3": "1.2533785838272452033236836102388436980190313482E-10",
+  "volumeThresholdMm3": "0.00000588106144752009294240206841349922939921710111563019809686518",
+  "pointClassifications": [
+    {
+      "point": [
+        -5.88,
+        0,
+        0
+      ],
+      "state": "TopAbs_State.TopAbs_OUT"
+    },
+    {
+      "point": [
+        0,
+        0,
+        0
+      ],
+      "state": "TopAbs_State.TopAbs_OUT"
+    },
+    {
+      "point": [
+        5.88,
+        0,
+        0
+      ],
+      "state": "TopAbs_State.TopAbs_OUT"
+    },
+    {
+      "point": [
+        0,
+        13.0,
+        0
+      ],
+      "state": "TopAbs_State.TopAbs_IN"
+    }
+  ],
+  "booleanProbes": [
+    {
+      "label": "core",
+      "solidCount": 0,
+      "volume": 0.0,
+      "valid": true
+    },
+    {
+      "label": "material",
+      "solidCount": 1,
+      "volume": 21.2057504117311,
+      "valid": true
+    }
+  ],
+  "status": "ACCEPTED"
+}

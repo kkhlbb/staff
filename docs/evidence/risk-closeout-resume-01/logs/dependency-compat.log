@@ -1,0 +1,10 @@
+✔ scoped minimatch preserves project-service pattern matching with dot:true (2.170833ms)
+✔ real TypeScript parser project service accepts only allowDefaultProject match (663.737958ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 871.766916

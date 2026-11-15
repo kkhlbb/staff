@@ -1,0 +1,16 @@
+✔ relative paths reject traversal, absolute paths and alternate separators (0.428042ms)
+✔ complete offline unit fixture verifies but never grants release (2.528625ms)
+✔ missing explicit resource target is caller error (0.059166ms)
+✔ corrupted supply input is rejected (1.144458ms)
+✔ different product Resources cannot borrow supply binding (1.25625ms)
+✔ unindexed supply file is rejected (1.326583ms)
+✔ parent symlink in a manifest path is rejected (1.358625ms)
+✔ unsafe manifest key is rejected even if hash matches (1.221ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 63.115791
