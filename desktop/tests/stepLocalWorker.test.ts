@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { Worker } from 'node:worker_threads'
-import { behaviorModifiedWasm, sectionChanged } from './narrowWasmFixture'
+import { behaviorModifiedWasm, sectionChanged, signatureMismatchWasm } from './narrowWasmFixture'
 import { cpSync, mkdtempSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
@@ -16,6 +16,11 @@ async function run(bytes: Uint8Array, defaults?: { directory: string; hashes: Re
   finally { await worker.terminate() }
 }
 describe('local WASM remains inside pinned worker/glue', () => {
+  it('rejects matching export names with an incompatible function signature before execution', async () => {
+    const bytes = signatureMismatchWasm()
+    expect(WebAssembly.validate(bytes)).toBe(true)
+    expect((await run(bytes)).error).toContain('STEP_LOCAL_ABI')
+  }, 30000)
   it('enforces real memory and table declarations on the default branch too', async () => {
     // Isolated worker fixtures have their own explicit pins; never relax main pins.
     for (const [bytes, reason] of [[sectionChanged(5, [1, 1, 0x80, 2, 0x80, 0x80, 1]), 'STEP_MEMORY'], [sectionChanged(4, [1, 0x70, 1, 1, 0xff, 0xff, 0x7f]), 'STEP_TABLE']] as const) {

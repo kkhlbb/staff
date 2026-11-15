@@ -27,6 +27,43 @@ const assert = require('node:assert/strict');
   try { module = new WebAssembly.Module(wasmBinary); } catch { throw new Error(prefix + 'COMPILE'); }
   const reference = new WebAssembly.Module(originalWasm);
   for (const kind of ['imports', 'exports']) assert.deepEqual(WebAssembly.Module[kind](module), WebAssembly.Module[kind](reference), prefix + 'ABI');
+  // Module.imports/exports report names/kinds, NOT function signatures. Resolve
+  // actual type indices before instantiation, including imported functions.
+  function functionABI(bytes) {
+    let cursor = 8, limit = bytes.length;
+    const check = ok => assert.ok(ok, prefix + 'ABI');
+    const byte = () => { check(cursor < limit); return bytes[cursor++]; };
+    const leb = () => { let value = 0, shift = 0, b; do { check(shift < 35); b = byte(); value += (b & 127) * 2 ** shift; shift += 7; } while (b & 128); return value; };
+    const name = () => { const size = leb(); check(cursor + size <= limit); const value = bytes.subarray(cursor, cursor + size).toString('utf8'); cursor += size; return value; };
+    const types = [], functions = [], imports = [], exports = [];
+    while (cursor < bytes.length) {
+      limit = bytes.length;
+      const id = byte(), size = leb(), end = cursor + size;
+      check(end <= bytes.length); limit = end;
+      if (id === 1) {
+        const count = leb();
+        for (let i = 0; i < count; i++) {
+          check(byte() === 0x60);
+          const vector = () => { const count = leb(), values = []; for (let j = 0; j < count; j++) { const value = byte(); check([0x7f,0x7e,0x7d,0x7c,0x7b,0x70,0x6f].includes(value)); values.push(value); } return values; };
+          types.push({ parameters: vector(), results: vector() });
+        }
+      } else if (id === 2) {
+        const count = leb();
+        for (let i = 0; i < count; i++) { const module = name(), field = name(); check(byte() === 0); const type = leb(); functions.push(type); imports.push({ module, name: field, type }); }
+      } else if (id === 3) {
+        const count = leb(); for (let i = 0; i < count; i++) functions.push(leb());
+      } else if (id === 7) {
+        const count = leb(); for (let i = 0; i < count; i++) { const field = name(), kind = byte(), index = leb(); if (kind === 0) exports.push({ name: field, index }); }
+      }
+      if ([1,2,3,7].includes(id)) check(cursor === end);
+      cursor = end;
+    }
+    const type = index => { check(Number.isInteger(index) && !!types[index]); return types[index]; };
+    return { imports: imports.map(i => ({ module: i.module, name: i.name, signature: type(i.type) })), exports: exports.map(e => ({ name: e.name, signature: type(functions[e.index]) })) };
+  }
+  const abi = functionABI(wasmBinary);
+  assert.deepEqual(abi, functionABI(originalWasm), prefix + 'ABI');
+  assert.deepEqual(abi.exports.find(e => e.name === 'spacer_step')?.signature, { parameters: [0x7c,0x7c,0x7c], results: [0x7f] }, prefix + 'ABI');
   // V8 resourceLimits do not bound linear memory. Apply to BOTH default/local.
   let cursor = 8, memories = 0, tables = 0;
   function uleb(end) {
