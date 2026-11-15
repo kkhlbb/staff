@@ -1,3 +1,12 @@
+# 当前窄核接入增补
+
+当前资产、供给、ABI和限制以 [step-narrow-runtime.md](step-narrow-runtime.md) 为准。
+新SBOM为STEP-NARROW-SBOM.cdx.json；旧STEP-SBOM及以下记录不改写为新核证明。
+新核两支均受实际512MiB内存/表限制；仅三项新运行资源，不再含旧npm JS核。
+门禁仍BLOCKED/INCOMPLETE，没有发布许可。
+
+## 以下原文保留为旧版本与实验历史
+
 # 固定 STEP 二进制：来源、义务和分发门禁
 
 状态：分发仍阻塞；不是法律认证。机器清单 STEP-SBOM.cdx.json 明确 incomplete。

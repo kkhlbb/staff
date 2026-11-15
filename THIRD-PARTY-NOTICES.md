@@ -1,3 +1,20 @@
+# 当前产品窄核告知（历史记录在后）
+
+本产品STEP出口现在使用固定源OCCT 8.0.1窄C ABI，不再通过npm旧绑定运行。
+OCCT为LGPL2.1及OCCT header exception；应用/手写wrapper/worker保持MIT边界，
+Emscripten glue与musl/LLVM/dlmalloc/Strtod等各依原文，不统称MIT。
+新运行资源为step-narrow-v1，精确hash见STEP-NARROW-SBOM.cdx.json与运行manifest。
+旧npm/旧缓存不进入新包；下文旧版本字节与四项来源缺口仅为原版历史事实。
+
+真实产品wrapper已重编，保留几何安全检查并重链接默认/源修改OCCT库。
+本地可移植对应材料与应用对象见docs/step-narrow-runtime.md。
+允许用户修改LGPL库、重新链接以及为调试这些修改而逆向工程；应用MIT许可不变。
+正式源供给渠道、完整notice与法律审查仍BLOCKED，不是法律认证或分发授权。
+完整许可原文随外置资源；本地显式用户WASM入口不允许自选JS/worker或默认回退。
+
+## 以下为旧npm版本历史告知（不代表当前运行核）
+
+
 # 第三方组件与许可
 
 寸链自身代码以 MIT 许可发布（见 `LICENSE`）。随附的第三方组件按各自的许可分发，以下为实际打包进应用的版本。

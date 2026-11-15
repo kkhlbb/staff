@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
@@ -12,15 +12,17 @@ if (Object.keys(hashes).length !== 3) throw new Error('STEP_MANIFEST_INVALID')
 export const legalFiles = {
   'LICENSE_LGPL_21.txt': 'desktop/main/cad/licenses/LICENSE_LGPL_21.txt',
   'OCCT_LGPL_EXCEPTION.txt': 'desktop/main/cad/licenses/OCCT_LGPL_EXCEPTION.txt',
-  'REPLICAD_OCJS_LICENSE.txt': 'desktop/main/cad/licenses/REPLICAD_OCJS_LICENSE.txt',
   'THIRD-PARTY-NOTICES.md': 'THIRD-PARTY-NOTICES.md',
   NOTICE: 'NOTICE',
   'STEP-SBOM.cdx.json': 'STEP-NARROW-SBOM.cdx.json',
   'STEP-CANDIDATE-LICENSES.txt': 'licenses/STEP-CANDIDATE-LICENSES.txt',
+  'STEP-NARROW-RUNTIME-NOTICES.txt': 'licenses/STEP-NARROW-RUNTIME-NOTICES.txt',
+  'step-narrow-runtime.md': 'docs/step-narrow-runtime.md',
   'step-license-provenance.md': 'docs/step-license-provenance.md',
   'step-kernel-replacement.md': 'docs/step-kernel-replacement.md',
 }
 export function verifyAssets(directory) {
+  if (readdirSync(directory).some(name => /\.(?:c?js|wasm)$/.test(name) && !(name in hashes))) throw new Error('STEP_UNEXPECTED_RUNTIME_ASSET')
   for (const [name, expected] of Object.entries(hashes)) {
     const bytes = readFileSync(path.join(directory, name))
     if (createHash('sha256').update(bytes).digest('hex') !== expected) throw new Error(`STEP_ASSET_HASH: ${name}`)

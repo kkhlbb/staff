@@ -22,10 +22,18 @@ for (const name of Object.keys(legalFiles)) {
     assert.doesNotThrow(() => verifyAssets(target))
   })
 }
+test('rejects legacy or unknown executable kernel files in new resources', () => {
+  for (const name of ['replicad_single.wasm', 'replicad_single.js', 'foreign.cjs']) {
+    const target = path.join(directory, 'unexpected-' + name)
+    cpSync(original, target, { recursive: true })
+    writeFileSync(path.join(target, name), 'unexpected kernel')
+    assert.throws(() => verifyAssets(target), /STEP_UNEXPECTED_RUNTIME_ASSET/)
+  }
+})
 test('local packaging verification does not approve release', () => {
   assert.doesNotThrow(() => verifyAssets(original))
   const result = spawnSync(process.execPath, [new URL('./check-step-release.mjs', import.meta.url).pathname], { encoding: 'utf8' })
   assert.equal(result.status, 1)
   assert.match(result.stderr, /BLOCKED_PROVENANCE_AND_LGPL_SOURCE_SUPPLY/)
-  assert.match(result.stderr, /CORRESPONDING_SOURCE_AND_GENERATED_BINDINGS/)
+  assert.match(result.stderr, /FORMAL_SOURCE_DELIVERY/)
 })
