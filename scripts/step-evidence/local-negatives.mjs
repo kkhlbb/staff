@@ -5,15 +5,33 @@ import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
 const [executable,fixtures,evidenceRoot] = process.argv.slice(2)
 const out=path.resolve(evidenceRoot),root=process.cwd(),sha=b=>createHash('sha256').update(b).digest('hex')
-const original=fs.readFileSync('node_modules/replicad-opencascadejs/dist/replicad_single.wasm')
+function leb(value) {
+ const bytes=[]
+ do {const b=value&127;value>>>=7;bytes.push(b|(value?128:0))}while(value)
+ return Buffer.from(bytes)
+}
+function sectionChanged(bytes,id,payload) {
+ let cursor=8
+ while(cursor<bytes.length) {
+  const start=cursor,section=bytes[cursor++];let size=0,shift=0,b
+  do{b=bytes[cursor++];size+=(b&127)*2**shift;shift+=7}while(b&128)
+  const end=cursor+size
+  if(section===id)return Buffer.concat([bytes.subarray(0,start),Buffer.from([id]),leb(payload.length),Buffer.from(payload),bytes.subarray(end)])
+  cursor=end
+ }
+ throw Error('missing section')
+}
 const selected=fs.readFileSync(path.join(out,'candidate/modified.wasm'))
-const excessiveTable=Buffer.from(selected);excessiveTable.set([255,255,127],36538)
+const excessiveMemory=sectionChanged(selected,5,[1,1,128,2,128,128,4]) // 65536 pages
+const excessiveTable=sectionChanged(selected,4,[1,112,1,128,128,64,128,128,64]) // 1048576 entries
+assert.equal(WebAssembly.validate(excessiveMemory),true)
+assert.equal(WebAssembly.validate(excessiveTable),true)
 const cases=[
  {name:'no-opt-in',bytes:selected,reason:'STEP_LOCAL_CONFIG',consent:'unset'},
  {name:'invalid-opt-in',bytes:selected,reason:'STEP_LOCAL_CONFIG',consent:'0'},
  {name:'invalid-binary',bytes:Buffer.alloc(64,1),reason:'STEP_LOCAL_COMPILE'},
  {name:'wrong-abi',bytes:Buffer.from([0,97,115,109,1,0,0,0]),reason:'STEP_LOCAL_ABI'},
- {name:'memory-limit',bytes:original,reason:'STEP_LOCAL_MEMORY'},
+ {name:'memory-limit',bytes:excessiveMemory,reason:'STEP_LOCAL_MEMORY'},
  {name:'table-limit',bytes:excessiveTable,reason:'STEP_LOCAL_TABLE'},
  {name:'wrong-hash',bytes:selected,reason:'STEP_LOCAL_HASH',wrongHash:true},
  {name:'missing',bytes:selected,reason:'STEP_LOCAL_FILE',kind:'missing'},

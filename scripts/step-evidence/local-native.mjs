@@ -13,7 +13,7 @@ for(const [relative,d] of cases) {
  fs.writeFileSync(path.join(root,'logs',`native-${label}.json`),JSON.stringify(record,null,2),{flag:'wx'})
  fs.writeFileSync(path.join(root,'logs',`native-${label}.log`),(result.stdout||'')+(result.stderr||''),{flag:'wx'})
  const native=fs.existsSync(report)?JSON.parse(fs.readFileSync(report,'utf8')):null
- const modifiedHeader=fs.readFileSync(file,'utf8').includes('USER PATCHED STEP processor 8.0')
+ const modifiedHeader=fs.readFileSync(file,'utf8').includes('SOURCE MODIFIED OCCT STEP translator')
  results.push({relative,status:result.status,verdict:native?.status,modifiedHeader})
  if(relative.startsWith('packaged-local'))assert.equal(modifiedHeader,true)
  console.log(JSON.stringify(results.at(-1)))

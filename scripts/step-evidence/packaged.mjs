@@ -47,7 +47,7 @@ async function connect(port) {
 }
 let main
 let renamed=false
-const assets=path.resolve(executable,'../../Resources/step-kernel')
+const assets=path.resolve(executable,'../../Resources/step-narrow-v1')
 try {
  main=await connect(9491)
  const probe=await main(`({requireType:typeof require,mainType:typeof process.mainModule,resourcesPath:process.resourcesPath,version:process.versions.electron})`)
@@ -79,7 +79,7 @@ try {
  if(localCandidate) {
   assert.equal(receipt.value.wasmSha256,localCandidate.sha256)
   assert.match(receipt.value.kernelVersion,/user-selected-local-wasm/)
-  assert.ok(bytes.toString('ascii').includes('USER PATCHED STEP translator 8.0'))
+  assert.ok(bytes.toString('ascii').includes('SOURCE MODIFIED OCCT STEP translator'))
   // Snapshotting and revalidation apply to the user file as well; never fallback.
   const selected=env.CUNLIAN_STEP_LOCAL_WASM,original=await fs.readFile(selected),failureTarget=path.join(out,'local-hash-must-not-exist.step')
   try {
@@ -91,19 +91,19 @@ try {
    await assert.rejects(fs.stat(failureTarget),{code:'ENOENT'})
   } finally {await fs.writeFile(selected,original)}
  }
- else assert.equal(bytes.toString('ascii').includes('USER PATCHED'),false)
+ else assert.equal(bytes.toString('ascii').includes('SOURCE MODIFIED OCCT STEP translator'),false)
  assert.deepEqual(receipt.value.generationInput,base.input)
  const currentLengthQ=opened.value.snapshot.project.parameters.find(p=>p.key==='length').valueQ
  assert.notEqual(currentLengthQ,receipt.value.generationInput.lengthQ)
  await fs.writeFile(path.join(out,'historical-freeze-audit.json'),JSON.stringify({currentLengthQ,selectedFrozenLengthQ:receipt.value.generationInput.lengthQ,inputMatchesSelectedFrozenReceipt:true,historicalByteIdentical:receipt.value.historicalByteIdentical},null,2),{flag:'wx'})
  // Actual packaged resource omission, then restore, with no development-tree fallback.
- const wasm=path.join(assets,'replicad_single.wasm');await fs.rename(wasm,wasm+'.mutation-hidden');renamed=true
+ const wasm=path.join(assets,'spacer.wasm');await fs.rename(wasm,wasm+'.mutation-hidden');renamed=true
  const badTarget=path.join(out,'must-not-exist.step')
  await main(`globalThis.__stepEvidenceElectron.dialog.showSaveDialog=async()=>({canceled:false,filePath:${JSON.stringify(badTarget)}});true`)
  const missing=await renderer(`window.cunlian.stepExport(${JSON.stringify({...request,jobId:'missing-wasm'})})`)
  await fs.writeFile(path.join(out,'missing-wasm-receipt.json'),JSON.stringify(missing,null,2),{flag:'wx'})
  assert.equal(missing.ok,false);assert.equal(missing.error.code,'STEP_EXPORT_FAILED');assert.match(missing.error.message,/STEP_ASSET_MISSING/);await assert.rejects(fs.stat(badTarget))
- await fs.writeFile(path.join(out,'missing-wasm.patch'),'rename packaged/step-kernel/replicad_single.wasm -> replicad_single.wasm.mutation-hidden\nExpected: STEP_ASSET_MISSING, no fallback and no target writes.\n',{flag:'wx'})
+ await fs.writeFile(path.join(out,'missing-wasm.patch'),'rename packaged/step-kernel/spacer.wasm -> spacer.wasm.mutation-hidden\nExpected: STEP_ASSET_MISSING, no fallback and no target writes.\n',{flag:'wx'})
  await fs.rename(wasm+'.mutation-hidden',wasm);renamed=false
  const greenTarget=path.join(out,'restored.step')
  await main(`globalThis.__stepEvidenceElectron.dialog.showSaveDialog=async()=>({canceled:false,filePath:${JSON.stringify(greenTarget)}});true`)
@@ -112,7 +112,7 @@ try {
  assert.equal(createHash('sha256').update(await fs.readFile(greenTarget)).digest('hex'),restored.value.sha256)
  // Omit/corrupt every own runtime asset in this package, then restore bytes in finally.
  const resourceChecks=[]
- for(const name of ['replicad_single.cjs','replicad_single.js','replicad_single.wasm','step-worker.cjs']) {
+ for(const name of ['spacer.cjs','spacer.wasm','step-worker.cjs']) {
   const resource=path.join(assets,name),original=await fs.readFile(resource)
   for(const mode of ['missing','corrupt']) {
    const mutationTarget=path.join(out,`${mode}-${name}.step`)
@@ -180,7 +180,7 @@ try {
  console.log(JSON.stringify({status:'PASS',scope:'real packaged Electron main/preload IPC/worker/save; native dialogs stubbed via debugger, NOT native dialog UX verification',probe,target,receipt:receipt.value,missingWasmRejected:true,restored:true,cancelled:true},null,2))
  }
 } finally {
- if(renamed)await fs.rename(path.join(assets,'replicad_single.wasm.mutation-hidden'),path.join(assets,'replicad_single.wasm'))
+ if(renamed)await fs.rename(path.join(assets,'spacer.wasm.mutation-hidden'),path.join(assets,'spacer.wasm'))
  if(main) {try{await main(`setTimeout(()=>globalThis.__stepEvidenceElectron.app.exit(0),30);true`)}catch{}}
  for(const socket of sockets)socket.close()
  const exit=await Promise.race([new Promise(r=>app.once('exit',(code,signal)=>r({code,signal}))),sleep(5000).then(()=>null)])
