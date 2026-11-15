@@ -1,0 +1,119 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 2,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "bom-ref": "cunlian",
+      "name": "\u5bf8\u94fe STEP local integration",
+      "version": "0.4.1-beta",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "cunlian:scope",
+        "value": "STEP assets only; not whole Electron application"
+      },
+      {
+        "name": "cunlian:completeness",
+        "value": "INCOMPLETE"
+      },
+      {
+        "name": "cunlian:distributionApproval",
+        "value": "BLOCKED_PROVENANCE_AND_LGPL_SOURCE_SUPPLY"
+      },
+      {
+        "name": "cunlian:sourceSupply",
+        "value": "LOCAL_PORTABLE_MATERIALS_PRODUCT_WRAPPER_REBUILT;FORMAL_DELIVERY_PENDING"
+      },
+      {
+        "name": "cunlian:replacement",
+        "value": "EXPLICIT_LOCAL_WASM_SNAPSHOT_NARROW_ABI"
+      },
+      {
+        "name": "cunlian:blockers",
+        "value": "PRODUCT_PACKAGED_MODIFIED_KERNEL_EXECUTION;FORMAL_SOURCE_DELIVERY;TRANSITIVE_NOTICE_REVIEW;LGPL_LEGAL_REVIEW"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "file",
+      "bom-ref": "asset:spacer.cjs",
+      "name": "spacer.cjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "96ff4cea09e0fcbc3cbdcd07e83c6e03470735db01bcab32b689972b4e57b94f"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "asset:spacer.wasm",
+      "name": "spacer.wasm",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c309d6a202aab5b2b2a498bdd1515b8b03f470ea238dfb99ba5ccb00b8a80108"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "asset:step-worker.cjs",
+      "name": "step-worker.cjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9ae9e614998820c6c4ecccb23e1941a215f5d96a5e98bf3071a104156aaf014e"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "occt:narrow",
+      "name": "OCCT",
+      "version": "8.0.1 source b8f597c677811d1f9f4d8a97f5ae2825c0353a42 + preserved patches",
+      "licenses": [
+        {
+          "license": {
+            "name": "LGPL-2.1 with OCCT header exception"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:scope",
+          "value": "23 supplied archives; actual extracted objects in product link maps; not every supplied member is embedded"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "cunlian",
+      "dependsOn": [
+        "occt:narrow",
+        "asset:spacer.cjs",
+        "asset:spacer.wasm",
+        "asset:step-worker.cjs"
+      ]
+    }
+  ],
+  "compositions": [
+    {
+      "aggregate": "incomplete",
+      "assemblies": [
+        "occt:narrow"
+      ]
+    }
+  ]
+}

@@ -1,5 +1,4 @@
-// Fixed 1.2.1 bindings; reference: approved wasm-experiment-01/export.cjs/readback.cjs.
-// Each job owns one fresh WASM heap. Parent always terminates this worker.
+// Fixed narrow C ABI; one fresh WASM heap per job, terminated by the parent.
 const { parentPort, workerData } = require('node:worker_threads');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -8,131 +7,76 @@ const assert = require('node:assert/strict');
 (async () => {
   const { input, assetDirectory, hashes } = workerData;
   for (const [name, expected] of Object.entries(hashes)) {
-    const bytes = fs.readFileSync(path.join(assetDirectory, name));
-    assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), expected, 'STEP_ASSET_HASH: ' + name);
+    assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(assetDirectory, name))).digest('hex'), expected, 'STEP_ASSET_HASH: ' + name);
   }
-  // Defense in depth; parent validates before spawning too.
   assert.ok(input && Object.keys(input).sort().join(',') === 'innerDiameter,length,outerDiameter', 'STEP_INVALID');
   assert.ok(Object.values(input).every(q => Number.isSafeInteger(q) && q >= 100 && q <= 100000000), 'STEP_UNSUPPORTED');
   assert.ok(input.outerDiameter - input.innerDiameter >= 200, 'STEP_UNSUPPORTED');
   const d = input.innerDiameter / 10000, D = input.outerDiameter / 10000, L = input.length / 10000;
   assert.ok(Math.max(D, L) / Math.min(d / 2, (D - d) / 2, L) <= 10000, 'STEP_UNSUPPORTED');
-  const originalWasm = fs.readFileSync(path.join(assetDirectory, 'replicad_single.wasm'));
+  const originalWasm = fs.readFileSync(path.join(assetDirectory, 'spacer.wasm'));
   let wasmBinary = originalWasm;
+  const prefix = workerData.localWasm ? 'STEP_LOCAL_' : 'STEP_';
   if (workerData.localWasm) {
     const local = workerData.localWasm;
     assert.ok(local.bytes instanceof Uint8Array && local.bytes.length >= 8 && local.bytes.length <= 64 * 1024 * 1024, 'STEP_LOCAL_SIZE');
     assert.equal(crypto.createHash('sha256').update(local.bytes).digest('hex'), local.sha256, 'STEP_LOCAL_HASH');
     wasmBinary = Buffer.from(local.bytes);
-    let module;
-    try { module = new WebAssembly.Module(wasmBinary); } catch { throw new Error('STEP_LOCAL_COMPILE'); }
-    const reference = new WebAssembly.Module(originalWasm);
-    for (const kind of ['imports', 'exports']) {
-      assert.deepEqual(WebAssembly.Module[kind](module), WebAssembly.Module[kind](reference), 'STEP_LOCAL_ABI');
-    }
-    // V8 resourceLimits do NOT bound WASM linear memory. Require a declared
-    // single nonshared 32-bit memory maximum <=512MiB before instantiation.
-    let cursor = 8, memories = 0;
-    function uleb(end) {
-      let value = 0, shift = 0, byte;
-      do {
-        assert.ok(cursor < end && shift < 35, 'STEP_LOCAL_MEMORY');
-        byte = wasmBinary[cursor++]; value += (byte & 127) * 2 ** shift; shift += 7;
-      } while (byte & 128);
-      return value;
-    }
-    while (cursor < wasmBinary.length) {
-      const id = wasmBinary[cursor++], size = uleb(wasmBinary.length), end = cursor + size;
-      assert.ok(end <= wasmBinary.length, 'STEP_LOCAL_MEMORY');
-      if (id === 4) {
-        assert.equal(uleb(end), 1, 'STEP_LOCAL_TABLE');
-        assert.equal(wasmBinary[cursor++], 0x70, 'STEP_LOCAL_TABLE');
-        assert.equal(uleb(end), 1, 'STEP_LOCAL_TABLE');
-        const initial = uleb(end), maximum = uleb(end);
-        assert.ok(initial <= maximum && maximum <= 1000000 && cursor === end, 'STEP_LOCAL_TABLE');
-      }
-      if (id === 5) {
-        assert.equal(uleb(end), 1, 'STEP_LOCAL_MEMORY');
-        assert.equal(uleb(end), 1, 'STEP_LOCAL_MEMORY');
-        const initial = uleb(end), maximum = uleb(end);
-        assert.ok(initial <= maximum && maximum <= 8192 && cursor === end, 'STEP_LOCAL_MEMORY');
-        memories++;
-      }
-      cursor = end;
-    }
-    assert.equal(memories, 1, 'STEP_LOCAL_MEMORY');
   }
+  let module;
+  try { module = new WebAssembly.Module(wasmBinary); } catch { throw new Error(prefix + 'COMPILE'); }
+  const reference = new WebAssembly.Module(originalWasm);
+  for (const kind of ['imports', 'exports']) assert.deepEqual(WebAssembly.Module[kind](module), WebAssembly.Module[kind](reference), prefix + 'ABI');
+  // V8 resourceLimits do not bound linear memory. Apply to BOTH default/local.
+  let cursor = 8, memories = 0, tables = 0;
+  function uleb(end) {
+    let value = 0, shift = 0, byte;
+    do {
+      assert.ok(cursor < end && shift < 35, prefix + 'MEMORY');
+      byte = wasmBinary[cursor++]; value += (byte & 127) * 2 ** shift; shift += 7;
+    } while (byte & 128);
+    return value;
+  }
+  while (cursor < wasmBinary.length) {
+    const id = wasmBinary[cursor++], size = uleb(wasmBinary.length), end = cursor + size;
+    assert.ok(end <= wasmBinary.length, prefix + 'MEMORY');
+    if (id === 4) {
+      assert.equal(uleb(end), 1, prefix + 'TABLE');
+      assert.equal(wasmBinary[cursor++], 0x70, prefix + 'TABLE');
+      assert.equal(uleb(end), 1, prefix + 'TABLE');
+      const initial = uleb(end), maximum = uleb(end);
+      assert.ok(initial <= maximum && maximum <= 1000000 && cursor === end, prefix + 'TABLE');
+      tables++;
+    }
+    if (id === 5) {
+      assert.equal(uleb(end), 1, prefix + 'MEMORY');
+      assert.equal(uleb(end), 1, prefix + 'MEMORY');
+      const initial = uleb(end), maximum = uleb(end);
+      assert.ok(initial <= maximum && maximum <= 8192 && cursor === end, prefix + 'MEMORY');
+      memories++;
+    }
+    cursor = end;
+  }
+  assert.equal(memories, 1, prefix + 'MEMORY');
+  assert.equal(tables, 1, prefix + 'TABLE');
   let oc;
   try {
-    oc = await require(path.join(assetDirectory, 'replicad_single.cjs'))({
-      // This pinned glue ignores wasmBinary. Force the exact validated snapshot;
-      // synchronous instantiation cannot fall back to a file or a network fetch.
+    oc = await require(path.join(assetDirectory, 'spacer.cjs'))({
       instantiateWasm(imports, receive) {
-        const instance = new WebAssembly.Instance(new WebAssembly.Module(wasmBinary), imports);
-        receive(instance);
+        const instance = new WebAssembly.Instance(module, imports);
+        receive(instance, module);
         return instance.exports;
       },
       print: () => {}, printErr: () => {},
     });
-  } catch { throw new Error(workerData.localWasm ? 'STEP_LOCAL_INSTANTIATE' : 'STEP_INSTANTIATE'); }
-  for (const name of ['Message_ProgressRange', 'gp_Ax2', 'gp_Pnt', 'gp_Dir', 'BRepPrimAPI_MakeCylinder', 'BRepAlgoAPI_Cut', 'BRepCheck_Analyzer', 'STEPControl_Writer']) {
-    assert.equal(typeof oc[name], 'function', 'STEP_LOCAL_API: ' + name);
-  }
-  const range = new oc.Message_ProgressRange();
-  const axis = new oc.gp_Ax2(new oc.gp_Pnt(-L / 2, 0, 0), new oc.gp_Dir(1, 0, 0));
-  // Divide integer diameter q directly by 20000: never truncate odd q.
-  const outer = new oc.BRepPrimAPI_MakeCylinder(axis, input.outerDiameter / 20000, L);
-  const inner = new oc.BRepPrimAPI_MakeCylinder(axis, input.innerDiameter / 20000, L);
-  const a = outer.Shape(), b = inner.Shape();
-  assert.ok(outer.IsDone() && inner.IsDone(), 'STEP_BUILD_CYLINDER');
-  const cut = new oc.BRepAlgoAPI_Cut(a, b, range);
-  assert.ok(cut.IsDone(), 'STEP_BUILD_BOOLEAN');
-  const shape = cut.Shape();
-  assert.ok(!shape.IsNull() && new oc.BRepCheck_Analyzer(shape, true, false, false).IsValid(), 'STEP_INVALID_BREP');
-  function collect(kind) {
-    const ex = new oc.TopExp_Explorer(shape, kind, oc.TopAbs_ShapeEnum.TopAbs_SHAPE), found = [];
-    while (ex.More()) { found.push(ex.Current().Oriented(ex.Current().Orientation())); ex.Next(); }
-    ex.delete(); return found;
-  }
-  const solids = collect(oc.TopAbs_ShapeEnum.TopAbs_SOLID), shells = collect(oc.TopAbs_ShapeEnum.TopAbs_SHELL);
-  assert.equal(solids.length, 1, 'STEP_SOLID_COUNT');
-  assert.equal(shells.length, 1, 'STEP_SHELL_COUNT');
-  assert.ok(oc.BRep_Tool.IsClosed(shells[0]), 'STEP_OPEN_SHELL');
-  const faces = collect(oc.TopAbs_ShapeEnum.TopAbs_FACE);
-  assert.equal(faces.length, 4, 'STEP_FACE_COUNT');
-  const radii = [];
-  let planes = 0;
-  for (const f of faces) {
-    const surface = new oc.BRepAdaptor_Surface(oc.TopoDS.Face(f), true);
-    if (surface.GetType() === oc.GeomAbs_SurfaceType.GeomAbs_Cylinder) radii.push(surface.Cylinder().Radius());
-    else { assert.equal(surface.GetType(), oc.GeomAbs_SurfaceType.GeomAbs_Plane, 'STEP_NON_ANALYTIC'); planes++; }
-  }
-  radii.sort((x, y) => x - y);
-  assert.equal(planes, 2); assert.equal(radii.length, 2);
-  assert.ok(Math.abs(radii[0] - d / 2) < 1e-6 && Math.abs(radii[1] - D / 2) < 1e-6, 'STEP_RADII');
-  const props = new oc.GProp_GProps();
-  oc.BRepGProp.VolumeProperties(shape, props, true, false, false);
-  const volume = props.Mass(), expected = Math.PI * (D - d) * (D + d) * L / 4;
-  assert.ok(Number.isFinite(volume) && volume > 0 && Math.abs(volume - expected) <= Math.max(1e-6, expected * 1e-9), 'STEP_VOLUME');
-  function point(x, y, inside) {
-    const vertex = new oc.BRepBuilderAPI_MakeVertex(new oc.gp_Pnt(x, y, 0)).Shape();
-    const dist = new oc.BRepExtrema_DistShapeShape(); dist.LoadS1(solids[0]); dist.LoadS2(vertex);
-    assert.ok(dist.Perform(range) && dist.IsDone(), 'STEP_POINT_CHECK');
-    assert.equal(dist.InnerSolution(), inside, 'STEP_POINT_MATERIAL');
-    assert.ok(Math.abs(dist.Value() - (inside ? 0 : d / 2)) <= 1e-6, 'STEP_POINT_DISTANCE');
-  }
-  for (const x of [-0.49 * L, 0, 0.49 * L]) point(x, 0, false);
-  point(0, (d + D) / 4, true);
-  // Seed initializes STEP static settings. Use direct string enums, NOT .value.
-  new oc.STEPControl_Writer().delete();
-  for (const [key, value] of [['write.step.schema', 'AP214IS'], ['write.step.unit', 'MM'], ['xstep.cascade.unit', 'MM']]) {
-    assert.ok(oc.Interface_Static.SetCVal(key, value), 'STEP_SETTING');
-    assert.equal(oc.Interface_Static.CVal(key), value, 'STEP_SETTING_READBACK');
-  }
-  assert.equal(oc.Interface_Static.IVal('write.step.schema'), 4);
-  const writer = new oc.STEPControl_Writer();
-  assert.equal(writer.Transfer(shape, oc.STEPControl_StepModelType.STEPControl_AsIs, true, range), oc.IFSelect_ReturnStatus.IFSelect_RetDone, 'STEP_TRANSFER');
-  assert.equal(writer.Write('/spacer.step'), oc.IFSelect_ReturnStatus.IFSelect_RetDone, 'STEP_WRITE');
+  } catch { throw new Error(prefix + 'INSTANTIATE'); }
+  assert.equal(typeof oc._spacer_step, 'function', prefix + 'API');
+  assert.equal(typeof oc.FS?.readFile, 'function', prefix + 'API');
+  // C++ wrapper validates BRep/solid/shell/analytic faces/radii/volume/hole
+  // points before writing AND on STEP readback. Nonzero codes never yield bytes.
+  const code = oc._spacer_step(D, d, L);
+  assert.equal(code, 0, 'STEP_NARROW_STATUS_' + code);
   const bytes = Uint8Array.from(oc.FS.readFile('/spacer.step'));
+  assert.ok(bytes.length > 0 && bytes.length <= 16 * 1024 * 1024, 'STEP_RESULT_SIZE');
   parentPort.postMessage({ bytes }, [bytes.buffer]);
 })().catch(error => { parentPort.postMessage({ error: 'STEP_KERNEL_FAILED: ' + (error?.message || String(error)) }); });

@@ -58,12 +58,12 @@ describe('fixed low-level STEP worker', () => {
     Object.defineProperty(process, 'defaultApp', { configurable: true, value: false })
     try {
       await expect(generateStep(good)).rejects.toThrow('STEP_ASSET_MISSING')
-      cpSync(path.join(process.cwd(), 'node_modules/.cache/step-kernel'), path.join(root, 'step-kernel'), { recursive: true })
+      cpSync(path.join(process.cwd(), 'node_modules/.cache/step-narrow-v1'), path.join(root, 'step-narrow-v1'), { recursive: true })
       expect((await generateStep(good)).bytes.length).toBeGreaterThan(8000)
-      for (const name of ['replicad_single.cjs', 'replicad_single.js', 'replicad_single.wasm', 'step-worker.cjs']) {
-        writeFileSync(path.join(root, 'step-kernel', name), 'tampered')
+      for (const name of ['spacer.cjs', 'spacer.wasm', 'step-worker.cjs']) {
+        writeFileSync(path.join(root, 'step-narrow-v1', name), 'tampered')
         await expect(generateStep(good)).rejects.toThrow(`STEP_ASSET_HASH: ${name}`)
-        cpSync(path.join(process.cwd(), 'node_modules/.cache/step-kernel', name), path.join(root, 'step-kernel', name))
+        cpSync(path.join(process.cwd(), 'node_modules/.cache/step-narrow-v1', name), path.join(root, 'step-narrow-v1', name))
       }
     } finally {
       if (original) Object.defineProperty(process, 'resourcesPath', original)
@@ -80,8 +80,8 @@ describe('fixed low-level STEP worker', () => {
     expect(text).toMatch(/SI_UNIT\(\.MILLI\.,\.METRE\.\)/)
     expect(text).toContain('MANIFOLD_SOLID_BREP')
     expect(text).not.toContain('B_SPLINE_SURFACE')
-    expect(result.wasmSha256).toBe('a9335919fa64bfeaee3e241d3139ad134022682429c6688e20d8ca12093d33d9')
-    expect(result.kernelVersion).toBe('replicad-opencascadejs@1.2.1 / OCCT 8.0')
-    expect(result.generatorVersion).toMatch(/^spacer-ap214is-v1/)
+    expect(result.wasmSha256).toBe('c309d6a202aab5b2b2a498bdd1515b8b03f470ea238dfb99ba5ccb00b8a80108')
+    expect(result.kernelVersion).toBe('OCCT 8.0.1 narrow C ABI / source b8f597c')
+    expect(result.generatorVersion).toMatch(/^spacer-ap214is-v2-narrow/)
   }, 30000)
 })

@@ -4,11 +4,10 @@ import { setImmediate as nextTurn } from 'node:timers/promises'
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
+import { behaviorModifiedWasm } from './narrowWasmFixture'
 it('captures launch consent, reads only selected bytes, isolates worker, and never bypasses packaged default guards', async () => {
   const root = mkdtempSync(path.join(process.cwd(), 'node_modules/.cache/local-main-'))
-  const bytes = Buffer.from(readFileSync('node_modules/.cache/step-kernel/replicad_single.wasm'))
-  bytes.set([128, 192, 0], 36547)
-  for (const text of ['Open CASCADE STEP translator 8.0', 'Open CASCADE %s processor 8.0']) Buffer.from(text.replace('Open CASCADE', 'USER PATCHED')).copy(bytes, bytes.indexOf(text))
+  const bytes = behaviorModifiedWasm()
   const file = path.join(root, 'user.wasm'); writeFileSync(file, bytes)
   const sha = createHash('sha256').update(bytes).digest('hex')
   vi.stubEnv('CUNLIAN_STEP_LOCAL_OPT_IN', '1'); vi.stubEnv('CUNLIAN_STEP_LOCAL_WASM', file); vi.stubEnv('CUNLIAN_STEP_LOCAL_SHA256', sha)
@@ -20,7 +19,7 @@ it('captures launch consent, reads only selected bytes, isolates worker, and nev
   const defaultApp = Object.getOwnPropertyDescriptor(process, 'defaultApp')
   Object.defineProperty(process, 'resourcesPath', { configurable: true, value: root })
   Object.defineProperty(process, 'defaultApp', { configurable: true, value: false })
-  cpSync('node_modules/.cache/step-kernel', path.join(root, 'step-kernel'), { recursive: true })
+  cpSync('node_modules/.cache/step-narrow-v1', path.join(root, 'step-narrow-v1'), { recursive: true })
   const terminate = vi.spyOn(Worker.prototype, 'terminate')
   try {
     const input = { innerDiameter: 200001, outerDiameter: 320000, length: 120000 }
@@ -45,8 +44,8 @@ it('captures launch consent, reads only selected bytes, isolates worker, and nev
     } finally { vi.useRealTimers() }
     expect(terminate).toHaveBeenCalledTimes(3)
     expect((await generateStep(input)).wasmSha256).toBe(sha)
-    for (const name of ['replicad_single.wasm', 'replicad_single.cjs', 'replicad_single.js', 'step-worker.cjs']) {
-      const target = path.join(root, 'step-kernel', name), original = readFileSync(target)
+    for (const name of ['spacer.wasm', 'spacer.cjs', 'step-worker.cjs']) {
+      const target = path.join(root, 'step-narrow-v1', name), original = readFileSync(target)
       writeFileSync(target, 'tampered')
       try { await expect(generateStep(input)).rejects.toThrow(`STEP_ASSET_HASH: ${name}`) }
       finally { writeFileSync(target, original) }
