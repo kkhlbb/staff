@@ -176,3 +176,43 @@ app.asar SHA256 d93f7cf0a7b966167c60db25ee8c767e19634dfb7ccdcec7b551a25896eb0d6b
 最终snapshot逐文件清单2097项；收尾仅新增取证辅助脚本/索引，不改已测产品代码。
 发布门禁脚本字节及SBOM四blocker属性与220a45f作自动比较，维持BLOCKED/INCOMPLETE。
 未merge/push/delete/发布/付费/改权限/全局安装；未接触共享staff/gt-expand。
+
+## 新源码可追溯窄核接入（本节为最新产品状态）
+
+用户明确批准本轮替换。起点2368683干净；61ba70d/dc2ab93/4830450接入独立
+step-narrow-v1资产与新ABI；旧几何安全检查迁入产品C++，真实重编应用对象并重链接。
+0ff0c0b/e776212补成包、实际源变异与非法退化验收；2c8210c由同名错签名红例驱动，
+实例化前解析真实函数type，保留默认hash/主进程opt-in/快照/no fallback/内存表/取消等契约。
+758ed23补完整早退出记录；6641b01让发布门禁显式核实际Resources，非只读开发SBOM。
+
+独立新证据 ../step-newkernel-integration/REPORT.zh-CN.md、audit-final.json、logs/。
+全量typecheck、typecheck:desktop、lint、build各exit0；npm test1455、desktop376/17跳过、
+MCP22，三套1853通过/17真实模型跳过。最终许可测试13通过。真实mac arm64新包
+snapshot-final/out/寸链-darwin-arm64/寸链.app；app.asar SHA256
+f60450dbb75c92de102ec592cd686bd72561314206c19cfec58532d89982a944。
+517个运行相关源码/资产/配置与最终snapshot同字节，后续仅CLI/证据脚本/索引补强不冒称重打包。
+
+最终默认/源修改核两套真实IPC/worker/磁盘：普通/奇数q、历史99mm/12mm隔离、
+stale-session、保存框取消及stepCancel IPC、微小长度/薄壁零目标写入；3资源各缺/坏6项
+仍拒绝、custom-section直接替换仍hash拒绝。开发node_modules及默认vendor可逆移位为
+不可用时两套包仍运行，finally恢复；无需关闭产品Chromium sandbox。
+最终11本地核成包负例全部符合期望，含同名错签名/内存/表/错sha/opt-in/符号链接等。
+14份最终STEP原生reader各exit0/ACCEPTED，精度未放宽；6类C++源变异真实重编后
+原生reader各exit3，前后2绿，8/8符合预期。禁网内核4文件13通过，网络限制控制EPERM。
+16个相关最终成包进程code0/signal=null，原生保存框仅桩化，不计GUI UX全验。
+
+独立本地交付delivery/含固定完整OCCT源/patch、产品对象/源码、23archive/4193成员、
+工具实物/完整工具源归档/缓存、map/why-extract/reproduce/许可与43组件供给SBOM。
+最终实际提取2728个OCCT对象+317系统对象，不沿用旧实验2739计数。core供给sha
+ a0477a0cac0101a6d04c3e1adb755eaebfdaa2b288b32d814c0f0f1ce731b9f2。
+父任务再从delivery解包、含空格新目录重编wrapper/Controller实际源对象并重链接exit0，
+默认/修改核与产品确切hash一致；该产物进入最终包又真实IPC导出/三份原生ACCEPTED。
+复用系统缓存，非全库从零重建；主机Python/Node/macOS arm64前提明确，没有原开发绝对路径执行依赖。
+
+只移除新资产已证实的PRODUCT_PACKAGED_MODIFIED_KERNEL_EXECUTION。
+实际包release gate exit1、packageVerification=VERIFIED，仍BLOCKED/INCOMPLETE：
+FORMAL_SOURCE_DELIVERY、TRANSITIVE_NOTICE_REVIEW、LGPL_LEGAL_REVIEW。旧SBOM原字节保留，
+不替旧npm补造历史，不作法律认证；无修复/异厂商/原生GUI/其他平台限制不变。
+整Electron外套OS拒读策略真实失败，初次早退出未知保留，修正取证后重跑明确SIGTRAP，
+未算通过；资源移位独立验证成功。峰值RSS实测467.296875MiB，不是总RSS硬限/无泄漏证明。
+原始失败/警告全部保留；无历史证据更改或跟踪文件删除，未merge/push/发布/付费/改权限/全局安装。
