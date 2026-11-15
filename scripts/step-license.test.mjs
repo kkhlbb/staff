@@ -30,6 +30,18 @@ test('rejects legacy or unknown executable kernel files in new resources', () =>
     assert.throws(() => verifyAssets(target), /STEP_UNEXPECTED_RUNTIME_ASSET/)
   }
 })
+test('release gate verifies the selected packaged assets rather than borrowing source provenance', () => {
+  const resources = path.join(directory, 'release-resources')
+  cpSync(original, path.join(resources, 'step-narrow-v1'), { recursive: true })
+  const invoke = () => spawnSync(process.execPath, [new URL('./check-step-release.mjs', import.meta.url).pathname, resources], { encoding: 'utf8' })
+  const valid = invoke()
+  assert.equal(valid.status, 1)
+  assert.equal(JSON.parse(valid.stderr).packageVerification, 'VERIFIED')
+  writeFileSync(path.join(resources, 'step-narrow-v1/spacer.wasm'), 'corrupt')
+  const corrupt = invoke()
+  assert.equal(corrupt.status, 1)
+  assert.equal(JSON.parse(corrupt.stderr).status, 'BLOCKED_PACKAGED_ASSET_VERIFICATION')
+})
 test('local packaging verification does not approve release', () => {
   assert.doesNotThrow(() => verifyAssets(original))
   const result = spawnSync(process.execPath, [new URL('./check-step-release.mjs', import.meta.url).pathname], { encoding: 'utf8' })
