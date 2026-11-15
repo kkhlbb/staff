@@ -1,0 +1,498 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "bom-ref": "cunlian",
+      "name": "寸链 STEP local integration",
+      "version": "0.4.1-beta",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "cunlian:scope",
+        "value": "STEP assets only; not whole Electron application"
+      },
+      {
+        "name": "cunlian:completeness",
+        "value": "INCOMPLETE"
+      },
+      {
+        "name": "cunlian:distributionApproval",
+        "value": "BLOCKED_PROVENANCE_AND_LGPL_SOURCE_SUPPLY"
+      },
+      {
+        "name": "cunlian:sourceSupply",
+        "value": "INCOMPLETE"
+      },
+      {
+        "name": "cunlian:replacement",
+        "value": "BLOCKED_DIRECT_BINARY_REPLACEMENT"
+      },
+      {
+        "name": "cunlian:blockers",
+        "value": "TARGET_BUILD_PROVENANCE;CORRESPONDING_SOURCE_AND_GENERATED_BINDINGS;STATIC_COMPONENT_INVENTORY;RELINK_AND_MODIFIED_LIBRARY_EXECUTION"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "npm:replicad-opencascadejs@1.2.1",
+      "name": "replicad-opencascadejs",
+      "version": "1.2.1",
+      "purl": "pkg:npm/replicad-opencascadejs@1.2.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-only"
+          }
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "07b6fb17a26a0be2de35be298fe3401852446a8cbb7306605b63c07d1d4207c2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/replicad-opencascadejs/-/replicad-opencascadejs-1.2.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/sgenoud/replicad/tree/5e4ad9bb5a35bb9ae0571e91c25fa1897ba0570c"
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:scope",
+          "value": "npm tarball; not WASM file"
+        },
+        {
+          "name": "cunlian:integrity",
+          "value": "sha512-nFWkL5+24JiN1sv5fLGhdQr3FKCOLR3PIBkeZJcLm37p4eraEtD7Jueo8dP2BoqClJwb9hTSkf2QMli3GVqhpg=="
+        },
+        {
+          "name": "cunlian:exactBuildProvenance",
+          "value": "UNRESOLVED"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "asset:replicad_single.cjs",
+      "name": "replicad_single.cjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e13327f9a883a467eabf1eee8635c7b3687be96dd100acb6bff8a68759b7dfff"
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "PACKAGED_VERIFIED"
+        },
+        {
+          "name": "cunlian:licenseBoundary",
+          "value": "LGPL binding/kernel; see NOTICE"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "asset:replicad_single.js",
+      "name": "replicad_single.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "465b68c209b416396857fad30a6e33e7f5407907373cfe240c194af6d80c4a1d"
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "PACKAGED_VERIFIED"
+        },
+        {
+          "name": "cunlian:licenseBoundary",
+          "value": "LGPL binding/kernel; see NOTICE"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "asset:replicad_single.wasm",
+      "name": "replicad_single.wasm",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a9335919fa64bfeaee3e241d3139ad134022682429c6688e20d8ca12093d33d9"
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "PACKAGED_VERIFIED"
+        },
+        {
+          "name": "cunlian:licenseBoundary",
+          "value": "LGPL binding/kernel; see NOTICE"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "asset:step-worker.cjs",
+      "name": "step-worker.cjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "98821fe02d03a256ecfdf4cd92af4f8cc52a8254d2aa73ddc52e120393d41027"
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "PACKAGED_VERIFIED"
+        },
+        {
+          "name": "cunlian:licenseBoundary",
+          "value": "MIT application worker"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "candidate:OCCT",
+      "name": "OCCT",
+      "version": "8.0 self-report; 8.0.1 candidate source",
+      "licenses": [
+        {
+          "license": {
+            "name": "LGPL-2.1 with OCCT header exception"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "SOURCE_CANDIDATE_NOT_TARGET_INVENTORY"
+        },
+        {
+          "name": "cunlian:sourceRevision",
+          "value": "b8f597c677811d1f9f4d8a97f5ae2825c0353a42"
+        },
+        {
+          "name": "cunlian:limitation",
+          "value": "No target link map/generated bindings or reproducible build; not asserted exact binary version"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "candidate:taucad-opencascade.js",
+      "name": "taucad-opencascade.js",
+      "version": "3.1.0",
+      "licenses": [
+        {
+          "license": {
+            "name": "LGPL-2.1-only"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "SOURCE_CANDIDATE_NOT_TARGET_INVENTORY"
+        },
+        {
+          "name": "cunlian:sourceRevision",
+          "value": "341fa789f49ce73db76a0209d89ae518cc64a52d"
+        },
+        {
+          "name": "cunlian:limitation",
+          "value": "No target link map/generated bindings or reproducible build; not asserted exact binary version"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "candidate:Emscripten",
+      "name": "Emscripten",
+      "version": "6.0.5",
+      "licenses": [
+        {
+          "license": {
+            "name": "MIT OR NCSA; individual runtime files differ"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "SOURCE_CANDIDATE_NOT_TARGET_INVENTORY"
+        },
+        {
+          "name": "cunlian:sourceRevision",
+          "value": "1db513782be24469589d7cb8a1f1834e9a33f271"
+        },
+        {
+          "name": "cunlian:limitation",
+          "value": "No target link map/generated bindings or reproducible build; not asserted exact binary version"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "candidate:RapidJSON",
+      "name": "RapidJSON",
+      "version": "post-1.1.0",
+      "licenses": [
+        {
+          "license": {
+            "name": "MIT and embedded third-party notices"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "SOURCE_CANDIDATE_NOT_TARGET_INVENTORY"
+        },
+        {
+          "name": "cunlian:sourceRevision",
+          "value": "24b5e7a8b27f42fa16b96fc70aade9106cf7102f"
+        },
+        {
+          "name": "cunlian:limitation",
+          "value": "No target link map/generated bindings or reproducible build; not asserted exact binary version"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "candidate:FreeType-headers",
+      "name": "FreeType-headers",
+      "version": "2.13.0",
+      "licenses": [
+        {
+          "license": {
+            "name": "FTL OR GPL-2.0-only"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "SOURCE_CANDIDATE_NOT_TARGET_INVENTORY"
+        },
+        {
+          "name": "cunlian:sourceRevision",
+          "value": "de8b92dd7ec634e9e2b25ef534c54a3537555c11"
+        },
+        {
+          "name": "cunlian:limitation",
+          "value": "No target link map/generated bindings or reproducible build; not asserted exact binary version"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "candidate:FreeType-port",
+      "name": "FreeType-port",
+      "version": "2.13.3",
+      "licenses": [
+        {
+          "license": {
+            "name": "FTL OR GPL-2.0-only"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "SOURCE_CANDIDATE_NOT_TARGET_INVENTORY"
+        },
+        {
+          "name": "cunlian:sourceRevision",
+          "value": "port SHA512 in research"
+        },
+        {
+          "name": "cunlian:limitation",
+          "value": "No target link map/generated bindings or reproducible build; not asserted exact binary version"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "candidate:zlib-port",
+      "name": "zlib-port",
+      "version": "1.3.2",
+      "licenses": [
+        {
+          "license": {
+            "name": "Zlib"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "SOURCE_CANDIDATE_NOT_TARGET_INVENTORY"
+        },
+        {
+          "name": "cunlian:sourceRevision",
+          "value": "port SHA512 in research"
+        },
+        {
+          "name": "cunlian:limitation",
+          "value": "No target link map/generated bindings or reproducible build; not asserted exact binary version"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "candidate:musl-libc",
+      "name": "musl-libc",
+      "version": "candidate Emscripten tree",
+      "licenses": [
+        {
+          "license": {
+            "name": "MIT plus COPYRIGHT notices"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "SOURCE_CANDIDATE_NOT_TARGET_INVENTORY"
+        },
+        {
+          "name": "cunlian:sourceRevision",
+          "value": "not independently inventoried"
+        },
+        {
+          "name": "cunlian:limitation",
+          "value": "No target link map/generated bindings or reproducible build; not asserted exact binary version"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "candidate:libc++-libc++abi-libunwind-compiler-rt",
+      "name": "libc++-libc++abi-libunwind-compiler-rt",
+      "version": "candidate Emscripten tree",
+      "licenses": [
+        {
+          "license": {
+            "name": "Apache-2.0 WITH LLVM-exception and file notices"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "SOURCE_CANDIDATE_NOT_TARGET_INVENTORY"
+        },
+        {
+          "name": "cunlian:sourceRevision",
+          "value": "not independently inventoried"
+        },
+        {
+          "name": "cunlian:limitation",
+          "value": "No target link map/generated bindings or reproducible build; not asserted exact binary version"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "candidate:mimalloc",
+      "name": "mimalloc",
+      "version": "candidate Emscripten tree",
+      "licenses": [
+        {
+          "license": {
+            "name": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "SOURCE_CANDIDATE_NOT_TARGET_INVENTORY"
+        },
+        {
+          "name": "cunlian:sourceRevision",
+          "value": "not independently inventoried"
+        },
+        {
+          "name": "cunlian:limitation",
+          "value": "No target link map/generated bindings or reproducible build; not asserted exact binary version"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "candidate:OCCT-embedded-dtoa-Delabella-Bison-skeleton",
+      "name": "OCCT-embedded-dtoa-Delabella-Bison-skeleton",
+      "version": "candidate OCCT tree",
+      "licenses": [
+        {
+          "license": {
+            "name": "MIT-like and GPL skeleton special exception"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "cunlian:inclusion",
+          "value": "SOURCE_CANDIDATE_NOT_TARGET_INVENTORY"
+        },
+        {
+          "name": "cunlian:sourceRevision",
+          "value": "see source headers"
+        },
+        {
+          "name": "cunlian:limitation",
+          "value": "No target link map/generated bindings or reproducible build; not asserted exact binary version"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "cunlian",
+      "dependsOn": [
+        "npm:replicad-opencascadejs@1.2.1",
+        "asset:step-worker.cjs"
+      ]
+    },
+    {
+      "ref": "npm:replicad-opencascadejs@1.2.1",
+      "dependsOn": [
+        "asset:replicad_single.cjs",
+        "asset:replicad_single.js",
+        "asset:replicad_single.wasm"
+      ]
+    }
+  ],
+  "compositions": [
+    {
+      "aggregate": "incomplete",
+      "assemblies": [
+        "npm:replicad-opencascadejs@1.2.1"
+      ]
+    }
+  ]
+}

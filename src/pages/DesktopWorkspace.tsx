@@ -484,6 +484,8 @@ export function DesktopWorkspace() {
               snapshot={snapshot!}
               events={snapshot!.events}
               sessionId={sessionId}
+              baseEditSeq={session.state?.acceptedSeq}
+              exportDisabled={session.busy || session.state?.localSeq !== session.state?.acceptedSeq}
               change={session.change}
               onStage={session.stageChange}
               onPreview={session.previewChange}

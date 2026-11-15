@@ -15,6 +15,7 @@ import {
 import { sourceBasisOf } from '../revisions/digest'
 import { REQUIREMENT_STATUS_LABEL } from '../requirements/types'
 import { DrawingCanvas } from './DrawingCanvas'
+import { HistoricalStepExport } from './HistoricalStepExport'
 import { RequirementStatusPanel } from './RequirementStatusPanel'
 import type { ChangeUiState } from '../workspace/useDesktopSession'
 import { formatMm } from '../domain/units'
@@ -27,6 +28,8 @@ export interface ChangeWorkbenchProps {
   snapshot: SnapshotDto
   events: readonly ChangeEvent[]
   sessionId: string | null
+  baseEditSeq?: number
+  exportDisabled?: boolean
   change: ChangeUiState
   onStage: (
     inputs: { innerDiameter: string; outerDiameter: string; length: string },
@@ -322,6 +325,7 @@ export function ChangeWorkbench(props: ChangeWorkbenchProps) {
 
       <section className="change-workbench__history" aria-label="从旧版本恢复">
         <h3>从旧版本恢复（生成新草稿，需重新确认）</h3>
+        <HistoricalStepExport snapshot={snapshot} sessionId={props.sessionId} baseEditSeq={props.baseEditSeq ?? 0} disabled={props.exportDisabled || props.baseEditSeq === undefined} />
         <ul>
           {snapshot.fileRevisions
             .slice()
