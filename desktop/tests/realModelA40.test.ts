@@ -1126,63 +1126,7 @@ describe.skipIf(!ENABLED)('V4.0 阶段4：真实模型 A40 验收', () => {
     }
   }, 600_000)
 
-  it('A40-09：范围内外样例停在可解释状态（英制/扫描件/超精度）', async () => {
-    const record: AttemptRecord = {
-      item: 'A40-09', attempt: 1, startedAt: new Date().toISOString(), durationMs: 0,
-      taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
-      modelCalls: 0, assertions: [], notes: [],
-    }
-    records.push(record)
-    const check = makeChecker(record)
-    try {
-      for (const [file, expected] of [
-        ['bad-inch-unit.pdf', /UNSUPPORTED_UNIT|UNIT/u],
-        ['bad-no-text-layer.pdf', /TEXT|NO_TEXT|扫描|文本/u],
-      ] as [string, RegExp][]) {
-        const snapshot = await buildSnapshot({ pdf: file })
-        const ctx = await openContext(snapshot)
-        const session = ctx.h.projectService.getSession(ctx.sessionId)!
-        const run = await ipcCall<ExtractionRunValue>(ctx, IPC_CHANNELS.extractionRun, {
-          sessionId: session.sessionId, baseEditSeq: session.acceptedSeq, revisionId: 'sr-1', pageFrom: 1, pageTo: 1, requestId: `a40-09-${file}`,
-        })
-        const draft = run.ok ? session.snapshot.project.extractionDrafts.find((item) => item.draftId === run.value.draftId) : undefined
-        const signals = run.ok
-          ? [
-              ...(draft?.issues ?? []).map((issue) => `${issue.code} ${issue.message}`),
-              ...(draft?.candidates ?? []).flatMap((candidate) => [...candidate.reasonCodes]),
-            ]
-          : [`${run.error.code} ${run.error.message}`]
-        const explained = signals.some((signal) => expected.test(signal))
-        check(`${file} 停在可解释状态`, explained, signals.length === 0 ? 'NO_SIGNAL' : signals.slice(0, 4))
-        check(`${file} 未伪造参数`, draft === undefined ? true : draft.candidates.every((candidate) => candidate.status !== 'confirmed'), 'no auto-confirm')
-        await cleanupAll()
-      }
-      // 超精度：12.00001 mm 不能被截断成 12.0000。
-      const ctx = await openContext(await buildSnapshot())
-      const draft = await ctx.service.prepareDemoDraft(1)
-      const session = ctx.h.projectService.getSession(ctx.sessionId)!
-      if (draft.ok) {
-        const tooPrecise = await ctx.service.run(1, 'stage', {
-          toolMode: 'agent', draftId: draft.data.draftId, baseRevisionId: session.snapshot.project.currentRevisionId,
-          parameter: 'length', valueMm: '12.00001', lockedKeys: ['innerDiameter', 'outerDiameter'],
-        })
-        check('超精度输入停在可解释状态（不是静默截断）',
-          !tooPrecise.ok || JSON.stringify(tooPrecise.data).includes('12.00001'),
-          tooPrecise.ok ? (tooPrecise.data as AgentDraftValue).parameters.find((parameter) => parameter.key === 'length') : tooPrecise.code)
-      }
-      // 不支持的零件：apply 只接受内置隔套。
-      const unsupported = await ctx.service.run(1, 'apply', {
-        planToken: 'x', baseRevisionId: session.snapshot.project.currentRevisionId, candidateIds: ['c'],
-        mapping: { spacerPart: 'builtin:other', ringSymbols: [], requirement: false },
-      })
-      check('不支持零件类型停在可解释状态', !unsupported.ok, unsupported.ok ? 'ok' : unsupported.code)
-    } catch (error) {
-      record.notes.push(`异常：${error instanceof Error ? error.message : String(error)}`)
-      check('流程无异常', false, record.notes.at(-1))
-    } finally {
-      await cleanupAll()
-    }
-  }, 600_000)
+
   /**
    * A40-02b：模型追问「缺隔套长度」后，用户补一个数值。
    * 判据（结构化）：
@@ -1516,119 +1460,7 @@ describe.skipIf(!ENABLED)('V4.0 阶段4：真实模型 A40 验收', () => {
    * 说明（如实记录）：产品在「选好路径」之后没有取消通道，所以 rename 之前的真实取消
    * 只有系统对话框这一条；②里的 ECANCELED 是注入的 IO 中断，回执按 SAVE_FAILED 如实上报。
    */
-  it('A40-07c-2：取消落在保存原子步骤 → 回执与磁盘一致（真的装配导出端口）', async () => {
-    const record: AttemptRecord = {
-      item: 'A40-07c-2', attempt: 1, startedAt: new Date().toISOString(), durationMs: 0,
-      taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
-      modelCalls: 0, assertions: [], notes: [],
-    }
-    records.push(record)
-    const check = makeChecker(record)
-    const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'a40-07c2-'))
-    try {
-      const ctx = await openContext(await buildSnapshot())
-      const projectBytesBefore = await fileSha256(ctx.projectPath)
 
-
-      const makeService = (ports: { pickTarget: (windowId: number, name: string) => Promise<string | null>; store?: DrawingExportStore }) =>
-        new AgentToolService({
-          controller: ctx.h.controller,
-          projectService: ctx.h.projectService,
-          recovery: ctx.h.recovery,
-          rootDir: ctx.h.workspace,
-          exportPorts: ports,
-        })
-      const temps = async () => (await fsp.readdir(dir)).filter((name) => name.endsWith('.tmp'))
-      const exists = async (target: string) => {
-        try { await fsp.access(target); return true } catch { return false }
-      }
-
-      // ① 取消在 rename 之前（产品唯一的真实取消通道 = 系统保存对话框）：
-      //    对话框没选路径就没有写入、更没有 rename。用一个计数存储证明落盘路径从未被走到。
-      const targetCancel = path.join(dir, 'cancel.svg')
-      const spyStore = new CountingStore()
-      const dialogPorts = new ControllableExportPorts({ target: null, store: spyStore })
-      const cancelled = await makeService(dialogPorts).exportApprovedVersion(1, 'svg')
-      check('对话框取消 → CANCELLED',
-        !cancelled.ok && cancelled.code === 'CANCELLED', cancelled.ok ? 'unexpected ok' : { code: cancelled.code, message: cancelled.message })
-      check('取消回执说明没有产生文件',
-        !cancelled.ok && cancelled.message.includes('没有产生文件'), cancelled.ok ? 'ok' : cancelled.message)
-      check('取消发生在原子写入之前（存储层 save 从未被调用）', spyStore.saveCalls === 0, spyStore.saveCalls)
-      check('对话框端口确实被请求过（不是绕开端口直接失败）', dialogPorts.picks.length === 1, dialogPorts.picks)
-      check('取消后目标文件不存在、无临时残留',
-        !(await exists(targetCancel)) && (await temps()).length === 0, { target: await exists(targetCancel), temps: await temps() })
-
-      // ② 原子步骤中断：临时文件写入失败（注入 ECANCELED，属 IO 级中断，不是用户取消）。
-      const targetWrite = path.join(dir, 'write-cancel.svg')
-      const writeInterrupted = await makeService({
-        pickTarget: async () => targetWrite,
-        store: new DrawingExportStore({
-          ops: interruptedOps({
-            writeExclusive: async () => { throw Object.assign(new Error('injected cancel while writing temp'), { code: 'ECANCELED' }) },
-          }),
-        }),
-      }).exportApprovedVersion(1, 'svg')
-      check('写入临时文件时被取消 → SAVE_FAILED（不是 CANCELLED 也不是成功）',
-        !writeInterrupted.ok && writeInterrupted.code === 'SAVE_FAILED',
-        writeInterrupted.ok ? 'unexpected ok' : { code: writeInterrupted.code, message: writeInterrupted.message })
-      check('写入中断后目标文件不存在、无临时残留',
-        !(await exists(targetWrite)) && (await temps()).length === 0, { target: await exists(targetWrite), temps: await temps() })
-
-      // ④ 原子步骤中断：rename（提交点）被取消。
-      const targetRename = path.join(dir, 'rename-cancel.svg')
-      const renameInterrupted = await makeService({
-        pickTarget: async () => targetRename,
-        store: new DrawingExportStore({
-          ops: interruptedOps({
-            rename: async () => { throw Object.assign(new Error('injected cancel at rename'), { code: 'ECANCELED' }) },
-          }),
-        }),
-      }).exportApprovedVersion(1, 'svg')
-      check('rename 提交点被取消 → SAVE_FAILED，原目标保持不变',
-        !renameInterrupted.ok && renameInterrupted.code === 'SAVE_FAILED',
-        renameInterrupted.ok ? 'unexpected ok' : { code: renameInterrupted.code, message: renameInterrupted.message })
-      check('提交点中断后目标文件不存在、无临时残留',
-        !(await exists(targetRename)) && (await temps()).length === 0, { target: await exists(targetRename), temps: await temps() })
-
-      // ③ 取消在提交点之后到达：rename 已真实执行（写入已提交），回执必须是 EXPORTED，
-      //    且磁盘上的文件确实存在、哈希/大小与回执一致。
-      const targetCommit = path.join(dir, 'after-commit.svg')
-      const store = new CancelAfterCommitStore()
-      const exported = await makeService({ pickTarget: async () => targetCommit, store }).exportApprovedVersion(1, 'svg')
-      const receipt: AgentExportValue | null = exported.ok ? exported.data : null
-      check('提交点之后的取消不撤销已写文件：回执 = EXPORTED',
-        exported.ok && receipt?.status === 'EXPORTED', exported.ok ? receipt : { code: exported.code, message: exported.message })
-      check('存储层已跨过原子提交点', store.committed, store.committed)
-      check('取消信号到达时 rename 已完成', store.cancelAfterCommit, { committed: store.committed, cancelAfterCommit: store.cancelAfterCommit })
-      check('提交点之后取消：磁盘上导出文件确实存在', await exists(targetCommit), targetCommit)
-      const diskHash = (await exists(targetCommit)) ? await fileSha256(targetCommit) : null
-      const diskSize = (await exists(targetCommit)) ? (await fsp.stat(targetCommit)).size : null
-      check('回执哈希/字节数与磁盘一致', receipt !== null && diskHash === receipt.sha256 && diskSize === receipt.byteSize,
-        { receipt: receipt === null ? null : { sha256: receipt.sha256, byteSize: receipt.byteSize }, diskHash, diskSize })
-      check('导出物是矢量 SVG（不是截图）', diskHash !== null && (await fsp.readFile(targetCommit, 'utf8')).includes('<svg')
-        && (await fsp.readFile(targetCommit, 'utf8')).includes('width="297mm"'), targetCommit)
-
-      // ④ 不变式：不允许出现「回执说取消/失败，但目标文件已写」。
-      const cases = [
-        { name: 'dialog-cancel', code: cancelled.ok ? 'OK' : cancelled.code, file: await exists(targetCancel) },
-        { name: 'write-interrupt', code: writeInterrupted.ok ? 'OK' : writeInterrupted.code, file: await exists(targetWrite) },
-        { name: 'rename-interrupt', code: renameInterrupted.ok ? 'OK' : renameInterrupted.code, file: await exists(targetRename) },
-        { name: 'after-commit', code: exported.ok ? 'EXPORTED' : exported.code, file: await exists(targetCommit) },
-      ]
-      check('没有“已取消/失败但文件已写”的组合',
-        cases.every((item) => (item.code === 'EXPORTED' ? item.file : !item.file)), cases)
-      check('所有成功回执都有对应文件', cases.filter((item) => item.code === 'EXPORTED').every((item) => item.file), cases)
-      check('导出没有改动正式项目字节', await fileSha256(ctx.projectPath) === projectBytesBefore, projectBytesBefore.slice(0, 16))
-      record.notes.push(`原子步骤边界实测：${JSON.stringify(cases)}`)
-    } catch (error) {
-      record.notes.push(`异常：${error instanceof Error ? error.message : String(error)}`)
-      check('流程无异常', false, record.notes.at(-1))
-    } finally {
-      record.outcome = record.assertions.length > 0 && record.assertions.every((assertion) => assertion.ok) ? 'PASS' : 'FAIL'
-      await fsp.rm(dir, { recursive: true, force: true }).catch(() => undefined)
-      await cleanupAll()
-    }
-  }, 600_000)
 
   /**
    * A40-07d：切换项目后旧任务回包 → 按 taskId+projectId 丢弃，新项目零写入。
@@ -1787,3 +1619,181 @@ function accumulateCost(items: AttemptRecord[]) {
   const cost = (cacheMiss * PRICING.inputCacheMissPerMillion + cacheHit * PRICING.inputCacheHitPerMillion + completion * PRICING.outputPerMillion) / 1_000_000
   return { promptTokens: prompt, completionTokens: completion, cacheHitTokens: cacheHit, cacheMissTokens: cacheMiss, estimatedUsd: Number(cost.toFixed(6)) }
 }
+
+
+// These exact test bodies are mechanical; no provider probe or model permission is required.
+describe('A40 离线机械验收（不调用模型）', () => {
+  afterAll(cleanupAll)
+
+  it('A40-09：范围内外样例停在可解释状态（英制/扫描件/超精度）', async () => {
+    const record: AttemptRecord = {
+      item: 'A40-09', attempt: 1, startedAt: new Date().toISOString(), durationMs: 0,
+      taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
+      modelCalls: 0, assertions: [], notes: [],
+    }
+    records.push(record)
+    const check = makeChecker(record)
+    try {
+      for (const [file, expected] of [
+        ['bad-inch-unit.pdf', /UNSUPPORTED_UNIT|UNIT/u],
+        ['bad-no-text-layer.pdf', /TEXT|NO_TEXT|扫描|文本/u],
+      ] as [string, RegExp][]) {
+        const snapshot = await buildSnapshot({ pdf: file })
+        const ctx = await openContext(snapshot)
+        const session = ctx.h.projectService.getSession(ctx.sessionId)!
+        const run = await ipcCall<ExtractionRunValue>(ctx, IPC_CHANNELS.extractionRun, {
+          sessionId: session.sessionId, baseEditSeq: session.acceptedSeq, revisionId: 'sr-1', pageFrom: 1, pageTo: 1, requestId: `a40-09-${file}`,
+        })
+        const draft = run.ok ? session.snapshot.project.extractionDrafts.find((item) => item.draftId === run.value.draftId) : undefined
+        const signals = run.ok
+          ? [
+              ...(draft?.issues ?? []).map((issue) => `${issue.code} ${issue.message}`),
+              ...(draft?.candidates ?? []).flatMap((candidate) => [...candidate.reasonCodes]),
+            ]
+          : [`${run.error.code} ${run.error.message}`]
+        const explained = signals.some((signal) => expected.test(signal))
+        check(`${file} 停在可解释状态`, explained, signals.length === 0 ? 'NO_SIGNAL' : signals.slice(0, 4))
+        check(`${file} 未伪造参数`, draft === undefined ? true : draft.candidates.every((candidate) => candidate.status !== 'confirmed'), 'no auto-confirm')
+        await cleanupAll()
+      }
+      // 超精度：12.00001 mm 不能被截断成 12.0000。
+      const ctx = await openContext(await buildSnapshot())
+      const draft = await ctx.service.prepareDemoDraft(1)
+      const session = ctx.h.projectService.getSession(ctx.sessionId)!
+      if (draft.ok) {
+        const tooPrecise = await ctx.service.run(1, 'stage', {
+          toolMode: 'agent', draftId: draft.data.draftId, baseRevisionId: session.snapshot.project.currentRevisionId,
+          parameter: 'length', valueMm: '12.00001', lockedKeys: ['innerDiameter', 'outerDiameter'],
+        })
+        check('超精度输入停在可解释状态（不是静默截断）',
+          !tooPrecise.ok || JSON.stringify(tooPrecise.data).includes('12.00001'),
+          tooPrecise.ok ? (tooPrecise.data as AgentDraftValue).parameters.find((parameter) => parameter.key === 'length') : tooPrecise.code)
+      }
+      // 不支持的零件：apply 只接受内置隔套。
+      const unsupported = await ctx.service.run(1, 'apply', {
+        planToken: 'x', baseRevisionId: session.snapshot.project.currentRevisionId, candidateIds: ['c'],
+        mapping: { spacerPart: 'builtin:other', ringSymbols: [], requirement: false },
+      })
+      check('不支持零件类型停在可解释状态', !unsupported.ok, unsupported.ok ? 'ok' : unsupported.code)
+    } catch (error) {
+      record.notes.push(`异常：${error instanceof Error ? error.message : String(error)}`)
+      check('流程无异常', false, record.notes.at(-1))
+    } finally {
+      await cleanupAll()
+    }
+  }, 600_000)
+
+  it('A40-07c-2：取消落在保存原子步骤 → 回执与磁盘一致（真的装配导出端口）', async () => {
+    const record: AttemptRecord = {
+      item: 'A40-07c-2', attempt: 1, startedAt: new Date().toISOString(), durationMs: 0,
+      taskState: null, taskErrorCode: null, modelText: '', toolReceipts: [], modelUsage: { prompt: 0, completion: 0, total: 0, cacheHit: 0, cacheMiss: 0 },
+      modelCalls: 0, assertions: [], notes: [],
+    }
+    records.push(record)
+    const check = makeChecker(record)
+    const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'a40-07c2-'))
+    try {
+      const ctx = await openContext(await buildSnapshot())
+      const projectBytesBefore = await fileSha256(ctx.projectPath)
+
+
+      const makeService = (ports: { pickTarget: (windowId: number, name: string) => Promise<string | null>; store?: DrawingExportStore }) =>
+        new AgentToolService({
+          controller: ctx.h.controller,
+          projectService: ctx.h.projectService,
+          recovery: ctx.h.recovery,
+          rootDir: ctx.h.workspace,
+          exportPorts: ports,
+        })
+      const temps = async () => (await fsp.readdir(dir)).filter((name) => name.endsWith('.tmp'))
+      const exists = async (target: string) => {
+        try { await fsp.access(target); return true } catch { return false }
+      }
+
+      // ① 取消在 rename 之前（产品唯一的真实取消通道 = 系统保存对话框）：
+      //    对话框没选路径就没有写入、更没有 rename。用一个计数存储证明落盘路径从未被走到。
+      const targetCancel = path.join(dir, 'cancel.svg')
+      const spyStore = new CountingStore()
+      const dialogPorts = new ControllableExportPorts({ target: null, store: spyStore })
+      const cancelled = await makeService(dialogPorts).exportApprovedVersion(1, 'svg')
+      check('对话框取消 → CANCELLED',
+        !cancelled.ok && cancelled.code === 'CANCELLED', cancelled.ok ? 'unexpected ok' : { code: cancelled.code, message: cancelled.message })
+      check('取消回执说明没有产生文件',
+        !cancelled.ok && cancelled.message.includes('没有产生文件'), cancelled.ok ? 'ok' : cancelled.message)
+      check('取消发生在原子写入之前（存储层 save 从未被调用）', spyStore.saveCalls === 0, spyStore.saveCalls)
+      check('对话框端口确实被请求过（不是绕开端口直接失败）', dialogPorts.picks.length === 1, dialogPorts.picks)
+      check('取消后目标文件不存在、无临时残留',
+        !(await exists(targetCancel)) && (await temps()).length === 0, { target: await exists(targetCancel), temps: await temps() })
+
+      // ② 原子步骤中断：临时文件写入失败（注入 ECANCELED，属 IO 级中断，不是用户取消）。
+      const targetWrite = path.join(dir, 'write-cancel.svg')
+      const writeInterrupted = await makeService({
+        pickTarget: async () => targetWrite,
+        store: new DrawingExportStore({
+          ops: interruptedOps({
+            writeExclusive: async () => { throw Object.assign(new Error('injected cancel while writing temp'), { code: 'ECANCELED' }) },
+          }),
+        }),
+      }).exportApprovedVersion(1, 'svg')
+      check('写入临时文件时被取消 → SAVE_FAILED（不是 CANCELLED 也不是成功）',
+        !writeInterrupted.ok && writeInterrupted.code === 'SAVE_FAILED',
+        writeInterrupted.ok ? 'unexpected ok' : { code: writeInterrupted.code, message: writeInterrupted.message })
+      check('写入中断后目标文件不存在、无临时残留',
+        !(await exists(targetWrite)) && (await temps()).length === 0, { target: await exists(targetWrite), temps: await temps() })
+
+      // ④ 原子步骤中断：rename（提交点）被取消。
+      const targetRename = path.join(dir, 'rename-cancel.svg')
+      const renameInterrupted = await makeService({
+        pickTarget: async () => targetRename,
+        store: new DrawingExportStore({
+          ops: interruptedOps({
+            rename: async () => { throw Object.assign(new Error('injected cancel at rename'), { code: 'ECANCELED' }) },
+          }),
+        }),
+      }).exportApprovedVersion(1, 'svg')
+      check('rename 提交点被取消 → SAVE_FAILED，原目标保持不变',
+        !renameInterrupted.ok && renameInterrupted.code === 'SAVE_FAILED',
+        renameInterrupted.ok ? 'unexpected ok' : { code: renameInterrupted.code, message: renameInterrupted.message })
+      check('提交点中断后目标文件不存在、无临时残留',
+        !(await exists(targetRename)) && (await temps()).length === 0, { target: await exists(targetRename), temps: await temps() })
+
+      // ③ 取消在提交点之后到达：rename 已真实执行（写入已提交），回执必须是 EXPORTED，
+      //    且磁盘上的文件确实存在、哈希/大小与回执一致。
+      const targetCommit = path.join(dir, 'after-commit.svg')
+      const store = new CancelAfterCommitStore()
+      const exported = await makeService({ pickTarget: async () => targetCommit, store }).exportApprovedVersion(1, 'svg')
+      const receipt: AgentExportValue | null = exported.ok ? exported.data : null
+      check('提交点之后的取消不撤销已写文件：回执 = EXPORTED',
+        exported.ok && receipt?.status === 'EXPORTED', exported.ok ? receipt : { code: exported.code, message: exported.message })
+      check('存储层已跨过原子提交点', store.committed, store.committed)
+      check('取消信号到达时 rename 已完成', store.cancelAfterCommit, { committed: store.committed, cancelAfterCommit: store.cancelAfterCommit })
+      check('提交点之后取消：磁盘上导出文件确实存在', await exists(targetCommit), targetCommit)
+      const diskHash = (await exists(targetCommit)) ? await fileSha256(targetCommit) : null
+      const diskSize = (await exists(targetCommit)) ? (await fsp.stat(targetCommit)).size : null
+      check('回执哈希/字节数与磁盘一致', receipt !== null && diskHash === receipt.sha256 && diskSize === receipt.byteSize,
+        { receipt: receipt === null ? null : { sha256: receipt.sha256, byteSize: receipt.byteSize }, diskHash, diskSize })
+      check('导出物是矢量 SVG（不是截图）', diskHash !== null && (await fsp.readFile(targetCommit, 'utf8')).includes('<svg')
+        && (await fsp.readFile(targetCommit, 'utf8')).includes('width="297mm"'), targetCommit)
+
+      // ④ 不变式：不允许出现「回执说取消/失败，但目标文件已写」。
+      const cases = [
+        { name: 'dialog-cancel', code: cancelled.ok ? 'OK' : cancelled.code, file: await exists(targetCancel) },
+        { name: 'write-interrupt', code: writeInterrupted.ok ? 'OK' : writeInterrupted.code, file: await exists(targetWrite) },
+        { name: 'rename-interrupt', code: renameInterrupted.ok ? 'OK' : renameInterrupted.code, file: await exists(targetRename) },
+        { name: 'after-commit', code: exported.ok ? 'EXPORTED' : exported.code, file: await exists(targetCommit) },
+      ]
+      check('没有“已取消/失败但文件已写”的组合',
+        cases.every((item) => (item.code === 'EXPORTED' ? item.file : !item.file)), cases)
+      check('所有成功回执都有对应文件', cases.filter((item) => item.code === 'EXPORTED').every((item) => item.file), cases)
+      check('导出没有改动正式项目字节', await fileSha256(ctx.projectPath) === projectBytesBefore, projectBytesBefore.slice(0, 16))
+      record.notes.push(`原子步骤边界实测：${JSON.stringify(cases)}`)
+    } catch (error) {
+      record.notes.push(`异常：${error instanceof Error ? error.message : String(error)}`)
+      check('流程无异常', false, record.notes.at(-1))
+    } finally {
+      record.outcome = record.assertions.length > 0 && record.assertions.every((assertion) => assertion.ok) ? 'PASS' : 'FAIL'
+      await fsp.rm(dir, { recursive: true, force: true }).catch(() => undefined)
+      await cleanupAll()
+    }
+  }, 600_000)
+})
