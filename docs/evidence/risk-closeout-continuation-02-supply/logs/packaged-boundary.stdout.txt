@@ -1,0 +1,161 @@
+{
+  "scope": "Mechanical package boundary/hash receipt, not legal approval or renewed source-delivery binding",
+  "appAsarSha256": "f60450dbb75c92de102ec592cd686bd72561314206c19cfec58532d89982a944",
+  "memberCount": 33,
+  "devPackagePathsAbsent": [
+    "@electron/asar",
+    "@eslint/config-array",
+    "@typescript-eslint",
+    "typescript-eslint",
+    "eslint",
+    "glob",
+    "minimatch",
+    "@isaacs/nonrecursive-glob-match",
+    "path-scurry"
+  ],
+  "leaked": [],
+  "dependencyNodes": [
+    {
+      "name": "node_modules/@electron/asar",
+      "version": "4.3.2",
+      "dev": true,
+      "license": "MIT",
+      "integrity": "sha512-2nwyO3OgmLgkYQe6TzB8FmyrBKGgmXzSO51ozoG2BpHOLPTPdQpBt/zD0MdPkhQr4UqVgw3u09y4uYxgZKhmtg=="
+    },
+    {
+      "name": "node_modules/@eslint/config-array",
+      "version": "0.23.6",
+      "dev": true,
+      "license": "Apache-2.0",
+      "integrity": "sha512-WrTH7nioI9QPY4NZGnsywmecswJdgeq4BCM76qok9VgjTO29ZgUzUvcuJLVPYVQM4uDbaPBU0M33R9DIxI8X3w=="
+    },
+    {
+      "name": "node_modules/@isaacs/nonrecursive-glob-match",
+      "version": "1.1.0",
+      "dev": true,
+      "license": "BlueOak-1.0.0",
+      "integrity": "sha512-GPm/Dbvk5RLmhRnxXIa7nTpK0xtl4E0wj0MslsuNiJ1FIROU+2+9lgUC/dgF7Ey4QCWhfEsgxilMRMCdHPfDfw=="
+    },
+    {
+      "name": "node_modules/@typescript-eslint/typescript-estree/node_modules/minimatch",
+      "version": "11.0.8",
+      "dev": true,
+      "license": "BlueOak-1.0.0",
+      "integrity": "sha512-nFQuYSTVrGvysVBps5Ih+0BdnYFN/Cj3C816r6+p7yK+FHrVLGE4O4N9AFwykrlNlvM2HYt+Rad1Uiro6h88Ig=="
+    },
+    {
+      "name": "node_modules/eslint",
+      "version": "10.15.0",
+      "dev": true,
+      "license": "MIT",
+      "integrity": "sha512-+5Wg4p+ze3sG1WErYgUO/3H1IQIfFBymVUA0Fo/XTeBOLS6UQIUekpSJ8sdRkn7O7wjh84b55w/roqavH2aScg=="
+    },
+    {
+      "name": "node_modules/glob",
+      "version": "14.0.6",
+      "dev": true,
+      "license": "BlueOak-1.0.0",
+      "integrity": "sha512-OwXjVP2svY5EyLY75Vek96C8qK43gqrt4xsZ+qSILdnaEiJPXkd62mcfUSNx/TQErQRdu5uM5kF67sfONragKw=="
+    },
+    {
+      "name": "node_modules/minimatch",
+      "version": "11.0.8",
+      "dev": true,
+      "license": "BlueOak-1.0.0",
+      "integrity": "sha512-nFQuYSTVrGvysVBps5Ih+0BdnYFN/Cj3C816r6+p7yK+FHrVLGE4O4N9AFwykrlNlvM2HYt+Rad1Uiro6h88Ig=="
+    },
+    {
+      "name": "node_modules/path-scurry",
+      "version": "3.0.0",
+      "dev": true,
+      "license": "BlueOak-1.0.0",
+      "integrity": "sha512-1pTbQqH1wIwMi/eleQ5leFTTCkzFsPcgXNjwOA8YGGW/W4/kHT3dssE7Z6NH+zuqNLOzOB0uaD61yl7cAcVhgg=="
+    },
+    {
+      "name": "node_modules/typescript-eslint",
+      "version": "8.72.2",
+      "dev": true,
+      "license": "MIT",
+      "integrity": "sha512-c/+AKMW1KB81r28Sp0AAdcyXj5dzNmAsZFcsrxKbZTKmcBK2xIwBR31dcSYSDu3bKmzXe8GKrSxO+eDQ401Uzg=="
+    }
+  ],
+  "stepResources": [
+    {
+      "name": "APP-RUNTIME-NOTICES.txt",
+      "sha256": "568e2e7cd264e05f1d2ee7438a4b8da7c5681d6ebb06b3522f8203699a36a812"
+    },
+    {
+      "name": "ELECTRON-CHROMIUM-LICENSES.html",
+      "sha256": "214152f78cc0b611f63ff8faefcc6670c4605ffbff05f092bb671e6df80ce741"
+    },
+    {
+      "name": "ELECTRON-LICENSE.txt",
+      "sha256": "5154e165bd6c2cc0cfbcd8916498c7abab0497923bafcd5cb07673fe8480087d"
+    },
+    {
+      "name": "LICENSE_LGPL_21.txt",
+      "sha256": "e237fa56668030e928551ddd60f05df5fe957f75eab874bbd017e085ed722e7c"
+    },
+    {
+      "name": "NOTICE",
+      "sha256": "159b6d70264a07ad8c4633f845dd5b23e968ede33f3969fe9a94244997e38b9f"
+    },
+    {
+      "name": "OCCT_LGPL_EXCEPTION.txt",
+      "sha256": "04580a884ea6cea294402649ff7b5cbb167d47462d1340a4ed33e550db10a81b"
+    },
+    {
+      "name": "SOURCE-SUPPLY.zh-CN.md",
+      "sha256": "62b42dfeca4d521d139d844cd1af720d0af2e4cf9fba9ee9a966702242d1a8de"
+    },
+    {
+      "name": "STEP-CANDIDATE-LICENSES.txt",
+      "sha256": "0d58e5a2ccb1e3eaaf0d69f97e807cb3aac79950d05a61e5992ec1ff65a3a6f5"
+    },
+    {
+      "name": "STEP-NARROW-RUNTIME-NOTICES.txt",
+      "sha256": "017d06d7934c947c22e19ae6dc19b980228927362fac055a9e9f2f564257eb9d"
+    },
+    {
+      "name": "STEP-SBOM.cdx.json",
+      "sha256": "63a7228a4139f35c72dd2152063dc4bc8dc2134a70e3212ba6789bb668d3d58a"
+    },
+    {
+      "name": "STEP-TRANSITIVE-NOTICES.txt",
+      "sha256": "324a2e80a8320d4d7a95fa99b500dc704658fc7b0c83dc7a6e13bb028ac6d4a9"
+    },
+    {
+      "name": "THIRD-PARTY-NOTICES.md",
+      "sha256": "44a5e712816097e9a5ccfe4dee0a163d79111f98d78207815af40428e9390c5c"
+    },
+    {
+      "name": "package.json",
+      "sha256": "89c47db7851f89caec72da4f215ebc21cf1e294aeef3b45d2583562d846ab035"
+    },
+    {
+      "name": "spacer.cjs",
+      "sha256": "96ff4cea09e0fcbc3cbdcd07e83c6e03470735db01bcab32b689972b4e57b94f"
+    },
+    {
+      "name": "spacer.wasm",
+      "sha256": "c309d6a202aab5b2b2a498bdd1515b8b03f470ea238dfb99ba5ccb00b8a80108"
+    },
+    {
+      "name": "step-kernel-replacement.md",
+      "sha256": "7354138d044ae36e1da6a30d804b5af7062e44eb2cfc76dc3710766fc51f1175"
+    },
+    {
+      "name": "step-license-provenance.md",
+      "sha256": "994779e54f83fd12e70d7396a901c1d405a5c9f04493897ebe300554e443a623"
+    },
+    {
+      "name": "step-narrow-runtime.md",
+      "sha256": "ee12725a64498f65a752e410383aeb468cf6c5b494d64fcde642a7f46d9f2a4d"
+    },
+    {
+      "name": "step-worker.cjs",
+      "sha256": "2eb428ddaa2a22c243d60e2ab8a14dfe696a0a0594acf3d75cbbf54d711ed36c"
+    }
+  ],
+  "sourceDelivery": "Prior delivery binding covers prior app.asar only; this receipt does not rebind or approve formal distribution"
+}

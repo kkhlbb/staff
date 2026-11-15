@@ -1,0 +1,454 @@
+{
+  "APP-TREE.json": {
+    "bytes": 57327,
+    "sha256": "693956723eba6610910788da631a7fefaa7ed5979453e8d518519adb5d1bae78"
+  },
+  "PACKAGE-FILES.cdx.json": {
+    "bytes": 150831,
+    "sha256": "8b4846af4dafaf043968a8b715f221fb2088431f2756eeaa91e4efb9e93bf1d9"
+  },
+  "PRODUCT-BINDING.json": {
+    "bytes": 4410,
+    "sha256": "f8531c35795c1f7103a587a04ac66b697511cd5f5a79117537a5d83de727f8db"
+  },
+  "README.zh-CN.md": {
+    "bytes": 4042,
+    "sha256": "dec14735a2ce842dfd25ceba263d175eff0e1489eff9381a4dd4c14c3c063c2a"
+  },
+  "build-dependencies/BUILD-DEPENDENCIES.cdx.json": {
+    "bytes": 356386,
+    "sha256": "050b77df561740acbf4bed49f1df557d57bd8867d71ad09f7625201383073c27"
+  },
+  "build-dependencies/BUILD-DEPENDENCY-NOTICES.txt": {
+    "bytes": 37769,
+    "sha256": "51309c26e275eb95ddf4df826d6bbf0d7c9b014e030ca57863a063eed3eb5d5d"
+  },
+  "build-dependencies/_electron_asar-4.3.2.registry.json": {
+    "bytes": 5610,
+    "sha256": "4b1ae1600f3a07f9f5bae108d52933dacc15f4b8e099d54c6ed6e73617eb2ebc"
+  },
+  "build-dependencies/_electron_asar-4.3.2.tgz": {
+    "bytes": 30288,
+    "sha256": "0408087c32787a8da57177c7f78565d169b8089f0df1e96580f3a33e71d8acb8"
+  },
+  "build-dependencies/_eslint_config-array-0.23.6.registry.json": {
+    "bytes": 4994,
+    "sha256": "6f251a5f3b11bbd0a753a45cd3f73ce97c1da3d7ab51d583550fac0554ebf02a"
+  },
+  "build-dependencies/_eslint_config-array-0.23.6.tgz": {
+    "bytes": 83827,
+    "sha256": "4cb2b41050175a6ebb83e81f0c135a65c550c865b1f21fdfc02bb8e9e43594ca"
+  },
+  "build-dependencies/_isaacs_nonrecursive-glob-match-1.1.0.registry.json": {
+    "bytes": 3162,
+    "sha256": "9e2930d1580f9618c31983beb9c33a71f4d881df109b29cc6d72732a06a25bc1"
+  },
+  "build-dependencies/_isaacs_nonrecursive-glob-match-1.1.0.tgz": {
+    "bytes": 106359,
+    "sha256": "d8eab172188bcaa83b950160fcd7c0b9dc68f44f7c470660e5d7f4c8a437d658"
+  },
+  "build-dependencies/_typescript-eslint_eslint-plugin-8.72.2.registry.json": {
+    "bytes": 351904,
+    "sha256": "fc32f7904d4a2336807b8366ca8f68bb007cb4d470c4640025834285bca6640a"
+  },
+  "build-dependencies/_typescript-eslint_eslint-plugin-8.72.2.tgz": {
+    "bytes": 353916,
+    "sha256": "1ac86950645d8c1b6aed7684df2079d6658abcc0ac917b3e6ce1b0f5288b649f"
+  },
+  "build-dependencies/_typescript-eslint_parser-8.72.2.registry.json": {
+    "bytes": 356197,
+    "sha256": "16c415678a4b084c0767ed9cb19e90e32de0ce8811e7fcf2e8c19e3a3b048c34"
+  },
+  "build-dependencies/_typescript-eslint_parser-8.72.2.tgz": {
+    "bytes": 5251,
+    "sha256": "48db3d7784fc214d583e188a35a5d9db8010d99c77c13b791cbce4b1f999a5fd"
+  },
+  "build-dependencies/_typescript-eslint_project-service-8.72.2.registry.json": {
+    "bytes": 58156,
+    "sha256": "c5d9ecc769db016e14c687436ab5a37aa335806925b8300e035e76f217ea8681"
+  },
+  "build-dependencies/_typescript-eslint_project-service-8.72.2.tgz": {
+    "bytes": 5639,
+    "sha256": "61a77acd28d0985e6e9c821d56af6cce4d4edae51e57f0f3cb6eac9953eef1a7"
+  },
+  "build-dependencies/_typescript-eslint_scope-manager-8.72.2.registry.json": {
+    "bytes": 302928,
+    "sha256": "d2db194fe49b292d1712cd2f857ec205c8fb15481c644f3f925e56f979be11ad"
+  },
+  "build-dependencies/_typescript-eslint_scope-manager-8.72.2.tgz": {
+    "bytes": 67346,
+    "sha256": "b0ee36f700ea7dcfc0f638fa0cf3edfdf223ee2a40e7d5a19ed32592982215ba"
+  },
+  "build-dependencies/_typescript-eslint_tsconfig-utils-8.72.2.registry.json": {
+    "bytes": 57919,
+    "sha256": "48006ede32e461042ffeb4b858f8bbe9a878f6cf15fa46b8347c4564b470b56b"
+  },
+  "build-dependencies/_typescript-eslint_tsconfig-utils-8.72.2.tgz": {
+    "bytes": 3670,
+    "sha256": "d0b4cb5d2843ff0cc00834f2a59d1dbaac085f9cc5fa0284d71303f18dfd911c"
+  },
+  "build-dependencies/_typescript-eslint_type-utils-8.72.2.registry.json": {
+    "bytes": 237233,
+    "sha256": "b6db4b91e13e173751f22727fbcb86694ff2bf1c6a978752b2d995ab2922aaaa"
+  },
+  "build-dependencies/_typescript-eslint_type-utils-8.72.2.tgz": {
+    "bytes": 19515,
+    "sha256": "7a11e95b74ebac1b0250143228f789d30e488da49deefaa6128e501157840950"
+  },
+  "build-dependencies/_typescript-eslint_types-8.72.2.registry.json": {
+    "bytes": 305652,
+    "sha256": "8f7842e51a3c5143e8040eb3375c231d57c31352073600292dca4fda86e64392"
+  },
+  "build-dependencies/_typescript-eslint_types-8.72.2.tgz": {
+    "bytes": 20200,
+    "sha256": "9aa392fa816da75f101ef845319a46dae701bcd40f01584f2261d80915be9a44"
+  },
+  "build-dependencies/_typescript-eslint_typescript-estree-8.72.2.registry.json": {
+    "bytes": 356824,
+    "sha256": "b878b9dabc482e9a095711b9a7bce01ca4feb7d07b3f88881bce525f216098c9"
+  },
+  "build-dependencies/_typescript-eslint_typescript-estree-8.72.2.tgz": {
+    "bytes": 79501,
+    "sha256": "2ab112ec24728aca1e8ec3bcffbecf78b7d1e0c8eb809f3c4765899fa2ccebfe"
+  },
+  "build-dependencies/_typescript-eslint_utils-8.72.2.registry.json": {
+    "bytes": 236864,
+    "sha256": "066f3f0196cb1f5287e4366010cb842b60c693413b6bd996b7248fd8ad8344af"
+  },
+  "build-dependencies/_typescript-eslint_utils-8.72.2.tgz": {
+    "bytes": 44659,
+    "sha256": "a2e38e2365ed7f30870006b4667cad4036be5289071d68bf6e7a015b556bfc9d"
+  },
+  "build-dependencies/_typescript-eslint_visitor-keys-8.72.2.registry.json": {
+    "bytes": 304974,
+    "sha256": "89a683c0fc8e279a515c14c268b5b663ab4d1dec84e2d405d72e66bcbdc9c69a"
+  },
+  "build-dependencies/_typescript-eslint_visitor-keys-8.72.2.tgz": {
+    "bytes": 4296,
+    "sha256": "41635afbba20bdd67e742f3d4ddcd36f592c8886cbb6b2551d3dbfcac18965cf"
+  },
+  "build-dependencies/baseline-package-lock.json": {
+    "bytes": 213340,
+    "sha256": "891b21e8db406930ac10f97ce8b0f52961da25b52ae326cfb284686520d4e4ea"
+  },
+  "build-dependencies/brace-expansion-5.0.13.registry.json": {
+    "bytes": 7046,
+    "sha256": "c43f5147295d6b63db8024ff7e40c48c40ae9b5d3b6c7270c275cc09b8e2575c"
+  },
+  "build-dependencies/brace-expansion-5.0.13.tgz": {
+    "bytes": 32333,
+    "sha256": "015c8761629e59fc31f3a6e472a940f6d759fc8227e67882c399dfb9a703ae6e"
+  },
+  "build-dependencies/download-events.json": {
+    "bytes": 22996,
+    "sha256": "acf933814a8f4023d33107ae3e8b4a9d4497bb18e1f9c07e6c89d26c330fbca6"
+  },
+  "build-dependencies/eslint-10.15.0.registry.json": {
+    "bytes": 41766,
+    "sha256": "6bcd6a71eb626bd01332b201ed309f372954e3ddcff0f950995832d712d825d9"
+  },
+  "build-dependencies/eslint-10.15.0.tgz": {
+    "bytes": 631085,
+    "sha256": "8cb5e45fb5b1174e4216d546b69d37c0ac5cb5d9ba8342946a04af1f59605edb"
+  },
+  "build-dependencies/glob-14.0.6.registry.json": {
+    "bytes": 23194,
+    "sha256": "903fc27d22d5a9099c68103c062369b974e9fe683dc341d4859944eaef051da7"
+  },
+  "build-dependencies/glob-14.0.6.tgz": {
+    "bytes": 445513,
+    "sha256": "25783530017d408140b709492053f419379b272ecd6ec36b09e23b65bc2e7467"
+  },
+  "build-dependencies/lock-delta.json": {
+    "bytes": 30005,
+    "sha256": "eef1091b1849883201dd3a460296b46fdd85ea3a5aae784e71b3cab05414c8b6"
+  },
+  "build-dependencies/minimatch-11.0.8.registry.json": {
+    "bytes": 14384,
+    "sha256": "3816958b035bf676b48c782487fc9f81fdc0c045a16dd13f1d994f5e806e0019"
+  },
+  "build-dependencies/minimatch-11.0.8.tgz": {
+    "bytes": 121657,
+    "sha256": "1dc838a033c6105308d3d49c1881f9304b2b6821683dfe4815c37f8e19e7956a"
+  },
+  "build-dependencies/official-license-index.json": {
+    "bytes": 14695,
+    "sha256": "d2bb94bd693eb4692ceea09f1e701f2dfd08525d469b0aa9fefb40a77e62bba9"
+  },
+  "build-dependencies/original-notices/_electron_asar-4.3.2/LICENSE.md": {
+    "bytes": 1055,
+    "sha256": "d5af8fc171f6f600c0ab4e7597dca398dda80dbe6821ce01cef78e859e7a00f8"
+  },
+  "build-dependencies/original-notices/_eslint_config-array-0.23.6/LICENSE": {
+    "bytes": 11357,
+    "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+  },
+  "build-dependencies/original-notices/_isaacs_nonrecursive-glob-match-1.1.0/LICENSE.md": {
+    "bytes": 1552,
+    "sha256": "8a1af140fdfbf5afd3df27f7e662f989c5b963a300020dfafce42033cae9e004"
+  },
+  "build-dependencies/original-notices/_typescript-eslint_eslint-plugin-8.72.2/LICENSE": {
+    "bytes": 1097,
+    "sha256": "2eb5c7a0bba9deb77a98c81bf6b9d3fb1c67118eebf968b6b1a787b3f8928ee0"
+  },
+  "build-dependencies/original-notices/_typescript-eslint_parser-8.72.2/LICENSE": {
+    "bytes": 1097,
+    "sha256": "2eb5c7a0bba9deb77a98c81bf6b9d3fb1c67118eebf968b6b1a787b3f8928ee0"
+  },
+  "build-dependencies/original-notices/_typescript-eslint_project-service-8.72.2/LICENSE": {
+    "bytes": 1097,
+    "sha256": "053a75a14b7508a897466b65e12797201a06b0e9b5066d1223da72cac99601b5"
+  },
+  "build-dependencies/original-notices/_typescript-eslint_scope-manager-8.72.2/LICENSE": {
+    "bytes": 1097,
+    "sha256": "2eb5c7a0bba9deb77a98c81bf6b9d3fb1c67118eebf968b6b1a787b3f8928ee0"
+  },
+  "build-dependencies/original-notices/_typescript-eslint_tsconfig-utils-8.72.2/LICENSE": {
+    "bytes": 1097,
+    "sha256": "053a75a14b7508a897466b65e12797201a06b0e9b5066d1223da72cac99601b5"
+  },
+  "build-dependencies/original-notices/_typescript-eslint_type-utils-8.72.2/LICENSE": {
+    "bytes": 1097,
+    "sha256": "f3c51ace7f159b21566d72535e84ff354505ae7ffdca835dac81fcdafbf9e879"
+  },
+  "build-dependencies/original-notices/_typescript-eslint_types-8.72.2/LICENSE": {
+    "bytes": 1097,
+    "sha256": "2eb5c7a0bba9deb77a98c81bf6b9d3fb1c67118eebf968b6b1a787b3f8928ee0"
+  },
+  "build-dependencies/original-notices/_typescript-eslint_typescript-estree-8.72.2/LICENSE": {
+    "bytes": 1097,
+    "sha256": "2eb5c7a0bba9deb77a98c81bf6b9d3fb1c67118eebf968b6b1a787b3f8928ee0"
+  },
+  "build-dependencies/original-notices/_typescript-eslint_utils-8.72.2/LICENSE": {
+    "bytes": 1097,
+    "sha256": "2eb5c7a0bba9deb77a98c81bf6b9d3fb1c67118eebf968b6b1a787b3f8928ee0"
+  },
+  "build-dependencies/original-notices/_typescript-eslint_visitor-keys-8.72.2/LICENSE": {
+    "bytes": 1097,
+    "sha256": "2eb5c7a0bba9deb77a98c81bf6b9d3fb1c67118eebf968b6b1a787b3f8928ee0"
+  },
+  "build-dependencies/original-notices/brace-expansion-5.0.13/LICENSE": {
+    "bytes": 1144,
+    "sha256": "9c63a23124d68cd30cd316a94a1a0bca34f032786df6df69fc4b5f136bac8d2e"
+  },
+  "build-dependencies/original-notices/eslint-10.15.0/LICENSE": {
+    "bytes": 1094,
+    "sha256": "3b6be04f862a077a4b97929dbf247299360824d9365f8603c263769303ace18c"
+  },
+  "build-dependencies/original-notices/glob-14.0.6/LICENSE.md": {
+    "bytes": 1764,
+    "sha256": "a49c9ba464796f65b59fca3f1e6ca40912df1e859f575383223f7ec6c5baae09"
+  },
+  "build-dependencies/original-notices/minimatch-11.0.8/LICENSE.md": {
+    "bytes": 1550,
+    "sha256": "2c7c5d22ed5a8ee968c64757710979afcd77438c48b4a265b94e615babd8a901"
+  },
+  "build-dependencies/original-notices/path-scurry-3.0.0/LICENSE.md": {
+    "bytes": 1552,
+    "sha256": "8a1af140fdfbf5afd3df27f7e662f989c5b963a300020dfafce42033cae9e004"
+  },
+  "build-dependencies/original-notices/typescript-eslint-8.72.2/LICENSE": {
+    "bytes": 1097,
+    "sha256": "2eb5c7a0bba9deb77a98c81bf6b9d3fb1c67118eebf968b6b1a787b3f8928ee0"
+  },
+  "build-dependencies/package-lock.json": {
+    "bytes": 214388,
+    "sha256": "a75567d9ce2fdbe0c00d5337916e1f5157d098543e6d143062e43dc04b29e1bf"
+  },
+  "build-dependencies/path-scurry-3.0.0.registry.json": {
+    "bytes": 5004,
+    "sha256": "1dc324d94e0610fa4be604021eb39a5e64a2b36fbe3ab1880cc5cb71849a7112"
+  },
+  "build-dependencies/path-scurry-3.0.0.tgz": {
+    "bytes": 103785,
+    "sha256": "28d5862f70595973f00d63bb219083d6ed7a28488685a73a1c3340ba55688675"
+  },
+  "build-dependencies/receipt.json": {
+    "bytes": 479,
+    "sha256": "f375ce9c9126bbdbb0baabf8fe648045c3b603231427bf4436bcd9b1cfb0e737"
+  },
+  "build-dependencies/typescript-eslint-8.72.2.registry.json": {
+    "bytes": 123302,
+    "sha256": "c21b939e2454f16eb447eb5738185bed1ec50a4cdcd1f0f6f1e4c3a0326e7d08"
+  },
+  "build-dependencies/typescript-eslint-8.72.2.tgz": {
+    "bytes": 9372,
+    "sha256": "3491d67b276366e650d6559be27183093f2592937f725d28e61c6e125471e073"
+  },
+  "closeout-source.tar.gz": {
+    "bytes": 84825604,
+    "sha256": "d2c34c4c09ec2efd0e457a2dc041e12d1cb93c0a1e6ddf3f09eb27a49a7835a7"
+  },
+  "review/CURRENT-LEGAL-SCOPE.zh-CN.md": {
+    "bytes": 809,
+    "sha256": "beef756b23720fce36a2d3598adcac9f8697f379acb50c2d6992f53131efee70"
+  },
+  "review/LEGAL-REVIEW-FACTS.zh-CN.md": {
+    "bytes": 6658,
+    "sha256": "bc794a4fdd391cc0450a7d11c6019789be20098a4f8c865423976129d53163dd"
+  },
+  "review/app-notice-supplement-index.json": {
+    "bytes": 8094,
+    "sha256": "480470105af4d8909d9912c2b748fef72c4dd9eea325e1f808c424962bac6285"
+  },
+  "review/audit-evidence.tar.gz": {
+    "bytes": 23565684,
+    "sha256": "754c494477e54f19df4e15fe675cc74b3f4de81ad7d48a9d544a5b02cb16cbe8"
+  },
+  "review/component-license-matrix.json": {
+    "bytes": 301839,
+    "sha256": "94eb53196af56f4707c247ef4e0b5e1c5eb5bb15a4fdd981e2cc40c00f4d4ed6"
+  },
+  "review/current-native-readback.py": {
+    "bytes": 7854,
+    "sha256": "eb38146faeaec042551dfe0fc655a1428726536984da0d83b8c2d97fc14fbfc2"
+  },
+  "review/current-packaged.mjs": {
+    "bytes": 19831,
+    "sha256": "7c9d3a89d6d02837a4b032c1716fecea58b3ef171f9522035f233f85cd3501c2"
+  },
+  "review/historical-REPLICAD_OCJS_LICENSE.txt": {
+    "bytes": 26526,
+    "sha256": "20c17d8b8c48a600800dfd14f95d5cb9ff47066a9641ddeab48dc54aec96e331"
+  },
+  "review/modified-controller-notice-overlay.patch": {
+    "bytes": 519,
+    "sha256": "b6dcce2f174aabac621d845eede6dc025d52f5886d888724718319494a2461f7"
+  },
+  "review/modified-file-date-review.json": {
+    "bytes": 13080,
+    "sha256": "81d487f9a89b34d21ba84fb3844cdad4e9d3438e7bccc204a63a745e375e66aa"
+  },
+  "review/official-downloads.json": {
+    "bytes": 35861,
+    "sha256": "2236f70123e4e85bc9ffd27fb36db8be36eaa665cfdfaf743a4d415d9bd9c04e"
+  },
+  "review/official-materials.tar": {
+    "bytes": 155576320,
+    "sha256": "e1650181f3a994d16a44b54d52591dd40dd82776a965a3015108f7f2b66892f4"
+  },
+  "review/prior-MANIFEST.json": {
+    "bytes": 5570,
+    "sha256": "6bf3c311e3566026f6c249d1ea4aac34ba9e07767e86ccb9a51e4a17053fedf8"
+  },
+  "review/prior-PRODUCT-BINDING.json": {
+    "bytes": 4022,
+    "sha256": "3a7b55a968244e928bd8e18222078bcac412aa463235770629cdbd41e87ef886"
+  },
+  "review/prior-README.zh-CN.md": {
+    "bytes": 5775,
+    "sha256": "46681a394b9f0beed86d2d127d0aa18d8f13a4b1fad225bd00edbf01367ec3dd"
+  },
+  "review/prior-delivery-receipt.json": {
+    "bytes": 1901,
+    "sha256": "2670b0d0685f11da21989d06d9d930752ffd4dc89e63465dd6f80e7e4689c0f5"
+  },
+  "review/source-capture.json": {
+    "bytes": 240,
+    "sha256": "5b470620ba2d547cc6b01aea3155d062417d44369c52d160e733700ccc5e8ada"
+  },
+  "review/source-license-matrix-summary.json": {
+    "bytes": 875,
+    "sha256": "f19ff84b86053e54bd010b1eb93b841a431c21cdc1d854ab60d012a90f33a9dd"
+  },
+  "review/source-notice-overlay.patch": {
+    "bytes": 15350,
+    "sha256": "e586309655895c970a567bf50a5cffa99aa7da4dec533da0c2ce771300be30bb"
+  },
+  "review/step-audit-summary.json": {
+    "bytes": 366,
+    "sha256": "cc51d75b8bec1c7707453a589b0a31d9eae37bde375e0557619444d667eba53c"
+  },
+  "review/supplemental-coverage.json": {
+    "bytes": 3665,
+    "sha256": "5a6d6f6a86b007744716e8a4523ddbf15f05f54959686fa4e12393227f1dc8bd"
+  },
+  "review/variant-inventory-comparison.json": {
+    "bytes": 350,
+    "sha256": "f0c67ca2342d7490c2fdf140188fd5b8cf44f329a469177c7414ecde84e3e9e6"
+  },
+  "review/whole-app-audit.zh-CN.md": {
+    "bytes": 13076,
+    "sha256": "ad58e056218b54e198f701f33a7c6754bca5facbc4a8f5f2ac5427b639ece2cc"
+  },
+  "source/annotated-source-review.tar.gz": {
+    "bytes": 142432,
+    "sha256": "7880b4a0e2ffb8118e564cfadbca3dbc514e66a10f5154ab0c5ef49632c55c44"
+  },
+  "source/core-supply-product.tar.gz": {
+    "bytes": 82023650,
+    "sha256": "a0477a0cac0101a6d04c3e1adb755eaebfdaa2b288b32d814c0f0f1ce731b9f2"
+  },
+  "source/final-build-evidence.tar.gz": {
+    "bytes": 74469378,
+    "sha256": "8894d83de3c51dbcdb9cf5d1def279c9f5400de2f9dad851931bfd1fba00ca16"
+  },
+  "source/prior-closeout-source.tar.gz": {
+    "bytes": 858000,
+    "sha256": "63fa9555d6535ff595d46a95c87b757ae3c06a5736ee9d74ffd714d34d476067"
+  },
+  "source/product-integration-source-final.tar.gz": {
+    "bytes": 126411,
+    "sha256": "c6653e1a47a5f1ae494b4631b9e08a7f5bddb59229c7b445adf7fe9f6bf6c886"
+  },
+  "source/tool-materials/TOOLS.json": {
+    "bytes": 1782,
+    "sha256": "a0c198e55d0050df61ef68db0e54dc9afaecb79b6098413e43f2b62a1784478d"
+  },
+  "source/tool-materials/binaryen.tar.gz": {
+    "bytes": 7016451,
+    "sha256": "ae4401f6eea828ccede634a499fcae5ac5fffa2d7f3bd1aa4031a650234c1908"
+  },
+  "source/tool-materials/cmake-4.3.2-SHA-256.txt": {
+    "bytes": 2015,
+    "sha256": "5bffe9f151a0f405f60897e1aa8e1053979b59defea5b5059d84e6c46920b5ca"
+  },
+  "source/tool-materials/cmake-4.3.2-SHA-256.txt.asc": {
+    "bytes": 833,
+    "sha256": "8df05a6b000350226e9c6df8940907743b0124303f079a625e632455765796a1"
+  },
+  "source/tool-materials/cmake-4.3.2-macos-universal.tar.gz": {
+    "bytes": 87444418,
+    "sha256": "808ab43a0db04c8eec9ed7db12b90d7be1c8e2e75f4a060724d604a2043ccaf7"
+  },
+  "source/tool-materials/cmake-4.3.2.tar.gz": {
+    "bytes": 12968608,
+    "sha256": "b0231eb39b3c3cabdc568c619df78208a7bd95ea10c9b2236d61218bac1b367d"
+  },
+  "source/tool-materials/emscripten.tar.gz": {
+    "bytes": 32848280,
+    "sha256": "b0aa1d8ba07579a9ebf76fe1def6319082c3ee6c0bcd6ccf49433bd2cbcff30e"
+  },
+  "source/tool-materials/emsdk-emscripten-releases-tags.json": {
+    "bytes": 19307,
+    "sha256": "58f9b2240d3c37296e40f4ccb98e7bcf3c7b57f7150fc727a46bc8dc7ee3fcba"
+  },
+  "source/tool-materials/emsdk-tag.json": {
+    "bytes": 345,
+    "sha256": "6f10b198edacd8481cc96d9bac4d0ccac44a6029b390cc67b99e7e321e5e7098"
+  },
+  "source/tool-materials/emsdk.tar.gz": {
+    "bytes": 174921,
+    "sha256": "d3a5dad5ba056c0f09c430ddb890726b875d56c596a9d0987e101314741074d6"
+  },
+  "source/tool-materials/llvm.tar.gz": {
+    "bytes": 278655985,
+    "sha256": "1c4b593ea65953ba72821e8f4fc5bdcc9cb4d935bcc7d41bb22a8bc13cc8b719"
+  },
+  "source/tool-materials/reused-runtime-cache.tar.gz": {
+    "bytes": 6838538,
+    "sha256": "fbc4c923d21325f7f1ee3ba78f1d685b391df2d9cf2255f7037716b91637e058"
+  },
+  "source/tool-materials/taucad-source.tar.gz": {
+    "bytes": 3753604,
+    "sha256": "f66455fc901abf47990899eadb70d7c994f5cb9d45471cdbc427e2dd44330eff"
+  },
+  "source/tool-materials/wasm-binaries-arm64.tar.xz": {
+    "bytes": 269217224,
+    "sha256": "82231ed58d0134a9c8796b4133207563b94704088cd5a355464a061ad0d31c15"
+  },
+  "verify-step-supply.mjs": {
+    "bytes": 3859,
+    "sha256": "9358b32eadce2248627e425caad93317017655d9e52569f7966344f015fd9d87"
+  }
+}

@@ -1,0 +1,26 @@
+Old supply independently rehashed: 37
+{
+  "sourceCommit": "92931c9daaf85458cc60b2327595142d1ef7a59d",
+  "manifest": {
+    "bytes": 17891,
+    "sha256": "a181552b4280c45ca95400711de90c1ec1673dd86e2d69ff1546733e6cf9fa41"
+  },
+  "distributionFiles": 109,
+  "distributionBytes": 1126905491,
+  "appArchive": {
+    "path": "寸链-dependency-fixed-arm64.app.tar.gz",
+    "bytes": 126317479,
+    "sha256": "ff9a9f1fb78980ea2aeaee8c4f63fa1ddfd67e6f9be6133fc572ecb8e5d963f8"
+  },
+  "appTreeEntries": 291,
+  "resources": 21,
+  "appAsar": {
+    "bytes": 6017170,
+    "sha256": "f60450dbb75c92de102ec592cd686bd72561314206c19cfec58532d89982a944"
+  },
+  "priorSupplyFilesRehashed": 37,
+  "currentKernelMatchesPriorVerified": true,
+  "kernelRebuiltThisRound": false,
+  "legalCertification": false,
+  "releaseApproval": "BLOCKED"
+}

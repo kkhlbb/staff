@@ -1,0 +1,8 @@
+{
+  "added": [],
+  "removed": [
+    "step-narrow-v1/REPLICAD_OCJS_LICENSE.txt"
+  ],
+  "changed": [],
+  "note": "Historical REPLICAD_OCJS_LICENSE.txt was an extra legacy-package notice, not a current legalFiles entry. Actual required notices are verified against current repository by package/release assertions."
+}
