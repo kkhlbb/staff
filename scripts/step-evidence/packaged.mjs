@@ -17,7 +17,9 @@ if(localCandidateDirectory) {
  env.CUNLIAN_STEP_LOCAL_WASM=path.resolve(localCandidateDirectory,'modified.wasm')
  env.CUNLIAN_STEP_LOCAL_SHA256=localCandidate.sha256
 }
-const app=spawn(executable,['--inspect=9491','--remote-debugging-port=9492',`--user-data-dir=${path.join(out,'user-data')}`],{env,stdio:['ignore','pipe','pipe']})
+const launchArgs=['--inspect=9491','--remote-debugging-port=9492',`--user-data-dir=${path.join(out,'user-data')}`]
+const profile=process.env.STEP_EVIDENCE_OS_PROFILE
+const app=spawn(profile?'sandbox-exec':executable,profile?['-f',profile,executable,...launchArgs]:launchArgs,{env,cwd:path.resolve(out),stdio:['ignore','pipe','pipe']})
 let output='';app.stdout.on('data',x=>output+=x);app.stderr.on('data',x=>output+=x)
 const sleep=ms=>new Promise(r=>setTimeout(r,ms))
 const sockets=[]
@@ -148,7 +150,7 @@ try {
   await fs.writeFile(path.join(out,'replacement-receipt.json'),JSON.stringify(replacement,null,2),{flag:'wx'})
   assert.equal(replacement.ok,false);assert.equal(replacement.error.code,'STEP_EXPORT_FAILED');assert.match(replacement.error.message,/STEP_ASSET_HASH/)
   await assert.rejects(fs.stat(replacementTarget),{code:'ENOENT'})
-  await fs.writeFile(path.join(out,'replacement-audit.json'),JSON.stringify({wasmValid:true,originalSha256:createHash('sha256').update(originalWasm).digest('hex'),candidateSha256:createHash('sha256').update(candidate).digest('hex'),status:'BLOCKED_DIRECT_BINARY_REPLACEMENT',reason:'Pinned integrity rejects different bytes; modified OCCT source/relink not tested.'},null,2),{flag:'wx'})
+  await fs.writeFile(path.join(out,'replacement-audit.json'),JSON.stringify({wasmValid:true,originalSha256:createHash('sha256').update(originalWasm).digest('hex'),candidateSha256:createHash('sha256').update(candidate).digest('hex'),status:'BLOCKED_DIRECT_BINARY_REPLACEMENT',reason:'Pinned default integrity rejects direct changed bytes; explicit user opt-in is a separate tested source-rebuild path.'},null,2),{flag:'wx'})
  } finally { await fs.writeFile(wasm,originalWasm) }
  assert.deepEqual(await fs.readFile(wasm),originalWasm)
  // Switch to a separately persisted odd-q historical version; real kernel geometry must change.
@@ -177,6 +179,29 @@ try {
  const afterFiles=(await fs.readdir(out)).filter(n=>n.endsWith('.step') || n.endsWith('.step-tmp')).sort()
  assert.deepEqual(afterFiles,beforeFiles);assert.equal(afterFiles.filter(n=>n.endsWith('.step-tmp')).length,0)
  await fs.writeFile(path.join(out,'cancelled-disk-audit.json'),JSON.stringify({beforeFiles,afterFiles,targetAbsent:true,ownTemporaryFiles:[],staleRejectedBeforeDialog:true,currentFrozenRevision:oddRequest.revisionId,scope:'Export directory only; not a whole-disk no-write claim; native dialogs stubbed.'},null,2),{flag:'wx'})
+ // Explicit cancellation through real IPC while the real worker job is pending.
+ const runningCancelTarget=path.join(out,'running-cancel-must-not-exist.step')
+ await main(`globalThis.__stepEvidenceElectron.dialog.showSaveDialog=async()=>({canceled:false,filePath:${JSON.stringify(runningCancelTarget)}});true`)
+ const pendingCancel=await renderer(`(async()=>{const request=${JSON.stringify({...oddRequest,jobId:'running-cancel'})};const pending=window.cunlian.stepExport(request);await new Promise(r=>setTimeout(r,35));const cancellation=await window.cunlian.stepCancel({sessionId:request.sessionId,jobId:request.jobId});return {cancellation,result:await pending}})()`)
+ await fs.writeFile(path.join(out,'running-cancel-receipt.json'),JSON.stringify(pendingCancel,null,2),{flag:'wx'})
+ assert.equal(pendingCancel.cancellation.ok,true);assert.equal(pendingCancel.cancellation.value.cancelled,true)
+ assert.equal(pendingCancel.result.ok,false);assert.equal(pendingCancel.result.error.code,'CANCELLED')
+ await assert.rejects(fs.stat(runningCancelTarget),{code:'ENOENT'})
+ // Formally persisted invalid/degenerate historical input still cannot create a target.
+ for(const name of ['degenerate-length','thin-wall']) {
+  const bad=JSON.parse(await fs.readFile(path.join(fixtureDirectory,`${name}-request.json`),'utf8'))
+  await main(`globalThis.__stepEvidenceElectron.dialog.showOpenDialog=async()=>({canceled:false,filePaths:[${JSON.stringify(path.join(fixtureDirectory,`${name}.cunlian`))}]});true`)
+  const openedBad=await renderer('window.cunlian.openProject({})');assert.ok(openedBad.ok,JSON.stringify(openedBad))
+  const badTarget=path.join(out,`${name}-must-not-exist.step`)
+  await main(`globalThis.__stepEvidenceElectron.dialog.showSaveDialog=async()=>({canceled:false,filePath:${JSON.stringify(badTarget)}});true`)
+  const failure=await renderer(`window.cunlian.stepExport(${JSON.stringify({sessionId:openedBad.value.sessionId,baseEditSeq:openedBad.value.editSeq,revisionId:bad.revisionId,partId:bad.partId,expectedInputFingerprint:bad.expectedInputFingerprint,jobId:name})})`)
+  await fs.writeFile(path.join(out,`${name}-receipt.json`),JSON.stringify(failure,null,2),{flag:'wx'})
+  assert.equal(failure.ok,false);assert.equal(failure.error.code,bad.expectedCode);await assert.rejects(fs.stat(badTarget),{code:'ENOENT'})
+ }
+ const modules=await main(`Object.keys(process.mainModule.require('node:module')._cache)`)
+ assert.ok(modules.every(name=>!name.includes('/step-implementation/')&&!name.includes('/node_modules/')))
+ await fs.writeFile(path.join(out,'runtime-dependencies.json'),JSON.stringify({modules,profile:profile??null,workingDirectory:out,scope:'Packaged app module paths; OS denied development roots when profile present. Not a whole application network isolation claim.'},null,2),{flag:'wx'})
+ assert.equal((await fs.readdir(out)).filter(n=>n.endsWith('.step-tmp')).length,0)
  console.log(JSON.stringify({status:'PASS',scope:'real packaged Electron main/preload IPC/worker/save; native dialogs stubbed via debugger, NOT native dialog UX verification',probe,target,receipt:receipt.value,missingWasmRejected:true,restored:true,cancelled:true},null,2))
  }
 } finally {

@@ -42,7 +42,10 @@ SDK6.0.5-git、23供应archive与系统组件原文/对象材料保留。
 当前 `STEP-NARROW-SBOM.cdx.json` 对应新资产；旧 `STEP-SBOM.cdx.json`
 是原npm历史记录，未被改写。新机器门禁仍INCOMPLETE/BLOCKED，绝无环境豁免。
 
-新链已具本地源码/构建/对象/链接材料，但正式对应源交付机制、修改通知、
-传递头文件/生成JS逐项notice与法律审查仍未闭合；产品成包修改核执行需父任务验证。
+新链已具本地源码/构建/对象/链接材料。expanded-default-v2与expanded-local-v2已真实
+成包IPC/worker/磁盘导出；修改核回执hash为aba946481d18427a351dd1cafd7768a594eb2d1cb91a5e402172abc39fa0408a，
+STEP含实际Controller源码修改标记，历史冻结/奇数q/取消/非法退化/资源缺坏拒绝成立。
+据此仅移除PRODUCT_PACKAGED_MODIFIED_KERNEL_EXECUTION；正式对应源交付机制、修改通知、
+传递头文件/生成JS逐项notice与法律审查仍未闭合，发布状态保持BLOCKED。
 不得借新链补写旧npm历史来源或以普通打包成功宣称LGPL认证/发布许可。
 OCP读回同OCCT家族，默认transfer可能heal，不是异厂商或无修复证明。

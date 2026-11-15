@@ -30,4 +30,15 @@ it('explicit evidence generation only; never in ordinary test include',async()=>
   await fs.writeFile(path.join(dir,`${suffix}-receipt.json`),JSON.stringify({...receipt,input,kernelVersion:result.kernelVersion,wasmSha256:result.wasmSha256,generatorVersion:result.generatorVersion},null,2),{flag:'wx'})
   expect(result.bytes.length).toBeGreaterThan(8000)
  }
+ for (const [name,key,valueQ] of [['degenerate-length','length',1],['thin-wall','outerDiameter',200001]] as const) {
+  const snapshot=await createSpacerSnapshot()
+  snapshot.project.drawings=[];snapshot.project.dimensionLinks=[]
+  snapshot.project.parameters=snapshot.project.parameters.map(p=>({...p,reviewStatus:'pending',...(p.key===key?{valueQ}:{})}))
+  for(const revision of snapshot.fileRevisions)revision.project=structuredClone(snapshot.project)
+  const encoded=await encodeProjectFile(snapshot)
+  if(!encoded.ok)throw Error(JSON.stringify(encoded.error))
+  await fs.writeFile(path.join(dir,`${name}.cunlian`),encoded.value.bytes,{flag:'wx'})
+  const input=selectSpacerStepInputFromSnapshot(snapshot,snapshot.fileRevisions[0].revisionId,SPACER_PART_ID)
+  await fs.writeFile(path.join(dir,`${name}-request.json`),JSON.stringify({revisionId:snapshot.fileRevisions[0].revisionId,partId:SPACER_PART_ID,expectedInputFingerprint:input.inputFingerprint,expectedCode:'UNSUPPORTED_GEOMETRY'},null,2),{flag:'wx'})
+ }
 },30000)

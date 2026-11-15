@@ -3,6 +3,7 @@ import path from 'node:path'
 import {spawnSync} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
+import { signatureMismatchWasm } from '../../desktop/tests/narrowWasmFixture.ts'
 const [executable,fixtures,evidenceRoot] = process.argv.slice(2)
 const out=path.resolve(evidenceRoot),root=process.cwd(),sha=b=>createHash('sha256').update(b).digest('hex')
 function leb(value) {
@@ -31,6 +32,7 @@ const cases=[
  {name:'invalid-opt-in',bytes:selected,reason:'STEP_LOCAL_CONFIG',consent:'0'},
  {name:'invalid-binary',bytes:Buffer.alloc(64,1),reason:'STEP_LOCAL_COMPILE'},
  {name:'wrong-abi',bytes:Buffer.from([0,97,115,109,1,0,0,0]),reason:'STEP_LOCAL_ABI'},
+ {name:'wrong-signature',bytes:signatureMismatchWasm(),reason:'STEP_LOCAL_ABI'},
  {name:'memory-limit',bytes:excessiveMemory,reason:'STEP_LOCAL_MEMORY'},
  {name:'table-limit',bytes:excessiveTable,reason:'STEP_LOCAL_TABLE'},
  {name:'wrong-hash',bytes:selected,reason:'STEP_LOCAL_HASH',wrongHash:true},
