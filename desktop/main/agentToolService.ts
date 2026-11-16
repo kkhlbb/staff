@@ -668,8 +668,18 @@ export class AgentToolService {
     const task = async (): Promise<ToolResult<AgentExportValue>> => {
       const current = this.deps.controller.sessionFor(windowId)
       if (current !== session) return { ok: false, code: 'STALE_BASE', message: '活动项目已切换', requestId, objectVersion }
-      const revisionId = session.snapshot.project.currentRevisionId
-      const rebuilt = rebuildDrawingFromProject(session.snapshot.project)
+      // The button promises a saved revision, not the current dirty session.
+      // Read and decode an immutable file image, anchored to the saved fingerprint.
+      const sourcePath = session.path
+      const sourceFingerprint = session.fingerprint
+      if (sourcePath === null || sourceFingerprint === null) return { ok: false, code: 'SAVE_FAILED', message: '没有可识别的已保存文件', requestId, objectVersion }
+      const read = await this.deps.projectService.readProjectBytes(sourcePath)
+      if (!read.ok || read.value.fingerprint !== sourceFingerprint) return { ok: false, code: 'STALE_BASE', message: '已保存文件无法读取或已被外部修改，请重新打开后导出', requestId, objectVersion }
+      const decoded = await decodeProjectFile(read.value.bytes)
+      if (!decoded.ok || decoded.value.snapshot.project.id !== session.snapshot.project.id) return { ok: false, code: 'SAVE_FAILED', message: '已保存文件校验失败，未导出', requestId, objectVersion }
+      const savedProject = decoded.value.snapshot.project
+      const revisionId = savedProject.currentRevisionId
+      const rebuilt = rebuildDrawingFromProject(savedProject)
       if (!rebuilt.ok) {
         return { ok: false, code: 'TOOL_FAILED', message: `图纸无法重建：${rebuilt.message}`, requestId, objectVersion: revisionId }
       }
@@ -689,8 +699,8 @@ export class AgentToolService {
         }
       }
       const intentSuffix =
-        session.snapshot.project.sourceKind === 'user-intent' ? USER_INPUT_FILE_SUFFIX : ''
-      const suggested = `${session.snapshot.project.name}${intentSuffix}-${revisionId.slice(0, 8)}.${format}`
+        savedProject.sourceKind === 'user-intent' ? USER_INPUT_FILE_SUFFIX : ''
+      const suggested = `${savedProject.name}${intentSuffix}-${revisionId.slice(0, 8)}.${format}`
       const target = await ports.pickTarget(windowId, suggested)
       if (target === null) {
         return { ok: false, code: 'CANCELLED', message: '已在系统对话框中取消导出；没有产生文件', requestId, objectVersion: revisionId }

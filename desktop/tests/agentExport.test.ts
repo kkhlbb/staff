@@ -58,6 +58,21 @@ async function setup(options: {
 }
 
 describe('V4.0 阶段4：exportApprovedVersion', () => {
+  it('S05 dirty in-memory drawing is not exported as the saved revision', async () => {
+    const s = await setup()
+    const session = s.h.projectService.getSession(s.sessionId)!
+    const saved = session.snapshot
+    const rebuilt = rebuildDrawingFromProject(saved.project)
+    if (!rebuilt.ok) throw Error(rebuilt.message)
+    expect(s.h.projectService.stage(s.sessionId, 1, { ...saved, project: { ...saved.project, currentRevisionId: 'unsaved-only', drawings: [] } }).ok).toBe(true)
+    const result = await s.service.exportApprovedVersion(1, 'svg')
+    expect(result.ok, JSON.stringify(result)).toBe(true)
+    if (!result.ok) return
+    expect(result.data.revisionId).toBe(saved.project.currentRevisionId)
+    expect(await fsp.readFile(s.target, 'utf8')).toBe(renderDrawingSvg(rebuilt.data))
+    expect(session.snapshot.project.currentRevisionId).toBe('unsaved-only')
+    expect(session.acceptedSeq).toBeGreaterThan(session.savedSeq)
+  })
   it('SVG 导出返回真实文件名/大小/哈希，文件内容与哈希一致', async () => {
     const s = await setup()
     const result = await s.service.exportApprovedVersion(1, 'svg')
