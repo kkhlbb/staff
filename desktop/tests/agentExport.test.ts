@@ -96,6 +96,18 @@ describe('V4.0 阶段4：exportApprovedVersion', () => {
     expect(value.revisionId).toBe(session.snapshot.project.currentRevisionId)
   })
 
+  it('S05 an externally changed saved file is rejected before selecting an export path', async () => {
+    const s = await setup()
+    const session = s.h.projectService.getSession(s.sessionId)!
+    const memory = session.snapshot
+    await fsp.writeFile(session.path!, 'external change')
+    const result = await s.service.exportApprovedVersion(1, 'svg')
+    expect(result).toMatchObject({ ok: false, code: 'STALE_BASE' })
+    expect(s.picks).toHaveLength(0)
+    expect(session.snapshot).toBe(memory)
+    expect(await fsp.readFile(session.path!, 'utf8')).toBe('external change')
+    await expect(fsp.stat(s.target)).rejects.toThrow()
+  })
   it('用户在系统对话框取消 → CANCELLED，且没有产生文件', async () => {
     const s = await setup({ pick: null })
     const result = await s.service.exportApprovedVersion(1, 'svg')
