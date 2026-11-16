@@ -17,6 +17,7 @@ import type { ProjectFileSnapshot } from '../project-file/types'
 import {
   ChangeError,
   computeChange,
+  type ComputeChangeOptions,
 } from '../revisions/compute'
 import { parameterBindingStatusRows } from '../revisions/status'
 import { validateBindingRegion } from '../project-file/validation'
@@ -329,6 +330,30 @@ function numericVerdict(
 export async function computeCandidateRequirementCheck(
   input: RequirementCheckInput,
 ): Promise<RequirementCheckResult> {
+  return computeRequirementCheck(input)
+}
+
+/**
+ * 提交调用域：只接受原始输入，内部独立计算；不接受预览、chain 或 computation。
+ * 私有链副本仅由无参数闭包使用，不向公共 standalone check 增加可信结果入口。
+ * 返回的 computation 即使被调用者修改，也不能替换闭包中的检查依据。
+ */
+export function createRecomputedRequirementContext(
+  input: RequirementCheckInput & { draft: NonNullable<RequirementCheckInput['draft']> },
+  options: ComputeChangeOptions,
+) {
+  const computation = computeChange(input.snapshot, input.draft, options)
+  const chain = cloneChain(computation.chain)
+  return {
+    computation,
+    computeCheck: () => computeRequirementCheck(input, chain),
+  }
+}
+
+async function computeRequirementCheck(
+  input: RequirementCheckInput,
+  recomputedChain?: ChainDefinition,
+): Promise<RequirementCheckResult> {
   const { snapshot } = input
   const chainRef = { projectId: snapshot.project.id, kind: 'project-dimension-chain' as const }
   const baseRevisionId = input.baseRevisionId ?? snapshot.project.currentRevisionId
@@ -373,15 +398,14 @@ export async function computeCandidateRequirementCheck(
   if (input.inputIssue === null) {
     if (hasBoundParameters(snapshot)) {
       try {
-        const computation = computeChange(
+        chain = recomputedChain ?? computeChange(
           snapshot,
           {
             parameters: input.draft?.parameters ?? snapshot.project.parameters,
             bindings: input.draft?.bindings ?? parameterBindingsOf(snapshot),
           },
           { revisionId: baseRevisionId, now: input.checkedAt },
-        )
-        chain = computation.chain
+        ).chain
       } catch (error) {
         if (error instanceof ChangeError && error.code === 'INVALID_PARAMETER') {
           computationIssue = 'INVALID_INPUT'
@@ -426,16 +450,15 @@ export async function computeCandidateRequirementCheck(
 
   let status: RequirementCheckStatus
   const codes: RequirementReasonCode[] = []
-  let requirementResult: ChainResult | null = null
   let originalTargetResult: ChainResult | null = null
 
   if (chain !== null) {
     originalTargetResult = calculateChain(chain)
   }
-  if (requirement !== null && chain !== null) {
-    const verdict = numericVerdict(requirement, chain)
-    requirementResult = verdict.result
-  }
+  const verdict = requirement !== null && chain !== null
+    ? numericVerdict(requirement, chain)
+    : null
+  const requirementResult = verdict?.result ?? null
 
   const pendingCodes: RequirementReasonCode[] = []
   if (requirement !== null) {
@@ -470,9 +493,10 @@ export async function computeCandidateRequirementCheck(
     status = 'pending-confirmation'
     codes.push(...pendingCodes)
   } else {
-    const verdict = numericVerdict(requirement, chain)
-    status = verdict.status
-    codes.push(...verdict.codes)
+    // 有条款且链有效时已计算；四态优先级不变，待确认仍可携带候选数值。
+    const numeric = verdict!
+    status = numeric.status
+    codes.push(...numeric.codes)
   }
 
   const keepCandidateNumbers =

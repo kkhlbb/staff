@@ -17,6 +17,7 @@ import type { ChangeComputation } from '../revisions/types'
 import type { RequirementCheck, RequirementEditDraft, RequirementRevision } from './types'
 import {
   computeCandidateRequirementCheck,
+  createRecomputedRequirementContext,
   type RequirementCheckErrorCode,
 } from './check'
 import type { RequirementResult } from './confirm'
@@ -109,16 +110,45 @@ function computationSignature(computation: ChangeComputation): string {
 export async function commitRecomputedChange(
   input: CommitRecomputedChangeInput,
 ): Promise<RequirementResult<CommitRecomputedChangeValue, CommitRecomputedErrorCode>> {
-  const runCompute = input.deps?.computeChange ?? computeChange
-  const runCheck = input.deps?.computeCheck ?? computeCandidateRequirementCheck
+  const injectedCheck = input.deps?.computeCheck ?? computeCandidateRequirementCheck
+  const checkInput = {
+    snapshot: input.snapshot,
+    requirementRevisions: input.requirementRevisions,
+    activeRequirementRevisionId: input.activeRequirementRevisionId,
+    pendingEdit: input.pendingEdit,
+    draft: input.draft,
+    baseRevisionId: input.baseRevisionId,
+    baseGeneration: input.baseGeneration,
+    acceptedSeq: input.acceptedSeq,
+    checkedAt: input.checkedAt,
+    checkId: input.checkId,
+    inputIssue: null,
+    basis: {
+      kind: 'draft' as const,
+      baseRevisionId: input.baseRevisionId,
+      draftId: input.draft.draftId,
+      draftRevision: input.draft.draftRevision,
+    },
+    provenance: 'candidate' as const,
+  }
 
   let computation: ChangeComputation
+  let runCheck: () => ReturnType<typeof computeCandidateRequirementCheck>
   try {
-    computation = runCompute(
-      input.snapshot,
-      { parameters: input.draft.parameters, bindings: input.draft.bindings },
-      { revisionId: input.revisionId, now: input.checkedAt },
-    )
+    const options = { revisionId: input.revisionId, now: input.checkedAt }
+    if (input.deps !== undefined) {
+      // 保留测试注入的独立调用语义，不把注入结果提升为可信检查依据。
+      computation = (input.deps.computeChange ?? computeChange)(
+        input.snapshot,
+        { parameters: input.draft.parameters, bindings: input.draft.bindings },
+        options,
+      )
+      runCheck = () => injectedCheck(checkInput)
+    } else {
+      const context = createRecomputedRequirementContext(checkInput, options)
+      computation = context.computation
+      runCheck = context.computeCheck
+    }
   } catch (error) {
     if (error instanceof ChangeError) {
       return {
@@ -161,26 +191,7 @@ export async function commitRecomputedChange(
     }
   }
 
-  const recomputed = await runCheck({
-    snapshot: input.snapshot,
-    requirementRevisions: input.requirementRevisions,
-    activeRequirementRevisionId: input.activeRequirementRevisionId,
-    pendingEdit: input.pendingEdit,
-    draft: input.draft,
-    baseRevisionId: input.baseRevisionId,
-    baseGeneration: input.baseGeneration,
-    acceptedSeq: input.acceptedSeq,
-    checkedAt: input.checkedAt,
-    checkId: input.checkId,
-    inputIssue: null,
-    basis: {
-      kind: 'draft',
-      baseRevisionId: input.baseRevisionId,
-      draftId: input.draft.draftId,
-      draftRevision: input.draft.draftRevision,
-    },
-    provenance: 'candidate',
-  })
+  const recomputed = await runCheck()
   if (!recomputed.ok) {
     return {
       ok: false,
