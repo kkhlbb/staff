@@ -242,7 +242,9 @@ async function main() {
   console.log('')
   console.log(`语料目录：${corpusDir}（manifest：${MANIFEST_RELATIVE_PATH}）`)
 
-  const metricsPath = path.join(repoRoot, METRICS_RELATIVE_PATH)
+  const metricsPath = options.evidenceDir === null
+    ? path.join(repoRoot, METRICS_RELATIVE_PATH)
+    : path.join(options.evidenceDir, 'metrics.json')
   await writeEvidence(metricsPath, measured, evidenceJson)
   console.log(`已写 ${METRICS_RELATIVE_PATH}`)
 

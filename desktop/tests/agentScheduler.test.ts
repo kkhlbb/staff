@@ -205,8 +205,9 @@ describe('V4.0 阶段 2：Agent 调度十二项状态验收', () => {
     expect(harness.scheduler.getTrace(taskId)!.events.filter((event) => event.type === 'tool_call_args_done')).toHaveLength(3)
     if (process.env.V40_RECORD === '1') {
       const trace = harness.scheduler.getTrace(taskId)!
-      await fs.mkdir('docs/evidence/v40-stage2', { recursive: true })
-      await fs.writeFile('docs/evidence/v40-stage2/fake-session-trace.json', serializeEvidence({
+      const recordDir = process.env.V40_RECORD_DIR ?? 'docs/evidence/v40-stage2'
+      await fs.mkdir(recordDir, { recursive: true })
+      await fs.writeFile(path.join(recordDir, 'fake-session-trace.json'), serializeEvidence({
         purpose: 'V4.0 阶段 2 假模型完整会话（正常路径，无真实模型调用）',
         provider: { configured: true, provider: 'fake' },
         modelId: 'fake-1',
