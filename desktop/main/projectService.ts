@@ -570,6 +570,8 @@ export class ProjectService {
       if (!checked.ok) {
         return checked
       }
+      // Capture the revision before the first I/O await; later stage calls remain live.
+      const snapshot = session.snapshot
       const existing = await this.store.fingerprint(request.targetPath)
       if (existing !== null && existing !== request.overwriteFingerprint) {
         return ipcFailure(
@@ -583,6 +585,7 @@ export class ProjectService {
         request.targetPath,
         request,
         existing,
+        snapshot,
       )
     })
   }
@@ -621,9 +624,10 @@ export class ProjectService {
     targetPath: string,
     request: SaveRequest,
     overwriteFingerprint: string | null,
+    snapshot: ProjectFileSnapshot = session.snapshot,
   ): Promise<IpcResult<SaveValue>> {
     // 首次保存旧格式项目：显式升级并在保存成功后写回会话；失败不改变会话。
-    const upgrade = upgradeSnapshotToV2(session.snapshot, {
+    const upgrade = upgradeSnapshotToV2(snapshot, {
       newRevisionId: () => `rev-${randomUUID()}`,
     })
     const encoded = await encodeProjectFile(upgrade.snapshot)
@@ -681,7 +685,9 @@ export class ProjectService {
       return fromSaveError(saved.error)
     }
 
-    session.snapshot = upgrade.snapshot
+    // Publish the saved snapshot only if it is still the live revision. A later
+    // stage owns the current snapshot and must remain dirty, including v1 drafts.
+    if (session.acceptedSeq === request.editSeq) session.snapshot = upgrade.snapshot
     session.path = saved.value.path
     session.fingerprint = saved.value.fingerprint
     session.savedSeq = request.editSeq
