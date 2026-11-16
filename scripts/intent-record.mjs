@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { INTENT_CASES, recordsStatus } from './evidence-status.mjs'
 /**
  * 生成 docs/evidence/intent-project/evidence.json（走 serializeEvidence）。
  *
@@ -117,6 +118,8 @@ const payload = {
       return { status: 'BLOCKED', reason: '本机没有 DEEPSEEK_API_KEY；真实模型 3 条未执行，不记为通过。' }
     }
     const result = JSON.parse(readFileSync(file, 'utf8'))
+    const assessment = recordsStatus(result, INTENT_CASES)
+    if (['INVALID', 'NOT_RUN'].includes(assessment.status)) return { status: assessment.status, reason: '预期 D1/D2/D3/D3b，必填回执和非空断言未满足', assessment }
     const items = result.records.map((record) => ({
       item: record.item,
       outcome: record.outcome,
@@ -131,7 +134,7 @@ const payload = {
       notes: record.notes,
     }))
     return {
-      status: items.every((item) => item.outcome === 'PASS') ? 'PASS' : 'FAIL',
+      status: assessment.status,
       switch: 'INTENT_REAL_MODEL=1 且 DEEPSEEK_API_KEY 有值（密钥只从 $HERMES_HOME/.env 读进进程，不落盘）',
       command: 'INTENT_REAL_MODEL=1 npx vitest run --config vitest.desktop.config.ts desktop/tests/intentRealModel.test.ts',
       testFile: 'desktop/tests/intentRealModel.test.ts',

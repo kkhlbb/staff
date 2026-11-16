@@ -5,12 +5,18 @@
  * 输出：docs/evidence/v40-stage4/metrics.json 与 metrics.md
  */
 import fs from 'node:fs/promises'
+import { A40_CASES, recordsStatus, recordStatus } from './evidence-status.mjs'
 import path from 'node:path'
 import { serializeEvidence } from './evidence-json.ts'
 
 const SRC = 'docs/evidence/v40-stage4/a40-real-results.json'
 const data = JSON.parse(await fs.readFile(SRC, 'utf8'))
-const records = data.records ?? []
+const assessment = recordsStatus(data, A40_CASES)
+if (['INVALID', 'NOT_RUN'].includes(assessment.status)) {
+  console.error(JSON.stringify(assessment))
+  process.exit(1)
+}
+const records = assessment.records
 
 const tools = records.flatMap((record) => record.toolReceipts ?? [])
 const toolTotal = tools.length
@@ -27,7 +33,7 @@ const toolFailures = toolTotal - toolOk
 const durations = [...byItem.entries()].map(([item, items]) => ({
   item,
   attempts: items.length,
-  pass: items.filter((record) => (record.outcome ?? ((record.assertions ?? []).every((assertion) => assertion.ok) ? 'PASS' : 'FAIL')) === 'PASS').length,
+  pass: items.filter((record) => recordStatus(record) === 'PASS').length,
   durationsMs: items.map((record) => record.durationMs),
   states: items.map((record) => `${record.taskState}${record.taskErrorCode === null ? '' : `/${record.taskErrorCode}`}`),
   failures: items.filter((record) => record.outcome === 'FAIL').map((record) => ({
@@ -40,6 +46,7 @@ const durations = [...byItem.entries()].map(([item, items]) => ({
 }))
 
 const metrics = {
+  status: assessment.status,
   toolCalls: { total: toolTotal, ok: toolOk, failed: toolFailures, successRate: toolTotal === 0 ? null : Number((toolOk / toolTotal).toFixed(4)) },
   modelCalls,
   userSupplements: askCount,
@@ -70,3 +77,4 @@ ${rows}
 `
 await fs.writeFile('docs/evidence/v40-stage4/metrics.md', markdown)
 console.log(markdown)
+if (assessment.status !== 'PASS') process.exitCode = 1

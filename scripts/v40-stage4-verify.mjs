@@ -11,6 +11,7 @@
  *   docs/evidence/v40-stage4/verification.json（serializeEvidence）
  */
 import fs from 'node:fs/promises'
+import { inspectEvidence } from './evidence-status.mjs'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { evidenceViolations, serializeEvidence } from './evidence-json.ts'
@@ -91,15 +92,8 @@ const evidenceFiles = [
   'docs/evidence/v40-stage4/e2e-result.json',
   'docs/evidence/v40-stage4/export-artifact.json',
 ]
-for (const file of evidenceFiles) {
-  try {
-    const text = await fs.readFile(file, 'utf8')
-    const violations = evidenceViolations(text)
-    const leak = hasKey ? text.includes(secret) : false
-    guards.push({ file, violations, keyLeak: leak })
-  } catch {
-    guards.push({ file, violations: [], keyLeak: false, missing: true })
-  }
+for (const [index, file] of evidenceFiles.entries()) {
+  guards.push(await inspectEvidence(file, ['a40', 'e2e', 'export'][index], fs.readFile, evidenceViolations, secret))
 }
 const keyScanOk = hasKey ? scan.exactHits.length === 0 && scan.prefixHits.length === 0 : false
 // 应用自己的配置也必须不含密钥（非仓库文件，单独扫）。
@@ -125,5 +119,5 @@ await fs.writeFile('docs/evidence/v40-stage4/verification.json', serializeEviden
   screenshots,
 }))
 const failed = results.some((result) => result.exitCode !== 0)
-const guarded = guards.some((guard) => guard.violations.length > 0 || guard.keyLeak)
+const guarded = guards.some((guard) => guard.status !== 'PASS' || guard.violations.length > 0 || guard.keyLeak)
 if (failed || guarded || !keyScanOk || !appConfigOk) process.exitCode = 1
