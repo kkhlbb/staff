@@ -11,6 +11,7 @@
  * - docs/evidence/confirm-efficiency/confirm-efficiency-metrics.json（serializeEvidence）。
  */
 import path from 'node:path'
+import { confirmationPlan } from './confirmation-plan.mjs'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import {
@@ -23,7 +24,7 @@ import {
 import { loadEvidenceJson, loadExtraction, loadPdfTextExtract } from './real-docs/tsImport.mjs'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const OUT_DIR = path.join(repoRoot, 'docs', 'evidence', 'confirm-efficiency')
+const OUT_DIR = path.resolve(process.env.CONFIRM_EFFICIENCY_OUT ?? path.join(repoRoot, '..', 'slop-cleanup-evidence', 'confirm-efficiency'))
 const OUT_JSON = path.join(OUT_DIR, 'confirm-efficiency-metrics.json')
 const corpusDir = process.env.REAL_DOC_CORPUS ?? defaultCorpusDir()
 const manifest = loadManifest(path.join(repoRoot, MANIFEST_RELATIVE_PATH))
@@ -121,26 +122,11 @@ for (const entry of verified) {
   )
 }
 
-const operations = {
-  before: {
-    /** 改前：58 条待确认逐条点击确认（同一符号多处的其余处也要先看过才知道能不能点）。 */
-    individualConfirmClicks: totals.pending,
-    unitOnlyBatchClicks: 0,
-  },
-  after: {
-    /** 改后：1 次「本组全部确认」+ 每个互斥组 1 次逐组选择。 */
-    batchConfirmClicks: 1,
-    individualPicks: totals.pendingIndividualDecisions,
-    confirmClicks: 1 + totals.pendingIndividualDecisions,
-    /** 额外处理 45 条“仅差单位”：开表单 1 + 输入声明 1 + 确认补单位 1。 */
-    unitClicks: 2,
-    unitInputs: 1,
-    total: 1 + totals.pendingIndividualDecisions + 2 + 1,
-  },
-}
+// Static grouping provides only an operation lower bound, not actual completion.
+const operations = confirmationPlan(documents)
 
 const payload = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   task: 'L2 确认效率（按原因码分组 / 批量补单位 / 批量确认）',
   corpus: {
     manifest: MANIFEST_RELATIVE_PATH,
@@ -165,8 +151,7 @@ console.log(
   `必须人工单独决策：${totals.pending} → ${totals.pendingIndividualDecisions}（上限 25）` +
     `；若先补单位，互斥组额外 ${totals.afterUnitAttestationIndividualDecisions} 组选择`,
 )
-console.log(
-  `操作数：改前 ${operations.before.individualConfirmClicks} 次点击 → 改后 58 条确认 ${operations.after.confirmClicks} 次点击` +
-    `（1 批量 + ${operations.after.individualPicks} 逐组），加补单位 3 次（2 点击 + 1 输入），共 ${operations.after.total} 次`,
-)
+console.log(`逐份计划（非已执行）：同等选择目标原需 ${operations.totals.beforeConfirmClicks} 次确认点击，批量后 ${operations.totals.confirmClicks} 次；可形成 ${operations.totals.confirmedAfterSelection} 条确认，仍有 ${operations.totals.unselectedPending} 条未选 pending。`)
+console.log(`补单位不是确认；补后 pending ${operations.totals.pendingAfterUnitAttestation}，含补单位的计划操作共 ${operations.totals.totalOperations} 次，不含逐条阅读/复核/其余候选决策。`)
+
 console.log(`已写 ${path.relative(repoRoot, OUT_JSON)}`)

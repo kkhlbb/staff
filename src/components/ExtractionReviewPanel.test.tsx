@@ -2,6 +2,8 @@
 /**
  * V3.6 审阅面板：状态可见、逐条确认、拒绝需理由、批量只拒绝、如实披露限制。
  */
+import { confirmCandidate } from '../document-extraction/draft'
+import { confirmCandidateBatch } from '../document-extraction/batch'
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { SnapshotDto } from '../../desktop/shared/contracts'
@@ -839,12 +841,12 @@ describe('L2 分组与批量动作（面板）', () => {
 })
 
 describe('L2 操作数计数用例（界面里数，不凭感觉估）', () => {
-  it('从打开面板到完成 58 条确认：改前 58 次点击 → 改后 12 次点击；加补单位共 15 次操作', async () => {
+  it('单份语料形状夹具的请求计数：12 次确认点击只选 39 条，19 条仍 pending；补单位不是确认', async () => {
     const handler = batchActions()
     render(<ExtractionReviewPanel snapshot={await corpusShapedSnapshot()} busy={false} actions={handler} />)
     const ops = opsCounter()
 
-    // 改后路径：1 次批量确认单值 28 条 + 11 个互斥组各选一处（每组 1 次单独确认）。
+    // 仅验证UI请求；下面另用真实生产确认函数核实最终集合，不把mock回执当完成证据。
     ops.click(screen.getByRole('button', { name: '本组全部确认（28 条）' }))
     await waitFor(() => expect(handler.onConfirmBatch).toHaveBeenCalledTimes(1))
     const multiSizes = [3, 2, 3, 3, 3, 4, 4, 2, 2, 2, 2]
@@ -861,11 +863,29 @@ describe('L2 操作数计数用例（界面里数，不凭感觉估）', () => {
     await waitFor(() => expect(handler.onAttestUnits).toHaveBeenCalledTimes(1))
 
     expect(ops.state).toEqual({ clicks: 14, inputs: 1 })
-    // 58 条确认本身的点击 = 1 批量 + 11 次逐组选择（补单位那 2 次点击 + 1 次输入另计）。
+    // 12次点击只选择28+11=39条；不是58条完成，也不是六份真实文档。
     expect(ops.state.clicks - 2).toBe(12)
-    // 必须人工单独决策的条目数 = 11 组（每组只能选一处），改前是 58 条逐条点。
+    // 同等选择目标逐条确认需要39次；58是初始pending候选数，不是完成数量。
     expect(multiSizes).toHaveLength(11)
     expect(1 + multiSizes.length).toBeLessThanOrEqual(25)
+    const initial = corpusShapedDraft()
+    const batchRequest = vi.mocked(handler.onConfirmBatch!).mock.calls[0]![0]
+    const batch = confirmCandidateBatch(initial, { ...batchRequest, actor: 'operator', decidedAt: '2026-11-16T00:00:00Z' })
+    if (!batch.ok) throw Error(batch.message)
+    let current = batch.value.draft
+    for (const [request] of vi.mocked(handler.onDecide).mock.calls) {
+      const next = confirmCandidate(current, { candidateId: request.candidateId, editRevision: request.editRevision, confirmed: true, actor: 'operator', decidedAt: '2026-11-16T00:00:00Z' })
+      if (!next.ok) throw Error(next.message)
+      current = next.value
+    }
+    expect(current.candidates.filter(c => c.status === 'confirmed')).toHaveLength(39)
+    expect(current.candidates.filter(c => c.status === 'pending')).toHaveLength(19)
+    expect(current.candidates.filter(c => c.status === 'blocked')).toHaveLength(80)
+    expect(current.decisions.filter(d => d.action === 'confirm')).toHaveLength(39)
+    expect(vi.mocked(handler.onAttestUnits!).mock.calls[0]![0].candidateIds).toHaveLength(45)
+    // The UI harness does not apply returned snapshots; no end-to-end completion claim.
+    expect(screen.getByTestId('group-summary-confirmable')).toHaveTextContent('可确认 58')
+
   })
 })
 
