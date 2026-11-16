@@ -46,7 +46,7 @@ export interface RssResult {
   combinedSigmaQ: number
   /** 3σ_C，区间半径。 */
   halfWidthQ: number
-  /** C₀ − 3σ_C / C₀ + 3σ_C。 */
+  /** (C₀ + Σsᵢ(EIᵢ+ESᵢ)/2) ± 3σ_C；中心偏移仅作统计参考。 */
   intervalMinQ: number
   intervalMaxQ: number
   distributionAssumption: 'normal'
@@ -105,7 +105,7 @@ export interface StatisticalSummary {
 
 export const ASSUMPTION_NOTE =
   '三种方法并列：极值法假设所有组成环同时取极限，不需要分布假设，仍是条款判定的唯一依据；' +
-  'RSS 假设各环独立且服从正态分布（σ=T/6，±3σ 约覆盖 99.73%）；' +
+  'RSS 假设各环独立且服从以公差带中点为中心的正态分布（σ=T/6，±3σ 约覆盖 99.73%）；中心相对名义值的 midpoint shift = Σsᵢ(EIᵢ+ESᵢ)/2，仅为参考期望偏移，不改名义尺寸或极值判据；' +
   '蒙特卡洛沿用同一分布假设做数值抽样，用来印证 RSS，不参与判定。' +
   '统计区间较窄来自概率假设，不代表装配更容易合格，也不会改变判定结论。'
 
@@ -120,17 +120,21 @@ function toleranceOf(term: ChainDefinition['terms'][number]): Q {
   return term.upperDeviationQ - term.lowerDeviationQ
 }
 
-/** RSS：σᵢ = Tᵢ/6，σ_C = √(Σσᵢ²)，区间 C₀ ± 3σ_C。 */
+/** RSS：σᵢ = Tᵢ/6，σ_C = √(Σσᵢ²)，区间 (C₀ + midpoint shift) ± 3σ_C。 */
 export function rssOf(chain: ChainDefinition, nominalQ: Q): RssResult {
   assertFinite(nominalQ, 'nominalQ')
   const terms: RssTermSigma[] = []
   let sumSquares = 0
+  // Same midpoint-centred distribution as MC; this shift is a reference
+  // expectation, not a change to nominal dimensions or the extreme judgement.
+  let midpointShiftQ = 0
   for (const term of chain.terms) {
     const toleranceQ = toleranceOf(term)
     if (toleranceQ < 0) {
       throw new RangeError(`组成环 ${term.id} 的公差为负`)
     }
     const sigmaQ = toleranceQ * SIGMA_PER_TOLERANCE
+    midpointShiftQ += term.sign * (term.lowerDeviationQ + toleranceQ / 2)
     sumSquares += sigmaQ * sigmaQ
     terms.push({ termId: term.id, toleranceQ, sigmaQ })
   }
@@ -141,8 +145,8 @@ export function rssOf(chain: ChainDefinition, nominalQ: Q): RssResult {
     terms,
     combinedSigmaQ,
     halfWidthQ,
-    intervalMinQ: nominalQ - halfWidthQ,
-    intervalMaxQ: nominalQ + halfWidthQ,
+    intervalMinQ: nominalQ + midpointShiftQ - halfWidthQ,
+    intervalMaxQ: nominalQ + midpointShiftQ + halfWidthQ,
     distributionAssumption: 'normal',
   }
 }
