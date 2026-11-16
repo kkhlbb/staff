@@ -17,6 +17,13 @@ test('PASS requires a complete expected-case set and nonempty true assertions', 
   assert.equal(recordStatus({ ...record('x'), assertions: [{ name: 'failed', ok: false }] }), 'FAIL')
   assert.equal(recordsStatus({ records: [...records, record('unexpected')] }, A40_CASES).status, 'INVALID')
 })
+test('intent receipts require the exact case set and arrays consumed by its report', () => {
+  const records = INTENT_CASES.map(item => ({ ...record(item), toolCalls: [], toolCallNames: [] }))
+  assert.equal(recordsStatus({ records }, INTENT_CASES).status, 'PASS')
+  assert.equal(recordsStatus({ records: records.slice(0, -1) }, INTENT_CASES).status, 'INVALID')
+  assert.equal(recordsStatus({ records: records.map(r => ({ ...r, toolCalls: undefined })) }, INTENT_CASES).status, 'INVALID')
+  assert.equal(recordsStatus({ records: records.map(r => ({ ...r, toolCallNames: undefined })) }, INTENT_CASES).status, 'INVALID')
+})
 test('non-model records require an explicit null taskState and zero modelCalls', () => {
   assert.equal(recordStatus({ ...record('A40-09'), taskState: null, modelCalls: 0 }), 'PASS')
   assert.equal(recordStatus({ ...record('x'), taskState: null, modelCalls: 1 }), 'INVALID')
