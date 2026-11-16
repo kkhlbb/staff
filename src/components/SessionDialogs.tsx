@@ -21,7 +21,7 @@ export function SessionDialogs({ session }: { session: ReturnType<typeof useDesk
     <form onSubmit={event => { event.preventDefault(); void session.create(name.trim(), 'empty') }}>
       <label htmlFor="new-project-name">项目名称</label>
       <input id="new-project-name" value={name} required maxLength={200} onChange={event => setName(event.target.value)} aria-describedby="new-project-note" />
-      <p id="new-project-note">新建空项目，不解析项目名中的文字或数值。可导入资料或在任务侧栏填写目标，再逐条确认候选。</p>
+      <p id="new-project-note">新项目带两个无业务含义的占位组成环，不解析项目名中的文字或数值。请明确填写尺寸并核对来源；也可导入资料或在任务侧栏提供目标后逐条确认候选。</p>
       {session.notice && <p role="alert">{uiDiagnosticText(session.notice)}</p>}
       <div className="desktop-workspace__dialog-actions"><button type="button" disabled={session.busy} onClick={() => session.setNewOpen(false)}>取消</button><button disabled={session.busy || !name.trim()}>新建</button></div>
     </form>
