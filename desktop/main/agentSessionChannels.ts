@@ -128,8 +128,10 @@ function fail(code: ToolErrorCode, message: string, details?: unknown): ToolResu
  * 无任务书演示：四个工具一次走完，所有数值都刻意写成用户原话里能逐字找到的数。
  * 这是假模型的固定脚本，不是“AI 自己会说的数”；换成真模型时由它按用户原话填。
  */
-function intentDemoScript(goal: string): FakeModelStep[] {
-  const statement = goal
+import { INTENT_DEMO_GOAL } from '../../src/agent/intentDemo'
+
+function intentDemoScript(): FakeModelStep[] {
+  const statement = INTENT_DEMO_GOAL
   return [
     { kind: 'tool_calls', calls: [{ name: 'createProject', argumentsJson: JSON.stringify({ name: 'φ20 轴隔套', partType: 'spacer' }) }] },
     {
@@ -422,7 +424,9 @@ export function registerAgentSessionChannels(ipc: IpcMainLike, deps: AgentSessio
     const scenario = request.demo ?? 'normal'
     if (scenario === 'intent') {
       // 无任务书演示：不需要工程草稿；四个工具从空项目开始写意图草稿。
-      registry.register(new FakeModelAdapter(FAKE_MODEL_ID, intentDemoScript(request.goal)))
+      // Fixed example only: never attach scripted numbers to arbitrary user text.
+      if (request.goal !== INTENT_DEMO_GOAL) return fail('INVALID_INPUT', '离线演示仅支持固定示例；自定义文字请使用真实模型入口')
+      registry.register(new FakeModelAdapter(FAKE_MODEL_ID, intentDemoScript()))
       const started = await scheduler.startTask({
         projectId,
         baseRevisionId,

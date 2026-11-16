@@ -209,17 +209,7 @@ export function DesktopWorkspace() {
   const [locate, setLocate] = useState<import('../components/DesktopSessionViews').RequirementSourceLocation | null>(null)
   const locateNonce = useRef(0)
 
-  const [exportOpen, setExportOpen] = useState(false)
-  const exportRef = useRef<HTMLButtonElement>(null)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
-
-  useEffect(() => {
-    const keydown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape' && exportOpen) { setExportOpen(false); exportRef.current?.focus() }
-    }
-    window.addEventListener('keydown', keydown)
-    return () => { window.removeEventListener('keydown', keydown) }
-  }, [exportOpen])
 
   /**
    * 启动页轴系示例入口：先建可另存的尺寸链会话，成功后才开启 3D 侧车。
@@ -396,12 +386,7 @@ export function DesktopWorkspace() {
       <button disabled={model.busy || session.busy} onClick={() => void model.beginImport(false)}>导入模型…</button>
       {model.partId && <button disabled={model.busy || session.busy} onClick={() => void model.beginImport(true)}>替换模型…</button>}
       <div className="desktop-workspace__toolbar-end">
-        <button disabled title="请在工程图页建立参数草稿">预览变更</button>
-        <button ref={exportRef} aria-expanded={exportOpen} aria-controls="desktop-export" onClick={() => setExportOpen(!exportOpen)}>导出 PDF ▾</button>
-        {exportOpen && <div id="desktop-export" className="desktop-workspace__export">
-          <strong>图纸导出在“工程图”页</strong>
-          <p>SVG 与 PDF 都由同一份图纸数据生成；导出文件不会自动回灌为项目附件。</p>
-        </div>}
+        <button type="button" onClick={() => { setTab(0); tabRefs.current[0]?.focus() }}>前往图纸导出</button>
       </div>
     </div>
     <div className="desktop-workspace__notice" role="status">{uiDiagnosticText(session.notice || (session.state?.lastError ? `${session.state.lastError.code}：${session.state.lastError.message}` : session.state?.warnings.join('；')) || '当前会话已载入；绑定来源不等于审查通过。')}{session.state?.recoveryWarning && <span>{uiDiagnosticText(session.state.recoveryWarning)}</span>}</div>
@@ -432,7 +417,7 @@ export function DesktopWorkspace() {
         {linkTargetName(linkDialog.link)}：旧版 {modelVersionLabel(linkDialog.link.target.modelRevisionId)} → 当前新版 {modelVersionLabel(model.revisionId)}。
         确认后只更新外形资料来源定位；不会改尺寸链数值。
       </p>}
-      <p className="desktop-workspace__pending">该关联只表示外形资料来源：不改变尺寸链数值、不自动同步，也不是 D 批次参数联动。</p>
+      <p className="desktop-workspace__pending">该关联只记录 STL 外形资料来源：不改变尺寸链数值、不自动同步，也不驱动参数隔套预览。</p>
       <div className="desktop-workspace__model-dialog-actions">
         <button type="button" onClick={() => setLinkDialog(null)}>取消</button>
         <button type="button" className="desktop-workspace__primary" disabled={model.busy || model.partId === null} onClick={() => {
@@ -461,7 +446,7 @@ export function DesktopWorkspace() {
         <h2>项目树</h2>
         {groups.map(group => <details key={group} open>
           <summary>{group}</summary>
-          {entries[group].length ? entries[group].map(item => <button key={item.id} aria-pressed={selected?.id === item.id} onClick={() => { setSelection(item.id); if (group === '尺寸链') setTab(3); if (group === '版本历史') setTab(4) }}>{item.label}</button>) : <p>{group === '零件' ? '尚未打开轴系示例 · B1' : group === '工程图' ? '暂无工程图' : `暂无${group}`}</p>}
+          {entries[group].length ? entries[group].map(item => <button key={item.id} aria-pressed={selected?.id === item.id} onClick={() => { setSelection(item.id); if (group === '尺寸链') setTab(3); if (group === '版本历史') setTab(4) }}>{item.label}</button>) : <p>{group === '零件' ? '尚未打开轴系示例' : group === '工程图' ? '暂无工程图' : `暂无${group}`}</p>}
         </details>)}
       </Panel>
       {leftOpen ? <Splitter label="项目树宽度" value={leftWidth} min={180} max={treeWidthLimit(viewportWidth)} onChange={setLeftWidth} /> : <div />}
@@ -539,7 +524,7 @@ export function DesktopWorkspace() {
               <span className="desktop-workspace__pending">○ 尚无 3D 视图</span>
               <h2>导入 STL 或查看内置轴系示例</h2>
               <p>可导入二进制/ASCII STL（≤10 MiB、≤200,000 面）。导入是整体网格：旋转/缩放/平移只改相机，不提供部件爆炸；单位只作为备注，不缩放顶点、不改 q。</p>
-              <p>内置轴系示例是只读示意装配（5 个部件）；示例与当前项目尺寸链未关联，几何固定，不随尺寸编辑变化。</p>
+              <p>内置轴系示例含 5 个示意部件；其中隔套按当前三参数预览（有变更草稿时展示草稿，否则展示正式参数），不是对导入 STL 的修改，其余部件保持示意尺寸。</p>
               <div className="desktop-workspace__model-dialog-actions">
                 <button type="button" disabled={model.busy} onClick={() => void model.beginImport(false)}>导入 STL 模型…</button>
                 <button type="button" onClick={() => demo.activate()}>查看内置轴系示例</button>
@@ -572,7 +557,7 @@ export function DesktopWorkspace() {
         <h2>属性 · {selected?.label ?? '未选择'}</h2><p>选择项目树中的对象查看会话快照。</p>
         <dl><dt>项目版本</dt><dd>{versionLabel}</dd>{selected?.properties.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{uiDiagnosticText(value)}</dd></div>)}</dl>
         {selectedPart && <section className="desktop-workspace__part-note" aria-label="示例部件只读说明">
-          <p className="desktop-workspace__pending">未关联尺寸链 · 示例几何（B1 只读）</p>
+          <p className="desktop-workspace__pending">示意装配 · 隔套按参数预览，非 STL 编辑</p>
           <button type="button" onClick={() => setTab(0)}>在工程图页编辑参数</button>
           <p>隔套三参数编辑与图纸标注在“工程图”页；参数联动草稿/预览/确认同页。</p>
         </section>}
@@ -605,7 +590,7 @@ export function DesktopWorkspace() {
             <button type="button" disabled={model.busy} onClick={() => setLinkDialog({ kind: 'bind', termId: selectedTermId, granularity: 'part' })}>关联部件（记录版本）…</button>
           </>}
           {!model.partId && <p>先导入或打开含模型的部件后才能建立关联。</p>}
-          <p className="desktop-workspace__pending">参数联动（改尺寸→改模型）属于 D 批次，不在本关联内。</p>
+          <p className="desktop-workspace__pending">工程图页可预览隔套参数与尺寸链联动；此处 STL 来源关联不会修改网格。</p>
         </section>}
         {activeParameterId && effectiveDrawing && (() => {
           const parameter = effectiveDrawing.parameterSnapshot.find(item => item.parameterId === activeParameterId)

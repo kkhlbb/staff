@@ -50,7 +50,7 @@ export function DesktopChainView({ snapshot, edit, disabled }: {
           <td><select aria-label={`第 ${index + 1} 行 ${term.symbol} 方向`} value={term.sign} disabled={disabled} onChange={event => edit({ type: 'updateField', termId: term.id, field: 'sign', value: event.target.value === '1' ? 1 : -1 })}><option value="1">增环 (+)</option><option value="-1">减环 (−)</option></select></td>
         </tr>)}</tbody></table>
     </div>
-    {!draft.terms.length && <p>暂无组成环。增删环与绑定引用维护本批次未接入。</p>}
+    {!draft.terms.length && <p>暂无组成环。可在任务侧栏建立工程草稿，或导入已有项目；本表不提供增删环。</p>}
     <fieldset disabled={disabled} className="desktop-workspace__target"><legend>目标区间（mm，两项留空表示未设置）</legend>
       {(['min', 'max'] as const).map(side => {
         const key = side === 'min' ? 'targetMin' : 'targetMax'
@@ -68,8 +68,7 @@ export function DesktopChainView({ snapshot, edit, disabled }: {
       </dl></> : <p role="alert">{draft.terms.length ? '输入无效，当前结果不可用；请修正表格或目标区间中标出的字段。' : '空链，尚无计算结果。'}</p>}
     </section>
     <StatisticalReference chain={parsed.ok ? parsed.chain : null} result={result} />
-    <p id="desktop-chain-write-reason">增删环、审查确认与新建分析快照本批次未接入；不会修改既有冻结历史。</p>
-    <div className="desktop-workspace__actions">{['增加组成环', '删除组成环', '确认审查', '冻结分析快照'].map(label => <button key={label} disabled aria-describedby="desktop-chain-write-reason">{label}</button>)}</div>
+    <p id="desktop-chain-write-reason">本表仅编辑已有组成环与目标；参数联动及版本提交请到工程图页，来源候选确认请到提取复核页。这里不提供增删环、审查确认或冻结快照，不修改既有历史。</p>
   </div>
 }
 
@@ -140,7 +139,7 @@ export function DesktopSourceView({ snapshot, sessionId, requirementSource, loca
   }, [sessionId])
   return <div className="desktop-workspace__content"><h2>来源 PDF</h2>
     <p>读取当前会话内的确切附件版本；有绑定不代表来源已审查。</p>
-    {snapshot.revisions.length === 0 && locate === null && requirementSource === null ? <p role="status">没有来源 PDF。资料导入本批次未实现。</p> : <>
+    {snapshot.revisions.length === 0 && locate === null && requirementSource === null ? <p role="status">没有来源 PDF。可用工具栏“导入资料”添加 PDF。</p> : <>
       {snapshot.revisions.length === 0 && location.revisionId === '' ? null : <label>来源版本 <select aria-label="来源版本" value={location.revisionId} onChange={event => setLocation({ revisionId: event.target.value, page: 1, termId: null, requirementRevisionId: null })}>{revision === undefined && location.revisionId !== '' ? <option value={location.revisionId}>未命名版本（不在项目文件中）</option> : null}{snapshot.revisions.map(rev => <option key={rev.id} value={rev.id}>{rev.fileName} · {uiSourceVersionLabel(snapshot.revisions, rev.id)}</option>)}</select></label>}
       {snapshot.documents.map(doc => <button key={doc.id} type="button" onClick={() => onImportVersion(doc.id)}>导入「{doc.title}」新版…</button>)}
       <ul className="desktop-workspace__locations">{snapshot.bindings.map(binding => <li key={binding.id}><span>{snapshot.project.dimensionChain.terms.find(term => term.id === binding.termId)?.symbol ?? '未命名组成环'} · 第 {binding.page} 页 · {uiSourceVersionLabel(snapshot.revisions, binding.revisionId)} </span><button disabled={!snapshot.revisions.some(rev => rev.id === binding.revisionId)} onClick={() => { setLocation({ revisionId: binding.revisionId, page: binding.page, termId: binding.termId, requirementRevisionId: null }); setZoom(1); setRotation(0) }}>查看原图位置</button></li>)}
@@ -152,7 +151,7 @@ export function DesktopSourceView({ snapshot, sessionId, requirementSource, loca
         bindings={[...snapshot.bindings, ...(requirementBinding ? [requirementBinding] : [])]}
         selectedTermId={location.termId} page={location.page} zoom={zoom} rotation={rotation}
         onPageChange={page => setLocation(current => ({ ...current, page }))} onZoomChange={setZoom} onRotationChange={setRotation} loadBytes={loadBytes}
-        onSaveBinding={async () => ({ ok: false, message: '来源绑定写入本批次未接入' })} /> : <p role="alert">附件不可用：找不到来源版本元数据。</p>}
+        onSaveBinding={async () => ({ ok: false, message: '此来源视图只读，不写入绑定' })} /> : <p role="alert">附件不可用：找不到来源版本元数据。</p>}
     </>}
   </div>
 }
@@ -170,7 +169,7 @@ export function DesktopHistoryView({ snapshot, requirementHistory = [], onLocate
       onLocate={onLocateRequirement}
       testIdPrefix="history-requirement"
     />}
-    {!snapshot.analysisSnapshots.length && <p>暂无 AnalysisSnapshot。新建冻结快照本批次未接入。</p>}
+    {!snapshot.analysisSnapshots.length && <p>暂无冻结分析快照；版本提交和历史查看入口在工程图页。</p>}
     {snapshot.analysisSnapshots.map(item => <article key={item.id} className="desktop-workspace__history-item" aria-label={`历史报告 ${item.projectName} · ${item.createdAt}`}>
       <h3>{item.projectName} · 分析快照</h3><p>{item.createdAt} · 引擎 {item.engineVersion} · 规则 {item.reviewRulesVersion}</p>
       <ChainExpression draft={item.draft} />

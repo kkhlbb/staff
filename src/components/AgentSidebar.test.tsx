@@ -175,6 +175,12 @@ const intentDraft: import('../../desktop/shared/contracts').IntentDraftView = {
 }
 
 describe('ADR-001 第 3 步：无任务书侧栏', () => {
+  it('S13 fixed offline sample is read-only and distinct from the real goal input', () => {
+    render(<AgentSidebar open onToggle={() => undefined} projectName="项目" revisionId="rev-a1" onLocate={() => undefined} />)
+    expect(screen.getByRole('textbox', { name: '固定示例原话（只读）' })).toHaveAttribute('readonly')
+    expect(screen.getByRole('button', { name: '运行固定示例（离线演示）' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Agent 任务输入' })).not.toHaveAttribute('readonly')
+  })
   it('离线演示提示只说人话：界面不出现内部模型 id 与任务实例号', async () => {
     const api = apiWith({ preview: null })
     vi.mocked(api.agentStart!).mockResolvedValue({

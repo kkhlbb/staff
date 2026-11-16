@@ -74,7 +74,7 @@ export interface AgentSidebarProps {
 }
 
 /** 无任务书演示的默认原话：每个数值都要能在句子里逐字找到（工具会核）。 */
-const INTENT_GOAL = '我要给 φ20 的轴配个隔套，外径 32，长 12.05；总长 52.25 偏差 0.02；两个轴承各 20 偏差 0.01；隔套 12.05 偏差 0.01；间隙 0.15 到 0.25'
+import { INTENT_DEMO_GOAL as INTENT_GOAL } from '../agent/intentDemo'
 
 const DEMOS: { scenario: 'normal' | 'ask' | 'failure'; label: string; hint: string }[] = [
   { scenario: 'normal', label: '正常改图（+0.04 mm）', hint: '会先改长度参数、再算一遍；算完要你点头才落盘' },
@@ -105,7 +105,6 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, revision
   const [intentName, setIntentName] = useState('φ20 轴隔套')
   const [actorId, setActorId] = useState('')
   const [sessionLabel, setSessionLabel] = useState('')
-  const [intentGoal, setIntentGoal] = useState(INTENT_GOAL)
   const [intentNote, setIntentNote] = useState<string | null>(null)
   const [intentDraft, setIntentDraft] = useState<AgentDraftValue | null>(null)
   const [acknowledged, setAcknowledged] = useState(false)
@@ -338,13 +337,13 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, revision
     if (actorId.trim() === '') { setIntentNote('先在“你的称呼”里填一个名字：出处要写清是谁说的'); return }
     setBusy(true); setIntentNote(null); setIntentCommit(null); setIntentDraft(null); setAcknowledged(false)
     const result = await api.agentStart({
-      goal: intentGoal.trim() === '' ? INTENT_GOAL : intentGoal.trim(),
+      goal: INTENT_GOAL,
       demo: 'intent',
       intent: { actorId: actorId.trim(), ...(sessionLabel.trim() === '' ? {} : { sessionLabel: sessionLabel.trim() }) },
     })
     if (result.ok) {
       setTaskId(result.data.taskId)
-      setIntentNote('已启动离线演示（本机假模型）：它只把你说过的数字写进草稿')
+      setIntentNote('已启动固定示例（本机假模型）：只运行下列示例数值，不解析自定义输入')
       await refreshIntent()
     } else {
       setIntentNote(`启动没有成功：${result.message}`)
@@ -487,12 +486,13 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, revision
       <label>备注（可空）
         <input value={sessionLabel} maxLength={120} onChange={event => setSessionLabel(event.target.value)} aria-label="输入会话备注" placeholder="例如 2026-11-12 复检" />
       </label>
-      <label>你要的零件（原话）
-        <textarea value={intentGoal} maxLength={2000} rows={3} onChange={event => setIntentGoal(event.target.value)} aria-label="无任务书原话" />
+      <p className="agent-sidebar__hint">“建立无任务书项目”仅建空项目，不解析文字。真实输入请在下方“任务”中填写并运行真实模型；离线按钮只运行固定示例。</p>
+      <label>固定示例（只读，不是自定义解析）
+        <textarea value={INTENT_GOAL} readOnly rows={3} aria-label="固定示例原话（只读）" />
       </label>
       <div className="agent-sidebar__actions">
         <button type="button" disabled={busy || !installed || actorId.trim() === ''} onClick={() => void createIntent()}>建立无任务书项目</button>
-        <button type="button" disabled={busy || !installed || actorId.trim() === ''} title="假模型只把你说过的数字写进草稿；确认与提交仍由你完成" onClick={() => void startIntentDemo()}>对话建件（离线演示）</button>
+        <button type="button" disabled={busy || !installed || actorId.trim() === ''} title="固定数值示例，不解析自定义文字；确认与提交仍由你完成" onClick={() => void startIntentDemo()}>运行固定示例（离线演示）</button>
       </div>
       {intentNote !== null && <p role="status" className="agent-sidebar__hint" data-testid="intent-note">{uiDiagnosticText(intentNote)}</p>}
       {intent !== null && (
