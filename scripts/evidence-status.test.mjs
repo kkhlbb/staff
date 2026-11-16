@@ -17,6 +17,11 @@ test('PASS requires a complete expected-case set and nonempty true assertions', 
   assert.equal(recordStatus({ ...record('x'), assertions: [{ name: 'failed', ok: false }] }), 'FAIL')
   assert.equal(recordsStatus({ records: [...records, record('unexpected')] }, A40_CASES).status, 'INVALID')
 })
+test('non-model records require an explicit null taskState and zero modelCalls', () => {
+  assert.equal(recordStatus({ ...record('A40-09'), taskState: null, modelCalls: 0 }), 'PASS')
+  assert.equal(recordStatus({ ...record('x'), taskState: null, modelCalls: 1 }), 'INVALID')
+  assert.equal(recordStatus({ ...record('x'), taskState: undefined, modelCalls: 0 }), 'INVALID')
+})
 test('missing, invalid JSON and structurally empty evidence fail closed', async () => {
   const missing = await inspectEvidence('missing.json', 'export', async () => { throw Object.assign(Error('missing'), { code: 'ENOENT' }) }, () => [])
   assert.equal(missing.status, 'NOT_RUN')

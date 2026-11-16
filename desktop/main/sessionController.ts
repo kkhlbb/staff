@@ -247,7 +247,7 @@ export class SessionController {
         detail: '正式文件已保存，但最近项目索引更新失败',
       })
     }
-    await this.recovery.discard(session.sessionId)
+    await this.recovery.discardSaved(session.sessionId, session.savedSeq, () => session.acceptedSeq === session.savedSeq)
   }
 
   /**

@@ -154,6 +154,16 @@ export class RecoveryStore {
   private readonly now: () => Date
   private readonly newId: () => string
   private readonly sessions = new Map<string, SessionState>()
+  private readonly operations = new Map<string, Promise<unknown>>()
+
+  private enqueue<T>(sessionId: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.operations.get(sessionId) ?? Promise.resolve()
+    const next = previous.then(operation, operation)
+    const settled = next.then(() => undefined, () => undefined)
+    this.operations.set(sessionId, settled)
+    void settled.then(() => { if (this.operations.get(sessionId) === settled) this.operations.delete(sessionId) })
+    return next
+  }
   private indexQueue: Promise<unknown> = Promise.resolve()
 
   constructor(options: RecoveryOptions) {
@@ -189,6 +199,10 @@ export class RecoveryStore {
     editSeq: number,
     meta: RecoveryMeta,
   ): Promise<RecoveryWriteOutcome> {
+    return this.enqueue(sessionId, () => this.stageSnapshot(sessionId, snapshot, editSeq, meta))
+  }
+
+  private async stageSnapshot(sessionId: string, snapshot: ProjectFileSnapshot, editSeq: number, meta: RecoveryMeta): Promise<RecoveryWriteOutcome> {
     const state = await this.stateFor(sessionId, meta)
     if (state.writing !== null) {
       // 正在进行上一次写入：把新快照排在后面，由后续防抖/flush 继续。
@@ -265,6 +279,20 @@ export class RecoveryStore {
 
   /** 草稿被正式保存或用户明确放弃后清理；清理失败不否认主操作。 */
   async discard(sessionId: string): Promise<void> {
+    return this.enqueue(sessionId, () => this.discardSnapshot(sessionId))
+  }
+
+  /** Retire only a revision covered by a successful save. New stages are queued
+   * behind cleanup, so they cannot reuse an index/file still being removed. */
+  async discardSaved(sessionId: string, savedSeq: number, stillSaved: () => boolean): Promise<void> {
+    return this.enqueue(sessionId, async () => {
+      const state = this.sessions.get(sessionId)
+      if (!stillSaved() || (state?.pending?.editSeq ?? 0) > savedSeq || (state?.lastWrittenSeq ?? 0) > savedSeq) return
+      await this.discardSnapshot(sessionId)
+    })
+  }
+
+  private async discardSnapshot(sessionId: string): Promise<void> {
     const state = this.sessions.get(sessionId)
     if (state === undefined) {
       return
@@ -275,6 +303,8 @@ export class RecoveryStore {
     }
     state.pending = null
     this.sessions.delete(sessionId)
+    // An already-started writer must finish before its index/file are retired.
+    if (state.writing !== null) await state.writing
     await this.removeIndexEntry(state.recoveryId)
     try {
       await this.ops.remove(this.draftPath(state.recoveryId))

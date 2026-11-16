@@ -3,7 +3,7 @@
  * V3.6 审阅面板：状态可见、逐条确认、拒绝需理由、批量只拒绝、如实披露限制。
  */
 import { confirmCandidate } from '../document-extraction/draft'
-import { confirmCandidateBatch } from '../document-extraction/batch'
+import { confirmCandidateBatch, attestCandidateUnits } from '../document-extraction/batch'
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { SnapshotDto } from '../../desktop/shared/contracts'
@@ -882,7 +882,13 @@ describe('L2 操作数计数用例（界面里数，不凭感觉估）', () => {
     expect(current.candidates.filter(c => c.status === 'pending')).toHaveLength(19)
     expect(current.candidates.filter(c => c.status === 'blocked')).toHaveLength(80)
     expect(current.decisions.filter(d => d.action === 'confirm')).toHaveLength(39)
-    expect(vi.mocked(handler.onAttestUnits!).mock.calls[0]![0].candidateIds).toHaveLength(45)
+    const unitRequest = vi.mocked(handler.onAttestUnits!).mock.calls[0]![0]
+    expect(unitRequest.candidateIds).toHaveLength(45)
+    const attested = attestCandidateUnits(current, { ...unitRequest, actor: 'operator', decidedAt: '2026-11-16T00:00:00Z', sessionSeq: 1, turnId: 'measured-ui-turn' })
+    if (!attested.ok) throw Error(attested.message)
+    expect(attested.value.draft.candidates.filter(c => c.status === 'confirmed')).toHaveLength(39)
+    expect(attested.value.draft.candidates.filter(c => c.status === 'pending')).toHaveLength(64)
+    expect(attested.value.draft.candidates.filter(c => c.status === 'blocked')).toHaveLength(35)
     // The UI harness does not apply returned snapshots; no end-to-end completion claim.
     expect(screen.getByTestId('group-summary-confirmable')).toHaveTextContent('可确认 58')
 

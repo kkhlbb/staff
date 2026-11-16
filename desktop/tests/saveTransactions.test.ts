@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { FileStore, type FileOps } from '../main/fileStore'
+import { FileStore, sha256Bytes, type FileOps } from '../main/fileStore'
 import { ProjectService } from '../main/projectService'
 import { createSampleSnapshot } from '../../src/project-file/__fixtures__/sampleProjectFile'
-import { decodeProjectFile } from '../../src/project-file/codec'
+import { decodeProjectFile, encodeProjectFile } from '../../src/project-file/codec'
 
 function memoryPort() {
   const files = new Map<string, Uint8Array>()
@@ -22,15 +22,21 @@ function memoryPort() {
 }
 
 describe('S01 production FileStore memory-port save transaction', () => {
-  it.each([1, 2, 3])('preserves a newer stage during suspended rename (run %s)', async () => {
+  it.each(['save', 'saveAs'].flatMap(mode => [1, 2, 3].map(run => ({ mode, run }))))('preserves a newer stage during suspended $mode rename (run $run)', async ({ mode }) => {
     const port = memoryPort()
     const service = new ProjectService({ store: new FileStore({ ops: port.ops }) })
     const snapshot = await createSampleSnapshot()
-    const opened = service.adoptSnapshot(snapshot, null, null)
+    const encoded = await encodeProjectFile(snapshot)
+    if (!encoded.ok) throw Error(encoded.error.message)
+    const fingerprint = mode === 'save' ? await sha256Bytes(encoded.value.bytes) : null
+    if (mode === 'save') port.files.set('/projects/test.cunlian', encoded.value.bytes)
+    const opened = service.adoptSnapshot(snapshot, mode === 'save' ? '/projects/test.cunlian' : null, fingerprint)
     if (!opened.ok) throw Error(opened.error.message)
     const id = opened.value.sessionId
     expect(service.stage(id, 1, { ...snapshot, project: { ...snapshot.project, name: 'saving' } }).ok).toBe(true)
-    const saving = service.saveAs(id, { editSeq: 1, expectedFingerprint: null, targetPath: '/projects/test.cunlian' })
+    const saving = mode === 'save'
+      ? service.save(id, { editSeq: 1, expectedFingerprint: fingerprint })
+      : service.saveAs(id, { editSeq: 1, expectedFingerprint: null, targetPath: '/projects/test.cunlian' })
     await port.atRename
     expect(service.stage(id, 2, { ...snapshot, project: { ...snapshot.project, name: 'new edit' } }).ok).toBe(true)
     port.release()

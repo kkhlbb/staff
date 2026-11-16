@@ -4,7 +4,7 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 const text = value => typeof value === 'string' && value.trim().length > 0
 const hash = value => typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value)
 export function recordStatus(record) {
-  if (!object(record) || !text(record.item) || !text(record.taskState) ||
+  if (!object(record) || !text(record.item) || !(text(record.taskState) || (record.taskState === null && record.modelCalls === 0)) ||
       !(record.taskErrorCode === null || text(record.taskErrorCode)) ||
       !Number.isFinite(record.durationMs) || record.durationMs < 0 ||
       !Number.isInteger(record.modelCalls) || record.modelCalls < 0 ||
