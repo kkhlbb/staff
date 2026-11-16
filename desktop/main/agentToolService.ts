@@ -13,12 +13,12 @@ import { resolveRequirementRevisionSource } from '../../src/requirements/history
 import type { RequirementCheck } from '../../src/requirements/types'
 import type { ChangeComputation } from '../../src/revisions/types'
 import { tryParseMm } from '../../src/domain/units'
-import { SPACER_PARAMETER_KEYS, SPACER_PART_ID, USER_INPUT_FILE_SUFFIX } from '../../src/drawing/types'
+import { SPACER_PARAMETER_KEYS, SPACER_PART_ID } from '../../src/drawing/types'
 import { rebuildDrawingFromProject } from '../../src/drawing/rebuildDrawing'
-import { renderDrawingSvg, validateDrawingSvgMarkup } from '../../src/drawing/renderDrawingSvg'
 import { formatQWithDecimals } from '../../src/drawing/formatDimension'
 import type { DrawingData } from '../../src/drawing/types'
-import { DrawingExportStore } from './drawingExportStore'
+import type { DrawingExportStore } from './drawingExportStore'
+import { createSavedVersionExport } from './savedVersionExport'
 import { extractPdfTextPages } from './pdfTextExtract'
 import { decodeProjectFile } from '../../src/project-file/codec'
 import type { ProjectFileSnapshot } from '../../src/project-file/types'
@@ -656,88 +656,10 @@ export class AgentToolService {
    * 文件名、大小、哈希都取自实际落盘结果；用户取消返回 CANCELLED，绝不返回假路径。
    */
   async exportApprovedVersion(windowId: number, format: 'pdf' | 'svg'): Promise<ToolResult<AgentExportValue>> {
-    const requestId = randomUUID()
+    // Capture before enqueue: edits made while waiting must cancel this request.
+    const task = createSavedVersionExport(this.deps, windowId, format)
     const session = this.deps.controller.sessionFor(windowId)
-    const objectVersion = session?.snapshot.project.currentRevisionId ?? 'unavailable'
-    if (session === null) return { ok: false, code: 'STALE_BASE', message: '没有活动项目', requestId, objectVersion }
-    const ports = this.deps.exportPorts
-    if (ports === undefined) return { ok: false, code: 'UNSUPPORTED_SCOPE', message: '导出端口未装配', requestId, objectVersion }
-    if (session.path === null) {
-      return { ok: false, code: 'SAVE_FAILED', message: '当前项目尚未保存到磁盘，只能导出已保存版本', requestId, objectVersion }
-    }
-    const task = async (): Promise<ToolResult<AgentExportValue>> => {
-      const current = this.deps.controller.sessionFor(windowId)
-      if (current !== session) return { ok: false, code: 'STALE_BASE', message: '活动项目已切换', requestId, objectVersion }
-      // The button promises a saved revision, not the current dirty session.
-      // Read and decode an immutable file image, anchored to the saved fingerprint.
-      const sourcePath = session.path
-      const sourceFingerprint = session.fingerprint
-      if (sourcePath === null || sourceFingerprint === null) return { ok: false, code: 'SAVE_FAILED', message: '没有可识别的已保存文件', requestId, objectVersion }
-      const read = await this.deps.projectService.readProjectBytes(sourcePath)
-      if (!read.ok || read.value.fingerprint !== sourceFingerprint) return { ok: false, code: 'STALE_BASE', message: '已保存文件无法读取或已被外部修改，请重新打开后导出', requestId, objectVersion }
-      const decoded = await decodeProjectFile(read.value.bytes)
-      if (!decoded.ok || decoded.value.snapshot.project.id !== session.snapshot.project.id) return { ok: false, code: 'SAVE_FAILED', message: '已保存文件校验失败，未导出', requestId, objectVersion }
-      const savedProject = decoded.value.snapshot.project
-      const revisionId = savedProject.currentRevisionId
-      const rebuilt = rebuildDrawingFromProject(savedProject)
-      if (!rebuilt.ok) {
-        return { ok: false, code: 'TOOL_FAILED', message: `图纸无法重建：${rebuilt.message}`, requestId, objectVersion: revisionId }
-      }
-      const drawing = rebuilt.data
-      const svg = renderDrawingSvg(drawing)
-      let bytes: Uint8Array
-      if (format === 'svg') {
-        bytes = new TextEncoder().encode(svg)
-      } else {
-        if (ports.renderPdf === undefined) {
-          return { ok: false, code: 'UNSUPPORTED_SCOPE', message: 'PDF 渲染端口未装配，改用 svg', requestId, objectVersion: revisionId }
-        }
-        try {
-          bytes = await ports.renderPdf(windowId, svg, drawing)
-        } catch {
-          return { ok: false, code: 'TOOL_FAILED', message: 'PDF 渲染失败，未产生文件', requestId, objectVersion: revisionId }
-        }
-      }
-      const intentSuffix =
-        savedProject.sourceKind === 'user-intent' ? USER_INPUT_FILE_SUFFIX : ''
-      const suggested = `${savedProject.name}${intentSuffix}-${revisionId.slice(0, 8)}.${format}`
-      const target = await ports.pickTarget(windowId, suggested)
-      if (target === null) {
-        return { ok: false, code: 'CANCELLED', message: '已在系统对话框中取消导出；没有产生文件', requestId, objectVersion: revisionId }
-      }
-      const store = ports.store ?? new DrawingExportStore()
-      const existing = await store.fingerprint(target)
-      const saved = await store.save({
-        targetPath: target,
-        kind: format,
-        bytes,
-        expectedFingerprint: existing,
-        verify: async (written) => {
-          if (format === 'svg') {
-            const report = validateDrawingSvgMarkup(new TextDecoder().decode(written), drawing)
-            return report.ok ? { ok: true } : { ok: false, message: report.errors.join('；') }
-          }
-          const head = new TextDecoder().decode(written.slice(0, 5))
-          return head === '%PDF-' ? { ok: true } : { ok: false, message: '导出内容不是 PDF' }
-        },
-      })
-      if (!saved.ok) {
-        return { ok: false, code: 'SAVE_FAILED', message: `${saved.error.message}（${saved.error.code}）`, requestId, objectVersion: revisionId }
-      }
-      return {
-        ok: true,
-        data: {
-          status: 'EXPORTED',
-          fileName: path.basename(target),
-          byteSize: bytes.byteLength,
-          sha256: saved.value.fingerprint,
-          revisionId,
-        },
-        requestId,
-        objectVersion: revisionId,
-      }
-    }
-    return this.enqueue(session.sessionId, task)
+    return session === null ? task() : this.enqueue(session.sessionId, task)
   }
 
   /** 与 run 相同的串行队列；新写路径不能绕过它。 */
