@@ -14,7 +14,43 @@ function evidenceJsonFiles(directory: string): string[] {
 const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
 const outside = evidenceJsonFiles('docs/evidence').filter((file) => !Object.hasOwn(legacyCaptures, file))
 
+const compare = (before: unknown, after: unknown, path: string) => {
+      if (Array.isArray(before)) {
+        expect(Array.isArray(after), path).toBe(true)
+        expect((after as unknown[]).length, path).toBe(before.length)
+        before.forEach((value, index) => compare(value, (after as unknown[])[index], `${path}[${index}]`))
+        return
+      }
+      if (before !== null && typeof before === 'object') {
+        for (const [key, value] of Object.entries(before)) {
+          expect(after, `${path}/${key}`).toHaveProperty(key)
+          compare(value, (after as Record<string, unknown>)[key], `${path}/${key}`)
+        }
+        return
+      }
+      if (typeof before === 'number' || typeof before === 'boolean' || before === null) {
+        expect(after, path).toEqual(before)
+        return
+      }
+      if (typeof before !== 'string') return
+      if (before.startsWith('[') || before.startsWith('{')) {
+        let parsed: unknown
+        try { parsed = JSON.parse(before) } catch (error) {
+          if (!(error instanceof SyntaxError)) throw error
+          return // 純文本探针：只忽略原始字符串的语法错误。
+        }
+        compare(parsed, JSON.parse(after as string), path)
+        return
+      }
+      if (/^[a-f0-9]{64}$/u.test(before)) expect(after, path).toBe(before)
+    }
+
 describe('two-stage evidence guard', () => {
+  it('rejects changed numeric payloads inside JSON-encoded probes', () => {
+    expect(() => compare('{"q":523000}', '{"q":1}', 'probe')).toThrow()
+    expect(() => compare('[true,null,58]', '[false,null,0]', 'probe')).toThrow()
+  })
+
   it('runs both stages with explicit coverage (never a silent empty scan)', () => {
     expect(evidenceFiles).toHaveLength(6)
     const all = evidenceJsonFiles('docs/evidence')
@@ -35,8 +71,11 @@ describe('two-stage evidence guard', () => {
     expect(sha256(execFileSync('git', ['show', `9fe22fd:${file}`])), `freeze source: ${file}`).toBe(expected)
   })
 
-  it.each(outside)('STAGE 2 %s contains no machine paths or unmarked UUIDs', (file) => {
-    expect(evidenceViolations(readFileSync(file, 'utf8')), file).toEqual([])
+  it('STAGE 2 aggregate format audit (not business-case coverage)', () => {
+    console.log(`FORMAT AUDIT ONLY: ${outside.length} JSON files; business test count excludes this file scan`)
+    for (const file of outside) {
+      expect(evidenceViolations(readFileSync(file, 'utf8')), file).toEqual([])
+    }
   })
 
   it.each(['/var/folders/abc/sample.json', '/Users/test/sample.json', '/tmp/sample.json'])('rejects %s even with metadata', (target) => {
@@ -108,31 +147,6 @@ describe('two-stage evidence guard', () => {
   it.each(evidenceFiles)('%s 的生产方序列化保留每个数值、布尔、null、数组长度与键', (file) => {
     const original = JSON.parse(execFileSync('git', ['show', `9fe22fd:${file}`], { encoding: 'utf8' }))
     const round = JSON.parse(serializeEvidence(original))
-    const compare = (before: unknown, after: unknown, path: string) => {
-      if (Array.isArray(before)) {
-        expect(Array.isArray(after), path).toBe(true)
-        expect((after as unknown[]).length, path).toBe(before.length)
-        before.forEach((value, index) => compare(value, (after as unknown[])[index], `${path}[${index}]`))
-        return
-      }
-      if (before !== null && typeof before === 'object') {
-        for (const [key, value] of Object.entries(before)) {
-          expect(after, `${path}/${key}`).toHaveProperty(key)
-          compare(value, (after as Record<string, unknown>)[key], `${path}/${key}`)
-        }
-        return
-      }
-      if (typeof before === 'number' || typeof before === 'boolean' || before === null) {
-        expect(after, path).toEqual(before)
-        return
-      }
-      if (typeof before !== 'string') return
-      if (before.startsWith('[') || before.startsWith('{')) {
-        try { compare(JSON.parse(before), JSON.parse(after as string), path) } catch { /* 纯文本探针 */ }
-        return
-      }
-      if (/^[a-f0-9]{64}$/u.test(before)) expect(after, path).toBe(before)
-    }
     compare(original, round, file)
     expect(evidenceViolations(serializeEvidence(original))).toEqual([])
   })
