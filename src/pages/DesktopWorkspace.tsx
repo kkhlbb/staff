@@ -679,6 +679,13 @@ export function DesktopWorkspace() {
       }}
       projectName={project.name}
       revisionId={project.currentRevisionId}
+      savedExportBlockedReason={!session.state?.path
+        ? '当前项目尚未保存，请先保存后导出已保存版本。'
+        : !session.state.saveStateKnown
+          ? '正式保存状态未知，请先保存后导出已保存版本。'
+          : session.state.dirty
+            ? '有未保存修改，请先保存后导出已保存版本。'
+            : null}
       revisionSequence={snapshot.fileRevisions.findIndex(item => item.revisionId === project.currentRevisionId) + 1}
       onLocate={locateFromAgent}
       onProjectChanged={() => session.reloadSession()}

@@ -26,6 +26,8 @@ export interface DrawingExportSaveOptions {
   bytes: Uint8Array
   /** 对话框确认时磁盘上的目标指纹；null 表示目标应不存在。 */
   expectedFingerprint: string | null
+  /** 可选的同步提交门禁，仅已保存版本导出传入；普通草稿导出不受影响。 */
+  canCommit?: () => boolean
   verify: (
     bytes: Uint8Array,
   ) => Promise<{ ok: true } | { ok: false; message: string; detail?: string }>
@@ -162,6 +164,10 @@ export class DrawingExportStore {
         }
       }
 
+      // 没有 await 的最后门禁与 rename 调用相邻；之后即为文件提交点。
+      if (options.canCommit?.() === false) {
+        return { ok: false, error: { code: 'BUSY', message: '导出来源已变化，已取消导出' } }
+      }
       try {
         await ops.rename(tempPath, options.targetPath)
         tempWritten = false

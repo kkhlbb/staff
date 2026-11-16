@@ -22,6 +22,26 @@ import { AgentSidebar } from './AgentSidebar'
 import { expectNoUiInternalIds, UI_REVISION_ID, UI_HEX_ID } from '../test/uiIdGuard'
 import { createSampleSnapshot } from '../project-file/__fixtures__/sampleProjectFile'
 
+it('S05 dirty 禁用两个已保存版本导出入口并说明先保存；保存后才允许 IPC', async () => {
+  const api = apiWith()
+  api.exportApprovedVersion = vi.fn(async () => ({ ok: false as const, code: 'CANCELLED' as const, message: '已取消', requestId: 'r', objectVersion: 'rev-a1' }))
+  window.cunlian = api
+  const props = { open: true, onToggle: () => undefined, projectName: '项目', revisionId: 'rev-a1', onLocate: () => undefined }
+  const { rerender } = render(<AgentSidebar {...props} savedExportBlockedReason="有未保存修改，请先保存后导出已保存版本。" />)
+  expect(screen.getByText('有未保存修改，请先保存后导出已保存版本。')).toBeVisible()
+  const svg = screen.getByRole('button', { name: '导出已保存版本 SVG' })
+  const pdf = screen.getByRole('button', { name: '导出已保存版本 PDF' })
+  expect(svg).toBeDisabled()
+  expect(pdf).toBeDisabled()
+  fireEvent.click(svg)
+  fireEvent.click(pdf)
+  expect(api.exportApprovedVersion).not.toHaveBeenCalled()
+  rerender(<AgentSidebar {...props} savedExportBlockedReason={null} />)
+  expect(svg).toBeEnabled()
+  fireEvent.click(svg)
+  await waitFor(() => expect(api.exportApprovedVersion).toHaveBeenCalledWith({ format: 'svg' }))
+})
+
 it('提交回执只从已提交历史取真实序号，不把 acceptedSeq 当版本号', async () => {
   const snapshot = await createSampleSnapshot()
   snapshot.fileRevisions.push({ ...snapshot.fileRevisions[0], revisionId: 'rev-a77' })

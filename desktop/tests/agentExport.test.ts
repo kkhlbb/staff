@@ -62,14 +62,12 @@ describe('V4.0 阶段4：exportApprovedVersion', () => {
     const s = await setup()
     const session = s.h.projectService.getSession(s.sessionId)!
     const saved = session.snapshot
-    const rebuilt = rebuildDrawingFromProject(saved.project)
-    if (!rebuilt.ok) throw Error(rebuilt.message)
     expect(s.h.projectService.stage(s.sessionId, 1, { ...saved, project: { ...saved.project, currentRevisionId: 'unsaved-only', drawings: [] } }).ok).toBe(true)
     const result = await s.service.exportApprovedVersion(1, 'svg')
-    expect(result.ok, JSON.stringify(result)).toBe(true)
-    if (!result.ok) return
-    expect(result.data.revisionId).toBe(saved.project.currentRevisionId)
-    expect(await fsp.readFile(s.target, 'utf8')).toBe(renderDrawingSvg(rebuilt.data))
+    expect(result).toMatchObject({ ok: false, code: 'SAVE_FAILED' })
+    if (!result.ok) expect(result.message).toContain('先保存')
+    expect(s.picks).toHaveLength(0)
+    await expect(fsp.stat(s.target)).rejects.toThrow()
     expect(session.snapshot.project.currentRevisionId).toBe('unsaved-only')
     expect(session.acceptedSeq).toBeGreaterThan(session.savedSeq)
   })

@@ -68,6 +68,8 @@ export interface AgentSidebarProps {
   projectName: string | null
   revisionId: string | null
   revisionSequence?: number
+  /** 仅限制“导出已保存版本”，不影响普通草稿导出；由工作台实时保存状态提供。 */
+  savedExportBlockedReason?: string | null
   onLocate: (value: LocateEvidenceValue) => void
   /** 提交成功后把 main 侧的新快照重新挂回工作台（可选；测试可不提供）。 */
   onProjectChanged?: () => void | Promise<void>
@@ -83,7 +85,7 @@ const DEMOS: { scenario: 'normal' | 'ask' | 'failure'; label: string; hint: stri
 ]
 
 
-export function AgentSidebar({ open, onToggle, projectName, revisionId, revisionSequence, onLocate, onProjectChanged }: AgentSidebarProps): JSX.Element {
+export function AgentSidebar({ open, onToggle, projectName, revisionId, revisionSequence, savedExportBlockedReason = null, onLocate, onProjectChanged }: AgentSidebarProps): JSX.Element {
   const api = window.cunlian
   const installed = api?.agentStart !== undefined && api.agentTaskState !== undefined
   const [provider, setProvider] = useState<AgentProviderStatusValue | null>(null)
@@ -296,7 +298,7 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, revision
   }
 
   const exportSaved = async (format: 'pdf' | 'svg'): Promise<void> => {
-    if (api?.exportApprovedVersion === undefined) return
+    if (api?.exportApprovedVersion === undefined || savedExportBlockedReason !== null || revisionId === null || busy) return
     setBusy(true); setExportNote(null)
     const result = await api.exportApprovedVersion({ format })
     setExportNote(result.ok
@@ -563,8 +565,9 @@ export function AgentSidebar({ open, onToggle, projectName, revisionId, revision
       {notice !== null && <p role="status" data-testid="agent-notice" className="agent-sidebar__hint">{uiDiagnosticText(notice)}</p>}
       {api?.exportApprovedVersion !== undefined && (
         <div className="agent-sidebar__actions">
-          <button type="button" disabled={busy || revisionId === null} onClick={() => void exportSaved('svg')}>导出已保存版本 SVG</button>
-          <button type="button" disabled={busy || revisionId === null} onClick={() => void exportSaved('pdf')}>导出 PDF</button>
+          <button type="button" disabled={busy || revisionId === null || savedExportBlockedReason !== null} aria-describedby={savedExportBlockedReason === null ? undefined : 'saved-export-blocked'} onClick={() => void exportSaved('svg')}>导出已保存版本 SVG</button>
+          <button type="button" disabled={busy || revisionId === null || savedExportBlockedReason !== null} aria-describedby={savedExportBlockedReason === null ? undefined : 'saved-export-blocked'} onClick={() => void exportSaved('pdf')}>导出已保存版本 PDF</button>
+          {savedExportBlockedReason !== null && <p id="saved-export-blocked" role="status">{savedExportBlockedReason}</p>}
         </div>
       )}
       {exportNote !== null && <p role="status" className="agent-sidebar__hint" data-testid="agent-export-result">{uiDiagnosticText(exportNote)}</p>}

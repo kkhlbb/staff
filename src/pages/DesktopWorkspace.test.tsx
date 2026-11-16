@@ -9,7 +9,27 @@ import { createSpacerSnapshot } from '../project-file/__fixtures__/spacerProject
 import { createRequirementProject, createTwoVersionRequirementProject } from '../requirements/__fixtures__/requirementFixture'
 import { toSnapshotDto, decodeProjectFile, encodeProjectFile } from '../project-file/codec'
 import { DesktopWorkspace } from './DesktopWorkspace'
+import { writeAgentPanelOpen } from '../components/agentPanel'
 import { expectNoUiInternalIds, UI_REVISION_ID, UI_HEX_ID } from '../test/uiIdGuard'
+
+it('S05 工作台实时传递 dirty 原因；保存后恢复，不自动保存', async () => {
+  api.exportApprovedVersion = vi.fn(async () => ({ ok: false as const, code: 'CANCELLED' as const, message: '用户取消', requestId: 'r', objectVersion: 'rev-a1' }))
+  vi.mocked(api.reattachSession).mockResolvedValue({ ok: true, value: { ...opened, path: '/p.cunlian', fingerprint: 'hash', editSeq: 7, savedSeq: 0, recovery: 'pending' } })
+  writeAgentPanelOpen(true)
+  render(<DesktopWorkspace />)
+  await screen.findByText('有未保存修改')
+  const svg = await screen.findByRole('button', { name: '导出已保存版本 SVG' })
+  expect(svg).toBeDisabled()
+  expect(screen.getByText('有未保存修改，请先保存后导出已保存版本。')).toBeVisible()
+  fireEvent.click(svg)
+  expect(api.saveProject).not.toHaveBeenCalled()
+  expect(api.exportApprovedVersion).not.toHaveBeenCalled()
+  vi.mocked(api.saveProject).mockResolvedValue({ ok: true, value: { path: '/p.cunlian', fingerprint: 'saved', savedSeq: 7, warnings: [] } })
+  fireEvent.click(screen.getByRole('button', { name: '保存' }))
+  await waitFor(() => expect(svg).toBeEnabled())
+  fireEvent.click(svg)
+  await waitFor(() => expect(api.exportApprovedVersion).toHaveBeenCalledWith({ format: 'svg' }))
+})
 
 it('UI-ID guard: 主工作台与图纸面板真实输出不泄漏身份', async () => {
   opened.snapshot = await createSpacerSnapshot()
