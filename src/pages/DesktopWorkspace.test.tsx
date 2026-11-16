@@ -682,14 +682,14 @@ describe('B1 内置轴系示例整合', () => {
 
   async function openShaftExample() {
     render(<DesktopWorkspace />)
-    fireEvent.click(await screen.findByRole('button', { name: '打开轴系示例 · 示意装配（B1）' }))
+    fireEvent.click(await screen.findByRole('button', { name: '打开轴系示例 · 示意装配' }))
     await screen.findByRole('main', { name: '寸链桌面工作台' })
     await screen.findByText(/3D 就绪/)
   }
 
   it('B1-A01 启动页轴系入口：建可另存的尺寸链会话后开启示例并转到 3D', async () => {
     await openShaftExample()
-    expect(api.newProject).toHaveBeenCalledWith({ name: '轴系示例（B1）· 示意装配', template: 'chain-demo' })
+    expect(api.newProject).toHaveBeenCalledWith({ name: '轴系示例 · 示意装配', template: 'chain-demo' })
     expect(screen.getByRole('tab', { name: '3D' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText(/内置轴系示例 · 示意装配/)).toBeInTheDocument()
     expect(screen.getByText(/隔套示意几何随当前参数草稿/)).toBeInTheDocument()

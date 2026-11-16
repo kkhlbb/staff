@@ -27,7 +27,7 @@ export const DEFAULT_MC_SAMPLES = 200_000
 export const UI_MC_SAMPLES = 100_000
 /** 交叉验证容差（任务卡 A3）：±3σ 区间半径的相对偏差上限。 */
 export const CROSS_CHECK_TOLERANCE = 0.02
-export const STATISTICS_GENERATOR_VERSION = 'statistics-v1'
+export const STATISTICS_GENERATOR_VERSION = 'statistics-v2-midpoint'
 
 /** 正态假设下 σᵢ = Tᵢ/6，即 ±3σ 覆盖公差带。 */
 export const SIGMA_PER_TOLERANCE = 1 / 6

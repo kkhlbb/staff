@@ -21,11 +21,17 @@ export function recordsStatus(data, expected) {
   const missing = expected.filter(item => !actual.has(item))
   const unexpected = [...actual].filter(item => !expected.includes(item))
   const states = records.map(recordStatus)
-  const status = missing.length || unexpected.length || states.includes('INVALID') ? 'INVALID' : states.includes('FAIL') ? 'FAIL' : 'PASS'
+  const receiptField = expected === INTENT_CASES ? 'toolCalls' : 'toolReceipts'
+  const malformed = records.some(record => !Array.isArray(record?.[receiptField]) ||
+    (expected === INTENT_CASES && (!Array.isArray(record?.toolCallNames) || record.toolCallNames.some(name => !text(name)))))
+  const status = missing.length || unexpected.length || malformed || states.includes('INVALID') ? 'INVALID' : states.includes('FAIL') ? 'FAIL' : 'PASS'
   return { status, missing, unexpected, records }
 }
 export function validateArtifact(data, kind) {
-  if (kind === 'a40') return recordsStatus(data, A40_CASES)
+  if (kind === 'a40') {
+    const assessed = recordsStatus(data, A40_CASES)
+    return { status: assessed.status, reason: assessed.reason ?? null, missing: assessed.missing ?? [], unexpected: assessed.unexpected ?? [], recordCount: assessed.records.length }
+  }
   if (!object(data)) return { status: 'INVALID' }
   if (kind === 'export') {
     if (data.schema !== 'v40stage4-export-artifact' || !text(data.source) || !text(data.artifact) ||

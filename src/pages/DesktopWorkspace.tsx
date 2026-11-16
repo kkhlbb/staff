@@ -216,7 +216,7 @@ export function DesktopWorkspace() {
    * 3D 只在示例开启时挂载（动态 import three）；之后切标签保持挂载、只暂停渲染。
    */
   async function openShaftDemo() {
-    const created = await session.create('轴系示例（B1）· 示意装配', 'chain-demo')
+    const created = await session.create('轴系示例 · 示意装配', 'chain-demo')
     if (!created) return
     demo.activate(created)
     setTab(1)
@@ -351,7 +351,7 @@ export function DesktopWorkspace() {
         <button disabled={session.busy} onClick={() => session.action('new')}>新建项目…</button>
         <button disabled={session.busy} aria-keyshortcuts="Meta+O" onClick={() => session.action('open')}>打开项目…</button>
         <button disabled={session.busy} onClick={() => void session.create('尺寸链示例（A）', 'chain-demo')}>打开内置示例 · 尺寸链示例（A）</button>
-        <button disabled={session.busy} onClick={() => void openShaftDemo()}>打开轴系示例 · 示意装配（B1）</button>
+        <button disabled={session.busy} onClick={() => void openShaftDemo()}>打开轴系示例 · 示意装配</button>
         <button disabled={session.busy} onClick={() => session.action('importV2')}>导入 V2 备份…</button>
         <button disabled={session.busy} onClick={() => void openDxfViewer()}>打开 DXF 看图…</button>
       </div>

@@ -16,6 +16,9 @@ import { IPC_CHANNELS, type AgentDraftValue, type ApplyConfirmedInputsRequest, t
 import { candidateValueSnapshot, type ExtractionCandidate, type ExtractionDraft } from '../../src/document-extraction'
 import { encodeProjectFile, decodeProjectFile } from '../../src/project-file/codec'
 import type { ProjectFileSnapshot } from '../../src/project-file/types'
+import { AgentScheduler } from '../main/agentScheduler'
+import { AgentTaskStore } from '../main/agentTaskStore'
+import { FakeModelAdapter, ModelAdapterRegistry } from '../main/modelAdapter'
 import { serializeEvidence } from '../../scripts/evidence-json'
 
 const cleanup: Harness[] = []
@@ -96,6 +99,29 @@ async function persist(s: Awaited<ReturnType<typeof setup>>, draft: ExtractionDr
 }
 
 describe('V4.0 阶段1：状态级九项验收', () => {
+  it('S04 fake-model scheduling exercises production context → stage → preview → context → preview', async () => {
+    const s = await setup()
+    const draft = data(await s.apply())
+    const basis = { toolMode: 'agent', draftId: draft.draftId, baseRevisionId: s.session.snapshot.project.currentRevisionId }
+    const adapters = new ModelAdapterRegistry()
+    adapters.register(new FakeModelAdapter('fake-chain', [
+      { kind: 'tool_calls', calls: [{ name: 'context', argumentsJson: '{}' }, { name: 'stage', argumentsJson: JSON.stringify({ ...basis, parameter: 'length', valueMm: '12.04', lockedKeys: ['innerDiameter', 'outerDiameter'] }) }, { name: 'preview', argumentsJson: JSON.stringify(basis) }] },
+      { kind: 'tool_calls', calls: [{ name: 'context', argumentsJson: '{}' }, { name: 'preview', argumentsJson: JSON.stringify(basis) }] },
+      { kind: 'text', text: 'Only tool receipts establish state.' },
+    ]))
+    const scheduler = new AgentScheduler({ store: new AgentTaskStore({ rootDir: s.h.workspace }), adapters,
+      provider: { getProviderStatus: () => ({ configured: true, provider: 'fake' }) }, activeProjectId: s.session.snapshot.project.id,
+      dispatch: { dispatch: call => s.service.run(1, call.command, call.arguments, { userText: call.userText }) } })
+    const started = await scheduler.startTask({ projectId: s.session.snapshot.project.id, baseRevisionId: basis.baseRevisionId, goal: '把隔套长度改为12.04，其他参数锁定', modelId: 'fake-chain' })
+    if (!started.ok) throw Error(started.message)
+    const task = await started.completion
+    expect(task.state).toBe('ready-to-commit')
+    expect(task.errorCode).toBeNull()
+    const tools = scheduler.getSteps(started.taskId).filter(step => step.kind === 'tool')
+    expect(tools.map(step => step.inputSummary.tool)).toEqual(['context', 'stage', 'preview', 'context', 'preview'])
+    expect(tools.every(step => step.errorCode === null)).toBe(true)
+    expect(task.transitions.some(t => t.from === 'checking' && t.to === 'executing')).toBe(false)
+  })
   it('01 A40-01：真实 PDF → 逐条界面决定 → 草稿，参数/环/公式/绑定/条款/图纸/3D 同源', async () => {
     const s = await setup()
     const before = await s.disk()

@@ -301,5 +301,5 @@ export function validateToolArguments(name: string, value: unknown): ToolValidat
   return { ok: true, value }
 }
 
-/** 供适配器构造 ModelRequest.tools；模型只能看到这五个命令。 */
+/** 供适配器构造 ModelRequest.tools；可见命令以同一权威工具表为准。 */
 export const MODEL_TOOL_SCHEMAS: ToolSchema[] = Object.values(AGENT_TOOL_SCHEMAS)
