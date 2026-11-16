@@ -146,6 +146,23 @@ const previewCall = { name: 'preview', argumentsJson: JSON.stringify({ toolMode:
 const contextCall = { name: 'context', argumentsJson: '{}' }
 
 describe('V4.0 阶段 2：Agent 调度十二项状态验收', () => {
+  it.each([true, false])('S04 preview followed by a normal context tool (same reply: %s)', async (sameReply) => {
+    const harness = await makeHarness({ script: sameReply ? [
+      { kind: 'tool_calls', calls: [previewCall, contextCall] },
+      { kind: 'text', text: 'done' },
+    ] : [
+      { kind: 'tool_calls', calls: [previewCall] },
+      { kind: 'tool_calls', calls: [contextCall] },
+      { kind: 'text', text: 'done' },
+    ] })
+    const { completion } = await start(harness)
+    const task = await completion
+    expect(task.state).toBe('ready-to-commit')
+    expect(task.errorCode).toBeNull()
+    expect(harness.stub.calls.map(call => call.command)).toEqual(['preview', 'context'])
+    expect(task.transitions.map(t => `${t.from}>${t.to}`)).toContain('checking>reading')
+    expect(task.transitions.map(t => `${t.from}>${t.to}`)).not.toContain('checking>executing')
+  })
   it('S2-01 假模型正常：context → stage → preview → done，状态按表推进、步骤与草稿落盘', async () => {
     const harness = await makeHarness({
       script: [

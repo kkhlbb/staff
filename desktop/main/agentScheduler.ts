@@ -430,6 +430,9 @@ export class AgentScheduler {
             })
             continue
           }
+          // A completed preview leaves checking. A following tool starts a new
+          // read/execute cycle, not an illegal checking -> executing shortcut.
+          if (entry.task.state === 'checking') await this.move(entry, 'reading')
           await this.move(entry, 'executing')
           const toolStartedAt = this.now()
           let result: ToolResult<unknown>
