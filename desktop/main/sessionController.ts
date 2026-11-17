@@ -94,6 +94,21 @@ export class SessionController {
     return sessionId === undefined ? null : this.projectService.getSession(sessionId)
   }
 
+  /** 只提交 renderer 待发送编辑，不保存、不询问；必须在会话事务锁之外等待。 */
+  async flushPendingEdits(windowId: number): Promise<IpcResult<null>> {
+    const session = this.sessionFor(windowId)
+    if (session === null) return failure('STALE_SESSION', '没有活动项目')
+    if (typeof this.ports.flushEditor !== 'function') return failure('SAVE_FAILED', '编辑屏障端口未装配，请先保存后重试')
+    try {
+      const result = await this.ports.flushEditor(windowId)
+      if (!result.ok) return result
+      return this.sessionFor(windowId) === session
+        ? result : failure('STALE_SESSION', '编辑屏障期间会话已切换')
+    } catch {
+      return failure('SAVE_FAILED', '编辑屏障失联，请先保存后重试')
+    }
+  }
+
   /** dirty 的唯一判定：已接受但未成功落盘的编辑。 */
   isDirty(session: ProjectSession): boolean {
     return session.acceptedSeq > session.savedSeq || this.projectService.hasPendingStage(session.sessionId)

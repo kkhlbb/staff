@@ -118,6 +118,7 @@ export class DesktopSessionAdapter {
   private stageTimer: ReturnType<typeof setTimeout> | null = null
   private stageInFlight: Promise<IpcResult<ProjectStageValue>> | null = null
   private unsubscribers: (() => void)[] = []
+  private bindingGeneration = 0
 
   constructor(options: DesktopAdapterOptions = {}) {
     const api = options.api ?? (globalThis as { cunlian?: CunlianApi }).cunlian
@@ -149,6 +150,7 @@ export class DesktopSessionAdapter {
   }
 
   dispose(): void {
+    this.bindingGeneration++
     for (const off of this.unsubscribers) {
       off()
     }
@@ -662,13 +664,18 @@ export class DesktopSessionAdapter {
   }
 
   private async handleFlush(requestId: string): Promise<void> {
-    await this.flushStage()
     const sessionId = this.state.sessionId
-    this.api.respondEditorFlush(
-      sessionId === null
-        ? { requestId }
-        : { requestId, sessionId, editSeq: this.state.acceptedSeq },
-    )
+    const generation = this.bindingGeneration
+    try {
+      const flushed = await this.flushStage()
+      if (!flushed.ok || generation !== this.bindingGeneration || this.state.sessionId !== sessionId || this.state.localSeq !== this.state.acceptedSeq) {
+        this.api.respondEditorFlush({ requestId, failed: true })
+        return
+      }
+      this.api.respondEditorFlush(sessionId === null ? { requestId } : { requestId, sessionId, editSeq: flushed.value.acceptedSeq })
+    } catch {
+      this.api.respondEditorFlush({ requestId, failed: true })
+    }
   }
 
   private async handleMenuAction(action: MenuAction): Promise<void> {

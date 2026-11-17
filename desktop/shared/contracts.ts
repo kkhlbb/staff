@@ -149,6 +149,8 @@ export interface EditorFlushedPayload {
   requestId: string
   sessionId?: string
   editSeq?: number
+  /** stage 失败/会话切换时只能否决屏障，不能以旧 acceptedSeq 放行。 */
+  failed?: true
 }
 
 /** 容器错误码（任务卡 §3 “容器码”）。 */

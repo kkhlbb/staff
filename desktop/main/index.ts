@@ -99,13 +99,14 @@ const closeGuard = new CloseGuard({
     const target = webContents.fromId(webContentsId)
     if (target !== undefined && !target.isDestroyed()) {
       target.send(IPC_EVENTS.editorFlush, payload)
-    }
+    } else throw new Error('编辑屏障窗口不存在')
   },
 })
 
 /** 编辑屏障：只有拿到 renderer 的 flushed 回复才返回成功。 */
 async function flushEditor(window: BrowserWindow): Promise<IpcResult<null>> {
-  const outcome = await closeGuard.requestFlush(window.webContents.id)
+  const id = window.webContents.id
+  const outcome = await closeGuard.requestSessionFlush(id, key => controllerForClose?.sessionFor(key) ?? null)
   if (!outcome.ok) {
     return { ok: false, error: outcome.error ?? { code: 'SAVE_FAILED', message: '关闭失败' } }
   }
@@ -124,10 +125,15 @@ function createWindow(): MainWindowHandle {
   const handle = createMainWindow({
     guard,
     onClosed: (webContentsId) => {
+      closeGuard.cancelWindow(webContentsId)
       windows.delete(webContentsId)
     },
   })
   const webContentsId = handle.window.webContents.id
+  handle.window.webContents.on('render-process-gone', () => closeGuard.cancelWindow(webContentsId))
+  handle.window.webContents.on('did-start-navigation', (_event, _url, _inPlace, isMainFrame) => {
+    if (isMainFrame) closeGuard.cancelWindow(webContentsId)
+  })
   windows.set(webContentsId, handle)
 
   handle.window.on('close', (event) => {
@@ -798,6 +804,7 @@ function installIpcHandlers(): void {
           requestId: z.string().min(1).max(200),
           sessionId: z.string().min(1).max(200).optional(),
           editSeq: z.number().int().nonnegative().optional(),
+          failed: z.literal(true).optional(),
         })
         .strict(),
       handle: ({ sender }, payload) => {

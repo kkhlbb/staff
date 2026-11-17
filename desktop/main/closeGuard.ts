@@ -33,7 +33,7 @@ export class CloseGuard {
   private readonly sendFlush: CloseGuardOptions['sendFlush']
   private readonly pending = new Map<
     string,
-    { webContentsId: number; finish: (outcome: FlushOutcome) => void; timer: NodeJS.Timeout }
+    { webContentsId: number; finish: (outcome: FlushOutcome) => void; timer: NodeJS.Timeout; validate?: (payload: EditorFlushedPayload) => boolean }
   >()
   private readonly closing = new Set<number>()
 
@@ -61,7 +61,14 @@ export class CloseGuard {
   }
 
   /** 发起编辑屏障并等待 renderer 回复；超时返回 EDITOR_TIMEOUT。 */
-  requestFlush(webContentsId: number): Promise<FlushOutcome> {
+  requestSessionFlush(webContentsId: number, sessionFor: (id: number) => { sessionId: string; acceptedSeq: number } | null): Promise<FlushOutcome> {
+    const session = sessionFor(webContentsId)
+    return this.requestFlush(webContentsId, payload => sessionFor(webContentsId) === session && (session === null
+      ? payload.sessionId === undefined && payload.editSeq === undefined
+      : payload.sessionId === session.sessionId && payload.editSeq === session.acceptedSeq))
+  }
+
+  requestFlush(webContentsId: number, validate?: (payload: EditorFlushedPayload) => boolean): Promise<FlushOutcome> {
     const requestId = this.newRequestId()
     return new Promise<FlushOutcome>((resolve) => {
       const finish = (outcome: FlushOutcome): void => {
@@ -90,7 +97,7 @@ export class CloseGuard {
       }, this.timeoutMs)
       timer.unref?.()
 
-      this.pending.set(requestId, { webContentsId, finish, timer })
+      this.pending.set(requestId, { webContentsId, finish, timer, validate })
 
       try {
         this.sendFlush(webContentsId, { requestId })
@@ -137,6 +144,10 @@ export class CloseGuard {
         },
       }
     }
+    if (payload.failed === true || (entry.validate !== undefined && !entry.validate(payload))) {
+      entry.finish({ ok: false, error: { code: 'STALE_EDIT', message: '编辑未提交或屏障会话/序号已失效' } })
+      return { ok: false, error: { code: 'STALE_EDIT', message: '编辑屏障失败' } }
+    }
     if (payload.editSeq !== undefined) {
       if (!Number.isSafeInteger(payload.editSeq) || payload.editSeq < 0) {
         return {
@@ -150,6 +161,14 @@ export class CloseGuard {
     }
     entry.finish({ ok: true })
     return { ok: true }
+  }
+
+  /** 窗口销毁/renderer 失联：只取消该窗口，清理计时器与绑定。 */
+  cancelWindow(webContentsId: number): void {
+    for (const entry of this.pending.values()) {
+      if (entry.webContentsId === webContentsId) entry.finish({ ok: false, error: { code: 'CANCELLED', message: '编辑屏障窗口已失联或取消' } })
+    }
+    this.closing.delete(webContentsId)
   }
 
   /** 只用于测试与窗口销毁清理：丢弃所有等待中的请求。 */

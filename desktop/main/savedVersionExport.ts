@@ -37,6 +37,13 @@ export function createSavedVersionExport(
     if (session === null) return failure('STALE_BASE', '没有活动项目')
     if (initiallyDirty) return failure('SAVE_FAILED', '有未保存修改，请先保存后导出已保存版本')
     if (!unchanged()) return cancelled()
+    // main 的 clean 不代表 renderer 没有 debounce 中的编辑。共享入口强制屏障，
+    // 不持有 projectService 会话锁（stage 必须能够接纳），也绝不自动保存。
+    const barrier = await deps.controller.flushPendingEdits(windowId)
+    if (!barrier.ok) return failure('SAVE_FAILED', `编辑屏障未完成，请先保存后重试；未导出（${barrier.error.code}）`)
+    if (deps.controller.sessionFor(windowId) !== session) return cancelled()
+    if (deps.controller.isDirty(session)) return failure('SAVE_FAILED', '有未保存修改，请先保存后导出已保存版本')
+    if (!unchanged()) return cancelled()
     if (sourcePath == null || sourceFingerprint == null) return failure('SAVE_FAILED', '当前项目尚未保存，请先保存后导出已保存版本')
     const ports = deps.exportPorts
     if (ports === undefined) return failure('UNSUPPORTED_SCOPE', '导出端口未装配')
@@ -68,6 +75,9 @@ export function createSavedVersionExport(
     const store = ports.store ?? new DrawingExportStore()
     const existing = await store.fingerprint(target)
     if (!unchanged()) return cancelled()
+    // 系统对话框/生成期间的新本地编辑也必须接纳后再复核，仍然不占事务锁。
+    const commitBarrier = await deps.controller.flushPendingEdits(windowId)
+    if (!commitBarrier.ok || !unchanged()) return cancelled()
     // 对话框与生成不占会话锁；最终落盘才加入共同事务。
     // 新编辑若先到，拒绝且零目标写入；若后到，排在导出提交后接纳。
     return deps.projectService.transaction(session.sessionId, async () => {
