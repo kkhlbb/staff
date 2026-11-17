@@ -212,6 +212,76 @@ it('two real adapters and one main guard keep separate windows/sessions isolated
   expect(s.session.acceptedSeq).toBe(0)
 })
 
+it('all programmatic mutating adapter requests explicitly reject while the edit queue is leased', async () => {
+  const s = await setup()
+  vi.useFakeTimers()
+  const acquired = await s.controller.acquireExportLease(1)
+  if (!acquired.ok) throw Error('lease required')
+  for (const method of ['newProject', 'openProject', 'importV2', 'restoreRecovery', 'saveProject', 'saveProjectAs', 'close', 'reattachSession', 'stageChange', 'applyChange', 'bindParameter', 'unbindParameter', 'restoreRevisionDraft', 'importSource', 'importSketchImage', 'ingestSketchReadings', 'stageRequirementEdit', 'runExtraction', 'decideExtraction', 'deleteExtractionDraft', 'confirmExtractionBatch', 'attestExtractionUnits', 'revokeExtractionUnits', 'confirmRequirement'] as const) {
+    await expect(Reflect.apply(s.adapter[method], s.adapter, [])).rejects.toThrow('此操作尚未执行')
+  }
+  expect(s.adapter.getState().localSeq).toBe(0)
+  acquired.value.release()
+  expect(s.adapter.getState().exportEditNotice).toBeUndefined()
+  expect(vi.getTimerCount()).toBe(0)
+})
+
+it('main deadline fails closed even before its timer callback is serviced', async () => {
+  const s = await setup()
+  const acquired = await s.controller.acquireExportLease(1)
+  if (!acquired.ok) throw Error('lease required')
+  const now = performance.now()
+  const clock = vi.spyOn(performance, 'now').mockReturnValue(now + 30_001)
+  try { expect(acquired.value.valid()).toBe(false) }
+  finally { clock.mockRestore(); acquired.value.release() }
+})
+
+it('lost acquire acknowledgement times out, replays queued edit and never leaves a permanent lock', async () => {
+  const s = await setup()
+  vi.useFakeTimers()
+  s.api.respondEditorFlush = () => {} // renderer installs lease, main never receives acknowledgement
+  const pending = s.controller.acquireExportLease(1)
+  s.adapter.edit(s.adapter.getState().snapshot!)
+  expect(s.adapter.getState().localSeq).toBe(0)
+  await vi.advanceTimersByTimeAsync(101)
+  expect(await pending).toMatchObject({ ok: false })
+  expect(s.adapter.getState()).toMatchObject({ localSeq: 1, dirty: true, exportEditNotice: undefined })
+  expect(vi.getTimerCount()).toBe(1)
+})
+
+it('lost release delivery self-expires only after main is invalid; queued edits survive', async () => {
+  const s = await setup()
+  vi.useFakeTimers()
+  const acquired = await s.controller.acquireExportLease(1)
+  if (!acquired.ok) throw Error('lease required')
+  s.onSend(payload => { if (payload.exportLease?.action === 'release') throw Error('lost release') })
+  s.adapter.edit(s.adapter.getState().snapshot!)
+  acquired.value.release()
+  expect(acquired.value.valid()).toBe(false)
+  expect(s.adapter.getState().localSeq).toBe(0)
+  await vi.advanceTimersByTimeAsync(30_001)
+  expect(s.adapter.getState()).toMatchObject({ localSeq: 1, dirty: true, exportEditNotice: undefined })
+  expect(vi.getTimerCount()).toBe(1)
+})
+
+it('in-flight old reattach receipt cannot reset the leased adapter or discard queued edits', async () => {
+  const s = await setup()
+  vi.useFakeTimers()
+  const original = s.api.reattachSession
+  let release!: () => void
+  const resume = new Promise<void>(r => { release = r })
+  s.api.reattachSession = async () => { await resume; return original() }
+  const reattaching = s.adapter.reattachSession()
+  const acquired = await s.controller.acquireExportLease(1)
+  if (!acquired.ok) throw Error('lease required')
+  s.adapter.edit(s.adapter.getState().snapshot!)
+  release()
+  await expect(reattaching).rejects.toThrow('此操作尚未执行')
+  expect(s.adapter.getState()).toMatchObject({ sessionId: s.session.sessionId, localSeq: 0 })
+  acquired.value.release()
+  expect(s.adapter.getState()).toMatchObject({ sessionId: s.session.sessionId, localSeq: 1, dirty: true })
+})
+
 it('a legacy ordinary flush acknowledgement cannot acquire an export lease', async () => {
   const s = await setup()
   s.disconnect()

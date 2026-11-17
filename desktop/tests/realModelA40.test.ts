@@ -151,7 +151,7 @@ interface Ctx {
 }
 
 async function openContext(snapshot: ProjectFileSnapshot): Promise<Ctx> {
-  const h = await createHarness({ debounceMs: 60_000 })
+  const h = await createHarness({ debounceMs: 60_000, stubExportLease: true }) // main-only IO fixture; real lease: savedExportBarrier
   harnesses.push(h)
   const approvals = new ApprovalStore({ rootDir: h.workspace })
   const service = new AgentToolService({ controller: h.controller, projectService: h.projectService, recovery: h.recovery, rootDir: h.workspace, approvals })
@@ -190,7 +190,7 @@ async function openContext(snapshot: ProjectFileSnapshot): Promise<Ctx> {
 }
 
 async function reopenContext(filePath: string): Promise<Ctx> {
-  const h = await createHarness({ debounceMs: 60_000 })
+  const h = await createHarness({ debounceMs: 60_000, stubExportLease: true }) // main-only IO fixture; real lease: savedExportBarrier
   harnesses.push(h)
   const approvals = new ApprovalStore({ rootDir: h.workspace })
   const service = new AgentToolService({ controller: h.controller, projectService: h.projectService, recovery: h.recovery, rootDir: h.workspace, approvals })

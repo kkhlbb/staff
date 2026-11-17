@@ -833,6 +833,8 @@ export class DesktopSessionAdapter {
   }
 
   private resetState(state: DesktopSessionState): void {
+    // 包括租约建立前已经发出的异步 open/reattach 回执：不能清掉排队编辑。
+    this.assertNoExportLease()
     this.state = state
     this.emit()
   }
