@@ -264,6 +264,23 @@ it('lost release delivery self-expires only after main is invalid; queued edits 
   expect(vi.getTimerCount()).toBe(1)
 })
 
+it('renderer expiry callback cannot accept queued edit while its monotonic lease deadline has not elapsed', async () => {
+  const s = await setup()
+  vi.useFakeTimers()
+  const acquired = await s.controller.acquireExportLease(1)
+  if (!acquired.ok) throw Error('lease required')
+  s.onSend(payload => { if (payload.exportLease?.action === 'release') throw Error('lost release') })
+  s.adapter.edit(s.adapter.getState().snapshot!)
+  const clock = vi.spyOn(performance, 'now').mockReturnValue(performance.now())
+  try {
+    await vi.advanceTimersByTimeAsync(30_001)
+    expect(acquired.value.valid()).toBe(false)
+    expect(s.adapter.getState().localSeq).toBe(0)
+  } finally { clock.mockRestore() }
+  await vi.advanceTimersByTimeAsync(30_000)
+  expect(s.adapter.getState()).toMatchObject({ localSeq: 1, dirty: true, exportEditNotice: undefined })
+})
+
 it('in-flight old reattach receipt cannot reset the leased adapter or discard queued edits', async () => {
   const s = await setup()
   vi.useFakeTimers()

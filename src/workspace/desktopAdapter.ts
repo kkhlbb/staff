@@ -730,7 +730,17 @@ export class DesktopSessionAdapter {
         return
       }
       // 同步安装，随后才 await flush；main 的截止时间早于本地计时开始。
-      const timer = setTimeout(() => this.releaseExportLease(requestId, exportLease.sessionId), exportLease.durationMs)
+      const deadline = performance.now() + exportLease.durationMs
+      const expire = (): void => {
+        if (this.exportLease?.requestId !== requestId) return
+        // 定时器可能按毫秒取整提前触发；本地单调时钟也到期后才可单方面接纳编辑。
+        const remaining = deadline - performance.now()
+        if (remaining > 0) {
+          this.exportLease.timer = setTimeout(expire, Math.ceil(remaining))
+          this.exportLease.timer.unref?.()
+        } else this.releaseExportLease(requestId, exportLease.sessionId)
+      }
+      const timer = setTimeout(expire, exportLease.durationMs)
       timer.unref?.()
       this.exportLease = { requestId, sessionId: exportLease.sessionId, timer, edits: [] }
       this.state = { ...this.state, exportEditNotice: '正在提交已保存版本导出；新编辑将短暂排队，结束或超时后接纳，不会自动保存。' }
