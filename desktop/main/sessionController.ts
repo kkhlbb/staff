@@ -96,7 +96,7 @@ export class SessionController {
 
   /** dirty 的唯一判定：已接受但未成功落盘的编辑。 */
   isDirty(session: ProjectSession): boolean {
-    return session.acceptedSeq > session.savedSeq
+    return session.acceptedSeq > session.savedSeq || this.projectService.hasPendingStage(session.sessionId)
   }
 
   /**
@@ -144,7 +144,7 @@ export class SessionController {
       if (!saved.ok) {
         return saved
       }
-      if (session.acceptedSeq > session.savedSeq) {
+      if (this.isDirty(session)) {
         // 保存期间产生了更高 editSeq：旧序号不能冒充已保存，重新询问。
         this.ports.log?.({
           code: 'SAVE_RACE',
@@ -247,7 +247,7 @@ export class SessionController {
         detail: '正式文件已保存，但最近项目索引更新失败',
       })
     }
-    await this.recovery.discardSaved(session.sessionId, session.savedSeq, () => session.acceptedSeq === session.savedSeq)
+    await this.recovery.discardSaved(session.sessionId, session.savedSeq, () => !this.isDirty(session))
   }
 
   /**
@@ -259,7 +259,7 @@ export class SessionController {
     if (previous !== undefined && previous !== sessionId) {
       // 先完成旧草稿清理，再登记新会话：避免恢复草稿时“清理”晚到把新草稿删掉。
       await this.recovery.discard(previous)
-      this.projectService.closeSession(previous)
+      await this.projectService.closeSession(previous)
     }
     this.active.set(windowId, sessionId)
   }
@@ -272,7 +272,7 @@ export class SessionController {
     }
     this.active.delete(windowId)
     await this.recovery.discard(sessionId)
-    this.projectService.closeSession(sessionId)
+    await this.projectService.closeSession(sessionId)
   }
 
   /** 把开放会话包装为 IPC 返回 DTO；不包含附件字节。 */

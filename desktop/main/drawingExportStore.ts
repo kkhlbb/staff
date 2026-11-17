@@ -164,7 +164,7 @@ export class DrawingExportStore {
         }
       }
 
-      // 没有 await 的最后门禁与 rename 调用相邻；之后即为文件提交点。
+      // 同步门禁不等于异步提交锁；已保存版本入口在共同会话事务内调用本方法。
       if (options.canCommit?.() === false) {
         return { ok: false, error: { code: 'BUSY', message: '导出来源已变化，已取消导出' } }
       }

@@ -259,7 +259,7 @@ describe('D 基准失效：旧 token 明确拒绝且零写入（含改后改回�
           ...session.snapshot,
           project: { ...session.snapshot.project, name },
         }
-        const staged = harness.projectService.stageFromDto(session.sessionId, session.acceptedSeq + 1, dto)
+        const staged = (await harness.projectService.stageFromDto(session.sessionId, session.acceptedSeq + 1, dto))
         expect(staged.ok).toBe(true)
       }
       expect(harness.projectService.getSession(harness.sessionId)!.acceptedSeq).toBe(2)
@@ -287,7 +287,7 @@ describe('D 基准失效：旧 token 明确拒绝且零写入（含改后改回�
             index === 0 ? { ...binding, reviewedTermRevision: 1, reviewedAt: '2026-11-09T09:30:00.000Z' } : binding,
           ),
         }
-        const staged = harness.projectService.stageFromDto(session.sessionId, session.acceptedSeq + 1, dto)
+        const staged = (await harness.projectService.stageFromDto(session.sessionId, session.acceptedSeq + 1, dto))
         expect(staged.ok).toBe(true)
       }
       const staleSource = await apply(harness, draft1, shown1, 'req-source-change')
@@ -311,7 +311,7 @@ describe('D 基准失效：旧 token 明确拒绝且零写入（含改后改回�
             },
           },
         }
-        const staged = harness.projectService.stageFromDto(session.sessionId, session.acceptedSeq + 1, dto)
+        const staged = (await harness.projectService.stageFromDto(session.sessionId, session.acceptedSeq + 1, dto))
         expect(staged.ok).toBe(true)
       }
       const staleTarget = await apply(harness, draft2, shown2, 'req-target-change')
@@ -458,11 +458,11 @@ describe('D 绑定：单环唯一、显式替换、解除不反向改参数', ()
           },
         },
       }
-      const staged = harness.projectService.stageFromDto(
+      const staged = (await harness.projectService.stageFromDto(
         session.sessionId,
         session.acceptedSeq + 1,
         dto,
-      )
+      ))
       expect(staged.ok).toBe(false)
       if (!staged.ok) expect(staged.error.code).toBe('INVALID_BINDING')
     } finally {

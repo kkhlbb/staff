@@ -280,7 +280,6 @@ function expectationDiff(before: Expectation, after: Expectation): string[] {
 export class ChangeService {
   private readonly deps: ChangeServiceDeps
   private readonly states = new Map<string, ChangeSessionState>()
-  private readonly queues = new Map<string, Promise<unknown>>()
 
   constructor(deps: ChangeServiceDeps) {
     this.deps = deps
@@ -408,6 +407,11 @@ export class ChangeService {
   }
 
   async stage(sessionId: string, request: ChangeStageRequest): Promise<ChangeResult<ChangeDraftValue>> {
+    const key = sessionId
+    return key === null ? this.stageNow(sessionId, request) : this.deps.projectService.transaction(key, () => this.stageNow(sessionId, request))
+  }
+
+  private async stageNow(sessionId: string, request: ChangeStageRequest): Promise<ChangeResult<ChangeDraftValue>> {
     const found = this.requireSession(sessionId)
     if ('error' in found) return failure(found.error.code, found.error.message, found.error.detail)
     const { session } = found
@@ -524,6 +528,11 @@ export class ChangeService {
   }
 
   async preview(sessionId: string, baseToken: string, draftToken: string): Promise<ChangeResult<ChangePreviewValue>> {
+    const key = sessionId
+    return key === null ? this.previewNow(sessionId, baseToken, draftToken) : this.deps.projectService.transaction(key, () => this.previewNow(sessionId, baseToken, draftToken))
+  }
+
+  private async previewNow(sessionId: string, baseToken: string, draftToken: string): Promise<ChangeResult<ChangePreviewValue>> {
     const found = this.requireSession(sessionId)
     if ('error' in found) return failure(found.error.code, found.error.message, found.error.detail)
     const { session } = found
@@ -693,16 +702,7 @@ export class ChangeService {
 
   /** 供 IPC 层做幂等/队列；真正提交序列化在 apply 内。 */
   private enqueue<T>(sessionId: string, task: () => Promise<T>): Promise<T> {
-    const previous = this.queues.get(sessionId) ?? Promise.resolve()
-    const next = previous.then(task, task)
-    this.queues.set(
-      sessionId,
-      next.then(
-        () => undefined,
-        () => undefined,
-      ),
-    )
-    return next
+    return this.deps.projectService.transaction(sessionId, task)
   }
 
   async apply(request: {
@@ -900,6 +900,11 @@ export class ChangeService {
   }
 
   async bind(sessionId: string, request: ChangeBindRequest): Promise<ChangeResult<ChangeDraftValue>> {
+    const key = sessionId
+    return key === null ? this.bindNow(sessionId, request) : this.deps.projectService.transaction(key, () => this.bindNow(sessionId, request))
+  }
+
+  private async bindNow(sessionId: string, request: ChangeBindRequest): Promise<ChangeResult<ChangeDraftValue>> {
     const found = this.requireSession(sessionId)
     if ('error' in found) return failure(found.error.code, found.error.message, found.error.detail)
     const { session } = found
@@ -961,6 +966,11 @@ export class ChangeService {
   }
 
   async unbind(sessionId: string, request: ChangeUnbindRequest): Promise<ChangeResult<ChangeDraftValue>> {
+    const key = sessionId
+    return key === null ? this.unbindNow(sessionId, request) : this.deps.projectService.transaction(key, () => this.unbindNow(sessionId, request))
+  }
+
+  private async unbindNow(sessionId: string, request: ChangeUnbindRequest): Promise<ChangeResult<ChangeDraftValue>> {
     const found = this.requireSession(sessionId)
     if ('error' in found) return failure(found.error.code, found.error.message, found.error.detail)
     const { session } = found
@@ -980,6 +990,11 @@ export class ChangeService {
   }
 
   async restore(sessionId: string, request: ChangeRestoreRequest): Promise<ChangeResult<ChangeRestoreValue>> {
+    const key = sessionId
+    return key === null ? this.restoreNow(sessionId, request) : this.deps.projectService.transaction(key, () => this.restoreNow(sessionId, request))
+  }
+
+  private async restoreNow(sessionId: string, request: ChangeRestoreRequest): Promise<ChangeResult<ChangeRestoreValue>> {
     const found = this.requireSession(sessionId)
     if ('error' in found) return failure(found.error.code, found.error.message, found.error.detail)
     const { session } = found
@@ -1203,6 +1218,14 @@ export class ChangeService {
     sessionId: string,
     request: RequirementEditRequest,
   ): Promise<ChangeResult<RequirementEditValue>> {
+    const key = sessionId
+    return key === null ? this.stageRequirementEditNow(sessionId, request) : this.deps.projectService.transaction(key, () => this.stageRequirementEditNow(sessionId, request))
+  }
+
+  private async stageRequirementEditNow(
+    sessionId: string,
+    request: RequirementEditRequest,
+  ): Promise<ChangeResult<RequirementEditValue>> {
     const found = this.requireSession(sessionId)
     if ('error' in found) return failure(found.error.code, found.error.message, found.error.detail)
     const { session } = found
@@ -1423,6 +1446,6 @@ export class ChangeService {
 
   resetSession(sessionId: string): void {
     this.states.delete(sessionId)
-    this.queues.delete(sessionId)
+
   }
 }

@@ -154,7 +154,7 @@ function drawingRecordOf(data: DrawingData, frameFields: {
 }
 
 export function registerDrawingChannels(ipc: IpcMainLike, deps: DrawingChannelDeps): void {
-  const ipcDeps: IpcDeps = { guard: deps.guard, log: deps.log }
+  const ipcDeps: IpcDeps = { guard: deps.guard, log: deps.log, sessionTransactions: deps.projectService }
   const busySessions = new Set<string>()
 
   function requireActive(windowId: number, sessionId: string) {
@@ -246,12 +246,12 @@ export function registerDrawingChannels(ipc: IpcMainLike, deps: DrawingChannelDe
           parameterRevision: previous.get(item.parameterId) ?? 1,
         }))
         const record = drawingRecordOf(data, frameFields)
-        const applied = deps.projectService.applySpacerDrawing(
+        const applied = (await deps.projectService.applySpacerDrawing(
           session.sessionId,
           params.baseEditSeq,
           parameters,
           record,
-        )
+        ))
         if (!applied.ok) {
           reject(applied.error.code, applied.error.message, applied.error.detail)
         }

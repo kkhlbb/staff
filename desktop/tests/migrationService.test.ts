@@ -357,10 +357,10 @@ describe('migration:commit 提交', () => {
     const opened = await h.projectService.openFile(current)
     expect(opened.ok).toBe(true)
     if (!opened.ok) return
-    const staged = h.projectService.stage(opened.value.sessionId, 1, {
+    const staged = (await h.projectService.stage(opened.value.sessionId, 1, {
       ...sample,
       project: { ...sample.project, name: '未保存的改名' },
-    })
+    }))
     expect(staged.ok).toBe(true)
     expect(h.projectService.dirtySessionCount()).toBe(1)
 

@@ -23,9 +23,10 @@ export function createSavedVersionExport(
   const acceptedSeq = session?.acceptedSeq
   const savedSeq = session?.savedSeq
   const snapshot = session?.snapshot
-  const initiallyDirty = session !== null && session.acceptedSeq !== session.savedSeq
+  const initiallyDirty = session !== null && deps.controller.isDirty(session)
   const failure = (code: 'STALE_BASE' | 'SAVE_FAILED' | 'CANCELLED' | 'TOOL_FAILED' | 'UNSUPPORTED_SCOPE', message: string): ToolResult<AgentExportValue> => ({ ok: false, code, message, requestId, objectVersion })
   const unchanged = (): boolean => session !== null
+    && !deps.controller.isDirty(session)
     && deps.controller.sessionFor(windowId) === session
     && session.acceptedSeq === acceptedSeq && session.savedSeq === savedSeq
     && session.path === sourcePath && session.fingerprint === sourceFingerprint
@@ -67,20 +68,25 @@ export function createSavedVersionExport(
     const store = ports.store ?? new DrawingExportStore()
     const existing = await store.fingerprint(target)
     if (!unchanged()) return cancelled()
-    const saved = await store.save({
-      targetPath: target, kind: format, bytes, expectedFingerprint: existing,
-      canCommit: unchanged,
-      verify: async written => {
-        if (format === 'svg') {
-          const report = validateDrawingSvgMarkup(new TextDecoder().decode(written), drawing)
-          return report.ok ? { ok: true } : { ok: false, message: report.errors.join('；') }
-        }
-        return new TextDecoder().decode(written.slice(0, 5)) === '%PDF-'
-          ? { ok: true } : { ok: false, message: '导出内容不是 PDF' }
-      },
+    // 对话框与生成不占会话锁；最终落盘才加入共同事务。
+    // 新编辑若先到，拒绝且零目标写入；若后到，排在导出提交后接纳。
+    return deps.projectService.transaction(session.sessionId, async () => {
+      if (!unchanged()) return cancelled()
+      const saved = await store.save({
+        targetPath: target, kind: format, bytes, expectedFingerprint: existing,
+        canCommit: unchanged,
+        verify: async written => {
+          if (format === 'svg') {
+            const report = validateDrawingSvgMarkup(new TextDecoder().decode(written), drawing)
+            return report.ok ? { ok: true } : { ok: false, message: report.errors.join('；') }
+          }
+          return new TextDecoder().decode(written.slice(0, 5)) === '%PDF-'
+            ? { ok: true } : { ok: false, message: '导出内容不是 PDF' }
+        },
+      })
+      if (!saved.ok) return saved.error.code === 'BUSY' && !unchanged()
+        ? cancelled() : failure('SAVE_FAILED', `${saved.error.message}（${saved.error.code}）`)
+      return { ok: true, data: { status: 'EXPORTED', fileName: path.basename(target), byteSize: bytes.byteLength, sha256: saved.value.fingerprint, revisionId }, requestId, objectVersion: revisionId }
     })
-    if (!saved.ok) return saved.error.code === 'BUSY' && !unchanged()
-      ? cancelled() : failure('SAVE_FAILED', `${saved.error.message}（${saved.error.code}）`)
-    return { ok: true, data: { status: 'EXPORTED', fileName: path.basename(target), byteSize: bytes.byteLength, sha256: saved.value.fingerprint, revisionId }, requestId, objectVersion: revisionId }
   }
 }

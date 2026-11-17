@@ -43,7 +43,7 @@ describe('FIX-06/07/08 main transactions with rendered calculation', () => {
       const session = ctx.h.projectService.getSession(ctx.opened.sessionId)!
       const basis = session.snapshot.project.relationRevision
       const draft = { ...session.snapshot.draft!, basisRelationRevision: basis, assumptions: 'my uncommitted input' }
-      expect(ctx.h.projectService.stage(session.sessionId, 1, { ...session.snapshot, draft }).ok).toBe(true)
+      expect((await ctx.h.projectService.stage(session.sessionId, 1, { ...session.snapshot, draft })).ok).toBe(true)
       const { result } = await change(ctx, '12.05')
       expect(result.ok).toBe(true)
       const after = ctx.h.projectService.getSession(session.sessionId)!.snapshot
@@ -67,7 +67,7 @@ describe('FIX-06/07/08 main transactions with rendered calculation', () => {
       const draft = structuredClone(session.snapshot.draft!)
       draft.basisRelationRevision = session.snapshot.project.relationRevision
       draft.terms[0]!.nominal = 'invalid-kept'
-      expect(ctx.h.projectService.stage(session.sessionId, 1, { ...session.snapshot, draft }).ok).toBe(true)
+      expect((await ctx.h.projectService.stage(session.sessionId, 1, { ...session.snapshot, draft })).ok).toBe(true)
       const original = structuredClone(session.snapshot)
       const disk = await fs.readFile(ctx.opened.path!)
       const { result } = await change(ctx, '12.05')

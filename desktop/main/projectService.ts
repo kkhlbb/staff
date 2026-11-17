@@ -10,6 +10,7 @@
  * 附件字节永远留在 main；返回给 renderer 的是去掉 attachments 的 DTO。
  */
 import { randomUUID } from 'node:crypto'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { decodeProjectFile, encodeProjectFile, toSnapshotDto } from '../../src/project-file/codec'
 import { assembleSnapshot } from '../../src/project-file/validation'
 import { upgradeSnapshotToV2 } from '../../src/project-file/upgrade'
@@ -114,6 +115,9 @@ export class ProjectService {
   private readonly newBackupSuffix: () => string
   private readonly sessions = new Map<string, ProjectSession>()
   private readonly queues = new Map<string, Promise<unknown>>()
+  private readonly transactionContext = new AsyncLocalStorage<{ key: string; active: boolean }>()
+  private readonly submittedSeq = new Map<string, number>()
+  private readonly conflictedStages = new Map<string, ProjectSession | SnapshotDto>()
 
   constructor(options: ProjectServiceOptions = {}) {
     this.store = options.store ?? new FileStore()
@@ -127,16 +131,23 @@ export class ProjectService {
     return this.sessions.get(sessionId) ?? null
   }
 
-  closeSession(sessionId: string): void {
-    this.sessions.delete(sessionId)
-    this.queues.delete(sessionId)
+  hasPendingStage(sessionId: string): boolean {
+    return this.submittedSeq.has(sessionId) || this.conflictedStages.has(sessionId)
+  }
+
+  async closeSession(sessionId: string): Promise<void> {
+    await this.transaction(sessionId, async () => {
+      this.sessions.delete(sessionId)
+      this.submittedSeq.delete(sessionId)
+      this.conflictedStages.delete(sessionId)
+    })
   }
 
   /** dirty gate 用：存在已接受但未成功落盘的编辑即视为有未保存工作。 */
   dirtySessionCount(): number {
     let count = 0
     for (const session of this.sessions.values()) {
-      if (session.acceptedSeq > session.savedSeq) {
+      if (session.acceptedSeq > session.savedSeq || this.hasPendingStage(session.sessionId)) {
         count += 1
       }
     }
@@ -217,7 +228,31 @@ export class ProjectService {
    * 序号必须严格大于已接受序号；草稿字段可以含无效数值字符串，但结构、引用
    * 与附件元数据必须自洽（允许缺字节声明）。main 这里不做落盘。
    */
-  stage(
+  async stage(
+    sessionId: string,
+    editSeq: number,
+    snapshot: ProjectFileSnapshot,
+  ): Promise<IpcResult<{ acceptedSeq: number }>> {
+    const received = this.sessions.get(sessionId)?.acceptedSeq
+    if (!Number.isSafeInteger(editSeq) || editSeq < 0) {
+      return ipcFailure('INVALID_REQUEST', 'editSeq 必须是非负安全整数')
+    }
+    if (received !== undefined && editSeq <= Math.max(received, this.submittedSeq.get(sessionId) ?? -1)) {
+      return ipcFailure('STALE_EDIT', '编辑序号未递增，编辑内容未被接纳；请保留编辑并刷新基准')
+    }
+    if (Number.isSafeInteger(editSeq) && editSeq >= 0) this.submittedSeq.set(sessionId, editSeq)
+    return this.transaction(sessionId, async () => {
+      const current = this.sessions.get(sessionId)?.acceptedSeq
+      // 仅重排传输序号，不合并任何业务字段。完整较新编辑拥有独立 dirty 代。
+      const nextSeq = received !== undefined && current !== undefined && editSeq > received
+        ? Math.max(editSeq, current + 1) : editSeq
+      return this.stageNow(sessionId, nextSeq, snapshot)
+    }, true).finally(() => {
+      if (this.submittedSeq.get(sessionId) === editSeq) this.submittedSeq.delete(sessionId)
+    })
+  }
+
+  private stageNow(
     sessionId: string,
     editSeq: number,
     snapshot: ProjectFileSnapshot,
@@ -252,12 +287,67 @@ export class ProjectService {
    * 其余部分走与打开/保存同一套 `assembleSnapshot` 结构、引用与数量校验，
    * 允许草稿字段是无效数值字符串，但结构必须合法。
    */
-  stageFromDto(
+  async stageFromDto(
     sessionId: string,
     editSeq: number,
     dto: Omit<ProjectFileSnapshot, 'attachments'>,
+    afterStage?: (session: ProjectSession, conflict: boolean) => Promise<void>,
+  ): Promise<IpcResult<{ acceptedSeq: number }>> {
+    const original = this.sessions.get(sessionId)
+    if (original === undefined) return ipcFailure('STALE_SESSION', '会话已失效，请重新打开项目')
+    if (!Number.isSafeInteger(editSeq) || editSeq < 0) return ipcFailure('INVALID_REQUEST', 'editSeq 必须是非负安全整数')
+    if (editSeq <= (this.submittedSeq.get(sessionId) ?? -1)
+      || (editSeq <= original.acceptedSeq && dto?.project?.currentRevisionId === original.snapshot.project.currentRevisionId)) {
+      return ipcFailure('STALE_EDIT', '编辑序号未递增，编辑内容未被接纳；请保留编辑并刷新基准')
+    }
+    let baseline = original.snapshot
+    if (dto?.project?.currentRevisionId !== baseline.project.currentRevisionId) {
+      const previousConflict = this.conflictedStages.get(sessionId)
+      const historical = baseline.fileRevisions.find(item => item.revisionId === dto?.project?.currentRevisionId)?.project
+      if (previousConflict !== undefined && 'snapshot' in previousConflict
+        && previousConflict.snapshot.project.currentRevisionId === dto?.project?.currentRevisionId) {
+        baseline = previousConflict.snapshot
+      } else if (historical?.schemaVersion === PROJECT_FILE_SCHEMA_VERSION) {
+        baseline = { ...baseline, project: historical }
+      } else {
+        this.conflictedStages.set(sessionId, dto)
+        return ipcFailure('STALE_EDIT', '编辑依据不是当前正式版本，未自动合并；界面编辑保留，原恢复数据不变，本次恢复草稿未更新，请勿关闭界面并先处理冲突')
+      }
+    }
+    // 在接收时按当时的权威字段校验、固定完整副本；排队后不与新业务状态合并。
+    const isolated = { ...original, snapshot: baseline, acceptedSeq: Math.min(original.acceptedSeq, editSeq - 1) }
+    const validated = this.stageFromDtoNow(sessionId, editSeq, dto, isolated)
+    if (!validated.ok) return validated
+    this.submittedSeq.set(sessionId, editSeq)
+    return this.transaction(sessionId, async () => {
+      const current = this.sessions.get(sessionId)
+      if (current !== original) return ipcFailure('STALE_SESSION', '会话已失效，请保留编辑并重新打开项目')
+      if (current.snapshot !== baseline) {
+        // 不覆盖已提交的业务状态，也不把 renderer 较新的整份编辑静默丢掉。
+        // 保存为独立的待解决恢复代；main dirty gate 阻止把冲突误当成已保存。
+        this.conflictedStages.set(sessionId, isolated)
+        isolated.acceptedSeq = Math.max(editSeq, current.acceptedSeq + 1)
+        if (afterStage !== undefined) await afterStage(isolated, true)
+        return ipcFailure('STALE_EDIT', '提交期间基准已变化，未自动合并；界面编辑保留，请从恢复草稿恢复为副本后处理冲突', `acceptedSeq=${current.acceptedSeq}, editSeq=${editSeq}`)
+      }
+      const accepted = this.stageNow(sessionId, editSeq, isolated.snapshot)
+      if (accepted.ok) {
+        this.conflictedStages.delete(sessionId)
+        if (afterStage !== undefined) await afterStage(current, false)
+      }
+      return accepted
+    }, true).finally(() => {
+      if (this.submittedSeq.get(sessionId) === editSeq) this.submittedSeq.delete(sessionId)
+    })
+  }
+
+  private stageFromDtoNow(
+    sessionId: string,
+    editSeq: number,
+    dto: Omit<ProjectFileSnapshot, 'attachments'>,
+    isolated?: ProjectSession,
   ): IpcResult<{ acceptedSeq: number }> {
-    const session = this.sessions.get(sessionId)
+    const session = isolated ?? this.sessions.get(sessionId)
     if (session === undefined) {
       return ipcFailure('STALE_SESSION', '会话已失效，请重新打开项目')
     }
@@ -350,7 +440,16 @@ export class ProjectService {
    * 当前 acceptedSeq，成功后序号 +1。调用方（drawing:update-spacer）负责先用
    * 同一 DrawingData 生成器重建并校验指纹。
    */
-  applySpacerDrawing(
+  async applySpacerDrawing(
+    sessionId: string,
+    baseEditSeq: number,
+    parameters: ProjectFileSpacerParameter[],
+    drawing: ProjectFileDrawingRecord,
+  ): Promise<IpcResult<{ acceptedSeq: number }>> {
+    return this.transaction(sessionId, async () => this.applySpacerDrawingNow(sessionId, baseEditSeq, parameters, drawing))
+  }
+
+  private applySpacerDrawingNow(
     sessionId: string,
     baseEditSeq: number,
     parameters: ProjectFileSpacerParameter[],
@@ -398,6 +497,16 @@ export class ProjectService {
     sessionId: string,
     request: CommitCandidateRequest,
   ): Promise<IpcResult<CommitCandidateValue>> {
+    return this.transaction(sessionId, () => this.commitCandidateNow(sessionId, request))
+  }
+
+  private async commitCandidateNow(
+    sessionId: string,
+    request: CommitCandidateRequest,
+  ): Promise<IpcResult<CommitCandidateValue>> {
+    if (this.conflictedStages.has(sessionId)) {
+      return ipcFailure('STALE_EDIT', '尚有未解决的编辑冲突，请保留编辑并先处理恢复草稿')
+    }
     const session = this.sessions.get(sessionId)
     if (session === undefined) {
       return ipcFailure('STALE_SESSION', '会话已失效，请重新打开项目')
@@ -550,7 +659,7 @@ export class ProjectService {
     if (session.path === null) {
       return ipcFailure('INVALID_REQUEST', '当前项目尚未保存过，请使用另存为')
     }
-    return this.enqueue(sessionId, async () => {
+    return this.transaction(sessionId, async () => {
       const checked = this.checkSaveRequest(session, request, true)
       if (!checked.ok) {
         return checked
@@ -565,7 +674,7 @@ export class ProjectService {
     if (session === undefined) {
       return ipcFailure('STALE_SESSION', '会话已失效，请重新打开项目')
     }
-    return this.enqueue(sessionId, async () => {
+    return this.transaction(sessionId, async () => {
       const checked = this.checkSaveRequest(session, request, false)
       if (!checked.ok) {
         return checked
@@ -595,6 +704,12 @@ export class ProjectService {
     request: SaveRequest,
     requireSessionFingerprint: boolean,
   ): IpcResult<null> {
+    if (this.conflictedStages.has(session.sessionId)) {
+      return ipcFailure('STALE_EDIT', '尚有未解决的编辑冲突；请保留界面编辑，从恢复草稿恢复为副本后保存')
+    }
+    if (this.sessions.get(session.sessionId) !== session) {
+      return ipcFailure('STALE_SESSION', '会话已失效，未保存；编辑内容应保留后重新打开项目')
+    }
     if (!Number.isSafeInteger(request.editSeq) || request.editSeq < 0) {
       return ipcFailure('INVALID_REQUEST', 'editSeq 必须是非负安全整数')
     }
@@ -722,10 +837,21 @@ export class ProjectService {
     }
   }
 
-  /** 同一会话的保存串行化；排队等待不返回 BUSY。 */
-  private enqueue<T>(key: string, task: () => Promise<T>): Promise<T> {
+  /** 同会话所有变更共用；跨会话独立。嵌套调用继承事务，不重复排队。
+   * 队列持有至正式发布及调用方恢复维护完成；拒绝不会毒化后续任务。
+   */
+  transaction<T>(key: string, task: () => Promise<T>, forceQueue = false): Promise<T> {
+    const owner = this.transactionContext.getStore()
+    if (!forceQueue && owner?.key === key && owner.active) return task()
+
     const previous = this.queues.get(key) ?? Promise.resolve()
-    const next = previous.then(task, task)
+    const run = () => {
+      const context = { key, active: true }
+      return this.transactionContext.run(context, async () => {
+        try { return await task() } finally { context.active = false }
+      })
+    }
+    const next = previous.then(run, run)
     this.queues.set(
       key,
       next.then(

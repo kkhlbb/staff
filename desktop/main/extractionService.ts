@@ -165,7 +165,6 @@ export class ExtractionService {
   private readonly extractorVersion: string
   private readonly running = new Map<number, string>()
   private readonly tokens = new Map<string, CancelToken>()
-  private readonly chains = new Map<string, Promise<unknown>>()
 
   constructor(deps: ExtractionServiceDeps) {
     this.deps = deps
@@ -176,13 +175,7 @@ export class ExtractionService {
 
   /** 同会话串行：两次提取/决定并发时不会基于同一 acceptedSeq 互相覆盖。 */
   private enqueue<T>(sessionId: string, work: () => Promise<T>): Promise<T> {
-    const previous = this.chains.get(sessionId) ?? Promise.resolve()
-    const task = previous.then(work, work)
-    this.chains.set(
-      sessionId,
-      task.catch(() => undefined),
-    )
-    return task
+    return this.deps.projectService.transaction(sessionId, work)
   }
 
   cancel(windowId: number, request: ExtractionCancelRequest): IpcResult<ExtractionCancelValue> {

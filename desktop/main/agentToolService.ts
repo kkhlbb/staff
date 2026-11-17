@@ -659,15 +659,19 @@ export class AgentToolService {
     // Capture before enqueue: edits made while waiting must cancel this request.
     const task = createSavedVersionExport(this.deps, windowId, format)
     const session = this.deps.controller.sessionFor(windowId)
-    return session === null ? task() : this.enqueue(session.sessionId, task)
+    return session === null ? task() : this.enqueueExport(session.sessionId, task)
+  }
+
+  private enqueueExport<T>(sessionId: string, task: () => Promise<T>): Promise<T> {
+    const previous = this.queues.get(sessionId) ?? Promise.resolve()
+    const next = previous.then(task, task)
+    this.queues.set(sessionId, next.then(() => undefined, () => undefined))
+    return next
   }
 
   /** 与 run 相同的串行队列；新写路径不能绕过它。 */
   private enqueue<T>(sessionId: string, task: () => Promise<T>): Promise<T> {
-    const previous = this.queues.get(sessionId) ?? Promise.resolve()
-    const next = previous.then(task, task)
-    this.queues.set(sessionId, next)
-    return next
+    return this.deps.projectService.transaction(sessionId, task)
   }
 
 
@@ -677,6 +681,14 @@ export class AgentToolService {
 
   /** 无任务书项目：建立（无会话时新建并挂接；空白项目就地转换，projectId 不变）。 */
   async createIntentProject(
+    windowId: number,
+    input: { name: string; actorId: string; sessionLabel?: string | null },
+  ): Promise<ToolResult<IntentCreateValue>> {
+    const key = this.deps.controller.sessionFor(windowId)?.sessionId ?? null
+    return key === null ? this.createIntentProjectNow(windowId, input) : this.deps.projectService.transaction(key, () => this.createIntentProjectNow(windowId, input))
+  }
+
+  private async createIntentProjectNow(
     windowId: number,
     input: { name: string; actorId: string; sessionLabel?: string | null },
   ): Promise<ToolResult<IntentCreateValue>> {
@@ -888,6 +900,16 @@ export class AgentToolService {
     args: unknown,
     turn: { userText: string; turnId: string; at: string },
   ): Promise<ToolResult<IntentDraftView>> {
+    const key = this.deps.controller.sessionFor(windowId)?.sessionId ?? null
+    return key === null ? this.runIntentToolNow(windowId, command, args, turn) : this.deps.projectService.transaction(key, () => this.runIntentToolNow(windowId, command, args, turn))
+  }
+
+  private async runIntentToolNow(
+    windowId: number,
+    command: 'setChain' | 'setRequirement' | 'setBinding',
+    args: unknown,
+    turn: { userText: string; turnId: string; at: string },
+  ): Promise<ToolResult<IntentDraftView>> {
     const requestId = randomUUID()
     const session = this.deps.controller.sessionFor(windowId)
     if (session === null) {
@@ -1022,6 +1044,14 @@ export class AgentToolService {
    * 不是全批确认：每次只确认一条，且必须带界面看到的编辑代数。
    */
   async confirmIntentCandidate(
+    windowId: number,
+    request: { candidateId: string; editRevision: number },
+  ): Promise<ToolResult<IntentDraftView>> {
+    const key = this.deps.controller.sessionFor(windowId)?.sessionId ?? null
+    return key === null ? this.confirmIntentCandidateNow(windowId, request) : this.deps.projectService.transaction(key, () => this.confirmIntentCandidateNow(windowId, request))
+  }
+
+  private async confirmIntentCandidateNow(
     windowId: number,
     request: { candidateId: string; editRevision: number },
   ): Promise<ToolResult<IntentDraftView>> {
@@ -1242,10 +1272,7 @@ export class AgentToolService {
         session.acceptedSeq = acceptedSeq
         return { ok: true, data: result.data, requestId, objectVersion }
       }
-      const previous = this.queues.get(session.sessionId) ?? Promise.resolve()
-      const next = previous.then(task, task)
-      this.queues.set(session.sessionId, next)
-      return next
+      return this.enqueue(session.sessionId, task)
     }
     if (command === 'createProject') {
       if (context?.intentIdentity === undefined) {
@@ -1300,10 +1327,7 @@ export class AgentToolService {
         return { ok: false, code: known ? error.code : 'TOOL_FAILED', message: known ? error.message : '工程工具执行失败', details: known ? error.details : undefined, requestId, objectVersion: session.snapshot.project.currentRevisionId }
       }
     }
-    const previous = this.queues.get(session.sessionId) ?? Promise.resolve()
-    const next = previous.then(task, task)
-    this.queues.set(session.sessionId, next)
-    return next
+    return this.enqueue(session.sessionId, task)
   }
 
   /**

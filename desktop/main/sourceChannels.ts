@@ -82,7 +82,7 @@ export function registerSourceChannels(ipc: IpcMainLike, deps: SourceChannelDeps
   const now = deps.now ?? (() => new Date())
   const newId = deps.newId ?? (() => randomUUID())
   const inspectPdf = deps.inspectPdf ?? ((bytes: Uint8Array) => inspectSourcePdf(bytes, { maxPages: DEFAULT_SOURCE_LIMITS.maxPages }))
-  const ipcDeps: IpcDeps = { guard: deps.guard, log: deps.log }
+  const ipcDeps: IpcDeps = { guard: deps.guard, log: deps.log, sessionTransactions: deps.projectService }
   const { controller, recovery } = deps
 
   installChannel(

@@ -57,7 +57,7 @@ describe('ProjectService 会话与保存', () => {
     const service = newService()
     const { sessionId, snapshot } = await openSample(service)
 
-    const staged = service.stage(sessionId, 1, { ...snapshot, project: { ...snapshot.project, name: '改名后的项目' } })
+    const staged = (await service.stage(sessionId, 1, { ...snapshot, project: { ...snapshot.project, name: '改名后的项目' } }))
     expect(staged.ok).toBe(true)
 
     const saved = await service.saveAs(sessionId, {
@@ -99,10 +99,10 @@ describe('ProjectService 会话与保存', () => {
     expect(session?.fingerprint).toBe(first.value.fingerprint)
 
     const snapshot = session?.snapshot as ProjectFileSnapshot
-    service.stage(session2, 1, {
+    (await service.stage(session2, 1, {
       ...snapshot,
       project: { ...snapshot.project, name: '第二次保存' },
-    })
+    }))
     const saved = await service.save(session2, {
       editSeq: 1,
       expectedFingerprint: reopened.value.fingerprint,
@@ -130,26 +130,26 @@ describe('ProjectService 会话与保存', () => {
     const service = newService()
     const { sessionId, snapshot } = await openSample(service)
 
-    const zero = service.stage(sessionId, 0, snapshot)
+    const zero = (await service.stage(sessionId, 0, snapshot))
     expect(zero.ok).toBe(false)
     if (!zero.ok) expect(zero.error.code).toBe('STALE_EDIT')
 
-    const negative = service.stage(sessionId, -1, snapshot)
+    const negative = (await service.stage(sessionId, -1, snapshot))
     expect(negative.ok).toBe(false)
     if (!negative.ok) expect(negative.error.code).toBe('INVALID_REQUEST')
 
-    const fractional = service.stage(sessionId, 1.5, snapshot)
+    const fractional = (await service.stage(sessionId, 1.5, snapshot))
     expect(fractional.ok).toBe(false)
     if (!fractional.ok) expect(fractional.error.code).toBe('INVALID_REQUEST')
 
-    const otherProject = service.stage(sessionId, 1, {
+    const otherProject = (await service.stage(sessionId, 1, {
       ...snapshot,
       project: { ...snapshot.project, id: 'other-project' },
-    })
+    }))
     expect(otherProject.ok).toBe(false)
     if (!otherProject.ok) expect(otherProject.error.code).toBe('INVALID_REQUEST')
 
-    expect(service.stage(sessionId, 1, snapshot).ok).toBe(true)
+    expect((await service.stage(sessionId, 1, snapshot)).ok).toBe(true)
   })
 
   it('保存的 editSeq 与已接受序号不一致时返回 STALE_EDIT', async () => {
@@ -160,7 +160,7 @@ describe('ProjectService 会话与保存', () => {
       expectedFingerprint: null,
       targetPath: projectPath(),
     })
-    service.stage(sessionId, 2, snapshot)
+    await service.stage(sessionId, 2, snapshot)
     const result = await service.save(sessionId, { editSeq: 1, expectedFingerprint: null })
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe('STALE_EDIT')
@@ -181,10 +181,10 @@ describe('ProjectService 会话与保存', () => {
     if (!reopened.ok) throw new Error('reopen failed')
     const session = service.getSession(reopened.value.sessionId)
     const snapshot = session?.snapshot as ProjectFileSnapshot
-    service.stage(reopened.value.sessionId, 1, {
+    (await service.stage(reopened.value.sessionId, 1, {
       ...snapshot,
       project: { ...snapshot.project, name: '本地修改' },
-    })
+    }))
 
     const externalBytes = new TextEncoder().encode('external edit')
     await fsp.writeFile(projectPath(), externalBytes)

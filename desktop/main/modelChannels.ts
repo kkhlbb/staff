@@ -223,7 +223,7 @@ export function registerModelChannels(ipc: IpcMainLike, deps: ModelChannelDeps):
   const now = deps.now ?? (() => Date.now())
   const newId = deps.newId ?? (() => randomUUID())
   const candidates = new ModelCandidates(now, newId)
-  const ipcDeps: IpcDeps = { guard: deps.guard, log: deps.log }
+  const ipcDeps: IpcDeps = { guard: deps.guard, log: deps.log, sessionTransactions: deps.projectService }
   const { controller, recovery } = deps
 
   const stageRecovery = async (

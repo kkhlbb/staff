@@ -2,6 +2,7 @@ import { it, expect } from 'vitest'
 import { FileStore, type FileOps } from '../main/fileStore'
 import { ProjectService } from '../main/projectService'
 import { createSampleSnapshot } from '../../src/project-file/__fixtures__/sampleProjectFile'
+import { decodeProjectFile } from '../../src/project-file/codec'
 
 it.each([1, 2, 3])('S02 candidate commit must not overwrite a stage after the final guard (run %s)', async () => {
   const files = new Map<string, Uint8Array>()
@@ -27,9 +28,13 @@ it.each([1, 2, 3])('S02 candidate commit must not overwrite a stage after the fi
   const commit = service.commitCandidate(id, { baseEditSeq: 0, candidate, targetPath: '/projects/test.cunlian', guard: () => { guards++; return session.acceptedSeq === 0 ? null : 'changed' } })
   await atRename
   expect(guards).toBeGreaterThanOrEqual(2)
-  expect(service.stage(id, 1, { ...snapshot, project: { ...snapshot.project, name: 'new edit' } }).ok).toBe(true)
+  const staging = service.stage(id, 1, { ...snapshot, project: { ...snapshot.project, name: 'new edit' } })
   resume()
-  await commit
+  expect((await staging).ok).toBe(true)
+  expect(await commit).toMatchObject({ ok: true, value: { acceptedSeq: 1 } })
   expect(session.snapshot.project.name).toBe('new edit')
   expect(session.acceptedSeq).toBeGreaterThan(session.savedSeq)
+  expect(session.savedSeq).toBe(1)
+  const persisted = await decodeProjectFile(files.get('/projects/test.cunlian')!)
+  expect(persisted.ok && persisted.value.snapshot.project.name).toBe('approved')
 })

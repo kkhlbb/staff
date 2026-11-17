@@ -25,6 +25,7 @@ export interface IpcMainLike {
 }
 
 export interface IpcDeps {
+  sessionTransactions?: { transaction<T>(key: string, task: () => Promise<T>): Promise<T> }
   guard: SenderGuard
   /** 记录阶段/码/匿名信息；不记录业务内容、堆栈或 PDF 字节。 */
   log?: (entry: { channel: string; code: IpcErrorCode; detail?: string }) => void
@@ -109,7 +110,10 @@ export function installChannel<P, T>(
     }
 
     try {
-      const value = await spec.handle({ sender }, parsed.data)
+      const params = parsed.data as { sessionId?: unknown }
+      const task = () => spec.handle({ sender }, parsed.data)
+      const value = await (deps.sessionTransactions !== undefined && typeof params?.sessionId === 'string'
+        ? deps.sessionTransactions.transaction(params.sessionId, task) : task())
       return { ok: true, value }
     } catch (error) {
       if (error instanceof IpcFailure) {

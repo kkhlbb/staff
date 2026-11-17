@@ -82,7 +82,7 @@ function requireSession(
 export function registerSketchChannels(ipc: IpcMainLike, deps: SketchChannelDeps): void {
   const now = deps.now ?? (() => new Date())
   const newId = deps.newId ?? (() => randomUUID())
-  const ipcDeps: IpcDeps = { guard: deps.guard, log: deps.log }
+  const ipcDeps: IpcDeps = { guard: deps.guard, log: deps.log, sessionTransactions: deps.projectService }
   const { controller, recovery } = deps
 
   installChannel(

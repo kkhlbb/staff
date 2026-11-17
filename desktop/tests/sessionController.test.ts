@@ -134,12 +134,13 @@ describe('dirty gate', () => {
     const opened = await harness.openSample()
     await stageRename(harness, opened, 1, '第一版')
     // 第一次落盘写临时文件时注入第二次编辑（editSeq=2）。
+    let staging: ReturnType<typeof stageRename> | undefined
     hook.fn = async () => {
-      const staged = await stageRename(harness as Harness, opened, 2, '第二版')
-      expect(staged.ok).toBe(true)
+      staging = stageRename(harness as Harness, opened, 2, '第二版')
     }
 
     const result = await runCloseGate(harness.controller, 1, 'close')
+    expect((await staging)?.ok).toBe(true)
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.error.code).toBe('CANCELLED')

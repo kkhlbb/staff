@@ -33,13 +33,14 @@ describe('S01 production FileStore memory-port save transaction', () => {
     const opened = service.adoptSnapshot(snapshot, mode === 'save' ? '/projects/test.cunlian' : null, fingerprint)
     if (!opened.ok) throw Error(opened.error.message)
     const id = opened.value.sessionId
-    expect(service.stage(id, 1, { ...snapshot, project: { ...snapshot.project, name: 'saving' } }).ok).toBe(true)
+    expect((await service.stage(id, 1, { ...snapshot, project: { ...snapshot.project, name: 'saving' } })).ok).toBe(true)
     const saving = mode === 'save'
       ? service.save(id, { editSeq: 1, expectedFingerprint: fingerprint })
       : service.saveAs(id, { editSeq: 1, expectedFingerprint: null, targetPath: '/projects/test.cunlian' })
     await port.atRename
-    expect(service.stage(id, 2, { ...snapshot, project: { ...snapshot.project, name: 'new edit' } }).ok).toBe(true)
+    const staging = service.stage(id, 2, { ...snapshot, project: { ...snapshot.project, name: 'new edit' } })
     port.release()
+    expect((await staging).ok).toBe(true)
     expect((await saving).ok).toBe(true)
     const session = service.getSession(id)!
     expect(session.snapshot.project.name).toBe('new edit')

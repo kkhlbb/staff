@@ -372,24 +372,27 @@ export function registerProjectChannels(ipc: IpcMainLike, deps: ProjectChannelDe
         if (snapshotByteLength(params.snapshot) > SNAPSHOT_DTO_MAX_BYTES) {
           reject('TOO_LARGE', '编辑快照超过 32 MiB 上限')
         }
-        const accepted = projectService.stageFromDto(
+        let recoveryOutcome: { state: ProjectStageValue['recovery']; warning?: string } = { state: 'failed' }
+        const accepted = await projectService.stageFromDto(
           session.sessionId,
           params.editSeq,
           params.snapshot as Omit<ProjectFileSnapshot, 'attachments'>,
+          async (current, conflict) => {
+            try {
+              recoveryOutcome = await recovery.stage(
+                current.sessionId, current.snapshot, current.acceptedSeq,
+                controller.recoveryMeta(current, current.snapshot),
+              )
+              if (conflict && recoveryOutcome.state !== 'failed') recoveryOutcome = await recovery.flush(current.sessionId)
+            } catch {
+              // 编辑已在内存接纳：恢复失败必须明示，不冒充未接纳或已持久化。
+              recoveryOutcome = { state: 'failed', warning: '编辑已保留，但恢复草稿写入失败，请立即保存项目' }
+            }
+          },
         )
         if (!accepted.ok) {
-          reject(accepted.error.code, accepted.error.message, accepted.error.detail)
+          reject(accepted.error.code, accepted.error.message, [accepted.error.detail, `恢复状态=${recoveryOutcome.state}`, recoveryOutcome.warning].filter(Boolean).join('；'))
         }
-        const current = projectService.getSession(session.sessionId)
-        if (current === null) {
-          reject('STALE_SESSION', '会话已失效，请重新打开项目')
-        }
-        const recoveryOutcome = await recovery.stage(
-          session.sessionId,
-          current.snapshot,
-          params.editSeq,
-          controller.recoveryMeta(current, current.snapshot),
-        )
         const value: ProjectStageValue = {
           acceptedSeq: accepted.value.acceptedSeq,
           recovery: recoveryOutcome.state,

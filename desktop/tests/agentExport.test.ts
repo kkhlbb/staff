@@ -62,7 +62,7 @@ describe('V4.0 阶段4：exportApprovedVersion', () => {
     const s = await setup()
     const session = s.h.projectService.getSession(s.sessionId)!
     const saved = session.snapshot
-    expect(s.h.projectService.stage(s.sessionId, 1, { ...saved, project: { ...saved.project, currentRevisionId: 'unsaved-only', drawings: [] } }).ok).toBe(true)
+    expect((await s.h.projectService.stage(s.sessionId, 1, { ...saved, project: { ...saved.project, currentRevisionId: 'unsaved-only', drawings: [] } })).ok).toBe(true)
     const result = await s.service.exportApprovedVersion(1, 'svg')
     expect(result).toMatchObject({ ok: false, code: 'SAVE_FAILED' })
     if (!result.ok) expect(result.message).toContain('先保存')

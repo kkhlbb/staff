@@ -43,14 +43,15 @@ it('S01 successful save retains the newer staged recovery draft', async () => {
     const opened = await h.openSample()
     const session = h.projectService.getSession(opened.sessionId)!
     const before = session.snapshot
-    expect(h.projectService.stage(session.sessionId, 1, { ...before, project: { ...before.project, name: 'saved' } }).ok).toBe(true)
+    expect((await h.projectService.stage(session.sessionId, 1, { ...before, project: { ...before.project, name: 'saved' } })).ok).toBe(true)
     await h.recovery.stage(session.sessionId, session.snapshot, 1, h.controller.recoveryMeta(session, session.snapshot))
     active = true
     const saving = h.controller.saveSession(session)
     await barrier
-    expect(h.projectService.stage(session.sessionId, 2, { ...before, project: { ...before.project, name: 'new recovery' } }).ok).toBe(true)
-    await h.recovery.stage(session.sessionId, session.snapshot, 2, h.controller.recoveryMeta(session, session.snapshot))
+    const staging = h.projectService.stage(session.sessionId, 2, { ...before, project: { ...before.project, name: 'new recovery' } })
     release()
+    expect((await staging).ok).toBe(true)
+    await h.recovery.stage(session.sessionId, session.snapshot, 2, h.controller.recoveryMeta(session, session.snapshot))
     expect((await saving).ok).toBe(true)
     expect(h.recovery.stateOf(session.sessionId)).not.toBe('none')
     expect((await h.recovery.flush(session.sessionId)).state).toBe('written')
