@@ -1,8 +1,7 @@
 // @vitest-environment node
 import { readFileSync, readdirSync } from 'node:fs'
-import { createHash } from 'node:crypto'
-import { execFileSync } from 'node:child_process'
 import { describe, expect, it } from 'vitest'
+import { evidenceMode, frozenEvidence, sha256, sourcePrivacyManifest, verifyEvidenceTree } from '../../scripts/source-privacy'
 import { evidenceComparisonBytes, evidenceFiles, legacyCaptures, evidenceViolations, serializeEvidence } from '../../scripts/evidence-json'
 
 function evidenceJsonFiles(directory: string): string[] {
@@ -11,7 +10,6 @@ function evidenceJsonFiles(directory: string): string[] {
     return entry.isDirectory() ? evidenceJsonFiles(path) : path.endsWith('.json') ? [path] : []
   }).sort()
 }
-const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
 const outside = evidenceJsonFiles('docs/evidence').filter((file) => !Object.hasOwn(legacyCaptures, file))
 
 const compare = (before: unknown, after: unknown, path: string) => {
@@ -66,9 +64,16 @@ describe('two-stage evidence guard', () => {
     }
   })
 
-  it.each(Object.entries(legacyCaptures))('STAGE 1 %s matches frozen SHA256', (file, expected) => {
-    expect(sha256(readFileSync(file)), `frozen SHA256: ${file}; explicitly remove the legacy entry and explain why before regenerating`).toBe(expected)
-    expect(sha256(execFileSync('git', ['show', `9fe22fd:${file}`])), `freeze source: ${file}`).toBe(expected)
+  it('authenticates all approved display mappings and historical images in the active evidence domain', () => {
+    console.log(`Evidence domain: ${evidenceMode()}; authenticated mapping/image coverage: ${Object.keys(sourcePrivacyManifest.files).length}`)
+    verifyEvidenceTree()
+  }, 60000)
+
+  it.each(Object.entries(legacyCaptures))('STAGE 1 %s authenticates original Git history OR the pinned public derivative', (file, expected) => {
+    expect(sourcePrivacyManifest.files[file].originalSha256).toBe(expected)
+    const bytes = frozenEvidence(file)
+    const domainHash = evidenceMode() === 'git-original' ? expected : sourcePrivacyManifest.files[file].publishedSha256
+    expect(sha256(bytes), `authenticated evidence domain: ${file}`).toBe(domainHash)
   })
 
   it('STAGE 2 aggregate format audit (not business-case coverage)', () => {
@@ -145,7 +150,7 @@ describe('two-stage evidence guard', () => {
   })
 
   it.each(evidenceFiles)('%s 的生产方序列化保留每个数值、布尔、null、数组长度与键', (file) => {
-    const original = JSON.parse(execFileSync('git', ['show', `9fe22fd:${file}`], { encoding: 'utf8' }))
+    const original = JSON.parse(frozenEvidence(file).toString('utf8'))
     const round = JSON.parse(serializeEvidence(original))
     compare(original, round, file)
     expect(evidenceViolations(serializeEvidence(original))).toEqual([])
