@@ -201,7 +201,7 @@ export function useDesktopSession(options: { onOpenDxf?: () => void } = {}) {
       await adapter.current?.applyDrawingMutation(value)
     },
     edit: (action: WorkspaceAction) => {
-      const current = adapter.current?.getState().snapshot
+      const current = adapter.current?.getEditingSnapshot()
       if (!current || locked.current) return
       const resolved = resolveDraft(current)
       const draft = workspaceReducer({ ...resolved.draft, basisRelationRevision: resolved.basis }, action)

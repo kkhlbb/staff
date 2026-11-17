@@ -78,7 +78,8 @@ export function DesktopWorkspace() {
       else if (!result.ok) setDxfError(`DXF 打开失败：${result.error.message}`)
     })
   }, [])
-  const snapshot = session.state?.snapshot
+  // Local input projection is separate from the snapshot frozen for saved-version export.
+  const snapshot = session.state?.editingSnapshot ?? session.state?.snapshot
   const project = snapshot?.project
   const versionLabel = uiFileVersionLabel(snapshot?.fileRevisions ?? [], project?.currentRevisionId)
   const modelVersionLabel = (id: string | null | undefined) => {

@@ -75,6 +75,8 @@ export interface DesktopSessionState {
   recovery: RecoveryWriteState | 'none'
   recoveryWarning?: string
   snapshot: SnapshotDto | null
+  /** Renderer-only queued editing projection. Never stage/export this until lease release. */
+  editingSnapshot?: SnapshotDto
   warnings: string[]
   lastError?: IpcErrorPayload
   exportEditNotice?: string
@@ -138,6 +140,11 @@ export class DesktopSessionAdapter {
     return this.state
   }
 
+  /** Every local read-modify-write must use the last queued result, not the frozen export basis. */
+  getEditingSnapshot(): SnapshotDto | null {
+    return this.state.editingSnapshot ?? this.state.snapshot
+  }
+
   private assertNoExportLease(): void {
     if (this.exportLease) throw new Error('正在提交已保存版本导出，此操作尚未执行；请在导出结束或超时后重试，排队编辑仍保留且不会自动保存')
   }
@@ -175,9 +182,11 @@ export class DesktopSessionAdapter {
       throw new Error('没有活动项目，不能提交编辑')
     }
     if (this.exportLease) {
-      // edit 是完整快照替换语义；逐项保留，不自作主张合并/保存或声称接纳。
-      this.exportLease.edits.push(structuredClone(snapshot))
-      this.state = { ...this.state, exportEditNotice: `正在提交已保存版本导出；${this.exportLease.edits.length} 次编辑已排队，提交结束或超时后接纳，不会自动保存。` }
+      // Keep full replacement semantics, but publish a separate editing projection so
+      // the next reducer reads this result. Frozen snapshot and main sequences stay untouched.
+      const queued = structuredClone(snapshot)
+      this.exportLease.edits.push(queued)
+      this.state = { ...this.state, editingSnapshot: queued, exportEditNotice: `正在提交已保存版本导出；${this.exportLease.edits.length} 次编辑已排队，提交结束或超时后接纳，不会自动保存。` }
       this.emit()
       return
     }
@@ -707,7 +716,7 @@ export class DesktopSessionAdapter {
     if (!lease || lease.requestId !== requestId || lease.sessionId !== sessionId) return
     clearTimeout(lease.timer)
     this.exportLease = null
-    this.state = { ...this.state, exportEditNotice: undefined }
+    this.state = { ...this.state, editingSnapshot: undefined, exportEditNotice: undefined }
     // 只回放原会话；切换由 main 的 dirty gate 负责，不能把旧编辑写进新项目。
     if (this.state.sessionId === sessionId) for (const snapshot of lease.edits) this.edit(snapshot)
     this.emit()

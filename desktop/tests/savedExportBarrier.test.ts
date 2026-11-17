@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest'
 import { DesktopSessionAdapter } from '../../src/workspace/desktopAdapter'
+import { resolveDraft } from '../../src/workspace/draftSync'
+import { workspaceReducer, type WorkspaceAction } from '../../src/workspace/draft'
 import { createRequirementProject } from '../../src/requirements/__fixtures__/requirementFixture'
 import type { ProjectFileSnapshot } from '../../src/project-file/types'
 import { AgentToolService } from '../main/agentToolService'
@@ -113,8 +115,15 @@ it.each(['write-failed', 'read-failed', 'exception', 'closed', 'navigation', 'ti
   await ready
   expect(s.adapter.getState().exportEditNotice).toContain('新编辑将短暂排队')
   const snapshot = s.adapter.getState().snapshot!
-  s.adapter.edit({ ...snapshot, project: { ...snapshot.project, name: 'first queued' } })
-  s.adapter.edit({ ...snapshot, project: { ...snapshot.project, name: 'second queued' } })
+  // Real hook order: resolve current editing basis and reduce each independent action.
+  for (const action of [
+    { type: 'setAssumptions', assumptions: 'FIRST EDIT MUST SURVIVE' },
+    { type: 'setTarget', targetMin: '1', targetMax: '2' },
+  ] satisfies WorkspaceAction[]) {
+    const current = s.adapter.getEditingSnapshot()!
+    const resolved = resolveDraft(current)
+    s.adapter.edit({ ...current, draft: workspaceReducer({ ...resolved.draft, basisRelationRevision: resolved.basis }, action) })
+  }
   expect(s.adapter.getState()).toMatchObject({ localSeq: 0, dirty: false, snapshot })
   expect(s.adapter.getState().exportEditNotice).toContain('2 次编辑已排队')
   await expect(s.adapter.saveProject()).rejects.toThrow('此操作尚未执行')
@@ -129,7 +138,8 @@ it.each(['write-failed', 'read-failed', 'exception', 'closed', 'navigation', 'ti
   else expect(mode).toBe('exception')
   expect(s.files.size).toBe(0)
   expect(s.adapter.getState()).toMatchObject({ dirty: true, localSeq: 2, exportEditNotice: undefined })
-  expect(s.adapter.getState().snapshot?.project.name).toBe('second queued')
+  expect(s.adapter.getState().snapshot?.draft).toMatchObject({ assumptions: 'FIRST EDIT MUST SURVIVE', targetMin: '1', targetMax: '2' })
+  expect(s.adapter.getState().editingSnapshot).toBeUndefined()
   expect(await s.h.projectService.readProjectBytes(s.session.path!)).toEqual(sourceBefore)
   // Release does not stage or save automatically; accepted/saved remain clean until debounce/explicit flush.
   expect(s.session.acceptedSeq).toBe(0)

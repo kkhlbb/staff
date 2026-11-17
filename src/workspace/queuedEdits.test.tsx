@@ -89,3 +89,27 @@ it('project snapshot edit followed by two real hook draft edits retains the comp
   expect(s.adapter.getState().snapshot?.draft).toMatchObject({ assumptions: 'FIRST EDIT MUST SURVIVE', targetMin: '1', targetMax: '2' })
   expect(s.adapter.getState().localSeq).toBe(3)
 })
+
+it('queued projection is visible immediately, survives refused reset/session switch, and clears before next session', async () => {
+  const s = await setup()
+  await act(async () => {
+    s.result.current.edit({ type: 'setAssumptions', assumptions: 'FIRST EDIT MUST SURVIVE' })
+    s.result.current.edit({ type: 'setTarget', targetMin: '1', targetMax: '2' })
+  })
+  expect(s.result.current.state?.editingSnapshot?.draft).toMatchObject({ assumptions: 'FIRST EDIT MUST SURVIVE', targetMin: '1', targetMax: '2' })
+  expect(s.result.current.state?.snapshot).toEqual(s.snapshot)
+  // resetState is also reached by a response issued before acquire; it must refuse,
+  // not clear the queue or leak a projection into a different session.
+  s.api.reattachSession.mockResolvedValueOnce({ ok: true, value: { sessionId: 'two', editSeq: 0, savedSeq: 0, snapshot: s.snapshot, path: '/other.cunlian', fingerprint: 'b'.repeat(64), recovery: 'none' } })
+  await expect(s.adapter.reattachSession()).rejects.toThrow('此操作尚未执行')
+  expect(s.adapter.getEditingSnapshot()?.draft).toMatchObject({ assumptions: 'FIRST EDIT MUST SURVIVE' })
+  await s.release()
+  expect(s.adapter.getState().editingSnapshot).toBeUndefined()
+  expect(s.adapter.getEditingSnapshot()).toBe(s.adapter.getState().snapshot)
+  await act(async () => { await s.adapter.flushStage(); await s.adapter.reattachSession() })
+  expect(s.adapter.getState()).toMatchObject({ sessionId: 'two', localSeq: 0, dirty: false })
+  expect(s.adapter.getState().editingSnapshot).toBeUndefined()
+  expect(s.adapter.getEditingSnapshot()).toEqual(s.snapshot)
+  await s.release() // old nonce/session has no effect on the new session
+  expect(s.adapter.getState()).toMatchObject({ sessionId: 'two', localSeq: 0, dirty: false })
+})
