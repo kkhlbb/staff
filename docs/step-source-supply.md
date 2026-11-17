@@ -1,5 +1,18 @@
 # STEP 窄核对应源码与告知供给索引（未获发布放行）
 
+## 0.4.2-beta 渠道与材料更新
+
+用户已批准以 GitHub Pre-release 同页提供 macOS arm64 / Windows x64 应用及对应源码材料；授权不等于已经上传，也不是许可充分性签字。
+当前正式提供状态为 PENDING_PUBLICATION_AND_DOWNLOAD_VERIFICATION，主控执行发布和远端下载核验后才能记为完成。
+TRANSITIVE_NOTICE_REVIEW 与 LGPL_LEGAL_REVIEW 保留阻塞，不作 APPROVED。
+
+本版同页资产应包括 cunlian-v0.4.2-beta-macOS-arm64.zip、cunlian-v0.4.2-beta-windows-x64.zip、cunlian-v0.4.2-beta-source.tar.gz、cunlian-v0.4.2-beta-corresponding-materials.tar、SHA256SUMS、RELEASE-NOTES.zh-CN.md。
+供给包内 README.zh-CN.md、MANIFEST.json、BINDING-macos-arm64.json、BINDING-windows-x64.json 是当前精确源码/两平台 Resources 绑定入口；不得用下述历史 0.4.1 绑定替代。
+供给包含固定 OCCT 源/补丁/wrapper/重链接对象/工具与许可证，另含 Electron 45.2.3 对应 FFmpeg 固定完整源、四补丁和目标配置。Windows 仅实验跨平台构建，未在 Windows 运行或重建工具链。
+本应用不禁止用户自用修改 LGPL 库、重链接及为调试修改而逆向工程。工具/链接成功不代替法律充分性判断。
+
+以下保留既有 0.4.1 本地供给与重建的历史说明；其中“渠道尚未批准”描述的是历史状态，不能解释为本轮授权尚未取得。
+
 本产品使用 Open CASCADE Technology 8.0.1，固定源 b8f597c677811d1f9f4d8a97f5ae2825c0353a42。
 适用原文为 LICENSE_LGPL_21.txt 和 OCCT_LGPL_EXCEPTION.txt。OCCT header exception 不等于静态库豁免。
 应用的 MIT 许可不替代第三方条款。允许用户为自用修改 LGPL 库、重新链接，以及为调试这些修改而逆向工程；本说明不添加禁止这些行为的产品限制。
