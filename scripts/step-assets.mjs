@@ -19,6 +19,7 @@ export const legalFiles = {
   'STEP-NARROW-RUNTIME-NOTICES.txt': 'licenses/STEP-NARROW-RUNTIME-NOTICES.txt',
   'STEP-TRANSITIVE-NOTICES.txt': 'licenses/STEP-TRANSITIVE-NOTICES.txt',
   'APP-RUNTIME-NOTICES.txt': 'licenses/APP-RUNTIME-NOTICES.txt',
+  'RELEASE-SUPPLEMENTAL-NOTICES.txt': 'licenses/RELEASE-SUPPLEMENTAL-NOTICES.txt',
   'ELECTRON-LICENSE.txt': 'licenses/ELECTRON-LICENSE.txt',
   'ELECTRON-CHROMIUM-LICENSES.html': 'licenses/ELECTRON-CHROMIUM-LICENSES.html',
   'SOURCE-SUPPLY.zh-CN.md': 'docs/step-source-supply.md',
