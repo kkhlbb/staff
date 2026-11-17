@@ -301,12 +301,22 @@ it('in-flight old reattach receipt cannot reset the leased adapter or discard qu
   const reattaching = s.adapter.reattachSession()
   const acquired = await s.controller.acquireExportLease(1)
   if (!acquired.ok) throw Error('lease required')
-  s.adapter.edit(s.adapter.getState().snapshot!)
+  for (const action of [
+    { type: 'setAssumptions', assumptions: 'FIRST EDIT MUST SURVIVE' },
+    { type: 'setTarget', targetMin: '1', targetMax: '2' },
+  ] satisfies WorkspaceAction[]) {
+    const current = s.adapter.getEditingSnapshot()!
+    const resolved = resolveDraft(current)
+    s.adapter.edit({ ...current, draft: workspaceReducer({ ...resolved.draft, basisRelationRevision: resolved.basis }, action) })
+  }
   release()
   await expect(reattaching).rejects.toThrow('此操作尚未执行')
   expect(s.adapter.getState()).toMatchObject({ sessionId: s.session.sessionId, localSeq: 0 })
+  expect(s.adapter.getEditingSnapshot()?.draft).toMatchObject({ assumptions: 'FIRST EDIT MUST SURVIVE', targetMin: '1', targetMax: '2' })
   acquired.value.release()
-  expect(s.adapter.getState()).toMatchObject({ sessionId: s.session.sessionId, localSeq: 1, dirty: true })
+  expect(s.adapter.getState()).toMatchObject({ sessionId: s.session.sessionId, localSeq: 2, dirty: true })
+  expect(s.adapter.getState().snapshot?.draft).toMatchObject({ assumptions: 'FIRST EDIT MUST SURVIVE', targetMin: '1', targetMax: '2' })
+  expect(s.adapter.getState().editingSnapshot).toBeUndefined()
 })
 
 it('a legacy ordinary flush acknowledgement cannot acquire an export lease', async () => {
