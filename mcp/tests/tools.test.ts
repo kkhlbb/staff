@@ -5,6 +5,7 @@
 import { mkdtemp, readFile, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { TOOLS } from '../tools/index'
 import { runCalcChain } from '../tools/calc-chain'
@@ -13,7 +14,7 @@ import { runDescribeProject } from '../tools/describe-project'
 import { runReadTaskbook } from '../tools/read-taskbook'
 import { runRenderDrawing } from '../tools/render-drawing'
 
-const ROOT = new URL('../../', import.meta.url).pathname
+const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const PDF = `${ROOT}docs/evidence/V3.5/fixtures/taskbook-2p.pdf`
 const PROJECT = `${ROOT}docs/evidence/v40-stage4/fixtures/a40-1204.cunlian`
 

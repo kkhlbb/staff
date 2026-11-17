@@ -4,6 +4,7 @@ import { promises as fsp } from 'node:fs'
 import { readFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { decodeProjectFile, encodeProjectFile, toSnapshotDto } from '../../src/project-file/codec'
 import { createSampleSnapshot } from '../../src/project-file/__fixtures__/sampleProjectFile'
@@ -30,7 +31,7 @@ afterEach(async () => {
 })
 
 function fixturePath(name: string): string {
-  return new URL(`../../src/backup/__fixtures__/${name}`, import.meta.url).pathname
+  return fileURLToPath(new URL(`../../src/backup/__fixtures__/${name}`, import.meta.url))
 }
 
 function fixtureBytes(name: string): Uint8Array {

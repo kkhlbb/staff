@@ -6,9 +6,10 @@
  */
 import { spawn } from 'node:child_process'
 import { createInterface } from 'node:readline'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-const ROOT = new URL('../../', import.meta.url).pathname
+const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 
 interface Frame {
   jsonrpc?: unknown
