@@ -134,10 +134,22 @@ it('authorized newer aggregate from an already pending mutation survives a prece
   ;(api as unknown as CunlianApi).applyChange = vi.fn(() => mutation.promise)
   const applying = a.applyChange({} as Parameters<DesktopSessionAdapter['applyChange']>[0])
   save.resolve({ ok: true, value: { path: '/saved.cunlian', fingerprint: 'b'.repeat(64), savedSeq: 0, warnings: [] } }); await saving
-  const value = { snapshot: { ...open.snapshot, project: { ...open.snapshot.project, name: 'NEW AGGREGATE' } }, acceptedSeq: 1, savedSeq: 1, path: '/saved.cunlian', fingerprint: 'c'.repeat(64), warnings: [] }
+  const value = { revisionId: 'revision-new', analysisSnapshotId: 'analysis-new', recovery: 'none' as const, snapshot: { ...open.snapshot, project: { ...open.snapshot.project, name: 'NEW AGGREGATE' } }, acceptedSeq: 1, savedSeq: 1, path: '/saved.cunlian', fingerprint: 'c'.repeat(64), warnings: [] }
   mutation.resolve({ ok: true, value } as Awaited<ReturnType<DesktopSessionAdapter['applyChange']>>)
   expect((await applying).ok).toBe(true)
   expect(a.getState()).toMatchObject({ snapshot: value.snapshot, acceptedSeq: 1, savedSeq: 1, fingerprint: value.fingerprint, dirty: false })
+})
+
+it.each([false, true])('pending reattach accepts a genuinely newer main aggregate only without intervening edit=%s', async interveningEdit => {
+  const { a, api, receipt, edit } = await setup()
+  const d = deferred<typeof receipt>(); api.reattachSession.mockReturnValueOnce(d.promise)
+  const pending = a.reattachSession()
+  await a.applyModelMutation({ snapshot: receipt.value.snapshot, acceptedSeq: 1, recovery: 'pending' })
+  if (interveningEdit) edit()
+  d.resolve({ ...receipt, value: { ...receipt.value, editSeq: 3, savedSeq: 3 } })
+  expect((await pending).ok).toBe(!interveningEdit)
+  if (interveningEdit) expect(a.getState()).toMatchObject({ localSeq: 2, acceptedSeq: 1, dirty: true, snapshot: { project: { name: 'QUEUED_EDIT' } } })
+  else expect(a.getState()).toMatchObject({ localSeq: 3, acceptedSeq: 3, savedSeq: 3, dirty: false })
 })
 
 it('explicit main-authorized open survives a preceding authoritative model receipt', async () => {

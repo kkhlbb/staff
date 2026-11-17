@@ -148,16 +148,23 @@ export class DesktopSessionAdapter {
       pendingEdits: this.state.localSeq > this.state.acceptedSeq, reset: this.resetRequestGeneration }
   }
 
-  private responseError(ticket: ResponseTicket, mode: 'open' | 'reset' | 'mutation' | 'save'): IpcErrorPayload | undefined {
+  private responseError(ticket: ResponseTicket, mode: 'open' | 'reset' | 'mutation' | 'save', aggregateSeq?: number): IpcErrorPayload | undefined {
     // Keep the explicit lease rejection, but never use that instantaneous lock as
     // the lifetime freshness test. A released lease may already have replayed edits.
     if (mode === 'reset' || mode === 'open') this.assertNoExportLease()
     const identityChanged = ticket.binding !== this.bindingGeneration || ticket.sessionId !== this.state.sessionId
     const editsChanged = mode !== 'save' && (ticket.edits !== this.editGeneration ||
       (mode !== 'open' && ticket.pendingEdits))
-    if (identityChanged || editsChanged || ticket.authority !== this.authorityGeneration ||
-        (mode === 'reset' && ticket.recovery !== this.recoveryGeneration) ||
-        ticket.reset !== this.resetRequestGeneration || (mode !== 'save' && this.exportLease)) {
+    // Main can serialize a genuine commit after a save that completed while this
+    // request was pending. A strictly newer aggregate is not an old read receipt.
+    // Never use this exception for intervening local edits or identity changes.
+    const newerAggregate = aggregateSeq !== undefined && aggregateSeq > this.state.acceptedSeq &&
+      this.state.localSeq === this.state.acceptedSeq
+    const authorityChanged = mode !== 'open' && !newerAggregate && ticket.authority !== this.authorityGeneration
+    if (identityChanged || editsChanged || authorityChanged ||
+        (mode === 'reset' && !newerAggregate && ticket.recovery !== this.recoveryGeneration) ||
+        ((mode === 'open' || mode === 'reset') && ticket.reset !== this.resetRequestGeneration) ||
+        (mode !== 'save' && this.exportLease)) {
       const error: IpcErrorPayload = { code: 'STALE_SESSION', message: '异步响应已过期；当前编辑与恢复信息已保留，请核对后重试或重新打开项目。' }
       if (!identityChanged && editsChanged) {
         this.state = { ...this.state, lastError: error }
@@ -407,7 +414,7 @@ export class DesktopSessionAdapter {
     this.assertNoExportLease()
     const ticket = this.responseTicket(true)
     const result = await this.api.reattachSession()
-    const stale = this.responseError(ticket, 'reset')
+    const stale = this.responseError(ticket, 'reset', result.ok && 'sessionId' in result.value ? result.value.editSeq : undefined)
     if (stale) return { ok: false as const, error: stale }
     if (result.ok) this.authorityGeneration++
     if (result.ok && 'sessionId' in result.value) {
@@ -486,7 +493,7 @@ export class DesktopSessionAdapter {
     this.assertNoExportLease()
     const ticket = this.responseTicket(false)
     const result = await this.api.applyChange(request)
-    const stale = this.responseError(ticket, 'mutation')
+    const stale = this.responseError(ticket, 'mutation', result.ok ? result.value.acceptedSeq : undefined)
     if (stale) return { ok: false as const, error: stale }
     if (result.ok) this.authorityGeneration++
     if (result.ok) {
@@ -542,7 +549,7 @@ export class DesktopSessionAdapter {
     this.assertNoExportLease()
     const ticket = this.responseTicket(false)
     const result = await this.api.importSource(request)
-    const stale = this.responseError(ticket, 'mutation')
+    const stale = this.responseError(ticket, 'mutation', result.ok ? result.value.acceptedSeq : undefined)
     if (stale) return { ok: false as const, error: stale }
     if (result.ok) this.authorityGeneration++
     if (result.ok) {
@@ -573,7 +580,7 @@ export class DesktopSessionAdapter {
     this.assertNoExportLease()
     const ticket = this.responseTicket(false)
     const result = await this.api.importSketchImage(request)
-    const stale = this.responseError(ticket, 'mutation')
+    const stale = this.responseError(ticket, 'mutation', result.ok ? result.value.acceptedSeq : undefined)
     if (stale) return { ok: false as const, error: stale }
     if (result.ok) this.authorityGeneration++
     if (result.ok) {
@@ -601,7 +608,7 @@ export class DesktopSessionAdapter {
     this.assertNoExportLease()
     const ticket = this.responseTicket(false)
     const result = await this.api.ingestSketchReadings(request)
-    const stale = this.responseError(ticket, 'mutation')
+    const stale = this.responseError(ticket, 'mutation', result.ok ? result.value.acceptedSeq : undefined)
     if (stale) return { ok: false as const, error: stale }
     if (result.ok) this.authorityGeneration++
     if (result.ok) {
@@ -636,7 +643,7 @@ export class DesktopSessionAdapter {
     this.assertNoExportLease()
     const ticket = this.responseTicket(false)
     const result = await this.api.runExtraction(request)
-    const stale = this.responseError(ticket, 'mutation')
+    const stale = this.responseError(ticket, 'mutation', result.ok ? result.value.acceptedSeq : undefined)
     if (stale) return { ok: false as const, error: stale }
     if (result.ok) this.authorityGeneration++
     if (result.ok) {
@@ -665,7 +672,7 @@ export class DesktopSessionAdapter {
     this.assertNoExportLease()
     const ticket = this.responseTicket(false)
     const result = await this.api.decideExtraction(request)
-    const stale = this.responseError(ticket, 'mutation')
+    const stale = this.responseError(ticket, 'mutation', result.ok ? result.value.acceptedSeq : undefined)
     if (stale) return { ok: false as const, error: stale }
     if (result.ok) this.authorityGeneration++
     if (result.ok) {
@@ -701,7 +708,7 @@ export class DesktopSessionAdapter {
     this.assertNoExportLease()
     const ticket = this.responseTicket(false)
     const result = await this.api.deleteExtractionDraft(request)
-    const stale = this.responseError(ticket, 'mutation')
+    const stale = this.responseError(ticket, 'mutation', result.ok ? result.value.acceptedSeq : undefined)
     if (stale) return { ok: false as const, error: stale }
     if (result.ok) this.authorityGeneration++
     if (result.ok) {
@@ -760,7 +767,7 @@ export class DesktopSessionAdapter {
     }
     const ticket = this.responseTicket()
     const result = await api.confirmExtractionBatch(request)
-    const stale = this.responseError(ticket, 'mutation')
+    const stale = this.responseError(ticket, 'mutation', result.ok ? result.value.acceptedSeq : undefined)
     if (stale) return { ok: false as const, error: stale }
     if (result.ok) this.authorityGeneration++
     return this.applyBatchResult(result)
@@ -777,7 +784,7 @@ export class DesktopSessionAdapter {
     }
     const ticket = this.responseTicket()
     const result = await api.attestExtractionUnits(request)
-    const stale = this.responseError(ticket, 'mutation')
+    const stale = this.responseError(ticket, 'mutation', result.ok ? result.value.acceptedSeq : undefined)
     if (stale) return { ok: false as const, error: stale }
     if (result.ok) this.authorityGeneration++
     return this.applyBatchResult(result)
@@ -794,7 +801,7 @@ export class DesktopSessionAdapter {
     }
     const ticket = this.responseTicket()
     const result = await api.revokeExtractionUnits(request)
-    const stale = this.responseError(ticket, 'mutation')
+    const stale = this.responseError(ticket, 'mutation', result.ok ? result.value.acceptedSeq : undefined)
     if (stale) return { ok: false as const, error: stale }
     if (result.ok) this.authorityGeneration++
     return this.applyBatchResult(result)
@@ -807,7 +814,7 @@ export class DesktopSessionAdapter {
     this.assertNoExportLease()
     const ticket = this.responseTicket(false)
     const result = await this.api.confirmRequirement(request)
-    const stale = this.responseError(ticket, 'mutation')
+    const stale = this.responseError(ticket, 'mutation', result.ok ? result.value.acceptedSeq : undefined)
     if (stale) return { ok: false as const, error: stale }
     if (result.ok) this.authorityGeneration++
     if (result.ok) {
