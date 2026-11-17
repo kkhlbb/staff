@@ -113,6 +113,16 @@ const INITIAL_STATE: DesktopSessionState = {
   warnings: [],
 }
 
+interface ResponseTicket {
+  binding: number
+  sessionId: string | null
+  edits: number
+  authority: number
+  recovery: number
+  pendingEdits: boolean
+  reset: number
+}
+
 export class DesktopSessionAdapter {
   private readonly api: CunlianApi
   private readonly stageDelayMs: number
@@ -123,6 +133,40 @@ export class DesktopSessionAdapter {
   private stageInFlight: Promise<IpcResult<ProjectStageValue>> | null = null
   private unsubscribers: (() => void)[] = []
   private bindingGeneration = 0
+  private sessionGeneration = 0
+  // Monotonic across reset/dispose: localSeq is a per-session main protocol number,
+  // not a safe freshness token (queued edits do not advance it until release).
+  private editGeneration = 0
+  private authorityGeneration = 0
+  private recoveryGeneration = 0
+  private resetRequestGeneration = 0
+
+  private responseTicket(reset = false): ResponseTicket {
+    if (reset) this.resetRequestGeneration++
+    return { binding: this.bindingGeneration, sessionId: this.state.sessionId,
+      edits: this.editGeneration, authority: this.authorityGeneration, recovery: this.recoveryGeneration,
+      pendingEdits: this.state.localSeq > this.state.acceptedSeq, reset: this.resetRequestGeneration }
+  }
+
+  private responseError(ticket: ResponseTicket, mode: 'open' | 'reset' | 'mutation' | 'save'): IpcErrorPayload | undefined {
+    // Keep the explicit lease rejection, but never use that instantaneous lock as
+    // the lifetime freshness test. A released lease may already have replayed edits.
+    if (mode === 'reset' || mode === 'open') this.assertNoExportLease()
+    const identityChanged = ticket.binding !== this.bindingGeneration || ticket.sessionId !== this.state.sessionId
+    const editsChanged = mode !== 'save' && (ticket.edits !== this.editGeneration ||
+      (mode !== 'open' && ticket.pendingEdits))
+    if (identityChanged || editsChanged || ticket.authority !== this.authorityGeneration ||
+        (mode === 'reset' && ticket.recovery !== this.recoveryGeneration) ||
+        ticket.reset !== this.resetRequestGeneration || (mode !== 'save' && this.exportLease)) {
+      const error: IpcErrorPayload = { code: 'STALE_SESSION', message: '异步响应已过期；当前编辑与恢复信息已保留，请核对后重试或重新打开项目。' }
+      if (!identityChanged && editsChanged) {
+        this.state = { ...this.state, lastError: error }
+        this.emit()
+      }
+      return error
+    }
+    return undefined
+  }
   private exportLease: { requestId: string; sessionId: string; timer: ReturnType<typeof setTimeout>; edits: SnapshotDto[] } | null = null
 
   constructor(options: DesktopAdapterOptions = {}) {
@@ -181,6 +225,7 @@ export class DesktopSessionAdapter {
     if (this.state.status !== 'open') {
       throw new Error('没有活动项目，不能提交编辑')
     }
+    this.editGeneration++
     if (this.exportLease) {
       // Keep full replacement semantics, but publish a separate editing projection so
       // the next reducer reads this result. Frozen snapshot and main sequences stay untouched.
@@ -202,6 +247,8 @@ export class DesktopSessionAdapter {
 
   /** 立即提交最新编辑；保存/关闭/屏障前必须等待它完成。 */
   async flushStage(): Promise<IpcResult<{ acceptedSeq: number }>> {
+    const binding = this.bindingGeneration
+    const sessionGeneration = this.sessionGeneration
     if (this.stageTimer !== null) {
       clearTimeout(this.stageTimer)
       this.stageTimer = null
@@ -213,6 +260,9 @@ export class DesktopSessionAdapter {
     if (this.stageInFlight !== null) {
       await this.stageInFlight
     }
+    if (binding !== this.bindingGeneration || sessionGeneration !== this.sessionGeneration) {
+      return { ok: false, error: { code: 'STALE_SESSION', message: '等待 stage 期间会话已变更' } }
+    }
     while (this.state.localSeq > this.state.acceptedSeq && this.state.snapshot !== null) {
       const seq = this.state.localSeq
       const snapshot = this.state.snapshot
@@ -220,12 +270,13 @@ export class DesktopSessionAdapter {
       this.stageInFlight = inFlight
       try {
         const staged = await inFlight
+        if (binding !== this.bindingGeneration || sessionGeneration !== this.sessionGeneration || sessionId !== this.state.sessionId) {
+          return { ok: false, error: { code: 'STALE_SESSION', message: 'stage 响应所属会话已变更，未应用到当前项目' } }
+        }
+        this.recoveryGeneration++
         if (!staged.ok) {
           this.state = { ...this.state, lastError: staged.error, dirty: true }
           this.emit()
-          if (staged.error.code === 'STALE_SESSION') {
-            this.reset()
-          }
           return { ok: false, error: staged.error }
         }
         this.state = {
@@ -234,7 +285,7 @@ export class DesktopSessionAdapter {
           recovery: staged.value.recovery,
           recoveryWarning: staged.value.warning,
           lastError: undefined,
-          dirty: staged.value.acceptedSeq > this.state.savedSeq,
+          dirty: this.state.localSeq > this.state.savedSeq,
         }
         this.emit()
       } finally {
@@ -246,14 +297,22 @@ export class DesktopSessionAdapter {
 
   async newProject(name: string, template: 'empty' | 'chain-demo'): Promise<IpcResult<ProjectOpenValue>> {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(true)
     const result = await this.api.newProject({ name, template })
+    const stale = this.responseError(ticket, 'open')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     this.applyOpen(result)
     return result
   }
 
   async openProject(recentId?: string): Promise<IpcResult<ProjectOpenValue>> {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(true)
     const result = await this.api.openProject(recentId === undefined ? {} : { recentId })
+    const stale = this.responseError(ticket, 'open')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     this.applyOpen(result)
     return result
   }
@@ -261,14 +320,22 @@ export class DesktopSessionAdapter {
   /** 迁移成功后接入 main 返回的唯一会话，不另建本地副本。 */
   async importV2(importToken: string, projectId: string): Promise<IpcResult<ProjectOpenValue>> {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(true)
     const result = await this.api.commitV2({ importToken, projectId })
+    const stale = this.responseError(ticket, 'open')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     this.applyOpen(result)
     return result
   }
 
   async restoreRecovery(recoveryId: string): Promise<IpcResult<ProjectOpenValue>> {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(true)
     const result = await this.api.restoreRecovery({ recoveryId })
+    const stale = this.responseError(ticket, 'open')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     this.applyOpen(result)
     return result
   }
@@ -276,19 +343,26 @@ export class DesktopSessionAdapter {
   /** ⌘S：先 flush 本地编辑，再保存；main 校验 editSeq 与指纹。 */
   async saveProject(): Promise<IpcResult<ProjectSaveValue>> {
     this.assertNoExportLease()
+    const intent = this.responseTicket()
     const flushed = await this.flushStage()
     if (!flushed.ok) {
       return flushed
     }
+    const obsoleteIntent = this.responseError(intent, 'save')
+    if (obsoleteIntent) return { ok: false, error: obsoleteIntent }
     const sessionId = this.state.sessionId
     if (sessionId === null) {
       return { ok: false, error: { code: 'STALE_SESSION', message: '没有活动项目' } }
     }
+    const ticket = this.responseTicket(false)
     const result = await this.api.saveProject({
       sessionId,
       editSeq: this.state.acceptedSeq,
       expectedFingerprint: this.state.fingerprint,
     })
+    const stale = this.responseError(ticket, 'save')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     this.applySave(result)
     return result
   }
@@ -296,18 +370,25 @@ export class DesktopSessionAdapter {
   /** ⇧⌘S：先 flush，再让 main 取新目标。 */
   async saveProjectAs(): Promise<IpcResult<ProjectSaveValue>> {
     this.assertNoExportLease()
+    const intent = this.responseTicket()
     const flushed = await this.flushStage()
     if (!flushed.ok) {
       return flushed
     }
+    const obsoleteIntent = this.responseError(intent, 'save')
+    if (obsoleteIntent) return { ok: false, error: obsoleteIntent }
     const sessionId = this.state.sessionId
     if (sessionId === null) {
       return { ok: false, error: { code: 'STALE_SESSION', message: '没有活动项目' } }
     }
+    const ticket = this.responseTicket(false)
     const result = await this.api.saveProjectAs({
       sessionId,
       editSeq: this.state.acceptedSeq,
     })
+    const stale = this.responseError(ticket, 'save')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     this.applySave(result)
     return result
   }
@@ -324,7 +405,11 @@ export class DesktopSessionAdapter {
 
   async reattachSession() {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(true)
     const result = await this.api.reattachSession()
+    const stale = this.responseError(ticket, 'reset')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     if (result.ok && 'sessionId' in result.value) {
       const value = result.value
       this.resetState({
@@ -353,6 +438,8 @@ export class DesktopSessionAdapter {
     recovery: RecoveryWriteState | 'none'
     warning?: string
   }): Promise<void> {
+    this.assertNoExportLease()
+    this.authorityGeneration++
     // model:commit/link 已在 main 内完成原子提交；这里只做权威状态重同步，
     // 不把旧 DTO 回写，也不自行把 pending 关联改成已核对。
     this.state = {
@@ -397,7 +484,11 @@ export class DesktopSessionAdapter {
   /** 确认成功后一次性重同步权威快照；失败保留当前编辑与草稿。 */
   async applyChange(request: ChangeApplyRequest): Promise<IpcResult<ChangeApplyValue>> {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(false)
     const result = await this.api.applyChange(request)
+    const stale = this.responseError(ticket, 'mutation')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     if (result.ok) {
       this.state = {
         ...this.state,
@@ -449,7 +540,11 @@ export class DesktopSessionAdapter {
 
   async importSource(request: SourceImportRequest): Promise<IpcResult<SourceImportValue>> {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(false)
     const result = await this.api.importSource(request)
+    const stale = this.responseError(ticket, 'mutation')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     if (result.ok) {
       this.state = {
         ...this.state,
@@ -476,7 +571,11 @@ export class DesktopSessionAdapter {
     baseEditSeq: number
   }): Promise<IpcResult<SketchImageImportValue>> {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(false)
     const result = await this.api.importSketchImage(request)
+    const stale = this.responseError(ticket, 'mutation')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     if (result.ok) {
       this.state = {
         ...this.state,
@@ -500,7 +599,11 @@ export class DesktopSessionAdapter {
     request: SketchIngestRequest,
   ): Promise<IpcResult<SketchIngestValue>> {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(false)
     const result = await this.api.ingestSketchReadings(request)
+    const stale = this.responseError(ticket, 'mutation')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     if (result.ok) {
       this.state = {
         ...this.state,
@@ -531,7 +634,11 @@ export class DesktopSessionAdapter {
   /** 提取只更新会话快照里的隔离草稿；不自动保存项目文件。 */
   async runExtraction(request: ExtractionRunRequest): Promise<IpcResult<ExtractionRunValue>> {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(false)
     const result = await this.api.runExtraction(request)
+    const stale = this.responseError(ticket, 'mutation')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     if (result.ok) {
       this.state = {
         ...this.state,
@@ -556,7 +663,11 @@ export class DesktopSessionAdapter {
     request: ExtractionDecideRequest,
   ): Promise<IpcResult<ExtractionDecideValue>> {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(false)
     const result = await this.api.decideExtraction(request)
+    const stale = this.responseError(ticket, 'mutation')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     if (result.ok) {
       this.state = {
         ...this.state,
@@ -588,7 +699,11 @@ export class DesktopSessionAdapter {
     request: ExtractionDeleteDraftRequest,
   ): Promise<IpcResult<ExtractionDeleteDraftValue>> {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(false)
     const result = await this.api.deleteExtractionDraft(request)
+    const stale = this.responseError(ticket, 'mutation')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     if (result.ok) {
       this.state = {
         ...this.state,
@@ -643,7 +758,12 @@ export class DesktopSessionAdapter {
     if (api.confirmExtractionBatch === undefined) {
       return { ok: false, error: { code: 'UNSUPPORTED_VERSION', message: '当前 preload 未提供批量确认' } }
     }
-    return this.applyBatchResult(await api.confirmExtractionBatch(request))
+    const ticket = this.responseTicket()
+    const result = await api.confirmExtractionBatch(request)
+    const stale = this.responseError(ticket, 'mutation')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
+    return this.applyBatchResult(result)
   }
 
   /** L2：批量补单位（只对“仅差单位”）。 */
@@ -655,7 +775,12 @@ export class DesktopSessionAdapter {
     if (api.attestExtractionUnits === undefined) {
       return { ok: false, error: { code: 'UNSUPPORTED_VERSION', message: '当前 preload 未提供批量补单位' } }
     }
-    return this.applyBatchResult(await api.attestExtractionUnits(request))
+    const ticket = this.responseTicket()
+    const result = await api.attestExtractionUnits(request)
+    const stale = this.responseError(ticket, 'mutation')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
+    return this.applyBatchResult(result)
   }
 
   /** L2：撤销补单位（整批或逐条）。 */
@@ -667,7 +792,12 @@ export class DesktopSessionAdapter {
     if (api.revokeExtractionUnits === undefined) {
       return { ok: false, error: { code: 'UNSUPPORTED_VERSION', message: '当前 preload 未提供撤销补单位' } }
     }
-    return this.applyBatchResult(await api.revokeExtractionUnits(request))
+    const ticket = this.responseTicket()
+    const result = await api.revokeExtractionUnits(request)
+    const stale = this.responseError(ticket, 'mutation')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
+    return this.applyBatchResult(result)
   }
 
   /** 条款确认已由 main 原子写盘；成功只重同步权威快照与保存状态。 */
@@ -675,7 +805,11 @@ export class DesktopSessionAdapter {
     request: RequirementConfirmRequest,
   ): Promise<IpcResult<RequirementConfirmValue>> {
     this.assertNoExportLease()
+    const ticket = this.responseTicket(false)
     const result = await this.api.confirmRequirement(request)
+    const stale = this.responseError(ticket, 'mutation')
+    if (stale) return { ok: false as const, error: stale }
+    if (result.ok) this.authorityGeneration++
     if (result.ok) {
       this.state = {
         ...this.state,
@@ -777,8 +911,11 @@ export class DesktopSessionAdapter {
     switch (action) {
       case 'new': {
         if (this.handlers.newProject !== undefined) {
+          const ticket = this.responseTicket(true)
           const value = await this.handlers.newProject()
+          if (this.responseError(ticket, 'open')) break
           if (value !== null) {
+            this.authorityGeneration++
             this.attachOpen(value)
           }
         }
@@ -840,20 +977,19 @@ export class DesktopSessionAdapter {
       fingerprint: result.value.fingerprint,
       savedSeq: result.value.savedSeq,
       saveStateKnown: true,
-      dirty: this.state.acceptedSeq > result.value.savedSeq,
+      dirty: this.state.localSeq > result.value.savedSeq,
       warnings: result.value.warnings,
       lastError: undefined,
     }
     this.emit()
   }
 
-  private reset(): void {
-    this.resetState({ ...INITIAL_STATE })
-  }
-
   private resetState(state: DesktopSessionState): void {
     // 包括租约建立前已经发出的异步 open/reattach 回执：不能清掉排队编辑。
     this.assertNoExportLease()
+    this.authorityGeneration++
+    this.sessionGeneration++
+    if (this.stageTimer !== null) { clearTimeout(this.stageTimer); this.stageTimer = null }
     this.state = state
     this.emit()
   }

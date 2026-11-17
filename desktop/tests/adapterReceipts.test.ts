@@ -15,7 +15,7 @@ afterEach(() => { for (const a of adapters.splice(0)) a.dispose(); vi.useRealTim
 async function setup() {
   const snapshot = toSnapshotDto(await createSampleSnapshot())
   const open: ProjectOpenValue = { sessionId: 'one', editSeq: 0, snapshot, path: '/one.cunlian', fingerprint: 'a'.repeat(64), warnings: [] }
-  const receipt = { ok: true as const, value: { ...open, savedSeq: 0, recovery: 'none' as const } }
+  const receipt = { ok: true as const, value: { ...open, editSeq: 0 as number, savedSeq: 0 as number, recovery: 'none' as const } }
   const api = {
     reattachSession: vi.fn(async () => receipt),
     openProject: vi.fn(async () => ({ ok: true as const, value: open })),
@@ -88,6 +88,41 @@ it('explicit open new session is legal, but edit during pending open is retained
   const pending = a.openProject(); edit(); d.resolve({ ok: true, value: open })
   expect((await pending).ok).toBe(false)
   expect(a.getState()).toMatchObject({ sessionId: 'two', dirty: true, snapshot: { project: { name: 'QUEUED_EDIT' } } })
+})
+
+it('open permits its own dirty-gate stage, while passive reattach protects pending edits', async () => {
+  const { a, api, open, receipt, edit } = await setup()
+  edit()
+  expect((await a.reattachSession()).ok).toBe(false)
+  expect(a.getState().snapshot?.project.name).toBe('QUEUED_EDIT')
+  const d = deferred<IpcResult<ProjectOpenValue>>()
+  api.openProject.mockReturnValueOnce(d.promise as ReturnType<typeof api.openProject>)
+  const opening = a.openProject()
+  await a.flushStage() // real dirty-gate flush belongs to the open intent, not an intervening edit
+  d.resolve({ ok: true, value: { ...open, sessionId: 'two' } })
+  expect((await opening).ok).toBe(true)
+  expect(a.getState()).toMatchObject({ sessionId: 'two', dirty: false, localSeq: 0 })
+  api.reattachSession.mockResolvedValueOnce({ ...receipt, value: { ...receipt.value, sessionId: 'two', editSeq: 9, savedSeq: 9 } })
+  expect((await a.reattachSession()).ok).toBe(true) // authorized main aggregate need not equal old renderer seq
+  expect(a.getState().savedSeq).toBe(9)
+})
+
+it.each(['same', 'cross', 'dispose'] as const)('late stage and waiting save do not mutate a replaced %s identity', async mode => {
+  const { a, api, open, edit } = await setup()
+  edit()
+  const d = deferred<Awaited<ReturnType<typeof api.stageDraft>>>()
+  api.stageDraft.mockReturnValueOnce(d.promise)
+  const saving = a.saveProject()
+  if (mode === 'dispose') { a.dispose(); a.bind() }
+  else {
+    api.openProject.mockResolvedValueOnce({ ok: true, value: { ...open, sessionId: mode === 'same' ? 'one' : 'two' } })
+    await a.openProject()
+  }
+  const state = a.getState()
+  d.resolve({ ok: true, value: { acceptedSeq: 1, recovery: 'pending' } })
+  expect((await saving).ok).toBe(false)
+  expect(a.getState()).toBe(state)
+  expect(api.saveProject).not.toHaveBeenCalled()
 })
 
 it('save receipt preserves edits made after dispatch and cannot contaminate another session', async () => {
