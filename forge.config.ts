@@ -1,6 +1,7 @@
 import type { ForgeConfig } from '@electron-forge/shared-types'
 import { VitePlugin } from '@electron-forge/plugin-vite'
 import { prepareStepAssets } from './scripts/step-assets.mjs'
+import { copyPlatformRuntimeNotices } from './scripts/platform-runtime-notices.mjs'
 
 /**
  * 离线打包：本机网络不可用时，@electron/get 仍会去取 SHASUMS256.txt 而失败。
@@ -18,6 +19,11 @@ const config: ForgeConfig = {
     ignore: file => Boolean(file) && !file.startsWith('/.vite'),
     extraResource: [prepareStepAssets()],
     ...(electronZipDir === undefined ? {} : { electronZipDir }),
+  },
+  hooks: {
+    postPackage: async (_config, result) => {
+      for (const output of result.outputPaths) copyPlatformRuntimeNotices(output, result.platform, result.arch)
+    },
   },
   rebuildConfig: {},
   makers: [],
