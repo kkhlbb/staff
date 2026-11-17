@@ -125,6 +125,32 @@ it.each(['same', 'cross', 'dispose'] as const)('late stage and waiting save do n
   expect(api.saveProject).not.toHaveBeenCalled()
 })
 
+it('authorized newer aggregate from an already pending mutation survives a preceding save receipt', async () => {
+  const { a, api, open } = await setup()
+  const save = deferred<IpcResult<ProjectSaveValue>>()
+  api.saveProject.mockReturnValueOnce(save.promise as ReturnType<typeof api.saveProject>)
+  const saving = a.saveProject(); await Promise.resolve()
+  const mutation = deferred<Awaited<ReturnType<DesktopSessionAdapter['applyChange']>>>()
+  ;(api as unknown as CunlianApi).applyChange = vi.fn(() => mutation.promise)
+  const applying = a.applyChange({} as Parameters<DesktopSessionAdapter['applyChange']>[0])
+  save.resolve({ ok: true, value: { path: '/saved.cunlian', fingerprint: 'b'.repeat(64), savedSeq: 0, warnings: [] } }); await saving
+  const value = { snapshot: { ...open.snapshot, project: { ...open.snapshot.project, name: 'NEW AGGREGATE' } }, acceptedSeq: 1, savedSeq: 1, path: '/saved.cunlian', fingerprint: 'c'.repeat(64), warnings: [] }
+  mutation.resolve({ ok: true, value } as Awaited<ReturnType<DesktopSessionAdapter['applyChange']>>)
+  expect((await applying).ok).toBe(true)
+  expect(a.getState()).toMatchObject({ snapshot: value.snapshot, acceptedSeq: 1, savedSeq: 1, fingerprint: value.fingerprint, dirty: false })
+})
+
+it('explicit main-authorized open survives a preceding authoritative model receipt', async () => {
+  const { a, api, open } = await setup()
+  const d = deferred<IpcResult<ProjectOpenValue>>()
+  api.openProject.mockReturnValueOnce(d.promise as ReturnType<typeof api.openProject>)
+  const pending = a.openProject()
+  await a.applyModelMutation({ snapshot: open.snapshot, acceptedSeq: 1, recovery: 'pending' })
+  d.resolve({ ok: true, value: { ...open, sessionId: 'two' } })
+  expect((await pending).ok).toBe(true)
+  expect(a.getState()).toMatchObject({ sessionId: 'two', localSeq: 0, dirty: false })
+})
+
 it('save receipt preserves edits made after dispatch and cannot contaminate another session', async () => {
   const { a, api, open, edit } = await setup()
   const d = deferred<IpcResult<ProjectSaveValue>>()
