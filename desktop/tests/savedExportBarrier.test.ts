@@ -167,3 +167,41 @@ it('model arguments cannot inject flush reply or bypass renderer barrier', async
   expect(s.writes).toEqual([])
   vi.useRealTimers()
 })
+
+it('missing trusted renderer port is an explicit refusal', async () => {
+  const s = await setup()
+  const controller = new SessionController({ projectService: s.h.projectService, recovery: s.h.recovery, recent: s.h.recent,
+    ports: { askChoice: async () => 'cancel', pickSaveTarget: async () => null, flushEditor: undefined as unknown as () => never } })
+  await controller.attach(1, s.session.sessionId)
+  const service = new AgentToolService({ controller, projectService: s.h.projectService, recovery: s.h.recovery, rootDir: s.h.workspace, exportPorts: s.exportPorts })
+  expect(await service.run(1, 'export', { format: 'svg' })).toMatchObject({ ok: false, message: expect.stringContaining('先保存') })
+  expect(s.picks()).toBe(0)
+  expect(s.writes).toEqual([])
+})
+
+it('disposed adapter during in-flight stage replies failed, never clean', async () => {
+  const s = await setup()
+  vi.useFakeTimers()
+  let release!: () => void
+  const resume = new Promise<void>(r => { release = r })
+  const original = s.api.stageDraft
+  s.api.stageDraft = async input => { await resume; return original(input) }
+  s.adapter.edit(s.adapter.getState().snapshot!)
+  const pending = s.service.run(1, 'export', { format: 'svg' })
+  await vi.advanceTimersByTimeAsync(0)
+  s.adapter.dispose()
+  release()
+  expect(await pending).toMatchObject({ ok: false })
+  expect(s.replies).toContainEqual({ requestId: expect.any(String), failed: true })
+  expect(s.writes).toEqual([])
+  vi.useRealTimers()
+})
+
+it('final pre-transaction barrier failure refuses before temporary write', async () => {
+  const s = await setup()
+  let sent = 0
+  s.onSend(() => { if (++sent === 2) throw Error('renderer lost during dialog') })
+  expect(await s.service.exportApprovedVersion(1, 'svg')).toMatchObject({ ok: false, code: 'CANCELLED' })
+  expect(sent).toBe(2)
+  expect(s.writes).toEqual([])
+})

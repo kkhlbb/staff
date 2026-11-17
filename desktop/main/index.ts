@@ -808,29 +808,8 @@ function installIpcHandlers(): void {
         })
         .strict(),
       handle: ({ sender }, payload) => {
-        const session = controller.sessionFor(sender.webContentsId)
-        if (session !== null) {
-          // 屏障回复必须对应活动会话与已接受序号，否则不释放关闭流程。
-          if (
-            payload.sessionId !== undefined &&
-            payload.sessionId !== session.sessionId
-          ) {
-            logStage({
-              channel: IPC_EVENTS.editorFlushed,
-              code: 'STALE_SESSION',
-              detail: '编辑屏障回复的会话与活动会话不一致',
-            })
-            return
-          }
-          if (payload.editSeq !== undefined && payload.editSeq !== session.acceptedSeq) {
-            logStage({
-              channel: IPC_EVENTS.editorFlushed,
-              code: 'STALE_EDIT',
-              detail: `acceptedSeq=${session.acceptedSeq}, flushedSeq=${payload.editSeq}`,
-            })
-            return
-          }
-        }
+        // requestSessionFlush 已捕获主进程会话身份；由 guard 一次核对并结算。
+        // 不在这里提前丢弃 stale 回复，否则只能等超时，无法及时清理该请求。
         const verdict = closeGuard.acceptFlushed(sender.webContentsId, payload)
         if (!verdict.ok) {
           logStage({
