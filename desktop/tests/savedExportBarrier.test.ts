@@ -51,9 +51,41 @@ async function setup() {
   const exportPorts = { store: new DrawingExportStore({ ops }), pickTarget: async () => { picks++; return '/exports/drawing.svg' } }
   const service = new AgentToolService({ controller, projectService: h.projectService, recovery: h.recovery, rootDir: h.workspace, exportPorts })
   cleanup.push(async () => { adapter.dispose(); guard.dispose(); await h.dispose() })
-  return { h, session, controller, adapter, service, guard, files, writes, replies, exportPorts, api, picks: () => picks,
+  return { h, session, controller, adapter, service, guard, files, writes, replies, exportPorts, api, ops, picks: () => picks,
     onSend: (fn: typeof onSend) => { onSend = fn }, disconnect: () => { deliver = false } }
 }
+
+it.each(['write', 'read'] as const)('S05 continuous boundary: real debounce edit during suspended temp %s cannot be accepted before successful rename', async phase => {
+  const s = await setup()
+  vi.useFakeTimers()
+  let entered!: () => void
+  let release!: () => void
+  const ready = new Promise<void>(r => { entered = r })
+  const resume = new Promise<void>(r => { release = r })
+  const originalWrite = s.ops.writeExclusive
+  const originalRead = s.ops.readFile
+  s.ops.writeExclusive = async (file, bytes) => {
+    await originalWrite(file, bytes)
+    if (phase === 'write') { entered(); await resume }
+  }
+  s.ops.readFile = async file => {
+    if (phase === 'read' && file.endsWith('.tmp')) { entered(); await resume }
+    return originalRead(file)
+  }
+  const pending = s.service.run(1, 'export', { format: 'svg' })
+  await ready
+  const edited = { ...s.adapter.getState().snapshot!, project: { ...s.session.snapshot.project, name: 'during temporary IO' } }
+  s.adapter.edit(edited)
+  const acceptedInRenderer = s.adapter.getState().localSeq > 0
+  expect(s.session.acceptedSeq).toBe(0) // real 250ms stage has NOT fired
+  release()
+  const result = await pending
+  expect({ successfulExportOfOldVersionAfterAcceptedEdit: result.ok && acceptedInRenderer }).toEqual({ successfulExportOfOldVersionAfterAcceptedEdit: false })
+  expect(s.adapter.getState().snapshot?.project.name).toBe('during temporary IO')
+  expect(s.adapter.getState().dirty).toBe(true)
+  if (!result.ok) expect(s.files.has('/exports/drawing.svg')).toBe(false)
+  expect([...s.files.keys()].some(file => file.endsWith('.tmp'))).toBe(false)
+})
 
 it('S05 real adapter debounce window → model service export refuses without any target writes; explicit save restores export', async () => {
   const s = await setup()
