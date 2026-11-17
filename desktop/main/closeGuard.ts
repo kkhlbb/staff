@@ -10,6 +10,12 @@ export interface FlushOutcome {
   error?: IpcErrorPayload
 }
 
+export interface ExportEditLease {
+  readonly requestId: string
+  valid(): boolean
+  release(): void
+}
+
 export interface CloseGuardOptions {
   /** 编辑屏障等待上限；超时不关闭窗口（任务卡 §3：EDITOR_TIMEOUT 不关闭窗口）。 */
   timeoutMs?: number
@@ -36,6 +42,38 @@ export class CloseGuard {
     { webContentsId: number; finish: (outcome: FlushOutcome) => void; timer: NodeJS.Timeout; validate?: (payload: EditorFlushedPayload) => boolean }
   >()
   private readonly closing = new Set<number>()
+  private readonly leases = new Map<number, ExportEditLease>()
+
+  /** 主进程计时先于 renderer 开始；即使事件循环延迟，valid 的单调时钟检查仍拒绝过期提交。 */
+  async acquireExportLease(webContentsId: number, sessionFor: (id: number) => { sessionId: string; acceptedSeq: number } | null, durationMs = 30_000): Promise<{ ok: true; value: ExportEditLease } | { ok: false; error: IpcErrorPayload }> {
+    const session = sessionFor(webContentsId)
+    if (session === null || this.leases.has(webContentsId)) return { ok: false, error: { code: 'BUSY', message: '导出编辑租约不可用' } }
+    const requestId = this.newRequestId()
+    const deadline = performance.now() + durationMs
+    let released = false
+    const lease: ExportEditLease = {
+      requestId,
+      valid: () => !released && this.leases.get(webContentsId) === lease && sessionFor(webContentsId) === session && performance.now() < deadline,
+      release: () => {
+        if (released) return
+        released = true
+        clearTimeout(timer)
+        if (this.leases.get(webContentsId) === lease) this.leases.delete(webContentsId)
+        try { this.sendFlush(webContentsId, { requestId, exportLease: { action: 'release', sessionId: session.sessionId, durationMs } }) } catch { /* renderer 已消失；main 门禁已撤销。 */ }
+      },
+    }
+    const timer = setTimeout(() => lease.release(), durationMs)
+    timer.unref?.()
+    this.leases.set(webContentsId, lease)
+    const result = await this.requestFlush(webContentsId, payload => lease.valid() && payload.exportLeaseHeld === true
+      && payload.sessionId === session.sessionId && payload.editSeq === session.acceptedSeq,
+    { requestId, exportLease: { action: 'acquire', sessionId: session.sessionId, durationMs } })
+    if (!result.ok || !lease.valid()) {
+      lease.release()
+      return { ok: false, error: result.error ?? { code: 'STALE_EDIT', message: '导出编辑租约已过期' } }
+    }
+    return { ok: true, value: lease }
+  }
 
   constructor(options: CloseGuardOptions) {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_FLUSH_TIMEOUT_MS
@@ -68,8 +106,8 @@ export class CloseGuard {
       : payload.sessionId === session.sessionId && payload.editSeq === session.acceptedSeq))
   }
 
-  requestFlush(webContentsId: number, validate?: (payload: EditorFlushedPayload) => boolean): Promise<FlushOutcome> {
-    const requestId = this.newRequestId()
+  requestFlush(webContentsId: number, validate?: (payload: EditorFlushedPayload) => boolean, request?: EditorFlushRequest): Promise<FlushOutcome> {
+    const requestId = request?.requestId ?? this.newRequestId()
     return new Promise<FlushOutcome>((resolve) => {
       const finish = (outcome: FlushOutcome): void => {
         const entry = this.pending.get(requestId)
@@ -100,7 +138,7 @@ export class CloseGuard {
       this.pending.set(requestId, { webContentsId, finish, timer, validate })
 
       try {
-        this.sendFlush(webContentsId, { requestId })
+        this.sendFlush(webContentsId, request ?? { requestId })
       } catch (error) {
         finish({
           ok: false,
@@ -124,7 +162,12 @@ export class CloseGuard {
     webContentsId: number,
     payload: EditorFlushedPayload,
   ): { ok: true } | { ok: false; error: IpcErrorPayload } {
+    const lease = this.leases.get(webContentsId)
     const entry = this.pending.get(payload.requestId)
+    if (payload.failed && lease?.requestId === payload.requestId) {
+      lease.release()
+      if (!entry) return { ok: true } // 已确认租约的主动撤销，不是伪造/过期回执。
+    }
     if (entry === undefined) {
       return {
         ok: false,
@@ -165,6 +208,7 @@ export class CloseGuard {
 
   /** 窗口销毁/renderer 失联：只取消该窗口，清理计时器与绑定。 */
   cancelWindow(webContentsId: number): void {
+    this.leases.get(webContentsId)?.release()
     for (const entry of this.pending.values()) {
       if (entry.webContentsId === webContentsId) entry.finish({ ok: false, error: { code: 'CANCELLED', message: '编辑屏障窗口已失联或取消' } })
     }
@@ -173,6 +217,7 @@ export class CloseGuard {
 
   /** 只用于测试与窗口销毁清理：丢弃所有等待中的请求。 */
   dispose(): void {
+    for (const lease of this.leases.values()) lease.release()
     for (const [requestId, entry] of this.pending) {
       clearTimeout(entry.timer)
       entry.finish({

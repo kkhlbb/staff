@@ -539,7 +539,7 @@ function installIpcHandlers(): void {
   const recovery = new RecoveryStore({ rootDir: WORKSPACE_ROOT })
   const recent = new RecentProjectsStore({ rootDir: WORKSPACE_ROOT })
 
-  const controller = new SessionController({
+  const controller: SessionController = new SessionController({
     projectService,
     recovery,
     recent,
@@ -554,6 +554,7 @@ function installIpcHandlers(): void {
         return flushEditor(handle.window)
       },
       log: (entry) => logStage({ channel: 'session', ...entry }),
+      acquireExportLease: id => closeGuard.acquireExportLease(id, key => controller.sessionFor(key)),
     },
   })
   controllerForClose = controller
@@ -805,6 +806,7 @@ function installIpcHandlers(): void {
           sessionId: z.string().min(1).max(200).optional(),
           editSeq: z.number().int().nonnegative().optional(),
           failed: z.literal(true).optional(),
+          exportLeaseHeld: z.literal(true).optional(),
         })
         .strict(),
       handle: ({ sender }, payload) => {

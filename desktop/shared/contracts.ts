@@ -143,6 +143,8 @@ export interface MenuActionPayload {
 export interface EditorFlushRequest {
   /** main 生成的请求 ID；renderer 必须在 flushed 里原样带回。 */
   requestId: string
+  /** 仅 main 发起：最终导出阶段暂停接纳本地编辑；release 必须匹配 nonce/session。 */
+  exportLease?: { action: 'acquire' | 'release'; sessionId: string; durationMs: number }
 }
 
 export interface EditorFlushedPayload {
@@ -151,6 +153,8 @@ export interface EditorFlushedPayload {
   editSeq?: number
   /** stage 失败/会话切换时只能否决屏障，不能以旧 acceptedSeq 放行。 */
   failed?: true
+  /** 防止不支持租约的旧 renderer 用普通 flush 回执放行导出。 */
+  exportLeaseHeld?: true
 }
 
 /** 容器错误码（任务卡 §3 “容器码”）。 */

@@ -138,14 +138,7 @@ export function useDesktopSession(options: { onOpenDxf?: () => void } = {}) {
     adapter.current = session
     // 单独订阅菜单，确保工具栏/快捷键/原生菜单共用忙碌锁与迁移流程。
     const offMenu = api.onMenuAction(({ action }) => actionRef.current(action))
-    const offFlush = api.onEditorFlush(({ requestId }) => {
-      void session.flushStage().then(result => {
-        // stage 失败不声称 flush 成功：让 main 的屏障超时阻止切换。
-        if (!result.ok) { report(result); return }
-        const current = session.getState()
-        api.respondEditorFlush(current.sessionId ? { requestId, sessionId: current.sessionId, editSeq: current.acceptedSeq } : { requestId })
-      })
-    })
+    const offFlush = api.onEditorFlush(payload => { void session.handleEditorFlush(payload) })
     locked.current = true
     void session.reattachSession().then(result => {
       if (adapter.current === session) report(result)

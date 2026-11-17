@@ -31,7 +31,7 @@ async function setup(options: {
   fileName?: string
   renderPdf?: (svg: string) => Uint8Array
 } = {}) {
-  const h = await createHarness({ debounceMs: 60_000 })
+  const h = await createHarness({ debounceMs: 60_000, stubExportLease: true })
   cleanup.push(h)
   const project = await createRequirementProject()
   const opened = await h.openSample(project.snapshot)

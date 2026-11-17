@@ -20,6 +20,7 @@ import { toSnapshotDto } from '../../src/project-file/codec'
 import type { ProjectService, ProjectSession } from './projectService'
 import type { RecoveryStore } from './recovery'
 import type { RecentProjectsStore } from './recentProjects'
+import type { ExportEditLease } from './closeGuard'
 
 export type SwitchPurpose = 'new' | 'open' | 'migrate' | 'restore' | 'close' | 'quit'
 export type GateChoice = 'save' | 'discard' | 'cancel'
@@ -38,6 +39,7 @@ export interface SessionPorts {
   pickSaveTarget: (suggestedName: string) => Promise<string | null>
   /** 编辑屏障（editor:flush → editor:flushed）；超时或失败都不能继续。 */
   flushEditor: (windowId: number) => Promise<IpcResult<null>>
+  acquireExportLease?: (windowId: number) => Promise<IpcResult<ExportEditLease>>
   log?: (entry: { code: string; detail?: string }) => void
 }
 
@@ -107,6 +109,21 @@ export class SessionController {
     } catch {
       return failure('SAVE_FAILED', '编辑屏障失联，请先保存后重试')
     }
+  }
+
+  async acquireExportLease(windowId: number): Promise<IpcResult<ExportEditLease>> {
+    if (!this.ports.acquireExportLease) return failure('SAVE_FAILED', '持续编辑租约端口未装配，请先保存后重试')
+    const session = this.sessionFor(windowId)
+    const exclusive = () => session !== null && this.sessionFor(windowId) === session
+      && ![...this.active].some(([id, sessionId]) => id !== windowId && sessionId === session.sessionId)
+    if (!exclusive()) return failure('BUSY', '会话由多个窗口共享，无法独占导出编辑边界')
+    try {
+      const acquired = await this.ports.acquireExportLease(windowId)
+      if (!acquired.ok) return acquired
+      const lease = acquired.value
+      return { ok: true, value: { requestId: lease.requestId, valid: () => exclusive() && lease.valid(), release: () => lease.release() } }
+    }
+    catch { return failure('SAVE_FAILED', '持续编辑租约失联，请先保存后重试') }
   }
 
   /** dirty 的唯一判定：已接受但未成功落盘的编辑。 */

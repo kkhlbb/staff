@@ -76,27 +76,32 @@ export function createSavedVersionExport(
     const existing = await store.fingerprint(target)
     if (!unchanged()) return cancelled()
     // 系统对话框/生成期间的新本地编辑也必须接纳后再复核，仍然不占事务锁。
-    const commitBarrier = await deps.controller.flushPendingEdits(windowId)
-    if (!commitBarrier.ok || !unchanged()) return cancelled()
-    // 对话框与生成不占会话锁；最终落盘才加入共同事务。
-    // 新编辑若先到，拒绝且零目标写入；若后到，排在导出提交后接纳。
-    return deps.projectService.transaction(session.sessionId, async () => {
-      if (!unchanged()) return cancelled()
-      const saved = await store.save({
-        targetPath: target, kind: format, bytes, expectedFingerprint: existing,
-        canCommit: unchanged,
-        verify: async written => {
-          if (format === 'svg') {
-            const report = validateDrawingSvgMarkup(new TextDecoder().decode(written), drawing)
-            return report.ok ? { ok: true } : { ok: false, message: report.errors.join('；') }
-          }
-          return new TextDecoder().decode(written.slice(0, 5)) === '%PDF-'
-            ? { ok: true } : { ok: false, message: '导出内容不是 PDF' }
-        },
+    const commitBarrier = await deps.controller.acquireExportLease(windowId)
+    if (!commitBarrier.ok) return cancelled()
+    const lease = commitBarrier.value
+    try {
+      if (!lease.valid() || !unchanged()) return cancelled()
+      // 租约覆盖 store 的所有 await，不再把瞬时 flush 当作持续编辑边界。
+      // renderer 新 edit 排队，尚不更新其权威快照/序号；其他编辑请求明确拒绝。
+      // main 已到达的编辑仍受原会话事务/dirty 检查保护。线性化点是 rename 调用。
+      return await deps.projectService.transaction(session.sessionId, async () => {
+        if (!lease.valid() || !unchanged()) return cancelled()
+        const saved = await store.save({
+          targetPath: target, kind: format, bytes, expectedFingerprint: existing,
+          canCommit: () => lease.valid() && unchanged(),
+          verify: async written => {
+            if (format === 'svg') {
+              const report = validateDrawingSvgMarkup(new TextDecoder().decode(written), drawing)
+              return report.ok ? { ok: true } : { ok: false, message: report.errors.join('；') }
+            }
+            return new TextDecoder().decode(written.slice(0, 5)) === '%PDF-'
+              ? { ok: true } : { ok: false, message: '导出内容不是 PDF' }
+          },
+        })
+        if (!saved.ok) return saved.error.code === 'BUSY' && (!lease.valid() || !unchanged())
+          ? cancelled() : failure('SAVE_FAILED', `${saved.error.message}（${saved.error.code}）`)
+        return { ok: true, data: { status: 'EXPORTED', fileName: path.basename(target), byteSize: bytes.byteLength, sha256: saved.value.fingerprint, revisionId }, requestId, objectVersion: revisionId }
       })
-      if (!saved.ok) return saved.error.code === 'BUSY' && !unchanged()
-        ? cancelled() : failure('SAVE_FAILED', `${saved.error.message}（${saved.error.code}）`)
-      return { ok: true, data: { status: 'EXPORTED', fileName: path.basename(target), byteSize: bytes.byteLength, sha256: saved.value.fingerprint, revisionId }, requestId, objectVersion: revisionId }
-    })
+    } finally { lease.release() }
   }
 }

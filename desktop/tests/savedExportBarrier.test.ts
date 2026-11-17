@@ -2,6 +2,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { DesktopSessionAdapter } from '../../src/workspace/desktopAdapter'
 import { createRequirementProject } from '../../src/requirements/__fixtures__/requirementFixture'
+import type { ProjectFileSnapshot } from '../../src/project-file/types'
 import { AgentToolService } from '../main/agentToolService'
 import { SessionController } from '../main/sessionController'
 import { CloseGuard } from '../main/closeGuard'
@@ -21,10 +22,12 @@ async function setup() {
   let deliver = true
   let onSend: ((payload: EditorFlushRequest) => void) | undefined
   const replies: EditorFlushedPayload[] = []
-  const guard = new CloseGuard({ timeoutMs: 100, sendFlush: (_id, payload) => { onSend?.(payload); if (deliver) listener?.(payload) } })
-  const controller = new SessionController({ projectService: h.projectService, recovery: h.recovery, recent: h.recent,
+  const otherWindows = new Map<number, (payload: EditorFlushRequest) => void>()
+  const guard = new CloseGuard({ timeoutMs: 100, sendFlush: (id, payload) => { if (id !== 1) { otherWindows.get(id)?.(payload); return }; onSend?.(payload); if (deliver) listener?.(payload) } })
+  const controller: SessionController = new SessionController({ projectService: h.projectService, recovery: h.recovery, recent: h.recent,
     ports: { askChoice: async () => { throw Error('must not ask to save') }, pickSaveTarget: async () => { throw Error('must not auto save') },
       flushEditor: async id => { const outcome = await guard.requestSessionFlush(id, key => controller.sessionFor(key)); return outcome.ok ? { ok: true, value: null } : { ok: false, error: outcome.error! } },
+      acquireExportLease: id => guard.acquireExportLease(id, key => controller.sessionFor(key)),
     } })
   await controller.attach(1, session.sessionId)
   const api = {
@@ -51,7 +54,7 @@ async function setup() {
   const exportPorts = { store: new DrawingExportStore({ ops }), pickTarget: async () => { picks++; return '/exports/drawing.svg' } }
   const service = new AgentToolService({ controller, projectService: h.projectService, recovery: h.recovery, rootDir: h.workspace, exportPorts })
   cleanup.push(async () => { adapter.dispose(); guard.dispose(); await h.dispose() })
-  return { h, session, controller, adapter, service, guard, files, writes, replies, exportPorts, api, ops, picks: () => picks,
+  return { h, session, controller, adapter, service, guard, files, writes, replies, exportPorts, api, ops, otherWindows, picks: () => picks,
     onSend: (fn: typeof onSend) => { onSend = fn }, disconnect: () => { deliver = false } }
 }
 
@@ -85,6 +88,137 @@ it.each(['write', 'read'] as const)('S05 continuous boundary: real debounce edit
   expect(s.adapter.getState().dirty).toBe(true)
   if (!result.ok) expect(s.files.has('/exports/drawing.svg')).toBe(false)
   expect([...s.files.keys()].some(file => file.endsWith('.tmp'))).toBe(false)
+})
+
+it.each(['write-failed', 'read-failed', 'exception', 'closed', 'navigation', 'timeout', 'adapter-dispose'] as const)('continuous lease %s releases queued edits without autosave or target replacement', async mode => {
+  const s = await setup()
+  vi.useFakeTimers()
+  const sourceBefore = await s.h.projectService.readProjectBytes(s.session.path!)
+  let entered!: () => void
+  let release!: () => void
+  const ready = new Promise<void>(r => { entered = r })
+  const resume = new Promise<void>(r => { release = r })
+  const write = s.ops.writeExclusive
+  const read = s.ops.readFile
+  const stat = s.ops.statKind
+  let held = false
+  s.ops.writeExclusive = async (file, bytes) => {
+    entered(); await resume
+    if (mode === 'write-failed') throw Error('injected write failure')
+    await write(file, bytes); held = true
+  }
+  s.ops.readFile = async file => { if (mode === 'read-failed' && file.endsWith('.tmp')) throw Error('injected read failure'); return read(file) }
+  s.ops.statKind = async file => { if (mode === 'exception' && held) throw Error('injected unexpected exception'); return stat(file) }
+  const pending = s.service.run(1, 'export', { format: 'svg' }).then(value => ({ value }), error => ({ error }))
+  await ready
+  expect(s.adapter.getState().exportEditNotice).toContain('新编辑将短暂排队')
+  const snapshot = s.adapter.getState().snapshot!
+  s.adapter.edit({ ...snapshot, project: { ...snapshot.project, name: 'first queued' } })
+  s.adapter.edit({ ...snapshot, project: { ...snapshot.project, name: 'second queued' } })
+  expect(s.adapter.getState()).toMatchObject({ localSeq: 0, dirty: false, snapshot })
+  expect(s.adapter.getState().exportEditNotice).toContain('2 次编辑已排队')
+  await expect(s.adapter.saveProject()).rejects.toThrow('此操作尚未执行')
+  await expect(s.adapter.openProject()).rejects.toThrow('此操作尚未执行')
+  await expect(s.adapter.stageChange({} as Parameters<DesktopSessionAdapter['stageChange']>[0])).rejects.toThrow('此操作尚未执行')
+  if (mode === 'closed' || mode === 'navigation') s.guard.cancelWindow(1)
+  if (mode === 'adapter-dispose') s.adapter.dispose()
+  if (mode === 'timeout') await vi.advanceTimersByTimeAsync(30_001)
+  release()
+  const outcome = await pending
+  if ('value' in outcome) expect(outcome.value).toMatchObject({ ok: false })
+  else expect(mode).toBe('exception')
+  expect(s.files.size).toBe(0)
+  expect(s.adapter.getState()).toMatchObject({ dirty: true, localSeq: 2, exportEditNotice: undefined })
+  expect(s.adapter.getState().snapshot?.project.name).toBe('second queued')
+  expect(await s.h.projectService.readProjectBytes(s.session.path!)).toEqual(sourceBefore)
+  // Release does not stage or save automatically; accepted/saved remain clean until debounce/explicit flush.
+  expect(s.session.acceptedSeq).toBe(0)
+  expect(s.session.savedSeq).toBe(0)
+  if (mode !== 'adapter-dispose') {
+    expect((await s.adapter.saveProject()).ok).toBe(true)
+    s.ops.statKind = stat
+    s.ops.readFile = read
+    s.ops.writeExclusive = write
+    expect(await s.service.run(1, 'export', { format: 'svg' })).toMatchObject({ ok: true })
+  }
+})
+
+it('lease nonce/session isolation: late release or failure receipt cannot unlock a newer lease', async () => {
+  const s = await setup()
+  vi.useFakeTimers()
+  const first = await s.controller.acquireExportLease(1)
+  expect(first.ok).toBe(true)
+  if (!first.ok) throw Error('lease required')
+  first.value.release()
+  const second = await s.controller.acquireExportLease(1)
+  if (!second.ok) throw Error('second lease required')
+  const oldRelease = { requestId: first.value.requestId, exportLease: { action: 'release' as const, sessionId: s.session.sessionId, durationMs: 30_000 } }
+  await s.adapter.handleEditorFlush(oldRelease)
+  await s.adapter.handleEditorFlush({ ...oldRelease, requestId: second.value.requestId, exportLease: { ...oldRelease.exportLease, sessionId: 'old-session' } })
+  s.guard.acceptFlushed(1, { requestId: first.value.requestId, failed: true })
+  s.guard.acceptFlushed(2, { requestId: second.value.requestId, failed: true })
+  s.guard.cancelWindow(2)
+  first.value.release()
+  expect(second.value.valid()).toBe(true)
+  s.adapter.edit(s.adapter.getState().snapshot!)
+  expect(s.adapter.getState().localSeq).toBe(0)
+  expect(await s.controller.acquireExportLease(1)).toMatchObject({ ok: false })
+  // A second binding to the SAME session is refused, rather than trusting just one renderer.
+  await s.controller.attach(2, s.session.sessionId)
+  expect(second.value.valid()).toBe(false)
+  expect(await s.controller.acquireExportLease(2)).toMatchObject({ ok: false })
+  second.value.release()
+  expect(s.adapter.getState().localSeq).toBe(1)
+  expect(vi.getTimerCount()).toBe(1) // only the real adapter debounce remains
+})
+
+it('two real adapters and one main guard keep separate windows/sessions isolated', async () => {
+  const s = await setup()
+  const opened = await s.h.projectService.openFile(s.session.path!)
+  if (!opened.ok) throw Error('second project required')
+  await s.controller.attach(2, opened.value.sessionId)
+  const secondSession = s.controller.sessionFor(2)!
+  const api: CunlianApi = { ...s.api,
+    onEditorFlush: fn => { s.otherWindows.set(2, fn); return () => { s.otherWindows.delete(2) } },
+    respondEditorFlush: payload => { s.guard.acceptFlushed(2, payload) },
+    reattachSession: async () => ({ ok: true, value: { ...opened.value, savedSeq: 0, recovery: 'none' } }),
+    stageDraft: async input => {
+      const result = await s.h.projectService.stageFromDto(input.sessionId, input.editSeq, input.snapshot as Omit<ProjectFileSnapshot, 'attachments'>)
+      return result.ok ? { ok: true, value: { ...result.value, recovery: 'pending' } } : result
+    },
+  }
+  const adapter = new DesktopSessionAdapter({ api })
+  adapter.bind(); await adapter.reattachSession()
+  cleanup.unshift(async () => { adapter.dispose() })
+  vi.useFakeTimers()
+  const one = await s.controller.acquireExportLease(1)
+  const two = await s.controller.acquireExportLease(2)
+  if (!one.ok || !two.ok) throw Error('two independent leases required')
+  s.adapter.edit(s.adapter.getState().snapshot!)
+  adapter.edit(adapter.getState().snapshot!)
+  s.guard.cancelWindow(1)
+  expect(one.value.valid()).toBe(false)
+  expect(two.value.valid()).toBe(true)
+  expect(s.adapter.getState().localSeq).toBe(1)
+  expect(adapter.getState().localSeq).toBe(0)
+  expect(secondSession.acceptedSeq).toBe(0)
+  s.guard.acceptFlushed(1, { requestId: two.value.requestId, failed: true })
+  expect(two.value.valid()).toBe(true)
+  two.value.release()
+  expect(adapter.getState()).toMatchObject({ localSeq: 1, dirty: true })
+  expect((await adapter.flushStage()).ok).toBe(true)
+  expect(secondSession.acceptedSeq).toBe(1)
+  expect(secondSession.savedSeq).toBe(0)
+  expect(s.session.acceptedSeq).toBe(0)
+})
+
+it('a legacy ordinary flush acknowledgement cannot acquire an export lease', async () => {
+  const s = await setup()
+  s.disconnect()
+  s.onSend(payload => {
+    if (payload.exportLease?.action === 'acquire') s.guard.acceptFlushed(1, { requestId: payload.requestId, sessionId: s.session.sessionId, editSeq: 0 })
+  })
+  expect(await s.controller.acquireExportLease(1)).toMatchObject({ ok: false })
 })
 
 it('S05 real adapter debounce window → model service export refuses without any target writes; explicit save restores export', async () => {
@@ -232,7 +366,7 @@ it('disposed adapter during in-flight stage replies failed, never clean', async 
 it('final pre-transaction barrier failure refuses before temporary write', async () => {
   const s = await setup()
   let sent = 0
-  s.onSend(() => { if (++sent === 2) throw Error('renderer lost during dialog') })
+  s.onSend(payload => { if (payload.exportLease?.action !== 'release' && ++sent === 2) throw Error('renderer lost during dialog') })
   expect(await s.service.exportApprovedVersion(1, 'svg')).toMatchObject({ ok: false, code: 'CANCELLED' })
   expect(sent).toBe(2)
   expect(s.writes).toEqual([])

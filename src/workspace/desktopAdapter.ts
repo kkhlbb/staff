@@ -13,6 +13,7 @@
  */
 import type {
   CunlianApi,
+  EditorFlushRequest,
   IpcErrorPayload,
   IpcResult,
   MenuAction,
@@ -76,6 +77,7 @@ export interface DesktopSessionState {
   snapshot: SnapshotDto | null
   warnings: string[]
   lastError?: IpcErrorPayload
+  exportEditNotice?: string
 }
 
 export interface DesktopAdapterHandlers {
@@ -119,6 +121,7 @@ export class DesktopSessionAdapter {
   private stageInFlight: Promise<IpcResult<ProjectStageValue>> | null = null
   private unsubscribers: (() => void)[] = []
   private bindingGeneration = 0
+  private exportLease: { requestId: string; sessionId: string; timer: ReturnType<typeof setTimeout>; edits: SnapshotDto[] } | null = null
 
   constructor(options: DesktopAdapterOptions = {}) {
     const api = options.api ?? (globalThis as { cunlian?: CunlianApi }).cunlian
@@ -135,13 +138,17 @@ export class DesktopSessionAdapter {
     return this.state
   }
 
+  private assertNoExportLease(): void {
+    if (this.exportLease) throw new Error('正在提交已保存版本导出，此操作尚未执行；请在导出结束或超时后重试，排队编辑仍保留且不会自动保存')
+  }
+
   /** 订阅菜单与编辑屏障；返回取消订阅函数。 */
   bind(): () => void {
     const offMenu = this.api.onMenuAction((payload) => {
       void this.handleMenuAction(payload.action)
     })
     const offFlush = this.api.onEditorFlush((payload) => {
-      void this.handleFlush(payload.requestId)
+      void this.handleEditorFlush(payload)
     })
     this.unsubscribers = [offMenu, offFlush]
     return () => {
@@ -151,6 +158,7 @@ export class DesktopSessionAdapter {
 
   dispose(): void {
     this.bindingGeneration++
+    if (this.exportLease) this.api.respondEditorFlush({ requestId: this.exportLease.requestId, failed: true })
     for (const off of this.unsubscribers) {
       off()
     }
@@ -165,6 +173,13 @@ export class DesktopSessionAdapter {
   edit(snapshot: SnapshotDto): void {
     if (this.state.status !== 'open') {
       throw new Error('没有活动项目，不能提交编辑')
+    }
+    if (this.exportLease) {
+      // edit 是完整快照替换语义；逐项保留，不自作主张合并/保存或声称接纳。
+      this.exportLease.edits.push(structuredClone(snapshot))
+      this.state = { ...this.state, exportEditNotice: `正在提交已保存版本导出；${this.exportLease.edits.length} 次编辑已排队，提交结束或超时后接纳，不会自动保存。` }
+      this.emit()
+      return
     }
     this.state = {
       ...this.state,
@@ -221,12 +236,14 @@ export class DesktopSessionAdapter {
   }
 
   async newProject(name: string, template: 'empty' | 'chain-demo'): Promise<IpcResult<ProjectOpenValue>> {
+    this.assertNoExportLease()
     const result = await this.api.newProject({ name, template })
     this.applyOpen(result)
     return result
   }
 
   async openProject(recentId?: string): Promise<IpcResult<ProjectOpenValue>> {
+    this.assertNoExportLease()
     const result = await this.api.openProject(recentId === undefined ? {} : { recentId })
     this.applyOpen(result)
     return result
@@ -234,12 +251,14 @@ export class DesktopSessionAdapter {
 
   /** 迁移成功后接入 main 返回的唯一会话，不另建本地副本。 */
   async importV2(importToken: string, projectId: string): Promise<IpcResult<ProjectOpenValue>> {
+    this.assertNoExportLease()
     const result = await this.api.commitV2({ importToken, projectId })
     this.applyOpen(result)
     return result
   }
 
   async restoreRecovery(recoveryId: string): Promise<IpcResult<ProjectOpenValue>> {
+    this.assertNoExportLease()
     const result = await this.api.restoreRecovery({ recoveryId })
     this.applyOpen(result)
     return result
@@ -247,6 +266,7 @@ export class DesktopSessionAdapter {
 
   /** ⌘S：先 flush 本地编辑，再保存；main 校验 editSeq 与指纹。 */
   async saveProject(): Promise<IpcResult<ProjectSaveValue>> {
+    this.assertNoExportLease()
     const flushed = await this.flushStage()
     if (!flushed.ok) {
       return flushed
@@ -266,6 +286,7 @@ export class DesktopSessionAdapter {
 
   /** ⇧⌘S：先 flush，再让 main 取新目标。 */
   async saveProjectAs(): Promise<IpcResult<ProjectSaveValue>> {
+    this.assertNoExportLease()
     const flushed = await this.flushStage()
     if (!flushed.ok) {
       return flushed
@@ -284,6 +305,7 @@ export class DesktopSessionAdapter {
 
   /** ⌘Q/⌘W：main 负责 dirty gate 与编辑屏障；这里只发起请求。 */
   async close(): Promise<IpcResult<{ closed: true }>> {
+    this.assertNoExportLease()
     return this.api.requestClose()
   }
 
@@ -292,6 +314,7 @@ export class DesktopSessionAdapter {
   }
 
   async reattachSession() {
+    this.assertNoExportLease()
     const result = await this.api.reattachSession()
     if (result.ok && 'sessionId' in result.value) {
       const value = result.value
@@ -350,6 +373,7 @@ export class DesktopSessionAdapter {
   /* ---- D：参数联动 ------------------------------------------------- */
 
   async stageChange(request: ChangeStageRequest): Promise<IpcResult<ChangeDraftValue>> {
+    this.assertNoExportLease()
     return this.api.stageChangeDraft(request)
   }
 
@@ -363,6 +387,7 @@ export class DesktopSessionAdapter {
 
   /** 确认成功后一次性重同步权威快照；失败保留当前编辑与草稿。 */
   async applyChange(request: ChangeApplyRequest): Promise<IpcResult<ChangeApplyValue>> {
+    this.assertNoExportLease()
     const result = await this.api.applyChange(request)
     if (result.ok) {
       this.state = {
@@ -389,10 +414,12 @@ export class DesktopSessionAdapter {
   }
 
   async bindParameter(request: ChangeBindRequest): Promise<IpcResult<ChangeDraftValue>> {
+    this.assertNoExportLease()
     return this.api.bindParameter(request)
   }
 
   async unbindParameter(request: ChangeUnbindRequest): Promise<IpcResult<ChangeDraftValue>> {
+    this.assertNoExportLease()
     return this.api.unbindParameter(request)
   }
 
@@ -405,12 +432,14 @@ export class DesktopSessionAdapter {
   async restoreRevisionDraft(
     request: ChangeRestoreRequest,
   ): Promise<IpcResult<ChangeRestoreValue>> {
+    this.assertNoExportLease()
     return this.api.restoreRevisionDraft(request)
   }
 
   /* ---- V3.5：桌面 PDF 与条款 --------------------------------------- */
 
   async importSource(request: SourceImportRequest): Promise<IpcResult<SourceImportValue>> {
+    this.assertNoExportLease()
     const result = await this.api.importSource(request)
     if (result.ok) {
       this.state = {
@@ -437,6 +466,7 @@ export class DesktopSessionAdapter {
     sessionId: string
     baseEditSeq: number
   }): Promise<IpcResult<SketchImageImportValue>> {
+    this.assertNoExportLease()
     const result = await this.api.importSketchImage(request)
     if (result.ok) {
       this.state = {
@@ -460,6 +490,7 @@ export class DesktopSessionAdapter {
   async ingestSketchReadings(
     request: SketchIngestRequest,
   ): Promise<IpcResult<SketchIngestValue>> {
+    this.assertNoExportLease()
     const result = await this.api.ingestSketchReadings(request)
     if (result.ok) {
       this.state = {
@@ -482,6 +513,7 @@ export class DesktopSessionAdapter {
   async stageRequirementEdit(
     request: RequirementEditRequest,
   ): Promise<IpcResult<RequirementEditValue>> {
+    this.assertNoExportLease()
     return this.api.stageRequirementEdit(request)
   }
 
@@ -489,6 +521,7 @@ export class DesktopSessionAdapter {
 
   /** 提取只更新会话快照里的隔离草稿；不自动保存项目文件。 */
   async runExtraction(request: ExtractionRunRequest): Promise<IpcResult<ExtractionRunValue>> {
+    this.assertNoExportLease()
     const result = await this.api.runExtraction(request)
     if (result.ok) {
       this.state = {
@@ -513,6 +546,7 @@ export class DesktopSessionAdapter {
   async decideExtraction(
     request: ExtractionDecideRequest,
   ): Promise<IpcResult<ExtractionDecideValue>> {
+    this.assertNoExportLease()
     const result = await this.api.decideExtraction(request)
     if (result.ok) {
       this.state = {
@@ -544,6 +578,7 @@ export class DesktopSessionAdapter {
   async deleteExtractionDraft(
     request: ExtractionDeleteDraftRequest,
   ): Promise<IpcResult<ExtractionDeleteDraftValue>> {
+    this.assertNoExportLease()
     const result = await this.api.deleteExtractionDraft(request)
     if (result.ok) {
       this.state = {
@@ -594,6 +629,7 @@ export class DesktopSessionAdapter {
   async confirmExtractionBatch(
     request: ExtractionConfirmBatchRequest,
   ): Promise<IpcResult<ExtractionBatchValue>> {
+    this.assertNoExportLease()
     const api = this.api
     if (api.confirmExtractionBatch === undefined) {
       return { ok: false, error: { code: 'UNSUPPORTED_VERSION', message: '当前 preload 未提供批量确认' } }
@@ -605,6 +641,7 @@ export class DesktopSessionAdapter {
   async attestExtractionUnits(
     request: ExtractionAttestUnitsRequest,
   ): Promise<IpcResult<ExtractionAttestUnitsValue>> {
+    this.assertNoExportLease()
     const api = this.api
     if (api.attestExtractionUnits === undefined) {
       return { ok: false, error: { code: 'UNSUPPORTED_VERSION', message: '当前 preload 未提供批量补单位' } }
@@ -616,6 +653,7 @@ export class DesktopSessionAdapter {
   async revokeExtractionUnits(
     request: ExtractionRevokeUnitsRequest,
   ): Promise<IpcResult<ExtractionBatchValue>> {
+    this.assertNoExportLease()
     const api = this.api
     if (api.revokeExtractionUnits === undefined) {
       return { ok: false, error: { code: 'UNSUPPORTED_VERSION', message: '当前 preload 未提供撤销补单位' } }
@@ -627,6 +665,7 @@ export class DesktopSessionAdapter {
   async confirmRequirement(
     request: RequirementConfirmRequest,
   ): Promise<IpcResult<RequirementConfirmValue>> {
+    this.assertNoExportLease()
     const result = await this.api.confirmRequirement(request)
     if (result.ok) {
       this.state = {
@@ -663,7 +702,40 @@ export class DesktopSessionAdapter {
     this.stageTimer.unref?.()
   }
 
-  private async handleFlush(requestId: string): Promise<void> {
+  private releaseExportLease(requestId: string, sessionId: string): void {
+    const lease = this.exportLease
+    if (!lease || lease.requestId !== requestId || lease.sessionId !== sessionId) return
+    clearTimeout(lease.timer)
+    this.exportLease = null
+    this.state = { ...this.state, exportEditNotice: undefined }
+    // 只回放原会话；切换由 main 的 dirty gate 负责，不能把旧编辑写进新项目。
+    if (this.state.sessionId === sessionId) for (const snapshot of lease.edits) this.edit(snapshot)
+    this.emit()
+  }
+
+  /** UI 和测试必须使用同一个协议入口，不得另写一个瞬时 flush listener。 */
+  async handleEditorFlush(payload: EditorFlushRequest): Promise<void> {
+    const { requestId, exportLease } = payload
+    if (exportLease?.action === 'release') {
+      this.releaseExportLease(requestId, exportLease.sessionId)
+      return
+    }
+    if (this.exportLease) {
+      this.api.respondEditorFlush({ requestId, failed: true })
+      return
+    }
+    if (exportLease) {
+      if (this.state.sessionId !== exportLease.sessionId || exportLease.durationMs <= 0 || exportLease.durationMs > 30_000) {
+        this.api.respondEditorFlush({ requestId, failed: true })
+        return
+      }
+      // 同步安装，随后才 await flush；main 的截止时间早于本地计时开始。
+      const timer = setTimeout(() => this.releaseExportLease(requestId, exportLease.sessionId), exportLease.durationMs)
+      timer.unref?.()
+      this.exportLease = { requestId, sessionId: exportLease.sessionId, timer, edits: [] }
+      this.state = { ...this.state, exportEditNotice: '正在提交已保存版本导出；新编辑将短暂排队，结束或超时后接纳，不会自动保存。' }
+      this.emit()
+    }
     const sessionId = this.state.sessionId
     const generation = this.bindingGeneration
     try {
@@ -672,7 +744,11 @@ export class DesktopSessionAdapter {
         this.api.respondEditorFlush({ requestId, failed: true })
         return
       }
-      this.api.respondEditorFlush(sessionId === null ? { requestId } : { requestId, sessionId, editSeq: flushed.value.acceptedSeq })
+      if (exportLease && this.exportLease?.requestId !== requestId) {
+        this.api.respondEditorFlush({ requestId, failed: true })
+        return
+      }
+      this.api.respondEditorFlush(sessionId === null ? { requestId } : { requestId, sessionId, editSeq: flushed.value.acceptedSeq, ...(exportLease ? { exportLeaseHeld: true as const } : {}) })
     } catch {
       this.api.respondEditorFlush({ requestId, failed: true })
     }

@@ -17,7 +17,7 @@ afterEach(async () => {
   for (const dir of dirs.splice(0)) await fsp.rm(dir, { recursive: true, force: true })
 })
 async function setup() {
-  const h = await createHarness({ debounceMs: 60_000 })
+  const h = await createHarness({ debounceMs: 60_000, stubExportLease: true })
   harnesses.push(h)
   const project = await createRequirementProject()
   const opened = await h.openSample(project.snapshot)

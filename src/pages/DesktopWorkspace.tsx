@@ -389,7 +389,7 @@ export function DesktopWorkspace() {
         <button type="button" onClick={() => { setTab(0); tabRefs.current[0]?.focus() }}>前往图纸导出</button>
       </div>
     </div>
-    <div className="desktop-workspace__notice" role="status">{uiDiagnosticText(session.notice || (session.state?.lastError ? `${session.state.lastError.code}：${session.state.lastError.message}` : session.state?.warnings.join('；')) || '当前会话已载入；绑定来源不等于审查通过。')}{session.state?.recoveryWarning && <span>{uiDiagnosticText(session.state.recoveryWarning)}</span>}</div>
+    <div className="desktop-workspace__notice" role="status">{uiDiagnosticText(session.state?.exportEditNotice || session.notice || (session.state?.lastError ? `${session.state.lastError.code}：${session.state.lastError.message}` : session.state?.warnings.join('；')) || '当前会话已载入；绑定来源不等于审查通过。')}{session.state?.recoveryWarning && <span>{uiDiagnosticText(session.state.recoveryWarning)}</span>}</div>
     {model.error && <div className="desktop-workspace__model-error" role="alert">
       <strong>模型导入失败：{model.error.code}</strong>
       <span>{uiDiagnosticText(model.error.message)}{model.error.detail ? `（${uiDiagnosticText(model.error.detail)}）` : ''}</span>

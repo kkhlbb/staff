@@ -127,6 +127,8 @@ export function renamed(
 }
 
 export interface HarnessOptions {
+  /** 仅 main 单元测试使用；真实 renderer 集成覆盖在 savedExportBarrier 中。 */
+  stubExportLease?: boolean
   choices?: GateChoice[]
   saveTarget?: string | null
   flushResult?: IpcResult<null>
@@ -299,6 +301,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
         return state.saveTargetValue
       },
       flushEditor: async () => state.flushResult,
+      ...(options.stubExportLease ? { acquireExportLease: async () => ({ ok: true as const, value: { requestId: 'main-only-test-stub', valid: () => true, release: () => {} } }) } : {}),
       log: () => undefined,
     },
   })
