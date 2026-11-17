@@ -1211,17 +1211,17 @@ describe('V3.5 第 3 阶段：草稿候选画面与提交门禁', () => {
     expect(api.applyChange).not.toHaveBeenCalled()
   })
 
-  it('顶栏批次标签在启动页与工作台两处都是 V4.0 · Beta', async () => {
+  it('顶栏批次标签在启动页与工作台两处都是 v0.4.2-beta', async () => {
     render(<DesktopWorkspace />)
     await waitFor(() => expect(screen.getByRole('button', { name: /打开内置示例/ })).toBeEnabled())
-    expect(document.querySelector('.desktop-workspace__batch')).toHaveTextContent('V4.0 · Beta')
+    expect(document.querySelector('.desktop-workspace__batch')).toHaveTextContent('v0.4.2-beta')
     expect(screen.queryByText('V3 · D 批次')).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /打开内置示例/ }))
     await screen.findByRole('main', { name: '寸链桌面工作台' })
     const batches = document.querySelectorAll('.desktop-workspace__batch')
     expect(batches).toHaveLength(1)
-    expect(batches[0]).toHaveTextContent('V4.0 · Beta')
+    expect(batches[0]).toHaveTextContent('v0.4.2-beta')
     expect(screen.queryByText('V3 · D 批次')).toBeNull()
   })
 })

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type CSSProperties, type KeyboardEvent } from 'react'
 import { useDesktopSession } from '../workspace/useDesktopSession'
+import { version as appVersion } from '../../package.json'
 import { agentReadSources, readingSourceLabel } from '../sources/agentReadDisplay'
 import { useBuiltinAssemblyView } from '../workspace/useBuiltinAssemblyView'
 import { useImportedModel } from '../workspace/useImportedModel'
@@ -345,7 +346,7 @@ export function DesktopWorkspace() {
     </div>
   )
   if (!project) return <main className="desktop-workspace" aria-label="寸链启动页">
-    <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">V4.0 · Beta</span></header>
+    <header className="desktop-workspace__titlebar"><h1>寸链</h1><span className="desktop-workspace__batch">v{appVersion}</span></header>
     <section className="desktop-workspace__start">
       <h2>打开项目，继续设计</h2><p>轴系轴向公差链分析</p>
       <div className="desktop-workspace__start-actions">
@@ -372,7 +373,7 @@ export function DesktopWorkspace() {
           return readings.length === 0 ? '依据：用户输入，无外部原文件' : `依据：外部读数（${[...new Set(readings.map(readingSourceLabel))].join('；')}）`
         })()}</span>
       )}
-      <span className="desktop-workspace__batch">V4.0 · Beta</span>
+      <span className="desktop-workspace__batch">v{appVersion}</span>
     </header>
     <div className="desktop-workspace__toolbar" role="toolbar" aria-label="项目操作">
       <button disabled={session.busy} onClick={() => session.action('new')}>新建项目</button>
