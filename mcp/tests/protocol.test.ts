@@ -5,6 +5,9 @@
  * 坏 JSON / stdout 纯净度（每个字节都是 JSON-RPC 行）。
  */
 import { spawn } from 'node:child_process'
+import { mkdtemp, rm, stat } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { createInterface } from 'node:readline'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -112,6 +115,38 @@ describe('MCP stdio 协议', () => {
     expect(frames.find((frame) => frame.id === 4)?.error?.code).toBe(-32601)
     const parseError = frames.find((frame) => frame.id === null && frame.error !== undefined)
     expect(parseError?.error?.code).toBe(-32700)
+  })
+
+  it('五个旧工具都可通过原 stdio 命令调用并返回兼容数据', async () => {
+    const outputDir = await mkdtemp(path.join(tmpdir(), 'cunlian-stdio-'))
+    try {
+      const calls = {
+        read_taskbook: { pdfPath: path.join(ROOT, 'docs/evidence/V3.5/fixtures/taskbook-2p.pdf'), pageFrom: 1, pageTo: 2 },
+        calc_chain: { parameters: { innerDiameterQ: 200000, outerDiameterQ: 320000, lengthQ: 120000 } },
+        check_requirement: { cQ: 1500, lowerQ: 1000, upperQ: 3000 },
+        render_drawing: { parameters: { innerDiameter: '20.00', outerDiameter: '32.00', length: '12.00' },
+          format: 'svg', outputDir },
+        describe_project: { path: path.join(ROOT, 'docs/evidence/v40-stage4/fixtures/a40-1204.cunlian') },
+      }
+      const { frames } = await runFrames([initialize, ...Object.entries(calls).map(([name, args], index) => ({
+        jsonrpc: '2.0', id: index + 2, method: 'tools/call', params: { name, arguments: args },
+      }))])
+      const results = frames.slice(1).map(frame => {
+        const result = frame.result as { isError: boolean; content: { text: string }[]; structuredContent: Record<string, unknown> }
+        expect(result.isError).toBe(false)
+        expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent)
+        expect(result.structuredContent.readOnly).toBe(true)
+        return result.structuredContent
+      })
+      expect(results).toHaveLength(5)
+      expect(results[0]).toMatchObject({ pageCount: 2 })
+      expect(results[1]).toMatchObject({ result: { minQ: expect.any(Number) } })
+      expect(results[2]).toMatchObject({ status: 'satisfied' })
+      expect((await stat(results[3].filePath as string)).size).toBe(results[3].byteSize)
+      expect(results[4]).toMatchObject({ project: { id: 'project-a' } })
+    } finally {
+      await rm(outputDir, { recursive: true, force: true })
+    }
   })
 
   it('calc_chain / check_requirement 通过真实帧返回结构化结果', async () => {

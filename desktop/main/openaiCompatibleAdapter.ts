@@ -32,6 +32,8 @@ export interface OpenAICompatibleSettings {
   model: string
   /** 单次请求超时；未给出时用任务预算。 */
   timeoutMs?: number
+  /** Require provider-authored IDs and use non-streaming Chat Completions. */
+  strictToolProtocol?: boolean
   /** 网络层重试次数，默认 2；只对可重试错误生效。 */
   maxRetries?: number
   /** 重试基础退避毫秒，默认 400，按次数指数增长。 */
@@ -43,6 +45,7 @@ export interface OpenAICompatibleDeps {
   getApiKey: () => Promise<string | null>
   settings: OpenAICompatibleSettings
   fetchImpl?: typeof fetch
+  signal?: AbortSignal
   /** 允许注入等待函数，测试里跳过退避。 */
   sleep?: (ms: number) => Promise<void>
 }
@@ -109,7 +112,9 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
   }
 
   async streamEvents(request: ModelRequest, onEvent: (event: ModelEvent) => void): Promise<ModelReply> {
+    this.deps.signal?.throwIfAborted()
     const key = await this.deps.getApiKey()
+    this.deps.signal?.throwIfAborted()
     if (key === null || key.trim() === '') {
       onEvent({ type: 'error', code: 'CONNECTION_FAILED', message: '模型尚未配置密钥' })
       throw new ModelAdapterError('CONNECTION_FAILED', '模型尚未配置密钥')
@@ -127,9 +132,9 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
       let attempt = 0
       for (;;) {
         try {
-          return await this.once(request, key, controller.signal, onEvent)
+          return await this.once(request, key, this.signal(controller.signal), onEvent)
         } catch (error) {
-          if (this.cancelled.has(request.taskId) || (error instanceof Error && error.name === 'AbortError')) {
+          if (this.deps.signal?.aborted || this.cancelled.has(request.taskId) || (error instanceof Error && error.name === 'AbortError')) {
             if (timedOut) throw new ModelAdapterError('TIMEOUT', scrub(`模型请求超过 ${timeoutMs} ms 未返回`, key))
             throw new ModelAdapterError('CANCELLED', '模型请求已取消')
           }
@@ -194,6 +199,29 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
     }
   }
 
+  private signal(local: AbortSignal): AbortSignal {
+    return this.deps.signal ? AbortSignal.any([local, this.deps.signal]) : local
+  }
+
+  async listModels(): Promise<string[]> {
+    const key = await this.deps.getApiKey()
+    if (!key) throw new ModelAdapterError('INVALID_API_KEY', '模型尚未配置密钥')
+    const response = await (this.deps.fetchImpl ?? fetch)(joinUrl(this.deps.settings.baseUrl, '/models'), {
+      headers: { authorization: `Bearer ${key}` },
+      redirect: 'error',
+      signal: this.signal(AbortSignal.timeout(this.deps.settings.timeoutMs ?? 20_000)),
+    })
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => {})
+      throw new ModelAdapterError(response.status === 401 || response.status === 403 ? 'AUTH_FAILED' : 'DISCONNECTED', '模型列表请求失败')
+    }
+    const body: unknown = await response.json()
+    const data = body && typeof body === 'object' && 'data' in body ? body.data : null
+    if (!Array.isArray(data)) throw new ModelAdapterError('DISCONNECTED', '模型列表格式无效')
+    return [...new Set(data.flatMap((entry: unknown) =>
+      entry && typeof entry === 'object' && 'id' in entry && typeof entry.id === 'string' && entry.id.trim() !== '' ? [entry.id] : []))]
+  }
+
   private async once(
     request: ModelRequest,
     key: string,
@@ -211,18 +239,25 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
           function: { name: tool.name, description: tool.description, parameters: tool.parameters },
         })),
         tool_choice: 'auto',
-        stream: true,
-        stream_options: { include_usage: true },
+        ...(this.deps.settings.strictToolProtocol ? { stream: false } : { stream: true, stream_options: { include_usage: true } }),
       }),
       signal,
+      ...(this.deps.settings.strictToolProtocol ? { redirect: 'error' as const } : {}),
     })
     if (!response.ok) {
       const text = await response.text().catch(() => '')
+      if (this.deps.settings.strictToolProtocol && [401, 403].includes(response.status)) {
+        throw Object.assign(new Error('模型认证失败'), { adapterCode: 'AUTH_FAILED' })
+      }
+      if (this.deps.settings.strictToolProtocol && [400, 422].includes(response.status) &&
+        /(?:tools?|function.calling)/iu.test(text)) {
+        throw Object.assign(new Error('模型拒绝工具调用'), { adapterCode: 'TOOL_CALL_UNSUPPORTED' })
+      }
       const failure = this.httpFailure(response.status, text, key)
       throw Object.assign(new Error(failure.message), { adapterCode: failure.code, retryable: failure.retryable })
     }
     const contentType = response.headers.get('content-type') ?? ''
-    if (contentType.includes('text/event-stream') && response.body !== null) {
+    if (!this.deps.settings.strictToolProtocol && contentType.includes('text/event-stream') && response.body !== null) {
       return this.readStream(response.body, request.taskId, onEvent)
     }
     const body = await response.text()
@@ -319,13 +354,19 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
     } catch {
       throw Object.assign(new Error(scrub('供应商返回内容不是合法 JSON', key)), { adapterCode: 'INVALID_REPLY', retryable: false })
     }
-    const message = parsed.choices?.[0]?.message
-    if (message === undefined) {
+    const message = parsed?.choices?.[0]?.message
+    if (message == null || (this.deps.settings.strictToolProtocol && (typeof message !== 'object' ||
+      (message.tool_calls != null && !Array.isArray(message.tool_calls))))) {
       throw Object.assign(new Error('供应商回执缺少 choices[0].message'), { adapterCode: 'INVALID_REPLY', retryable: false })
     }
     const text = typeof message.content === 'string' ? message.content : ''
     if (text.length > 0) onEvent({ type: 'token', text })
     const toolCalls: ModelToolCall[] = (message.tool_calls ?? []).map((call, index) => {
+      if (this.deps.settings.strictToolProtocol &&
+        (call?.type !== 'function' || typeof call.id !== 'string' || !call.id.trim() ||
+          typeof call.function?.name !== 'string' || typeof call.function.arguments !== 'string')) {
+        throw Object.assign(new Error('工具调用格式无效'), { adapterCode: 'INVALID_REPLY' })
+      }
       const name = call.function?.name ?? ''
       const argumentsJson = call.function?.arguments ?? '{}'
       onEvent({ type: 'tool_call_start', index, name })

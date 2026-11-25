@@ -1,10 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { DesktopWorkspace } from '../pages/DesktopWorkspace'
+import App from '../App'
 import '../index.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <DesktopWorkspace />
+    <App />
   </StrictMode>,
 )

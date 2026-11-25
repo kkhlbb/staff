@@ -57,7 +57,7 @@ export class IpcFailure extends Error {
 }
 
 /** 从 Electron 事件提取安全校验所需字段；senderFrame 为 null 时按不可信处理。 */
-export function toSenderInfo(event: IpcMainInvokeEvent): SenderInfo {
+export function toSenderInfo(event: Pick<IpcMainInvokeEvent, 'sender' | 'senderFrame'>): SenderInfo {
   const sender = event.sender
   const frame = event.senderFrame
   return {

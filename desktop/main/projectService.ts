@@ -1,3 +1,4 @@
+import type { LocalM1Authority, LocalM1Session } from './project-agent/m1LocalAuthority.ts'
 /**
  * 项目文件会话服务（A-02 纯部分）。
  *
@@ -92,6 +93,7 @@ export interface CommitCandidateValue {
 }
 
 export interface ProjectServiceOptions {
+  bindingAuthority?: () => Pick<LocalM1Authority, 'preserveBinding'> | undefined
   store?: FileStore
   newSessionId?: () => string
   now?: () => Date
@@ -109,6 +111,7 @@ function fromSaveError(error: SaveError): IpcResult<never> {
 }
 
 export class ProjectService {
+  private readonly bindingAuthority: ProjectServiceOptions['bindingAuthority']
   private readonly store: FileStore
   private readonly newSessionId: () => string
   private readonly now: () => Date
@@ -120,6 +123,7 @@ export class ProjectService {
   private readonly conflictedStages = new Map<string, ProjectSession | SnapshotDto>()
 
   constructor(options: ProjectServiceOptions = {}) {
+    this.bindingAuthority = options.bindingAuthority
     this.store = options.store ?? new FileStore()
     this.newSessionId = options.newSessionId ?? (() => randomUUID())
     this.now = options.now ?? (() => new Date())
@@ -497,7 +501,11 @@ export class ProjectService {
     sessionId: string,
     request: CommitCandidateRequest,
   ): Promise<IpcResult<CommitCandidateValue>> {
-    return this.transaction(sessionId, () => this.commitCandidateNow(sessionId, request))
+    return this.transaction(sessionId, () => {
+      const session = this.sessions.get(sessionId)
+      const commit = () => this.commitCandidateNow(sessionId, request)
+      return session?.path && session.fingerprint ? this.saveWithBinding(session, commit) : commit()
+    })
   }
 
   private async commitCandidateNow(
@@ -664,7 +672,28 @@ export class ProjectService {
       if (!checked.ok) {
         return checked
       }
-      return this.writeSnapshot(session, session.path as string, request, session.fingerprint)
+      const target = session.path as string
+      return this.saveWithBinding(session, () => this.writeSnapshot(session, target, request, session.fingerprint))
+    })
+  }
+
+  private async saveWithBinding<T extends { warnings: string[] }>(
+    session: ProjectSession, save: () => Promise<IpcResult<T>>,
+  ): Promise<IpcResult<T>> {
+    const authority = this.bindingAuthority?.()
+    if (!authority) return save()
+    const describe = (): LocalM1Session => ({ sessionId: session.sessionId, projectId: session.snapshot.project.id,
+      path: session.path, fingerprint: session.fingerprint })
+    return authority.preserveBinding(describe(), async advance => {
+      const result = await save()
+      if (result.ok) {
+        try {
+          await advance(describe())
+        } catch {
+          result.value.warnings.push('项目已保存，但 M1 绑定版本更新失败。旧日志保留，当前版本须重新授权。')
+        }
+      }
+      return result
     })
   }
 

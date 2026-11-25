@@ -1,0 +1,1687 @@
+{
+  "synthetic": true,
+  "notice": "Synthetic schema/replay fixtures; not live connections, frontend rendering, engineering calculations or packaged acceptance. M0 capabilities deliberately remain false.",
+  "cases": [
+    {
+      "synthetic": true,
+      "id": "offline-reopen",
+      "snapshot": {
+        "version": "0.1.0-m0",
+        "projectId": "synthetic-project",
+        "baseRevision": "r7",
+        "draftRevision": null,
+        "cursor": 100,
+        "connection": {
+          "status": "disconnected",
+          "source": null
+        },
+        "authorization": {
+          "authorized": false,
+          "canWrite": false
+        },
+        "writer": {
+          "epoch": 4,
+          "callerId": null
+        },
+        "selection": null,
+        "capabilities": {
+          "projectService": false,
+          "externalBridge": false,
+          "internalToolRoundTrip": false,
+          "persistentWrites": false,
+          "eventReplay": false,
+          "plateGeometry": false,
+          "drawingProjection": false,
+          "planarAnalysis": false,
+          "spatialAnalysis": false,
+          "fixedPoseInterference": false,
+          "parts": []
+        },
+        "activeJobId": null,
+        "jobs": [],
+        "currentManifest": null,
+        "fallbackArtifacts": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-model",
+            "kind": "model",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://model",
+            "unit": "mm"
+          },
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-drawing",
+            "kind": "drawing",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://drawing",
+            "unit": "mm"
+          }
+        ]
+      },
+      "events": [],
+      "expected": {
+        "cursor": 100,
+        "needsSnapshot": false,
+        "artifactCount": 0,
+        "cancelled": false
+      }
+    },
+    {
+      "synthetic": true,
+      "id": "connected-unapproved",
+      "snapshot": {
+        "version": "0.1.0-m0",
+        "projectId": "synthetic-project",
+        "baseRevision": "r7",
+        "draftRevision": null,
+        "cursor": 100,
+        "connection": {
+          "status": "connected",
+          "source": "external",
+          "clientName": "Synthetic fixture only"
+        },
+        "authorization": {
+          "authorized": false,
+          "canWrite": false
+        },
+        "writer": {
+          "epoch": 4,
+          "callerId": null
+        },
+        "selection": null,
+        "capabilities": {
+          "projectService": false,
+          "externalBridge": false,
+          "internalToolRoundTrip": false,
+          "persistentWrites": false,
+          "eventReplay": false,
+          "plateGeometry": false,
+          "drawingProjection": false,
+          "planarAnalysis": false,
+          "spatialAnalysis": false,
+          "fixedPoseInterference": false,
+          "parts": []
+        },
+        "activeJobId": null,
+        "jobs": [],
+        "currentManifest": null,
+        "fallbackArtifacts": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-model",
+            "kind": "model",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://model",
+            "unit": "mm"
+          },
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-drawing",
+            "kind": "drawing",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://drawing",
+            "unit": "mm"
+          }
+        ]
+      },
+      "events": [],
+      "expected": {
+        "cursor": 100,
+        "needsSnapshot": false,
+        "artifactCount": 0,
+        "cancelled": false
+      }
+    },
+    {
+      "synthetic": true,
+      "id": "model-before-drawing",
+      "snapshot": {
+        "version": "0.1.0-m0",
+        "projectId": "synthetic-project",
+        "baseRevision": "r7",
+        "draftRevision": "d8",
+        "cursor": 100,
+        "connection": {
+          "status": "connected",
+          "source": "external",
+          "clientName": "Synthetic fixture only"
+        },
+        "authorization": {
+          "authorized": true,
+          "canWrite": true
+        },
+        "writer": {
+          "epoch": 4,
+          "callerId": "synthetic-caller"
+        },
+        "selection": null,
+        "capabilities": {
+          "projectService": false,
+          "externalBridge": false,
+          "internalToolRoundTrip": false,
+          "persistentWrites": false,
+          "eventReplay": false,
+          "plateGeometry": false,
+          "drawingProjection": false,
+          "planarAnalysis": false,
+          "spatialAnalysis": false,
+          "fixedPoseInterference": false,
+          "parts": []
+        },
+        "activeJobId": "j8",
+        "jobs": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": "d8",
+            "jobId": "j8",
+            "inputs": {
+              "requirementVersion": "synthetic-req1",
+              "featureVersion": "synthetic-feat1",
+              "kernelVersion": "synthetic-not-running",
+              "rulesVersion": "synthetic-rule1",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "geometry": {
+                "unit": "mm",
+                "coordinateSystemId": "synthetic-local",
+                "originMm": [
+                  0,
+                  0,
+                  0
+                ],
+                "xAxis": [
+                  1,
+                  0,
+                  0
+                ],
+                "yAxis": [
+                  0,
+                  1,
+                  0
+                ],
+                "zAxis": [
+                  0,
+                  0,
+                  1
+                ],
+                "modelingToleranceMm": 1e-06,
+                "displayDecimals": 3
+              }
+            },
+            "status": "running",
+            "steps": [
+              {
+                "kind": "model",
+                "attempt": 1,
+                "status": "ready",
+                "retryable": true
+              },
+              {
+                "kind": "drawing",
+                "attempt": 1,
+                "status": "running",
+                "retryable": true
+              },
+              {
+                "kind": "checks",
+                "attempt": 1,
+                "status": "running",
+                "retryable": true
+              }
+            ]
+          }
+        ],
+        "currentManifest": {
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "inputs": {
+            "requirementVersion": "synthetic-req1",
+            "featureVersion": "synthetic-feat1",
+            "kernelVersion": "synthetic-not-running",
+            "rulesVersion": "synthetic-rule1",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "geometry": {
+              "unit": "mm",
+              "coordinateSystemId": "synthetic-local",
+              "originMm": [
+                0,
+                0,
+                0
+              ],
+              "xAxis": [
+                1,
+                0,
+                0
+              ],
+              "yAxis": [
+                0,
+                1,
+                0
+              ],
+              "zAxis": [
+                0,
+                0,
+                1
+              ],
+              "modelingToleranceMm": 1e-06,
+              "displayDecimals": 3
+            }
+          },
+          "artifacts": [
+            {
+              "projectId": "synthetic-project",
+              "baseRevision": "r7",
+              "draftRevision": "d8",
+              "jobId": "j8",
+              "artifactId": "d8-model",
+              "kind": "model",
+              "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "objectMapVersion": "map8",
+              "attempt": 1,
+              "localRef": "synthetic://model",
+              "unit": "mm"
+            }
+          ],
+          "checks": [],
+          "objectMapVersion": "map8",
+          "previewFingerprint": null,
+          "checkFingerprint": null
+        },
+        "fallbackArtifacts": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-model",
+            "kind": "model",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://model",
+            "unit": "mm"
+          },
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-drawing",
+            "kind": "drawing",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://drawing",
+            "unit": "mm"
+          }
+        ]
+      },
+      "events": [],
+      "expected": {
+        "cursor": 100,
+        "needsSnapshot": false,
+        "artifactCount": 1,
+        "cancelled": false
+      }
+    },
+    {
+      "synthetic": true,
+      "id": "duplicate-sequence",
+      "snapshot": {
+        "version": "0.1.0-m0",
+        "projectId": "synthetic-project",
+        "baseRevision": "r7",
+        "draftRevision": "d8",
+        "cursor": 100,
+        "connection": {
+          "status": "connected",
+          "source": "external",
+          "clientName": "Synthetic fixture only"
+        },
+        "authorization": {
+          "authorized": true,
+          "canWrite": true
+        },
+        "writer": {
+          "epoch": 4,
+          "callerId": "synthetic-caller"
+        },
+        "selection": null,
+        "capabilities": {
+          "projectService": false,
+          "externalBridge": false,
+          "internalToolRoundTrip": false,
+          "persistentWrites": false,
+          "eventReplay": false,
+          "plateGeometry": false,
+          "drawingProjection": false,
+          "planarAnalysis": false,
+          "spatialAnalysis": false,
+          "fixedPoseInterference": false,
+          "parts": []
+        },
+        "activeJobId": "j8",
+        "jobs": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": "d8",
+            "jobId": "j8",
+            "inputs": {
+              "requirementVersion": "synthetic-req1",
+              "featureVersion": "synthetic-feat1",
+              "kernelVersion": "synthetic-not-running",
+              "rulesVersion": "synthetic-rule1",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "geometry": {
+                "unit": "mm",
+                "coordinateSystemId": "synthetic-local",
+                "originMm": [
+                  0,
+                  0,
+                  0
+                ],
+                "xAxis": [
+                  1,
+                  0,
+                  0
+                ],
+                "yAxis": [
+                  0,
+                  1,
+                  0
+                ],
+                "zAxis": [
+                  0,
+                  0,
+                  1
+                ],
+                "modelingToleranceMm": 1e-06,
+                "displayDecimals": 3
+              }
+            },
+            "status": "running",
+            "steps": [
+              {
+                "kind": "model",
+                "attempt": 1,
+                "status": "ready",
+                "retryable": true
+              },
+              {
+                "kind": "drawing",
+                "attempt": 1,
+                "status": "running",
+                "retryable": true
+              },
+              {
+                "kind": "checks",
+                "attempt": 1,
+                "status": "running",
+                "retryable": true
+              }
+            ]
+          }
+        ],
+        "currentManifest": {
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "inputs": {
+            "requirementVersion": "synthetic-req1",
+            "featureVersion": "synthetic-feat1",
+            "kernelVersion": "synthetic-not-running",
+            "rulesVersion": "synthetic-rule1",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "geometry": {
+              "unit": "mm",
+              "coordinateSystemId": "synthetic-local",
+              "originMm": [
+                0,
+                0,
+                0
+              ],
+              "xAxis": [
+                1,
+                0,
+                0
+              ],
+              "yAxis": [
+                0,
+                1,
+                0
+              ],
+              "zAxis": [
+                0,
+                0,
+                1
+              ],
+              "modelingToleranceMm": 1e-06,
+              "displayDecimals": 3
+            }
+          },
+          "artifacts": [
+            {
+              "projectId": "synthetic-project",
+              "baseRevision": "r7",
+              "draftRevision": "d8",
+              "jobId": "j8",
+              "artifactId": "d8-model",
+              "kind": "model",
+              "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "objectMapVersion": "map8",
+              "attempt": 1,
+              "localRef": "synthetic://model",
+              "unit": "mm"
+            }
+          ],
+          "checks": [],
+          "objectMapVersion": "map8",
+          "previewFingerprint": null,
+          "checkFingerprint": null
+        },
+        "fallbackArtifacts": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-model",
+            "kind": "model",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://model",
+            "unit": "mm"
+          },
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-drawing",
+            "kind": "drawing",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://drawing",
+            "unit": "mm"
+          }
+        ]
+      },
+      "events": [
+        {
+          "version": "0.1.0-m0",
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "jobId": "j8",
+          "sequence": 101,
+          "type": "artifactReady",
+          "artifactId": "d8-drawing",
+          "kind": "drawing",
+          "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "objectMapVersion": "map8",
+          "attempt": 1,
+          "localRef": "synthetic://drawing",
+          "unit": "mm"
+        },
+        {
+          "version": "0.1.0-m0",
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "jobId": "j8",
+          "sequence": 101,
+          "type": "artifactReady",
+          "artifactId": "d8-drawing",
+          "kind": "drawing",
+          "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "objectMapVersion": "map8",
+          "attempt": 1,
+          "localRef": "synthetic://drawing",
+          "unit": "mm"
+        }
+      ],
+      "expected": {
+        "cursor": 101,
+        "needsSnapshot": false,
+        "artifactCount": 2,
+        "cancelled": false
+      }
+    },
+    {
+      "synthetic": true,
+      "id": "late-old-revision",
+      "snapshot": {
+        "version": "0.1.0-m0",
+        "projectId": "synthetic-project",
+        "baseRevision": "r7",
+        "draftRevision": "d8",
+        "cursor": 100,
+        "connection": {
+          "status": "connected",
+          "source": "external",
+          "clientName": "Synthetic fixture only"
+        },
+        "authorization": {
+          "authorized": true,
+          "canWrite": true
+        },
+        "writer": {
+          "epoch": 4,
+          "callerId": "synthetic-caller"
+        },
+        "selection": null,
+        "capabilities": {
+          "projectService": false,
+          "externalBridge": false,
+          "internalToolRoundTrip": false,
+          "persistentWrites": false,
+          "eventReplay": false,
+          "plateGeometry": false,
+          "drawingProjection": false,
+          "planarAnalysis": false,
+          "spatialAnalysis": false,
+          "fixedPoseInterference": false,
+          "parts": []
+        },
+        "activeJobId": "j8",
+        "jobs": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": "d8",
+            "jobId": "j8",
+            "inputs": {
+              "requirementVersion": "synthetic-req1",
+              "featureVersion": "synthetic-feat1",
+              "kernelVersion": "synthetic-not-running",
+              "rulesVersion": "synthetic-rule1",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "geometry": {
+                "unit": "mm",
+                "coordinateSystemId": "synthetic-local",
+                "originMm": [
+                  0,
+                  0,
+                  0
+                ],
+                "xAxis": [
+                  1,
+                  0,
+                  0
+                ],
+                "yAxis": [
+                  0,
+                  1,
+                  0
+                ],
+                "zAxis": [
+                  0,
+                  0,
+                  1
+                ],
+                "modelingToleranceMm": 1e-06,
+                "displayDecimals": 3
+              }
+            },
+            "status": "running",
+            "steps": [
+              {
+                "kind": "model",
+                "attempt": 1,
+                "status": "ready",
+                "retryable": true
+              },
+              {
+                "kind": "drawing",
+                "attempt": 1,
+                "status": "running",
+                "retryable": true
+              },
+              {
+                "kind": "checks",
+                "attempt": 1,
+                "status": "running",
+                "retryable": true
+              }
+            ]
+          }
+        ],
+        "currentManifest": {
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "inputs": {
+            "requirementVersion": "synthetic-req1",
+            "featureVersion": "synthetic-feat1",
+            "kernelVersion": "synthetic-not-running",
+            "rulesVersion": "synthetic-rule1",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "geometry": {
+              "unit": "mm",
+              "coordinateSystemId": "synthetic-local",
+              "originMm": [
+                0,
+                0,
+                0
+              ],
+              "xAxis": [
+                1,
+                0,
+                0
+              ],
+              "yAxis": [
+                0,
+                1,
+                0
+              ],
+              "zAxis": [
+                0,
+                0,
+                1
+              ],
+              "modelingToleranceMm": 1e-06,
+              "displayDecimals": 3
+            }
+          },
+          "artifacts": [
+            {
+              "projectId": "synthetic-project",
+              "baseRevision": "r7",
+              "draftRevision": "d8",
+              "jobId": "j8",
+              "artifactId": "d8-model",
+              "kind": "model",
+              "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "objectMapVersion": "map8",
+              "attempt": 1,
+              "localRef": "synthetic://model",
+              "unit": "mm"
+            }
+          ],
+          "checks": [],
+          "objectMapVersion": "map8",
+          "previewFingerprint": null,
+          "checkFingerprint": null
+        },
+        "fallbackArtifacts": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-model",
+            "kind": "model",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://model",
+            "unit": "mm"
+          },
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-drawing",
+            "kind": "drawing",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://drawing",
+            "unit": "mm"
+          }
+        ]
+      },
+      "events": [
+        {
+          "version": "0.1.0-m0",
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d-old",
+          "jobId": "j-old",
+          "sequence": 101,
+          "type": "artifactReady",
+          "artifactId": "d8-drawing",
+          "kind": "drawing",
+          "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "objectMapVersion": "map8",
+          "attempt": 1,
+          "localRef": "synthetic://drawing",
+          "unit": "mm"
+        }
+      ],
+      "expected": {
+        "cursor": 101,
+        "needsSnapshot": false,
+        "artifactCount": 1,
+        "cancelled": false
+      }
+    },
+    {
+      "synthetic": true,
+      "id": "sequence-gap",
+      "snapshot": {
+        "version": "0.1.0-m0",
+        "projectId": "synthetic-project",
+        "baseRevision": "r7",
+        "draftRevision": "d8",
+        "cursor": 100,
+        "connection": {
+          "status": "connected",
+          "source": "external",
+          "clientName": "Synthetic fixture only"
+        },
+        "authorization": {
+          "authorized": true,
+          "canWrite": true
+        },
+        "writer": {
+          "epoch": 4,
+          "callerId": "synthetic-caller"
+        },
+        "selection": null,
+        "capabilities": {
+          "projectService": false,
+          "externalBridge": false,
+          "internalToolRoundTrip": false,
+          "persistentWrites": false,
+          "eventReplay": false,
+          "plateGeometry": false,
+          "drawingProjection": false,
+          "planarAnalysis": false,
+          "spatialAnalysis": false,
+          "fixedPoseInterference": false,
+          "parts": []
+        },
+        "activeJobId": "j8",
+        "jobs": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": "d8",
+            "jobId": "j8",
+            "inputs": {
+              "requirementVersion": "synthetic-req1",
+              "featureVersion": "synthetic-feat1",
+              "kernelVersion": "synthetic-not-running",
+              "rulesVersion": "synthetic-rule1",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "geometry": {
+                "unit": "mm",
+                "coordinateSystemId": "synthetic-local",
+                "originMm": [
+                  0,
+                  0,
+                  0
+                ],
+                "xAxis": [
+                  1,
+                  0,
+                  0
+                ],
+                "yAxis": [
+                  0,
+                  1,
+                  0
+                ],
+                "zAxis": [
+                  0,
+                  0,
+                  1
+                ],
+                "modelingToleranceMm": 1e-06,
+                "displayDecimals": 3
+              }
+            },
+            "status": "running",
+            "steps": [
+              {
+                "kind": "model",
+                "attempt": 1,
+                "status": "ready",
+                "retryable": true
+              },
+              {
+                "kind": "drawing",
+                "attempt": 1,
+                "status": "running",
+                "retryable": true
+              },
+              {
+                "kind": "checks",
+                "attempt": 1,
+                "status": "running",
+                "retryable": true
+              }
+            ]
+          }
+        ],
+        "currentManifest": {
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "inputs": {
+            "requirementVersion": "synthetic-req1",
+            "featureVersion": "synthetic-feat1",
+            "kernelVersion": "synthetic-not-running",
+            "rulesVersion": "synthetic-rule1",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "geometry": {
+              "unit": "mm",
+              "coordinateSystemId": "synthetic-local",
+              "originMm": [
+                0,
+                0,
+                0
+              ],
+              "xAxis": [
+                1,
+                0,
+                0
+              ],
+              "yAxis": [
+                0,
+                1,
+                0
+              ],
+              "zAxis": [
+                0,
+                0,
+                1
+              ],
+              "modelingToleranceMm": 1e-06,
+              "displayDecimals": 3
+            }
+          },
+          "artifacts": [
+            {
+              "projectId": "synthetic-project",
+              "baseRevision": "r7",
+              "draftRevision": "d8",
+              "jobId": "j8",
+              "artifactId": "d8-model",
+              "kind": "model",
+              "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "objectMapVersion": "map8",
+              "attempt": 1,
+              "localRef": "synthetic://model",
+              "unit": "mm"
+            }
+          ],
+          "checks": [],
+          "objectMapVersion": "map8",
+          "previewFingerprint": null,
+          "checkFingerprint": null
+        },
+        "fallbackArtifacts": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-model",
+            "kind": "model",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://model",
+            "unit": "mm"
+          },
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-drawing",
+            "kind": "drawing",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://drawing",
+            "unit": "mm"
+          }
+        ]
+      },
+      "events": [
+        {
+          "version": "0.1.0-m0",
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "jobId": "j8",
+          "sequence": 102,
+          "type": "artifactReady",
+          "artifactId": "d8-drawing",
+          "kind": "drawing",
+          "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "objectMapVersion": "map8",
+          "attempt": 1,
+          "localRef": "synthetic://drawing",
+          "unit": "mm"
+        }
+      ],
+      "expected": {
+        "cursor": 100,
+        "needsSnapshot": true,
+        "artifactCount": 1,
+        "cancelled": false
+      }
+    },
+    {
+      "synthetic": true,
+      "id": "cancelled-late-result",
+      "snapshot": {
+        "version": "0.1.0-m0",
+        "projectId": "synthetic-project",
+        "baseRevision": "r7",
+        "draftRevision": "d8",
+        "cursor": 100,
+        "connection": {
+          "status": "connected",
+          "source": "external",
+          "clientName": "Synthetic fixture only"
+        },
+        "authorization": {
+          "authorized": true,
+          "canWrite": true
+        },
+        "writer": {
+          "epoch": 4,
+          "callerId": "synthetic-caller"
+        },
+        "selection": null,
+        "capabilities": {
+          "projectService": false,
+          "externalBridge": false,
+          "internalToolRoundTrip": false,
+          "persistentWrites": false,
+          "eventReplay": false,
+          "plateGeometry": false,
+          "drawingProjection": false,
+          "planarAnalysis": false,
+          "spatialAnalysis": false,
+          "fixedPoseInterference": false,
+          "parts": []
+        },
+        "activeJobId": "j8",
+        "jobs": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": "d8",
+            "jobId": "j8",
+            "inputs": {
+              "requirementVersion": "synthetic-req1",
+              "featureVersion": "synthetic-feat1",
+              "kernelVersion": "synthetic-not-running",
+              "rulesVersion": "synthetic-rule1",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "geometry": {
+                "unit": "mm",
+                "coordinateSystemId": "synthetic-local",
+                "originMm": [
+                  0,
+                  0,
+                  0
+                ],
+                "xAxis": [
+                  1,
+                  0,
+                  0
+                ],
+                "yAxis": [
+                  0,
+                  1,
+                  0
+                ],
+                "zAxis": [
+                  0,
+                  0,
+                  1
+                ],
+                "modelingToleranceMm": 1e-06,
+                "displayDecimals": 3
+              }
+            },
+            "status": "running",
+            "steps": [
+              {
+                "kind": "model",
+                "attempt": 1,
+                "status": "ready",
+                "retryable": true
+              },
+              {
+                "kind": "drawing",
+                "attempt": 1,
+                "status": "running",
+                "retryable": true
+              },
+              {
+                "kind": "checks",
+                "attempt": 1,
+                "status": "running",
+                "retryable": true
+              }
+            ]
+          }
+        ],
+        "currentManifest": {
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "inputs": {
+            "requirementVersion": "synthetic-req1",
+            "featureVersion": "synthetic-feat1",
+            "kernelVersion": "synthetic-not-running",
+            "rulesVersion": "synthetic-rule1",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "geometry": {
+              "unit": "mm",
+              "coordinateSystemId": "synthetic-local",
+              "originMm": [
+                0,
+                0,
+                0
+              ],
+              "xAxis": [
+                1,
+                0,
+                0
+              ],
+              "yAxis": [
+                0,
+                1,
+                0
+              ],
+              "zAxis": [
+                0,
+                0,
+                1
+              ],
+              "modelingToleranceMm": 1e-06,
+              "displayDecimals": 3
+            }
+          },
+          "artifacts": [
+            {
+              "projectId": "synthetic-project",
+              "baseRevision": "r7",
+              "draftRevision": "d8",
+              "jobId": "j8",
+              "artifactId": "d8-model",
+              "kind": "model",
+              "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "objectMapVersion": "map8",
+              "attempt": 1,
+              "localRef": "synthetic://model",
+              "unit": "mm"
+            }
+          ],
+          "checks": [],
+          "objectMapVersion": "map8",
+          "previewFingerprint": null,
+          "checkFingerprint": null
+        },
+        "fallbackArtifacts": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-model",
+            "kind": "model",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://model",
+            "unit": "mm"
+          },
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-drawing",
+            "kind": "drawing",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://drawing",
+            "unit": "mm"
+          }
+        ]
+      },
+      "events": [
+        {
+          "version": "0.1.0-m0",
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "jobId": "j8",
+          "sequence": 101,
+          "type": "jobCancelled"
+        },
+        {
+          "version": "0.1.0-m0",
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "jobId": "j8",
+          "sequence": 102,
+          "type": "artifactReady",
+          "artifactId": "d8-drawing",
+          "kind": "drawing",
+          "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "objectMapVersion": "map8",
+          "attempt": 1,
+          "localRef": "synthetic://drawing",
+          "unit": "mm"
+        }
+      ],
+      "expected": {
+        "cursor": 102,
+        "needsSnapshot": false,
+        "artifactCount": 1,
+        "cancelled": true
+      }
+    },
+    {
+      "synthetic": true,
+      "id": "refresh-context",
+      "snapshot": {
+        "version": "0.1.0-m0",
+        "projectId": "synthetic-project",
+        "baseRevision": "r7",
+        "draftRevision": "d8",
+        "cursor": 100,
+        "connection": {
+          "status": "connected",
+          "source": "external",
+          "clientName": "Synthetic fixture only"
+        },
+        "authorization": {
+          "authorized": true,
+          "canWrite": true
+        },
+        "writer": {
+          "epoch": 4,
+          "callerId": "synthetic-caller"
+        },
+        "selection": null,
+        "capabilities": {
+          "projectService": false,
+          "externalBridge": false,
+          "internalToolRoundTrip": false,
+          "persistentWrites": false,
+          "eventReplay": false,
+          "plateGeometry": false,
+          "drawingProjection": false,
+          "planarAnalysis": false,
+          "spatialAnalysis": false,
+          "fixedPoseInterference": false,
+          "parts": []
+        },
+        "activeJobId": "j8",
+        "jobs": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": "d8",
+            "jobId": "j8",
+            "inputs": {
+              "requirementVersion": "synthetic-req1",
+              "featureVersion": "synthetic-feat1",
+              "kernelVersion": "synthetic-not-running",
+              "rulesVersion": "synthetic-rule1",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "geometry": {
+                "unit": "mm",
+                "coordinateSystemId": "synthetic-local",
+                "originMm": [
+                  0,
+                  0,
+                  0
+                ],
+                "xAxis": [
+                  1,
+                  0,
+                  0
+                ],
+                "yAxis": [
+                  0,
+                  1,
+                  0
+                ],
+                "zAxis": [
+                  0,
+                  0,
+                  1
+                ],
+                "modelingToleranceMm": 1e-06,
+                "displayDecimals": 3
+              }
+            },
+            "status": "running",
+            "steps": [
+              {
+                "kind": "model",
+                "attempt": 1,
+                "status": "ready",
+                "retryable": true
+              },
+              {
+                "kind": "drawing",
+                "attempt": 1,
+                "status": "running",
+                "retryable": true
+              },
+              {
+                "kind": "checks",
+                "attempt": 1,
+                "status": "running",
+                "retryable": true
+              }
+            ]
+          }
+        ],
+        "currentManifest": {
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "inputs": {
+            "requirementVersion": "synthetic-req1",
+            "featureVersion": "synthetic-feat1",
+            "kernelVersion": "synthetic-not-running",
+            "rulesVersion": "synthetic-rule1",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "geometry": {
+              "unit": "mm",
+              "coordinateSystemId": "synthetic-local",
+              "originMm": [
+                0,
+                0,
+                0
+              ],
+              "xAxis": [
+                1,
+                0,
+                0
+              ],
+              "yAxis": [
+                0,
+                1,
+                0
+              ],
+              "zAxis": [
+                0,
+                0,
+                1
+              ],
+              "modelingToleranceMm": 1e-06,
+              "displayDecimals": 3
+            }
+          },
+          "artifacts": [
+            {
+              "projectId": "synthetic-project",
+              "baseRevision": "r7",
+              "draftRevision": "d8",
+              "jobId": "j8",
+              "artifactId": "d8-model",
+              "kind": "model",
+              "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "objectMapVersion": "map8",
+              "attempt": 1,
+              "localRef": "synthetic://model",
+              "unit": "mm"
+            }
+          ],
+          "checks": [],
+          "objectMapVersion": "map8",
+          "previewFingerprint": null,
+          "checkFingerprint": null
+        },
+        "fallbackArtifacts": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-model",
+            "kind": "model",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://model",
+            "unit": "mm"
+          },
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-drawing",
+            "kind": "drawing",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://drawing",
+            "unit": "mm"
+          }
+        ]
+      },
+      "events": [
+        {
+          "version": "0.1.0-m0",
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "jobId": null,
+          "sequence": 101,
+          "type": "contextChanged"
+        }
+      ],
+      "expected": {
+        "cursor": 101,
+        "needsSnapshot": true,
+        "artifactCount": 1,
+        "cancelled": false
+      }
+    },
+    {
+      "synthetic": true,
+      "id": "aligned-per-step-attempts",
+      "snapshot": {
+        "version": "0.1.0-m0",
+        "projectId": "synthetic-project",
+        "baseRevision": "r7",
+        "draftRevision": "d8",
+        "cursor": 100,
+        "connection": {
+          "status": "connected",
+          "source": "external",
+          "clientName": "Synthetic fixture only"
+        },
+        "authorization": {
+          "authorized": true,
+          "canWrite": true
+        },
+        "writer": {
+          "epoch": 4,
+          "callerId": "synthetic-caller"
+        },
+        "selection": null,
+        "capabilities": {
+          "projectService": false,
+          "externalBridge": false,
+          "internalToolRoundTrip": false,
+          "persistentWrites": false,
+          "eventReplay": false,
+          "plateGeometry": false,
+          "drawingProjection": false,
+          "planarAnalysis": false,
+          "spatialAnalysis": false,
+          "fixedPoseInterference": false,
+          "parts": []
+        },
+        "activeJobId": "j8",
+        "jobs": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": "d8",
+            "jobId": "j8",
+            "inputs": {
+              "requirementVersion": "synthetic-req1",
+              "featureVersion": "synthetic-feat1",
+              "kernelVersion": "synthetic-not-running",
+              "rulesVersion": "synthetic-rule1",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "geometry": {
+                "unit": "mm",
+                "coordinateSystemId": "synthetic-local",
+                "originMm": [
+                  0,
+                  0,
+                  0
+                ],
+                "xAxis": [
+                  1,
+                  0,
+                  0
+                ],
+                "yAxis": [
+                  0,
+                  1,
+                  0
+                ],
+                "zAxis": [
+                  0,
+                  0,
+                  1
+                ],
+                "modelingToleranceMm": 1e-06,
+                "displayDecimals": 3
+              }
+            },
+            "status": "complete",
+            "steps": [
+              {
+                "kind": "model",
+                "attempt": 1,
+                "status": "ready",
+                "retryable": true
+              },
+              {
+                "kind": "drawing",
+                "attempt": 2,
+                "status": "ready",
+                "retryable": true
+              },
+              {
+                "kind": "checks",
+                "attempt": 1,
+                "status": "ready",
+                "retryable": true
+              }
+            ]
+          }
+        ],
+        "currentManifest": {
+          "projectId": "synthetic-project",
+          "baseRevision": "r7",
+          "draftRevision": "d8",
+          "inputs": {
+            "requirementVersion": "synthetic-req1",
+            "featureVersion": "synthetic-feat1",
+            "kernelVersion": "synthetic-not-running",
+            "rulesVersion": "synthetic-rule1",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "geometry": {
+              "unit": "mm",
+              "coordinateSystemId": "synthetic-local",
+              "originMm": [
+                0,
+                0,
+                0
+              ],
+              "xAxis": [
+                1,
+                0,
+                0
+              ],
+              "yAxis": [
+                0,
+                1,
+                0
+              ],
+              "zAxis": [
+                0,
+                0,
+                1
+              ],
+              "modelingToleranceMm": 1e-06,
+              "displayDecimals": 3
+            }
+          },
+          "artifacts": [
+            {
+              "projectId": "synthetic-project",
+              "baseRevision": "r7",
+              "draftRevision": "d8",
+              "jobId": "j8",
+              "artifactId": "d8-model",
+              "kind": "model",
+              "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "objectMapVersion": "map8",
+              "attempt": 1,
+              "localRef": "synthetic://model",
+              "unit": "mm"
+            },
+            {
+              "projectId": "synthetic-project",
+              "baseRevision": "r7",
+              "draftRevision": "d8",
+              "jobId": "j8",
+              "artifactId": "d8-drawing",
+              "kind": "drawing",
+              "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "objectMapVersion": "map8",
+              "attempt": 2,
+              "localRef": "synthetic://drawing",
+              "unit": "mm"
+            },
+            {
+              "projectId": "synthetic-project",
+              "baseRevision": "r7",
+              "draftRevision": "d8",
+              "jobId": "j8",
+              "artifactId": "d8-checks",
+              "kind": "checks",
+              "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "objectMapVersion": "map8",
+              "attempt": 1,
+              "localRef": "synthetic://checks",
+              "unit": "q"
+            }
+          ],
+          "checks": [
+            {
+              "requirementId": "synthetic-required",
+              "required": true,
+              "ruleId": "synthetic-rule",
+              "ruleVersion": "1",
+              "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "status": "pass",
+              "evidence": {
+                "requirementId": "synthetic-required",
+                "anchors": [],
+                "objects": [],
+                "annotationIds": [],
+                "inputs": [],
+                "threshold": null
+              }
+            }
+          ],
+          "objectMapVersion": "map8",
+          "previewFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "checkFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "fallbackArtifacts": [
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-model",
+            "kind": "model",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://model",
+            "unit": "mm"
+          },
+          {
+            "projectId": "synthetic-project",
+            "baseRevision": "r7",
+            "draftRevision": null,
+            "jobId": "j7",
+            "artifactId": "r7-drawing",
+            "kind": "drawing",
+            "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "inputFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "objectMapVersion": "map7",
+            "attempt": 1,
+            "localRef": "synthetic://drawing",
+            "unit": "mm"
+          }
+        ]
+      },
+      "events": [],
+      "expected": {
+        "cursor": 100,
+        "needsSnapshot": false,
+        "artifactCount": 3,
+        "cancelled": false,
+        "matchingBuild": true
+      }
+    }
+  ]
+}

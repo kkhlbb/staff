@@ -3,8 +3,9 @@
  *
  * 供主进程 IPC 与证据脚本共用同一实现：状态、保存、清除密钥、连接测试与适配器
  * 创建全部经由这里，避免界面、调度器、测试各自读一套配置。
- * 本文件不读取/不记录密钥文本；密钥只在 resolveApiKey → 适配器请求头之间传递。
+ * 凭据仅在主进程内解析，交给适配器请求头、脱敏器或系统安全存储。
  */
+import { createHash } from 'node:crypto'
 import type { ModelAdapter } from '../../src/agent/types'
 import type {
   AgentProviderSaveRequest,
@@ -76,6 +77,25 @@ export class RealModelRuntime {
       ...(this.deps.fetchImpl === undefined ? {} : { fetchImpl: this.deps.fetchImpl }),
     })
     return adapter
+  }
+
+  /** Resolve credentials once for a tested endpoint; chat never rereads a changed global key. */
+  async createM1Connection(input: { baseUrl: string; model: string; apiKey: string }) {
+    const account = 'm1-model-api:' + createHash('sha256').update(JSON.stringify([input.baseUrl, input.model])).digest('hex')
+    const key = input.apiKey || await this.deps.keychain.read(account)
+    if (!key || !/^[!-~]+$/u.test(key)) return null
+    return {
+      createAdapter: (signal: AbortSignal) => new OpenAICompatibleAdapter({
+        getApiKey: async () => key,
+        settings: { baseUrl: input.baseUrl, model: input.model, strictToolProtocol: true, maxRetries: 0,
+          timeoutMs: this.deps.testTimeoutMs ?? 20_000 },
+        ...(this.deps.fetchImpl === undefined ? {} : { fetchImpl: this.deps.fetchImpl }),
+        signal,
+      }),
+      redact: (value: string) => value.split(key).join('[已隐藏]'),
+      containsKey: (value: string) => value.includes(key),
+      persistKey: () => this.deps.keychain.write(account, key),
+    }
   }
 
   /** 连接测试只用合成文本；成功返回供应商回报的模型名与耗时。 */

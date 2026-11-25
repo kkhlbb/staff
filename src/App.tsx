@@ -5,6 +5,50 @@ import { ProjectList } from './pages/ProjectList'
 import { SnapshotList } from './pages/SnapshotList'
 import { Workspace } from './pages/Workspace'
 import { DesktopWorkspace } from './pages/DesktopWorkspace'
+import { ProjectAgentM0Preview } from './workspace/project-agent/ProjectAgentM0Preview'
+import { ProjectAgentM1ReadonlyEntry } from './workspace/project-agent/ProjectAgentM1ReadonlyEntry'
+import { DesktopAgentWorkspace } from './workspace/project-agent/DesktopAgentWorkspace'
+
+export type DesktopHashRouteKind =
+  | 'desktop-legacy'
+  | 'desktop-m0-preview'
+  | 'desktop-m1-readonly'
+  | 'desktop-m1-workbench'
+  | 'web'
+
+export interface ResolveDesktopHashRouteOptions {
+  readonly isDesktopRuntime?: boolean
+  readonly defaultDesktopRoute?: 'legacy' | 'm1-workbench'
+}
+
+/**
+ * 规范化桌面端哈希路由解析纯函数：
+ * - 精确匹配 `#/desktop-m0-preview`、`#/desktop-m1-readonly`、`#/desktop-m1-workbench`、`#/desktop-legacy`；
+ * - `#/desktop` 和桌面运行时空 hash 默认打开新工作台，`#/desktop-legacy` 打开旧工作台。
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function resolveDesktopHashRoute(
+  hash: string,
+  options?: ResolveDesktopHashRouteOptions,
+): DesktopHashRouteKind {
+  if (hash === '#/desktop-m0-preview') {
+    return 'desktop-m0-preview'
+  }
+  if (hash === '#/desktop-m1-readonly') {
+    return 'desktop-m1-readonly'
+  }
+  if (hash === '#/desktop-m1-workbench') {
+    return 'desktop-m1-workbench'
+  }
+  if (hash === '#/desktop-legacy') {
+    return 'desktop-legacy'
+  }
+  const defaultDesktopRoute = options?.defaultDesktopRoute ?? 'm1-workbench'
+  if (hash === '#/desktop' || (Boolean(options?.isDesktopRuntime) && !hash)) {
+    return defaultDesktopRoute === 'm1-workbench' ? 'desktop-m1-workbench' : 'desktop-legacy'
+  }
+  return 'web'
+}
 
 type Route =
   | { page: 'projects' }
@@ -93,10 +137,12 @@ function reportHash(projectId: string, snapshotId: string): string {
  * 同时保留浏览器前进/后退能力。
  */
 function App() {
+  const [rawHash, setRawHash] = useState<string>(() => window.location.hash)
   const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash))
 
   useEffect(() => {
     const syncRoute = (): void => {
+      setRawHash(window.location.hash)
       setRoute(parseRoute(window.location.hash))
     }
     window.addEventListener('hashchange', syncRoute)
@@ -175,7 +221,19 @@ function App() {
     content = <ProjectList onOpenProject={openProject} />
   }
 
-  if (window.location.hash === '#/desktop' || (window.cunlian && !window.location.hash)) {
+  const desktopRoute = resolveDesktopHashRoute(rawHash, {
+    isDesktopRuntime: Boolean(window.cunlian),
+  })
+  if (desktopRoute === 'desktop-m0-preview') {
+    return <ProjectAgentM0Preview />
+  }
+  if (desktopRoute === 'desktop-m1-readonly') {
+    return <ProjectAgentM1ReadonlyEntry />
+  }
+  if (desktopRoute === 'desktop-m1-workbench') {
+    return <DesktopAgentWorkspace />
+  }
+  if (desktopRoute === 'desktop-legacy') {
     return <DesktopWorkspace />
   }
   return <DatabaseVersionGuard>{content}</DatabaseVersionGuard>

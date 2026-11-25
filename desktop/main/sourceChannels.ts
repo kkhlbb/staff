@@ -49,6 +49,7 @@ export interface SourceChannelDeps {
   pickSourcePath: (windowId: number) => Promise<string | null>
   io: ModelFileIo
   /** 测试注入；生产使用真实 pdfjs 解析。 */
+  onSourceImported?: (windowId: number) => void
   inspectPdf?: (bytes: Uint8Array) => Promise<SourcePdfInspection>
   log?: IpcDeps['log']
   now?: () => Date
@@ -277,6 +278,7 @@ export function registerSourceChannels(ipc: IpcMainLike, deps: SourceChannelDeps
           recovery: recoveryOutcome.state,
         }
         if (recoveryOutcome.warning !== undefined) value.warning = recoveryOutcome.warning
+        deps.onSourceImported?.(windowId)
         return value
       },
     },

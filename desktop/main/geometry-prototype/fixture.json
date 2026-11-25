@@ -1,0 +1,11 @@
+{
+  "plate": { "lengthQ": 800000, "widthQ": 500000, "thicknessQ": 80000, "toleranceQ": 2000 },
+  "holes": [
+    { "xQ": 200000, "yQ": 250000, "diameterQ": 100000 },
+    { "xQ": 600000, "yQ": 250000, "diameterQ": 100000 }
+  ],
+  "cover": { "bottomQ": 100000, "toleranceQ": 1000, "thicknessQ": 10000 },
+  "contactBottomQ": 80000,
+  "overlapBottomQ": 79000,
+  "rotationDegrees": 90
+}

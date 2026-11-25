@@ -1,6 +1,18 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { IPC_CHANNELS as ipc } from '../shared/contracts'
+import type { CunlianApi } from '../shared/contracts'
+
+const electron = vi.hoisted(() => {
+  let api!: CunlianApi
+  const live = new Set<(...args: unknown[]) => void>()
+  return { getApi: () => api, live, invoke: vi.fn(),
+    exposeInMainWorld: (_key: string, bridge: CunlianApi) => { api = bridge },
+    on: (_channel: string, listener: (...args: unknown[]) => void) => live.add(listener),
+    removeListener: (_channel: string, listener: (...args: unknown[]) => void) => live.delete(listener) }
+})
+vi.mock('electron', () => ({ contextBridge: electron, ipcRenderer: electron }))
 
 /**
  * 旧桥回归：window.cunlian 原有 18 个函数必须存在；B2 只允许新增。
@@ -30,6 +42,29 @@ const LEGACY_FUNCTIONS = [
 ] as const
 
 const ADDED_FUNCTIONS = [
+  'getM1LocalAgentInstallInfo',
+  'getM1ConnectionStatus',
+  'testM1ModelApiConnection',
+  'sendM1ChatMessage',
+  'cancelM1ChatMessage',
+  'getM1ExternalActivities',
+  'commitM3ApprovedDraft',
+  'undoDraftChange',
+  'getMigrationReport',
+  'openExternalProjectResult',
+  'subscribeM3ExternalProjectEvents',
+  'getM2PreviewSnapshot',
+  'locateM2Evidence',
+  'retryM2Drawing',
+  'submitM2Clarification',
+  'subscribeM2PreviewEvents',
+  'subscribeM1WorkbenchEvents',
+  'reconnectM1Session',
+  'takeoverM1Draft',
+
+  'requestM1ProjectAuthorization', 'revokeM1ProjectAuthorization',
+  'getM1ProjectContext', 'readM1ProjectEvents', 'subscribeM1ProjectEvents',
+  'cancelM1ProjectSubscription', 'getM1ReadCapabilities',
   'stepExport', 'stepCancel',
   'pickModel',
   'readModel',
@@ -108,4 +143,110 @@ describe('B2/C preload 契约', () => {
     expect(source).toMatch(/stepExport:.*IPC_CHANNELS\.stepExport, request/)
     expect(source).toMatch(/stepCancel:.*IPC_CHANNELS\.stepCancel, request/)
   })
+})
+
+it('transports all workbench methods and strips Electron events from subscription callbacks', async () => {
+  await import('../preload/index')
+  const api = electron.getApi()
+  const methods = ['getM1ConnectionStatus', 'testM1ModelApiConnection', 'sendM1ChatMessage', 'cancelM1ChatMessage',
+    'getM1ExternalActivities', 'reconnectM1Session', 'takeoverM1Draft'] as const
+  const request = { projectId: 'p', scopeEpoch: 1 }
+  electron.invoke.mockResolvedValue({ ok: true, value: null })
+  await api.getM1LocalAgentInstallInfo()
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.getM1LocalAgentInstallInfo)
+  for (const method of methods) {
+    await api[method](request as never)
+    expect(electron.invoke).toHaveBeenLastCalledWith(ipc[method], request)
+  }
+  const listener = vi.fn()
+  const value = { ...request, writerEpoch: 0, sequence: 1, type: 'draft_updated', draftRevision: null }
+  electron.invoke.mockImplementation(async (key, _request, id) => {
+    if (key === ipc.subscribeM1WorkbenchEvents) {
+      for (const callback of electron.live) {
+        callback({ sender: 'secret' }, 'other-subscription', value)
+        callback({ sender: 'secret' }, id, value)
+      }
+      return { ok: true, value: { subscriptionId: id } }
+    }
+    return { ok: true, value: null }
+  })
+  const handle = await api.subscribeM1WorkbenchEvents(request, listener)
+  if (!handle.ok) throw Error('missing subscription')
+  expect(listener).toHaveBeenCalledExactlyOnceWith(value)
+  handle.value.unsubscribe()
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.unsubscribeM1WorkbenchEvents, handle.value.subscriptionId)
+  expect(electron.live.size).toBe(0)
+  const calls = electron.invoke.mock.calls.length
+  handle.value.unsubscribe()
+  expect(electron.invoke.mock.calls).toHaveLength(calls)
+  electron.invoke.mockRejectedValueOnce(Error('disconnected'))
+  expect(await api.subscribeM1WorkbenchEvents(request, listener)).toMatchObject({ ok: false, error: { code: 'DISCONNECTED' } })
+  expect(electron.live.size).toBe(0)
+})
+
+it('uses only the five M2 preview methods and scopes the subscription by token and project', async () => {
+  await import('../preload/index')
+  const api = electron.getApi()
+  const methods = ['getM2PreviewSnapshot', 'locateM2Evidence', 'retryM2Drawing', 'submitM2Clarification'] as const
+  const request = { projectId: 'plate' }
+  const failure = { ok: false, error: { code: 'STALE_BASE', message: 'stale', detail: 'draft-2' } }
+  electron.invoke.mockResolvedValue(failure)
+  for (const method of methods) {
+    expect(await api[method](request as never)).toEqual(failure)
+    expect(electron.invoke).toHaveBeenLastCalledWith(ipc[method], request)
+  }
+  const listener = vi.fn()
+  const value = { ...request, revision: 'draft-2', revisionOrder: 2, sequence: 1,
+    isDraft: true, fingerprint: 'fp', scopeEpoch: 3, writerEpoch: 4, type: 'model_ready', taskCompleted: false }
+  electron.invoke.mockImplementation(async (key, _request, id) => {
+    if (key === ipc.subscribeM2PreviewEvents) {
+      for (const callback of electron.live) {
+        callback({ sender: 'secret' }, 'wrong-token', value)
+        callback({ sender: 'secret' }, id, { ...value, projectId: 'wrong-project' })
+        callback({ sender: 'secret' }, id, value)
+      }
+      return { ok: true, value: { subscriptionId: id } }
+    }
+    return { ok: true, value: null }
+  })
+  const result = await api.subscribeM2PreviewEvents(request, listener)
+  if (!result.ok) throw Error('missing subscription')
+  expect(listener).toHaveBeenCalledExactlyOnceWith(value)
+  result.value.unsubscribe()
+  expect(electron.live.size).toBe(0)
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.unsubscribeM2PreviewEvents, result.value.subscriptionId)
+})
+
+it('wires the five M3 preload methods and fences events queued after unsubscribe', async () => {
+  await import('../preload/index')
+  const api = electron.getApi()
+  const methods = ['commitM3ApprovedDraft', 'undoDraftChange', 'getMigrationReport', 'openExternalProjectResult'] as const
+  const request = { projectId: 'plate', requestId: 'm3-request' }
+  const failure = { ok: false, error: { code: 'UNAUTHORIZED', message: 'needs grant', detail: 'project' } }
+  electron.invoke.mockResolvedValue(failure)
+  for (const method of methods) {
+    expect(await api[method](request as never)).toEqual(failure)
+    expect(electron.invoke).toHaveBeenLastCalledWith(ipc[method], request)
+  }
+  const listener = vi.fn()
+  const notification = { eventId: 'event', projectId: 'peer-project', projectName: '安装板',
+    sequence: 10, scopeEpoch: 3, writerEpoch: 4, draftRevision: 'draft-3', revisionOrder: 3, summary: '有草稿' }
+  let queued: ((...args: unknown[]) => void) | undefined
+  electron.invoke.mockImplementation(async (key, token) => {
+    if (key === ipc.subscribeM3ExternalProjectEvents) {
+      queued = [...electron.live][0]
+      queued?.({ sender: 'secret' }, 'other-token', notification)
+      queued?.({ sender: 'secret' }, token, notification)
+      return { ok: true, value: { subscriptionId: token } }
+    }
+    return { ok: true, value: null }
+  })
+  const subscription = await api.subscribeM3ExternalProjectEvents(listener)
+  if (!subscription.ok) throw Error('missing subscription')
+  expect(listener).toHaveBeenCalledExactlyOnceWith(notification)
+  subscription.value.unsubscribe?.()
+  queued?.({}, subscription.value.subscriptionId, notification)
+  expect(listener).toHaveBeenCalledTimes(1)
+  expect(electron.live.size).toBe(0)
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.unsubscribeM3ExternalProjectEvents, subscription.value.subscriptionId)
 })

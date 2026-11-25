@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { defineConfig, type ConfigEnv, type Plugin, type UserConfig } from 'vite'
+import { build, defineConfig, type ConfigEnv, type Plugin, type UserConfig } from 'vite'
 
 /**
  * Forge 的 Vite 插件默认用入口文件名作 `[name].cjs`，而本仓库主进程入口是
@@ -40,10 +40,42 @@ function pdfWorkerAsset(): Plugin {
   }
 }
 
+function m2WorkerAssets(): Plugin {
+  return {
+    name: 'cunlian-m2-worker-assets',
+    apply: 'build',
+    async generateBundle() {
+      const resolve = (file: string) => fileURLToPath(new URL(file, import.meta.url))
+      const worker = await build({
+        configFile: false,
+        publicDir: false,
+        logLevel: 'error',
+        build: {
+          write: false, minify: false,
+          ssr: resolve('./desktop/main/project-agent/m2/worker.mjs'),
+          target: 'esnext',
+          rolldownOptions: { output: { entryFileNames: 'm2-geometry-worker.mjs', inlineDynamicImports: true } },
+        },
+      })
+      if (!('output' in worker)) throw Error('Expected one M2 worker output')
+      for (const output of worker.output) {
+        this.emitFile({ type: 'asset', fileName: 'm2-worker/' + output.fileName, source: output.type === 'chunk' ? output.code : output.source })
+      }
+      for (const [fileName, source] of [
+        ['fixture.json', './desktop/main/geometry-prototype/fixture.json'],
+        ['m2-replicad.cjs', './node_modules/replicad-opencascadejs/dist/replicad_single.cjs'],
+        ['replicad_single.js', './node_modules/replicad-opencascadejs/dist/replicad_single.js'],
+        ['replicad_single.wasm', './node_modules/replicad-opencascadejs/dist/replicad_single.wasm'],
+        ['m2-replicad-LICENSE', './node_modules/replicad-opencascadejs/LICENSE'],
+      ]) this.emitFile({ type: 'asset', fileName: 'm2-worker/' + fileName, source: readFileSync(resolve(source)) })
+    },
+  }
+}
+
 export default defineConfig((env) => {
   const forgeEnv = env as ForgeViteEnv
   return {
-    plugins: [pdfWorkerAsset()],
+    plugins: [pdfWorkerAsset(), m2WorkerAssets()],
     build: {
       lib: {
         entry: forgeEnv.forgeConfigSelf.entry,

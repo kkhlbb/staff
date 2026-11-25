@@ -1,3 +1,7 @@
+import type { M3ExternalProjectEvent } from '../shared/project-agent/m3-lifecycle'
+import type { M2PreviewEvent, M2Result } from '../shared/project-agent/m2-preview'
+import type { M1ModelResult } from '../shared/project-agent/m1-model-api'
+import type { M1WorkbenchEvent } from '../shared/project-agent/m1-workbench'
 import {
   contextBridge,
   ipcRenderer,
@@ -5,6 +9,7 @@ import {
 } from 'electron'
 import {
   IPC_CHANNELS,
+  M1_READ_CAPABILITIES,
   IPC_EVENTS,
   type CunlianApi,
   type EditorFlushRequest,
@@ -87,7 +92,126 @@ function subscribe<T>(
   }
 }
 
+async function invokeM1<T>(channel: string, ...args: unknown[]): Promise<M1ModelResult<T>> {
+  try {
+    return await ipcRenderer.invoke(channel, ...args)
+  } catch {
+    return { ok: false, error: { code: 'DISCONNECTED', message: 'M1 工作台连接已断开' } }
+  }
+}
+
+async function invokeM3<T>(channel: string, request: unknown): Promise<M2Result<T>> {
+  try {
+    return await ipcRenderer.invoke(channel, request)
+  } catch {
+    return { ok: false, error: { code: 'BACKEND_UNAVAILABLE', message: '项目连接已断开' } }
+  }
+}
+
+async function invokeM2<T>(channel: string, request: unknown): Promise<M2Result<T>> {
+  try {
+    return await ipcRenderer.invoke(channel, request)
+  } catch {
+    return { ok: false, error: { code: 'DISCONNECTED', message: 'M2 预览连接已断开' } }
+  }
+}
+
 const api: CunlianApi = {
+  getM1LocalAgentInstallInfo: () => invokeM1(IPC_CHANNELS.getM1LocalAgentInstallInfo),
+  getM1ConnectionStatus: request => invokeM1(IPC_CHANNELS.getM1ConnectionStatus, request),
+  testM1ModelApiConnection: request => invokeM1(IPC_CHANNELS.testM1ModelApiConnection, request),
+  sendM1ChatMessage: request => invokeM1(IPC_CHANNELS.sendM1ChatMessage, request),
+  cancelM1ChatMessage: request => invokeM1(IPC_CHANNELS.cancelM1ChatMessage, request),
+  getM1ExternalActivities: request => invokeM1(IPC_CHANNELS.getM1ExternalActivities, request),
+  reconnectM1Session: request => invokeM1(IPC_CHANNELS.reconnectM1Session, request),
+  takeoverM1Draft: request => invokeM1(IPC_CHANNELS.takeoverM1Draft, request),
+  commitM3ApprovedDraft: request => invokeM3(IPC_CHANNELS.commitM3ApprovedDraft, request),
+  undoDraftChange: request => invokeM3(IPC_CHANNELS.undoDraftChange, request),
+  getMigrationReport: request => invokeM3(IPC_CHANNELS.getMigrationReport, request),
+  openExternalProjectResult: request => invokeM3(IPC_CHANNELS.openExternalProjectResult, request),
+  subscribeM3ExternalProjectEvents: async listener => {
+    const token = globalThis.crypto.randomUUID()
+    let active = true
+    const receive = (_event: unknown, id: string, value: M3ExternalProjectEvent) => {
+      if (active && id === token) listener(value)
+    }
+    ipcRenderer.on(IPC_CHANNELS.m3ExternalProjectEvent, receive)
+    const stop = () => {
+      active = false
+      ipcRenderer.removeListener(IPC_CHANNELS.m3ExternalProjectEvent, receive)
+    }
+    const result = await invokeM3<{ subscriptionId: string }>(IPC_CHANNELS.subscribeM3ExternalProjectEvents, token)
+    if (!result.ok) {
+      stop()
+      return result
+    }
+    return { ok: true, value: { ...result.value, unsubscribe() {
+      stop()
+      void ipcRenderer.invoke(IPC_CHANNELS.unsubscribeM3ExternalProjectEvents, token).catch(() => {})
+    } } }
+  },
+  getM2PreviewSnapshot: request => invokeM2(IPC_CHANNELS.getM2PreviewSnapshot, request),
+  locateM2Evidence: request => invokeM2(IPC_CHANNELS.locateM2Evidence, request),
+  retryM2Drawing: request => invokeM2(IPC_CHANNELS.retryM2Drawing, request),
+  submitM2Clarification: request => invokeM2(IPC_CHANNELS.submitM2Clarification, request),
+  subscribeM2PreviewEvents: async (request, listener) => {
+    const subscriptionId = crypto.randomUUID()
+    const receive = (_event: unknown, id: string, value: M2PreviewEvent) => {
+      if (id === subscriptionId && value.projectId === request.projectId) listener(value)
+    }
+    const remove = () => ipcRenderer.removeListener(IPC_CHANNELS.m2PreviewEvent, receive)
+    ipcRenderer.on(IPC_CHANNELS.m2PreviewEvent, receive)
+    try {
+      const result = await ipcRenderer.invoke(IPC_CHANNELS.subscribeM2PreviewEvents, request, subscriptionId)
+      if (!result.ok) {
+        remove()
+        return result
+      }
+      let active = true
+      return { ok: true, value: { subscriptionId, unsubscribe() {
+        if (!active) return
+        active = false
+        remove()
+        void ipcRenderer.invoke(IPC_CHANNELS.unsubscribeM2PreviewEvents, subscriptionId).catch(() => {})
+      } } }
+    } catch {
+      remove()
+      return { ok: false, error: { code: 'DISCONNECTED', message: '订阅连接已断开' } }
+    }
+  },
+  subscribeM1WorkbenchEvents: async (request, listener) => {
+    const subscriptionId = crypto.randomUUID()
+    const receive = (_event: unknown, id: string, value: M1WorkbenchEvent) => {
+      if (id === subscriptionId) listener(value)
+    }
+    const remove = () => ipcRenderer.removeListener(IPC_CHANNELS.m1WorkbenchEvent, receive)
+    ipcRenderer.on(IPC_CHANNELS.m1WorkbenchEvent, receive)
+    try {
+      const result = await ipcRenderer.invoke(IPC_CHANNELS.subscribeM1WorkbenchEvents, request, subscriptionId)
+      if (!result.ok) {
+        remove()
+        return result
+      }
+      let active = true
+      return { ok: true, value: { subscriptionId, unsubscribe() {
+        if (!active) return
+        active = false
+        remove()
+        void ipcRenderer.invoke(IPC_CHANNELS.unsubscribeM1WorkbenchEvents, subscriptionId).catch(() => {})
+      } } }
+    } catch {
+      remove()
+      return { ok: false, error: { code: 'DISCONNECTED', message: '订阅连接已断开' } }
+    }
+  },
+  requestM1ProjectAuthorization: request => ipcRenderer.invoke(IPC_CHANNELS.m1RequestAuthorization, request),
+  revokeM1ProjectAuthorization: request => ipcRenderer.invoke(IPC_CHANNELS.m1RevokeAuthorization, request),
+  getM1ProjectContext: request => ipcRenderer.invoke(IPC_CHANNELS.m1GetProjectContext, request),
+  readM1ProjectEvents: request => ipcRenderer.invoke(IPC_CHANNELS.m1ReadProjectEvents, request),
+  // No listener is registered until subscription delivery is implemented.
+  subscribeM1ProjectEvents: request => ipcRenderer.invoke(IPC_CHANNELS.m1SubscribeProjectEvents, request),
+  cancelM1ProjectSubscription: request => ipcRenderer.invoke(IPC_CHANNELS.m1CancelProjectSubscription, request),
+  getM1ReadCapabilities: () => M1_READ_CAPABILITIES,
   stepExport: (request) => ipcRenderer.invoke(IPC_CHANNELS.stepExport, request) as Promise<IpcResult<StepExportValue>>,
   stepCancel: (request) => ipcRenderer.invoke(IPC_CHANNELS.stepCancel, request) as Promise<IpcResult<{ cancelled: boolean }>>,
   newProject: (request) =>

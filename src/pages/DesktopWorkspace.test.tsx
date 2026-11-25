@@ -2,6 +2,7 @@
 import 'fake-indexeddb/auto'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { M1_READ_CAPABILITIES } from '../../desktop/shared/contracts'
 import type { CunlianApi, ProjectOpenValue, MenuActionPayload, EditorFlushRequest } from '../../desktop/shared/contracts'
 import { createSampleSnapshot } from '../project-file/__fixtures__/sampleProjectFile'
 import { createModelSnapshot, sampleStlTriangle, MODEL_PART_ID, MODEL_REVISION_ID } from '../project-file/__fixtures__/modelProjectFile'
@@ -130,11 +131,38 @@ let api: CunlianApi
 let drawingSnapshot: ProjectOpenValue['snapshot'] | null = null
 let changeDraft: import('../../desktop/shared/contracts').ChangeDraftValue | null = null
 const failure = { ok: false as const, error: { code: 'NO_SPACE' as const, message: '磁盘空间不足' } }
+const m1Unavailable = { ok: false as const, error: { code: 'FORBIDDEN_SENDER' as const, message: '此 UI 用例不调用 M1' } }
 beforeEach(async () => {
   opened = { sessionId: 'session-1', editSeq: 0, snapshot: await createSampleSnapshot(), path: null, fingerprint: null, warnings: [] }
   drawingSnapshot = null
   changeDraft = null
   api = {
+    requestM1ProjectAuthorization: vi.fn(async () => m1Unavailable),
+    revokeM1ProjectAuthorization: vi.fn(async () => m1Unavailable),
+    getM1ProjectContext: vi.fn(async () => m1Unavailable),
+    readM1ProjectEvents: vi.fn(async () => m1Unavailable),
+    subscribeM1ProjectEvents: vi.fn(async () => m1Unavailable),
+    cancelM1ProjectSubscription: vi.fn(async () => m1Unavailable),
+    getM1LocalAgentInstallInfo: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    getM1ConnectionStatus: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    testM1ModelApiConnection: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    sendM1ChatMessage: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    cancelM1ChatMessage: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    getM1ExternalActivities: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    commitM3ApprovedDraft: vi.fn(async () => ({ ok: false as const, error: { code: 'UNAUTHORIZED', message: '无授权' } })),
+    undoDraftChange: vi.fn(async () => ({ ok: false as const, error: { code: 'UNAUTHORIZED', message: '无授权' } })),
+    getMigrationReport: vi.fn(async () => ({ ok: false as const, error: { code: 'UNAUTHORIZED', message: '无授权' } })),
+    openExternalProjectResult: vi.fn(async () => ({ ok: false as const, error: { code: 'UNAUTHORIZED', message: '无授权' } })),
+    subscribeM3ExternalProjectEvents: vi.fn(async () => ({ ok: false as const, error: { code: 'UNAUTHORIZED', message: '无授权' } })),
+    getM2PreviewSnapshot: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    locateM2Evidence: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    retryM2Drawing: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    submitM2Clarification: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    subscribeM2PreviewEvents: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    subscribeM1WorkbenchEvents: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    reconnectM1Session: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    takeoverM1Draft: vi.fn(async () => ({ ok: false as const, error: { code: 'AUTH_REQUIRED', message: '无授权' } })),
+    getM1ReadCapabilities: vi.fn(() => M1_READ_CAPABILITIES),
     getProjectContext: vi.fn(async () => ({ ok: false as const, code: 'TOOL_FAILED' as const, message: '此 UI 用例不调用 Agent', requestId: 'mock-tool', objectVersion: 'mock' })),
     getConfirmedInputs: vi.fn(async () => ({ ok: false as const, code: 'TOOL_FAILED' as const, message: '此 UI 用例不调用 Agent', requestId: 'mock-tool', objectVersion: 'mock' })),
     applyConfirmedInputs: vi.fn(async () => ({ ok: false as const, code: 'TOOL_FAILED' as const, message: '此 UI 用例不调用 Agent', requestId: 'mock-tool', objectVersion: 'mock' })),

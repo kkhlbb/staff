@@ -33,6 +33,7 @@ export interface GatePrompt {
 }
 
 export interface SessionPorts {
+  onSessionBindingChanged?: (windowId: number) => Promise<void>
   /** 主进程三选对话框。 */
   askChoice: (prompt: GatePrompt) => Promise<GateChoice>
   /** 另存对话框；取消返回 null。 */
@@ -288,6 +289,7 @@ export class SessionController {
    */
   async attach(windowId: number, sessionId: string): Promise<void> {
     const previous = this.active.get(windowId)
+    if (previous !== sessionId) await this.ports.onSessionBindingChanged?.(windowId)
     if (previous !== undefined && previous !== sessionId) {
       // 先完成旧草稿清理，再登记新会话：避免恢复草稿时“清理”晚到把新草稿删掉。
       await this.recovery.discard(previous)
@@ -298,6 +300,7 @@ export class SessionController {
 
   /** 关闭项目/窗口：gate 通过后清理活动会话与草稿。 */
   async detach(windowId: number): Promise<void> {
+    await this.ports.onSessionBindingChanged?.(windowId)
     const sessionId = this.active.get(windowId)
     if (sessionId === undefined) {
       return

@@ -1,0 +1,23 @@
+{
+  "file": "mounting-plate-taskbook.pdf",
+  "byteLength": 3227,
+  "sha256": "d455a7fa1d91741ec94b14ff6b4a63036b6d09f5e75a6c506875dd8d063b9c42",
+  "pageCount": 2,
+  "pages": [
+    {
+      "page": 1,
+      "clauseIds": [
+        "MP-01",
+        "MP-02",
+        "MP-03"
+      ]
+    },
+    {
+      "page": 2,
+      "clauseIds": [
+        "MP-04",
+        "MP-05"
+      ]
+    }
+  ]
+}

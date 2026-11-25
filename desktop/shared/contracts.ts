@@ -1,3 +1,9 @@
+import type { M3WorkbenchBridge } from './project-agent/m3-lifecycle'
+import type { M2PreviewApi } from './project-agent/m2-preview'
+import type { M1WorkbenchApi } from './project-agent/m1-workbench'
+import type { M1AuthorizationRequest } from './project-agent/m1-local-authorization-2002.ts'
+import type { EntryScope } from './project-agent/m1-entry-1933.ts'
+import type { M1EntryCandidate } from './project-agent/m1-entry-1933.ts'
 /**
  * 桌面端 IPC 契约（批次 A 公共部分）。
  *
@@ -37,6 +43,37 @@ import type { ExtractionCandidate } from '../../src/document-extraction/types'
 
 /** 批次 A 全部 IPC 通道（与任务卡 §3 表格逐项对应）。 */
 export const IPC_CHANNELS = {
+  getM1LocalAgentInstallInfo: 'm1-workbench:getM1LocalAgentInstallInfo',
+  getM1ConnectionStatus: 'm1-workbench:getM1ConnectionStatus',
+  testM1ModelApiConnection: 'm1-workbench:testM1ModelApiConnection',
+  sendM1ChatMessage: 'm1-workbench:sendM1ChatMessage',
+  cancelM1ChatMessage: 'm1-workbench:cancelM1ChatMessage',
+  getM1ExternalActivities: 'm1-workbench:getM1ExternalActivities',
+  commitM3ApprovedDraft: 'm3-lifecycle:commitM3ApprovedDraft',
+  undoDraftChange: 'm3-lifecycle:undoDraftChange',
+  getMigrationReport: 'm3-lifecycle:getMigrationReport',
+  openExternalProjectResult: 'm3-lifecycle:openExternalProjectResult',
+  subscribeM3ExternalProjectEvents: 'm3-lifecycle:subscribeM3ExternalProjectEvents',
+  unsubscribeM3ExternalProjectEvents: 'm3-lifecycle:unsubscribeM3ExternalProjectEvents',
+  m3ExternalProjectEvent: 'm3-lifecycle:m3ExternalProjectEvent',
+  getM2PreviewSnapshot: 'm2-preview:getM2PreviewSnapshot',
+  locateM2Evidence: 'm2-preview:locateM2Evidence',
+  retryM2Drawing: 'm2-preview:retryM2Drawing',
+  submitM2Clarification: 'm2-preview:submitM2Clarification',
+  subscribeM2PreviewEvents: 'm2-preview:subscribeM2PreviewEvents',
+  unsubscribeM2PreviewEvents: 'm2-preview:unsubscribeM2PreviewEvents',
+  m2PreviewEvent: 'm2-preview:m2PreviewEvent',
+  subscribeM1WorkbenchEvents: 'm1-workbench:subscribeM1WorkbenchEvents',
+  reconnectM1Session: 'm1-workbench:reconnectM1Session',
+  takeoverM1Draft: 'm1-workbench:takeoverM1Draft',
+  unsubscribeM1WorkbenchEvents: 'm1-workbench:unsubscribeM1WorkbenchEvents',
+  m1WorkbenchEvent: 'm1-workbench:m1WorkbenchEvent',
+  m1RequestAuthorization: 'm1-project:request-authorization',
+  m1RevokeAuthorization: 'm1-project:revoke-authorization',
+  m1GetProjectContext: 'm1-project:context',
+  m1ReadProjectEvents: 'm1-project:read-events',
+  m1SubscribeProjectEvents: 'm1-project:subscribe',
+  m1CancelProjectSubscription: 'm1-project:cancel-subscription',
   projectNew: 'project:new',
   projectOpen: 'project:open',
   migrationInspect: 'migration:inspect',
@@ -276,6 +313,7 @@ export type CommonErrorCode =
   | 'EXTRACTION_ATTESTATION_CONFIRMED'
 
 export type IpcErrorCode =
+  | 'AUTH_REQUIRED'
   | ContainerErrorCode
   | SaveErrorCode
   | CommonErrorCode
@@ -1439,7 +1477,34 @@ export type LocateEvidenceValue =
       drawingId: string | null
     }
 
-export interface CunlianApi {
+export const M1_READ_CAPABILITIES = {
+  registeredReads: ['getM1ProjectContext', 'readM1ProjectEvents'],
+  trustedInjectionOnly: false,
+  localIdentityAvailable: true,
+  nativeReadConsentAvailable: true,
+  boundInternalReadAvailable: true,
+  productionAuthorizationMapped: true,
+  productionApiConnected: false,
+  productionSubscriptionPush: false,
+  subscriptionsAvailable: false,
+  writeAvailable: false,
+  toolsAvailable: false,
+  modelApiAvailable: false,
+  externalMcpAvailable: false,
+  formalSaveEnabled: false,
+} as const
+
+type M1ReadMethod<K extends keyof M1EntryCandidate> =
+  (...args: Parameters<M1EntryCandidate[K]>) => Promise<IpcResult<Awaited<ReturnType<M1EntryCandidate[K]>>>>
+
+export interface CunlianApi extends M1WorkbenchApi, M2PreviewApi, Required<M3WorkbenchBridge> {
+  requestM1ProjectAuthorization(request: M1AuthorizationRequest): Promise<IpcResult<EntryScope>>
+  revokeM1ProjectAuthorization(request: M1AuthorizationRequest): Promise<IpcResult<{ revoked: true }>>
+  getM1ProjectContext: M1ReadMethod<'getM1ProjectContext'>
+  readM1ProjectEvents: M1ReadMethod<'readM1ProjectEvents'>
+  subscribeM1ProjectEvents: M1ReadMethod<'subscribeM1ProjectEvents'>
+  cancelM1ProjectSubscription: M1ReadMethod<'cancelM1ProjectSubscription'>
+  getM1ReadCapabilities(): typeof M1_READ_CAPABILITIES
   stepExport(request: StepExportRequest): Promise<IpcResult<StepExportValue>>
   stepCancel(request: StepCancelRequest): Promise<IpcResult<{ cancelled: boolean }>>
   getProjectContext(): Promise<ToolResult<AgentContextValue>>

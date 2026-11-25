@@ -1,3 +1,13 @@
+import { readWorkbenchAttachment, readWorkbenchSelectedObject } from './project-agent/workbenchReferences'
+import { migrateLegacySpacer } from './project-agent/m3Migration'
+import { installM2PreviewChannels } from './project-agent/m2/channels'
+import { installM1WorkbenchChannels } from './project-agent/m1WorkbenchChannels'
+import { getLocalAgentInstallInfo } from './project-agent/m1LocalAgent'
+import { LocalM1Authority } from './project-agent/m1LocalAuthority'
+import { installM1AuthorizationChannels } from './project-agent/m1AuthorizationChannels'
+import { installM1ReadChannels } from './project-agent/m1ReadChannels'
+import { startM1LocalEndpoint } from './project-agent/m1LocalEndpoint'
+import { M1_BRIDGE_RESOURCE, localM1Socket } from './project-agent/m1LocalTransport'
 import {
   BrowserWindow,
   Menu,
@@ -11,7 +21,7 @@ import {
 } from 'electron'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { promises as fsp } from 'node:fs'
+import { constants as fsConstants, promises as fsp } from 'node:fs'
 import { z } from 'zod'
 import {
   DESKTOP_APP_NAME,
@@ -126,13 +136,26 @@ function createWindow(): MainWindowHandle {
     guard,
     onClosed: (webContentsId) => {
       closeGuard.cancelWindow(webContentsId)
+      m1WorkbenchForClose?.invalidate(webContentsId, true)
+      m2PreviewForClose?.invalidate(webContentsId)
+      void m1AuthorityForClose?.revokeWindow(webContentsId).catch(() => {})
       windows.delete(webContentsId)
     },
   })
   const webContentsId = handle.window.webContents.id
-  handle.window.webContents.on('render-process-gone', () => closeGuard.cancelWindow(webContentsId))
+  handle.window.webContents.on('render-process-gone', () => {
+    closeGuard.cancelWindow(webContentsId)
+    m1WorkbenchForClose?.invalidate(webContentsId, true)
+    m2PreviewForClose?.invalidate(webContentsId)
+    void m1AuthorityForClose?.revokeWindow(webContentsId).catch(() => {})
+  })
   handle.window.webContents.on('did-start-navigation', (_event, _url, _inPlace, isMainFrame) => {
-    if (isMainFrame) closeGuard.cancelWindow(webContentsId)
+    if (isMainFrame) {
+      closeGuard.cancelWindow(webContentsId)
+      m1WorkbenchForClose?.invalidate(webContentsId, true)
+      m2PreviewForClose?.invalidate(webContentsId)
+      void m1AuthorityForClose?.revokeWindow(webContentsId).catch(() => {})
+    }
   })
   windows.set(webContentsId, handle)
 
@@ -535,7 +558,7 @@ async function printDrawingPdf(data: DrawingData): Promise<Uint8Array> {
 function installIpcHandlers(): void {
   const ipc: IpcMainLike = ipcMain
   const deps = { guard, log: logStage }
-  const projectService = new ProjectService()
+  const projectService = new ProjectService({ bindingAuthority: () => m1AuthorityForClose })
   const recovery = new RecoveryStore({ rootDir: WORKSPACE_ROOT })
   const recent = new RecentProjectsStore({ rootDir: WORKSPACE_ROOT })
 
@@ -544,6 +567,7 @@ function installIpcHandlers(): void {
     recovery,
     recent,
     ports: {
+      onSessionBindingChanged: async windowId => { await m1AuthorityForClose?.revokeWindow(windowId) },
       askChoice: askDirtyChoice,
       pickSaveTarget: pickSaveTargetFor,
       flushEditor: async (windowId) => {
@@ -558,6 +582,78 @@ function installIpcHandlers(): void {
     },
   })
   controllerForClose = controller
+  const localM1SessionFor = (windowId: number) => {
+    const session = controller.sessionFor(windowId)
+    const sessionId = controller.sessionIdFor(windowId)
+    return session && sessionId ? { sessionId, projectId: session.snapshot.project.id,
+      path: session.path, fingerprint: session.fingerprint } : null
+  }
+  const m1Authority = new LocalM1Authority({
+    root: path.join(app.getPath('userData'), 'm1-local'),
+    sessionFor: localM1SessionFor,
+    onExternalDraft: (windowId, result, lease) => {
+      void m2PreviewForClose?.externalDraft(windowId, result, lease.writerEpoch).catch(() => {})
+    },
+    onGrantInvalidated: windowId => {
+      m1WorkbenchForClose?.invalidate(windowId)
+      m2PreviewForClose?.invalidate(windowId)
+    },
+    async confirm(windowId, projectId, projectPath) {
+      const owner = windows.get(windowId)?.window
+      if (!owner || owner.isDestroyed()) return 'cancel'
+      const result = await dialog.showMessageBox(owner, {
+        type: 'question', title: '授权 M1 项目只读访问',
+        message: `允许当前窗口读取项目 ${projectId} 的 M1 上下文和日志？`,
+        detail: `项目文件：${projectPath}\n仅授予当前窗口只读权限。打开项目不会自动授权；关闭或切换后失效。`,
+        buttons: ['取消', '拒绝', '允许只读'], defaultId: 0, cancelId: 0, noLink: true,
+      })
+      return result.response === 2 ? 'approve' : result.response === 1 ? 'deny' : 'cancel'
+    },
+  })
+  m1AuthorityForClose = m1Authority
+  if (app.isPackaged && process.platform === 'darwin') {
+    let confirming = false
+    localAgentEndpoint = Promise.resolve().then(() => startM1LocalEndpoint({
+      socketPath: localM1Socket(process.execPath),
+      peerHelper: path.join(process.resourcesPath, M1_BRIDGE_RESOURCE, 'm1-peer'),
+      authority: m1Authority,
+      selectWindow(projectId) {
+        const candidates = [...windows].filter(([id, { window }]) =>
+          !window.isDestroyed() && localM1SessionFor(id)?.projectId === projectId)
+        const focused = candidates.find(([, { window }]) => window.isFocused())
+        return focused?.[0] ?? (candidates.length === 1 ? candidates[0][0] : null)
+      },
+      async confirm(target, clientName, kind, signal) {
+        const owner = windows.get(target.windowId)?.window
+        if (confirming || signal.aborted || !owner || owner.isDestroyed()) return 'cancel'
+        confirming = true
+        const action = kind === 'read' ? '读取项目' : target.takeover ? '接管草稿写入' : '写入隔套草稿'
+        try {
+          const result = await dialog.showMessageBox(owner, {
+            type: 'question', title: '外部客户端访问项目',
+            message: `允许「${clientName}」${action}？`,
+            detail: `${target.projectPath}\n此权限在连接断开或关闭项目后失效。`,
+            buttons: ['拒绝', `允许${action}`], defaultId: 0, cancelId: 0, noLink: true, signal,
+          })
+          return result.response === 1 && !signal.aborted ? 'approve' : 'deny'
+        } finally {
+          confirming = false
+        }
+      },
+      diagnostic: code => logStage({ channel: 'm1-local-agent', code }),
+    })).catch(() => {
+      logStage({ channel: 'm1-local-agent', code: 'LOCAL_ENDPOINT_UNAVAILABLE' })
+      return undefined
+    })
+  }
+  installM1AuthorizationChannels(ipc, guard, m1Authority)
+  installM1ReadChannels(ipc, {
+    guard,
+    sessionFor: localM1SessionFor,
+    resolveTrustedM1Caller: (sender, binding) => m1Authority.resolve(sender, binding),
+    readContext: (binding, caller) => m1Authority.readContext(binding, caller),
+    readEvents: (binding, caller, after, limit) => m1Authority.readEvents(binding, caller, after, limit),
+  })
 
   registerProjectChannels(ipc, {
     guard,
@@ -624,6 +720,38 @@ function installIpcHandlers(): void {
   // 密钥走 safeStorage（macOS→Keychain，Windows→DPAPI）+ 密文文件；macOS 保留旧 Keychain 迁移。
   const modelKeyStore = createModelKeyStore({ userDataDir: app.getPath('userData'), safeStorage })
   const modelRuntime = new RealModelRuntime({ rootDir: path.join(app.getPath('userData'), 'workspace'), keychain: modelKeyStore })
+  m1WorkbenchForClose = installM1WorkbenchChannels(ipcMain, {
+    guard, authority: m1Authority, runtime: modelRuntime, sessionFor: localM1SessionFor,
+    projectName: windowId => controller.sessionFor(windowId)?.snapshot.project.name,
+    m2Change: async (event, projectId) => await m2PreviewForClose?.modelChangePort(event, projectId) ?? null,
+    readAttachment(windowId, ref) {
+      return readWorkbenchAttachment(controller.sessionFor(windowId)?.snapshot, ref,
+        documentRef => m2PreviewForClose?.readAttachment(windowId, documentRef) ?? null)
+    },
+    readSelectedObject(windowId, ref) {
+      return readWorkbenchSelectedObject(controller.sessionFor(windowId)?.snapshot, ref,
+        featureId => m2PreviewForClose?.readSelectedObject(windowId, featureId) ?? null)
+    },
+    endpoint: async () => localAgentEndpoint,
+    async installInfo() {
+      if (!app.isPackaged || process.platform !== 'darwin') throw Error('LOCAL_ENDPOINT_UNAVAILABLE')
+      const info = getLocalAgentInstallInfo(process.execPath, process.resourcesPath)
+      await fsp.access(info.bridgeCommand, fsConstants.X_OK).catch(() => { throw Error('LOCAL_ENDPOINT_UNAVAILABLE') })
+      return info
+    },
+    async confirm(source, target, signal, clientName) {
+      const owner = windows.get(target.windowId)?.window
+      if (!owner || owner.isDestroyed() || signal.aborted) return 'cancel'
+      const destination = source === 'model-api' ? '内置对话' : `外部客户端「${clientName}」`
+      const result = await dialog.showMessageBox(owner, {
+        type: 'question', title: '接管隔套草稿',
+        message: `允许${destination}接管当前隔套草稿？`,
+        detail: `项目文件：${target.projectPath}\n草稿会保留，原写入方将失去写入权限。`,
+        buttons: ['取消', '接管草稿'], defaultId: 0, cancelId: 0, noLink: true, signal,
+      })
+      return result.response === 1 && !signal.aborted ? 'approve' : 'cancel'
+    },
+  })
   const agentTools = new AgentToolService({
     projectService,
     recovery,
@@ -665,12 +793,76 @@ function installIpcHandlers(): void {
     log: logStage,
   })
 
+  const m2WorkerDirectory = app.isPackaged
+    ? path.join(process.resourcesPath, 'app.asar.unpacked', '.vite', 'build', 'm2-worker')
+    : path.join(__dirname, 'm2-worker')
+  m2PreviewForClose = installM2PreviewChannels(ipcMain, {
+    draftRoot: path.join(app.getPath('userData'), 'm2-drafts'),
+    scopeEpoch: windowId => m1WorkbenchForClose?.scopeEpoch(windowId) ?? 1,
+    workerUrl: pathToFileURL(path.join(m2WorkerDirectory, 'm2-geometry-worker.mjs')),
+    guard, authority: m1Authority, sessionFor: localM1SessionFor,
+    projectName: windowId => controller.sessionFor(windowId)?.snapshot.project.name,
+    eventForWindow(windowId) {
+      const owner = windows.get(windowId)?.window
+      if (!owner || owner.isDestroyed()) return null
+      const sender = owner.webContents
+      return { sender, get senderFrame() { return sender.isDestroyed() ? null : sender.mainFrame } }
+    },
+    openPeer(windowId) {
+      const owner = windows.get(windowId)?.window
+      if (owner && !owner.isDestroyed()) owner.focus()
+    },
+    async confirmM3(windowId, projectId, revision, signal) {
+      const owner = windows.get(windowId)?.window
+      const project = controller.sessionFor(windowId)?.snapshot.project
+      if (!owner || owner.isDestroyed() || project?.id !== projectId || signal.aborted) return false
+      const result = await dialog.showMessageBox(owner, {
+        type: 'question', title: '保存正式版本',
+        message: '将当前模型和图纸保存为正式版本？',
+        detail: `${project.name} · ${revision}\n必需检查均已通过。现有正式版本会保留在历史中。`,
+        buttons: ['取消', '保存正式版本'], defaultId: 0, cancelId: 0, noLink: true, signal,
+      })
+      return result.response === 1
+    },
+    migrationReport(windowId, verify) {
+      const current = controller.sessionFor(windowId)
+      return current ? migrateLegacySpacer(current, app.getPath('userData'), verify) : Promise.resolve(null)
+    },
+    openLegacy(windowId) {
+      const snapshot = controller.sessionFor(windowId)?.snapshot
+      if (!snapshot?.project.parameters.some(parameter => parameter.key === 'length')) return null
+      return {
+        formalVersions: snapshot.fileRevisions.map(version => ({ revision: version.revisionId,
+          committedAtLabel: version.createdAt, summary: version.reason,
+          isCurrent: version.revisionId === snapshot.project.currentRevisionId })),
+        uncommittedDrafts: snapshot.draft ? [{ draftRevision: 'legacy-draft-' + snapshot.draft.relationRevision,
+          baseRevision: snapshot.project.currentRevisionId, updatedAtLabel: snapshot.project.updatedAt,
+          status: 'in_progress', summary: '隔套独立草稿' }] : [],
+        restoredSourceCount: snapshot.documents.length,
+      }
+    },
+    sources(windowId) {
+      const snapshot = controller.sessionFor(windowId)?.snapshot
+      if (!snapshot) return []
+      return snapshot.documents.flatMap(document => {
+        if (document.projectId !== snapshot.project.id) return []
+        const revision = snapshot.revisions.find(item => item.id === document.latestRevisionId &&
+          item.documentId === document.id && item.projectId === snapshot.project.id)
+        const attachment = snapshot.attachments.find(item => item.blobKey === revision?.blobKey)
+        if (!revision || !attachment) return []
+        return [{ documentRef: revision.id, documentName: revision.fileName, sha256: revision.sha256,
+          pageCount: revision.pageCount, bytes: attachment.bytes }]
+      })
+    },
+  })
+
   registerSourceChannels(ipc, {
     guard,
     controller,
     projectService,
     recovery,
     pickSourcePath: pickSourcePdfFor,
+    onSourceImported: windowId => { void m2PreviewForClose?.sourceImported(windowId).catch(() => {}) },
     io: createModelFileIo(),
     inspectPdf: (bytes) => inspectSourcePdf(bytes),
     log: logStage,
@@ -841,6 +1033,10 @@ async function withCloseGate(
  * 关闭流程需要访问同一个 SessionController 实例；installIpcHandlers 会赋值。
  * A-01 在 IPC 安装前不会触发关闭流程。
  */
+let m1WorkbenchForClose: ReturnType<typeof installM1WorkbenchChannels> | undefined
+let m1AuthorityForClose: LocalM1Authority | undefined
+let localAgentEndpoint: Promise<Awaited<ReturnType<typeof startM1LocalEndpoint>> | undefined> | undefined
+let localAgentClosing = false
 let controllerForClose: SessionController = undefined as unknown as SessionController
 
 function applySessionSecurity(): void {
@@ -919,6 +1115,21 @@ function bootstrap(): void {
     })()
   })
 
+  app.on('will-quit', event => {
+    if (!localAgentEndpoint && !localAgentClosing) return
+    event.preventDefault()
+    const endpoint = localAgentEndpoint
+    if (!endpoint) return
+    localAgentEndpoint = undefined
+    localAgentClosing = true
+    void endpoint.then(value => value?.close()).catch(() => {
+      logStage({ channel: 'm1-local-agent', code: 'LOCAL_ENDPOINT_CLOSE_FAILED' })
+    }).finally(() => {
+      localAgentClosing = false
+      app.quit()
+    })
+  })
+
   void app.whenReady().then(() => {
     applySessionSecurity()
     installIpcHandlers()
@@ -959,3 +1170,5 @@ if (!hasSingleInstanceLock) {
 
 // pendingOpenFiles 只由 openProject 消费；A-01 不读取项目内容。
 export { pendingOpenFiles }
+
+let m2PreviewForClose: ReturnType<typeof installM2PreviewChannels> | undefined

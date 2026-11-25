@@ -113,6 +113,8 @@ export class SafeStorageStore implements KeychainStore {
   private readonly safeStorage: SafeStorageLike
   private readonly legacy: KeychainStore | null
   private cache: KeyFileShape | null = null
+  private loading: Promise<KeyFileShape> | undefined
+  private pendingWrites: Promise<void> = Promise.resolve()
   /** 已成功迁移过的 account：迁移失败（如加密不可用）不进集合，下次读取可重试。 */
   private readonly migrated = new Set<string>()
 
@@ -142,25 +144,35 @@ export class SafeStorageStore implements KeychainStore {
     return legacySecret
   }
 
-  async write(account: string, secret: string): Promise<void> {
-    if (secret === '') throw new Error('KEYCHAIN_EMPTY_SECRET')
-    if (!this.safeStorage.isEncryptionAvailable()) throw new Error('SAFE_STORAGE_UNAVAILABLE')
-    const encrypted = this.safeStorage.encryptString(secret)
-    const file = await this.load()
-    file.entries[account] = encrypted.toString('base64')
-    await this.save(file)
-    this.migrated.add(account)
+  write(account: string, secret: string): Promise<void> {
+    return this.mutate(async () => {
+      if (secret === '') throw new Error('KEYCHAIN_EMPTY_SECRET')
+      if (!this.safeStorage.isEncryptionAvailable()) throw new Error('SAFE_STORAGE_UNAVAILABLE')
+      const encrypted = this.safeStorage.encryptString(secret).toString('base64')
+      const file = await this.load()
+      await this.save({ ...file, entries: { ...file.entries, [account]: encrypted } })
+      this.migrated.add(account)
+    })
   }
 
-  async remove(account: string): Promise<void> {
-    const file = await this.load()
-    if (Object.prototype.hasOwnProperty.call(file.entries, account)) {
-      delete file.entries[account]
-      await this.save(file)
-    }
-    this.migrated.delete(account)
-    // 旧记录同步清掉：否则下次 read 会把刚删的密钥从旧 Keychain 迁回来。
-    if (this.legacy !== null) await this.legacy.remove(account)
+  remove(account: string): Promise<void> {
+    return this.mutate(async () => {
+      const file = await this.load()
+      if (Object.hasOwn(file.entries, account)) {
+        const entries = { ...file.entries }
+        delete entries[account]
+        await this.save({ ...file, entries })
+      }
+      this.migrated.delete(account)
+      // 旧记录同步清掉，否则下次 read 会把刚删掉的密钥迁回来。
+      if (this.legacy !== null) await this.legacy.remove(account)
+    })
+  }
+
+  private mutate(write: () => Promise<void>): Promise<void> {
+    const result = this.pendingWrites.then(write)
+    this.pendingWrites = result.catch(() => {})
+    return result
   }
 
   /** 仅供诊断/证据：密文文件里有哪些 account（不含任何密文或明文）。 */
@@ -181,6 +193,11 @@ export class SafeStorageStore implements KeychainStore {
 
   private async load(): Promise<KeyFileShape> {
     if (this.cache !== null) return this.cache
+    this.loading ??= this.loadFile()
+    return this.loading
+  }
+
+  private async loadFile(): Promise<KeyFileShape> {
     try {
       const text = await fsp.readFile(this.filePath, 'utf8')
       const raw = JSON.parse(text) as Partial<KeyFileShape>
@@ -200,9 +217,13 @@ export class SafeStorageStore implements KeychainStore {
   private async save(file: KeyFileShape): Promise<void> {
     await fsp.mkdir(path.dirname(this.filePath), { recursive: true })
     const temp = `${this.filePath}.${process.pid}.tmp`
-    await fsp.writeFile(temp, `${JSON.stringify(file, null, 2)}\n`, { mode: 0o600 })
-    await fsp.rename(temp, this.filePath)
-    this.cache = file
+    try {
+      await fsp.writeFile(temp, `${JSON.stringify(file, null, 2)}\n`, { mode: 0o600 })
+      await fsp.rename(temp, this.filePath)
+      this.cache = file
+    } finally {
+      await fsp.unlink(temp).catch(() => {})
+    }
   }
 }
 
