@@ -2319,3 +2319,420 @@
   padding: 10px;
   gap: 8px;
 }
+
+
+/* ============================================================================
+   M1B-FE-01: 3D 多零件装配树、视角预设、智能上下文胶囊、AI 配合草案与 What-If 仿真面板
+   ============================================================================ */
+.pa-assembly-tree-parts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pa-assembly-part-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pa-assembly-part-hidden {
+  opacity: 0.55;
+}
+
+.pa-assembly-part-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border-radius: 7px;
+  padding: 2px 4px;
+}
+
+.pa-assembly-part-btn {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pa-part-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.pa-part-eye-hidden {
+  opacity: 0.45;
+}
+
+.pa-assembly-feature-children {
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pa-assembly-feature-btn {
+  padding: 4px 7px;
+  font-size: 11.5px;
+}
+
+.pa-assembly-controls {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pa-assembly-ctrl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pa-viewport-camera-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pa-camera-preset-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pa-float-fit-btn-active {
+  opacity: 1;
+  border-color: var(--accent-border);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.pa-css2d-annotation-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 6;
+}
+
+.pa-css2d-anchor {
+  position: absolute;
+  pointer-events: auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #f8fafc;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pa-three-edge {
+  stroke: #38bdf8;
+  cursor: pointer;
+}
+
+.pa-three-edge-highlighted {
+  stroke: #f59e0b;
+}
+
+.pa-three-edge-selected {
+  stroke: #2563eb;
+}
+
+.pa-context-pill-assembly {
+  flex-wrap: wrap;
+  border-radius: 14px;
+  max-width: 100%;
+}
+
+.pa-context-labels {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+/* AI 建议配合草案卡片 */
+.pa-ai-mate-drafts-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pa-mate-draft-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.pa-mate-draft-item {
+  border: 1px solid var(--border-hairline);
+  border-radius: 8px;
+  padding: 8px 9px;
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.pa-mate-draft-applied {
+  border-color: var(--pass-border, #86efac);
+  background: var(--pass-bg);
+}
+
+.pa-mate-draft-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.pa-mate-draft-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pa-mate-draft-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.pa-mate-draft-rationale {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.pa-mate-draft-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pa-mate-evidence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pa-evidence-chip {
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  color: var(--text-secondary);
+}
+
+.pa-mate-draft-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 仿真诊断与 What-If 面板 */
+.pa-sim-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pa-sim-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pa-sim-spec-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.pa-sim-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.pa-sim-kpi-box {
+  border: 1px solid var(--border-hairline);
+  border-radius: 7px;
+  padding: 6px 8px;
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pa-sim-kpi-label {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.pa-sim-kpi-val {
+  font-size: 12.5px;
+  color: var(--text-primary);
+}
+
+.pa-sim-histogram-wrap {
+  border: 1px solid var(--border-hairline);
+  border-radius: 7px;
+  padding: 4px;
+  background: var(--bg-surface);
+}
+
+.pa-sim-histogram-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.pa-sim-hist-bar {
+  fill: var(--accent, #2563eb);
+  opacity: 0.78;
+}
+
+.pa-sim-hist-bar-oos {
+  fill: var(--fail, #dc2626);
+  opacity: 0.85;
+}
+
+.pa-sim-limit-line {
+  stroke: var(--fail, #dc2626);
+  stroke-width: 1.4;
+  stroke-dasharray: 3 2;
+}
+
+.pa-sim-axis-text {
+  font-size: 8.5px;
+  fill: var(--text-muted);
+}
+
+.pa-sim-pareto-section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.pa-sim-pareto-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.pa-sim-pareto-item {
+  border: 1px solid var(--border-hairline);
+  border-radius: 8px;
+  padding: 8px 9px;
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.14s ease, background-color 0.14s ease;
+}
+
+.pa-sim-pareto-item:hover,
+.pa-sim-pareto-item-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.pa-sim-pareto-head {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pa-sim-share-pct {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.pa-pareto-bar-track {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  overflow: hidden;
+}
+
+.pa-pareto-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.18s ease;
+}
+
+.pa-pareto-fill-high {
+  background: #ef4444;
+}
+
+.pa-pareto-fill-mid {
+  background: #f59e0b;
+}
+
+.pa-pareto-fill-low {
+  background: #3b82f6;
+}
+
+.pa-whatif-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.pa-whatif-slider-row input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent, #2563eb);
+  cursor: pointer;
+}
+
+.pa-whatif-val {
+  min-width: 64px;
+  text-align: right;
+  color: var(--text-primary);
+  font-weight: 600;
+}
