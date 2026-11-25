@@ -1,6 +1,6 @@
 # 寸链 · 机械制图 Agent 工作台
 
-> **版本**：`v0.5.3-beta`（机械制图 Agent 重构版）｜**架构**：Electron + React + TypeScript + Open CASCADE WASM
+> **版本**：`v0.6.0-beta`（机械制图 Agent 重构版）｜**架构**：Electron + React + TypeScript + Open CASCADE WASM
 > **许可**：MIT（第三方组件与字体许可见 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)）
 
 **寸链**是一个面向机械设计师的本地桌面制图工作台：**把带文本层的零件任务书 PDF 交给常用的本地 Agent（MCP）或内置模型 API，寸链按已确认的尺寸和约束生成可修改的三维实体、二维正投影图纸与多维检查记录，在桌面直接并排展示。**
@@ -9,7 +9,7 @@
 
 ---
 
-## 一、核心能力（`v0.5.3-beta`）
+## 一、核心能力（`v0.6.0-beta`）
 
 | 能力 | 当前实现 |
 |---|---|
@@ -42,7 +42,7 @@
     ```bash
     xattr -dr com.apple.quarantine /Applications/寸链.app
     ```
-  - **Windows x64**：随 `v0.5.3-beta` 提供 `win32-x64` 解压即用包与自动安装配置程序（Setup `.exe`），本地桥接采用 Windows 命名管道与 `cunlian-mcp.cmd`，未做代码签名，Windows 真机实测持续完善中。
+  - **Windows x64**：随 `v0.6.0-beta` 提供 `win32-x64` 解压即用包与自动安装配置程序（Setup `.exe`），本地桥接采用 Windows 命名管道与 `cunlian-mcp.cmd`，未做代码签名，Windows 真机实测持续完善中。
 
 ---
 
