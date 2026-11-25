@@ -1,6 +1,7 @@
 import type {
-  M1CancelChatRequest, M1ChatRequest, M1ChatResult, M1ModelConnectionRequest, M1ModelConnectionResult, M1ModelResult,
+  M1ModelListRequest, M1ModelListResult, M1CancelChatRequest, M1ChatRequest, M1ChatResult, M1ModelConnectionRequest, M1ModelConnectionResult, M1ModelResult,
 } from './m1-model-api'
+import { z } from 'zod'
 import type { M1Activity } from './m1-fields'
 
 export type M1WorkbenchScope = { projectId: string; scopeEpoch: number }
@@ -12,6 +13,29 @@ export type M1LocalAgentInstallInfo = {
   mcpServerName?: string
   mcpConfigJson?: string
   connectPrompt?: string
+}
+export const m1LocalAgentId = z.enum(['claude-code', 'codex', 'claude-desktop', 'cursor', 'windsurf'])
+export const m1RegisterLocalAgentRequest = z.object({ agentId: m1LocalAgentId }).strict()
+export type M1LocalAgentId = z.infer<typeof m1LocalAgentId>
+export type M1RegisterLocalAgentRequest = z.infer<typeof m1RegisterLocalAgentRequest>
+export type M1LocalAgentDetection = {
+  id: M1LocalAgentId
+  name: string
+  detected: boolean
+  configured: boolean
+  method: 'cli' | 'config-file'
+  configPath: string | null
+  detail?: string
+}
+export type M1LocalAgentRegistration = {
+  agentId: M1LocalAgentId
+  name: string
+  configured: true
+  method: M1LocalAgentDetection['method']
+  configPath: string | null
+  backupPath: string | null
+  message: string
+  requiresRestart?: boolean
 }
 export type M1ConnectionStatusSnapshot = {
   connectionState: 'disconnected' | 'connecting' | 'connected'
@@ -62,6 +86,9 @@ export type M1TakeoverResult = {
 }
 
 export interface M1WorkbenchApi {
+  detectM1LocalAgents(): Promise<M1ModelResult<{ agents: M1LocalAgentDetection[] }>>
+  registerM1LocalAgent(request: M1RegisterLocalAgentRequest): Promise<M1ModelResult<M1LocalAgentRegistration>>
+  listM1ModelApiModels(request: M1ModelListRequest): Promise<M1ModelResult<M1ModelListResult>>
   getM1LocalAgentInstallInfo(): Promise<M1ModelResult<M1LocalAgentInstallInfo>>
   getM1ConnectionStatus(request: M1WorkbenchScope): Promise<M1ModelResult<M1ConnectionStatusSnapshot>>
   testM1ModelApiConnection(request: M1ModelConnectionRequest): Promise<M1ModelResult<M1ModelConnectionResult>>

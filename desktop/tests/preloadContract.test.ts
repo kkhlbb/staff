@@ -42,6 +42,9 @@ const LEGACY_FUNCTIONS = [
 ] as const
 
 const ADDED_FUNCTIONS = [
+  'detectM1LocalAgents',
+  'registerM1LocalAgent',
+  'listM1ModelApiModels',
   'getM1LocalAgentInstallInfo',
   'getM1ConnectionStatus',
   'testM1ModelApiConnection',
@@ -148,10 +151,12 @@ describe('B2/C preload 契约', () => {
 it('transports all workbench methods and strips Electron events from subscription callbacks', async () => {
   await import('../preload/index')
   const api = electron.getApi()
-  const methods = ['getM1ConnectionStatus', 'testM1ModelApiConnection', 'sendM1ChatMessage', 'cancelM1ChatMessage',
+  const methods = ['registerM1LocalAgent', 'listM1ModelApiModels', 'getM1ConnectionStatus', 'testM1ModelApiConnection', 'sendM1ChatMessage', 'cancelM1ChatMessage',
     'getM1ExternalActivities', 'reconnectM1Session', 'takeoverM1Draft'] as const
   const request = { projectId: 'p', scopeEpoch: 1 }
   electron.invoke.mockResolvedValue({ ok: true, value: null })
+  await api.detectM1LocalAgents()
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.detectM1LocalAgents)
   await api.getM1LocalAgentInstallInfo()
   expect(electron.invoke).toHaveBeenLastCalledWith(ipc.getM1LocalAgentInstallInfo)
   for (const method of methods) {

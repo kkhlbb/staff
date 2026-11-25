@@ -117,6 +117,9 @@ async function invokeM2<T>(channel: string, request: unknown): Promise<M2Result<
 }
 
 const api: CunlianApi = {
+  detectM1LocalAgents: () => invokeM1(IPC_CHANNELS.detectM1LocalAgents),
+  registerM1LocalAgent: request => invokeM1(IPC_CHANNELS.registerM1LocalAgent, request),
+  listM1ModelApiModels: request => invokeM1(IPC_CHANNELS.listM1ModelApiModels, request),
   getM1LocalAgentInstallInfo: () => invokeM1(IPC_CHANNELS.getM1LocalAgentInstallInfo),
   getM1ConnectionStatus: request => invokeM1(IPC_CHANNELS.getM1ConnectionStatus, request),
   testM1ModelApiConnection: request => invokeM1(IPC_CHANNELS.testM1ModelApiConnection, request),

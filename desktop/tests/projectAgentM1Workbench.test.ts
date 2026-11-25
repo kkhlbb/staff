@@ -9,6 +9,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { SafeStorageStore } from '../main/keychain'
 import { LocalM1Authority } from '../main/project-agent/m1LocalAuthority'
 import { M1InternalService } from '../main/project-agent/m1InternalService'
+import { M1AgentRegistration } from '../main/project-agent/m1AgentRegistration'
 import { getLocalAgentInstallInfo } from '../main/project-agent/m1LocalAgent'
 import { startM1LocalEndpoint } from '../main/project-agent/m1LocalEndpoint'
 import { localM1Socket } from '../main/project-agent/m1LocalTransport'
@@ -31,7 +32,7 @@ const authorizing = { ...project, requestId: 'native-read', requestGeneration: 1
 const providerKey = 'fixture-secret-model-key'
 type Endpoint = Awaited<ReturnType<typeof startM1LocalEndpoint>>
 
-async function fixture() {
+async function fixture(packaged = true) {
   const root = await mkdtemp('/private/tmp/dsh-m1-workbench-')
   cleanup.push(() => rm(root, { recursive: true, force: true }))
   const file = path.join(root, 'Project with spaces.cunlian')
@@ -65,7 +66,12 @@ async function fixture() {
   const handlers = new Map<string, Handler>()
   const { invalidate } = installM1WorkbenchChannels({ handle: (key, handler) => { handlers.set(key, handler) } }, {
     guard, sessionFor, authority, runtime, confirm, endpoint: async () => endpoint,
-    installInfo: () => getLocalAgentInstallInfo(executable, path.resolve(executable, '../../Resources')), pollMs: 20,
+    agents: new M1AgentRegistration({ home: root, platform: 'darwin', env: {} }),
+    installInfo() {
+      if (!packaged) throw Error('LOCAL_ENDPOINT_UNAVAILABLE')
+      return getLocalAgentInstallInfo(executable, path.resolve(executable, '../../Resources'))
+    },
+    pollMs: 20,
   })
   cleanup.push(() => authority.revokeWindow(1))
   const invoke = (channel: string, ...args: unknown[]) => handlers.get(channel)!(event, ...args)
@@ -134,9 +140,10 @@ async function stubModel() {
   } }
 }
 
-it('registers all nine guarded transports and rejects renderer identity, generation and file spoofing', async () => {
+it('registers all workbench transports and rejects renderer identity, generation and file spoofing', async () => {
   const f = await fixture()
-  const channels = [ipc.getM1LocalAgentInstallInfo, ipc.getM1ConnectionStatus, ipc.testM1ModelApiConnection,
+  const channels = [ipc.detectM1LocalAgents, ipc.registerM1LocalAgent, ipc.listM1ModelApiModels,
+    ipc.getM1LocalAgentInstallInfo, ipc.getM1ConnectionStatus, ipc.testM1ModelApiConnection,
     ipc.sendM1ChatMessage, ipc.cancelM1ChatMessage, ipc.getM1ExternalActivities, ipc.subscribeM1WorkbenchEvents,
     ipc.reconnectM1Session, ipc.takeoverM1Draft]
   for (const channel of channels) {
@@ -161,6 +168,40 @@ it('registers all nine guarded transports and rejects renderer identity, generat
   }
   await writeFile(f.file, 'file replaced')
   expect(await f.invoke(ipc.getM1ExternalActivities, initial)).toMatchObject({ ok: false, error: { code: 'AUTH_REQUIRED' } })
+})
+
+it('registers local clients through the guarded IPC and reports unavailable unpackaged bridges', async () => {
+  const unpackaged = await fixture(false)
+  const request = { agentId: 'windsurf' }
+  expect(await unpackaged.invoke(ipc.detectM1LocalAgents)).toMatchObject({ ok: true, value: { agents: expect.any(Array) } })
+  expect(await unpackaged.invoke(ipc.registerM1LocalAgent, request))
+    .toMatchObject({ ok: false, error: { code: 'LOCAL_ENDPOINT_UNAVAILABLE' } })
+
+  const f = await fixture()
+  expect(await f.invoke(ipc.registerM1LocalAgent, { ...request, bridgeCommand: '/forged' }))
+    .toMatchObject({ ok: false, error: { code: 'INVALID_REQUEST' } })
+  expect(await f.invoke(ipc.registerM1LocalAgent, request))
+    .toMatchObject({ ok: true, value: { ...request, configured: true, backupPath: null } })
+  const detected = value<{ agents: { id: string; configured: boolean }[] }>(await f.invoke(ipc.detectM1LocalAgents))
+  expect(detected.agents.find(agent => agent.id === request.agentId)).toMatchObject({ configured: true })
+})
+
+it('validates the project generation and lists models without probing or storing credentials', async () => {
+  const f = await fixture()
+  const { config } = await stubModel()
+  const request = { ...initial, requestId: 'models', baseUrl: config.baseUrl, apiKey: '' }
+  expect(await f.invoke(ipc.listM1ModelApiModels, request)).toMatchObject({ ok: false, error: { code: 'AUTH_REQUIRED' } })
+  await f.authorize()
+  for (const patch of [{ projectId: 'other' }, { scopeEpoch: 2 }]) {
+    expect(await f.invoke(ipc.listM1ModelApiModels, { ...request, ...patch }))
+      .toMatchObject({ ok: false, error: { code: 'AUTH_REQUIRED' } })
+  }
+  expect(await f.invoke(ipc.listM1ModelApiModels, { ...request, apiKey: providerKey })).toEqual({
+    ok: true, value: { models: ['workbench-stub'], defaultModel: 'workbench-stub' },
+  })
+  await expect(readFile(path.join(f.root, 'keys.json'))).rejects.toMatchObject({ code: 'ENOENT' })
+  expect(await f.invoke(ipc.getM1ConnectionStatus, initial)).toMatchObject({ ok: true,
+    value: { connectionState: 'disconnected', source: 'none' } })
 })
 
 it.each(['revoke', 'navigate', 'changeSession'] as const)('drops subscriptions and aborts HTTP after %s', async action => {

@@ -1,15 +1,18 @@
 import type { IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 import { IPC_CHANNELS } from '../../shared/contracts'
-import { m1CancelChatRequest, m1ChatRequest, m1ModelConnectionRequest } from '../../shared/project-agent/m1-model-api'
+import { m1CancelChatRequest, m1ChatRequest, m1ModelConnectionRequest, m1ModelListRequest } from '../../shared/project-agent/m1-model-api'
 import type { M1ModelResult } from '../../shared/project-agent/m1-model-api'
 import type { M1Activity } from '../../shared/project-agent/m1-fields'
-import type { M1ConnectionStatusSnapshot, M1EntrySource, M1ExternalActivity, M1TakeoverResult, M1WorkbenchEvent } from '../../shared/project-agent/m1-workbench'
+import { m1RegisterLocalAgentRequest, type M1ConnectionStatusSnapshot, type M1EntrySource, type M1ExternalActivity,
+  type M1LocalAgentInstallInfo, type M1TakeoverResult, type M1WorkbenchEvent } from '../../shared/project-agent/m1-workbench'
 import { toSenderInfo } from '../ipc'
 import type { SenderGuard } from '../senderGuard'
 import type { RealModelRuntime } from '../realModelRuntime'
 import type { LocalM1Authority, LocalM1Session, M1WriterConfirmation } from './m1LocalAuthority'
 import type { startM1LocalEndpoint } from './m1LocalEndpoint'
+import { M1AgentRegistration } from './m1AgentRegistration'
+import { listM1ModelApiModels } from './m1ModelList'
 import { getExternalActivities } from './m1LocalAgent'
 import { M1ModelApi } from './m1ModelApi'
 import type { M1ModelAttachment, M1ModelScope } from './m1ModelApi'
@@ -45,7 +48,8 @@ interface Ports {
   readAttachment?(windowId: number, ref: string): M1ModelAttachment | null
   readSelectedObject?(windowId: number, ref: string): string | null
   endpoint(): Promise<Endpoint | undefined>
-  installInfo(): unknown | Promise<unknown>
+  installInfo(): M1LocalAgentInstallInfo | Promise<M1LocalAgentInstallInfo>
+  agents?: M1AgentRegistration
   confirm(source: M1EntrySource, target: Parameters<M1WriterConfirmation>[0], signal: AbortSignal, clientName?: string): ReturnType<M1WriterConfirmation>
   m2Change?(event: IpcMainInvokeEvent, projectId: string): ReturnType<NonNullable<M1ModelScope['m2Change']>>
   pollMs?: number
@@ -70,6 +74,10 @@ const codes: Record<string, string> = {
   WRITER_HELD: '已有写入方，请刷新并确认接管',
   WRITER_REVOKED: '写入权限已撤销，请刷新后重试',
   CURSOR_EXPIRED: '事件游标已过期，请重新读取快照',
+  INVALID_CONFIG_FILE: '客户端配置文件格式无效',
+  CONFIG_CHANGED: '客户端配置已更新，请重试',
+  INVALID_API_KEY: '请填写有效的模型 API 密钥',
+  AUTH_FAILED: '模型供应商拒绝了凭据',
   STEP_FAILED: '无法完成 M1 请求',
 }
 const ok = <T>(value: T): M1ModelResult<T> => ({ ok: true, value })
@@ -93,6 +101,7 @@ function activityView(activity: M1Activity): M1ExternalActivity {
 type Handler = (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<M1ModelResult<unknown>>
 export function installM1WorkbenchChannels(ipc: { handle(channel: string, handler: Handler): void }, ports: Ports) {
   const { guard, authority } = ports
+  const agents = ports.agents ?? new M1AgentRegistration()
   const states = new Map<number, State>()
   const generations = new WeakMap<State['frame'], { sessionId: string; epoch: number }>()
 
@@ -228,6 +237,33 @@ export function installM1WorkbenchChannels(ipc: { handle(channel: string, handle
     })
   }
 
+  install(IPC_CHANNELS.detectM1LocalAgents, async (event, ...args) => {
+    if (args.length) throw Error('INVALID_REQUEST')
+    let info: M1LocalAgentInstallInfo | undefined
+    try { info = await ports.installInfo() } catch (error) {
+      if (!(error instanceof Error) || error.message !== 'LOCAL_ENDPOINT_UNAVAILABLE') throw error
+    }
+    const value = await agents.detect(info)
+    if (!guard.verify(toSenderInfo(event)).ok) throw Error('FORBIDDEN_SENDER')
+    return ok(value)
+  })
+  install(IPC_CHANNELS.registerM1LocalAgent, async (event, raw, ...extra) => {
+    const parsed = m1RegisterLocalAgentRequest.safeParse(raw)
+    if (!parsed.success || extra.length) throw Error('INVALID_REQUEST')
+    const frame = event.senderFrame
+    const url = frame?.url
+    const verifySender = () => {
+      if (event.senderFrame !== frame || frame?.url !== url ||
+          !guard.verify(toSenderInfo(event)).ok) throw Error('FORBIDDEN_SENDER')
+    }
+    const value = await agents.register(parsed.data.agentId, await ports.installInfo(), verifySender)
+    verifySender()
+    return ok(value)
+  })
+  scoped(IPC_CHANNELS.listM1ModelApiModels, m1ModelListRequest, async (_event, state, request) => {
+    try { return ok(await listM1ModelApiModels(request, state.controller.signal)) }
+    catch (error) { return failure(error) }
+  })
   install(IPC_CHANNELS.getM1LocalAgentInstallInfo, async (_event, ...args) => {
     if (args.length) throw Error('INVALID_REQUEST')
     const value = await ports.installInfo()

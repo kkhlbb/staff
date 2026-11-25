@@ -203,11 +203,11 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
     return this.deps.signal ? AbortSignal.any([local, this.deps.signal]) : local
   }
 
-  async listModels(): Promise<string[]> {
+  async listModels({ allowAnonymous = false } = {}): Promise<string[]> {
     const key = await this.deps.getApiKey()
-    if (!key) throw new ModelAdapterError('INVALID_API_KEY', '模型尚未配置密钥')
+    if (!key && !allowAnonymous) throw new ModelAdapterError('INVALID_API_KEY', '模型尚未配置密钥')
     const response = await (this.deps.fetchImpl ?? fetch)(joinUrl(this.deps.settings.baseUrl, '/models'), {
-      headers: { authorization: `Bearer ${key}` },
+      headers: key ? { authorization: `Bearer ${key}` } : {},
       redirect: 'error',
       signal: this.signal(AbortSignal.timeout(this.deps.settings.timeoutMs ?? 20_000)),
     })

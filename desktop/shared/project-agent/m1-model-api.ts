@@ -9,6 +9,10 @@ export const m1ModelConnectionRequest = z.object({
   ...scope, baseUrl: z.string().trim().min(1).max(2048), model: z.string().trim().min(1).max(120),
   apiKey: z.string().max(4096), contextPreview: z.boolean(),
 }).strict()
+export const m1ModelListRequest = m1ModelConnectionRequest.omit({ model: true, contextPreview: true })
+export type M1ModelListRequest = z.infer<typeof m1ModelListRequest>
+export type M1ModelListResult = { models: string[]; defaultModel: string | null }
+
 export const m1ChatRequest = z.object({
   ...scope, writerEpoch: epoch, prompt: chatText, attachments: z.array(id).max(8),
   selectedObject: id.nullable(),

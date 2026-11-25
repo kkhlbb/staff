@@ -43,6 +43,9 @@ import type { ExtractionCandidate } from '../../src/document-extraction/types'
 
 /** 批次 A 全部 IPC 通道（与任务卡 §3 表格逐项对应）。 */
 export const IPC_CHANNELS = {
+  detectM1LocalAgents: 'm1-workbench:detectM1LocalAgents',
+  registerM1LocalAgent: 'm1-workbench:registerM1LocalAgent',
+  listM1ModelApiModels: 'm1-workbench:listM1ModelApiModels',
   getM1LocalAgentInstallInfo: 'm1-workbench:getM1LocalAgentInstallInfo',
   getM1ConnectionStatus: 'm1-workbench:getM1ConnectionStatus',
   testM1ModelApiConnection: 'm1-workbench:testM1ModelApiConnection',
