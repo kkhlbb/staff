@@ -8,6 +8,7 @@
  *
  * 保存端与打开端调用同一套函数，避免“能写不能读”的两套规则。
  */
+import { assemblyModelV1Schema, stepAttachmentSchema } from './assembly3d'
 import { z } from 'zod'
 import { validateEntryPath } from '../backup/zip'
 import { validateChain } from '../domain/validation'
@@ -33,6 +34,7 @@ import {
   V35_PROJECT_FILE_SCHEMA_VERSION,
   V36_PROJECT_FILE_SCHEMA_VERSION,
   V9_PROJECT_FILE_SCHEMA_VERSION,
+  V10_PROJECT_FILE_SCHEMA_VERSION,
   REVISION_PATH_PREFIX,
   type ProjectFileAttachmentInput,
   type ProjectFileAttachmentRef,
@@ -50,6 +52,7 @@ import {
   type ProjectFileProjectV7,
   type ProjectFileProjectV8,
   type ProjectFileProjectV9,
+  type ProjectFileProjectV10,
   type ProjectFileResult,
   type ProjectFileRevision,
   type ProjectFileSnapshot,
@@ -608,8 +611,8 @@ const pdfTextProvenanceSchema = z
     { message: '提取出处的选区/页框必须是有限数值' },
   )
 
-/** 出处联合：pdf-text（旧 evidence 形状或无 kind）或带 kind 的其它三类。 */
-const provenanceRefSchema = z.union([
+/** 出处联合：pdf-text（旧 evidence 形状或无 kind）或带 kind 的其它四类。 */
+export const provenanceRefSchema = z.union([
   z.object({
     kind: z.literal('agent-read'), actorId: z.string().min(1).max(200),
     at: z.iso.datetime(), sessionSeq: z.number().int().min(1),
@@ -930,9 +933,9 @@ const projectV8Schema = projectV6Schema
  * schema10：无任务书入口的加法字段。旧 schema9 记录没有这些字段，读取时经
  * adaptProjectV9 补 `sourceKind='pdf'` 与空账本（不重算、不改值）。
  */
-const projectV9Schema = projectV8Schema
+const projectV10Shape = projectV8Schema
   .extend({
-    schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
+    schemaVersion: z.literal(V10_PROJECT_FILE_SCHEMA_VERSION),
     sourceKind: z.enum(['pdf', 'user-intent']),
     actorId: z.string().min(1).max(200).nullable(),
     sessionSeq: z.number().int().min(0),
@@ -942,33 +945,56 @@ const projectV9Schema = projectV8Schema
     currentRequirementCheck: requirementCheckV10Schema.nullable(),
   })
   .strict()
-  .superRefine((value, context) => {
-    if (value.sourceKind !== 'user-intent') return
-    if (value.actorId === null || value.sessionSeq < 1) {
+
+function validateIntentProject(value: Omit<z.infer<typeof projectV10Shape>, 'schemaVersion'>, context: z.RefinementCtx) {
+  if (value.sourceKind !== 'user-intent') return
+  if (value.actorId === null || value.sessionSeq < 1) {
+    context.addIssue({
+      code: 'custom',
+      path: ['actorId'],
+      message: '无任务书项目必须有责任人自述与已发生的输入会话序号',
+    })
+    return
+  }
+  for (const [index, attestation] of value.attestations.entries()) {
+    if (attestation.actorId !== value.actorId) {
       context.addIssue({
         code: 'custom',
-        path: ['actorId'],
-        message: '无任务书项目必须有责任人自述与已发生的输入会话序号',
+        path: ['attestations', index, 'actorId'],
+        message: '断言的责任人与项目责任人不一致',
       })
-      return
     }
-    for (const [index, attestation] of value.attestations.entries()) {
-      if (attestation.actorId !== value.actorId) {
-        context.addIssue({
-          code: 'custom',
-          path: ['attestations', index, 'actorId'],
-          message: '断言的责任人与项目责任人不一致',
-        })
-      }
-      if (attestation.sessionSeq < 1 || attestation.sessionSeq > value.sessionSeq) {
-        context.addIssue({
-          code: 'custom',
-          path: ['attestations', index, 'sessionSeq'],
-          message: '断言的会话序号不在项目已发生的输入范围内',
-        })
-      }
+    if (attestation.sessionSeq < 1 || attestation.sessionSeq > value.sessionSeq) {
+      context.addIssue({
+        code: 'custom',
+        path: ['attestations', index, 'sessionSeq'],
+        message: '断言的会话序号不在项目已发生的输入范围内',
+      })
     }
-  })
+  }
+}
+
+const projectV10Schema = projectV10Shape.superRefine(validateIntentProject)
+
+const projectV11Schema = z.strictObject({
+  ...projectV10Shape.shape,
+  schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
+  stepAttachments: z.array(stepAttachmentSchema).optional(),
+  assembly3d: assemblyModelV1Schema.optional(),
+}).superRefine(validateIntentProject).superRefine((project, context) => {
+  const ids = new Set<string>()
+  for (const [index, attachment] of (project.stepAttachments ?? []).entries()) {
+    if (ids.has(attachment.id)) {
+      context.addIssue({ code: 'custom', path: ['stepAttachments', index, 'id'], message: 'Duplicate STEP attachment ID' })
+    }
+    ids.add(attachment.id)
+  }
+  for (const [index, part] of (project.assembly3d?.parts ?? []).entries()) {
+    if (part.kind === 'imported-step' && !ids.has(part.attachmentId)) {
+      context.addIssue({ code: 'custom', path: ['assembly3d', 'parts', index, 'attachmentId'], message: 'Unknown STEP attachment' })
+    }
+  }
+})
 
 const draftSchema = z
   .object({
@@ -1152,7 +1178,7 @@ const legacyArchiveSchema = z
 
 const attachmentRefSchema = z
   .object({
-    kind: z.enum(['pdf', 'model']),
+    kind: z.enum(['pdf', 'model', 'step']),
     revisionId: idSchema,
     blobKey: idSchema,
     path: z.string().min(1).max(PROJECT_FILE_MAX_PATH_LENGTH),
@@ -1272,6 +1298,7 @@ const manifestProjectV2Schema = z
       z.literal(V35_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(V36_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(V9_PROJECT_FILE_SCHEMA_VERSION),
+      z.literal(V10_PROJECT_FILE_SCHEMA_VERSION),
       z.literal(PROJECT_FILE_SCHEMA_VERSION),
     ]),
     dimensionChainSchemaVersion: z.literal(DIMENSION_CHAIN_SCHEMA_VERSION),
@@ -1332,7 +1359,8 @@ export type VersionedProject =
   | { version: 5; project: ProjectFileProjectV7 }
   | { version: 6; project: ProjectFileProjectV8 }
   | { version: 7; project: ProjectFileProjectV9 }
-  | { version: 8; project: ProjectFileProject }
+  | { version: 8; project: ProjectFileProjectV10 }
+  | { version: 9; project: ProjectFileProject }
 
 /** 校验工作链与基线链；两个 schema 版本共用。 */
 function validateProjectChains(
@@ -1478,21 +1506,21 @@ export function parseProjectVersioned(input: unknown): ProjectFileResult<Version
       },
     })
   }
-  if (version === PROJECT_FILE_SCHEMA_VERSION) {
-    const parsed = projectV9Schema.safeParse(input)
+  if (version === V10_PROJECT_FILE_SCHEMA_VERSION || version === PROJECT_FILE_SCHEMA_VERSION) {
+    const parsed = (version === V10_PROJECT_FILE_SCHEMA_VERSION ? projectV10Schema : projectV11Schema).safeParse(input)
     if (!parsed.success) {
-      return fail('INVALID_RECORD', 'project.json 结构不合法（schema 10）', describeZodError(parsed.error))
+      return fail('INVALID_RECORD', `project.json 结构不合法（schema ${version}）`, describeZodError(parsed.error))
     }
     const chains = validateProjectChains(parsed.data)
     if (!chains.ok) return chains
-    return ok({
-      version: 8,
-      project: {
-        ...(parsed.data as unknown as ProjectFileProject),
-        dimensionChain: chains.value.dimensionChain,
-        baseline: chains.value.baseline,
-      },
-    })
+    const project = {
+      ...(parsed.data as unknown as ProjectFileProjectV10 | ProjectFileProject),
+      dimensionChain: chains.value.dimensionChain,
+      baseline: chains.value.baseline,
+    }
+    return project.schemaVersion === V10_PROJECT_FILE_SCHEMA_VERSION
+      ? ok({ version: 8, project })
+      : ok({ version: 9, project })
   }
   return fail(
     'UNSUPPORTED_VERSION',
@@ -1646,7 +1674,7 @@ function withCandidateProvenance(candidate: ExtractionCandidate): ExtractionCand
 }
 
 /**
- * schema8 → 当前工作形状（schema 9）：按原 evidence 逐条补 pdf-text 出处。
+ * schema8 → 当前工作形状：按原 evidence 逐条补 pdf-text 出处。
  * 只加 provenance 字段：候选身份、数值、q、判据、决定与快照一律不重算、不改值。
  */
 export function adaptProjectV8(project: ProjectFileProjectV8): ProjectFileProject {
@@ -1666,7 +1694,7 @@ export function adaptProjectV8(project: ProjectFileProjectV8): ProjectFileProjec
 }
 
 /**
- * schema9 → 当前工作形状（schema 10）：只补来源种类与空账本。
+ * schema9 → 当前工作形状：只补来源种类与空账本。
  * 出处、候选、数值、判据与旧历史一律不重算、不改值。
  */
 export function adaptProjectV9(project: ProjectFileProjectV9): ProjectFileProject {
@@ -1677,7 +1705,7 @@ export function adaptProjectV9(project: ProjectFileProjectV9): ProjectFileProjec
   }
 }
 
-/** 严格解析 project/project.json（接受 schema3/4/5/6/7/8/9，统一返回当前工作形状）。 */
+/** 严格解析 project/project.json（接受 schema 3–11，统一返回当前工作形状）。 */
 export function parseProject(
   input: unknown,
 ): ProjectFileResult<ProjectFileProject> {
@@ -1690,6 +1718,7 @@ export function parseProject(
   if (parsed.value.version === 5) return ok(adaptProjectV7(parsed.value.project))
   if (parsed.value.version === 6) return ok(adaptProjectV8(parsed.value.project))
   if (parsed.value.version === 7) return ok(adaptProjectV9(parsed.value.project))
+  if (parsed.value.version === 8) return ok({ ...parsed.value.project, schemaVersion: PROJECT_FILE_SCHEMA_VERSION })
   return ok(parsed.value.project)
 }
 
@@ -1738,7 +1767,7 @@ export function parseRevisionFile(
   if (!parsed.success) {
     return fail('INVALID_RECORD', '项目文件版本记录结构不合法', describeZodError(parsed.error))
   }
-  // 旧历史快照保留 schema3 原样（不可变）；新快照为 schema4。
+  // 旧历史快照保留原版本。
   const project = parseProjectVersioned(parsed.data.project)
   if (!project.ok) {
     return fail(
@@ -1771,10 +1800,20 @@ export function computeCounts(snapshot: ProjectFileSnapshot): ProjectFileCounts 
   }
 }
 
+/** STEP bytes referenced by immutable revisions remain in the container. */
+function stepAttachments(snapshot: ProjectFileSnapshot) {
+  return [
+    ...(snapshot.project.stepAttachments ?? []),
+    ...snapshot.fileRevisions.flatMap(({ project }) =>
+      project.schemaVersion === PROJECT_FILE_SCHEMA_VERSION ? project.stepAttachments ?? [] : []),
+  ]
+}
+
 export function expectedAttachmentRefs(
   snapshot: ProjectFileSnapshot,
 ): ProjectFileAttachmentRef[] {
   const refs: ProjectFileAttachmentRef[] = []
+  const steps = [...new Map(stepAttachments(snapshot).map(step => [step.id, step])).values()]
   for (const blob of snapshot.blobs) {
     const pdfRevisions = snapshot.revisions.filter((item) => item.blobKey === blob.blobKey)
     const modelRevisions = snapshot.project.modelRevisions.filter(
@@ -1800,7 +1839,18 @@ export function expectedAttachmentRefs(
         byteSize: blob.byteSize,
       })
     }
-    if (pdfRevisions.length === 0 && modelRevisions.length === 0) {
+    const stepRefs = steps.filter(step => step.blobKey === blob.blobKey)
+    for (const step of stepRefs) {
+      refs.push({
+        kind: 'step',
+        revisionId: step.id,
+        blobKey: blob.blobKey,
+        path: attachmentEntryPath(blob.blobKey),
+        sha256: blob.sha256,
+        byteSize: blob.byteSize,
+      })
+    }
+    if (pdfRevisions.length === 0 && modelRevisions.length === 0 && stepRefs.length === 0) {
       // 保存端与打开端共用本函数；没有版本引用的孤立 blob 不应出现，
       // 仍保留旧行为给出空 revisionId，由引用校验拒绝。
       refs.push({
@@ -1815,7 +1865,7 @@ export function expectedAttachmentRefs(
   }
   return refs.sort((left, right) => {
     if (left.path !== right.path) return left.path < right.path ? -1 : 1
-    if (left.kind !== right.kind) return left.kind === 'pdf' ? -1 : 1
+    if (left.kind !== right.kind) return ['pdf', 'model', 'step'].indexOf(left.kind) - ['pdf', 'model', 'step'].indexOf(right.kind)
     return left.revisionId < right.revisionId ? -1 : left.revisionId > right.revisionId ? 1 : 0
   })
 }
@@ -2390,13 +2440,27 @@ export function validateSnapshotReferences(
       cursor = modelById.get(cursor)?.parentModelRevisionId ?? null
     }
   }
+  const stepBlobById = new Map<string, string>()
+  for (const step of stepAttachments(snapshot)) {
+    const previous = stepBlobById.get(step.id)
+    if (previous !== undefined && previous !== step.blobKey) {
+      return fail('INVALID_RECORD', '同一 STEP 附件 ID 指向不同字节', step.id)
+    }
+    stepBlobById.set(step.id, step.blobKey)
+    if (!blobByKey.has(step.blobKey) || !attachmentByKey.has(step.blobKey)) {
+      return fail('MISSING_REFERENCE', 'STEP 附件缺少 blob 元数据或字节', step.id)
+    }
+  }
+
+  const stepBlobKeys = new Set(stepBlobById.values())
   // 每个 blob 至少要有一个版本引用；不允许无来源的孤立字节。
   for (const blob of snapshot.blobs) {
     const referenced =
       snapshot.revisions.some((item) => item.blobKey === blob.blobKey) ||
-      snapshot.project.modelRevisions.some((item) => item.blobKey === blob.blobKey)
+      snapshot.project.modelRevisions.some((item) => item.blobKey === blob.blobKey) ||
+      stepBlobKeys.has(blob.blobKey)
     if (!referenced) {
-      return fail('MISSING_REFERENCE', 'blob 没有被任何来源或模型版本引用', blob.blobKey)
+      return fail('MISSING_REFERENCE', 'blob 没有被任何来源、模型版本或 STEP 附件引用', blob.blobKey)
     }
     if (!attachmentByKey.has(blob.blobKey)) {
       const missing = snapshot.missingAttachments.some((item) => item.blobKey === blob.blobKey)

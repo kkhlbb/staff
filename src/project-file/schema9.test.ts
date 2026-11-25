@@ -116,7 +116,7 @@ function stripProvenance(value: unknown): void {
   for (const item of Object.values(record)) stripProvenance(item)
 }
 
-/** 把 schema10 容器改写成 schema8：版本号降一级 + 删掉全部 provenance。 */
+/** 把 schema11 容器改写成 schema8：版本号降一级 + 删掉全部 provenance。 */
 async function downgradeToSchema8(bytes: Uint8Array): Promise<Uint8Array> {
   return await rebuildArchive(bytes, (parts) => {
     patchJson(parts, 'manifest.json', (manifest) => {
@@ -125,7 +125,7 @@ async function downgradeToSchema8(bytes: Uint8Array): Promise<Uint8Array> {
     patchAllProjects(parts, (project) => {
       project.schemaVersion = 8
       stripProvenance(project)
-      // schema8 严格拒绝 schema10 的加法字段。
+      // schema8 严格拒绝 schema11 的加法字段。
       delete project.sourceKind
       delete project.actorId
       delete project.sessionSeq
@@ -140,12 +140,12 @@ function sortedEvidenceKeys(draft: ExtractionDraft): string[] {
 }
 
 describe('ADR-001 schema 9/10：provenance 纯加法往返', () => {
-  it('编码解码：schema10 逐字段保留，候选身份与出处 key 不变', async () => {
+  it('编码解码：schema11 逐字段保留，候选身份与出处 key 不变', async () => {
     const { snapshot, draft } = await snapshotWithDraft()
     const encoded = await encodeProjectFile(snapshot)
     expect(encoded.ok, encoded.ok ? '' : encoded.error.message).toBe(true)
     if (!encoded.ok) return
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(10)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(11)
 
     const decoded = await decodeProjectFile(encoded.value.bytes)
     expect(decoded.ok, decoded.ok ? '' : `${decoded.error.code}: ${decoded.error.message}`).toBe(true)
@@ -174,7 +174,7 @@ describe('ADR-001 schema 9/10：provenance 纯加法往返', () => {
     expect(decoded.ok, decoded.ok ? '' : `${decoded.error.code}: ${decoded.error.message}`).toBe(true)
     if (!decoded.ok) return
     const migrated = decoded.value.snapshot.project
-    expect(migrated.schemaVersion).toBe(10)
+    expect(migrated.schemaVersion).toBe(11)
 
     const migratedDraft = migrated.extractionDrafts[0]
     expect(migratedDraft).toBeDefined()
@@ -206,7 +206,7 @@ describe('ADR-001 schema 9/10：provenance 纯加法往返', () => {
     const rewritten = await encodeProjectFile(decoded.value.snapshot)
     expect(rewritten.ok, rewritten.ok ? '' : rewritten.error.message).toBe(true)
     if (!rewritten.ok) return
-    expect(rewritten.value.manifest.project.projectSchemaVersion).toBe(10)
+    expect(rewritten.value.manifest.project.projectSchemaVersion).toBe(11)
     const reopened = await decodeProjectFile(rewritten.value.bytes)
     expect(reopened.ok).toBe(true)
     if (!reopened.ok) return

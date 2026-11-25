@@ -3,10 +3,10 @@
  * ADR-001 第 3 步 schema 10：无任务书入口的加法字段与 schema 9 迁移。
  *
  * 证明：
- * - schema 10 往返：sourceKind / actorId / sessionSeq / sessionLabel / attestations
+ * - schema 11 往返：sourceKind / actorId / sessionSeq / sessionLabel / attestations
  *   与 user-attestation 出处逐字段保留；
  * - schema 9 文件读入：sourceKind 固定补 'pdf'、账本为空，**不重算、不改值**
- *   （尺寸链、参数、图纸指纹、calculateChain 结果完全一致），保存时才写 10；
+ *   （尺寸链、参数、图纸指纹、calculateChain 结果完全一致），保存时才写 11；
  * - 无任务书项目缺责任人 / 断言跨责任人时明确拒绝。
  */
 import { describe, expect, it } from 'vitest'
@@ -95,7 +95,7 @@ function patchAllProjects(
   }
 }
 
-/** 把 schema 10 容器改写成 schema 9：删掉本步的加法字段并降版本号。 */
+/** 把当前容器改写成 schema 9：删掉本步的加法字段并降版本号。 */
 async function downgradeToSchema9(bytes: Uint8Array): Promise<Uint8Array> {
   return rebuildArchive(bytes, (parts) => {
     patchJson(parts, 'manifest.json', (manifest) => {
@@ -124,24 +124,24 @@ function asIntent(project: ProjectFileProject): ProjectFileProject {
 }
 
 describe('ADR-001 第 3 步 schema 10：来源种类/身份/断言账本', () => {
-  it('schema 10 往返：PDF 项目写 sourceKind=pdf、账本为空', async () => {
+  it('schema 11 往返：PDF 项目写 sourceKind=pdf、账本为空', async () => {
     const snapshot = await createSampleSnapshot()
     const encoded = await encodeProjectFile(snapshot)
     expect(encoded.ok, JSON.stringify(encoded)).toBe(true)
     if (!encoded.ok) return
-    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(10)
+    expect(encoded.value.manifest.project.projectSchemaVersion).toBe(11)
     const decoded = await decodeProjectFile(encoded.value.bytes)
     expect(decoded.ok, JSON.stringify(decoded)).toBe(true)
     if (!decoded.ok) return
     const project = decoded.value.snapshot.project
-    expect(project.schemaVersion).toBe(10)
+    expect(project.schemaVersion).toBe(11)
     expect(project.sourceKind).toBe('pdf')
     expect(project.actorId).toBeNull()
     expect(project.sessionSeq).toBe(0)
     expect(project.attestations).toEqual([])
   })
 
-  it('schema 9 → 10：补 sourceKind=pdf 与空账本，链/参数/图纸/结果不重算不改值', async () => {
+  it('schema 9 → 11：补 sourceKind=pdf 与空账本，链/参数/图纸/结果不重算不改值', async () => {
     const snapshot = await createSampleSnapshot()
     const bytes = await downgradeToSchema9(
       (await encodeProjectFile(snapshot) as { ok: true; value: { bytes: Uint8Array } }).value.bytes,
@@ -151,7 +151,7 @@ describe('ADR-001 第 3 步 schema 10：来源种类/身份/断言账本', () =>
     if (!decoded.ok) return
     const project = decoded.value.snapshot.project
     const original = snapshot.project
-    expect(project.schemaVersion).toBe(10)
+    expect(project.schemaVersion).toBe(11)
     expect(project.sourceKind).toBe('pdf')
     expect(project.actorId).toBeNull()
     expect(project.sessionSeq).toBe(0)
@@ -163,10 +163,32 @@ describe('ADR-001 第 3 步 schema 10：来源种类/身份/断言账本', () =>
     expect(project.drawings).toEqual(original.drawings)
     expect(project.currentRevisionId).toBe(original.currentRevisionId)
     expect(calculateChain(project.dimensionChain)).toEqual(calculateChain(original.dimensionChain))
-    // 保存时才写 10。
+    // 保存时才写 11。
     const reencoded = await encodeProjectFile(decoded.value.snapshot)
     expect(reencoded.ok).toBe(true)
-    if (reencoded.ok) expect(reencoded.value.manifest.project.projectSchemaVersion).toBe(10)
+    if (reencoded.ok) expect(reencoded.value.manifest.project.projectSchemaVersion).toBe(11)
+  })
+
+  it('真实 schema 10 容器可读取，工作形状升级且历史记录维持 schema 10', async () => {
+    const base = await createSampleSnapshot()
+    const encoded = await encodeProjectFile(base)
+    if (!encoded.ok) throw Error(JSON.stringify(encoded))
+    const bytes = await rebuildArchive(encoded.value.bytes, parts => {
+      patchJson(parts, 'manifest.json', manifest => {
+        const project = manifest.project as Record<string, unknown>
+        project.projectSchemaVersion = 10
+      })
+      patchAllProjects(parts, project => { project.schemaVersion = 10 })
+    })
+    const decoded = await decodeProjectFile(bytes)
+    if (!decoded.ok) throw Error(JSON.stringify(decoded))
+    expect(decoded.value.manifest.project.projectSchemaVersion).toBe(10)
+    expect(decoded.value.snapshot.project).toEqual(base.project)
+    expect(decoded.value.snapshot.fileRevisions).toEqual(base.fileRevisions.map(revision => ({
+      ...revision, project: { ...revision.project, schemaVersion: 10 },
+    })))
+    expect(decoded.value.snapshot.analysisSnapshots).toEqual(base.analysisSnapshots)
+    expect(decoded.value.snapshot.attachments).toEqual(base.attachments)
   })
 
   it('无任务书项目：断言账本与 user-attestation 出处可随文件往返', async () => {

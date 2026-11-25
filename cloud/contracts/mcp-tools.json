@@ -1,0 +1,2303 @@
+{
+  "tools": [
+    {
+      "name": "read_taskbook",
+      "title": "读任务书 PDF（候选 + 阻塞项）",
+      "description": "读本地带文本层 PDF 的指定页范围，输出候选（kind/符号/数值 q/单位/出处{页,选区,原文}）与阻塞项（原因码 + 人话）。只读：不写文件、不确认候选、不建项目。",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pdfPath": {"type": "string", "description": "PDF 绝对路径（只支持文本层，不做 OCR）。"},
+          "pageFrom": {"type": "integer", "minimum": 1, "maximum": 1000},
+          "pageTo": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "可选；缺省为 pageFrom 起最多 100 页（提取器单块上限，超过自动切块）。"
+          }
+        },
+        "required": ["pdfPath"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ok": {"const": true},
+          "tool": {"const": "read_taskbook"},
+          "file": {
+            "type": "object",
+            "properties": {
+              "path": {"type": "string"},
+              "byteSize": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            },
+            "required": ["path", "byteSize", "sha256"],
+            "additionalProperties": false
+          },
+          "pageCount": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+          "pageRange": {
+            "type": "object",
+            "properties": {
+              "from": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+              "to": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+            },
+            "required": ["from", "to"],
+            "additionalProperties": false
+          },
+          "extractorVersion": {"oneOf": [{"type": "string"}, {"type": "null"}]},
+          "draft": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "draftId": {"type": "string"},
+                  "idempotencyKey": {"type": "string"},
+                  "status": {"type": "string"}
+                },
+                "required": ["draftId", "idempotencyKey", "status"],
+                "additionalProperties": false
+              },
+              {"type": "null"}
+            ]
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "candidates": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+              "blockers": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+            },
+            "required": ["candidates", "blockers"],
+            "additionalProperties": false
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "candidateId": {"type": "string"},
+                "kind": {"type": "string"},
+                "status": {"type": "string"},
+                "rawText": {"type": "string"},
+                "symbol": {"oneOf": [{"type": "string"}, {"type": "null"}]},
+                "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                "confidence": {"enum": ["high", "medium", "low", "unknown"]},
+                "reasonCodes": {"type": "array", "items": {"type": "string"}},
+                "provenance": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "complete": {"type": "boolean"},
+                          "kind": {"const": "user-attestation"},
+                          "actorId": {"type": "string"},
+                          "at": {"type": "string"},
+                          "fieldPath": {"type": "string"},
+                          "statement": {"type": "string"},
+                          "sessionSeq": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                          "sessionLabel": {"oneOf": [{"type": "string"}, {"type": "null"}]}
+                        },
+                        "required": [
+                          "complete",
+                          "kind",
+                          "actorId",
+                          "at",
+                          "fieldPath",
+                          "statement",
+                          "sessionSeq",
+                          "sessionLabel"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "complete": {"type": "boolean"},
+                          "kind": {"const": "image-ocr"},
+                          "imageId": {"type": "string"},
+                          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                          "fileName": {"type": "string"},
+                          "rectPdf": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                          "confidence": {"type": "number"},
+                          "recognizedText": {"type": "string"}
+                        },
+                        "required": [
+                          "complete",
+                          "kind",
+                          "imageId",
+                          "sha256",
+                          "fileName",
+                          "rectPdf",
+                          "confidence",
+                          "recognizedText"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "complete": {"type": "boolean"},
+                          "kind": {"enum": ["pdf-text", "pdf-ocr", "agent-read", null]},
+                          "documentId": {"type": "string"},
+                          "revisionId": {"type": "string"},
+                          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                          "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                          "rectPdf": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                          "pageBoxPdf": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                          "textSnippet": {"type": "string"},
+                          "blobKey": {"type": "string"}
+                        },
+                        "required": ["complete", "kind"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "field": {"type": "string"},
+                      "text": {"type": "string"},
+                      "unitText": {"oneOf": [{"type": "string"}, {"type": "null"}]},
+                      "decimals": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                      "valueQ": {
+                        "oneOf": [
+                          {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                          {"type": "null"}
+                        ]
+                      },
+                      "valueMm": {"oneOf": [{"type": "string"}, {"type": "null"}]},
+                      "unit": {"oneOf": [{"type": "string"}, {"type": "null"}]},
+                      "provenance": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "complete": {"type": "boolean"},
+                                "kind": {"const": "user-attestation"},
+                                "actorId": {"type": "string"},
+                                "at": {"type": "string"},
+                                "fieldPath": {"type": "string"},
+                                "statement": {"type": "string"},
+                                "sessionSeq": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                "sessionLabel": {"oneOf": [{"type": "string"}, {"type": "null"}]}
+                              },
+                              "required": [
+                                "complete",
+                                "kind",
+                                "actorId",
+                                "at",
+                                "fieldPath",
+                                "statement",
+                                "sessionSeq",
+                                "sessionLabel"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "complete": {"type": "boolean"},
+                                "kind": {"const": "image-ocr"},
+                                "imageId": {"type": "string"},
+                                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                                "fileName": {"type": "string"},
+                                "rectPdf": {
+                                  "type": "array",
+                                  "items": {"type": "number"},
+                                  "minItems": 4,
+                                  "maxItems": 4
+                                },
+                                "confidence": {"type": "number"},
+                                "recognizedText": {"type": "string"}
+                              },
+                              "required": [
+                                "complete",
+                                "kind",
+                                "imageId",
+                                "sha256",
+                                "fileName",
+                                "rectPdf",
+                                "confidence",
+                                "recognizedText"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "complete": {"type": "boolean"},
+                                "kind": {"enum": ["pdf-text", "pdf-ocr", "agent-read", null]},
+                                "documentId": {"type": "string"},
+                                "revisionId": {"type": "string"},
+                                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                                "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                "rectPdf": {
+                                  "type": "array",
+                                  "items": {"type": "number"},
+                                  "minItems": 4,
+                                  "maxItems": 4
+                                },
+                                "pageBoxPdf": {
+                                  "type": "array",
+                                  "items": {"type": "number"},
+                                  "minItems": 4,
+                                  "maxItems": 4
+                                },
+                                "textSnippet": {"type": "string"},
+                                "blobKey": {"type": "string"}
+                              },
+                              "required": ["complete", "kind"],
+                              "additionalProperties": false
+                            }
+                          ]
+                        }
+                      },
+                      "provenanceComplete": {"type": "boolean"}
+                    },
+                    "required": [
+                      "field",
+                      "text",
+                      "unitText",
+                      "decimals",
+                      "valueQ",
+                      "valueMm",
+                      "unit",
+                      "provenance",
+                      "provenanceComplete"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "candidateId",
+                "kind",
+                "status",
+                "rawText",
+                "symbol",
+                "page",
+                "confidence",
+                "reasonCodes",
+                "provenance",
+                "values"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {"type": "string"},
+                "severity": {"type": "string"},
+                "message": {"type": "string"},
+                "page": {
+                  "oneOf": [{"type": "integer", "minimum": 1, "maximum": 9007199254740991}, {"type": "null"}]
+                }
+              },
+              "required": ["code", "severity", "message"],
+              "additionalProperties": false
+            }
+          },
+          "readOnly": {"const": true}
+        },
+        "required": [
+          "ok",
+          "tool",
+          "file",
+          "pageCount",
+          "pageRange",
+          "extractorVersion",
+          "draft",
+          "candidates",
+          "blockers",
+          "readOnly"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "calc_chain",
+      "title": "计算线性尺寸链（极值法）",
+      "description": "用与桌面端相同的确定性内核计算一维线性尺寸链：封闭环 C 的 q/ mm、极值上下限、公差与组成环清单。只读，不写任何文件。两种输入：parameters（隔套内径/外径/长度，q）或 terms（任意组成环数组，q）。",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "description": "隔套三参数（整数 q，1q = 0.0001 mm）。与 terms 二选一。",
+            "additionalProperties": false,
+            "properties": {
+              "innerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 10000000000},
+              "outerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 10000000000},
+              "lengthQ": {"type": "integer", "minimum": 1, "maximum": 10000000000}
+            },
+            "required": ["innerDiameterQ", "outerDiameterQ", "lengthQ"]
+          },
+          "terms": {
+            "type": "array",
+            "description": "显式组成环（与 parameters 二选一）。sign=1 为增环，-1 为减环。",
+            "minItems": 2,
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "symbol": {"type": "string", "minLength": 1, "maxLength": 32},
+                "name": {"type": "string", "maxLength": 64},
+                "nominalQ": {"type": "integer", "minimum": -10000000000, "maximum": 10000000000},
+                "lowerDeviationQ": {"type": "integer", "minimum": -10000000000, "maximum": 10000000000},
+                "upperDeviationQ": {"type": "integer", "minimum": -10000000000, "maximum": 10000000000},
+                "sign": {"type": "integer", "enum": [1, -1]}
+              },
+              "required": ["symbol", "nominalQ", "lowerDeviationQ", "upperDeviationQ", "sign"]
+            }
+          },
+          "formula": {"type": "string", "maxLength": 200, "description": "可选；仅用于输出说明。"},
+          "assumptions": {"type": "string", "maxLength": 1000},
+          "target": {
+            "description": "可选目标区间；null 表示不判定。",
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "minQ": {"type": "integer", "minimum": -10000000000, "maximum": 10000000000},
+                  "maxQ": {"type": "integer", "minimum": -10000000000, "maximum": 10000000000}
+                },
+                "required": ["minQ", "maxQ"]
+              },
+              {"type": "null"}
+            ]
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ok": {"const": true},
+          "tool": {"const": "calc_chain"},
+          "mode": {"enum": ["parameters", "terms"]},
+          "engineVersion": {"type": "string"},
+          "formula": {"oneOf": [{"type": "string"}, {"type": "null"}]},
+          "terms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {"type": "string"},
+                "symbol": {"type": "string"},
+                "name": {"type": "string"},
+                "sourceNote": {"type": "string"},
+                "nominalQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                "nominalMm": {"type": "string"},
+                "lowerDeviationQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                "lowerDeviationMm": {"type": "string"},
+                "upperDeviationQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                "upperDeviationMm": {"type": "string"},
+                "sign": {"enum": [1, -1]},
+                "source": {"type": "string"}
+              },
+              "required": [
+                "id",
+                "symbol",
+                "name",
+                "sourceNote",
+                "nominalQ",
+                "nominalMm",
+                "lowerDeviationQ",
+                "lowerDeviationMm",
+                "upperDeviationQ",
+                "upperDeviationMm",
+                "sign",
+                "source"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "parameters": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "innerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                  "outerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                  "lengthQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+                },
+                "required": ["innerDiameterQ", "outerDiameterQ", "lengthQ"],
+                "additionalProperties": false
+              },
+              {"type": "null"}
+            ]
+          },
+          "target": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "minQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                  "minMm": {"type": "string"},
+                  "maxQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                  "maxMm": {"type": "string"},
+                  "status": {"enum": ["no-target", "within", "outside"]},
+                  "lowerMarginQ": {
+                    "oneOf": [
+                      {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                      {"type": "null"}
+                    ]
+                  },
+                  "upperMarginQ": {
+                    "oneOf": [
+                      {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                      {"type": "null"}
+                    ]
+                  },
+                  "lowerMarginMm": {"oneOf": [{"type": "string"}, {"type": "null"}]},
+                  "upperMarginMm": {"oneOf": [{"type": "string"}, {"type": "null"}]}
+                },
+                "required": [
+                  "minQ",
+                  "minMm",
+                  "maxQ",
+                  "maxMm",
+                  "status",
+                  "lowerMarginQ",
+                  "upperMarginQ",
+                  "lowerMarginMm",
+                  "upperMarginMm"
+                ],
+                "additionalProperties": false
+              },
+              {"type": "null"}
+            ]
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "nominalQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "nominalMm": {"type": "string"},
+              "minQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "minMm": {"type": "string"},
+              "maxQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "maxMm": {"type": "string"},
+              "lowerDeviationQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "lowerDeviationMm": {"type": "string"},
+              "upperDeviationQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "upperDeviationMm": {"type": "string"},
+              "toleranceQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "toleranceMm": {"type": "string"},
+              "targetStatus": {"enum": ["no-target", "within", "outside"]}
+            },
+            "required": [
+              "nominalQ",
+              "nominalMm",
+              "minQ",
+              "minMm",
+              "maxQ",
+              "maxMm",
+              "lowerDeviationQ",
+              "lowerDeviationMm",
+              "upperDeviationQ",
+              "upperDeviationMm",
+              "toleranceQ",
+              "toleranceMm",
+              "targetStatus"
+            ],
+            "additionalProperties": false
+          },
+          "assumptions": {"type": "string"},
+          "provenance": {"type": "string"},
+          "readOnly": {"const": true}
+        },
+        "required": [
+          "ok",
+          "tool",
+          "mode",
+          "engineVersion",
+          "formula",
+          "terms",
+          "parameters",
+          "target",
+          "result",
+          "assumptions",
+          "provenance",
+          "readOnly"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "check_requirement",
+      "title": "按闭区间判定条款是否满足",
+      "description": "把封闭环 C（整数 q）与任务书要求的闭区间比较：返回 satisfied / exceeded、下/上裕量（q + mm）与判定依据原因码。边界相等默认算满足；只读、不写文件。",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cQ": {
+            "type": "integer",
+            "minimum": -10000000000,
+            "maximum": 10000000000,
+            "description": "封闭环 C 的（下）值，整数 q；1q = 0.0001 mm。"
+          },
+          "cMaxQ": {
+            "type": "integer",
+            "minimum": -10000000000,
+            "maximum": 10000000000,
+            "description": "可选：封闭环 C 的区间上限（极值法的 Cmax）。缺省时按单值点判定。"
+          },
+          "lowerQ": {
+            "type": "integer",
+            "minimum": -10000000000,
+            "maximum": 10000000000,
+            "description": "条款下限，整数 q。"
+          },
+          "upperQ": {
+            "type": "integer",
+            "minimum": -10000000000,
+            "maximum": 10000000000,
+            "description": "条款上限，整数 q。"
+          },
+          "inclusive": {"type": "boolean", "description": "是否含边界（闭区间）；默认 true。false 时边界相等算不满足。"},
+          "note": {"type": "string", "maxLength": 500, "description": "可选：条款原文或说明（仅回显）。"}
+        },
+        "required": ["cQ", "lowerQ", "upperQ"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ok": {"const": true},
+          "tool": {"const": "check_requirement"},
+          "status": {"enum": ["satisfied", "exceeded"]},
+          "satisfied": {"type": "boolean"},
+          "closed": {
+            "type": "object",
+            "properties": {
+              "minQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "minMm": {"type": "string"},
+              "maxQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "maxMm": {"type": "string"}
+            },
+            "required": ["minQ", "minMm", "maxQ", "maxMm"],
+            "additionalProperties": false
+          },
+          "requirement": {
+            "type": "object",
+            "properties": {
+              "lowerQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "lowerMm": {"type": "string"},
+              "upperQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "upperMm": {"type": "string"},
+              "inclusive": {"type": "boolean"},
+              "note": {"oneOf": [{"type": "string"}, {"type": "null"}]}
+            },
+            "required": ["lowerQ", "lowerMm", "upperQ", "upperMm", "inclusive", "note"],
+            "additionalProperties": false
+          },
+          "margins": {
+            "type": "object",
+            "properties": {
+              "marginQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "marginMm": {"type": "string"},
+              "lowerQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "lowerMm": {"type": "string"},
+              "upperQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+              "upperMm": {"type": "string"}
+            },
+            "required": ["marginQ", "marginMm", "lowerQ", "lowerMm", "upperQ", "upperMm"],
+            "additionalProperties": false
+          },
+          "reasonCodes": {"type": "array", "items": {"type": "string"}},
+          "reasons": {"type": "array", "items": {"type": "string"}},
+          "basis": {"type": "string"},
+          "readOnly": {"const": true}
+        },
+        "required": [
+          "ok",
+          "tool",
+          "status",
+          "satisfied",
+          "closed",
+          "requirement",
+          "margins",
+          "reasonCodes",
+          "reasons",
+          "basis",
+          "readOnly"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "render_drawing",
+      "title": "出图（SVG / DXF）",
+      "description": "按隔套参数生成 A4 工程图 SVG 或 DXF（R12 / 2000），写入调用方指定的绝对目录，返回真实文件路径、字节数、SHA-256 与「用户输入，无外部原文件」依据标记。只新增导出文件，不写项目、不提交。",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "innerDiameter": {"type": "string", "description": "内径，十进制 mm 字符串，最多 4 位小数"},
+              "outerDiameter": {"type": "string", "description": "外径，十进制 mm 字符串，最多 4 位小数"},
+              "length": {"type": "string", "description": "长度，十进制 mm 字符串，最多 4 位小数"}
+            },
+            "required": ["innerDiameter", "outerDiameter", "length"]
+          },
+          "format": {"type": "string", "enum": ["svg", "dxf"]},
+          "dxfVersion": {"type": "string", "enum": ["r12", "2000"], "description": "format=dxf 时的版本；默认 2000。"},
+          "outputDir": {"type": "string", "description": "输出目录的绝对路径（不存在则创建）。"}
+        },
+        "required": ["parameters", "format", "outputDir"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ok": {"const": true},
+          "tool": {"const": "render_drawing"},
+          "format": {"enum": ["svg", "dxf"]},
+          "dxfVersion": {"enum": ["r12", "2000", null]},
+          "filePath": {"type": "string"},
+          "fileName": {"type": "string"},
+          "byteSize": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "drawingId": {"type": "string"},
+          "drawingFingerprint": {"type": "string"},
+          "sourceMarker": {"type": "string"},
+          "provenance": {"type": "string"},
+          "unprovenanced": {"type": "boolean"},
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {"type": "string"},
+                "valueQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                "inputDecimals": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+              },
+              "required": ["key", "valueQ", "inputDecimals"],
+              "additionalProperties": false
+            }
+          },
+          "readOnly": {"const": true}
+        },
+        "required": [
+          "ok",
+          "tool",
+          "format",
+          "dxfVersion",
+          "filePath",
+          "fileName",
+          "byteSize",
+          "sha256",
+          "drawingId",
+          "drawingFingerprint",
+          "sourceMarker",
+          "provenance",
+          "unprovenanced",
+          "parameters",
+          "readOnly"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "describe_project",
+      "title": "只读描述 .cunlian 项目",
+      "description": ".cunlian（ZIP）绝对路径 → 正式版本、三参数、尺寸链组成环、活动条款、出处清单。只读：只解码与读取，不提交、不保存、不改任何字段。",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {"path": {"type": "string", "description": ".cunlian 项目文件绝对路径。"}},
+        "required": ["path"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ok": {"const": true},
+          "tool": {"const": "describe_project"},
+          "file": {
+            "type": "object",
+            "properties": {
+              "path": {"type": "string"},
+              "byteSize": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            },
+            "required": ["path", "byteSize", "sha256"],
+            "additionalProperties": false
+          },
+          "manifest": {
+            "type": "object",
+            "properties": {
+              "formatVersion": {"enum": [1, 2]},
+              "createdAt": {"type": "string"},
+              "writer": {"type": "object"},
+              "counts": {
+                "type": "object",
+                "additionalProperties": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+              }
+            },
+            "required": ["formatVersion", "createdAt", "writer", "counts"],
+            "additionalProperties": false
+          },
+          "project": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "name": {"type": "string"},
+              "engineVersion": {"type": "string"},
+              "createdAt": {"type": "string"},
+              "updatedAt": {"type": "string"},
+              "currentRevisionId": {"type": "string"},
+              "schemaVersion": {"const": 11},
+              "sourceKind": {"enum": ["pdf", "user-intent"]}
+            },
+            "required": [
+              "id",
+              "name",
+              "engineVersion",
+              "createdAt",
+              "updatedAt",
+              "currentRevisionId",
+              "schemaVersion",
+              "sourceKind"
+            ],
+            "additionalProperties": false
+          },
+          "formalVersion": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "revisionId": {"type": "string"},
+                  "createdAt": {"type": "string"},
+                  "reason": {"type": "string"},
+                  "parentId": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                  "fileRevisionCount": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+                },
+                "required": ["revisionId", "createdAt", "reason", "parentId", "fileRevisionCount"],
+                "additionalProperties": false
+              },
+              {"type": "null"}
+            ]
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {"type": "string"},
+                "valueQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                "inputDecimals": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                "parameterId": {"type": "string"},
+                "valueMm": {"type": "string"},
+                "reviewStatus": {"type": "string"},
+                "sourceNote": {"type": "string"},
+                "source": {"type": "string"},
+                "parameterRevision": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+              },
+              "required": [
+                "key",
+                "valueQ",
+                "inputDecimals",
+                "parameterId",
+                "valueMm",
+                "reviewStatus",
+                "sourceNote",
+                "source",
+                "parameterRevision"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "terms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {"type": "string"},
+                "symbol": {"type": "string"},
+                "name": {"type": "string"},
+                "sourceNote": {"type": "string"},
+                "nominalQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                "nominalMm": {"type": "string"},
+                "lowerDeviationQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                "lowerDeviationMm": {"type": "string"},
+                "upperDeviationQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                "upperDeviationMm": {"type": "string"},
+                "sign": {"enum": [1, -1]},
+                "termRevision": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+              },
+              "required": [
+                "id",
+                "symbol",
+                "name",
+                "sourceNote",
+                "nominalQ",
+                "nominalMm",
+                "lowerDeviationQ",
+                "lowerDeviationMm",
+                "upperDeviationQ",
+                "upperDeviationMm",
+                "sign",
+                "termRevision"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "requirement": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "requirementId": {"type": "string"},
+                  "revisionId": {"type": "string"},
+                  "ruleType": {"type": "string"},
+                  "confirmedText": {"type": "string"},
+                  "confirmedAt": {"type": "string"},
+                  "changeReason": {"type": "string"},
+                  "lowerQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                  "lowerMm": {"type": "string"},
+                  "upperQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                  "upperMm": {"type": "string"},
+                  "source": {"type": "object"},
+                  "revisionCount": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+                },
+                "required": [
+                  "requirementId",
+                  "revisionId",
+                  "ruleType",
+                  "confirmedText",
+                  "confirmedAt",
+                  "changeReason",
+                  "lowerQ",
+                  "lowerMm",
+                  "upperQ",
+                  "upperMm",
+                  "source",
+                  "revisionCount"
+                ],
+                "additionalProperties": false
+              },
+              {"type": "null"}
+            ]
+          },
+          "recordedCheck": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "checkId": {"type": "string"},
+                  "status": {"type": "string"},
+                  "checkedAt": {"type": "string"},
+                  "note": {"type": "string"},
+                  "reasonCodes": {"type": "array", "items": {"type": "string"}},
+                  "resultInterval": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "minQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                          "maxQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991}
+                        },
+                        "required": ["minQ", "maxQ"],
+                        "additionalProperties": false
+                      },
+                      {"type": "null"}
+                    ]
+                  },
+                  "margins": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "lowerQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+                          "upperQ": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991}
+                        },
+                        "required": ["lowerQ", "upperQ"],
+                        "additionalProperties": false
+                      },
+                      {"type": "null"}
+                    ]
+                  }
+                },
+                "required": ["checkId", "status", "checkedAt", "note", "reasonCodes", "resultInterval", "margins"],
+                "additionalProperties": false
+              },
+              {"type": "null"}
+            ]
+          },
+          "provenance": {
+            "type": "object",
+            "properties": {
+              "total": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+              "incomplete": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+              "items": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "key": {"type": "string"},
+                        "complete": {"type": "boolean"},
+                        "kind": {"const": "user-attestation"},
+                        "actorId": {"type": "string"},
+                        "at": {"type": "string"},
+                        "fieldPath": {"type": "string"},
+                        "statement": {"type": "string"},
+                        "sessionSeq": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+                      },
+                      "required": [
+                        "key",
+                        "complete",
+                        "kind",
+                        "actorId",
+                        "at",
+                        "fieldPath",
+                        "statement",
+                        "sessionSeq"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "key": {"type": "string"},
+                        "complete": {"type": "boolean"},
+                        "kind": {"const": "image-ocr"},
+                        "imageId": {"type": "string"},
+                        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                        "fileName": {"type": "string"},
+                        "rectPdf": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                        "confidence": {"type": "number"}
+                      },
+                      "required": [
+                        "key",
+                        "complete",
+                        "kind",
+                        "imageId",
+                        "sha256",
+                        "fileName",
+                        "rectPdf",
+                        "confidence"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "key": {"type": "string"},
+                        "complete": {"type": "boolean"},
+                        "kind": {"enum": ["pdf-text", "pdf-ocr", "agent-read", null]},
+                        "documentId": {"type": "string"},
+                        "revisionId": {"type": "string"},
+                        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                        "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                        "rectPdf": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                        "pageBoxPdf": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                        "textSnippet": {"type": "string"}
+                      },
+                      "required": ["key", "complete", "kind"],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            },
+            "required": ["total", "incomplete", "items"],
+            "additionalProperties": false
+          },
+          "readOnly": {"const": true}
+        },
+        "required": [
+          "ok",
+          "tool",
+          "file",
+          "manifest",
+          "project",
+          "formalVersion",
+          "parameters",
+          "terms",
+          "requirement",
+          "recordedCheck",
+          "provenance",
+          "readOnly"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "capabilities",
+      "inputSchema": {"type": "object", "properties": {}, "required": [], "additionalProperties": false},
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "protocol": {"const": 1},
+          "operations": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "capabilities",
+                "authorizeProject",
+                "getContext",
+                "getExternalActivities",
+                "acquireWriter",
+                "takeOverWriter",
+                "readWriterContext",
+                "stageChange",
+                "revokeWriter",
+                "moveRightHoleX"
+              ]
+            }
+          },
+          "draftOperations": {"type": "array", "items": {"enum": ["createSpacerDraft", "resumeSpacerDraft"]}}
+        },
+        "required": ["protocol", "operations", "draftOperations"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "authorizeProject",
+      "inputSchema": {
+        "type": "object",
+        "properties": {"projectId": {"type": "string", "minLength": 1, "pattern": "\\S", "maxLength": 256}},
+        "required": ["projectId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "authorized": {"const": true}
+        },
+        "required": ["projectId", "authorized"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getContext",
+      "inputSchema": {
+        "type": "object",
+        "properties": {"projectId": {"type": "string", "minLength": 1, "pattern": "\\S"}},
+        "required": ["projectId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "baseRevision": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "snapshot": {
+            "type": "object",
+            "properties": {
+              "projectId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+              "draftRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+              "cursor": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+              "connection": {"const": "connected"},
+              "authorization": {
+                "type": "object",
+                "properties": {"authorized": {"const": true}, "canWrite": {"type": "boolean"}},
+                "required": ["authorized", "canWrite"],
+                "additionalProperties": false
+              },
+              "writer": {
+                "type": "object",
+                "properties": {
+                  "epoch": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                  "occupied": {"type": "boolean"}
+                },
+                "required": ["epoch", "occupied"],
+                "additionalProperties": false
+              },
+              "spacerDraft": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "draftRevision": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                      "innerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                      "outerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                      "lengthQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                      "sources": {
+                        "type": "object",
+                        "properties": {
+                          "innerDiameterQ": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {"type": {"const": "userInput"}},
+                                "required": ["type"],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {"const": "document"},
+                                  "anchor": {
+                                    "type": "object",
+                                    "properties": {
+                                      "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                      "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                      "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                                      "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "region": {
+                                        "oneOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "x": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "y": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "width": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "height": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "unit": {"const": "pdfPoint1000"}
+                                            },
+                                            "required": ["x", "y", "width", "height", "unit"],
+                                            "additionalProperties": false
+                                          },
+                                          {"type": "null"}
+                                        ]
+                                      }
+                                    },
+                                    "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": ["type", "anchor"],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "outerDiameterQ": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {"type": {"const": "userInput"}},
+                                "required": ["type"],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {"const": "document"},
+                                  "anchor": {
+                                    "type": "object",
+                                    "properties": {
+                                      "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                      "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                      "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                                      "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "region": {
+                                        "oneOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "x": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "y": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "width": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "height": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "unit": {"const": "pdfPoint1000"}
+                                            },
+                                            "required": ["x", "y", "width", "height", "unit"],
+                                            "additionalProperties": false
+                                          },
+                                          {"type": "null"}
+                                        ]
+                                      }
+                                    },
+                                    "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": ["type", "anchor"],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "lengthQ": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {"type": {"const": "userInput"}},
+                                "required": ["type"],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {"const": "document"},
+                                  "anchor": {
+                                    "type": "object",
+                                    "properties": {
+                                      "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                      "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                      "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                                      "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "region": {
+                                        "oneOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "x": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "y": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "width": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "height": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "unit": {"const": "pdfPoint1000"}
+                                            },
+                                            "required": ["x", "y", "width", "height", "unit"],
+                                            "additionalProperties": false
+                                          },
+                                          {"type": "null"}
+                                        ]
+                                      }
+                                    },
+                                    "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": ["type", "anchor"],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["innerDiameterQ", "outerDiameterQ", "lengthQ"],
+                        "additionalProperties": false
+                      },
+                      "question": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "questionId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                              "reason": {"enum": ["missing", "conflict", "ambiguousReference"]},
+                              "prompt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                              "anchors": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                    "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                    "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                                    "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                    "region": {
+                                      "oneOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "x": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "y": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "width": {
+                                              "type": "integer",
+                                              "minimum": 1,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "height": {
+                                              "type": "integer",
+                                              "minimum": 1,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "unit": {"const": "pdfPoint1000"}
+                                          },
+                                          "required": ["x", "y", "width", "height", "unit"],
+                                          "additionalProperties": false
+                                        },
+                                        {"type": "null"}
+                                      ]
+                                    }
+                                  },
+                                  "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": ["questionId", "reason", "prompt", "anchors"],
+                            "additionalProperties": false
+                          },
+                          {"type": "null"}
+                        ]
+                      }
+                    },
+                    "required": [
+                      "draftRevision",
+                      "innerDiameterQ",
+                      "outerDiameterQ",
+                      "lengthQ",
+                      "sources",
+                      "question"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {"type": "null"}
+                ]
+              }
+            },
+            "required": [
+              "projectId",
+              "draftRevision",
+              "cursor",
+              "connection",
+              "authorization",
+              "writer",
+              "spacerDraft"
+            ],
+            "additionalProperties": false
+          },
+          "activities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "taskId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                "projectId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                "source": {"enum": ["internal", "external"]},
+                "baseRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                "draftRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                "lastStep": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                "errorCode": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                "status": {
+                  "enum": [
+                    "queued",
+                    "running",
+                    "awaitingInput",
+                    "interrupted",
+                    "succeeded",
+                    "failed",
+                    "cancelled"
+                  ]
+                },
+                "question": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "questionId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                        "reason": {"enum": ["missing", "conflict", "ambiguousReference"]},
+                        "prompt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                        "anchors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                              "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                              "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                              "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                              "region": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "x": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                      "y": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                      "width": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "height": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "unit": {"const": "pdfPoint1000"}
+                                    },
+                                    "required": ["x", "y", "width", "height", "unit"],
+                                    "additionalProperties": false
+                                  },
+                                  {"type": "null"}
+                                ]
+                              }
+                            },
+                            "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": ["questionId", "reason", "prompt", "anchors"],
+                      "additionalProperties": false
+                    },
+                    {"type": "null"}
+                  ]
+                },
+                "updatedAtMs": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+              },
+              "required": [
+                "taskId",
+                "projectId",
+                "source",
+                "baseRevision",
+                "draftRevision",
+                "lastStep",
+                "errorCode",
+                "status",
+                "question",
+                "updatedAtMs"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["baseRevision", "snapshot", "activities"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getExternalActivities",
+      "inputSchema": {
+        "type": "object",
+        "properties": {"projectId": {"type": "string", "minLength": 1, "pattern": "\\S"}},
+        "required": ["projectId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "draftRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+          "activities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "taskId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                "projectId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                "source": {"enum": ["internal", "external"]},
+                "baseRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                "draftRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                "lastStep": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                "errorCode": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                "status": {
+                  "enum": [
+                    "queued",
+                    "running",
+                    "awaitingInput",
+                    "interrupted",
+                    "succeeded",
+                    "failed",
+                    "cancelled"
+                  ]
+                },
+                "question": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "questionId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                        "reason": {"enum": ["missing", "conflict", "ambiguousReference"]},
+                        "prompt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                        "anchors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                              "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                              "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                              "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                              "region": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "x": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                      "y": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                      "width": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "height": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "unit": {"const": "pdfPoint1000"}
+                                    },
+                                    "required": ["x", "y", "width", "height", "unit"],
+                                    "additionalProperties": false
+                                  },
+                                  {"type": "null"}
+                                ]
+                              }
+                            },
+                            "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": ["questionId", "reason", "prompt", "anchors"],
+                      "additionalProperties": false
+                    },
+                    {"type": "null"}
+                  ]
+                },
+                "updatedAtMs": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+              },
+              "required": [
+                "taskId",
+                "projectId",
+                "source",
+                "baseRevision",
+                "draftRevision",
+                "lastStep",
+                "errorCode",
+                "status",
+                "question",
+                "updatedAtMs"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["draftRevision", "activities"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "acquireWriter",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "expectedWriterEpoch": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+        },
+        "required": ["projectId", "expectedWriterEpoch"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "writerEpoch": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+          "baseRevision": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "draftRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]}
+        },
+        "required": ["writerEpoch", "baseRevision", "draftRevision"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "takeOverWriter",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "expectedWriterEpoch": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+        },
+        "required": ["projectId", "expectedWriterEpoch"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "writerEpoch": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+          "baseRevision": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "draftRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]}
+        },
+        "required": ["writerEpoch", "baseRevision", "draftRevision"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "readWriterContext",
+      "inputSchema": {
+        "type": "object",
+        "properties": {"projectId": {"type": "string", "minLength": 1, "pattern": "\\S"}},
+        "required": ["projectId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "baseRevision": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "draftRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+          "cursor": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+          "spacerDraft": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "draftRevision": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                  "innerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                  "outerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                  "lengthQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                  "sources": {
+                    "type": "object",
+                    "properties": {
+                      "innerDiameterQ": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {"type": {"const": "userInput"}},
+                            "required": ["type"],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {"const": "document"},
+                              "anchor": {
+                                "type": "object",
+                                "properties": {
+                                  "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                  "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                  "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                                  "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                  "region": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "x": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                          "y": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                          "width": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                          "height": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                          "unit": {"const": "pdfPoint1000"}
+                                        },
+                                        "required": ["x", "y", "width", "height", "unit"],
+                                        "additionalProperties": false
+                                      },
+                                      {"type": "null"}
+                                    ]
+                                  }
+                                },
+                                "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": ["type", "anchor"],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "outerDiameterQ": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {"type": {"const": "userInput"}},
+                            "required": ["type"],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {"const": "document"},
+                              "anchor": {
+                                "type": "object",
+                                "properties": {
+                                  "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                  "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                  "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                                  "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                  "region": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "x": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                          "y": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                          "width": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                          "height": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                          "unit": {"const": "pdfPoint1000"}
+                                        },
+                                        "required": ["x", "y", "width", "height", "unit"],
+                                        "additionalProperties": false
+                                      },
+                                      {"type": "null"}
+                                    ]
+                                  }
+                                },
+                                "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": ["type", "anchor"],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "lengthQ": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {"type": {"const": "userInput"}},
+                            "required": ["type"],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {"const": "document"},
+                              "anchor": {
+                                "type": "object",
+                                "properties": {
+                                  "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                  "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                  "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                                  "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                  "region": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "x": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                          "y": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                          "width": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                          "height": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                          "unit": {"const": "pdfPoint1000"}
+                                        },
+                                        "required": ["x", "y", "width", "height", "unit"],
+                                        "additionalProperties": false
+                                      },
+                                      {"type": "null"}
+                                    ]
+                                  }
+                                },
+                                "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": ["type", "anchor"],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": ["innerDiameterQ", "outerDiameterQ", "lengthQ"],
+                    "additionalProperties": false
+                  },
+                  "question": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "questionId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                          "reason": {"enum": ["missing", "conflict", "ambiguousReference"]},
+                          "prompt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                          "anchors": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                                "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                "region": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "x": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                        "y": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                        "width": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                        "height": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                        "unit": {"const": "pdfPoint1000"}
+                                      },
+                                      "required": ["x", "y", "width", "height", "unit"],
+                                      "additionalProperties": false
+                                    },
+                                    {"type": "null"}
+                                  ]
+                                }
+                              },
+                              "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": ["questionId", "reason", "prompt", "anchors"],
+                        "additionalProperties": false
+                      },
+                      {"type": "null"}
+                    ]
+                  }
+                },
+                "required": ["draftRevision", "innerDiameterQ", "outerDiameterQ", "lengthQ", "sources", "question"],
+                "additionalProperties": false
+              },
+              {"type": "null"}
+            ]
+          },
+          "mountingPlateDraftRevision": {"type": "string", "minLength": 1, "pattern": "\\S"}
+        },
+        "required": ["baseRevision", "draftRevision", "cursor", "spacerDraft"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "stageChange",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "change": {
+            "type": "object",
+            "properties": {
+              "baseRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+              "expectedDraftRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+              "idempotencyKey": {"type": "string", "minLength": 1, "pattern": "\\S"},
+              "operation": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {"const": "createSpacerDraft"},
+                      "innerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                      "outerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                      "lengthQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+                    },
+                    "required": ["type"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {"const": "resumeSpacerDraft"},
+                      "taskId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                      "innerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                      "outerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                      "lengthQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+                    },
+                    "required": ["type", "taskId"],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "sources": {
+                "type": "object",
+                "properties": {
+                  "innerDiameterQ": {
+                    "type": "object",
+                    "properties": {"type": {"const": "userInput"}},
+                    "required": ["type"],
+                    "additionalProperties": false
+                  },
+                  "outerDiameterQ": {
+                    "type": "object",
+                    "properties": {"type": {"const": "userInput"}},
+                    "required": ["type"],
+                    "additionalProperties": false
+                  },
+                  "lengthQ": {
+                    "type": "object",
+                    "properties": {"type": {"const": "userInput"}},
+                    "required": ["type"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [],
+                "additionalProperties": false
+              }
+            },
+            "required": ["baseRevision", "expectedDraftRevision", "idempotencyKey", "operation", "sources"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["projectId", "change"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "draftRevision": {"type": "string", "minLength": 1, "pattern": "\\S"},
+              "innerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+              "outerDiameterQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+              "lengthQ": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+              "sources": {
+                "type": "object",
+                "properties": {
+                  "innerDiameterQ": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {"type": {"const": "userInput"}},
+                        "required": ["type"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {"const": "document"},
+                          "anchor": {
+                            "type": "object",
+                            "properties": {
+                              "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                              "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                              "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                              "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                              "region": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "x": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                      "y": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                      "width": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "height": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "unit": {"const": "pdfPoint1000"}
+                                    },
+                                    "required": ["x", "y", "width", "height", "unit"],
+                                    "additionalProperties": false
+                                  },
+                                  {"type": "null"}
+                                ]
+                              }
+                            },
+                            "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["type", "anchor"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "outerDiameterQ": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {"type": {"const": "userInput"}},
+                        "required": ["type"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {"const": "document"},
+                          "anchor": {
+                            "type": "object",
+                            "properties": {
+                              "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                              "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                              "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                              "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                              "region": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "x": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                      "y": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                      "width": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "height": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "unit": {"const": "pdfPoint1000"}
+                                    },
+                                    "required": ["x", "y", "width", "height", "unit"],
+                                    "additionalProperties": false
+                                  },
+                                  {"type": "null"}
+                                ]
+                              }
+                            },
+                            "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["type", "anchor"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "lengthQ": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {"type": {"const": "userInput"}},
+                        "required": ["type"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {"const": "document"},
+                          "anchor": {
+                            "type": "object",
+                            "properties": {
+                              "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                              "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                              "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                              "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                              "region": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "x": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                      "y": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                      "width": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "height": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                      "unit": {"const": "pdfPoint1000"}
+                                    },
+                                    "required": ["x", "y", "width", "height", "unit"],
+                                    "additionalProperties": false
+                                  },
+                                  {"type": "null"}
+                                ]
+                              }
+                            },
+                            "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["type", "anchor"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "required": ["innerDiameterQ", "outerDiameterQ", "lengthQ"],
+                "additionalProperties": false
+              },
+              "question": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "questionId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                      "reason": {"enum": ["missing", "conflict", "ambiguousReference"]},
+                      "prompt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                      "anchors": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                            "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                            "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                            "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                            "region": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "x": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                    "y": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                    "width": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                    "height": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                    "unit": {"const": "pdfPoint1000"}
+                                  },
+                                  "required": ["x", "y", "width", "height", "unit"],
+                                  "additionalProperties": false
+                                },
+                                {"type": "null"}
+                              ]
+                            }
+                          },
+                          "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": ["questionId", "reason", "prompt", "anchors"],
+                    "additionalProperties": false
+                  },
+                  {"type": "null"}
+                ]
+              }
+            },
+            "required": ["draftRevision", "innerDiameterQ", "outerDiameterQ", "lengthQ", "sources", "question"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "draftRevision": {"const": null},
+              "activity": {
+                "type": "object",
+                "properties": {
+                  "taskId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                  "projectId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                  "source": {"enum": ["internal", "external"]},
+                  "baseRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                  "draftRevision": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                  "lastStep": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                  "errorCode": {"oneOf": [{"type": "string", "minLength": 1, "pattern": "\\S"}, {"type": "null"}]},
+                  "status": {
+                    "enum": [
+                      "queued",
+                      "running",
+                      "awaitingInput",
+                      "interrupted",
+                      "succeeded",
+                      "failed",
+                      "cancelled"
+                    ]
+                  },
+                  "question": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "questionId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                          "reason": {"enum": ["missing", "conflict", "ambiguousReference"]},
+                          "prompt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                          "anchors": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "documentRef": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                "excerpt": {"type": "string", "minLength": 1, "pattern": "\\S"},
+                                "documentFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                                "page": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                "region": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "x": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                        "y": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                                        "width": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                        "height": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+                                        "unit": {"const": "pdfPoint1000"}
+                                      },
+                                      "required": ["x", "y", "width", "height", "unit"],
+                                      "additionalProperties": false
+                                    },
+                                    {"type": "null"}
+                                  ]
+                                }
+                              },
+                              "required": ["documentRef", "excerpt", "documentFingerprint", "page", "region"],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": ["questionId", "reason", "prompt", "anchors"],
+                        "additionalProperties": false
+                      },
+                      {"type": "null"}
+                    ]
+                  },
+                  "updatedAtMs": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+                },
+                "required": [
+                  "taskId",
+                  "projectId",
+                  "source",
+                  "baseRevision",
+                  "draftRevision",
+                  "lastStep",
+                  "errorCode",
+                  "status",
+                  "question",
+                  "updatedAtMs"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": ["draftRevision", "activity"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {"const": "clarification"},
+              "code": {"const": "UNSUPPORTED_SCOPE"},
+              "question": {"type": "string", "minLength": 1, "pattern": "\\S"}
+            },
+            "required": ["kind", "code", "question"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "revokeWriter",
+      "inputSchema": {
+        "type": "object",
+        "properties": {"projectId": {"type": "string", "minLength": 1, "pattern": "\\S"}},
+        "required": ["projectId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {"revoked": {"const": true}},
+        "required": ["revoked"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "moveRightHoleX",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type": "string", "minLength": 1, "pattern": "\\S", "maxLength": 240},
+          "baseRevision": {"type": "string", "minLength": 1, "pattern": "\\S", "maxLength": 240},
+          "expectedDraftRevision": {"type": "string", "minLength": 1, "pattern": "\\S", "maxLength": 240},
+          "idempotencyKey": {"type": "string", "minLength": 1, "pattern": "\\S", "maxLength": 240},
+          "deltaQ": {
+            "oneOf": [
+              {"type": "integer", "minimum": -9007199254740991, "maximum": -1},
+              {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+            ]
+          }
+        },
+        "required": ["projectId", "baseRevision", "expectedDraftRevision", "idempotencyKey", "deltaQ"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "jobId": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "revision": {"type": "string", "minLength": 1, "pattern": "\\S"}
+        },
+        "required": ["jobId", "revision"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

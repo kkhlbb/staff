@@ -9,6 +9,7 @@
  * 本模块只描述纯数据形状与常量，不导入 Electron、React 或 IndexedDB；
  * 对 V2 领域类型的引用只用 `import type`（编译后擦除）。
  */
+import type { AssemblyModelV1, StepAttachment } from './assembly3d'
 import type { ChainDefinition, Project, RelationReview, ProjectMigration } from '../domain/types'
 import type { ChangeEvent } from '../history/events'
 import type { AnalysisSnapshot } from '../history/snapshots'
@@ -22,11 +23,17 @@ import {
   MAX_BACKUP_UNCOMPRESSED_BYTES,
 } from '../backup/zip'
 
+export type {
+  AssemblyModelV1, AssemblyPart, PersistentFeature, AssemblyMate, DatumDefinition,
+  GdtFeatureControl, AssemblyPhysicsSpec, MeasurementSpec, StepAttachment,
+} from './assembly3d'
+
 export const PROJECT_FILE_FORMAT = 'cunlian-project'
 /** B2 起写出的格式版本：formatVersion=2，project.schemaVersion=4/5。 */
 export const PROJECT_FILE_FORMAT_VERSION = 2
 /**
- * 当前写端项目 schema（ADR-001 第 3 步起为 10）：
+ * 当前写端项目 schema：
+ * - 11：可选 STEP 附件及三维装配。旧 schema 10 直接提升工作形状，不改原历史版本；
  * - 10：无任务书入口的加法字段：`sourceKind`（pdf | user-intent）、`actorId`/
  *   `sessionSeq`/`sessionLabel` 与项目级 `attestations` 集合；提取草稿新增可选
  *   `intentBindings`。schema 9 读入时 `sourceKind='pdf'`，**不重算、不改值**；
@@ -40,14 +47,15 @@ export const PROJECT_FILE_FORMAT_VERSION = 2
  * - 3：B1 及更早（仍可读）。
  * `formatVersion` 保持 2：容器布局未变，只扩展 project.json 的 schema 与版本配对。
  */
-export const PROJECT_FILE_SCHEMA_VERSION = 10
-/** ADR-001 第 2 步的 schema9；仍可读，保存时显式升级为 10（读入时补 sourceKind='pdf'）。 */
+export const PROJECT_FILE_SCHEMA_VERSION = 11
+export const V10_PROJECT_FILE_SCHEMA_VERSION = 10
+/** ADR-001 第 2 步的 schema9；仍可读，保存时显式升级为 11（读入时补 sourceKind='pdf'）。 */
 export const V9_PROJECT_FILE_SCHEMA_VERSION = 9
-/** V3.6 的 schema8；仍可读，保存时显式升级为 10（读入时按原 evidence 补 provenance，不重算）。 */
+/** V3.6 的 schema8；仍可读，保存时显式升级为 11（读入时按原 evidence 补 provenance，不重算）。 */
 export const V36_PROJECT_FILE_SCHEMA_VERSION = 8
-/** V3.5 的 schema7；仍可读，保存时显式升级为 10。 */
+/** V3.5 的 schema7；仍可读，保存时显式升级为 11。 */
 export const V35_PROJECT_FILE_SCHEMA_VERSION = 7
-/** D 的 schema6；仍可读，保存时显式升级为 10。 */
+/** D 的 schema6；仍可读，保存时显式升级为 11。 */
 export const D_PROJECT_FILE_SCHEMA_VERSION = 6
 export const C_PROJECT_FILE_SCHEMA_VERSION = 5
 export const B2_PROJECT_FILE_SCHEMA_VERSION = 4
@@ -120,7 +128,7 @@ export interface ProjectFileManifestProject {
   id: string
   name: string
   /** 旧文件为 3，B2 为 4，C 为 5，D 写 6，V3.5 写 7，V3.6 写 8，ADR-001 写 9，本步写 10；读取时按伴随的 formatVersion 校验配对。 */
-  projectSchemaVersion: 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+  projectSchemaVersion: 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
   dimensionChainSchemaVersion: typeof DIMENSION_CHAIN_SCHEMA_VERSION
   currentRevisionId: string
 }
@@ -140,11 +148,11 @@ export interface ProjectFileCounts {
   legacyArchiveRecords: number
 }
 
-export type ProjectFileAttachmentKind = 'pdf' | 'model'
+export type ProjectFileAttachmentKind = 'pdf' | 'model' | 'step'
 
 export interface ProjectFileAttachmentRef {
   kind: ProjectFileAttachmentKind
-  /** PDF 为 SourceRevision.id，模型为 ModelRevision.modelRevisionId。 */
+  /** PDF 为 SourceRevision.id，模型为 ModelRevision.modelRevisionId，STEP 为 StepAttachment.id。 */
   revisionId: string
   blobKey: string
   path: string
@@ -450,6 +458,13 @@ export interface ProjectFileProject {
    * “跨会话伪造”校验，提交时随版本一起冻结。
    */
   attestations: UserAttestation[]
+  /** STEP IDs are project-scoped and immutable across saved revisions. */
+  stepAttachments?: StepAttachment[]
+  assembly3d?: AssemblyModelV1
+}
+
+export type ProjectFileProjectV10 = Omit<ProjectFileProject, 'schemaVersion' | 'stepAttachments' | 'assembly3d'> & {
+  schemaVersion: typeof V10_PROJECT_FILE_SCHEMA_VERSION
 }
 
 /**
@@ -458,7 +473,7 @@ export interface ProjectFileProject {
  * 只用于读时兼容与旧历史原样保留。
  */
 export type ProjectFileProjectV9 = Omit<
-  ProjectFileProject,
+  ProjectFileProjectV10,
   | 'schemaVersion'
   | 'sourceKind'
   | 'actorId'
@@ -631,11 +646,12 @@ export interface ProjectFileRevision {
   createdAt: string
   reason: string
   /**
-   * 旧归档快照保留原 schema（3/4/5/6/7/8/9）原样（不可变历史）；新快照为当前 schema 10。
+   * 旧归档快照保留原 schema（3/4/5/6/7/8/9/10）原样（不可变历史）；新快照为当前 schema 11。
    * 读取按版本化联合解析，保存时不会把旧历史改写成新内容。
    */
   project:
     | ProjectFileProject
+    | ProjectFileProjectV10
     | ProjectFileProjectV9
     | ProjectFileProjectV8
     | ProjectFileProjectV7
