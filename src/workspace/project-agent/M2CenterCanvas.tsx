@@ -50,6 +50,7 @@ export interface M2CenterCanvasProps {
   readonly retryDrawingFeedback: string | null
   readonly contextActionFeedback: string | null
   readonly previewMessage: string | null
+  readonly theme?: 'light' | 'dark'
   readonly canvasRegionRef: RefObject<HTMLElement | null>
   readonly objectListRegionRef: RefObject<HTMLElement | null>
   readonly retryDrawingButtonRef?: RefObject<HTMLButtonElement | null>
@@ -161,6 +162,7 @@ export function M2CenterCanvas({
   retryDrawingFeedback,
   contextActionFeedback,
   previewMessage,
+  theme = 'light',
   canvasRegionRef,
   objectListRegionRef,
   retryDrawingButtonRef,
@@ -222,13 +224,13 @@ export function M2CenterCanvas({
     <section
       ref={canvasRegionRef}
       tabIndex={-1}
-      className="pa-panel pa-focus-region"
+      className="pa-panel pa-canvas-column pa-focus-region"
       aria-label="中央画布"
       data-effective-view={effectiveViewMode}
       data-narrow-degraded={isNarrow && viewMode === 'split' ? 'true' : 'false'}
     >
       {/* Canvas Header: Title, Revisions, Draft/Checking Badges, View Mode Switcher */}
-      <div className="pa-header">
+      <div className="pa-canvas-toolbar">
         <div className="pa-row">
           <h2 className="pa-title">模型与图纸视图概览</h2>
           {isDraftDisplay ? (
@@ -248,7 +250,7 @@ export function M2CenterCanvas({
           ) : null}
         </div>
 
-        <div className="pa-controls" role="tablist" aria-label="中央画布视图切换">
+        <div className="pa-segmented" role="tablist" aria-label="中央画布视图切换">
           <button
             type="button"
             role="tab"
@@ -324,7 +326,11 @@ export function M2CenterCanvas({
 
       {/* Partial Artifact Failure Banner */}
       {drawingFailure ? (
-        <div className="pa-danger-box" role="alert" aria-label="部分产物失败提示">
+        <div
+          className="pa-danger-box pa-partial-fail-strip"
+          role="alert"
+          aria-label="部分产物失败提示"
+        >
           <div className="pa-header">
             <strong>
               {formatPartialDrawingFailureMessage(
@@ -336,7 +342,7 @@ export function M2CenterCanvas({
             <button
               ref={retryDrawingButtonRef}
               type="button"
-              className="pa-btn pa-btn-active"
+              className="pa-btn pa-btn-primary pa-btn-sm"
               disabled={retryDrawingPending}
               onClick={onRetryDrawing}
             >
@@ -351,7 +357,7 @@ export function M2CenterCanvas({
           ) : null}
         </div>
       ) : retryDrawingFeedback ? (
-        <div className="pa-pass-box" role="status">
+        <div className="pa-pass-box pa-canvas-alert-strip" role="status">
           <span>{retryDrawingFeedback}</span>
         </div>
       ) : null}
@@ -439,11 +445,13 @@ export function M2CenterCanvas({
         {/* 3D Model View Pane */}
         {showModelPane ? (
           <section className="pa-viewport-card" aria-label="三维模型视图">
-            <div className="pa-header">
+            <div className="pa-viewport-header">
               <div className="pa-row">
-                <h3 className="pa-title">
-                  3D 模型 · {formatRevisionDisplay(model.revision)}
-                </h3>
+                <div className="pa-viewport-tag">
+                  <h3 className="pa-title">
+                    3D 模型 · {formatRevisionDisplay(model.revision)}
+                  </h3>
+                </div>
                 <span
                   className={`pa-pill ${modelStatusMeta.toneClass}`}
                   data-artifact-status={modelStatusMeta.stateKey}
@@ -454,7 +462,7 @@ export function M2CenterCanvas({
                   <span className="pa-pill pa-tone-pending">✎ 草稿 3D</span>
                 ) : null}
               </div>
-              <div className="pa-controls">
+              <div className="pa-viewport-tools">
                 <button
                   type="button"
                   className="pa-btn pa-btn-sm"
@@ -524,6 +532,7 @@ export function M2CenterCanvas({
                     camera={camera}
                     selectedObjectId={selectedObjectId}
                     highlightedFeatureIds={highlightedFeatureIds}
+                    theme={theme}
                     onPickRange={handlePickMeshRange}
                     onUpdateCamera={onUpdateCamera}
                   />
@@ -556,11 +565,13 @@ export function M2CenterCanvas({
         {/* 2D Drawing View Pane */}
         {showDrawingPane ? (
           <section className="pa-viewport-card" aria-label="二维图纸视图">
-            <div className="pa-header">
+            <div className="pa-viewport-header">
               <div className="pa-row">
-                <h3 className="pa-title">
-                  2D 图纸 · {formatRevisionDisplay(drawing.revision)}
-                </h3>
+                <div className="pa-viewport-tag">
+                  <h3 className="pa-title">
+                    2D 图纸 · {formatRevisionDisplay(drawing.revision)}
+                  </h3>
+                </div>
                 <span
                   className={`pa-pill ${drawingStatusMeta.toneClass}`}
                   data-artifact-status={drawingStatusMeta.stateKey}
@@ -571,7 +582,7 @@ export function M2CenterCanvas({
                   <span className="pa-pill pa-tone-pending">⚠ 显示上一有效图纸</span>
                 ) : null}
               </div>
-              <div className="pa-controls">
+              <div className="pa-viewport-tools">
                 <button
                   type="button"
                   className="pa-btn pa-btn-sm"
@@ -654,97 +665,117 @@ export function M2CenterCanvas({
         ) : null}
       </div>
 
-      {/* Selection Context Bar (对象引用上下文区) */}
-      <section className="pa-card pa-context-bar" aria-label="对象引用上下文区">
-        <div className="pa-header">
-          <div className="pa-row">
-            <span className="pa-card-label">当前选择</span>
-            {selectedFeature ? (
-              <>
-                <strong data-testid="selection-breadcrumb">{selectedFeature.breadcrumb}</strong>
-                <span className="pa-pill pa-tone-action pa-mono">
-                  {selectedFeature.featureRef}
-                </span>
-              </>
-            ) : (
-              <span className="pa-muted">未选中任何几何对象</span>
-            )}
-          </div>
-
-          <div className="pa-controls">
-            <button
-              type="button"
-              className="pa-btn pa-btn-active"
-              disabled={!selectedFeature}
-              onClick={onBringIntoNextPrompt}
-            >
-              带入下一句话
-            </button>
-            <button
-              type="button"
-              className="pa-btn"
-              disabled={!selectedFeature}
-              onClick={onCopyToExternalSession}
-            >
-              复制到外部会话
-            </button>
-            <button
-              type="button"
-              className="pa-btn"
-              disabled={!selectedFeature && !selectedAnnotationId}
-              onClick={onClearSelection}
-            >
-              取消选择
-            </button>
-          </div>
-        </div>
-
-        {contextActionFeedback ? (
-          <p className="pa-muted" role="status">
-            {contextActionFeedback}
-          </p>
-        ) : null}
-
-        {/* Keyboard-navigable Object List */}
+      {/* Floating Selection Context Bar (悬浮对象引用上下文条) */}
+      <div className="pa-context-dock">
         <section
-          ref={objectListRegionRef}
-          tabIndex={-1}
-          className="pa-object-list-region pa-focus-region"
-          aria-label="对象列表"
-          onKeyDown={handleObjectListKeyDown}
+          className={
+            selectedFeature
+              ? 'pa-card pa-context-bar pa-context-bar-active'
+              : 'pa-card pa-context-bar'
+          }
+          aria-label="对象引用上下文区"
+          data-selection-active={selectedFeature ? 'true' : 'false'}
         >
           <div className="pa-header">
-            <span className="pa-card-label">对象列表（↑/↓ 切换对象，F6 / Shift+F6 跨区跳转）</span>
-            <span className="pa-muted">
-              主流程通过对话与特征选取驱动修改，不提供手动参数表、尺寸滑块或坐标编辑器。
-            </span>
-          </div>
-          <div className="pa-controls" role="group" aria-label="可选几何特征对象">
-            {features.map((obj, index) => (
-              <button
-                key={obj.objectId}
-                ref={(el) => {
-                  objectItemRefs.current[index] = el
-                }}
-                type="button"
-                aria-pressed={selectedObjectId === obj.objectId}
+            <div className="pa-row">
+              <span
                 className={
-                  selectedObjectId === obj.objectId ? 'pa-btn pa-btn-active' : 'pa-btn'
+                  selectedFeature
+                    ? 'pa-selection-dot'
+                    : 'pa-selection-dot pa-selection-dot-idle'
                 }
-                onClick={() => onSelectFeature(obj)}
-              >
-                {obj.breadcrumb}
-              </button>
-            ))}
-          </div>
-        </section>
-      </section>
+                aria-hidden="true"
+              />
+              <span className="pa-card-label">当前选择</span>
+              {selectedFeature ? (
+                <>
+                  <strong data-testid="selection-breadcrumb">{selectedFeature.breadcrumb}</strong>
+                  <span className="pa-pill pa-tone-action pa-mono">
+                    {selectedFeature.featureRef}
+                  </span>
+                </>
+              ) : (
+                <span className="pa-muted">未选中任何几何对象</span>
+              )}
+            </div>
 
-      {previewMessage ? (
-        <div className="pa-pass-box" role="status">
-          <span>{previewMessage}</span>
-        </div>
-      ) : null}
+            <div className="pa-controls">
+              <button
+                type="button"
+                className="pa-btn pa-btn-primary pa-btn-sm"
+                disabled={!selectedFeature}
+                onClick={onBringIntoNextPrompt}
+              >
+                带入下一句话
+              </button>
+              <button
+                type="button"
+                className="pa-btn pa-btn-sm"
+                disabled={!selectedFeature}
+                onClick={onCopyToExternalSession}
+              >
+                复制到外部会话
+              </button>
+              <button
+                type="button"
+                className="pa-btn pa-btn-ghost pa-btn-sm"
+                disabled={!selectedFeature && !selectedAnnotationId}
+                onClick={onClearSelection}
+              >
+                取消选择
+              </button>
+            </div>
+          </div>
+
+          {contextActionFeedback ? (
+            <p className="pa-muted" role="status">
+              {contextActionFeedback}
+            </p>
+          ) : null}
+
+          {/* Keyboard-navigable Object List */}
+          <section
+            ref={objectListRegionRef}
+            tabIndex={-1}
+            className="pa-object-list-region pa-focus-region"
+            aria-label="对象列表"
+            onKeyDown={handleObjectListKeyDown}
+          >
+            <div className="pa-header">
+              <span className="pa-card-label">对象列表（↑/↓ 切换对象，F6 / Shift+F6 跨区跳转）</span>
+              <span className="pa-muted">
+                主流程通过对话与特征选取驱动修改，不提供手动参数表、尺寸滑块或坐标编辑器。
+              </span>
+            </div>
+            <div className="pa-controls" role="group" aria-label="可选几何特征对象">
+              {features.map((obj, index) => (
+                <button
+                  key={obj.objectId}
+                  ref={(el) => {
+                    objectItemRefs.current[index] = el
+                  }}
+                  type="button"
+                  aria-pressed={selectedObjectId === obj.objectId}
+                  className={
+                    selectedObjectId === obj.objectId
+                      ? 'pa-btn pa-btn-sm pa-btn-active'
+                      : 'pa-btn pa-btn-sm'
+                  }
+                  onClick={() => onSelectFeature(obj)}
+                >
+                  {obj.breadcrumb}
+                </button>
+              ))}
+            </div>
+          </section>
+        </section>
+
+        {previewMessage ? (
+          <div className="pa-pass-box" role="status">
+            <span>{previewMessage}</span>
+          </div>
+        ) : null}
+      </div>
     </section>
   )
 }

@@ -38,6 +38,7 @@ export interface M2ThreeMeshViewportProps {
   readonly camera: M2CameraState
   readonly selectedObjectId: string | null
   readonly highlightedFeatureIds: ReadonlySet<string>
+  readonly theme?: 'light' | 'dark'
   readonly onPickRange: (range: M2MeshTriangleRange) => void
   readonly onUpdateCamera: (updater: (prev: M2CameraState) => M2CameraState) => void
 }
@@ -157,6 +158,7 @@ interface ThreeSceneController {
   updateMesh(mesh: M2ModelMesh, highlighted: ReadonlySet<string>): void
   updateHighlight(mesh: M2ModelMesh, highlighted: ReadonlySet<string>): void
   updateCamera(camera: M2CameraState, mesh: M2ModelMesh): void
+  updateTheme(theme: 'light' | 'dark'): void
   dispose(): void
 }
 
@@ -178,6 +180,7 @@ export function M2ThreeMeshViewport({
   camera,
   selectedObjectId,
   highlightedFeatureIds,
+  theme = 'light',
   onPickRange,
   onUpdateCamera,
 }: M2ThreeMeshViewportProps) {
@@ -190,8 +193,14 @@ export function M2ThreeMeshViewport({
   const modelMeshRef = useRef(modelMesh)
   const cameraRef = useRef(camera)
   const highlightedRef = useRef(highlightedFeatureIds)
+  const themeRef = useRef(theme)
   const onPickRangeRef = useRef(onPickRange)
   const onUpdateCameraRef = useRef(onUpdateCamera)
+
+  useEffect(() => {
+    themeRef.current = theme
+    controllerRef.current?.updateTheme(theme)
+  }, [theme])
 
   useEffect(() => {
     modelMeshRef.current = modelMesh
@@ -241,11 +250,12 @@ export function M2ThreeMeshViewport({
       return
     }
 
+    const initialDark = themeRef.current === 'dark'
     renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2))
-    renderer.setClearColor(new Color('#F8FAFC'), 1)
+    renderer.setClearColor(new Color(initialDark ? '#0B0E14' : '#EEF1F5'), 1)
 
     const scene = new Scene()
-    scene.background = new Color('#F8FAFC')
+    scene.background = new Color(initialDark ? '#0B0E14' : '#EEF1F5')
     const threeCamera = new PerspectiveCamera(42, 16 / 10, 0.1, 10000)
 
     const ambient = new AmbientLight(0xffffff, 1.0)
@@ -257,7 +267,7 @@ export function M2ThreeMeshViewport({
     scene.add(ambient, hemi, key, fill)
 
     const primaryMaterial = new MeshStandardMaterial({
-      color: 0xcbd5e1,
+      color: initialDark ? 0x64748b : 0xcbd5e1,
       metalness: 0.15,
       roughness: 0.55,
       side: DoubleSide,
@@ -265,10 +275,10 @@ export function M2ThreeMeshViewport({
       polygonOffsetFactor: 1,
       polygonOffsetUnits: 1,
     })
-    const edgeMaterial = new LineBasicMaterial({ color: 0x334155 })
+    const edgeMaterial = new LineBasicMaterial({ color: initialDark ? 0x94a3b8 : 0x334155 })
     const highlightMaterial = new MeshStandardMaterial({
-      color: 0x4f46e5,
-      emissive: 0x3730a3,
+      color: initialDark ? 0x4b83ff : 0x1e5eff,
+      emissive: initialDark ? 0x1e40af : 0x1749cc,
       emissiveIntensity: 0.35,
       metalness: 0.1,
       roughness: 0.4,
@@ -454,6 +464,18 @@ export function M2ThreeMeshViewport({
         if (disposed) return
         syncCamera(camState, meshData)
       },
+      updateTheme(nextTheme) {
+        if (disposed) return
+        const isDark = nextTheme === 'dark'
+        const bgColor = new Color(isDark ? '#0B0E14' : '#EEF1F5')
+        renderer.setClearColor(bgColor, 1)
+        scene.background = bgColor
+        primaryMaterial.color.setHex(isDark ? 0x64748b : 0xcbd5e1)
+        edgeMaterial.color.setHex(isDark ? 0x94a3b8 : 0x334155)
+        highlightMaterial.color.setHex(isDark ? 0x4b83ff : 0x1e5eff)
+        highlightMaterial.emissive.setHex(isDark ? 0x1e40af : 0x1749cc)
+        scheduleRender()
+      },
       dispose() {
         if (disposed) return
         disposed = true
@@ -606,7 +628,7 @@ export function M2ThreeMeshViewport({
           onMouseLeave={handleFallbackMouseUp}
           onWheel={handleFallbackWheel}
         >
-          <rect x="0" y="0" width="320" height="220" fill="#F8FAFC" />
+          <rect x="0" y="0" width="320" height="220" fill="transparent" />
           <g data-testid="m2-three-fallback-mesh">
             {fallbackProjection.projectedTriangles.map((tri) => {
               const objId = tri.range?.objectId ?? ''

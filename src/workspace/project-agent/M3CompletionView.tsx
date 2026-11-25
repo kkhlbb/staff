@@ -190,7 +190,7 @@ export function M3CompletionView({
             <span className="pa-pill pa-tone-danger">✕ 失败 {counts.fail}</span>
             <span className="pa-pill pa-tone-pending">? 待澄清 {counts.needsClarification}</span>
             <span className="pa-pill pa-tone-muted">○ 未覆盖 {counts.uncovered}</span>
-            <span className="pa-pill pa-tone-danger">! 执行失败 {counts.executionFailed}</span>
+            <span className="pa-pill pa-tone-execfail">! 执行失败 {counts.executionFailed}</span>
             <span className="pa-pill pa-tone-action">◌ 检查中 {counts.checking}</span>
           </div>
         </div>
@@ -360,7 +360,7 @@ export function M3CompletionView({
           <div className="pa-controls">
             <button
               type="button"
-              className="pa-btn pa-btn-active"
+              className="pa-btn pa-btn-primary"
               disabled={commitPending || !readiness.canSaveFormal}
               onClick={onConfirmCommitFormal}
             >
@@ -401,7 +401,7 @@ export function M3CompletionView({
           </button>
           <button
             type="button"
-            className="pa-btn pa-btn-active"
+            className="pa-btn pa-btn-primary"
             disabled={!readiness.canSaveFormal || Boolean(pendingConfirmation) || commitPending}
             onClick={onStartOneTimeConfirm}
           >

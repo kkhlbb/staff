@@ -67,6 +67,11 @@ import { M3CompletionView } from './M3CompletionView'
 import { M3MigrationBanner } from './M3MigrationBanner'
 import { focusRecoveryElement } from './focusRecovery'
 import {
+  persistWorkbenchTheme,
+  readStoredWorkbenchTheme,
+  type WorkbenchTheme,
+} from './workbenchTheme'
+import {
   computeCheckSetFingerprint,
   computeNextExternalNotificationWatermark,
   createBoundConfirmation,
@@ -384,6 +389,15 @@ export function ProjectAgentM1Workbench({
   const [projectName, setProjectName] = useState(resolvedInitialProjectName)
   const [baseRevision, setBaseRevision] = useState<string | null>(resolvedInitialBaseRevision)
   const [draftRevision, setDraftRevision] = useState<string | null>(resolvedInitialDraftRevision)
+  const [theme, setTheme] = useState<WorkbenchTheme>(() => readStoredWorkbenchTheme('light'))
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => {
+      const next: WorkbenchTheme = prev === 'light' ? 'dark' : 'light'
+      persistWorkbenchTheme(next)
+      return next
+    })
+  }
 
   const [connectionState, setConnectionState] = useState<M1ClientConnectionState>(
     initialConnectionSnapshot?.connectionState ?? 'disconnected',
@@ -2905,21 +2919,36 @@ export function ProjectAgentM1Workbench({
   return (
     <main
       className={rootClassName}
+      data-theme={theme}
       aria-label="寸链 M1 双入口工作台"
       onKeyDown={handleWorkbenchKeyDown}
     >
-      {/* Top Bar */}
+      {/* Single-Row 48px Top Status Bar */}
       <header className="pa-workbench-topbar" aria-label="顶部连接状态栏">
-        <div className="pa-row">
-          <h1 className="pa-title">{projectName}</h1>
-          <span className="pa-pill pa-tone-muted pa-mono">{projectId}</span>
-          <span className="pa-pill pa-tone-action pa-mono">
+        <div className="pa-topbar-left">
+          <span className="pa-brand-mini" aria-hidden="true">
+            <span className="pa-brand-mini-icon">寸</span>
+            <span>寸链</span>
+          </span>
+          <h1 className="pa-title pa-project-title">{projectName}</h1>
+          <span className="pa-project-id-tag pa-mono">{projectId}</span>
+          <span className="pa-rev-capsule pa-mono" aria-label="修订版本状态">
             正式版 {baseRevision ?? '无'} · 草稿 {draftRevision ?? '无'}
           </span>
         </div>
 
-        <div className="pa-row">
-          <span className="pa-pill pa-tone-muted" aria-label="当前连接来源">
+        <div className="pa-topbar-right">
+          <span className="pa-conn-capsule" aria-label="当前连接来源">
+            <span
+              className={
+                connectionState === 'connected'
+                  ? 'pa-conn-dot'
+                  : connectionState === 'disconnected'
+                    ? 'pa-conn-dot pa-conn-dot-offline'
+                    : 'pa-conn-dot pa-conn-dot-idle'
+              }
+              aria-hidden="true"
+            />
             连接来源：{formatSourceLabel(connectionSource, clientName, apiModel, skippedConnection)}
           </span>
           <span
@@ -2937,7 +2966,7 @@ export function ProjectAgentM1Workbench({
           {authorizationState === 'unauthorized' && !showOnboarding && !showDisconnectBanner ? (
             <button
               type="button"
-              className="pa-btn pa-btn-active"
+              className="pa-btn pa-btn-primary pa-btn-sm"
               disabled={readonlyAuthPending}
               onClick={() => {
                 void handleRequestReadonlyAuthorization()
@@ -2953,7 +2982,7 @@ export function ProjectAgentM1Workbench({
               {connectionSource === 'none' ? (
                 <select
                   aria-label="写入目标入口"
-                  className="pa-input"
+                  className="pa-select"
                   value={selectedTakeoverTarget}
                   onChange={(event) =>
                     setSelectedTakeoverTarget(
@@ -2968,7 +2997,7 @@ export function ProjectAgentM1Workbench({
               ) : null}
               <button
                 type="button"
-                className="pa-btn pa-btn-active"
+                className="pa-btn pa-btn-primary pa-btn-sm"
                 disabled={
                   takeoverPending ||
                   authorizationState === 'unauthorized' ||
@@ -2989,17 +3018,66 @@ export function ProjectAgentM1Workbench({
               </button>
             </>
           ) : null}
+
+          <div className="pa-segmented" role="group" aria-label="顶部入口快捷切换">
+            <button
+              type="button"
+              aria-pressed={sidebarSection === 'conversation' && sidebarTab === 'builtin'}
+              className={
+                sidebarSection === 'conversation' && sidebarTab === 'builtin'
+                  ? 'pa-btn-active'
+                  : undefined
+              }
+              onClick={() => {
+                setSidebarSection('conversation')
+                setSidebarTab('builtin')
+              }}
+            >
+              内置对话
+            </button>
+            <button
+              type="button"
+              aria-pressed={sidebarSection === 'conversation' && sidebarTab === 'external'}
+              className={
+                sidebarSection === 'conversation' && sidebarTab === 'external'
+                  ? 'pa-btn-active'
+                  : undefined
+              }
+              onClick={() => {
+                setSidebarSection('conversation')
+                setSidebarTab('external')
+              }}
+            >
+              外置活动
+            </button>
+          </div>
+
           <button
             type="button"
-            className="pa-btn"
+            className="pa-btn pa-btn-sm"
             onClick={() => setShowOnboarding((prev) => !prev)}
           >
             切换连接
           </button>
+
+          <button
+            type="button"
+            className="pa-btn pa-theme-btn"
+            data-testid="theme-toggle-btn"
+            aria-label="切换浅色/深色主题"
+            aria-pressed={theme === 'dark'}
+            title={theme === 'light' ? '切换至 Dark CAD 深色工程台' : '切换至 Light Studio 浅色制图台'}
+            onClick={handleToggleTheme}
+          >
+            {theme === 'light' ? '☀ Light Studio' : '☾ Dark CAD'}
+          </button>
+
           {hasSaveableResult ? (
             <button
               type="button"
-              className={showCompletionView ? 'pa-btn pa-btn-active' : 'pa-btn'}
+              className={
+                showCompletionView ? 'pa-btn pa-btn-primary pa-btn-sm' : 'pa-btn pa-btn-primary pa-btn-sm'
+              }
               aria-expanded={showCompletionView}
               onClick={() => {
                 setCommitFeedback(null)
@@ -3009,10 +3087,11 @@ export function ProjectAgentM1Workbench({
               保存此版本 / 完成视图
             </button>
           ) : null}
-          <a href="#/desktop-m1-readonly" className="pa-link-btn">
+
+          <a href="#/desktop-m1-readonly" className="pa-link-btn pa-link-ghost">
             只读授权视图
           </a>
-          <a href="#/desktop-legacy" className="pa-link-btn">
+          <a href="#/desktop-legacy" className="pa-link-btn pa-link-ghost">
             返回旧工作台
           </a>
         </div>
@@ -3079,48 +3158,54 @@ export function ProjectAgentM1Workbench({
 
       {/* Completion View & Bound One-Time Formal Commit (A11 / A04) */}
       {showCompletionView ? (
-        <M3CompletionView
-          partName={partName}
-          projectName={projectName}
-          baseRevision={baseRevision}
-          draftRevision={draftRevision}
-          model={canvasState.model}
-          drawing={canvasState.drawing}
-          checkSetFingerprint={checkSetFingerprint}
-          readiness={completionReadiness}
-          pendingConfirmation={activePendingConfirmation}
-          invalidatedConfirmationNotice={effectiveInvalidatedConfirmationNotice}
-          commitPending={commitPending}
-          commitFeedback={commitFeedback}
-          canUndoBlockedDraft={canUndoInCompletionView}
-          undoPending={undoPending}
-          undoFeedback={undoFeedback}
-          onClose={() => setShowCompletionView(false)}
-          onKeepDraft={() => {
-            setPendingConfirmation(null)
-            setShowCompletionView(false)
-            setPreviewMessage(
-              `已保留当前工作草稿（${formatRevisionDisplay(draftRevision)}），正式版保持 ${baseRevision ?? '无'}。`,
-            )
-          }}
-          onUndoBlockedDraft={() => {
-            void handleUndoBlockedDraft()
-          }}
-          onLocateCheckSource={(check) => {
-            setSidebarSection('checks')
-            handleSelectCheck(check)
-          }}
-          onStartOneTimeConfirm={handleStartOneTimeConfirm}
-          onCancelOneTimeConfirm={handleCancelOneTimeConfirm}
-          onConfirmCommitFormal={() => {
-            void handleConfirmCommitFormal()
-          }}
-        />
+        <div className="pa-completion-shell">
+          <M3CompletionView
+            partName={partName}
+            projectName={projectName}
+            baseRevision={baseRevision}
+            draftRevision={draftRevision}
+            model={canvasState.model}
+            drawing={canvasState.drawing}
+            checkSetFingerprint={checkSetFingerprint}
+            readiness={completionReadiness}
+            pendingConfirmation={activePendingConfirmation}
+            invalidatedConfirmationNotice={effectiveInvalidatedConfirmationNotice}
+            commitPending={commitPending}
+            commitFeedback={commitFeedback}
+            canUndoBlockedDraft={canUndoInCompletionView}
+            undoPending={undoPending}
+            undoFeedback={undoFeedback}
+            onClose={() => setShowCompletionView(false)}
+            onKeepDraft={() => {
+              setPendingConfirmation(null)
+              setShowCompletionView(false)
+              setPreviewMessage(
+                `已保留当前工作草稿（${formatRevisionDisplay(draftRevision)}），正式版保持 ${baseRevision ?? '无'}。`,
+              )
+            }}
+            onUndoBlockedDraft={() => {
+              void handleUndoBlockedDraft()
+            }}
+            onLocateCheckSource={(check) => {
+              setSidebarSection('checks')
+              handleSelectCheck(check)
+            }}
+            onStartOneTimeConfirm={handleStartOneTimeConfirm}
+            onCancelOneTimeConfirm={handleCancelOneTimeConfirm}
+            onConfirmCommitFormal={() => {
+              void handleConfirmCommitFormal()
+            }}
+          />
+        </div>
       ) : null}
 
       {/* Disconnect & Takeover Banner */}
       {showDisconnectBanner ? (
-        <section className="pa-notice" role="alert" aria-label="断线与接管状态">
+        <section
+          className="pa-notice pa-disconnect-banner"
+          role="alert"
+          aria-label="断线与接管状态"
+        >
           <div className="pa-header">
             <div>
               <strong>连接已断开</strong> · 项目{' '}
@@ -3250,20 +3335,24 @@ export function ProjectAgentM1Workbench({
 
       {/* Onboarding / Connection Selector */}
       {showOnboarding ? (
-        <section className="pa-panel" aria-label="首次启动与连接向导">
-          <div className="pa-header">
-            <div className="pa-row">
-              <h2 className="pa-title">连接方式与入口向导</h2>
-              <span className="pa-pill pa-tone-muted">随时可通过顶部“切换连接”重选</span>
+        <div className="pa-onboarding-shell">
+          <section className="pa-panel pa-onboarding-container" aria-label="首次启动与连接向导">
+            <div className="pa-header pa-onboarding-hero">
+              <div className="pa-row">
+                <span className="pa-brand-mini-icon" aria-hidden="true">
+                  寸
+                </span>
+                <h2 className="pa-title">连接方式与入口向导</h2>
+                <span className="pa-pill pa-tone-muted">随时可通过顶部“切换连接”重选</span>
+              </div>
+              <button
+                type="button"
+                className="pa-btn pa-btn-sm"
+                onClick={() => setShowOnboarding(false)}
+              >
+                收起向导
+              </button>
             </div>
-            <button
-              type="button"
-              className="pa-btn"
-              onClick={() => setShowOnboarding(false)}
-            >
-              收起向导
-            </button>
-          </div>
 
           <div className="pa-onboarding-options" role="group" aria-label="连接入口选项">
             <button
@@ -3360,7 +3449,7 @@ export function ProjectAgentM1Workbench({
               ) : null}
 
               <div className="pa-grid">
-                <section className="pa-card" aria-label="客户端连接状态">
+                <section className="pa-card pa-status-box" aria-label="客户端连接状态">
                   <span className="pa-card-label">客户端连接状态（握手与能力发现）</span>
                   <div className="pa-row">
                     <span className={`pa-pill ${getClientConnectionTone(connectionState)}`}>
@@ -3372,7 +3461,7 @@ export function ProjectAgentM1Workbench({
                   </div>
                 </section>
 
-                <section className="pa-card" aria-label="项目授权状态">
+                <section className="pa-card pa-status-box" aria-label="项目授权状态">
                   <span className="pa-card-label">项目授权状态（独立于客户端握手）</span>
                   <div className="pa-row">
                     <span className={`pa-pill ${getAuthorizationTone(authorizationState)}`}>
@@ -3428,12 +3517,12 @@ export function ProjectAgentM1Workbench({
                 </span>
               </div>
 
-              <div className="pa-card">
-                <div className="pa-header">
+              <div className="pa-card pa-code-block-wrap">
+                <div className="pa-header pa-code-block-header">
                   <span className="pa-card-label">自然语言连接说明</span>
                   <button
                     type="button"
-                    className="pa-btn"
+                    className="pa-btn pa-btn-sm"
                     onClick={() => {
                       void handleCopy(localAgentConfig.connectPrompt, '连接说明', 'local-agent')
                     }}
@@ -3444,12 +3533,12 @@ export function ProjectAgentM1Workbench({
                 <pre className="pa-code-block pa-mono">{localAgentConfig.connectPrompt}</pre>
               </div>
 
-              <div className="pa-card">
-                <div className="pa-header">
+              <div className="pa-card pa-code-block-wrap">
+                <div className="pa-header pa-code-block-header">
                   <span className="pa-card-label">MCP 客户端配置片段（JSON）</span>
                   <button
                     type="button"
-                    className="pa-btn"
+                    className="pa-btn pa-btn-sm"
                     onClick={() => {
                       void handleCopy(localAgentConfig.mcpConfigJson, 'MCP 配置', 'local-agent')
                     }}
@@ -3538,7 +3627,10 @@ export function ProjectAgentM1Workbench({
               </div>
 
               {/* Outgoing document excerpts & project summary */}
-              <section className="pa-card" aria-label="本次需发送的文档片段与项目摘要">
+              <section
+                className="pa-card pa-disclosure-box"
+                aria-label="本次需发送的文档片段与项目摘要"
+              >
                 <span className="pa-card-label">本次需发送的文档片段与项目摘要</span>
                 <div className="pa-row">
                   <span>
@@ -3696,7 +3788,8 @@ export function ProjectAgentM1Workbench({
               )}
             </section>
           ) : null}
-        </section>
+          </section>
+        </div>
       ) : null}
 
       {/* Main Split Area: Center Dual-View Canvas + 4-Tab Sidebar */}
@@ -3731,6 +3824,7 @@ export function ProjectAgentM1Workbench({
           retryDrawingFeedback={retryDrawingFeedback}
           contextActionFeedback={contextActionFeedback}
           previewMessage={previewMessage}
+          theme={theme}
           canvasRegionRef={canvasRegionRef}
           objectListRegionRef={objectListRegionRef}
           retryDrawingButtonRef={retryDrawingButtonRef}
@@ -3762,57 +3856,67 @@ export function ProjectAgentM1Workbench({
         <aside
           ref={sidebarRegionRef}
           tabIndex={-1}
-          className="pa-panel pa-focus-region"
+          className="pa-panel pa-sidebar-column pa-focus-region"
           aria-label="主工作台侧栏"
         >
-          <div className="pa-header">
-            <div className="pa-controls" role="tablist" aria-label="侧栏功能切换">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={sidebarSection === 'conversation'}
-                className={
-                  sidebarSection === 'conversation' ? 'pa-btn pa-btn-active' : 'pa-btn'
-                }
-                onClick={() => setSidebarSection('conversation')}
-              >
-                对话/活动
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={sidebarSection === 'requirements'}
-                className={
-                  sidebarSection === 'requirements' ? 'pa-btn pa-btn-active' : 'pa-btn'
-                }
-                onClick={() => setSidebarSection('requirements')}
-              >
-                要求
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={sidebarSection === 'checks'}
-                className={sidebarSection === 'checks' ? 'pa-btn pa-btn-active' : 'pa-btn'}
-                onClick={() => setSidebarSection('checks')}
-              >
-                检查
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={sidebarSection === 'history'}
-                className={sidebarSection === 'history' ? 'pa-btn pa-btn-active' : 'pa-btn'}
-                onClick={() => setSidebarSection('history')}
-              >
-                历史
-              </button>
-            </div>
+          <div className="pa-sidebar-tabs" role="tablist" aria-label="侧栏功能切换">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sidebarSection === 'conversation'}
+              className={
+                sidebarSection === 'conversation'
+                  ? 'pa-sidebar-tab pa-sidebar-tab-active'
+                  : 'pa-sidebar-tab'
+              }
+              onClick={() => setSidebarSection('conversation')}
+            >
+              对话/活动
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sidebarSection === 'requirements'}
+              className={
+                sidebarSection === 'requirements'
+                  ? 'pa-sidebar-tab pa-sidebar-tab-active'
+                  : 'pa-sidebar-tab'
+              }
+              onClick={() => setSidebarSection('requirements')}
+            >
+              要求
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sidebarSection === 'checks'}
+              className={
+                sidebarSection === 'checks'
+                  ? 'pa-sidebar-tab pa-sidebar-tab-active'
+                  : 'pa-sidebar-tab'
+              }
+              onClick={() => setSidebarSection('checks')}
+            >
+              检查
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sidebarSection === 'history'}
+              className={
+                sidebarSection === 'history'
+                  ? 'pa-sidebar-tab pa-sidebar-tab-active'
+                  : 'pa-sidebar-tab'
+              }
+              onClick={() => setSidebarSection('history')}
+            >
+              历史
+            </button>
           </div>
 
           {sidebarSection === 'conversation' ? (
-            <div className="pa-header">
-              <div className="pa-controls" role="tablist" aria-label="侧栏入口切换">
+            <div className="pa-mode-subbar">
+              <div className="pa-segmented" role="tablist" aria-label="侧栏入口切换">
                 <button
                   type="button"
                   role="tab"
@@ -3834,6 +3938,8 @@ export function ProjectAgentM1Workbench({
               </div>
             </div>
           ) : null}
+
+          <div className="pa-sidebar-content">
 
           {sidebarSection !== 'conversation' ? (
             <M2SidebarPanels
@@ -4158,6 +4264,7 @@ export function ProjectAgentM1Workbench({
               </div>
             </section>
           ) : null}
+          </div>
         </aside>
       </div>
     </main>
