@@ -77,6 +77,7 @@ import { renderDrawingSvg } from '../../src/drawing/renderDrawingSvg'
 import type { DrawingData } from '../../src/drawing/types'
 import { SessionController, runCloseGate, type GateChoice } from './sessionController'
 import { SenderGuard } from './senderGuard'
+import { createOpenFileRouter, extractDxfArg } from './launchArgs'
 import { createMainWindow, type MainWindowHandle } from './window'
 
 // 应用名与 userData 目录必须在任何路径读取前固定，避免 staff → 寸链 改名漂移。
@@ -292,16 +293,7 @@ async function takePendingOrPick(title: string): Promise<string | null> {
   return pickProjectPath(title)
 }
 
-/** 启动参数 `--open-dxf=<绝对路径>` 只排队给 renderer 看图，不打开项目。 */
-function takeDxfArgument(argv: string[]): string | null {
-  const prefix = '--open-dxf='
-  const found = argv.find((argument) => argument.startsWith(prefix))
-  if (found === undefined) return null
-  const value = found.slice(prefix.length)
-  return value === '' ? null : value
-}
-
-let pendingDxfPath: string | null = takeDxfArgument(process.argv)
+let pendingDxfPath: string | null = extractDxfArg(process.argv)
 
 async function pickDxfFileFor(): Promise<string | null> {
   const owner = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
@@ -1054,8 +1046,34 @@ function applySessionSecurity(): void {
   defaultSession.setPermissionCheckHandler(() => false)
 }
 
+function queueOpenProjectFile(filePath: string): void {
+  pendingOpenFiles.push(filePath)
+  const existing = BrowserWindow.getAllWindows()[0]
+  if (existing !== undefined) {
+    if (existing.isMinimized()) {
+      existing.restore()
+    }
+    existing.focus()
+    if (!existing.webContents.isLoading()) {
+      existing.webContents.send(IPC_EVENTS.menuAction, { action: 'open' })
+    }
+  }
+}
+
+const openFileRouter = createOpenFileRouter({
+  queue: pendingOpenFiles,
+  onDeliver: queueOpenProjectFile,
+})
+
 function bootstrap(): void {
-  app.on('second-instance', () => {
+  // Windows/Linux 冷启动命令行传入 `.cunlian` 路径：先入队，待窗口 did-finish-load 后由 renderer 消费。
+  openFileRouter.enqueueColdStart(process.argv, process.cwd())
+
+  app.on('second-instance', (_event, commandLine, workingDirectory) => {
+    const filePath = openFileRouter.handleSecondInstance(commandLine, workingDirectory)
+    if (filePath !== null) {
+      return
+    }
     const existing = BrowserWindow.getAllWindows()[0]
     if (existing !== undefined) {
       if (existing.isMinimized()) {
@@ -1067,14 +1085,7 @@ function bootstrap(): void {
 
   app.on('open-file', (event, filePath) => {
     event.preventDefault()
-    pendingOpenFiles.push(filePath)
-    const existing = BrowserWindow.getAllWindows()[0]
-    if (existing !== undefined) {
-      existing.focus()
-      if (!existing.webContents.isLoading()) {
-        existing.webContents.send(IPC_EVENTS.menuAction, { action: 'open' })
-      }
-    }
+    queueOpenProjectFile(filePath)
   })
 
   app.on('before-quit', (event) => {

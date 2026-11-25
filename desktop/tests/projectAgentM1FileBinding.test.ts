@@ -1,4 +1,5 @@
 import { promises as fs } from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { expect, it, vi } from 'vitest'
 import { createSampleSnapshot } from '../../src/project-file/__fixtures__/sampleProjectFile.ts'
@@ -7,12 +8,14 @@ import { ProjectService } from '../main/projectService.ts'
 import { LocalM1Authority } from '../main/project-agent/m1LocalAuthority.ts'
 import { M1InternalService } from '../main/project-agent/m1InternalService.ts'
 
-const evidence = '/Users/aston/DSH/tmp/cunlian-agent-refactor/isolated-2018-m1-binding-identity'
 const sender = { webContentsId: 1, isMainFrame: true, frameUrl: 'file:///index.desktop.html' }
 
 async function setup() {
-  const dir = await fs.mkdtemp(evidence + '/projects/binding-')
-  const root = await fs.mkdtemp(evidence + '/userdata/binding-')
+  const base = await fs.mkdtemp(path.join(os.tmpdir(), 'cunlian-m1-binding-'))
+  const dir = path.join(base, 'projects')
+  const root = path.join(base, 'userdata')
+  await fs.mkdir(dir, { recursive: true })
+  await fs.mkdir(root, { recursive: true })
   const file = path.join(dir, 'test.cunlian')
   const sample = await createSampleSnapshot()
   const bytes = async (name: string) => {

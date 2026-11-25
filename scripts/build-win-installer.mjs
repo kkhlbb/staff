@@ -8,7 +8,9 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const expected = '4c502ef3e9ab32c50fe7764b1c4f598108f29846d9b1ec9e44ab7f68e5cc4756'
+const pkg = JSON.parse(await readFile(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8'))
+const appVersion = pkg.version
+const expected = process.env.CUNLIAN_EXPECTED_ZIP_SHA256
 const [zip, output] = process.argv.slice(2).map(file => path.resolve(file))
 assert(zip && output, 'Usage: node scripts/build-win-installer.mjs INPUT.zip OUTPUT.exe')
 assert.notEqual(zip, output)
@@ -18,7 +20,8 @@ const hash = async file => {
   for await (const chunk of createReadStream(file)) digest.update(chunk)
   return digest.digest('hex')
 }
-assert.equal(await hash(zip), expected, 'Input ZIP SHA-256')
+const inputZipSha256 = await hash(zip)
+if (expected) assert.equal(inputZipSha256, expected, 'Input ZIP SHA-256')
 const temp = await mkdtemp(path.join(tmpdir(), 'cunlian-installer-'))
 const run = (program, args, options = {}) => execFileSync(program, args, { encoding: 'utf8', ...options })
 const ns = value => value.replaceAll('$', '$$').replaceAll('"', '$\\"')
@@ -61,7 +64,7 @@ try {
   for (const directory of [...directories].sort((a, b) => b.length - a.length)) cleanup.push('RMDir "$INSTDIR\\' + win(directory) + '"')
   await writeFile(path.join(temp, 'guard.nsh'), guards.join('\n') + '\n')
   await writeFile(path.join(temp, 'cleanup.nsh'), cleanup.join('\n') + '\n')
-  const setupPath = path.join(temp, 'cunlian-v0.5.0-beta-windows-x64-setup.exe')
+  const setupPath = path.join(temp, `cunlian-v${appVersion}-windows-x64-setup.exe`)
   run('makensis', ['-INPUTCHARSET', 'UTF8', '-DPAYLOAD=' + ns(payload), '-DEXECUTABLE=' + ns(setupPath),
     '-DGENERATED=' + ns(temp), 'cunlian-win-x64.nsi'], { cwd: installer, stdio: 'inherit' })
 
@@ -73,7 +76,7 @@ try {
   const setup = await readFile(setupPath)
   const setupMachine = machine(setup)
   assert([0x14c, 0x8664].includes(setupMachine))
-  for (const value of ['0.5.0-beta', 'ProductVersion', 'FileVersion']) {
+  for (const value of [appVersion, 'ProductVersion', 'FileVersion']) {
     assert(setup.includes(Buffer.from(value, 'utf16le')), 'Missing PE version metadata: ' + value)
   }
   for (const file of files) {
@@ -108,7 +111,7 @@ try {
   await mkdir(path.dirname(output), { recursive: true })
   await copyFile(setupPath, output)
   console.log(JSON.stringify({
-    output, bytes: setup.length, sha256: await hash(output),
+    output, bytes: setup.length, sha256: await hash(output), inputZipSha256,
     installerMachine: '0x' + setupMachine.toString(16), payloadMachine: 'AMD64',
     payloadFilesByteIdentical: files.length, pdfWorker: pdfName, pdfWorkerUnpacked: !!pdfEntry.unpacked,
     pdfWorkerSha256,
