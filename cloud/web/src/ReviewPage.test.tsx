@@ -1,0 +1,376 @@
+// @vitest-environment jsdom
+import '@testing-library/jest-dom/vitest'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { EvidenceRef } from '../../../src/document-extraction/types'
+import type { CheckSet, CommitDraftResult, Transport } from '../../../src/transport/types'
+import type { M2ModelMesh } from '../../../src/workspace/project-agent/m2WorkbenchBridge'
+import { ReviewPage } from './ReviewPage'
+import { parseReviewRoute } from './router'
+
+afterEach(() => {
+  cleanup()
+})
+
+const SAMPLE_MESH: M2ModelMesh = {
+  positions: [
+    0, 0, 0,
+    120, 0, 0,
+    120, 80, 0,
+    0, 80, 0,
+    0, 0, 12,
+    120, 0, 12,
+  ],
+  indices: [0, 1, 2, 0, 2, 3, 0, 1, 5, 0, 5, 4],
+  triangleRanges: [
+    { startTriangle: 0, endTriangle: 2, objectId: 'feat-plate-body', featureRef: 'plate.body' },
+    { startTriangle: 2, endTriangle: 4, objectId: 'feat-right-hole', featureRef: 'plate.hole.right' },
+  ],
+  bounds: { min: [0, 0, 0], max: [120, 80, 12] },
+}
+
+const SAMPLE_EVIDENCE: Record<string, readonly EvidenceRef[]> = {
+  'chk-edge': [
+    {
+      kind: 'pdf-text',
+      documentId: 'taskbook-plate.pdf',
+      revisionId: 'src-rev-1',
+      sha256: 'a'.repeat(64),
+      blobKey: 'blobs/taskbook',
+      page: 2,
+      rectPdf: { x: 10, y: 20, width: 100, height: 14 },
+      pageBoxPdf: { width: 595, height: 842 },
+      textSnippet: '右孔中心到右边缘最小距离 >= 15.0 mm',
+    },
+  ],
+  'chk-gap': [
+    {
+      kind: 'user-attestation',
+      actorId: 'engineer-li',
+      at: '2026-11-25T08:00:00Z',
+      sessionSeq: 2,
+      sessionLabel: '复核确认',
+      statement: '板与盖板间隙需大于 0.20 mm',
+      fieldPath: 'assembly.gap',
+    },
+  ],
+}
+
+function createMockTransport(options: {
+  readonly review: CheckSet
+  readonly summary?: string
+  readonly baseRevision?: string | null
+  readonly commitResponse?: Awaited<ReturnType<Transport['commitDraft']>>
+  readonly commitStatus?: Awaited<ReturnType<Transport['getCommitStatus']>>
+}): Transport {
+  const unimpl = async () => ({
+    ok: false as const,
+    error: { code: 'NOT_IMPLEMENTED', message: 'not used in test' },
+  })
+
+  return {
+    listProjects: unimpl,
+    createProject: unimpl,
+    importProject: unimpl,
+    getProject: unimpl,
+    readAttachmentBytes: unimpl,
+    capabilities: unimpl,
+    uploadAttachment: unimpl,
+    buildGeometry: unimpl,
+    triangulate: vi.fn(async () => ({ ok: true as const, value: SAMPLE_MESH })),
+    runChecks: unimpl,
+    runSimulation: unimpl,
+    getDrawing: vi.fn(async () => ({
+      ok: true as const,
+      value: {
+        bytes: new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>'),
+        fingerprint: 'drw-fp-001',
+      },
+    })),
+    acquireWriter: unimpl,
+    takeOverWriter: unimpl,
+    revokeWriter: unimpl,
+    readWriterContext: unimpl,
+    stageChange: unimpl,
+    commitDraft: vi.fn(
+      async () =>
+        options.commitResponse ?? {
+          ok: true as const,
+          value: {
+            projectId: options.review.projectId,
+            committedRevision: 'rev-2',
+            previousBaseRevision: options.baseRevision ?? 'rev-1',
+            committedDraftRevision: options.review.draftRevision,
+            checksetFingerprint: options.review.checksetFingerprint,
+            summary: '已原子提交至正式版本',
+            webhook: { status: 'delivered', httpStatus: 200, url: 'https://agentarts.test/hook' },
+          } as CommitDraftResult,
+        },
+    ),
+    authorizeProject: unimpl,
+    getContext: unimpl,
+    getExternalActivities: unimpl,
+    readProjectEvents: unimpl,
+    getReview: vi.fn(async () => ({
+      ok: true as const,
+      value: {
+        review: options.review,
+        summary: options.summary ?? '右孔 X 坐标调整至 95.0 mm',
+        baseRevision: options.baseRevision === undefined ? 'rev-1' : options.baseRevision,
+      },
+    })),
+    getCommitStatus: vi.fn(
+      async () =>
+        options.commitStatus ?? {
+          ok: true as const,
+          value: { state: 'awaiting-confirmation' as const },
+        },
+    ),
+    getConnectionStatus: unimpl,
+    testModelConnection: unimpl,
+    listModels: unimpl,
+  }
+}
+
+describe('parseReviewRoute', () => {
+  it('解析标准路径、哈希路径、查询参数并拒绝无效路径', () => {
+    expect(
+      parseReviewRoute({
+        pathname: '/review/proj-01/draft-3',
+        search: '?apiBase=https%3A%2F%2Fapi.test&theme=dark',
+      }),
+    ).toEqual({
+      matched: true,
+      projectId: 'proj-01',
+      draftRevision: 'draft-3',
+      apiBase: 'https://api.test',
+      apiKey: undefined,
+      webhookUrl: undefined,
+      theme: 'dark',
+    })
+
+    expect(
+      parseReviewRoute({
+        pathname: '/',
+        hash: '#/review/proj-02/draft-9?webhookUrl=https%3A%2F%2Fhook.test%2Fcb',
+      }),
+    ).toEqual({
+      matched: true,
+      projectId: 'proj-02',
+      draftRevision: 'draft-9',
+      apiBase: '',
+      apiKey: undefined,
+      webhookUrl: 'https://hook.test/cb',
+      theme: undefined,
+    })
+
+    const invalid = parseReviewRoute({ pathname: '/unknown/path' })
+    expect(invalid.matched).toBe(false)
+  })
+})
+
+describe('ReviewPage', () => {
+  it('无效路径展示清晰引导提示', () => {
+    render(<ReviewPage locationLike={{ pathname: '/bad-route' }} />)
+    expect(screen.getByTestId('review-invalid-route')).toBeInTheDocument()
+    expect(screen.getByText(/\/review\/:projectId\/:draftRev/)).toBeInTheDocument()
+  })
+
+  it('渲染 3D/2D 视口、支持三视图切换、检查条款双向高亮与原文溯源，并在必需项阻塞时禁用提交', async () => {
+    const user = userEvent.setup()
+    const blockedReview: CheckSet = {
+      projectId: 'proj-plate',
+      draftRevision: 'draft-4',
+      checksetFingerprint: 'csfp-blocked-01',
+      checks: [
+        {
+          checkId: 'chk-edge',
+          requirementId: 'req-edge',
+          title: '右孔边距极值校验',
+          required: true,
+          status: 'fail',
+          summary: '实际最小边距 11.2 mm < 15.0 mm',
+          linkedFeatureIds: ['feat-right-hole'],
+          linkedAnnotationIds: ['ann-right-edge'],
+        },
+        {
+          checkId: 'chk-gap',
+          requirementId: 'req-gap',
+          title: '板-盖板平行间隙',
+          required: true,
+          status: 'pass',
+          summary: '最小间隙 0.45 mm >= 0.20 mm',
+          linkedFeatureIds: ['feat-plate-body'],
+          linkedAnnotationIds: ['ann-gap'],
+        },
+      ],
+      evidenceByCheckId: SAMPLE_EVIDENCE,
+    }
+
+    const transport = createMockTransport({ review: blockedReview })
+    render(
+      <ReviewPage
+        locationLike={{ pathname: '/review/proj-plate/draft-4' }}
+        transport={transport}
+      />,
+    )
+
+    // 等待审核数据加载完成
+    expect(await screen.findByTestId('review-fingerprint')).toHaveTextContent('csfp-blocked-01')
+    expect(screen.getByTestId('review-project-id')).toHaveTextContent('proj-plate')
+    expect(screen.getByTestId('review-draft-rev')).toHaveTextContent('draft-4')
+
+    // 3D 与 2D 视口在默认并排模式下同时渲染
+    expect(screen.getByTestId('m2-three-viewport')).toBeInTheDocument()
+    expect(screen.getByTestId('m2-drawing-vector-stage')).toBeInTheDocument()
+
+    // 问题特征提供醒目红框高亮浮层
+    const failedOverlay = screen.getByTestId('review-failed-feature-overlay')
+    expect(failedOverlay).toHaveTextContent('feat-right-hole')
+    expect(screen.getByTestId('review-3d-card')).toHaveAttribute('data-has-failed-features', 'true')
+
+    // 默认选中首个问题检查项，展示 PDF 原文溯源
+    expect(screen.getByTestId('review-evidence-panel')).toHaveTextContent(
+      '右孔中心到右边缘最小距离 >= 15.0 mm',
+    )
+
+    // 点击第二条检查项，同步切换高亮特征与原文溯源
+    await user.click(screen.getByTestId('review-check-item-chk-gap'))
+    expect(screen.getByTestId('review-evidence-panel')).toHaveTextContent(
+      '板与盖板间隙需大于 0.20 mm',
+    )
+    expect(screen.getByTestId('m2-three-viewport')).toHaveAttribute(
+      'data-selected-object-id',
+      'feat-plate-body',
+    )
+
+    // 三视图切换：仅模型 / 仅图纸 / 并排
+    await user.click(screen.getByRole('button', { name: '模型' }))
+    expect(screen.getByTestId('review-3d-card')).toBeInTheDocument()
+    expect(screen.queryByTestId('review-2d-card')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '图纸' }))
+    expect(screen.queryByTestId('review-3d-card')).not.toBeInTheDocument()
+    expect(screen.getByTestId('review-2d-card')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '并排' }))
+    expect(screen.getByTestId('review-3d-card')).toBeInTheDocument()
+    expect(screen.getByTestId('review-2d-card')).toBeInTheDocument()
+
+    // 必需项阻塞时禁用提交并列出阻塞原因
+    expect(screen.getByTestId('review-blocking-alert')).toHaveTextContent('右孔边距极值校验')
+    expect(screen.getByRole('button', { name: '确认并提交' })).toBeDisabled()
+  })
+
+  it('全部必需项通过时需人工勾选确认，提交成功后展示新正式修订号与 Webhook 状态', async () => {
+    const user = userEvent.setup()
+    const passReview: CheckSet = {
+      projectId: 'proj-ok',
+      draftRevision: 'draft-5',
+      checksetFingerprint: 'csfp-pass-55',
+      checks: [
+        {
+          checkId: 'chk-gap',
+          requirementId: 'req-gap',
+          title: '板-盖板平行间隙',
+          required: true,
+          status: 'pass',
+          summary: '最小间隙 0.45 mm >= 0.20 mm',
+          linkedFeatureIds: ['feat-plate-body'],
+          linkedAnnotationIds: ['ann-gap'],
+        },
+      ],
+      evidenceByCheckId: SAMPLE_EVIDENCE,
+    }
+
+    const transport = createMockTransport({ review: passReview })
+    render(
+      <ReviewPage
+        locationLike={{
+          pathname: '/review/proj-ok/draft-5',
+          search: '?webhookUrl=https%3A%2F%2Fagentarts.test%2Fhook',
+        }}
+        transport={transport}
+      />,
+    )
+
+    expect(await screen.findByTestId('review-fingerprint')).toHaveTextContent('csfp-pass-55')
+    const commitBtn = screen.getByRole('button', { name: '确认并提交' })
+    expect(commitBtn).toBeDisabled()
+
+    await user.click(screen.getByRole('checkbox'))
+    expect(commitBtn).toBeEnabled()
+
+    await user.click(commitBtn)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('review-committed-card')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('review-committed-card')).toHaveTextContent('rev-2')
+    expect(screen.getByTestId('review-webhook-status')).toHaveTextContent('Webhook 回调已送达')
+    expect(transport.commitDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: 'proj-ok',
+        baseRevision: 'rev-1',
+        draftRevision: 'draft-5',
+        checksetFingerprint: 'csfp-pass-55',
+        webhook: { url: 'https://agentarts.test/hook' },
+      }),
+    )
+  })
+
+  it('409 指纹过期/租约冲突展示清晰报错并提供刷新最新草稿恢复入口', async () => {
+    const user = userEvent.setup()
+    const passReview: CheckSet = {
+      projectId: 'proj-409',
+      draftRevision: 'draft-6',
+      checksetFingerprint: 'csfp-stale-06',
+      checks: [
+        {
+          checkId: 'chk-gap',
+          requirementId: 'req-gap',
+          title: '板-盖板平行间隙',
+          required: true,
+          status: 'pass',
+          summary: '通过',
+          linkedFeatureIds: ['feat-plate-body'],
+          linkedAnnotationIds: ['ann-gap'],
+        },
+      ],
+    }
+
+    const transport = createMockTransport({
+      review: passReview,
+      commitResponse: {
+        ok: false,
+        error: {
+          code: 'FINGERPRINT_MISMATCH',
+          message: '草稿已被其他写入方更新，检查集指纹已失效',
+          detail: 'expected=csfp-stale-06 actual=csfp-latest-07',
+        },
+      },
+    })
+
+    render(
+      <ReviewPage
+        locationLike={{ pathname: '/review/proj-409/draft-6' }}
+        transport={transport}
+      />,
+    )
+
+    expect(await screen.findByTestId('review-fingerprint')).toHaveTextContent('csfp-stale-06')
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: '确认并提交' }))
+
+    const conflictAlert = await screen.findByTestId('review-conflict-alert')
+    expect(conflictAlert).toHaveTextContent('FINGERPRINT_MISMATCH')
+    expect(conflictAlert).toHaveTextContent('草稿已被其他写入方更新')
+
+    const refreshBtn = screen.getByRole('button', { name: '刷新最新草稿' })
+    await user.click(refreshBtn)
+    await waitFor(() => {
+      expect(transport.getReview).toHaveBeenCalledTimes(2)
+    })
+  })
+})
