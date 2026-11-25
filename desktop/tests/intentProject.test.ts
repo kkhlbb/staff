@@ -346,8 +346,8 @@ describe('无任务书入口：建项 → 对话写草稿 → 确认 → 预览 
     expect(dxf.text).toContain('999')
     expect(dxf.text).toContain(USER_INPUT_BASIS)
     expect(dxf.text).toContain('依据')
-    // 提交后的项目仍是 schema 10 且保留来源种类。
-    expect(project.schemaVersion).toBe(10)
+    // 提交后的项目仍是 schema 11 且保留来源种类。
+    expect(project.schemaVersion).toBe(11)
     expect(project.sourceKind).toBe('user-intent')
   })
 
@@ -367,7 +367,7 @@ describe('无任务书入口：建项 → 对话写草稿 → 确认 → 预览 
     expect(decoded.ok, JSON.stringify(decoded)).toBe(true)
     if (!decoded.ok) return
     const project = decoded.value.snapshot.project
-    expect(project.schemaVersion).toBe(10)
+    expect(project.schemaVersion).toBe(11)
     expect(project.sourceKind).toBe('user-intent')
     expect(project.actorId).toBe('老王')
     expect(project.sessionSeq).toBe(2)

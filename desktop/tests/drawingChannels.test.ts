@@ -362,7 +362,7 @@ describe('C-04 矢量导出', () => {
 describe('PDF 结构校验拒绝截图/纵向', () => {
   it('无字体嵌入或纵向页面判失败', async () => {
     const base = await createSampleSnapshot()
-    expect(base.project.schemaVersion).toBe(10)
+    expect(base.project.schemaVersion).toBe(11)
     const portrait = Buffer.from(minimalPdf()).toString('latin1')
       .replace('841.8898 595.2756', '595.2756 841.8898')
     const report = checkPdf(new Uint8Array(Buffer.from(portrait, 'latin1')))
