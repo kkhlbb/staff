@@ -1,20 +1,31 @@
-import { createHash, randomUUID } from 'node:crypto'
-import { runGeometryProbe } from '../../geometry-prototype/probe.mjs'
+import { randomUUID } from 'node:crypto'
+import { createGeometryManager, fingerprint } from '../../../../src/core/geometry/geometryManager.mjs'
 
-export function fingerprint(payload) {
-  return createHash('sha256').update(JSON.stringify(payload)).digest('hex')
+export { fingerprint }
+
+const managers = new Map()
+const sourceWorker = new URL('../../../../src/core/geometry/geometryWorker.mjs', import.meta.url)
+
+function manager(workerUrl = sourceWorker) {
+  if (!managers.has(workerUrl.href)) managers.set(workerUrl.href, createGeometryManager(workerUrl))
+  return managers.get(workerUrl.href)
 }
 
-export async function runMountingPlate(model, { signal, timeoutMs, jobId = randomUUID(), attempt = 1, drawing, deferDrawing, workerUrl } = {}) {
-  const payload = { model, drawing, deferDrawing }
+async function run(payload, { jobId = randomUUID(), attempt = 1, workerUrl, ...options }) {
   if (!jobId || !Number.isSafeInteger(attempt) || attempt < 1) throw new RangeError('Invalid M2 execution identity')
-  return runGeometryProbe(workerUrl ?? new URL('./worker.mjs', import.meta.url),
-    { jobId, attempt, inputFingerprint: fingerprint(payload) }, { timeoutMs, signal, payload })
+  const { report } = await manager(workerUrl).execute(payload, { jobId, attempt, ...options })
+  return report
 }
 
-export async function runMountingPlateDrawing(report, { signal, timeoutMs, jobId = randomUUID(), attempt = 1, drawing, workerUrl } = {}) {
+export function runMountingPlate(model, { drawing, deferDrawing, ...options } = {}) {
+  return run({ model, drawing, deferDrawing }, options)
+}
+
+export function runMountingPlateDrawing(report, { drawing, ...options } = {}) {
   const { model, measured, references } = report
-  const payload = { model, measured, references, drawing, drawingOnly: true }
-  return runGeometryProbe(workerUrl ?? new URL('./worker.mjs', import.meta.url),
-    { jobId, attempt, inputFingerprint: fingerprint(payload) }, { timeoutMs, signal, payload })
+  return run({ model, measured, references, drawing, drawingOnly: true }, options)
+}
+
+export async function releaseMountingPlate(projectId, revision, workerUrl = sourceWorker) {
+  await managers.get(workerUrl.href)?.release(projectId, revision)
 }

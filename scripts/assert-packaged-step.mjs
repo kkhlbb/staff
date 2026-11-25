@@ -24,7 +24,7 @@ if (members.some(name => /replicad[_-](?:single|opencascadejs)|[/\\]step-kernel(
   throw new Error('STEP_LEGACY_KERNEL_PACKAGED')
 }
 const asar = path.resolve(resources, 'app.asar')
-for (const name of [...m2Assets.keys(), 'm2-geometry-worker.mjs']) {
+for (const name of [...m2Assets.keys(), 'm2-geometry-worker.mjs', 'solverWorker.mjs']) {
   const member = (m2Worker + name).slice(1)
   const entry = statFile(asar, member, false)
   const unpacked = path.join(asar + '.unpacked', member)

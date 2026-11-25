@@ -87,6 +87,7 @@ try {
   }
   for (const file of [agent + 'cunlian-mcp.cmd', agent + 'local-bridge.mjs',
     'resources/app.asar.unpacked/.vite/build/m2-worker/m2-geometry-worker.mjs',
+    'resources/app.asar.unpacked/.vite/build/m2-worker/solverWorker.mjs',
     'resources/app.asar.unpacked/.vite/build/m2-worker/replicad_single.wasm']) {
     assert(files.includes(file), file)
   }

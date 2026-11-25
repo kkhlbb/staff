@@ -8,8 +8,8 @@
  * 事件属性、外链 href、CSS url() 与远程字体。字体只按 family 引用（打印页在
  * HTML 层用内嵌子集 @font-face 提供），SVG 文件本身零外部依赖。
  */
-import { dimensionText, resolveDimension } from './formatDimension'
-import { DRAFT_STATUS_TEXT, SPACER_PARAMETER_LABELS } from './types'
+import { dimensionText, resolveDimension } from './formatDimension.ts'
+import { DRAFT_STATUS_TEXT, SPACER_PARAMETER_LABELS } from './types.ts'
 import type {
   CircleGeometry,
   DrawingAnnotation,
@@ -19,7 +19,7 @@ import type {
   Point,
   PolylineGeometry,
   TextGeometry,
-} from './types'
+} from './types.ts'
 
 export interface SvgRenderOptions {
   /** 仅预览用：加高亮类；导出必须不传，保证与预览的规范化图元一致。 */
