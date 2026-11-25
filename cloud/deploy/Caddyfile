@@ -1,0 +1,8 @@
+cunlian.example.org {
+    reverse_proxy 127.0.0.1:8787 {
+        flush_interval -1
+        header_up X-Real-IP {http.request.remote.host}
+        header_up X-Forwarded-Proto https
+        header_up -Forwarded
+    }
+}
