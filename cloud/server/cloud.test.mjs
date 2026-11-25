@@ -183,7 +183,34 @@ test('persisted webhook retries with a verified signature and removes delivery o
 })
 
 test('3D cannot advertise readiness on a runtime without the assembly kernel', () => {
-  assert.throws(() => configFrom({ CUNLIAN_API_KEY: apiKey, FEATURE_3D_ASSEMBLY_M1: 'true' }), /assembly kernel/)
+  assert.throws(
+    () => configFrom({ CUNLIAN_API_KEY: apiKey, FEATURE_3D_ASSEMBLY_M1: 'true' }, { assemblyKernelAvailable: false }),
+    /assembly kernel/,
+  )
+})
+
+test('dual-state FEATURE_3D_ASSEMBLY_M1 reports false by default and true when enabled with Track B kernel', async t => {
+  const offFixture = await fixture(t, { FEATURE_3D_ASSEMBLY_M1: 'false' })
+  const offService = await offFixture.start()
+  try {
+    assert.deepEqual(await (await fetch(offService.origin + '/healthz')).json(), { status: 'ok' })
+    const capsOff = await value(await offService.request('/api/v1/capabilities'))
+    assert.equal(capsOff.FEATURE_3D_ASSEMBLY_M1, false)
+    assert.deepEqual(capsOff.attachments, ['pdf', 'stl'])
+  } finally {
+    await offService.close()
+  }
+
+  const onFixture = await fixture(t, { FEATURE_3D_ASSEMBLY_M1: 'true' })
+  const onService = await onFixture.start()
+  try {
+    assert.deepEqual(await (await fetch(onService.origin + '/healthz')).json(), { status: 'ok' })
+    const capsOn = await value(await onService.request('/api/v1/capabilities'))
+    assert.equal(capsOn.FEATURE_3D_ASSEMBLY_M1, true)
+    assert.deepEqual(capsOn.attachments, ['pdf', 'stl', 'step'])
+  } finally {
+    await onService.close()
+  }
 })
 
 test('expired human token cannot commit a still-current draft', async t => {

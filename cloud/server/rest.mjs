@@ -10,8 +10,10 @@ export function createRest(projects, engine, config) {
     const suffix = route.path.replace(/^\/api\/v1(?:\/projects(?:\/\{projectId\})?)?/, '')
     const method = route.method
     if (suffix === '/capabilities') return {
-      attachments: ['pdf', 'stl'], drawingFormats: ['svg', 'dxf-r12', 'dxf-2000'],
-      writerLeases: true, modelConnection: config.models.size > 0, FEATURE_3D_ASSEMBLY_M1: false,
+      attachments: config.feature3dAssemblyM1 ? ['pdf', 'stl', 'step'] : ['pdf', 'stl'],
+      drawingFormats: ['svg', 'dxf-r12', 'dxf-2000'],
+      writerLeases: true, modelConnection: config.models.size > 0,
+      FEATURE_3D_ASSEMBLY_M1: Boolean(config.feature3dAssemblyM1),
     }
     if (!projectId) {
       if (suffix.startsWith('/model-connection/')) {

@@ -1,5 +1,16 @@
+import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { HttpError } from './contracts.mjs'
+
+const defaultAssemblyKernelModules = [
+  fileURLToPath(new URL('../../src/core/geometry/assemblyGeometry.mjs', import.meta.url)),
+  fileURLToPath(new URL('../../src/core/solver/assemblySolver.mjs', import.meta.url)),
+]
+
+export function hasAssemblyKernel(modules = defaultAssemblyKernelModules) {
+  return modules.every(file => existsSync(file))
+}
 
 function number(value, fallback) {
   const parsed = Number(value ?? fallback)
@@ -13,7 +24,7 @@ function endpoint(value) {
   return url
 }
 
-export function configFrom(env = process.env) {
+export function configFrom(env = process.env, options = {}) {
   const principals = env.CUNLIAN_KEYS
     ? JSON.parse(env.CUNLIAN_KEYS)
     : env.CUNLIAN_API_KEY ? [{ name: 'operator', key: env.CUNLIAN_API_KEY, write: true, takeover: true }] : []
@@ -31,7 +42,9 @@ export function configFrom(env = process.env) {
     if (url.search) throw Error('Model base URLs must not contain query parameters')
     return url.href.replace(/\/$/, '')
   }))
-  if (env.FEATURE_3D_ASSEMBLY_M1 === 'true' || env.FEATURE_3D_ASSEMBLY_M1 === '1') {
+  const feature3dAssemblyM1 = env.FEATURE_3D_ASSEMBLY_M1 === 'true' || env.FEATURE_3D_ASSEMBLY_M1 === '1'
+  const kernelAvailable = options.assemblyKernelAvailable ?? hasAssemblyKernel()
+  if (feature3dAssemblyM1 && !kernelAvailable) {
     throw Error('FEATURE_3D_ASSEMBLY_M1 requires the Track B assembly kernel')
   }
   return {
@@ -43,7 +56,7 @@ export function configFrom(env = process.env) {
     webhookSecret: env.CUNLIAN_WEBHOOK_SECRET,
     origin: env.CUNLIAN_PUBLIC_ORIGIN ? endpoint(env.CUNLIAN_PUBLIC_ORIGIN).origin : null,
     proxies: new Set((env.CUNLIAN_TRUSTED_PROXIES ?? '').split(',').filter(Boolean)),
-    principals, models,
+    principals, models, feature3dAssemblyM1,
     webhookUrl(value) {
       let url
       try { url = endpoint(value) } catch { throw new HttpError(422, 'WEBHOOK_URL_FORBIDDEN') }
