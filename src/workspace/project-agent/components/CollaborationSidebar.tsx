@@ -1,4 +1,9 @@
 import type { RefObject } from 'react'
+import type {
+  AiMateDraftItem,
+  SimulationDiagnosticResult,
+  WorkbenchSidebarSection,
+} from '../assembly3dTypes'
 import {
   formatChatToolCallItem,
   MAX_M1_CHAT_ATTACHMENTS,
@@ -11,7 +16,6 @@ import type {
   M2EvidenceResult,
   M2HistoryEntry,
   M2RequirementItem,
-  M2SidebarSection,
 } from '../m2WorkbenchBridge'
 import { M2SidebarPanels } from '../M2SidebarPanels'
 import type {
@@ -27,21 +31,43 @@ import {
   type SidebarTab,
   type WorkbenchChatMessage,
 } from '../workbenchHelpers'
+import { AiMateDraftsCard } from './AiMateDraftsCard'
+import { SimulationWhatIfPanel } from './SimulationWhatIfPanel'
 
 export interface CollaborationSidebarProps {
   readonly sidebarRegionRef: RefObject<HTMLElement | null>
   readonly chatInputRef: RefObject<HTMLTextAreaElement | null>
   readonly retryChatButtonRef: RefObject<HTMLButtonElement | null>
 
-  readonly sidebarSection: M2SidebarSection
+  readonly sidebarSection: WorkbenchSidebarSection
   readonly sidebarTab: SidebarTab
-  readonly onSelectSidebarSection: (section: M2SidebarSection) => void
+  readonly onSelectSidebarSection: (section: WorkbenchSidebarSection) => void
   readonly checksSummaryCounts: {
     readonly total: number
     readonly failed: number
     readonly pending: number
     readonly passed: number
   }
+
+  /** M1B 3D assembly AI mate drafts & simulation What-If props. */
+  readonly feature3dAssemblyM1?: boolean
+  readonly aiMateDrafts?: readonly AiMateDraftItem[]
+  readonly appliedMatesCount?: number
+  readonly mateDraftsFeedback?: string | null
+  readonly onToggleMateDraft?: (draftId: string) => void
+  readonly onApplySelectedMateDrafts?: () => void
+  readonly onFocusAssemblyFeature?: (featureId: string) => void
+  readonly simulationResult?: SimulationDiagnosticResult
+  readonly simulationComputing?: boolean
+  readonly activeAssemblyFeatureId?: string | null
+  readonly onChangeContributorTolerance?: (contributorId: string, nextTolMm: number) => void
+  readonly onHoverContributor?: (
+    target: { readonly featureId: string; readonly partId: string } | null,
+  ) => void
+  readonly onClickContributor?: (target: {
+    readonly featureId: string
+    readonly partId: string
+  }) => void
 
   // M2SidebarPanels props
   readonly requirements: readonly M2RequirementItem[]
@@ -119,6 +145,19 @@ export function CollaborationSidebar({
   sidebarTab,
   onSelectSidebarSection,
   checksSummaryCounts,
+  feature3dAssemblyM1 = false,
+  aiMateDrafts = [],
+  appliedMatesCount = 0,
+  mateDraftsFeedback = null,
+  onToggleMateDraft,
+  onApplySelectedMateDrafts,
+  onFocusAssemblyFeature,
+  simulationResult,
+  simulationComputing = false,
+  activeAssemblyFeatureId = null,
+  onChangeContributorTolerance,
+  onHoverContributor,
+  onClickContributor,
   requirements,
   checks,
   checksInProgress,
@@ -247,10 +286,37 @@ export function CollaborationSidebar({
         >
           历史
         </button>
+        {feature3dAssemblyM1 ? (
+          <button
+            type="button"
+            role="tab"
+            data-testid="sidebar-tab-simulation"
+            aria-selected={sidebarSection === 'simulation'}
+            className={
+              sidebarSection === 'simulation'
+                ? 'pa-sidebar-tab pa-sidebar-tab-active'
+                : 'pa-sidebar-tab'
+            }
+            onClick={() => onSelectSidebarSection('simulation')}
+          >
+            仿真
+          </button>
+        ) : null}
       </div>
 
       <div className="pa-sidebar-content">
-        {sidebarSection !== 'conversation' ? (
+        {feature3dAssemblyM1 && sidebarSection === 'simulation' && simulationResult ? (
+          <SimulationWhatIfPanel
+            result={simulationResult}
+            computing={simulationComputing}
+            activeFeatureId={activeAssemblyFeatureId}
+            onChangeContributorTolerance={(id, val) => onChangeContributorTolerance?.(id, val)}
+            onHoverContributor={onHoverContributor}
+            onClickContributor={onClickContributor}
+          />
+        ) : null}
+
+        {sidebarSection !== 'conversation' && sidebarSection !== 'simulation' ? (
           <M2SidebarPanels
             section={sidebarSection}
             requirements={requirements}
@@ -284,6 +350,16 @@ export function CollaborationSidebar({
         {/* External Mode Sidebar (Clean activity stream) */}
         {sidebarSection === 'conversation' && sidebarTab === 'external' ? (
           <section className="pa-list" aria-label="外置模式任务活动侧栏">
+            {feature3dAssemblyM1 && aiMateDrafts.length > 0 ? (
+              <AiMateDraftsCard
+                drafts={aiMateDrafts}
+                appliedCount={appliedMatesCount}
+                feedbackMessage={mateDraftsFeedback}
+                onToggleDraft={(id) => onToggleMateDraft?.(id)}
+                onApplySelected={() => onApplySelectedMateDrafts?.()}
+                onFocusFeature={onFocusAssemblyFeature}
+              />
+            ) : null}
             <div className="pa-header">
               <span className="pa-card-label">外部 Agent 活动</span>
               <button
@@ -398,6 +474,16 @@ export function CollaborationSidebar({
 
             {/* Chat transcript or starter prompts */}
             <div className="pa-chat-scroll">
+              {feature3dAssemblyM1 && aiMateDrafts.length > 0 ? (
+                <AiMateDraftsCard
+                  drafts={aiMateDrafts}
+                  appliedCount={appliedMatesCount}
+                  feedbackMessage={mateDraftsFeedback}
+                  onToggleDraft={(id) => onToggleMateDraft?.(id)}
+                  onApplySelected={() => onApplySelectedMateDrafts?.()}
+                  onFocusFeature={onFocusAssemblyFeature}
+                />
+              ) : null}
               {messages.length === 0 ? (
                 <div className="pa-empty-guide" aria-label="新手引导示例">
                   <p className="pa-muted">试试直接描述你的设计或修改需求：</p>

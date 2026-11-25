@@ -1,4 +1,11 @@
 import type { RefObject } from 'react'
+import { CAMERA_PRESET_LABELS } from './assembly3dMath'
+import type {
+  AssemblyFeatureSelectionItem,
+  CameraPresetId,
+  ContextPillActionId,
+  PartMesh,
+} from './assembly3dTypes'
 import {
   areArtifactsRevisionAligned,
   formatPartialDrawingFailureMessage,
@@ -17,10 +24,19 @@ import {
   type M2SingleViewTab,
   type M2ViewMode,
 } from './m2WorkbenchBridge'
-import { M2ThreeMeshViewport } from './M2ThreeMeshViewport'
+import { M2ThreeMeshViewport, type AssemblyPickPayload } from './M2ThreeMeshViewport'
 import { M2VectorDrawingViewport } from './M2VectorDrawingViewport'
 import { AssemblyTreeOverlay } from './components/AssemblyTreeOverlay'
 import { ContextActionPill } from './components/ContextActionPill'
+
+const EMPTY_ASSEMBLY_FALLBACK_MESH: M2ModelMesh = {
+  positions: [0, 0, 0, 1, 0, 0, 0, 1, 0],
+  indices: [0, 1, 2],
+  triangleRanges: [],
+  bounds: { min: [0, 0, 0], max: [1, 1, 1] },
+}
+
+const CAMERA_PRESET_ORDER: readonly CameraPresetId[] = ['iso', 'front', 'top', 'right']
 
 export interface M2CenterCanvasProps {
   readonly viewMode: M2ViewMode
@@ -37,6 +53,7 @@ export interface M2CenterCanvasProps {
   readonly modelMesh?: M2ModelMesh | null
   readonly drawingVector?: M2DrawingVector | null
   readonly selectedObjectId: string | null
+  readonly selectedObjectIds?: readonly string[]
   readonly selectedAnnotationId: string | null
   readonly highlightedFeatureIds: ReadonlySet<string>
   readonly highlightedAnnotationIds: ReadonlySet<string>
@@ -55,7 +72,10 @@ export interface M2CenterCanvasProps {
   readonly retryDrawingButtonRef?: RefObject<HTMLButtonElement | null>
   readonly onToggleStructure: () => void
   readonly onCloseStructure: () => void
-  readonly onSelectFeature: (feature: M2ModelFeatureItem) => void
+  readonly onSelectFeature: (
+    feature: M2ModelFeatureItem,
+    options?: { readonly additive?: boolean },
+  ) => void
   readonly onSelectAnnotation: (annotation: M2DrawingAnnotationItem) => void
   readonly onClearSelection: () => void
   readonly onBringIntoNextPrompt: () => void
@@ -66,6 +86,22 @@ export interface M2CenterCanvasProps {
   readonly onUpdateDrawingViewport: (
     updater: (prev: M2DrawingViewportState) => M2DrawingViewportState,
   ) => void
+  /** M1B 3D assembly extensions (disabled when FEATURE_3D_ASSEMBLY_M1 is false). */
+  readonly feature3dAssemblyM1?: boolean
+  readonly partMeshes?: readonly PartMesh[]
+  readonly hiddenPartIds?: ReadonlySet<string>
+  readonly explosionFactor?: number
+  readonly xrayMode?: boolean
+  readonly selectedAssemblyItems?: readonly AssemblyFeatureSelectionItem[]
+  readonly additivePickMode?: boolean
+  readonly activeCameraPreset?: CameraPresetId
+  readonly onTogglePartVisibility?: (partId: string) => void
+  readonly onSelectPart?: (partId: string) => void
+  readonly onChangeExplosionFactor?: (factor: number) => void
+  readonly onToggleXrayMode?: () => void
+  readonly onPickAssemblyFeature?: (payload: AssemblyPickPayload) => void
+  readonly onExecuteAssemblyAction?: (actionId: ContextPillActionId) => void
+  readonly onSelectCameraPreset?: (preset: CameraPresetId) => void
 }
 
 export interface M2ArtifactStatusMeta {
@@ -147,6 +183,7 @@ export function M2CenterCanvas({
   modelMesh = null,
   drawingVector = null,
   selectedObjectId,
+  selectedObjectIds,
   selectedAnnotationId,
   highlightedFeatureIds,
   highlightedAnnotationIds,
@@ -174,6 +211,21 @@ export function M2CenterCanvas({
   onOpenCompletionView,
   onUpdateCamera,
   onUpdateDrawingViewport,
+  feature3dAssemblyM1 = false,
+  partMeshes = [],
+  hiddenPartIds,
+  explosionFactor = 0,
+  xrayMode = false,
+  selectedAssemblyItems = [],
+  additivePickMode = false,
+  activeCameraPreset = 'iso',
+  onTogglePartVisibility,
+  onSelectPart,
+  onChangeExplosionFactor,
+  onToggleXrayMode,
+  onPickAssemblyFeature,
+  onExecuteAssemblyAction,
+  onSelectCameraPreset,
 }: M2CenterCanvasProps) {
   const effectiveViewMode = resolveEffectiveViewMode(viewMode, isNarrow, lastSingleTab)
   const showModelPane = effectiveViewMode === 'model' || effectiveViewMode === 'split'
@@ -345,12 +397,22 @@ export function M2CenterCanvas({
           <AssemblyTreeOverlay
             features={features}
             selectedObjectId={selectedObjectId}
+            selectedObjectIds={selectedObjectIds}
             highlightedFeatureIds={highlightedFeatureIds}
             structureOpen={structureOpen}
             objectListRegionRef={objectListRegionRef}
             onToggleStructure={onToggleStructure}
             onCloseStructure={onCloseStructure}
             onSelectFeature={onSelectFeature}
+            showAssemblyControls={feature3dAssemblyM1}
+            partMeshes={feature3dAssemblyM1 ? partMeshes : undefined}
+            hiddenPartIds={hiddenPartIds}
+            onTogglePartVisibility={onTogglePartVisibility}
+            onSelectPart={onSelectPart}
+            explosionFactor={explosionFactor}
+            onChangeExplosionFactor={onChangeExplosionFactor}
+            xrayMode={xrayMode}
+            onToggleXrayMode={onToggleXrayMode}
           />
 
           {isDraftDisplay ? (
@@ -391,21 +453,28 @@ export function M2CenterCanvas({
                 </span>
               </div>
 
-              {model.status === 'empty' ? (
+              {model.status === 'empty' && !(feature3dAssemblyM1 && partMeshes.length > 0) ? (
                 <div className="pa-viewport-empty">
                   <p className="pa-muted">○ 尚未生成三维模型，可在右侧对话中描述需求开始建模。</p>
                 </div>
               ) : (
                 <div className="pa-viewport-body">
-                  {modelMesh ? (
+                  {modelMesh || (feature3dAssemblyM1 && partMeshes.length > 0) ? (
                     <M2ThreeMeshViewport
-                      modelMesh={modelMesh}
+                      modelMesh={modelMesh ?? EMPTY_ASSEMBLY_FALLBACK_MESH}
                       camera={camera}
                       selectedObjectId={selectedObjectId}
+                      selectedObjectIds={selectedObjectIds}
                       highlightedFeatureIds={highlightedFeatureIds}
                       theme={theme}
                       onPickRange={handlePickMeshRange}
                       onUpdateCamera={onUpdateCamera}
+                      partMeshes={feature3dAssemblyM1 ? partMeshes : undefined}
+                      explosionFactor={feature3dAssemblyM1 ? explosionFactor : 0}
+                      xrayMode={feature3dAssemblyM1 ? xrayMode : false}
+                      hiddenPartIds={feature3dAssemblyM1 ? hiddenPartIds : undefined}
+                      additivePickMode={feature3dAssemblyM1 ? additivePickMode : false}
+                      onPickAssemblyFeature={feature3dAssemblyM1 ? onPickAssemblyFeature : undefined}
                     />
                   ) : (
                     <div className="pa-feature-canvas" role="group" aria-label="三维模型特征拾取区">
@@ -432,22 +501,49 @@ export function M2CenterCanvas({
                 </div>
               )}
 
-              {/* Subtle Bottom Telemetry + Single Transparent Fit Button */}
+              {/* Subtle Bottom Telemetry + Camera Presets (M1B only) + Fit Button */}
               <div className="pa-viewport-overlay-bottom">
                 <span className="pa-viewport-meta pa-mono" aria-label="模型视角状态">
                   视角 {camera.yawDeg}°/{camera.pitchDeg}° · 缩放 {camera.zoomPercent}%
                 </span>
-                <button
-                  type="button"
-                  className="pa-float-fit-btn"
-                  aria-label="适合窗口"
-                  title="复位三维视角并适合窗口（支持拖拽旋转、滚轮缩放）"
-                  onClick={() =>
-                    onUpdateCamera(() => ({ yawDeg: 35, pitchDeg: 25, zoomPercent: 100 }))
-                  }
-                >
-                  适配
-                </button>
+                <div className="pa-viewport-camera-actions">
+                  {feature3dAssemblyM1 ? (
+                    <div
+                      className="pa-camera-preset-group"
+                      role="group"
+                      aria-label="三维标准视角预设"
+                      data-testid="camera-preset-group"
+                    >
+                      {CAMERA_PRESET_ORDER.map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          data-testid={`camera-preset-${preset}`}
+                          aria-pressed={activeCameraPreset === preset}
+                          className={`pa-float-fit-btn ${activeCameraPreset === preset ? 'pa-float-fit-btn-active' : ''}`}
+                          onClick={() => onSelectCameraPreset?.(preset)}
+                        >
+                          {CAMERA_PRESET_LABELS[preset]}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="pa-float-fit-btn"
+                    aria-label="适合窗口"
+                    title="复位三维视角并适合窗口（支持拖拽旋转、滚轮缩放）"
+                    onClick={() => {
+                      if (feature3dAssemblyM1 && onSelectCameraPreset) {
+                        onSelectCameraPreset('iso')
+                      } else {
+                        onUpdateCamera(() => ({ yawDeg: 35, pitchDeg: 25, zoomPercent: 100 }))
+                      }
+                    }}
+                  >
+                    适配
+                  </button>
+                </div>
               </div>
             </section>
           ) : null}
@@ -541,6 +637,10 @@ export function M2CenterCanvas({
           onBringIntoNextPrompt={onBringIntoNextPrompt}
           onCopyToExternalSession={onCopyToExternalSession}
           onClearSelection={onClearSelection}
+          assemblyMode={feature3dAssemblyM1}
+          selectedAssemblyItems={feature3dAssemblyM1 ? selectedAssemblyItems : undefined}
+          additivePickMode={feature3dAssemblyM1 ? additivePickMode : false}
+          onExecuteAssemblyAction={feature3dAssemblyM1 ? onExecuteAssemblyAction : undefined}
         />
 
         {previewMessage ? (

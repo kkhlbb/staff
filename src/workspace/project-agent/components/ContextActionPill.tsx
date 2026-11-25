@@ -1,3 +1,5 @@
+import { formatHumanReadableFeatureLabel, resolveContextPillActions } from '../assembly3dMath'
+import type { AssemblyFeatureSelectionItem, ContextPillActionId } from '../assembly3dTypes'
 import type { M2ModelFeatureItem } from '../m2WorkbenchBridge'
 
 export interface ContextActionPillProps {
@@ -8,12 +10,20 @@ export interface ContextActionPillProps {
   readonly onBringIntoNextPrompt: () => void
   readonly onCopyToExternalSession: () => void
   readonly onClearSelection: () => void
+  /** M1B 3D assembly smart context pill mode. */
+  readonly assemblyMode?: boolean
+  readonly selectedAssemblyItems?: readonly AssemblyFeatureSelectionItem[]
+  readonly additivePickMode?: boolean
+  readonly onExecuteAssemblyAction?: (actionId: ContextPillActionId) => void
 }
 
 /**
- * Floating bottom-center object reference context pill.
+ * Floating bottom-center smart contextual action pill.
  * Strictly 100% hidden when nothing is selected (GUI-V2-UX-01 invariant).
- * Pre-wired as an independent container for M1B 3D assembly context actions.
+ * - In M0/M1 single-part mode (`assemblyMode = false`): preserves existing behavior.
+ * - In M1B 3D assembly mode (`assemblyMode = true`): shows selection count badge,
+ *   human-readable feature labels (zero raw internal IDs), and 2–4 dynamic atomic
+ *   actions tailored to 1-feature or 2-feature geometry types.
  */
 export function ContextActionPill({
   selectedFeature,
@@ -23,7 +33,87 @@ export function ContextActionPill({
   onBringIntoNextPrompt,
   onCopyToExternalSession,
   onClearSelection,
+  assemblyMode = false,
+  selectedAssemblyItems = [],
+  additivePickMode = false,
+  onExecuteAssemblyAction,
 }: ContextActionPillProps) {
+  if (assemblyMode) {
+    if (selectedAssemblyItems.length === 0) {
+      if (!contextActionFeedback) return null
+      return (
+        <div className="pa-context-float-bottom">
+          <span className="pa-context-toast" role="status">
+            {contextActionFeedback}
+          </span>
+        </div>
+      )
+    }
+
+    const actions = resolveContextPillActions(selectedAssemblyItems, additivePickMode)
+    const countLabel = `已选 ${selectedAssemblyItems.length} 项`
+
+    return (
+      <div className="pa-context-float-bottom">
+        <section
+          className="pa-context-pill pa-context-pill-assembly"
+          aria-label="智能上下文胶囊"
+          data-testid="assembly-context-pill"
+          data-selection-active="true"
+          data-selection-count={String(selectedAssemblyItems.length)}
+        >
+          <span className="pa-selection-dot" aria-hidden="true" />
+          <span className="pa-pill pa-tone-action" data-testid="selection-count-badge">
+            {countLabel}
+          </span>
+          <div className="pa-context-labels" data-testid="selection-breadcrumb">
+            {selectedAssemblyItems.map((item, idx) => (
+              <span key={item.featureId} className="pa-context-feature-label">
+                {idx > 0 ? <span className="pa-muted"> + </span> : null}
+                <strong>{formatHumanReadableFeatureLabel(item)}</strong>
+              </span>
+            ))}
+          </div>
+
+          <div className="pa-context-actions">
+            {actions.map((action) => (
+              <button
+                key={action.id}
+                type="button"
+                data-testid={`ctx-action-${action.id}`}
+                aria-pressed={action.active ? true : undefined}
+                className={
+                  action.primary
+                    ? 'pa-btn pa-btn-primary pa-btn-sm'
+                    : action.active
+                      ? 'pa-btn pa-btn-active pa-btn-sm'
+                      : 'pa-btn pa-btn-ghost pa-btn-sm'
+                }
+                onClick={() => onExecuteAssemblyAction?.(action.id)}
+              >
+                {action.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="pa-icon-btn"
+              aria-label="取消选择"
+              title="取消选择"
+              onClick={onClearSelection}
+            >
+              ×
+            </button>
+          </div>
+        </section>
+        {contextActionFeedback ? (
+          <span className="pa-context-toast" role="status" data-testid="context-action-feedback">
+            {contextActionFeedback}
+          </span>
+        ) : null}
+      </div>
+    )
+  }
+
   const extraCount =
     selectedFeatures && selectedFeatures.length > 1 ? selectedFeatures.length - 1 : 0
 

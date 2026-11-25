@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
+  type RefObject,
   type WheelEvent as ReactWheelEvent,
 } from 'react'
 import {
@@ -14,6 +15,7 @@ import {
   DoubleSide,
   EdgesGeometry,
   Float32BufferAttribute,
+  Group,
   HemisphereLight,
   LineBasicMaterial,
   LineSegments,
@@ -24,8 +26,26 @@ import {
   Scene,
   Uint32BufferAttribute,
   Vector2,
+  Vector3,
   WebGLRenderer,
 } from 'three'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import {
+  applyPartGroupTransform,
+  applyVertexColorField,
+  applyVertexDisplacementField,
+  computeAssemblyBounds,
+  computeAssemblyCentroid,
+  computePartExplodedMatrix4,
+} from './assembly3dMath'
+import type {
+  Css2dAnnotationItem,
+  PartEdgeSegment,
+  PartMesh,
+  PickedFeatureGeometryKind,
+  VertexColorFieldChannel,
+  VertexDisplacementChannel,
+} from './assembly3dTypes'
 import {
   resolveMeshTrianglePick,
   type M2CameraState,
@@ -33,23 +53,49 @@ import {
   type M2ModelMesh,
 } from './m2WorkbenchBridge'
 
+export interface AssemblyPickPayload {
+  readonly objectId: string
+  readonly partId: string
+  readonly partName: string
+  readonly featureLabel: string
+  readonly geometryKind: PickedFeatureGeometryKind
+  readonly additive: boolean
+}
+
 export interface M2ThreeMeshViewportProps {
   readonly modelMesh: M2ModelMesh
   readonly camera: M2CameraState
   readonly selectedObjectId: string | null
+  readonly selectedObjectIds?: readonly string[]
   readonly highlightedFeatureIds: ReadonlySet<string>
   readonly theme?: 'light' | 'dark'
   readonly onPickRange: (range: M2MeshTriangleRange) => void
   readonly onUpdateCamera: (updater: (prev: M2CameraState) => M2CameraState) => void
+  /** M1B multi-part 3D assembly extensions (inactive when omitted). */
+  readonly partMeshes?: readonly PartMesh[]
+  readonly explosionFactor?: number
+  readonly xrayMode?: boolean
+  readonly hiddenPartIds?: ReadonlySet<string>
+  readonly additivePickMode?: boolean
+  readonly onPickAssemblyFeature?: (payload: AssemblyPickPayload) => void
+  /** M3 pre-wired CSS2DRenderer annotation container & items. */
+  readonly annotationLayerRef?: RefObject<HTMLDivElement | null>
+  readonly css2dAnnotations?: readonly Css2dAnnotationItem[]
+  /** M4 pre-wired BufferGeometry vertexColors & displacement channels. */
+  readonly colorFieldChannels?: readonly VertexColorFieldChannel[]
+  readonly displacementChannels?: readonly VertexDisplacementChannel[]
 }
 
 const DEG2RAD = Math.PI / 180
 
-function computeBoundsCenterAndRadius(mesh: M2ModelMesh): {
+function computeBoundsCenterAndRadius(bounds: {
+  readonly min: readonly [number, number, number]
+  readonly max: readonly [number, number, number]
+}): {
   readonly center: readonly [number, number, number]
   readonly radius: number
 } {
-  const { min, max } = mesh.bounds
+  const { min, max } = bounds
   const cx = (min[0] + max[0]) / 2
   const cy = (min[1] + max[1]) / 2
   const cz = (min[2] + max[2]) / 2
@@ -60,51 +106,48 @@ function computeBoundsCenterAndRadius(mesh: M2ModelMesh): {
   return { center: [cx, cy, cz], radius }
 }
 
-function buildPrimaryBufferGeometry(mesh: M2ModelMesh): BufferGeometry {
+function buildBufferGeometryFromRaw(
+  positions: readonly number[] | Float32Array,
+  indices: readonly number[] | Uint32Array | Uint16Array,
+  normals?: readonly number[] | Float32Array,
+): { readonly geometry: BufferGeometry; readonly basePositions: Float32Array } {
   const geom = new BufferGeometry()
-  const posArray =
-    mesh.positions instanceof Float32Array ? mesh.positions : new Float32Array(mesh.positions)
-  const idxArray =
-    mesh.indices instanceof Uint32Array ? mesh.indices : new Uint32Array(mesh.indices)
+  const posArray = positions instanceof Float32Array ? new Float32Array(positions) : new Float32Array(positions)
+  const idxArray = indices instanceof Uint32Array ? indices : new Uint32Array(indices)
   geom.setAttribute('position', new Float32BufferAttribute(posArray, 3))
   geom.setIndex(new Uint32BufferAttribute(idxArray, 1))
-  if (mesh.normals && mesh.normals.length === posArray.length) {
-    const normArray =
-      mesh.normals instanceof Float32Array ? mesh.normals : new Float32BufferAttribute(new Float32Array(mesh.normals), 3)
-    geom.setAttribute(
-      'normal',
-      normArray instanceof Float32BufferAttribute
-        ? normArray
-        : new Float32BufferAttribute(normArray, 3),
-    )
+  if (normals && normals.length === posArray.length) {
+    const normArray = normals instanceof Float32Array ? normals : new Float32Array(normals)
+    geom.setAttribute('normal', new Float32BufferAttribute(normArray, 3))
   } else {
     geom.computeVertexNormals()
   }
   geom.computeBoundingSphere()
-  return geom
+  return { geometry: geom, basePositions: new Float32Array(posArray) }
 }
 
 function buildHighlightGeometry(
-  mesh: M2ModelMesh,
+  positions: readonly number[] | Float32Array,
+  indices: readonly number[] | Uint32Array | Uint16Array,
+  triangleRanges: readonly M2MeshTriangleRange[],
   highlightedFeatureIds: ReadonlySet<string>,
 ): BufferGeometry | null {
-  if (highlightedFeatureIds.size === 0 || mesh.triangleRanges.length === 0) {
+  if (highlightedFeatureIds.size === 0 || triangleRanges.length === 0) {
     return null
   }
   const highlightedIndices: number[] = []
-  const totalTriangles = Math.floor(mesh.indices.length / 3)
-  for (const range of mesh.triangleRanges) {
+  const totalTriangles = Math.floor(indices.length / 3)
+  for (const range of triangleRanges) {
     if (!highlightedFeatureIds.has(range.objectId)) continue
     const start = Math.max(0, range.startTriangle)
     const end = Math.min(totalTriangles, range.endTriangle)
     for (let t = start; t < end; t += 1) {
-      highlightedIndices.push(mesh.indices[t * 3], mesh.indices[t * 3 + 1], mesh.indices[t * 3 + 2])
+      highlightedIndices.push(indices[t * 3], indices[t * 3 + 1], indices[t * 3 + 2])
     }
   }
   if (highlightedIndices.length === 0) return null
   const geom = new BufferGeometry()
-  const posArray =
-    mesh.positions instanceof Float32Array ? mesh.positions : new Float32Array(mesh.positions)
+  const posArray = positions instanceof Float32Array ? positions : new Float32Array(positions)
   geom.setAttribute('position', new Float32BufferAttribute(posArray, 3))
   geom.setIndex(new Uint32BufferAttribute(new Uint32Array(highlightedIndices), 1))
   geom.computeVertexNormals()
@@ -116,6 +159,7 @@ function positionCameraFromState(
   cameraState: M2CameraState,
   center: readonly [number, number, number],
   radius: number,
+  orbitControls?: OrbitControls | null,
 ): void {
   const yawRad = cameraState.yawDeg * DEG2RAD
   const pitchRad = Math.max(-85, Math.min(85, cameraState.pitchDeg)) * DEG2RAD
@@ -126,7 +170,12 @@ function positionCameraFromState(
   const y = center[1] + distance * Math.sin(pitchRad)
   const z = center[2] + distance * cosPitch * Math.cos(yawRad)
   threeCamera.position.set(x, y, z)
-  threeCamera.lookAt(center[0], center[1], center[2])
+  if (orbitControls) {
+    orbitControls.target.set(center[0], center[1], center[2])
+    orbitControls.update()
+  } else {
+    threeCamera.lookAt(center[0], center[1], center[2])
+  }
   threeCamera.updateMatrixWorld()
 }
 
@@ -154,10 +203,45 @@ function projectPointFallback(
   return [160 + rx * scale, 110 - ry * scale]
 }
 
+interface PartSceneEntry {
+  readonly part: PartMesh
+  readonly group: Group
+  readonly mesh: Mesh
+  readonly geometry: BufferGeometry
+  readonly basePositions: Float32Array
+  readonly material: MeshStandardMaterial
+  readonly edgeLines: LineSegments
+  readonly featureEdgeSegments: Array<{ readonly segment: PartEdgeSegment; readonly lines: LineSegments }>
+  highlightMesh: Mesh | null
+  highlightGeometry: BufferGeometry | null
+}
+
 interface ThreeSceneController {
-  updateMesh(mesh: M2ModelMesh, highlighted: ReadonlySet<string>): void
-  updateHighlight(mesh: M2ModelMesh, highlighted: ReadonlySet<string>): void
-  updateCamera(camera: M2CameraState, mesh: M2ModelMesh): void
+  updateSingleMesh(mesh: M2ModelMesh, highlighted: ReadonlySet<string>): void
+  updatePartsGeometry(
+    parts: readonly PartMesh[],
+    highlighted: ReadonlySet<string>,
+    explosionFactor: number,
+    xrayMode: boolean,
+    hiddenPartIds?: ReadonlySet<string>,
+  ): void
+  updatePartsTransforms(
+    parts: readonly PartMesh[],
+    explosionFactor: number,
+    hiddenPartIds?: ReadonlySet<string>,
+  ): void
+  updatePartsAppearance(
+    highlighted: ReadonlySet<string>,
+    xrayMode: boolean,
+  ): void
+  applyM4Channels(
+    colorChannels?: readonly VertexColorFieldChannel[],
+    displacementChannels?: readonly VertexDisplacementChannel[],
+  ): void
+  updateCamera(
+    camera: M2CameraState,
+    bounds: { readonly min: readonly [number, number, number]; readonly max: readonly [number, number, number] },
+  ): void
   updateTheme(theme: 'light' | 'dark'): void
   dispose(): void
 }
@@ -179,22 +263,53 @@ export function M2ThreeMeshViewport({
   modelMesh,
   camera,
   selectedObjectId,
+  selectedObjectIds,
   highlightedFeatureIds,
   theme = 'light',
   onPickRange,
   onUpdateCamera,
+  partMeshes,
+  explosionFactor = 0,
+  xrayMode = false,
+  hiddenPartIds,
+  additivePickMode = false,
+  onPickAssemblyFeature,
+  annotationLayerRef,
+  css2dAnnotations = [],
+  colorFieldChannels,
+  displacementChannels,
 }: M2ThreeMeshViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const controllerRef = useRef<ThreeSceneController | null>(null)
   const [renderMode, setRenderMode] = useState<'webgl' | 'fallback'>(() =>
     canAttemptWebGL() ? 'webgl' : 'fallback',
   )
+  const isMultiPart = Boolean(partMeshes && partMeshes.length > 0)
+
+  // Stable key representing part geometry identity (excludes explosionFactor & nominalTransform)
+  const partGeometryIdentity = useMemo(() => {
+    if (!partMeshes || partMeshes.length === 0) return ''
+    return partMeshes
+      .map((p) => `${p.partId}:${p.positions.length}:${p.indices.length}`)
+      .join('|')
+  }, [partMeshes])
+
+  // Track BufferGeometry build count without triggering re-renders on pure matrix updates
+  const geometryBuildCount = useMemo(() => {
+    return isMultiPart ? (partGeometryIdentity ? 1 : 0) : 1
+  }, [isMultiPart, partGeometryIdentity])
 
   const modelMeshRef = useRef(modelMesh)
+  const partMeshesRef = useRef(partMeshes)
   const cameraRef = useRef(camera)
   const highlightedRef = useRef(highlightedFeatureIds)
   const themeRef = useRef(theme)
+  const explosionRef = useRef(explosionFactor)
+  const xrayRef = useRef(xrayMode)
+  const hiddenPartsRef = useRef(hiddenPartIds)
+  const additiveRef = useRef(additivePickMode)
   const onPickRangeRef = useRef(onPickRange)
+  const onPickAssemblyRef = useRef(onPickAssemblyFeature)
   const onUpdateCameraRef = useRef(onUpdateCamera)
 
   useEffect(() => {
@@ -207,6 +322,10 @@ export function M2ThreeMeshViewport({
   }, [modelMesh])
 
   useEffect(() => {
+    partMeshesRef.current = partMeshes
+  }, [partMeshes])
+
+  useEffect(() => {
     cameraRef.current = camera
   }, [camera])
 
@@ -215,14 +334,34 @@ export function M2ThreeMeshViewport({
   }, [highlightedFeatureIds])
 
   useEffect(() => {
+    explosionRef.current = explosionFactor
+  }, [explosionFactor])
+
+  useEffect(() => {
+    xrayRef.current = xrayMode
+  }, [xrayMode])
+
+  useEffect(() => {
+    hiddenPartsRef.current = hiddenPartIds
+  }, [hiddenPartIds])
+
+  useEffect(() => {
+    additiveRef.current = additivePickMode
+  }, [additivePickMode])
+
+  useEffect(() => {
     onPickRangeRef.current = onPickRange
   }, [onPickRange])
+
+  useEffect(() => {
+    onPickAssemblyRef.current = onPickAssemblyFeature
+  }, [onPickAssemblyFeature])
 
   useEffect(() => {
     onUpdateCameraRef.current = onUpdateCamera
   }, [onUpdateCamera])
 
-  // Initialize Three.js WebGLRenderer once when mounted; degrade gracefully if WebGL is unavailable.
+  // Initialize Three.js WebGLRenderer + OrbitControls once when mounted; degrade gracefully if WebGL is unavailable.
   useEffect(() => {
     if (renderMode !== 'webgl') return
     const canvas = canvasRef.current
@@ -258,6 +397,12 @@ export function M2ThreeMeshViewport({
     scene.background = new Color(initialDark ? '#0B0E14' : '#EEF1F5')
     const threeCamera = new PerspectiveCamera(42, 16 / 10, 0.1, 10000)
 
+    const orbitControls = new OrbitControls(threeCamera, canvas)
+    orbitControls.enableDamping = true
+    orbitControls.dampingFactor = 0.08
+    orbitControls.enablePan = true
+    orbitControls.enableZoom = true
+
     const ambient = new AmbientLight(0xffffff, 1.0)
     const hemi = new HemisphereLight(0xffffff, 0x64748b, 1.0)
     const key = new DirectionalLight(0xffffff, 1.8)
@@ -276,10 +421,11 @@ export function M2ThreeMeshViewport({
       polygonOffsetUnits: 1,
     })
     const edgeMaterial = new LineBasicMaterial({ color: initialDark ? 0x94a3b8 : 0x334155 })
+    const featureEdgeMaterial = new LineBasicMaterial({ color: 0x38bdf8 })
     const highlightMaterial = new MeshStandardMaterial({
       color: initialDark ? 0x4b83ff : 0x1e5eff,
       emissive: initialDark ? 0x1e40af : 0x1749cc,
-      emissiveIntensity: 0.35,
+      emissiveIntensity: 0.4,
       metalness: 0.1,
       roughness: 0.4,
       side: DoubleSide,
@@ -288,22 +434,40 @@ export function M2ThreeMeshViewport({
       polygonOffsetUnits: -1,
     })
 
-    let primaryGeometry = buildPrimaryBufferGeometry(modelMeshRef.current)
+    // Single-part meshes
+    const singleGroup = new Group()
+    let { geometry: primaryGeometry } = buildBufferGeometryFromRaw(
+      modelMeshRef.current.positions,
+      modelMeshRef.current.indices,
+      modelMeshRef.current.normals,
+    )
     const primaryMesh = new Mesh(primaryGeometry, primaryMaterial)
-    scene.add(primaryMesh)
+    singleGroup.add(primaryMesh)
 
     let edgeGeometry = new EdgesGeometry(primaryGeometry, 25)
     const edgeLines = new LineSegments(edgeGeometry, edgeMaterial)
-    scene.add(edgeLines)
+    singleGroup.add(edgeLines)
 
-    let highlightGeometry = buildHighlightGeometry(modelMeshRef.current, highlightedRef.current)
+    let highlightGeometry = buildHighlightGeometry(
+      modelMeshRef.current.positions,
+      modelMeshRef.current.indices,
+      modelMeshRef.current.triangleRanges,
+      highlightedRef.current,
+    )
     let highlightMesh: Mesh | null = null
     if (highlightGeometry) {
       highlightMesh = new Mesh(highlightGeometry, highlightMaterial)
-      scene.add(highlightMesh)
+      singleGroup.add(highlightMesh)
     }
+    scene.add(singleGroup)
+
+    // Multi-part assembly groups
+    const assemblyRoot = new Group()
+    scene.add(assemblyRoot)
+    const partEntries = new Map<string, PartSceneEntry>()
 
     const raycaster = new Raycaster()
+    raycaster.params.Line = { threshold: 2.5 }
     let rafId = 0
     let disposed = false
 
@@ -327,40 +491,141 @@ export function M2ThreeMeshViewport({
       }
     }
 
-    const syncCamera = (camState: M2CameraState, meshData: M2ModelMesh) => {
-      const { center, radius } = computeBoundsCenterAndRadius(meshData)
-      positionCameraFromState(threeCamera, camState, center, radius)
+    const onControlsChange = () => {
+      scheduleRender()
+    }
+    orbitControls.addEventListener('change', onControlsChange)
+
+    const disposeParts = () => {
+      for (const entry of partEntries.values()) {
+        assemblyRoot.remove(entry.group)
+        entry.geometry.dispose()
+        entry.material.dispose()
+        entry.edgeLines.geometry.dispose()
+        for (const seg of entry.featureEdgeSegments) {
+          seg.lines.geometry.dispose()
+        }
+        entry.highlightGeometry?.dispose()
+      }
+      partEntries.clear()
+    }
+
+    const rebuildParts = (
+      parts: readonly PartMesh[],
+      highlighted: ReadonlySet<string>,
+      explode: number,
+      xray: boolean,
+      hidden?: ReadonlySet<string>,
+    ) => {
+      disposeParts()
+      const centroid = computeAssemblyCentroid(parts)
+      for (const part of parts) {
+        const group = new Group()
+        const { geometry, basePositions } = buildBufferGeometryFromRaw(
+          part.positions,
+          part.indices,
+          part.normals,
+        )
+        const material = new MeshStandardMaterial({
+          color: new Color(part.color),
+          metalness: 0.15,
+          roughness: 0.5,
+          side: DoubleSide,
+          transparent: xray,
+          opacity: xray ? 0.28 : 1,
+          depthWrite: !xray,
+          polygonOffset: true,
+          polygonOffsetFactor: 1,
+          polygonOffsetUnits: 1,
+        })
+        const mesh = new Mesh(geometry, material)
+        mesh.userData = { partId: part.partId }
+        group.add(mesh)
+
+        const edges = new LineSegments(new EdgesGeometry(geometry, 25), edgeMaterial)
+        group.add(edges)
+
+        const featureEdgeSegments: Array<{ readonly segment: PartEdgeSegment; readonly lines: LineSegments }> = []
+        for (const seg of part.edgeSegments ?? []) {
+          const segGeom = new BufferGeometry()
+          segGeom.setAttribute('position', new Float32BufferAttribute(new Float32Array(seg.points), 3))
+          const segLines = new LineSegments(segGeom, featureEdgeMaterial)
+          segLines.userData = { segment: seg }
+          group.add(segLines)
+          featureEdgeSegments.push({ segment: seg, lines: segLines })
+        }
+
+        const hlGeom = buildHighlightGeometry(
+          part.positions,
+          part.indices,
+          part.faceTriangleRanges,
+          highlighted,
+        )
+        let hlMesh: Mesh | null = null
+        if (hlGeom) {
+          hlMesh = new Mesh(hlGeom, highlightMaterial)
+          hlMesh.renderOrder = 2
+          group.add(hlMesh)
+        }
+
+        const matrix = computePartExplodedMatrix4(part, centroid, explode)
+        applyPartGroupTransform(group, matrix)
+        group.visible = !hidden?.has(part.partId)
+        assemblyRoot.add(group)
+
+        partEntries.set(part.partId, {
+          part,
+          group,
+          mesh,
+          geometry,
+          basePositions,
+          material,
+          edgeLines: edges,
+          featureEdgeSegments,
+          highlightMesh: hlMesh,
+          highlightGeometry: hlGeom,
+        })
+      }
+      singleGroup.visible = parts.length === 0
+      assemblyRoot.visible = parts.length > 0
       scheduleRender()
     }
 
-    syncCamera(cameraRef.current, modelMeshRef.current)
+    const syncCamera = (
+      camState: M2CameraState,
+      bounds: { readonly min: readonly [number, number, number]; readonly max: readonly [number, number, number] },
+    ) => {
+      const { center, radius } = computeBoundsCenterAndRadius(bounds)
+      positionCameraFromState(threeCamera, camState, center, radius, orbitControls)
+      scheduleRender()
+    }
 
-    let dragStart: { x: number; y: number } | null = null
-    let lastDrag: { x: number; y: number } | null = null
+    if (partMeshesRef.current && partMeshesRef.current.length > 0) {
+      rebuildParts(
+        partMeshesRef.current,
+        highlightedRef.current,
+        explosionRef.current,
+        xrayRef.current,
+        hiddenPartsRef.current,
+      )
+      syncCamera(
+        cameraRef.current,
+        computeAssemblyBounds(partMeshesRef.current, explosionRef.current, hiddenPartsRef.current),
+      )
+    } else {
+      syncCamera(cameraRef.current, modelMeshRef.current.bounds)
+    }
+
+    let pointerDownPos: { x: number; y: number } | null = null
 
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0) return
-      dragStart = { x: event.clientX, y: event.clientY }
-      lastDrag = { x: event.clientX, y: event.clientY }
-    }
-
-    const onPointerMove = (event: PointerEvent) => {
-      if (!lastDrag) return
-      const dx = event.clientX - lastDrag.x
-      const dy = event.clientY - lastDrag.y
-      lastDrag = { x: event.clientX, y: event.clientY }
-      if (dx === 0 && dy === 0) return
-      onUpdateCameraRef.current((prev) => ({
-        ...prev,
-        yawDeg: Math.round(prev.yawDeg + dx * 0.6),
-        pitchDeg: Math.max(-85, Math.min(85, Math.round(prev.pitchDeg + dy * 0.5))),
-      }))
+      pointerDownPos = { x: event.clientX, y: event.clientY }
     }
 
     const onPointerUp = (event: PointerEvent) => {
-      const start = dragStart
-      dragStart = null
-      lastDrag = null
+      const start = pointerDownPos
+      pointerDownPos = null
       if (!start || disposed) return
       const dist = Math.hypot(event.clientX - start.x, event.clientY - start.y)
       if (dist >= 6) return
@@ -369,8 +634,72 @@ export function M2ThreeMeshViewport({
       const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1
       const ndcY = -((event.clientY - rect.top) / rect.height) * 2 + 1
       threeCamera.updateMatrixWorld()
-      primaryMesh.updateMatrixWorld(true)
       raycaster.setFromCamera(new Vector2(ndcX, ndcY), threeCamera)
+
+      const activeParts = partMeshesRef.current
+      if (activeParts && activeParts.length > 0) {
+        const additive = event.shiftKey || additiveRef.current
+        // 1. Check discrete edges / cylindrical hole axes first for precision picking
+        const edgeTargets: LineSegments[] = []
+        const meshTargets: Mesh[] = []
+        for (const entry of partEntries.values()) {
+          if (!entry.group.visible) continue
+          entry.group.updateMatrixWorld(true)
+          meshTargets.push(entry.mesh)
+          for (const seg of entry.featureEdgeSegments) {
+            edgeTargets.push(seg.lines)
+          }
+        }
+
+        const edgeHits = raycaster.intersectObjects(edgeTargets, false)
+        const firstEdge = edgeHits[0]
+        if (firstEdge) {
+          const seg = firstEdge.object.userData.segment as PartEdgeSegment | undefined
+          const partEntry = seg ? partEntries.get(seg.partId) : undefined
+          if (seg && partEntry) {
+            onPickAssemblyRef.current?.({
+              objectId: seg.featureId,
+              partId: seg.partId,
+              partName: partEntry.part.displayName,
+              featureLabel: seg.label,
+              geometryKind: seg.kind,
+              additive,
+            })
+            return
+          }
+        }
+
+        // 2. Check part face triangles
+        const meshHits = raycaster.intersectObjects(meshTargets, false)
+        const firstMesh = meshHits[0]
+        if (firstMesh && typeof firstMesh.faceIndex === 'number') {
+          const partId = firstMesh.object.userData.partId as string | undefined
+          const partEntry = partId ? partEntries.get(partId) : undefined
+          if (partEntry) {
+            const picked = resolveMeshTrianglePick(
+              firstMesh.faceIndex,
+              partEntry.part.faceTriangleRanges,
+            )
+            const matchedRange = picked
+              ? partEntry.part.faceTriangleRanges.find((r) => r.objectId === picked.objectId)
+              : undefined
+            if (matchedRange) {
+              onPickAssemblyRef.current?.({
+                objectId: matchedRange.objectId,
+                partId: partEntry.part.partId,
+                partName: partEntry.part.displayName,
+                featureLabel: matchedRange.label ?? matchedRange.role ?? '表面',
+                geometryKind: matchedRange.geometryKind ?? 'face',
+                additive,
+              })
+            }
+          }
+        }
+        return
+      }
+
+      // Single-part mode raycast
+      primaryMesh.updateMatrixWorld(true)
       const hits = raycaster.intersectObject(primaryMesh, false)
       const firstHit = hits[0]
       if (firstHit && typeof firstHit.faceIndex === 'number') {
@@ -385,17 +714,7 @@ export function M2ThreeMeshViewport({
     }
 
     const onPointerCancel = () => {
-      dragStart = null
-      lastDrag = null
-    }
-
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault()
-      const delta = event.deltaY < 0 ? 15 : -15
-      onUpdateCameraRef.current((prev) => ({
-        ...prev,
-        zoomPercent: Math.max(40, Math.min(300, prev.zoomPercent + delta)),
-      }))
+      pointerDownPos = null
     }
 
     const onContextLost = (event: Event) => {
@@ -408,10 +727,8 @@ export function M2ThreeMeshViewport({
     }
 
     canvas.addEventListener('pointerdown', onPointerDown)
-    canvas.addEventListener('pointermove', onPointerMove)
     canvas.addEventListener('pointerup', onPointerUp)
     canvas.addEventListener('pointercancel', onPointerCancel)
-    canvas.addEventListener('wheel', onWheel, { passive: false })
     canvas.addEventListener('webglcontextlost', onContextLost)
 
     const resizeObserver =
@@ -422,28 +739,39 @@ export function M2ThreeMeshViewport({
         : null
     resizeObserver?.observe(canvas)
 
-    const replaceHighlight = (meshData: M2ModelMesh, highlighted: ReadonlySet<string>) => {
+    const replaceSingleHighlight = (meshData: M2ModelMesh, highlighted: ReadonlySet<string>) => {
       if (highlightMesh) {
-        scene.remove(highlightMesh)
+        singleGroup.remove(highlightMesh)
         highlightMesh = null
       }
       if (highlightGeometry) {
         highlightGeometry.dispose()
         highlightGeometry = null
       }
-      const nextGeom = buildHighlightGeometry(meshData, highlighted)
+      const nextGeom = buildHighlightGeometry(
+        meshData.positions,
+        meshData.indices,
+        meshData.triangleRanges,
+        highlighted,
+      )
       if (nextGeom) {
         highlightGeometry = nextGeom
         highlightMesh = new Mesh(highlightGeometry, highlightMaterial)
-        scene.add(highlightMesh)
+        singleGroup.add(highlightMesh)
       }
       scheduleRender()
     }
 
     const controller: ThreeSceneController = {
-      updateMesh(meshData, highlighted) {
+      updateSingleMesh(meshData, highlighted) {
         if (disposed) return
-        const nextPrimary = buildPrimaryBufferGeometry(meshData)
+        singleGroup.visible = true
+        assemblyRoot.visible = false
+        const { geometry: nextPrimary } = buildBufferGeometryFromRaw(
+          meshData.positions,
+          meshData.indices,
+          meshData.normals,
+        )
         primaryMesh.geometry = nextPrimary
         primaryGeometry.dispose()
         primaryGeometry = nextPrimary
@@ -453,16 +781,84 @@ export function M2ThreeMeshViewport({
         edgeGeometry.dispose()
         edgeGeometry = nextEdges
 
-        replaceHighlight(meshData, highlighted)
-        syncCamera(cameraRef.current, meshData)
+        replaceSingleHighlight(meshData, highlighted)
+        syncCamera(cameraRef.current, meshData.bounds)
       },
-      updateHighlight(meshData, highlighted) {
+      updatePartsGeometry(parts, highlighted, explode, xray, hidden) {
         if (disposed) return
-        replaceHighlight(meshData, highlighted)
+        rebuildParts(parts, highlighted, explode, xray, hidden)
       },
-      updateCamera(camState, meshData) {
+      updatePartsTransforms(parts, explode, hidden) {
         if (disposed) return
-        syncCamera(camState, meshData)
+        // Zero re-triangulation: update ONLY each part's THREE.Group 4x4 Matrix4 & visibility
+        const centroid = computeAssemblyCentroid(parts)
+        for (const part of parts) {
+          const entry = partEntries.get(part.partId)
+          if (!entry) continue
+          const matrix = computePartExplodedMatrix4(part, centroid, explode)
+          applyPartGroupTransform(entry.group, matrix)
+          entry.group.visible = !hidden?.has(part.partId)
+        }
+        scheduleRender()
+      },
+      updatePartsAppearance(highlighted, xray) {
+        if (disposed) return
+        highlightMaterial.depthTest = !xray
+        highlightMaterial.opacity = xray ? 0.92 : 1
+        highlightMaterial.transparent = xray
+        for (const entry of partEntries.values()) {
+          entry.material.transparent = xray
+          entry.material.opacity = xray ? 0.28 : 1
+          entry.material.depthWrite = !xray
+          entry.material.needsUpdate = true
+
+          if (entry.highlightMesh) {
+            entry.group.remove(entry.highlightMesh)
+            entry.highlightMesh = null
+          }
+          if (entry.highlightGeometry) {
+            entry.highlightGeometry.dispose()
+            entry.highlightGeometry = null
+          }
+          const nextHl = buildHighlightGeometry(
+            entry.part.positions,
+            entry.part.indices,
+            entry.part.faceTriangleRanges,
+            highlighted,
+          )
+          if (nextHl) {
+            entry.highlightGeometry = nextHl
+            entry.highlightMesh = new Mesh(nextHl, highlightMaterial)
+            entry.highlightMesh.renderOrder = 2
+            entry.group.add(entry.highlightMesh)
+          }
+        }
+        scheduleRender()
+      },
+      applyM4Channels(colors, displacements) {
+        if (disposed) return
+        if (colors) {
+          for (const ch of colors) {
+            const entry = partEntries.get(ch.partId)
+            if (!entry) continue
+            if (applyVertexColorField(entry.geometry, ch)) {
+              entry.material.vertexColors = true
+              entry.material.needsUpdate = true
+            }
+          }
+        }
+        if (displacements) {
+          for (const ch of displacements) {
+            const entry = partEntries.get(ch.partId)
+            if (!entry) continue
+            applyVertexDisplacementField(entry.geometry, entry.basePositions, ch)
+          }
+        }
+        scheduleRender()
+      },
+      updateCamera(camState, bounds) {
+        if (disposed) return
+        syncCamera(camState, bounds)
       },
       updateTheme(nextTheme) {
         if (disposed) return
@@ -483,20 +879,21 @@ export function M2ThreeMeshViewport({
           window.cancelAnimationFrame(rafId)
           rafId = 0
         }
+        orbitControls.removeEventListener('change', onControlsChange)
+        orbitControls.dispose()
         resizeObserver?.disconnect()
         canvas.removeEventListener('pointerdown', onPointerDown)
-        canvas.removeEventListener('pointermove', onPointerMove)
         canvas.removeEventListener('pointerup', onPointerUp)
         canvas.removeEventListener('pointercancel', onPointerCancel)
-        canvas.removeEventListener('wheel', onWheel)
         canvas.removeEventListener('webglcontextlost', onContextLost)
-        scene.remove(primaryMesh, edgeLines)
-        if (highlightMesh) scene.remove(highlightMesh)
+        disposeParts()
+        scene.remove(singleGroup, assemblyRoot)
         primaryGeometry.dispose()
         edgeGeometry.dispose()
         highlightGeometry?.dispose()
         primaryMaterial.dispose()
         edgeMaterial.dispose()
+        featureEdgeMaterial.dispose()
         highlightMaterial.dispose()
         scene.clear()
         renderer.dispose()
@@ -511,19 +908,155 @@ export function M2ThreeMeshViewport({
     }
   }, [renderMode])
 
-  // Refresh mesh geometry in-place when modelMesh changes without resetting camera
+  // Single-part mesh updates
   useEffect(() => {
-    controllerRef.current?.updateMesh(modelMesh, highlightedFeatureIds)
-  }, [modelMesh, highlightedFeatureIds])
+    if (isMultiPart) return
+    controllerRef.current?.updateSingleMesh(modelMesh, highlightedFeatureIds)
+  }, [isMultiPart, modelMesh, highlightedFeatureIds])
 
-  // Sync camera state without rebuilding mesh
+  // Multi-part geometry rebuild ONLY when part geometry identity changes (never on explosion/transform!)
   useEffect(() => {
-    controllerRef.current?.updateCamera(camera, modelMesh)
-  }, [camera, modelMesh])
+    if (!isMultiPart || !partMeshes) return
+    controllerRef.current?.updatePartsGeometry(
+      partMeshes,
+      highlightedRef.current,
+      explosionRef.current,
+      xrayRef.current,
+      hiddenPartsRef.current,
+    )
+  }, [isMultiPart, partGeometryIdentity, partMeshes])
+
+  // Multi-part zero-retriangulation Matrix4 + visibility updates
+  useEffect(() => {
+    if (!isMultiPart || !partMeshes) return
+    controllerRef.current?.updatePartsTransforms(partMeshes, explosionFactor, hiddenPartIds)
+  }, [isMultiPart, partMeshes, explosionFactor, hiddenPartIds])
+
+  // Multi-part X-Ray & highlight updates
+  useEffect(() => {
+    if (!isMultiPart) return
+    controllerRef.current?.updatePartsAppearance(highlightedFeatureIds, xrayMode)
+  }, [isMultiPart, highlightedFeatureIds, xrayMode])
+
+  // M4 pre-wired vertex color / displacement updates
+  useEffect(() => {
+    if (!isMultiPart || (!colorFieldChannels && !displacementChannels)) return
+    controllerRef.current?.applyM4Channels(colorFieldChannels, displacementChannels)
+  }, [isMultiPart, colorFieldChannels, displacementChannels])
+
+  // Sync camera state without rebuilding geometry
+  useEffect(() => {
+    const bounds =
+      isMultiPart && partMeshes
+        ? computeAssemblyBounds(partMeshes, explosionFactor, hiddenPartIds)
+        : modelMesh.bounds
+    controllerRef.current?.updateCamera(camera, bounds)
+  }, [camera, isMultiPart, partMeshes, explosionFactor, hiddenPartIds, modelMesh])
 
   // Fallback projected polygons (used in jsdom / non-WebGL environments)
   const fallbackProjection = useMemo(() => {
-    const { center, radius } = computeBoundsCenterAndRadius(modelMesh)
+    if (isMultiPart && partMeshes) {
+      const centroid = computeAssemblyCentroid(partMeshes)
+      const bounds = computeAssemblyBounds(partMeshes, explosionFactor, hiddenPartIds)
+      const { center, radius } = computeBoundsCenterAndRadius(bounds)
+      const v = new Vector3()
+
+      const projectedTriangles: Array<{
+        readonly key: string
+        readonly partId: string
+        readonly partName: string
+        readonly partColor: string
+        readonly triangleIndex: number
+        readonly points: string
+        readonly objectId: string
+        readonly featureLabel: string
+        readonly geometryKind: PickedFeatureGeometryKind
+      }> = []
+
+      const projectedEdges: Array<{
+        readonly key: string
+        readonly segment: PartEdgeSegment
+        readonly partName: string
+        readonly x1: number
+        readonly y1: number
+        readonly x2: number
+        readonly y2: number
+      }> = []
+
+      let totalTriangles = 0
+
+      for (const part of partMeshes) {
+        if (hiddenPartIds?.has(part.partId)) continue
+        const matrix = computePartExplodedMatrix4(part, centroid, explosionFactor)
+        const partTris = Math.floor(part.indices.length / 3)
+        totalTriangles += partTris
+        const maxPartTris = Math.min(partTris, 120)
+
+        for (let t = 0; t < maxPartTris; t += 1) {
+          const i0 = part.indices[t * 3]
+          const i1 = part.indices[t * 3 + 1]
+          const i2 = part.indices[t * 3 + 2]
+
+          const p0v = v
+            .set(part.positions[i0 * 3] ?? 0, part.positions[i0 * 3 + 1] ?? 0, part.positions[i0 * 3 + 2] ?? 0)
+            .applyMatrix4(matrix)
+          const p0 = projectPointFallback(p0v.x, p0v.y, p0v.z, center, radius, camera)
+
+          const p1v = v
+            .set(part.positions[i1 * 3] ?? 0, part.positions[i1 * 3 + 1] ?? 0, part.positions[i1 * 3 + 2] ?? 0)
+            .applyMatrix4(matrix)
+          const p1 = projectPointFallback(p1v.x, p1v.y, p1v.z, center, radius, camera)
+
+          const p2v = v
+            .set(part.positions[i2 * 3] ?? 0, part.positions[i2 * 3 + 1] ?? 0, part.positions[i2 * 3 + 2] ?? 0)
+            .applyMatrix4(matrix)
+          const p2 = projectPointFallback(p2v.x, p2v.y, p2v.z, center, radius, camera)
+
+          const picked = resolveMeshTrianglePick(t, part.faceTriangleRanges)
+          const matchedRange = picked
+            ? part.faceTriangleRanges.find((r) => r.objectId === picked.objectId)
+            : undefined
+
+          projectedTriangles.push({
+            key: `${part.partId}-tri-${t}`,
+            partId: part.partId,
+            partName: part.displayName,
+            partColor: part.color,
+            triangleIndex: t,
+            points: `${p0[0].toFixed(1)},${p0[1].toFixed(1)} ${p1[0].toFixed(1)},${p1[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`,
+            objectId: matchedRange?.objectId ?? '',
+            featureLabel: matchedRange?.label ?? matchedRange?.role ?? '表面',
+            geometryKind: matchedRange?.geometryKind ?? 'face',
+          })
+        }
+
+        for (const seg of part.edgeSegments ?? []) {
+          if (seg.points.length < 6) continue
+          const a = v.set(seg.points[0], seg.points[1], seg.points[2]).applyMatrix4(matrix)
+          const pA = projectPointFallback(a.x, a.y, a.z, center, radius, camera)
+          const b = v.set(seg.points[3], seg.points[4], seg.points[5]).applyMatrix4(matrix)
+          const pB = projectPointFallback(b.x, b.y, b.z, center, radius, camera)
+          projectedEdges.push({
+            key: `${part.partId}-seg-${seg.featureId}`,
+            segment: seg,
+            partName: part.displayName,
+            x1: pA[0],
+            y1: pA[1],
+            x2: pB[0],
+            y2: pB[1],
+          })
+        }
+      }
+
+      return {
+        mode: 'assembly' as const,
+        totalTriangles,
+        projectedTriangles,
+        projectedEdges,
+      }
+    }
+
+    const { center, radius } = computeBoundsCenterAndRadius(modelMesh.bounds)
     const totalTriangles = Math.floor(modelMesh.indices.length / 3)
     const projectedTriangles: Array<{
       readonly triangleIndex: number
@@ -565,8 +1098,8 @@ export function M2ThreeMeshViewport({
         range: resolveMeshTrianglePick(t, modelMesh.triangleRanges),
       })
     }
-    return { totalTriangles, projectedTriangles }
-  }, [modelMesh, camera])
+    return { mode: 'single' as const, totalTriangles, projectedTriangles, projectedEdges: [] }
+  }, [isMultiPart, partMeshes, explosionFactor, hiddenPartIds, modelMesh, camera])
 
   const fallbackDragRef = useRef<{ x: number; y: number } | null>(null)
 
@@ -600,11 +1133,24 @@ export function M2ThreeMeshViewport({
     }))
   }
 
+  const selectedIdSet = useMemo(() => {
+    const set = new Set<string>()
+    if (selectedObjectId) set.add(selectedObjectId)
+    for (const id of selectedObjectIds ?? []) {
+      set.add(id)
+    }
+    return set
+  }, [selectedObjectId, selectedObjectIds])
+
   return (
     <div
       className="pa-three-stage"
       data-testid="m2-three-viewport"
       data-render-mode={renderMode === 'webgl' ? 'webgl-3d' : 'fallback-3d'}
+      data-assembly-mode={isMultiPart ? 'multi-part' : 'single-part'}
+      data-xray-mode={xrayMode ? 'true' : 'false'}
+      data-explosion-percent={String(Math.round(explosionFactor * 100))}
+      data-geometry-build-count={String(geometryBuildCount)}
       data-triangle-count={String(fallbackProjection.totalTriangles)}
       data-selected-object-id={selectedObjectId ?? ''}
     >
@@ -613,7 +1159,7 @@ export function M2ThreeMeshViewport({
           ref={canvasRef}
           className="pa-three-canvas"
           role="img"
-          aria-label="三维实体网格画布：左键拖拽旋转，滚轮缩放，点击面拾取特征"
+          aria-label="三维实体网格画布：左键拖拽旋转，右键平移，滚轮缩放，点击面或孔轴拾取特征"
         />
       ) : (
         <svg
@@ -630,43 +1176,143 @@ export function M2ThreeMeshViewport({
         >
           <rect x="0" y="0" width="320" height="220" fill="transparent" />
           <g data-testid="m2-three-fallback-mesh">
-            {fallbackProjection.projectedTriangles.map((tri) => {
-              const objId = tri.range?.objectId ?? ''
-              const isHighlighted = objId !== '' && highlightedFeatureIds.has(objId)
-              const isSelected = objId !== '' && selectedObjectId === objId
-              return (
-                <polygon
-                  key={tri.triangleIndex}
-                  points={tri.points}
-                  data-triangle-index={String(tri.triangleIndex)}
-                  data-range-object-id={objId}
-                  data-highlighted={isHighlighted ? 'true' : 'false'}
-                  data-selected={isSelected ? 'true' : 'false'}
-                  className={
-                    isSelected
-                      ? 'pa-three-tri pa-three-tri-selected'
-                      : isHighlighted
-                        ? 'pa-three-tri pa-three-tri-highlighted'
-                        : 'pa-three-tri'
-                  }
-                  onClick={() => {
-                    const picked = resolveMeshTrianglePick(
-                      tri.triangleIndex,
-                      modelMesh.triangleRanges,
-                    )
-                    if (picked) {
-                      onPickRange(picked)
-                    }
-                  }}
-                />
-              )
-            })}
+            {fallbackProjection.mode === 'assembly'
+              ? fallbackProjection.projectedTriangles.map((tri) => {
+                  const isHighlighted =
+                    tri.objectId !== '' && highlightedFeatureIds.has(tri.objectId)
+                  const isSelected = tri.objectId !== '' && selectedIdSet.has(tri.objectId)
+                  return (
+                    <polygon
+                      key={tri.key}
+                      points={tri.points}
+                      fill={isSelected || isHighlighted ? undefined : tri.partColor}
+                      fillOpacity={xrayMode ? (isSelected || isHighlighted ? 0.85 : 0.28) : 0.88}
+                      data-part-id={tri.partId}
+                      data-triangle-index={String(tri.triangleIndex)}
+                      data-range-object-id={tri.objectId}
+                      data-geometry-kind={tri.geometryKind}
+                      data-highlighted={isHighlighted ? 'true' : 'false'}
+                      data-selected={isSelected ? 'true' : 'false'}
+                      className={
+                        isSelected
+                          ? 'pa-three-tri pa-three-tri-selected'
+                          : isHighlighted
+                            ? 'pa-three-tri pa-three-tri-highlighted'
+                            : 'pa-three-tri'
+                      }
+                      onClick={(event) => {
+                        if (!tri.objectId) return
+                        onPickAssemblyFeature?.({
+                          objectId: tri.objectId,
+                          partId: tri.partId,
+                          partName: tri.partName,
+                          featureLabel: tri.featureLabel,
+                          geometryKind: tri.geometryKind,
+                          additive: event.shiftKey || additivePickMode,
+                        })
+                      }}
+                    />
+                  )
+                })
+              : fallbackProjection.projectedTriangles.map((tri) => {
+                  const objId = tri.range?.objectId ?? ''
+                  const isHighlighted = objId !== '' && highlightedFeatureIds.has(objId)
+                  const isSelected = objId !== '' && selectedIdSet.has(objId)
+                  return (
+                    <polygon
+                      key={tri.triangleIndex}
+                      points={tri.points}
+                      data-triangle-index={String(tri.triangleIndex)}
+                      data-range-object-id={objId}
+                      data-highlighted={isHighlighted ? 'true' : 'false'}
+                      data-selected={isSelected ? 'true' : 'false'}
+                      className={
+                        isSelected
+                          ? 'pa-three-tri pa-three-tri-selected'
+                          : isHighlighted
+                            ? 'pa-three-tri pa-three-tri-highlighted'
+                            : 'pa-three-tri'
+                      }
+                      onClick={() => {
+                        const picked = resolveMeshTrianglePick(
+                          tri.triangleIndex,
+                          modelMesh.triangleRanges,
+                        )
+                        if (picked) {
+                          onPickRange(picked)
+                        }
+                      }}
+                    />
+                  )
+                })}
+
+            {fallbackProjection.mode === 'assembly'
+              ? fallbackProjection.projectedEdges.map((edge) => {
+                  const isHighlighted = highlightedFeatureIds.has(edge.segment.featureId)
+                  const isSelected = selectedIdSet.has(edge.segment.featureId)
+                  return (
+                    <line
+                      key={edge.key}
+                      x1={edge.x1.toFixed(1)}
+                      y1={edge.y1.toFixed(1)}
+                      x2={edge.x2.toFixed(1)}
+                      y2={edge.y2.toFixed(1)}
+                      strokeWidth={isSelected || isHighlighted ? 3.2 : 2.2}
+                      strokeDasharray={
+                        edge.segment.kind === 'cylindrical-hole-axis' ? '4 2' : undefined
+                      }
+                      data-testid={`assembly-edge-${edge.segment.featureId}`}
+                      data-part-id={edge.segment.partId}
+                      data-range-object-id={edge.segment.featureId}
+                      data-geometry-kind={edge.segment.kind}
+                      data-highlighted={isHighlighted ? 'true' : 'false'}
+                      data-selected={isSelected ? 'true' : 'false'}
+                      className={
+                        isSelected
+                          ? 'pa-three-edge pa-three-edge-selected'
+                          : isHighlighted
+                            ? 'pa-three-edge pa-three-edge-highlighted'
+                            : 'pa-three-edge'
+                      }
+                      onClick={(event) => {
+                        onPickAssemblyFeature?.({
+                          objectId: edge.segment.featureId,
+                          partId: edge.segment.partId,
+                          partName: edge.partName,
+                          featureLabel: edge.segment.label,
+                          geometryKind: edge.segment.kind,
+                          additive: event.shiftKey || additivePickMode,
+                        })
+                      }}
+                    />
+                  )
+                })
+              : null}
           </g>
           <text x="10" y="16" className="pa-svg-meta-text">
-            3D 网格投影（{fallbackProjection.totalTriangles} 三角面 · 降级模式）
+            {isMultiPart
+              ? `3D 装配投影（${partMeshes?.length ?? 0} 零件 · ${fallbackProjection.totalTriangles} 三角面）`
+              : `3D 网格投影（${fallbackProjection.totalTriangles} 三角面 · 降级模式）`}
           </text>
         </svg>
       )}
+
+      {/* M3 pre-wired CSS2DRenderer annotation overlay container */}
+      {isMultiPart || annotationLayerRef || css2dAnnotations.length > 0 ? (
+        <div
+          ref={annotationLayerRef}
+          className="pa-css2d-annotation-layer"
+          data-testid="css2d-annotation-layer"
+          aria-hidden={css2dAnnotations.length === 0}
+        >
+          {css2dAnnotations.map((ann) => (
+            <div key={ann.id} className="pa-css2d-anchor" data-annotation-id={ann.id}>
+              {ann.symbol ? <span>{ann.symbol}</span> : null}
+              <span>{ann.valueText ?? ann.label}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }

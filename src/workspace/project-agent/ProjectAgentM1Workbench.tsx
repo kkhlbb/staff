@@ -1,10 +1,17 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import './ProjectAgentPanel.css'
 import {
   resolveWorkbenchTransport,
   type ElectronTransport,
 } from '../../transport/electronTransport'
 import type { Transport } from '../../transport/types'
+import type {
+  AiMateDraftItem,
+  AssemblyModelV1,
+  PartMesh,
+  SimulationLoopSpec,
+  WorkbenchSidebarSection,
+} from './assembly3dTypes'
 import type {
   M1ConnectionStatusSnapshot,
   M1ExternalActivityItem,
@@ -14,7 +21,6 @@ import type {
 import {
   formatRevisionDisplay,
   type M2PreviewSnapshot,
-  type M2SidebarSection,
   type M2ViewMode,
 } from './m2WorkbenchBridge'
 import { M2CenterCanvas } from './M2CenterCanvas'
@@ -29,6 +35,7 @@ import {
   type WorkbenchChatMessage,
   type WorkbenchLocalProject,
 } from './workbenchHelpers'
+import { useAssembly3dM1b } from './hooks/useAssembly3dM1b'
 import { useWorkbenchSession } from './hooks/useWorkbenchSession'
 import { WorkbenchTopBar } from './components/WorkbenchTopBar'
 import { WorkbenchStatusBanners } from './components/WorkbenchStatusBanners'
@@ -58,7 +65,7 @@ export interface ProjectAgentM1WorkbenchProps {
   readonly initialShowOnboarding?: boolean
   readonly initialPreviewSnapshot?: Partial<M2PreviewSnapshot>
   readonly initialViewMode?: M2ViewMode
-  readonly initialSidebarSection?: M2SidebarSection
+  readonly initialSidebarSection?: WorkbenchSidebarSection
   readonly initialShowCompletionView?: boolean
   readonly initialFormalVersions?: readonly M3FormalVersionItem[]
   readonly initialUncommittedDrafts?: readonly M3UncommittedDraftItem[]
@@ -67,6 +74,12 @@ export interface ProjectAgentM1WorkbenchProps {
   readonly forceNarrowViewport?: boolean
   readonly clipboardWriter?: (text: string) => Promise<void> | void
   readonly className?: string
+  /** M1B 3D assembly feature flag & initial 3D assembly context. */
+  readonly feature3dAssemblyM1?: boolean
+  readonly initialAssembly3d?: AssemblyModelV1
+  readonly initialPartMeshes?: readonly PartMesh[]
+  readonly initialAiMateDrafts?: readonly AiMateDraftItem[]
+  readonly initialSimulationSpec?: SimulationLoopSpec
 }
 
 export function ProjectAgentM1Workbench({
@@ -97,7 +110,15 @@ export function ProjectAgentM1Workbench({
   forceNarrowViewport,
   clipboardWriter,
   className,
+  feature3dAssemblyM1: feature3dAssemblyM1Prop,
+  initialAssembly3d,
+  initialPartMeshes,
+  initialAiMateDrafts,
+  initialSimulationSpec,
 }: ProjectAgentM1WorkbenchProps) {
+  const [simulationTabActive, setSimulationTabActive] = useState(
+    initialSidebarSection === 'simulation',
+  )
   const transport = useMemo(
     () =>
       resolveWorkbenchTransport({
@@ -124,7 +145,7 @@ export function ProjectAgentM1Workbench({
     initialShowOnboarding,
     initialPreviewSnapshot,
     initialViewMode,
-    initialSidebarSection,
+    initialSidebarSection: initialSidebarSection === 'simulation' ? 'conversation' : initialSidebarSection,
     initialShowCompletionView,
     initialFormalVersions,
     initialUncommittedDrafts,
@@ -135,6 +156,50 @@ export function ProjectAgentM1Workbench({
   })
 
   const { viewport } = session
+
+  const assembly3d = useAssembly3dM1b({
+    transport,
+    projectId: session.projectId,
+    draftRevision: session.draftRevision,
+    feature3dAssemblyM1Prop,
+    initialAssembly3d,
+    initialPartMeshes,
+    initialAiMateDrafts,
+    initialSimulationSpec,
+    selectedObjectIds: viewport.selectedObjectIds,
+    onSelectFeature: viewport.handleSelectFeature,
+    onClearSelection: viewport.handleClearSelection,
+    onUpdateCamera: viewport.updateCamera,
+    onSetContextFeedback: viewport.setContextActionFeedback,
+    onBringTextToChat: (promptText) => {
+      setSimulationTabActive(false)
+      session.setSidebarSection('conversation')
+      session.setSidebarTab('builtin')
+      session.setChatInput((prev) => (prev.trim().length > 0 ? `${prev}\n${promptText}` : promptText))
+    },
+  })
+
+  const effectiveHighlightedFeatureIds = useMemo(() => {
+    if (!assembly3d.feature3dAssemblyM1 || !assembly3d.hoveredFeatureId) {
+      return viewport.highlightedFeatureIds
+    }
+    const next = new Set(viewport.highlightedFeatureIds)
+    next.add(assembly3d.hoveredFeatureId)
+    return next
+  }, [assembly3d.feature3dAssemblyM1, assembly3d.hoveredFeatureId, viewport.highlightedFeatureIds])
+
+  const activeSidebarSection: WorkbenchSidebarSection =
+    assembly3d.feature3dAssemblyM1 && simulationTabActive ? 'simulation' : session.sidebarSection
+
+  const handleSelectSidebarSection = (nextSection: WorkbenchSidebarSection) => {
+    if (nextSection === 'simulation') {
+      setSimulationTabActive(true)
+      return
+    }
+    setSimulationTabActive(false)
+    session.setSidebarSection(nextSection)
+  }
+
   const rootClassName = className ? `pa-workbench ${className}` : 'pa-workbench'
 
   return (
@@ -416,13 +481,18 @@ export function ProjectAgentM1Workbench({
             drawingFailure={viewport.canvasState.drawingFailure}
             checksInProgress={viewport.canvasState.checksInProgress}
             naturalCompletionSummary={viewport.naturalCompletionSummary}
-            features={viewport.canvasState.features}
+            features={
+              assembly3d.feature3dAssemblyM1
+                ? assembly3d.assemblyFeatures
+                : viewport.canvasState.features
+            }
             annotations={viewport.canvasState.annotations}
             modelMesh={viewport.canvasState.modelMesh}
             drawingVector={viewport.canvasState.drawingVector}
             selectedObjectId={viewport.canvasState.selectedObjectId}
+            selectedObjectIds={viewport.selectedObjectIds}
             selectedAnnotationId={viewport.canvasState.selectedAnnotationId}
-            highlightedFeatureIds={viewport.highlightedFeatureIds}
+            highlightedFeatureIds={effectiveHighlightedFeatureIds}
             highlightedAnnotationIds={viewport.highlightedAnnotationIds}
             selectionInvalidated={viewport.canvasState.selectionInvalidated}
             invalidatedObjectLabel={viewport.canvasState.invalidatedObjectLabel}
@@ -441,7 +511,11 @@ export function ProjectAgentM1Workbench({
             onCloseStructure={() => viewport.setStructureOpen(false)}
             onSelectFeature={viewport.handleSelectFeature}
             onSelectAnnotation={viewport.handleSelectAnnotation}
-            onClearSelection={viewport.handleClearSelection}
+            onClearSelection={
+              assembly3d.feature3dAssemblyM1
+                ? assembly3d.handleClearAssemblySelection
+                : viewport.handleClearSelection
+            }
             onBringIntoNextPrompt={session.handleBringIntoNextPrompt}
             onCopyToExternalSession={session.handleCopyToExternalSession}
             onRetryDrawing={() => {
@@ -453,16 +527,48 @@ export function ProjectAgentM1Workbench({
             }}
             onUpdateCamera={viewport.updateCamera}
             onUpdateDrawingViewport={viewport.updateDrawingViewport}
+            feature3dAssemblyM1={assembly3d.feature3dAssemblyM1}
+            partMeshes={assembly3d.partMeshes}
+            hiddenPartIds={assembly3d.hiddenPartIds}
+            explosionFactor={viewport.explosionFactor}
+            xrayMode={viewport.xrayMode}
+            selectedAssemblyItems={assembly3d.selectedAssemblyItems}
+            additivePickMode={assembly3d.additivePickMode}
+            activeCameraPreset={assembly3d.activeCameraPreset}
+            onTogglePartVisibility={assembly3d.togglePartVisibility}
+            onSelectPart={assembly3d.selectPart}
+            onChangeExplosionFactor={viewport.setExplosionFactor}
+            onToggleXrayMode={viewport.toggleXrayMode}
+            onPickAssemblyFeature={assembly3d.handlePickAssemblyFeature}
+            onExecuteAssemblyAction={assembly3d.executeContextAction}
+            onSelectCameraPreset={assembly3d.applyCameraPreset}
           />
 
           <CollaborationSidebar
             sidebarRegionRef={session.sidebarRegionRef}
             chatInputRef={session.chatInputRef}
             retryChatButtonRef={session.retryChatButtonRef}
-            sidebarSection={session.sidebarSection}
+            sidebarSection={activeSidebarSection}
             sidebarTab={session.sidebarTab}
-            onSelectSidebarSection={session.setSidebarSection}
+            onSelectSidebarSection={handleSelectSidebarSection}
             checksSummaryCounts={viewport.checksSummaryCounts}
+            feature3dAssemblyM1={assembly3d.feature3dAssemblyM1}
+            aiMateDrafts={assembly3d.aiMateDrafts}
+            appliedMatesCount={assembly3d.appliedMatesCount}
+            mateDraftsFeedback={assembly3d.mateDraftsFeedback}
+            onToggleMateDraft={assembly3d.toggleMateDraft}
+            onApplySelectedMateDrafts={assembly3d.applySelectedMateDrafts}
+            onFocusAssemblyFeature={assembly3d.focusFeatureById}
+            simulationResult={assembly3d.simulationResult}
+            simulationComputing={assembly3d.simulationComputing}
+            activeAssemblyFeatureId={
+              assembly3d.hoveredFeatureId ?? viewport.canvasState.selectedObjectId
+            }
+            onChangeContributorTolerance={assembly3d.updateWhatIfTolerance}
+            onHoverContributor={(target) =>
+              assembly3d.setHoveredFeatureId(target ? target.featureId : null)
+            }
+            onClickContributor={(target) => assembly3d.focusFeatureById(target.featureId)}
             requirements={viewport.canvasState.requirements}
             checks={viewport.canvasState.checks}
             checksInProgress={viewport.canvasState.checksInProgress}
