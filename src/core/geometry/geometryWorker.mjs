@@ -3,10 +3,24 @@ import { loadKernel } from '../../../desktop/main/geometry-prototype/plate.mjs'
 import { projectPlate } from '../../../desktop/main/project-agent/m2/drawing.mjs'
 import { evaluate } from '../../../desktop/main/project-agent/m2/evaluate.mjs'
 import { fingerprint, geometryProtocolVersion } from './geometryManager.mjs'
+import { runAssemblyGeometry } from './assemblyGeometry.mjs'
 import { ShapeCache } from './shapeCache.mjs'
 
 const bundled = import.meta.url.endsWith('/m2-geometry-worker.mjs')
 const cache = new ShapeCache()
+const assemblies = new ShapeCache(8, {
+  count: assembly => assembly.entries.length,
+  dispose: assembly => assembly.scope.dispose(),
+})
+
+function clearCaches() {
+  try {
+    assemblies.clear()
+  } finally {
+    cache.clear()
+  }
+}
+
 const defaultMemoryLimit = 512 * 1024 ** 2
 let kernel
 let wasmInitializations = 0
@@ -22,22 +36,39 @@ async function load() {
 
 function metrics() {
   const { rss, heapUsed, external } = process.memoryUsage()
-  return { threadId, wasmInitializations, cachedShapeBuilds, cachedShapeHandles: cache.handles,
+  return { threadId, wasmInitializations, cachedShapeBuilds, cachedShapeHandles: cache.handles + assemblies.handles,
     wasmHeapBytes: kernel?.wasmMemory?.buffer.byteLength ?? 0, rss, heapUsed, external }
 }
 
 async function execute({ kind, payload, task, projectId, revision }) {
   if (kind === 'clear') {
-    cache.clear()
+    clearCaches()
     return
   }
   if (kind === 'release') {
-    cache.release(projectId, revision)
+    try {
+      assemblies.release(projectId, revision)
+    } finally {
+      cache.release(projectId, revision)
+    }
     return
   }
   if (kind !== 'evaluate' || task?.version !== geometryProtocolVersion || typeof task.jobId !== 'string' || !task.jobId ||
       !Number.isSafeInteger(task.attempt) || task.attempt < 1 || task.inputFingerprint !== fingerprint(payload)) {
     throw new Error('Invalid geometry execution identity')
+  }
+  if (payload.operation === 'import-step' || payload.operation === 'rebuild-assembly') {
+    if (projectId !== undefined && (typeof payload.revision !== 'string' || !payload.revision)) {
+      throw new Error('Assembly cache requires a revision')
+    }
+    const oc = await load()
+    const report = runAssemblyGeometry(oc, payload, projectId === undefined ? undefined : (key, build) =>
+      assemblies.acquire(projectId, payload.revision, key, () => {
+        const result = build()
+        cachedShapeBuilds++
+        return result
+      }))
+    return { ...report, execution: task }
   }
   const { model, measured, references, drawing, drawingOnly, deferDrawing } = payload
   const report = drawingOnly ? projectPlate(model, measured, references, drawing)
@@ -58,14 +89,14 @@ parentPort.on('message', async ({ id, request }) => {
     // RSS is process-wide. Use the WASM heap and worker JS heap for recycling.
     const recycle = Math.max(stats.wasmHeapBytes, stats.external) + stats.heapUsed > (request.memoryLimitBytes ?? defaultMemoryLimit)
     if (recycle) {
-      cache.clear()
+      clearCaches()
       stats = metrics()
     }
     parentPort.postMessage({ id, ok: true, value: { report, metrics: stats }, recycle })
   } catch (error) {
     let message = String(error)
     try {
-      cache.clear()
+      clearCaches()
     } catch (cleanupError) {
       message += '\n' + String(cleanupError)
     } finally {
