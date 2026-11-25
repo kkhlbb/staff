@@ -1,10 +1,19 @@
-import { parentPort } from 'node:worker_threads'
+import { parentPort, threadId } from 'node:worker_threads'
 import { calculateChain } from '../../domain/calculate.ts'
 import { monteCarloOf } from '../../domain/statistics.ts'
+import { solveAssembly } from './assemblySolver.mjs'
+import { createSimulation } from './multivariate.mjs'
 
-function solve({ version, kind, chain, options }) {
+const runSimulation = createSimulation(threadId)
+
+function solve({ version, kind, chain, options, inputs }) {
   if (version !== 1) throw new Error('Unsupported solver protocol version')
-  if (kind === 'se3' || kind === 'multivariate') return { status: 'unsupported', kind }
+  // Preserve the original feature-probe reply for callers of the reserved empty input.
+  if ((kind === 'se3' || kind === 'multivariate') && inputs && Object.keys(inputs).length === 0) {
+    return { status: 'unsupported', kind }
+  }
+  if (kind === 'se3') return solveAssembly(inputs)
+  if (kind === 'multivariate') return runSimulation(inputs)
   if (kind !== 'extremes1d' && kind !== 'monteCarlo1d') throw new Error('Unknown solver task')
   const extremes = calculateChain(chain)
   if (kind === 'extremes1d') return extremes

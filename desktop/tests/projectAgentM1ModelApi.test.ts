@@ -4,6 +4,10 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, expect, it } from 'vitest'
+import { face, model, part } from '../../src/core/solver/test/fixture'
+import { createSampleSnapshot } from '../../src/project-file/__fixtures__/sampleProjectFile'
+import { encodeProjectFile } from '../../src/project-file/codec'
+import { readMateDrafts } from '../main/project-agent/mateDraftTool'
 import { SafeStorageStore } from '../main/keychain'
 import { LocalM1Authority, type M1WriterLease } from '../main/project-agent/m1LocalAuthority'
 import { M1InternalService } from '../main/project-agent/m1InternalService'
@@ -38,11 +42,28 @@ async function readBody(req: IncomingMessage): Promise<RequestBody> {
   return JSON.parse(Buffer.concat(chunks).toString('utf8')) as RequestBody
 }
 
-async function fixture() {
+async function fixture(withAssembly = false) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'm1-model-'))
   cleanups.push(() => fs.rm(root, { recursive: true, force: true }))
   const projectPath = path.join(root, 'private-project-path.cunlian')
-  const document = 'private project file data'
+  let document: string | Uint8Array = 'private project file data'
+  const attachmentBytes = Buffer.from('ISO-10303-21;\nEND-ISO-10303-21;')
+  const attachmentSha256 = createHash('sha256').update(attachmentBytes).digest('hex')
+  if (withAssembly) {
+    const snapshot = await createSampleSnapshot()
+    const assembly3d = model([part('a'), part('b')], [
+      face('seat', 'a', [0, 0, 0], [0, 0, 1]), face('base', 'b', [0, 0, 0], [0, 0, -1]),
+    ])
+    const project = { ...snapshot.project, assembly3d, stepAttachments: [{ id: 'step-a', fileName: 'sample.step', blobKey: 'step-data' }] }
+    const encoded = await encodeProjectFile({ ...snapshot, project,
+      fileRevisions: snapshot.fileRevisions.map(revision => ({ ...revision, project })),
+      blobs: [...snapshot.blobs, { blobKey: 'step-data', projectId: project.id, sha256: attachmentSha256, byteSize: attachmentBytes.length }],
+      attachments: [...snapshot.attachments, { blobKey: 'step-data', bytes: attachmentBytes }],
+    })
+    if (!encoded.ok) throw Error(JSON.stringify(encoded.error))
+    document = encoded.value.bytes
+  }
+  const identity = { projectId: withAssembly ? 'project-a' : 'stub-project', scopeEpoch: 5 }
   await fs.writeFile(projectPath, document)
   const journalRoot = path.join(root, 'authority')
   const session = { sessionId: 'native', projectId: identity.projectId, path: projectPath,
@@ -60,6 +81,7 @@ async function fixture() {
   if (!caller) throw Error('Missing fixture authorization')
   const scope = { ...identity, sender, sessionId: session.sessionId, authorizationRef: caller.authorizationRef,
     isCurrent: () => state.current,
+    readMateDrafts: withAssembly ? (signal: AbortSignal) => readMateDrafts(session, signal) : undefined,
     readAttachment: async (id: string) => id === 'doc' ? { excerpt: 'Authorized excerpt ' + secret, page: 2 } : null,
     readSelectedObject: async (id: string) => id === 'spacer' ? 'Authorized selection' : null }
   const requests: RequestBody[] = []
@@ -127,7 +149,7 @@ async function fixture() {
   }
   const writerRequest = (expectedWriterEpoch: number) => ({ windowId: 1, sessionId: session.sessionId,
     projectId: session.projectId, expectedWriterEpoch })
-  return { state, authority, api, config, connect, chat, context, journal, writerRequest, requests, authHeaders, keyFile, makeApi }
+  return { state, authority, api, config, connect, chat, context, journal, writerRequest, requests, authHeaders, keyFile, makeApi, projectPath, attachmentSha256 }
 }
 
 it.each([401, 403])('maps HTTP %i on list and completion to AUTH_FAILED without returning the body', async status => {
@@ -143,6 +165,30 @@ it.each([401, 403])('maps HTTP %i on list and completion to AUTH_FAILED without 
     expect(JSON.stringify(response)).not.toContain(secret)
   }
   expect(await f.chat('chat')).toMatchObject({ ok: false, error: { code: 'DISCONNECTED' } })
+})
+
+it('runs the real built-in read-only mate tool against an authorized Schema 11 file', async () => {
+  const f = await fixture(true)
+  expect((await f.connect()).ok).toBe(true)
+  const before = await fs.readFile(f.projectPath)
+  const prior = await f.context()
+  f.state.chat = (body, res) => {
+    expect(body.tools.map(item => item.function.name)).toContain('suggest_assembly_mates')
+    if (packet(body)) {
+      expect(result(body)).toMatchObject({ requiresConfirmation: true, drafts: [{
+        status: 'draft', mate: { kind: 'face-contact', featureIds: ['base', 'seat'] },
+        topologyEvidenceRefs: [{ attachmentSha256: f.attachmentSha256 }, { attachmentSha256: f.attachmentSha256 }],
+      }] })
+      expect(JSON.stringify(result(body))).not.toContain(f.projectPath)
+      reply(res, '请核对配合草案')
+    } else tool(res, 'mate-tool-id', 'suggest_assembly_mates', {})
+  }
+  const output = await f.chat('mate-draft', { writerEpoch: 0, prompt: '列出装配配合草案' })
+  expect(output).toMatchObject({ ok: true, value: { mateDrafts: { requiresConfirmation: true, drafts: [
+    { status: 'draft', confidence: 0.8 },
+  ] }, toolCalls: [{ name: 'suggest_assembly_mates', status: 'succeeded' }] } })
+  expect(await fs.readFile(f.projectPath)).toEqual(before)
+  expect(await f.context()).toEqual(prior)
 })
 
 it('requires a listed model and distinguishes missing tool support from a failed round trip', async () => {

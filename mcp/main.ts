@@ -1,5 +1,5 @@
 /**
- * MCP stdio 服务器主体：JSON-RPC 2.0 帧 + 五个只读/计算工具。
+ * MCP stdio 服务器主体：JSON-RPC 2.0 帧 + 只读/计算工具。
  *
  * 边界（任务卡 §3）：
  * - 没有写项目/提交/保存的工具，也没有密钥与模型调用；
@@ -10,13 +10,13 @@
  */
 import { readFile } from 'node:fs/promises'
 import { createStdioServer } from './stdio'
-import { TOOLS } from './tools/index'
+import { STDIO_TOOLS } from './tools/index'
 export { SUPPORTED_PROTOCOL_VERSIONS, DEFAULT_PROTOCOL_VERSION } from './stdio'
 export type { ServerIo } from './stdio'
 
 export const SERVER_NAME = 'cunlian'
 export const INSTRUCTIONS =
-  '寸链确定性内核：读任务书、算尺寸链、判条款、出图、读项目。只读与计算，写入必须回桌面端点确认。'
+  '寸链确定性内核：读任务书、算尺寸链、判条款、出图、读项目、分析 3D 装配。只读与计算，写入必须回桌面端点确认。'
 
 async function packageVersion(): Promise<string> {
   try {
@@ -32,5 +32,5 @@ export const { startServer, handleFrame } = createStdioServer({
   name: SERVER_NAME,
   version: packageVersion,
   instructions: INSTRUCTIONS,
-  tools: TOOLS,
+  tools: STDIO_TOOLS,
 })

@@ -1,13 +1,15 @@
 export class ShapeCache {
   #entries = new Map()
   #limit
+  #ownership
 
-  constructor(limit = 8) {
+  constructor(limit = 8, ownership = plateOwnership) {
     if (!Number.isSafeInteger(limit) || limit < 1) throw new RangeError('Invalid shape cache capacity')
     this.#limit = limit
+    this.#ownership = ownership
   }
 
-  // build transfers the two owned wrappers to the cache. Callers borrow the returned shapes.
+  // The builder transfers ownership to the cache. Callers borrow the result.
   acquire(projectId, revision, fingerprint, build) {
     const key = JSON.stringify([projectId, revision])
     const previous = this.#entries.get(key)
@@ -24,7 +26,7 @@ export class ShapeCache {
   }
 
   get handles() {
-    return this.#entries.size * 2
+    return [...this.#entries.values()].reduce((total, entry) => total + this.#ownership.count(entry.shapes), 0)
   }
 
   release(projectId, revision) {
@@ -52,10 +54,17 @@ export class ShapeCache {
     const entry = this.#entries.get(key)
     if (!entry) return
     this.#entries.delete(key)
-    try {
-      entry.shapes.cover.delete()
-    } finally {
-      entry.shapes.plate.delete()
-    }
+    this.#ownership.dispose(entry.shapes)
   }
+}
+
+const plateOwnership = {
+  count: () => 2,
+  dispose(shapes) {
+    try {
+      shapes.cover.delete()
+    } finally {
+      shapes.plate.delete()
+    }
+  },
 }
