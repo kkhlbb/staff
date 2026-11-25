@@ -1,0 +1,30 @@
+{
+  "roles": {
+    "requirements": {
+      "write": false,
+      "takeover": false,
+      "tools": ["read_taskbook"]
+    },
+    "design": {
+      "write": true,
+      "takeover": false,
+      "tools": ["readWriterContext", "acquireWriter", "stageChange", "moveRightHoleX", "revokeWriter"]
+    },
+    "validation": {
+      "write": false,
+      "takeover": false,
+      "tools": ["calc_chain", "check_requirement", "render_drawing"]
+    },
+    "reporting": {
+      "write": false,
+      "takeover": false,
+      "tools": ["describe_project", "getContext", "getExternalActivities"]
+    }
+  },
+  "workflow": {
+    "tools": ["capabilities", "authorizeProject"]
+  },
+  "humanRecovery": {
+    "tools": ["takeOverWriter"]
+  }
+}

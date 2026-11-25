@@ -34,7 +34,10 @@
     "evidence:record": "vitest run --config vitest.evidence.config.ts",
     "evidence:dxf": "vitest run --config vitest.dxfexport.config.ts",
     "test:desktop:dxf-e2e": "node desktop/tests/e2e/dxfExport.mjs",
-    "artifact:export": "vitest run --config vitest.v40stage4export.config.ts"
+    "artifact:export": "vitest run --config vitest.v40stage4export.config.ts",
+    "cloud": "node cloud/server/index.mjs",
+    "cloud:smoke": "node scripts/cloud-smoke.mjs",
+    "test:cloud": "node --test cloud/server/*.test.mjs"
   },
   "dependencies": {
     "@zip.js/zip.js": "2.24.0",
