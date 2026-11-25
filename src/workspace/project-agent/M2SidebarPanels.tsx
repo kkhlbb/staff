@@ -223,10 +223,11 @@ export function M2SidebarPanels({
 
   if (section === 'checks') {
     const passCount = checks.filter((c) => c.status === 'pass').length
-    const failCount = checks.filter(
-      (c) => c.status === 'fail' || c.status === 'executionFailed',
-    ).length
+    const failCount = checks.filter((c) => c.status === 'fail').length
     const clarifyCount = checks.filter((c) => c.status === 'needsClarification').length
+    const uncoveredCount = checks.filter((c) => c.status === 'uncovered').length
+    const execFailCount = checks.filter((c) => c.status === 'executionFailed').length
+    const checkingCount = checks.filter((c) => c.status === 'checking').length
 
     return (
       <section className="pa-list" aria-label="检查结果面板">
@@ -237,14 +238,33 @@ export function M2SidebarPanels({
               <span className="pa-pill pa-tone-action">◌ 检查中</span>
             ) : null}
           </div>
-          <div className="pa-row">
-            <span className="pa-pill pa-tone-pass">✓ 通过 {passCount}</span>
-            {failCount > 0 ? (
-              <span className="pa-pill pa-tone-danger">✕ 失败 {failCount}</span>
-            ) : null}
-            {clarifyCount > 0 ? (
-              <span className="pa-pill pa-tone-pending">? 待澄清 {clarifyCount}</span>
-            ) : null}
+        </div>
+
+        {/* 6-Status Engineering Check Summary Grid (Graphic + Text) */}
+        <div className="pa-status-summary-grid" aria-label="六类检查状态统计">
+          <div className="pa-status-summary-cell">
+            <span className="pa-pill pa-tone-pass">✓ 通过</span>
+            <strong className="pa-mono">{passCount}</strong>
+          </div>
+          <div className="pa-status-summary-cell">
+            <span className="pa-pill pa-tone-danger">✕ 失败</span>
+            <strong className="pa-mono">{failCount}</strong>
+          </div>
+          <div className="pa-status-summary-cell">
+            <span className="pa-pill pa-tone-pending">? 待澄清</span>
+            <strong className="pa-mono">{clarifyCount}</strong>
+          </div>
+          <div className="pa-status-summary-cell">
+            <span className="pa-pill pa-tone-muted">○ 未覆盖</span>
+            <strong className="pa-mono">{uncoveredCount}</strong>
+          </div>
+          <div className="pa-status-summary-cell">
+            <span className="pa-pill pa-tone-execfail">! 执行失败</span>
+            <strong className="pa-mono">{execFailCount}</strong>
+          </div>
+          <div className="pa-status-summary-cell">
+            <span className="pa-pill pa-tone-action">◌ 检查中</span>
+            <strong className="pa-mono">{checkingCount}</strong>
           </div>
         </div>
 
@@ -341,8 +361,8 @@ export function M2SidebarPanels({
           </ul>
         )}
 
-        {/* Evidence / Source Localization Card */}
-        <section className="pa-card" aria-label="来源定位证据">
+        {/* Evidence / Source Localization Card (Inline in Sidebar, Never Overlays Canvas) */}
+        <section className="pa-card pa-evidence-card" aria-label="来源定位证据">
           <div className="pa-header">
             <span className="pa-card-label">来源定位与原文依据</span>
             {evidenceLoading ? (
@@ -359,7 +379,7 @@ export function M2SidebarPanels({
           {activeEvidence ? (
             <div className="pa-list">
               {activeEvidence.anchors.map((anc, idx) => (
-                <div key={`${anc.documentRef}-${anc.page}-${idx}`} className="pa-card">
+                <div key={`${anc.documentRef}-${anc.page}-${idx}`} className="pa-pdf-excerpt-box">
                   <div className="pa-row">
                     <strong className="pa-mono">
                       {anc.documentName} · 第 {anc.page} 页

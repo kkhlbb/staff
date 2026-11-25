@@ -364,6 +364,16 @@ export function M2VectorDrawingViewport({
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
       >
+        {/* Engineering Sheet Border Frame */}
+        <rect
+          x="2"
+          y="2"
+          width={Math.max(10, layout.baseWidth - 4)}
+          height={Math.max(10, layout.baseHeight - 4)}
+          rx="1.5"
+          className="pa-svg-frame"
+        />
+
         {/* Title / Unit / Revision Header */}
         <g data-testid="m2-drawing-header">
           <text x="6" y="10" className="pa-svg-header-text">
