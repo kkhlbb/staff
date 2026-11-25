@@ -136,8 +136,10 @@ export class M2Pipeline {
     return this.start(model, clauses, requirements, order)
   }
 
-  stageChange(revision: string, requestId: string, change: { kind: 'moveRightHoleX'; deltaQ: number }) {
-    const input = change
+  stageChange(revision: string, requestId: string, change: { kind: 'moveRightHoleX'; deltaQ: number },
+    externalBaseRevision?: string) {
+    const input = externalBaseRevision === undefined ? change
+      : { ...change, revision, baseRevision: externalBaseRevision, sourceKey: this.sourceKey }
     return this.once('change', requestId, input, () => {
       const receipt = this.savedReply<ReturnType<M2Pipeline['start']>>('change', requestId, input)
       if (receipt) return receipt
@@ -146,10 +148,13 @@ export class M2Pipeline {
       const right = model.holes.find(hole => hole.role === 'hole.right.axis')
       const delta = change.deltaQ
       if (!right || model.bindings['hole.right.axis'] !== right.id || !Number.isSafeInteger(delta) || delta === 0) throw Error('INVALID_REQUEST')
-      right.x.nominalQ += delta
+      const nextX = right.x.nominalQ + delta
+      const nextOffset = this.draftInputs.rightHoleOffsetQ + delta
+      if (!Number.isSafeInteger(nextX) || !Number.isSafeInteger(nextOffset)) throw Error('INVALID_REQUEST')
+      right.x.nominalQ = nextX
       const order = base.order + 1
       const value = { jobId: randomUUID(), revision: 'draft-' + order }
-      this.saveInputs({ ...this.draftInputs, order, rightHoleOffsetQ: this.draftInputs.rightHoleOffsetQ + delta },
+      this.saveInputs({ ...this.draftInputs, order, rightHoleOffsetQ: nextOffset },
         { operation: 'change', requestId, digest: fingerprint(input), value })
       return this.start(model, base.clauses, base.requirements, order, value.jobId)
     })

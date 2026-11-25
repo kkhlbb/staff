@@ -567,16 +567,21 @@ export class M1InternalService {
     }
   }
 
-  writerContext(id: string, caller: Caller, credentials: Omit<Credentials, 'idempotencyKey'>,
-    verify: VerifyM1Binding): Promise<M1WriterContext> {
+  withWriter<T>(id: string, caller: Caller, credentials: Omit<Credentials, 'idempotencyKey'>,
+    verify: VerifyM1Binding, run: (context: M1WriterContext) => T): Promise<T> {
     return this.serial(id, async () => {
       const state = await this.load(id)
       const binding = await verify()
       binding.seal()
       this.checkSpacerWriter(state, caller, credentials)
-      return { baseRevision: binding.baseRevision, draftRevision: state.draftRevision, cursor: state.cursor,
-        spacerDraft: state.spacerDraft }
+      return run({ baseRevision: binding.baseRevision, draftRevision: state.draftRevision, cursor: state.cursor,
+        spacerDraft: state.spacerDraft })
     })
+  }
+
+  writerContext(id: string, caller: Caller, credentials: Omit<Credentials, 'idempotencyKey'>,
+    verify: VerifyM1Binding): Promise<M1WriterContext> {
+    return this.withWriter(id, caller, credentials, verify, context => context)
   }
 
   stageChange(id: string, caller: Caller, credentials: Omit<Credentials, 'idempotencyKey'>,

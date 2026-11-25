@@ -11,10 +11,10 @@ export const M1_LOCAL_VERSION = 1
 export const M1_REQUEST_BYTES = 128 * 1024
 
 export const M1_LOCAL_OPERATIONS = ['capabilities', 'authorizeProject', 'getContext', 'getExternalActivities',
-  'acquireWriter', 'takeOverWriter', 'stageChange', 'readWriterContext', 'revokeWriter'] as const
+  'acquireWriter', 'takeOverWriter', 'stageChange', 'readWriterContext', 'revokeWriter', 'moveRightHoleX'] as const
 export const M1_LOCAL_ERRORS = new Set(['AUTH_REQUIRED', 'WRITER_HELD', 'WRITER_REVOKED', 'INVALID_REQUEST', 'STALE_BASE',
   'DRAFT_NOT_EMPTY', 'INVALID_TRANSITION', 'REFERENCE_STALE', 'IDEMPOTENCY_CONFLICT', 'TASK_SCOPE_MISMATCH',
-  'UNSUPPORTED_SCOPE', 'SAVE_FAILED', 'STEP_FAILED'])
+  'UNSUPPORTED_SCOPE', 'SAVE_FAILED', 'STEP_FAILED', 'REQUEST_COLLISION', 'STALE_SOURCE'])
 
 export function isM1ClientName(value: unknown): value is string {
   return typeof value === 'string' && value.trim() === value && value.length > 0 && value.length <= 128 &&

@@ -55,11 +55,15 @@ function toolsFor(client: LocalM1Client): ToolSpec[] {
     define('authorizeProject', '按项目 ID 请求用户在寸链桌面确认读取已打开的项目。', project),
     define('getContext', '读取获准项目的草稿、写入状态和外部活动。', project),
     define('getExternalActivities', '读取获准项目的外部活动和草稿修订。', project),
-    define('acquireWriter', '请求用户允许创建或续接此项目的隔套草稿。', writer),
+    define('acquireWriter', '请求用户允许写入此项目的草稿。', writer),
     define('takeOverWriter', '请求用户接管此项目的草稿写入。', writer),
     define('readWriterContext', '读取当前写入权限对应的草稿和基准。', project),
     define('stageChange', '创建隔套草稿或补充同一任务缺少的尺寸。尺寸使用 q 整数单位。', stage),
     define('revokeWriter', '释放当前连接持有的写入权限。', project),
+    define('moveRightHoleX', '沿 X 轴移动安装板右孔。从 readWriterContext 获取文件基准及安装板草稿修订；deltaQ 每单位为 0.0001 mm。', {
+      ...project, baseRevision: { type: 'string' }, expectedDraftRevision: { type: 'string' },
+      idempotencyKey: { type: 'string' }, deltaQ: { type: 'integer', not: { const: 0 } },
+    }),
   ]
 }
 
@@ -73,7 +77,7 @@ async function main() {
   const { startServer } = createStdioServer({
     name: 'cunlian-local',
     version: async () => __CUNLIAN_PACKAGE_VERSION__,
-    instructions: '打开寸链项目后，按项目 ID 申请读取权限。写入隔套草稿需要在寸链确认。连接中断后重新申请项目权限。',
+    instructions: '打开寸链项目后，按项目 ID 申请读取权限。写入草稿需要在寸链确认。连接中断后重新申请项目权限。',
     tools: toolsFor(client),
     toolError(error) {
       const code = error instanceof Error ? error.message : ''

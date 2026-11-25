@@ -7,7 +7,7 @@ import { IPC_CHANNELS } from '../../../shared/contracts'
 import type { M2Result } from '../../../shared/project-agent/m2-preview'
 import { toSenderInfo } from '../../ipc'
 import type { SenderGuard } from '../../senderGuard'
-import type { LocalM1Authority, LocalM1Session } from '../m1LocalAuthority'
+import type { LocalM1Authority, LocalM1Session, M1ExternalScope, M1WriterLease } from '../m1LocalAuthority'
 import { openM2DraftStore } from './draftStore'
 import { fingerprint, runMountingPlate, runMountingPlateDrawing } from './engine.mjs'
 import { M2Pipeline } from './pipeline'
@@ -60,7 +60,7 @@ const messages: Record<string, string> = {
 type Handler = (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<M2Result<unknown>>
 interface Ports {
   guard: SenderGuard
-  authority: Pick<LocalM1Authority, 'resolve' | 'workbenchCut'>
+  authority: Pick<LocalM1Authority, 'resolve' | 'workbenchCut' | 'externalWorkbenchCut' | 'withExternalWriter'>
   sessionFor(windowId: number): LocalM1Session | null
   draftRoot?: string
   scopeEpoch?(windowId: number): number
@@ -110,7 +110,9 @@ export function installM2PreviewChannels(ipc: { handle(channel: string, handler:
     for (const stop of state?.streams.values() ?? []) stop()
   }
 
-  async function access(event: State['event'], projectId: string) {
+  type ExternalCut = Awaited<ReturnType<LocalM1Authority['externalWorkbenchCut']>>
+
+  async function access(event: State['event'], projectId: string, external?: ExternalCut) {
     const sender = toSenderInfo(event)
     const frame = event.senderFrame
     const binding = ports.sessionFor(sender.webContentsId)
@@ -123,10 +125,12 @@ export function installM2PreviewChannels(ipc: { handle(channel: string, handler:
       }
     }
     check()
-    const caller = await ports.authority.resolve(sender, binding!)
+    const local = await ports.authority.resolve(sender, binding!)
+    const caller = local ?? external?.caller
     if (!caller) throw Error('AUTH_REQUIRED')
-    const cut = await ports.authority.workbenchCut(binding!, caller)
+    const cut = local ? await ports.authority.workbenchCut(binding!, local) : external!
     const verify = () => { check(); cut.seal() }
+    external?.seal()
     verify()
     let state = states.get(sender.webContentsId)
     const writerEpoch = cut.snapshot.writerEpoch
@@ -407,6 +411,41 @@ export function installM2PreviewChannels(ipc: { handle(channel: string, handler:
     }
   }
 
+  async function modelChangePort(event: State['event'], projectId: string, external?: ExternalCut) {
+    const { state, verify, writable } = await access(event, projectId, external)
+    // M1 remains usable if the auxiliary M2 text reader cannot classify an attachment.
+    try { await importSource(state, event.sender.id) } catch (error) {
+      verify()
+      if (!state.pipeline.snapshot().currentRevision) return null
+      throw new Error('STALE_SOURCE', { cause: error })
+    }
+    verify()
+    const revision = state.pipeline.snapshot().currentRevision
+    if (!revision) return null
+    return {
+      revision,
+      select(objectId: string) {
+        verify()
+        state.live()
+        if (state.pipeline.snapshot().currentRevision !== revision) throw Error('REFERENCE_STALE')
+        return state.pipeline.readSelectedObject(objectId)
+      },
+      stage(requestId: string, deltaQ: number, expectedRevision = revision, externalBaseRevision?: string) {
+        verify()
+        state.live()
+        if (!writable) throw Error('WRITER_REVOKED')
+        return state.pipeline.stageChange(expectedRevision, requestId, { kind: 'moveRightHoleX', deltaQ }, externalBaseRevision)
+      },
+    }
+  }
+
+  async function externalPort(scope: M1ExternalScope, lease: M1WriterLease) {
+    const cut = await ports.authority.externalWorkbenchCut(scope, lease)
+    const event = ports.eventForWindow?.(scope.windowId)
+    if (!event || ports.sessionFor(scope.windowId)?.sessionId !== scope.sessionId) throw Error('AUTH_REQUIRED')
+    return modelChangePort(event, scope.projectId, cut)
+  }
+
   return {
     invalidate,
     externalDraft,
@@ -422,32 +461,27 @@ export function installM2PreviewChannels(ipc: { handle(channel: string, handler:
       state.live()
       return state.pipeline.readSelectedObject(ref)
     },
-    async modelChangePort(event: IpcMainInvokeEvent, projectId: string) {
-      const { state, verify, writable } = await access(event, projectId)
-      // M1 remains usable if the auxiliary M2 text reader cannot classify an attachment.
-      try { await importSource(state, event.sender.id) } catch (error) {
-        verify()
-        if (!state.pipeline.snapshot().currentRevision) return null
-        throw new Error('STALE_SOURCE', { cause: error })
+    modelChangePort,
+    async mountingPlateRevision(scope: M1ExternalScope, lease: M1WriterLease) {
+      try {
+        return (await externalPort(scope, lease))?.revision
+      } catch (error) {
+        // A stale taskbook must not disable the existing spacer context.
+        if (error instanceof Error && error.message === 'STALE_SOURCE') return undefined
+        throw error
       }
-      verify()
-      const revision = state.pipeline.snapshot().currentRevision
-      if (!revision) return null
-      return {
-        revision,
-        select(objectId: string) {
-          verify()
-          state.live()
-          if (state.pipeline.snapshot().currentRevision !== revision) throw Error('REFERENCE_STALE')
-          return state.pipeline.readSelectedObject(objectId)
-        },
-        stage(requestId: string, deltaQ: number) {
-          verify()
-          state.live()
-          if (!writable) throw Error('WRITER_REVOKED')
-          return state.pipeline.stageChange(revision, requestId, { kind: 'moveRightHoleX', deltaQ })
-        },
-      }
+    },
+    async moveRightHoleX(scope: M1ExternalScope, lease: M1WriterLease, request: {
+      baseRevision: string; expectedDraftRevision: string; idempotencyKey: string; deltaQ: number
+    }) {
+      const port = await externalPort(scope, lease)
+      if (!port) throw Error('UNSUPPORTED_SCOPE')
+      // Stage synchronously under the same writer journal queue as takeover and revocation.
+      return ports.authority.withExternalWriter(scope, lease, context => {
+        if (context.baseRevision !== request.baseRevision) throw Error('STALE_BASE')
+        const requestId = 'local-mcp:' + fingerprint(request.idempotencyKey)
+        return port.stage(requestId, request.deltaQ, request.expectedDraftRevision, request.baseRevision)
+      })
     },
     async sourceImported(windowId: number) {
       const state = states.get(windowId)

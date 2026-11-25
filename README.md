@@ -1,132 +1,95 @@
-# 寸链 · 轴系轴向尺寸链工作台
+# 寸链 · 机械制图 Agent 工作台
 
-macOS 桌面应用（Electron + React + TypeScript），用于带文本层 PDF 的候选提取、人工确认、一维轴向尺寸链计算、隔套图纸与有限 STEP 导出。模型只能调用受限工具；提交与导出须由人确认。
+> **版本**：`v0.5.0-beta`（机械制图 Agent 重构版）｜**架构**：Electron + React + TypeScript + Open CASCADE WASM  
+> **许可**：MIT（第三方组件与字体许可见 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)）
 
-它不是一个通用 CAD，也不是一个公差分析仿真器。目前只覆盖隔套和一维轴向链；出处、确认与版本保存在项目文件中，仍有未验证与未实现边界。
+**寸链**是一个面向机械设计师的本地桌面制图工作台：**把带文本层的零件任务书 PDF 交给常用的本地 Agent（MCP）或内置模型 API，寸链按已确认的尺寸和约束生成可修改的三维实体、二维正投影图纸与多维检查记录，在桌面直接并排展示。**
 
-许可 **MIT**。第三方组件与字体许可见 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)。
-
----
-
-## 一、它到底能做什么
-
-| 环节 | 现在能做到 | 证据 |
-|---|---|---|
-| **读任务书** | 带文本层的 PDF → 候选参数/组成环/公式/闭区间要求，每条带页、选区、原文片段 | 6 份真实文档 269 页：**140 候选 / 58 可确认 = 41.4%**；**GT-02：58 条 pending nominal 核对，错值 0**；上下偏差各核对 20 条，其余 38 条原件未标偏差，不当成数值 0。非召回率/全语义正确保证。逐份见 [`docs/BENCHMARK.md`](docs/BENCHMARK.md) |
-| **建项目** | 人工逐条确认 → 生成隔套项目草稿 | 确认凭据只来自界面；请求里带 `confirmed: true` 一律不采信 |
-| **算尺寸链** | 整数 `q`（1q = 0.0001 mm）极值法；`C = H − B1 − S − B2` | 内核不联网、不依赖浮点累加 |
-| **判条款** | 结果落在任务书要求的闭区间内？超了多少？ | 12.00→`0.1500~0.2500` 满足；12.10→`0.0500~0.1500` 不满足 |
-| **出图** | A4 横向工程图 → 矢量 PDF / SVG / **DXF（R12 + 2000）** | 2000 版有 A3 图幅、图纸空间视口、标题栏与**真 `DIMENSION` 实体**；R12 保持单张几何+TEXT |
-| **被别的 agent 调用** | **MCP stdio 入口**：`read_taskbook` / `calc_chain` / `check_requirement` / `render_drawing` / `describe_project` | 只读与计算，同一内核；写入必须回桌面端点确认 |
-| **改图** | 一句话（"加厚 0.10"）→ 草稿 → 重算 → 复核 | 历史 DeepSeek 回执见 docs/evidence/v40-stage4；当前默认跳过真实模型项，不代表本次模型验收通过 |
-| **留痕** | 版本不可变、出处可追、提交时重算 | 授权只在主进程签发，模型拿不到 `approvalId` |
-
-## 二、Agent 在这里做什么（以及不许做什么）
-
-当前模型工具清单（`src/agent/toolSchemas.ts`）：
-
-```
-ingest_readings 用户对照来源报读数     只产待逐条核对候选，不自行识图
-createProject  建立空的意图项目       不写数值
-setChain       用户原话组成环/公式    只产意图草稿
-setRequirement 用户原话区间         只产意图草稿
-setBinding     用户原话隔套参数/绑定  只产意图草稿
-context   读项目/版本/草稿/条款     只读
-confirmed 读已确认候选              只读
-apply     候选 → 项目草稿           只产草稿
-stage     改一个参数并重算          只产草稿，且只接受 内径/外径/长度
-preview   重算图纸/区间/条款         只读
-export    导出                     需用户点保存框
-```
-
-**它不能**：算数（内核算）、判合规（提交时主进程重算）、提交（主进程签发一次性授权）、自己宣布成功（侧栏只显示工具回执）。
-
-这条边界不是靠自觉，是架构关住的。设计理由见 [`ADR-001`](docs/adr/ADR-001-证据模型.md)。
-
-## 三、能力边界（先说清，免得你白试）
-
-**不支持**：自动 OCR（扫描 PDF/图片只能走用户提供读数、逐条核对路径）· DOCX · 形位公差与 GD&T · 多链联合求解 · 通用实体编辑 · DWG · Windows 构建验收。
-
-**有限实现**：RSS/蒙特卡洛仅为独立分布假设下的参考，不替换极值判据；RSS 与正态 MC 均以公差带中点为中心（σ=T/6，不截断）。隔套 STEP 仅从三参数生成固定 OCCT WASM 圆柱布尔差实体，不把任意 STL 转实体；发布/许可门禁与人工审查仍单列，能本地导出不等于可分发。
-
-**只能在 隔套 + 一条一维轴向链 + 一条毫米闭区间 上工作。** 未实现通用 CAD 与多链求解。
-
-**DXF 的实情（分两个版本，能力不一样）**：
-
-- **R12（AC1009）保持现状**：单张纸、只有模型空间，实体白名单 `LINE/POLYLINE/CIRCLE/ARC/TEXT`；
-  **没有 `DIMENSION` 实体**（尺寸是几何 + 文字，改图不会自动改数），也**没有 `LAYOUT`/`VIEWPORT`**（R12 没这些结构）。
-  R12 的 TEXT 有 255 字节上限；GBK 表外字符直接报错。
-- **2000（AC1015）有真图纸结构**：A3 横向 420×297 图幅，图框/标题栏/技术要求区在**图纸空间**，
-  零件在**模型空间按 1:1 真实尺寸**，一个 `VIEWPORT` 把两者按比例（1:1 / 1:2 / 2:1 …）接起来；
-  三条尺寸（长度 12.05、外径 ⌀32、内径 ⌀20）是**真 `DIMENSION` 实体**（`DIMSTYLE` 表 + 匿名几何块 `*D1/*D2/*D3`），
-  数值来自参数快照的 q 换算，不是写死的文字。改 q 编号会跟着变。
-  代价：文件结构复杂得多（`BLOCK_RECORD` 表、`LAYOUT` 对象、子类标记都得齐全），
-  导入器的实测坑见 `docs/evidence/dxf-depth/research.md` §5。
-
-**签名**：`.app` 是 ad-hoc 签名、未公证。自行构建可直接打开；下载来的会被 Gatekeeper 拦一次：
-
-```bash
-xattr -dr com.apple.quarantine /Applications/寸链.app
-```
-
-## 四、怎么验证我说的话
-
-不信任何一句，跑命令：
-
-```bash
-npm install
-npm test                 # 实际数量以当前输出为准；证据格式扫描聚合，不计作业务覆盖
-npm run test:desktop     # 真实模型项默认跳过；假模型只验证工具/调度契约
-npm run typecheck && npm run lint && npm run build
-
-# 真实文档度量（需自备 6 份 PDF，见 docs/BENCHMARK.md）
-REAL_DOC_CORPUS=<目录> npm run metrics:real-docs
-```
-
-每个功能的证据都在 `docs/evidence/` 下，含**变异实验**：把实现改坏，用例必须变红，再改回来。
-
-```bash
-# 例：去掉出处校验 → 必须红
-docs/evidence/evidence-ref/mutations/M02-red.log    # 3 failed / 45 passed
-docs/evidence/evidence-ref/mutations/M02-green-restored.log  # 48 passed
-```
-
-## 五、构建桌面应用
-
-```bash
-npm run package:desktop -- --arch=arm64
-# 产物：out/寸链-darwin-arm64/寸链.app（约 256 MB）
-```
-
-需要 Node.js 20+ 与 macOS。构建本机不需要 Apple 开发者账号。
-
-## 六、数据与隐私
-
-- 所有计算、渲染、PDF/DXF 生成都在本机完成，**不联网**
-- 项目文件是你指定的 `.cunlian`（ZIP：项目、来源附件原始字节、版本、事件、快照）
-- 唯一的外部调用是 **Agent 模型**，密钥存 macOS Keychain，明文不落盘；不配置模型时用离线假模型演示
-- `package.json` 的 `"private": true` 只为防误 `npm publish`
-
-## 七、仓库里有什么
-
-```
-src/domain/            尺寸链内核（整数 q、极值法）
-src/document-extraction/  任务书提取（版本以代码 EXTRACTOR_VERSION 为准）：规则、切块、出处校验
-src/agent/             Agent 工具契约
-src/drawing/           DrawingData → SVG / PDF / DXF
-desktop/main/          主进程：授权签发、提交重算、导出端口
-docs/adr/              架构决策（证据模型、入口与出处）
-docs/evidence/         每批交付的度量、变异日志、截图
-docs/BENCHMARK.md      真实文档度量体系与复现方式
-```
-
-## 八、已知未做
-
-- 真实机械装配任务书样本：**一份都没有**（评测语料是公开论文与标准）
-- 通用三维实体编辑/STEP 导入与 STL 转实体未实现；隔套 STEP 有限出口及固定内核见 ADR-004，不能外推为通用 CAD 能力
-- 校对—审核—批准三级签署、多用户、审计导出
-- 自动更新、崩溃上报、Windows 构建
+它不是通用 CAD，也不是通用公差仿真器。它专注**一条窄而可追责的工程闭环**——支持持续修改同一个有工程依据的项目、失败后恢复与次日重开；**任何写入授权、接管、正式版本提交与导出都必须由人在桌面端确认。**
 
 ---
 
-当前为本地 Beta；历史证据保留原口径，当前修正与未完成项见 slop-cleanup 交付追踪，不将历史通过数当成本次验收。
+## 一、核心能力（`v0.5.0-beta`）
+
+| 能力 | 当前实现 |
+|---|---|
+| **双入口 Agent 互联** | **1) 外置本地 Agent（标准 MCP stdio）**：随包提供 `cunlian-local` 桥接（导出标准 `mcpServers` JSON，冷启动唤起桌面、同 UID 本地通道），兼容 Claude Code / Claude Desktop / Codex / Cursor / Windsurf / Orca / DSH 等标准 MCP 客户端；同时保留原 `mcp/server.mjs` 5 个只读/计算工具。<br>**2) 内置模型 API（OpenAI 兼容协议）**：支持 DeepSeek、OpenAI、兼容网关及本机回环 `127.0.0.1`（Ollama / vLLM / LM Studio）；强制通过真实只读工具往返探针（`m1_connection_probe`）后才解锁建模对话。 |
+| **无手动参数表的主工作台** | 主流程移除手动参数表、尺寸滑块与坐标编辑器。中央画布内置 **Three.js 真 3D 网格拾取**与 **真 2D SVG 矢量图纸**（主/俯/侧视、实线/圆/隐藏虚线与特征绑定标注），支持模型 / 图纸 / 并排三视图与窄屏标签降级、特征 ↔ 标注双向高亮、连续修改保留 3D 视角与 2D 平移缩放。 |
+| **精确几何与多维检查** | 基于 **OCCT WASM（Replicad OpenCascade.js）** 在可取消独立 worker 中构形与投影；覆盖矩形安装板 + 贯穿圆孔 + 平行参考盖板，并完整保留旧版隔套 + 一维整数 `q`（`1q = 0.0001 mm`）极值尺寸链。<br>支持：**一维尺寸链极值**、**二维轴向孔边距极值**、**三维刚体变换（含绕轴旋转 90°）平行面间隙**、**固定姿态接触 / 干涉 / 间隙判定**，以及**具名持久引用失效检测与显式重绑**。 |
+| **异步出图、乱序守卫与人机确认闭环** | 模型与图纸异步独立生成；图纸失败时保留上一有效版本并明确标明版本号，支持单步重试；同修订指纹对齐后自动并排展示。每项目单写入方，支持原生接管并撤销旧写入租约；必需条款未通过严禁提交正式版，通过后经绑定草稿与检查集指纹的一次性原生确认原子写入。 |
+| **旧项目兼容与迁移** | 打开旧版 `.cunlian` 隔套项目时严格保留原件，生成迁移差异报告（列出未解释旧字段与受限操作），既有 12.00 / 12.04 / 12.10 / 12.05 尺寸链回归与独立未提交草稿保持一致；顶部栏提供「返回旧工作台」（`#/desktop-legacy`）随时回切。 |
+
+---
+
+## 二、Agent 权限与安全边界
+
+- **外置 `cunlian-local` MCP 工具（10 个）**：`capabilities`、`authorizeProject`、`getContext`、`getExternalActivities`、`acquireWriter`、`takeOverWriter`、`readWriterContext`、`stageChange`、`revokeWriter`、`moveRightHoleX`。
+  - 安装板右孔位移：在桌面授权项目并取得写入权后，用 `readWriterContext` 读取 `baseRevision` 和 `mountingPlateDraftRevision`，再传入 `projectId`、`baseRevision`、`expectedDraftRevision`、`idempotencyKey` 和整数 `deltaQ`（+1 mm 为 `10000`）。成功返回草稿修订和构建任务 ID，正式版本须在桌面确认提交。
+- **原 `mcp/server.mjs` 只读/计算工具（5 个）**：`read_taskbook`、`calc_chain`、`check_requirement`、`render_drawing`、`describe_project`。
+- **内置模型对话工具**：`m1_connection_probe`（只读探针）、`m1_stage_spacer`（隔套草稿）、`m2_move_right_hole_x`（安装板右孔沿 X 轴位移）。
+- **硬架构边界**：模型不直接算数、不自行判定合规、不执行任意代码、拿不到主进程签发的正式提交授权；写入授权、接管与正式提交均由 Electron 主进程原生弹窗确认并校验文件绑定与代际。详见 [`ADR-001`](docs/adr/ADR-001-证据模型.md)。
+
+---
+
+## 三、能力边界与已知限制
+
+- **零件与分析范围**：当前覆盖「矩形板件拉伸 + Z 向贯穿圆孔 + 平行参考盖板」与「隔套 + 一维轴向尺寸链」。**不支持**自由曲面、任意装配运动、完整 GD&T / 形位公差、扫描件自动 OCR、DOCX、原生 DWG。
+- **互联协议范围**：
+  - 外置 MCP 仅限本机同用户 stdio 桥接，不支持远程公网 Streamable HTTP / SSE；第三方成品客户端自动改写配置未实现（需复制 `mcpConfigJson` 填入客户端）。
+  - 内置 API 仅实现 OpenAI 兼容协议（`chat/completions` + `tools`）；Anthropic / Gemini 原生接口需通过 OpenAI 兼容网关接入。
+- **平台与签名**：
+  - **macOS arm64**：ad-hoc 签名、未公证；下载后首次打开若遇 Gatekeeper 拦截，可执行：
+    ```bash
+    xattr -dr com.apple.quarantine /Applications/寸链.app
+    ```
+  - **Windows x64**：随 `v0.5.0-beta` 提供 `win32-x64` 解压即用包（本地桥接采用 Windows 命名管道与 `cunlian-mcp.cmd`），未做代码签名，Windows 真机实测持续完善中。
+
+---
+
+## 四、本地验证与构建
+
+需要 Node.js 20+（推荐 22+）。
+
+```bash
+npm ci
+
+# 代码与类型检查
+npm run lint
+npm run typecheck
+npm run typecheck:desktop
+
+# 自动化测试套件
+npm test                 # 前端与工作台全量单测（含 A01–A12 前端验收走查）
+npm run test:mcp         # MCP stdio 协议回归
+npm run test:desktop     # 主进程 M1/M2/M3 生命周期、几何引擎与兼容回归
+node --test desktop/tests/projectAgentM0.node.mjs
+
+# 生产构建与打包
+npm run build
+npm run package:desktop -- --arch=arm64                 # macOS arm64
+npm run package:desktop -- --platform=win32 --arch=x64  # Windows x64
+```
+
+---
+
+## 五、数据与隐私
+
+- 几何构形、二维投影、尺寸链与多维检查、PDF/SVG/DXF 渲染全部在**本机完成，不联网**。
+- 项目存档保存在你指定的 `.cunlian` 文件（ZIP：项目数据、来源附件原始字节、版本、事件日志与快照）。
+- 唯一外发网络请求为你主动配置的 **模型 API**；密钥经 Electron `safeStorage` / 系统钥匙串加密保存，日志、响应与项目存档严格脱敏，明文不落盘。
+
+---
+
+## 六、仓库目录结构
+
+```text
+src/workspace/project-agent/  重构版主工作台（双入口向导、3D 网格与 2D SVG 画布、检查/来源定位、完成视图与迁移横幅）
+src/domain/                   一维整数 q 尺寸链内核
+src/document-extraction/      任务书 PDF 文本提取、切块与出处校验
+src/drawing/                  工程图 SVG / PDF / DXF（R12 & 2000）渲染
+desktop/main/project-agent/   主进程本地授权、单写入方事务、本机 MCP 端点、内置模型 API、M2 几何与投影引擎、M3 迁移与原子提交
+desktop/shared/project-agent/ 前后端共享 M0–M3 契约与事件 Schema
+desktop/preload/              Electron Preload 受控桥接（19 项重构工作台接口 + 旧版兼容接口）
+mcp/                          随包本地桥接 cunlian-local 与原只读 MCP 服务 server.mjs
+docs/                         架构决策（ADR）、真实文档基准（BENCHMARK）与 M0–M3 / 合流验收报告
+```

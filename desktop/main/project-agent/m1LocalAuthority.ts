@@ -326,6 +326,22 @@ export class LocalM1Authority {
     return result
   }
 
+  async withExternalWriter<T>(scope: M1ExternalScope, lease: M1WriterLease, run: (context: M1WriterContext) => T) {
+    const writer = this.writerFor(lease)
+    const { anchor, caller } = writer
+    if (anchor.external !== scope) throw Error('AUTH_REQUIRED')
+    return anchor.service.withWriter(caller.projectId, caller, lease, this.verifyWriterBinding(anchor, writer), run)
+  }
+
+  async externalWorkbenchCut(scope: M1ExternalScope, lease: M1WriterLease) {
+    const writer = this.writerFor(lease)
+    const grant = writer.anchor
+    if (grant.external !== scope) throw Error('AUTH_REQUIRED')
+    const cut = await this.grantCut(grant)
+    if (cut.snapshot.writerEpoch !== lease.writerEpoch || this.writers.get(grant.key) !== writer) throw Error('WRITER_REVOKED')
+    return { ...cut, caller: grant.caller }
+  }
+
   async readWriterContext(lease: M1WriterLease): Promise<M1WriterContext> {
     const writer = this.writerFor(lease)
     const { anchor, caller } = writer
@@ -379,10 +395,13 @@ export class LocalM1Authority {
     throw Error('AUTH_REQUIRED')
   }
   async workbenchCut(binding: Binding, caller: Omit<Caller, 'canWrite'>) {
-    const grant = await this.active(binding, caller)
+    return this.grantCut(await this.active(binding, caller))
+  }
+
+  private async grantCut(grant: Grant) {
     const verify = this.verifyWriterBinding(grant)
     const initial = await verify()
-    const cut = await grant.service.context(caller.projectId, grant.caller)
+    const cut = await grant.service.context(grant.caller.projectId, grant.caller)
     const current = await verify()
     current.seal()
     if (current.baseRevision !== initial.baseRevision) throw Error('AUTH_REQUIRED')

@@ -1,15 +1,20 @@
 import { execFileSync, spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { once } from 'node:events'
-import { chmod, lstat, mkdir, mkdtemp, realpath, rename, rm, stat, symlink, writeFile } from 'node:fs/promises'
+import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import net from 'node:net'
 import path from 'node:path'
+import type { IpcMainInvokeEvent } from 'electron'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { LocalM1Client } from '../../mcp/localClient'
 import { LocalM1Authority } from '../main/project-agent/m1LocalAuthority'
 import { getExternalActivities, getLocalAgentInstallInfo } from '../main/project-agent/m1LocalAgent'
 import { startM1LocalEndpoint } from '../main/project-agent/m1LocalEndpoint'
 import { M1InternalService } from '../main/project-agent/m1InternalService'
+import { IPC_CHANNELS } from '../shared/contracts'
+import { SenderGuard } from '../main/senderGuard'
+import { installM2PreviewChannels } from '../main/project-agent/m2/channels'
+import type { M2Result } from '../shared/project-agent/m2-preview'
 import { M1_LAUNCH_ARGUMENT } from '../main/project-agent/m1LocalTransport'
 
 const cleanup: (() => void | Promise<void>)[] = []
@@ -40,7 +45,7 @@ describe.skipIf(process.platform !== 'darwin' || process.getuid?.() === 0)('macO
     return () => rm(folder, { recursive: true, force: true })
   })
 
-  async function fixture(options: { start?: boolean; fault?: (phase: string) => void } = {}) {
+  async function fixture(options: { start?: boolean; mountingPlate?: boolean; fault?: (phase: string) => void } = {}) {
     const root = await mkdtemp('/private/tmp/m1-test-')
     cleanup.push(() => rm(root, { recursive: true, force: true }))
     const socketPath = path.join(root, 'agent.sock')
@@ -55,9 +60,22 @@ describe.skipIf(process.platform !== 'darwin' || process.getuid?.() === 0)('macO
       serviceFactory: dir => new M1InternalService(dir, phase => state.fault?.(phase)),
     })
     const confirm = vi.fn<Parameters<typeof startM1LocalEndpoint>[0]['confirm']>().mockImplementation(approve)
+    const handlers = new Map<string, (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<M2Result<unknown>>>()
+    const frame = { url: 'file:///workspace', send: vi.fn() }
+    const event = { sender: { id: 1, mainFrame: frame }, senderFrame: frame } as unknown as IpcMainInvokeEvent
+    const guard = new SenderGuard()
+    guard.register({ webContentsId: 1, isDestroyed: () => false, isAllowedFrameUrl: url => url === frame.url })
+    const bytes = options.mountingPlate ? await readFile(new URL('./fixtures/agent-refactor/mounting-plate-taskbook.pdf', import.meta.url)) : null
+    const m2 = bytes ? installM2PreviewChannels({ handle: (channel, handler) => handlers.set(channel, handler) }, {
+      authority, guard, sessionFor: () => state.session, eventForWindow: () => event, draftRoot: path.join(root, 'm2'),
+      sources: () => [{ documentRef: 'taskbook', documentName: 'mounting-plate-taskbook.pdf', bytes,
+        pageCount: 2, sha256: createHash('sha256').update(bytes).digest('hex') }],
+    }) : undefined
+    cleanup.push(() => m2?.invalidate(1))
     const start = async () => {
       const endpoint = await startM1LocalEndpoint({
         socketPath, peerHelper: helper, authority, confirm,
+        mountingPlateRevision: m2?.mountingPlateRevision, moveRightHoleX: m2?.moveRightHoleX,
         selectWindow: id => id === project.projectId ? 1 : null,
       })
       cleanup.push(endpoint.close)
@@ -71,6 +89,7 @@ describe.skipIf(process.platform !== 'darwin' || process.getuid?.() === 0)('macO
       return peer
     }
     return { socketPath, executable, authority, state, confirm, session, client, start,
+      invoke: (channel: string, params: object) => handlers.get(channel)!(event, params),
       endpoint: options.start === false ? undefined : await start() }
   }
 
@@ -192,6 +211,89 @@ describe.skipIf(process.platform !== 'darwin' || process.getuid?.() === 0)('macO
     await expect(getExternalActivities(f.authority, 1, f.session, 'wrong')).rejects.toThrow('AUTH_REQUIRED')
     expect(await client.call('revokeWriter', project)).toEqual({ revoked: true })
     await expect(client.call('stageChange', resume)).rejects.toThrow('WRITER_REVOKED')
+  })
+
+  it('replays mounted-plate writes through the local socket and the shared M2 change port', async () => {
+    const f = await fixture({ mountingPlate: true })
+    const client = f.client()
+    const request = { ...project, baseRevision: fingerprint, expectedDraftRevision: 'draft-1',
+      idempotencyKey: 'move-1', deltaQ: 10_000 }
+    const move = (args: object = request) => client.call('moveRightHoleX', args)
+    await expect(move()).rejects.toThrow('AUTH_REQUIRED')
+    await client.call('authorizeProject', project)
+    await expect(move()).rejects.toThrow('WRITER_REVOKED')
+    await client.call('acquireWriter', { ...project, expectedWriterEpoch: 0 })
+    await expect(client.call('readWriterContext', project)).resolves.toMatchObject({
+      baseRevision: fingerprint, mountingPlateDraftRevision: 'draft-1',
+    })
+    await expect(move({ ...request, writerEpoch: 1, path: f.session.path })).rejects.toThrow('INVALID_REQUEST')
+    await expect(move({ ...request, deltaQ: 1.5 })).rejects.toThrow('INVALID_REQUEST')
+    await expect(move({ ...request, baseRevision: 'wrong' })).rejects.toThrow('STALE_BASE')
+
+    await f.authority.authorize(sender, { ...project, requestId: 'local', requestGeneration: 1 })
+    await expect(f.invoke(IPC_CHANNELS.getM2PreviewSnapshot, project)).resolves.toMatchObject({
+      ok: true, value: { currentRevision: 'draft-1' },
+    })
+    const staged = await move()
+    expect(staged).toEqual({ revision: 'draft-2', jobId: expect.any(String) })
+    expect(await move()).toEqual(staged)
+    await expect(move({ ...request, deltaQ: 20_000 })).rejects.toThrow('REQUEST_COLLISION')
+    await expect(move({ ...request, expectedDraftRevision: 'draft-2' })).rejects.toThrow('REQUEST_COLLISION')
+    await expect(move({ ...request, idempotencyKey: 'stale' })).rejects.toThrow('STALE_BASE')
+
+    const next = f.client('New Writer')
+    await next.call('authorizeProject', project)
+    await next.call('takeOverWriter', { ...project, expectedWriterEpoch: 1 })
+    await expect(move()).rejects.toThrow('WRITER_REVOKED')
+    await expect(next.call('moveRightHoleX', request)).resolves.toEqual(staged)
+    await vi.waitFor(async () => {
+      expect(await f.invoke(IPC_CHANNELS.getM2PreviewSnapshot, project)).toMatchObject({ ok: true, value: {
+        currentRevision: 'draft-2',
+        checks: expect.arrayContaining([expect.objectContaining({ checkId: 'MP-03', status: 'pass', summary: '[13.75, 14.25] mm' })]),
+      } })
+    }, { timeout: 15_000 })
+    expect(await f.invoke(IPC_CHANNELS.locateM2Evidence, { ...project, revision: 'draft-2',
+      target: { kind: 'check', checkId: 'MP-03', requirementId: 'MP-03' },
+    })).toMatchObject({ ok: true, value: { inputs: expect.arrayContaining([
+      expect.objectContaining({ valueText: expect.stringMatching(/^61 ± /) }),
+    ]) } })
+  }, 20_000)
+
+  it('rejects a socket write disconnected before the M2 transaction enters the writer journal', async () => {
+    const f = await fixture({ mountingPlate: true })
+    const client = f.client()
+    await client.call('authorizeProject', project)
+    await client.call('acquireWriter', { ...project, expectedWriterEpoch: 0 })
+    const entered = deferred<void>()
+    const resume = deferred<void>()
+    const withWriter = f.authority.withExternalWriter.bind(f.authority)
+    const gate = vi.spyOn(f.authority, 'withExternalWriter').mockImplementationOnce(async (scope, lease, run) => {
+      entered.resolve()
+      await resume.promise
+      return withWriter(scope, lease, run)
+    })
+    const move = client.call('moveRightHoleX', { ...project, baseRevision: fingerprint,
+      expectedDraftRevision: 'draft-1', idempotencyKey: 'interrupted', deltaQ: 10_000 })
+    const disconnected = expect(move).rejects.toThrow('DESKTOP_DISCONNECTED')
+    let closing: Promise<void> | undefined
+    try {
+      await Promise.race([entered.promise, move])
+      expect(gate).toHaveBeenCalledOnce()
+      closing = f.endpoint?.close()
+      await disconnected
+    } finally {
+      resume.resolve()
+      await closing
+      gate.mockRestore()
+    }
+
+    await f.start()
+    const next = f.client('Replacement Writer')
+    await next.call('authorizeProject', project)
+    await next.call('acquireWriter', { ...project, expectedWriterEpoch: 2 })
+    await expect(next.call('readWriterContext', project)).resolves.toMatchObject({
+      mountingPlateDraftRevision: 'draft-1',
+    })
   })
 
   it('targets a single writer across connections and revalidates the binding after file replacement', async () => {

@@ -109,7 +109,7 @@ try {
   bridge.stdin.write('{"jsonrpc":"2.0","method":"notifications/initialized"}\n')
   const listed = await request('tools/list', {})
   assert.deepEqual(listed.tools.map(tool => tool.name), ['capabilities', 'authorizeProject', 'getContext',
-    'getExternalActivities', 'acquireWriter', 'takeOverWriter', 'readWriterContext', 'stageChange', 'revokeWriter'])
+    'getExternalActivities', 'acquireWriter', 'takeOverWriter', 'readWriterContext', 'stageChange', 'revokeWriter', 'moveRightHoleX'])
   assert.equal((await call('capabilities', {})).structuredContent.protocol, 1)
   const denied = await call('getExternalActivities', { projectId: 'not-authorized' })
   assert.equal(denied.isError, true)

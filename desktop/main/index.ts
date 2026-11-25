@@ -617,6 +617,8 @@ function installIpcHandlers(): void {
       socketPath: localM1Socket(process.execPath),
       peerHelper: path.join(process.resourcesPath, M1_BRIDGE_RESOURCE, 'm1-peer'),
       authority: m1Authority,
+      mountingPlateRevision: (scope, lease) => m2PreviewForClose!.mountingPlateRevision(scope, lease),
+      moveRightHoleX: (scope, lease, request) => m2PreviewForClose!.moveRightHoleX(scope, lease, request),
       selectWindow(projectId) {
         const candidates = [...windows].filter(([id, { window }]) =>
           !window.isDestroyed() && localM1SessionFor(id)?.projectId === projectId)
@@ -627,7 +629,7 @@ function installIpcHandlers(): void {
         const owner = windows.get(target.windowId)?.window
         if (confirming || signal.aborted || !owner || owner.isDestroyed()) return 'cancel'
         confirming = true
-        const action = kind === 'read' ? '读取项目' : target.takeover ? '接管草稿写入' : '写入隔套草稿'
+        const action = kind === 'read' ? '读取项目' : target.takeover ? '接管草稿写入' : '写入项目草稿'
         try {
           const result = await dialog.showMessageBox(owner, {
             type: 'question', title: '外部客户端访问项目',

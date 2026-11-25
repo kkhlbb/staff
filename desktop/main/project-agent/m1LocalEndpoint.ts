@@ -2,7 +2,7 @@ import { constants, chmodSync, closeSync, fstatSync, mkdirSync, openSync, unlink
 import net from 'node:net'
 import type { Socket } from 'node:net'
 import path from 'node:path'
-import { nat, object, oneOf, text, type Infer } from '../../shared/project-agent/schema.ts'
+import { nat, object, oneOf, q, text, type Infer } from '../../shared/project-agent/schema.ts'
 import type { LocalM1Authority, M1ExternalScope, M1WriterConfirmation, M1WriterLease } from './m1LocalAuthority'
 import type { M1StageChangeRequest } from './m1StageContracts'
 import { checkM1Directory, checkM1Socket, isPrivateM1Node, M1_LOCAL_VERSION, M1_REQUEST_BYTES,
@@ -16,6 +16,8 @@ const stage = object({ projectId: text, change: (value): value is M1StageChangeR
   return !!sources && typeof sources === 'object' && !Array.isArray(sources) &&
     Object.values(sources).every(object({ type: oneOf('userInput') }))
 } })
+const move = object({ projectId: text, baseRevision: text, expectedDraftRevision: text, idempotencyKey: text, deltaQ: q })
+type MoveRightHole = Infer<typeof move>
 const empty = object({})
 const envelope = object({ id: nat, method: oneOf('hello', ...M1_LOCAL_OPERATIONS), params: (value): value is object => !!value && typeof value === 'object' && !Array.isArray(value) })
 const hello = object({ version: (value): value is 1 => value === M1_LOCAL_VERSION,
@@ -29,6 +31,9 @@ interface EndpointPorts {
   selectWindow(projectId: string): number | null
   confirm(target: ConfirmationTarget, clientName: string, kind: 'read' | 'writer', signal: AbortSignal):
     ReturnType<M1WriterConfirmation>
+  mountingPlateRevision?(scope: M1ExternalScope, lease: M1WriterLease): Promise<string | undefined>
+  moveRightHoleX?(scope: M1ExternalScope, lease: M1WriterLease, request: MoveRightHole):
+    Promise<{ revision: string; jobId: string }>
   diagnostic?(code: string): void
 }
 type Peer = {
@@ -113,7 +118,8 @@ export async function startM1LocalEndpoint(ports: EndpointPorts) {
     if (method === 'capabilities') {
       if (!empty(params)) throw Error('INVALID_REQUEST')
       peer.ready = true
-      return { protocol: M1_LOCAL_VERSION, operations: M1_LOCAL_OPERATIONS, draftOperations: ['createSpacerDraft', 'resumeSpacerDraft'] }
+      const operations = ports.moveRightHoleX ? M1_LOCAL_OPERATIONS : M1_LOCAL_OPERATIONS.filter(name => name !== 'moveRightHoleX')
+      return { protocol: M1_LOCAL_VERSION, operations, draftOperations: ['createSpacerDraft', 'resumeSpacerDraft'] }
     }
     if (!peer.ready) throw Error('INVALID_REQUEST')
     if (method === 'authorizeProject') {
@@ -136,7 +142,8 @@ export async function startM1LocalEndpoint(ports: EndpointPorts) {
       return { projectId: scope.projectId, authorized: true }
     }
     const scope = peer.scope
-    const args = method === 'stageChange' ? (stage(params) ? params : null) :
+    const args = method === 'moveRightHoleX' ? (move(params) ? params : null) :
+      method === 'stageChange' ? (stage(params) ? params : null) :
       method === 'acquireWriter' || method === 'takeOverWriter' ? (writer(params) ? params : null) :
       (project(params) ? params : null)
     if (!args) throw Error('INVALID_REQUEST')
@@ -161,7 +168,17 @@ export async function startM1LocalEndpoint(ports: EndpointPorts) {
     }
     const lease = peer.lease
     if (!lease) throw Error('WRITER_REVOKED')
-    if (method === 'readWriterContext') return authority.readWriterContext(lease)
+    if (method === 'readWriterContext') {
+      const mountingPlateDraftRevision = await ports.mountingPlateRevision?.(scope, lease)
+      const context = await authority.readWriterContext(lease)
+      return mountingPlateDraftRevision ? { ...context, mountingPlateDraftRevision } : context
+    }
+    if (method === 'moveRightHoleX' && move(params)) {
+      if ([params.projectId, params.baseRevision, params.expectedDraftRevision, params.idempotencyKey]
+        .some(value => value.length > 240) || params.deltaQ === 0) throw Error('INVALID_REQUEST')
+      if (!ports.moveRightHoleX) throw Error('UNSUPPORTED_SCOPE')
+      return ports.moveRightHoleX(scope, lease, params)
+    }
     if (method === 'stageChange' && stage(params)) return authority.stageChange(lease, params.change)
     if (method === 'revokeWriter') {
       peer.lease = undefined
