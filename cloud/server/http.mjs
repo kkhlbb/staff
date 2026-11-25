@@ -159,6 +159,7 @@ export async function createCloudServer(
     res.setHeader('x-content-type-options', 'nosniff')
     res.setHeader('referrer-policy', 'no-referrer')
     res.setHeader('cache-control', 'no-store')
+    res.setHeader('access-control-expose-headers', 'X-Cunlian-Confirmation-Token, X-Drawing-Fingerprint, X-Request-Id')
     try {
       if (!req.url?.startsWith('/') || req.url.startsWith('//')) throw new HttpError(400, 'INVALID_PATH')
       const url = new URL(req.url, 'http://localhost')

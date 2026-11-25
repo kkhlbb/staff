@@ -49,6 +49,8 @@ export interface HttpTransportOptions {
   readonly leaseToken?: string
   /** Optional writer epoch attached as `X-Writer-Epoch` on write/commit calls when provided. */
   readonly writerEpoch?: number
+  /** Optional human approval secret sent as `X-Cunlian-Approval` on `getReview()` to mint a server confirmation token. */
+  readonly approvalSecret?: string
   /** Optional extra static headers merged into every request. */
   readonly headers?: Readonly<Record<string, string>>
 }
@@ -59,10 +61,19 @@ export interface HttpCommitDraftRequest extends CommitDraftRequest {
   readonly writerEpoch?: number
 }
 
+export interface HttpReviewPayload {
+  readonly review: CheckSet
+  readonly summary: string
+  readonly baseRevision: string | null
+  readonly confirmationToken?: string
+}
+
 export interface HttpTransport extends Transport {
   readonly kind: 'http'
   readonly baseUrl: string
   health(): Promise<M2Result<{ status: 'ok' }>>
+  getReview(request: DraftRef): Promise<M2Result<HttpReviewPayload>>
+  getCachedConfirmationToken(request: DraftRef): string | undefined
 }
 
 interface ErrorEnvelope {
@@ -188,6 +199,17 @@ export function createHttpTransport(options: HttpTransportOptions): HttpTranspor
       ? options.timeoutMs
       : DEFAULT_TIMEOUT_MS
   const fetchFn: typeof fetch | undefined = options.fetchImpl ?? globalThis.fetch
+  const approvalSecret = options.approvalSecret?.trim() || undefined
+  const confirmationTokens = new Map<string, string>()
+
+  function confirmationCacheKey(projectId: string, draftRevision: string): string {
+    return `${projectId}\0${draftRevision}`
+  }
+
+  function isClientPlaceholderToken(token: string): boolean {
+    const trimmed = token.trim()
+    return trimmed.length === 0 || trimmed.startsWith('human-confirm-')
+  }
 
   async function executeFetch(
     path: string,
@@ -284,7 +306,7 @@ export function createHttpTransport(options: HttpTransportOptions): HttpTranspor
     }
   }
 
-  async function requestJson<T>(
+  async function requestJsonDetailed<T>(
     path: string,
     init: {
       readonly method: 'GET' | 'POST' | 'DELETE'
@@ -293,7 +315,7 @@ export function createHttpTransport(options: HttpTransportOptions): HttpTranspor
       readonly extraHeaders?: Readonly<Record<string, string>>
       readonly unwrapEnvelope?: boolean
     },
-  ): Promise<M2Result<T>> {
+  ): Promise<M2Result<{ readonly value: T; readonly headers: Headers }>> {
     const headers: Record<string, string> = { ...(init.extraHeaders ?? {}) }
     let body: BodyInit | undefined
     if (init.formBody) {
@@ -345,7 +367,7 @@ export function createHttpTransport(options: HttpTransportOptions): HttpTranspor
     }
 
     if (init.unwrapEnvelope === false) {
-      return { ok: true, value: parsed as T }
+      return { ok: true, value: { value: parsed as T, headers: response.headers } }
     }
 
     const envelopeError = parseErrorEnvelope(parsed)
@@ -364,7 +386,28 @@ export function createHttpTransport(options: HttpTransportOptions): HttpTranspor
       }
     }
 
-    return { ok: true, value: (parsed as unknown as SuccessEnvelope<T>).value }
+    return {
+      ok: true,
+      value: {
+        value: (parsed as unknown as SuccessEnvelope<T>).value,
+        headers: response.headers,
+      },
+    }
+  }
+
+  async function requestJson<T>(
+    path: string,
+    init: {
+      readonly method: 'GET' | 'POST' | 'DELETE'
+      readonly jsonBody?: unknown
+      readonly formBody?: FormData
+      readonly extraHeaders?: Readonly<Record<string, string>>
+      readonly unwrapEnvelope?: boolean
+    },
+  ): Promise<M2Result<T>> {
+    const detailed = await requestJsonDetailed<T>(path, init)
+    if (!detailed.ok) return detailed
+    return { ok: true, value: detailed.value.value }
   }
 
   async function requestBinary(
@@ -670,18 +713,24 @@ export function createHttpTransport(options: HttpTransportOptions): HttpTranspor
         request as unknown as { readonly checkSetFingerprint?: string }
       ).checkSetFingerprint
       const checksetFingerprint = request.checksetFingerprint || legacyCheckSetFingerprint || ''
+      const cacheKey = confirmationCacheKey(request.projectId, request.draftRevision)
+      const cachedToken = confirmationTokens.get(cacheKey)
+      const confirmationToken =
+        cachedToken && isClientPlaceholderToken(request.confirmationToken)
+          ? cachedToken
+          : request.confirmationToken
 
       const payload: CommitDraftRequest = {
         projectId: request.projectId,
         baseRevision: request.baseRevision,
         draftRevision: request.draftRevision,
         checksetFingerprint,
-        confirmationToken: request.confirmationToken,
+        confirmationToken,
         requestId: request.requestId,
         ...(request.webhook ? { webhook: { url: request.webhook.url } } : {}),
       }
 
-      return requestJson<CommitDraftResult>(
+      const res = await requestJson<CommitDraftResult>(
         `/api/v1/projects/${encodeSegment(request.projectId)}/drafts/${encodeSegment(request.draftRevision)}/commit`,
         {
           method: 'POST',
@@ -692,6 +741,10 @@ export function createHttpTransport(options: HttpTransportOptions): HttpTranspor
           }),
         },
       )
+      if (res.ok) {
+        confirmationTokens.delete(cacheKey)
+      }
+      return res
     },
 
     async authorizeProject(
@@ -739,12 +792,41 @@ export function createHttpTransport(options: HttpTransportOptions): HttpTranspor
       )
     },
 
-    async getReview(
-      request: DraftRef,
-    ): Promise<M2Result<{ review: CheckSet; summary: string; baseRevision: string | null }>> {
-      return requestJson<{ review: CheckSet; summary: string; baseRevision: string | null }>(
+    async getReview(request: DraftRef): Promise<M2Result<HttpReviewPayload>> {
+      const extraHeaders: Record<string, string> = {}
+      if (approvalSecret) {
+        extraHeaders['X-Cunlian-Approval'] = approvalSecret
+      }
+      const res = await requestJsonDetailed<{
+        review: CheckSet
+        summary: string
+        baseRevision: string | null
+      }>(
         `/api/v1/projects/${encodeSegment(request.projectId)}/drafts/${encodeSegment(request.draftRevision)}/review`,
-        { method: 'GET' },
+        {
+          method: 'GET',
+          extraHeaders,
+        },
+      )
+      if (!res.ok) return res
+      const serverToken = res.value.headers.get('x-cunlian-confirmation-token')?.trim()
+      if (serverToken) {
+        confirmationTokens.set(
+          confirmationCacheKey(request.projectId, request.draftRevision),
+          serverToken,
+        )
+      }
+      return {
+        ok: true,
+        value: serverToken
+          ? { ...res.value.value, confirmationToken: serverToken }
+          : res.value.value,
+      }
+    },
+
+    getCachedConfirmationToken(request: DraftRef): string | undefined {
+      return confirmationTokens.get(
+        confirmationCacheKey(request.projectId, request.draftRevision),
       )
     },
 

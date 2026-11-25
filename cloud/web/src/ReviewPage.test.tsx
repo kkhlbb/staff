@@ -61,6 +61,8 @@ function createMockTransport(options: {
   readonly review: CheckSet
   readonly summary?: string
   readonly baseRevision?: string | null
+  readonly confirmationToken?: string
+  readonly reviewResponse?: Awaited<ReturnType<Transport['getReview']>>
   readonly commitResponse?: Awaited<ReturnType<Transport['commitDraft']>>
   readonly commitStatus?: Awaited<ReturnType<Transport['getCommitStatus']>>
 }): Transport {
@@ -112,14 +114,18 @@ function createMockTransport(options: {
     getContext: unimpl,
     getExternalActivities: unimpl,
     readProjectEvents: unimpl,
-    getReview: vi.fn(async () => ({
-      ok: true as const,
-      value: {
-        review: options.review,
-        summary: options.summary ?? '右孔 X 坐标调整至 95.0 mm',
-        baseRevision: options.baseRevision === undefined ? 'rev-1' : options.baseRevision,
-      },
-    })),
+    getReview: vi.fn(
+      async () =>
+        options.reviewResponse ?? {
+          ok: true as const,
+          value: {
+            review: options.review,
+            summary: options.summary ?? '右孔 X 坐标调整至 95.0 mm',
+            baseRevision: options.baseRevision === undefined ? 'rev-1' : options.baseRevision,
+            ...(options.confirmationToken ? { confirmationToken: options.confirmationToken } : {}),
+          },
+        },
+    ),
     getCommitStatus: vi.fn(
       async () =>
         options.commitStatus ?? {
@@ -372,5 +378,94 @@ describe('ReviewPage', () => {
     await waitFor(() => {
       expect(transport.getReview).toHaveBeenCalledTimes(2)
     })
+  })
+
+  it('提交时透传服务端签发的 confirmationToken 而非客户端伪造令牌', async () => {
+    const user = userEvent.setup()
+    const serverToken = '1799999999999.' + 'b'.repeat(64)
+    const passReview: CheckSet = {
+      projectId: 'proj-tok',
+      draftRevision: 'draft-7',
+      checksetFingerprint: 'csfp-tok-07',
+      checks: [
+        {
+          checkId: 'chk-gap',
+          requirementId: 'req-gap',
+          title: '板-盖板平行间隙',
+          required: true,
+          status: 'pass',
+          summary: '通过',
+          linkedFeatureIds: ['feat-plate-body'],
+          linkedAnnotationIds: ['ann-gap'],
+        },
+      ],
+    }
+
+    const transport = createMockTransport({
+      review: passReview,
+      confirmationToken: serverToken,
+    })
+    render(
+      <ReviewPage
+        locationLike={{ pathname: '/review/proj-tok/draft-7' }}
+        transport={transport}
+      />,
+    )
+
+    expect(await screen.findByTestId('review-fingerprint')).toHaveTextContent('csfp-tok-07')
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: '确认并提交' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('review-committed-card')).toBeInTheDocument()
+    })
+    expect(transport.commitDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        confirmationToken: serverToken,
+      }),
+    )
+  })
+
+  it('刷新已提交草稿的审核链接时（GET /review 返回 STALE_DRAFT），优先依据 commit 状态展示已提交结果', async () => {
+    const emptyReview: CheckSet = {
+      projectId: 'proj-done',
+      draftRevision: 'draft-8',
+      checksetFingerprint: 'csfp-done-08',
+      checks: [],
+    }
+    const transport = createMockTransport({
+      review: emptyReview,
+      reviewResponse: {
+        ok: false,
+        error: { code: 'STALE_DRAFT', message: 'STALE_DRAFT' },
+      },
+      commitStatus: {
+        ok: true,
+        value: {
+          state: 'committed',
+          result: {
+            projectId: 'proj-done',
+            committedRevision: 'rev-9',
+            previousBaseRevision: 'rev-8',
+            committedDraftRevision: 'draft-8',
+            checksetFingerprint: 'csfp-done-08',
+            summary: 'chk-spacer=pass',
+          },
+        },
+      },
+    })
+
+    render(
+      <ReviewPage
+        locationLike={{ pathname: '/review/proj-done/draft-8' }}
+        transport={transport}
+      />,
+    )
+
+    const committedCard = await screen.findByTestId('review-committed-card')
+    expect(committedCard).toHaveTextContent('rev-9')
+    expect(committedCard).toHaveTextContent('csfp-done-08')
+    expect(screen.getByTestId('review-status-pill')).toHaveTextContent('已正式提交')
+    expect(screen.queryByTestId('review-load-error')).not.toBeInTheDocument()
   })
 })

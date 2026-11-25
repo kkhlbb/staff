@@ -8,7 +8,7 @@
 4. 在 ECS 主机运行 Caddy，替换 `Caddyfile` 中的域名。HTTP API 端口仅绑定主机回环地址。网关保留 Authorization 或 X-API-Key、Origin、Accept 与 MCP-Protocol-Version，并对 SSE 禁用缓冲。
 5. 执行 `curl -fsS https://域名/healthz`。用 `Authorization: Bearer …` 请求 `/api/v1/capabilities`。从仓库根目录运行 `npm run cloud:smoke` 可在本机启动独立进程跑完整场景。
 
-容器使用 Node 24 LTS 和生产依赖中的 OCCT WASM。构建 Web 产物后可挂载至 `/web` 替换占位文件。根路径与 `/review/:projectId/:draftRevision` 使用同一入口文件。
+容器使用 Node 24 LTS 和生产依赖中的 OCCT WASM，多阶段构建会自动编译 `cloud/web` 静态产物（`cloud/web/dist`）并装载至 `/web`。根路径与 `/review/:projectId/:draftRevision` 使用同一入口文件。
 
 ## 信任与存储
 

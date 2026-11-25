@@ -208,3 +208,46 @@ test('expired human token cannot commit a still-current draft', async t => {
     await close()
   }
 })
+
+test('HttpTransport getReview -> commitDraft succeeds end-to-end with server-issued confirmation token', async t => {
+  const { createHttpTransport } = await import('../../src/transport/httpTransport.ts')
+  const { start } = await fixture(t)
+  const { origin, request, close } = await start()
+  try {
+    const transport = createHttpTransport({ baseUrl: origin, apiKey, approvalSecret: human })
+    const created = await transport.createProject({ name: 'http-e2e', template: 'builtin-shaft-spacer' })
+    assert.equal(created.ok, true)
+    const { projectId, baseRevision, draftRevision } = created.value
+    const lease = await transport.acquireWriter({ projectId, expectedWriterEpoch: 0 })
+    assert.equal(lease.ok, true)
+
+    const rawReview = await request(`/api/v1/projects/${projectId}/drafts/${draftRevision}/review`, {
+      headers: { 'x-cunlian-approval': human },
+    })
+    const exposed = rawReview.headers.get('access-control-expose-headers') ?? ''
+    assert.match(exposed, /X-Cunlian-Confirmation-Token/i)
+    assert.match(exposed, /X-Drawing-Fingerprint/i)
+
+    const review = await transport.getReview({ projectId, draftRevision })
+    assert.equal(review.ok, true)
+    assert.ok(review.value.confirmationToken, 'expected server-issued confirmationToken from getReview()')
+
+    const committed = await transport.commitDraft({
+      projectId,
+      baseRevision,
+      draftRevision,
+      checksetFingerprint: review.value.review.checksetFingerprint,
+      confirmationToken: review.value.confirmationToken,
+      requestId: 'http-e2e-commit-1',
+    })
+    assert.equal(committed.ok, true, JSON.stringify(committed))
+    assert.equal(committed.value.committedDraftRevision, draftRevision)
+
+    const status = await transport.getCommitStatus({ projectId, draftRevision })
+    assert.equal(status.ok, true)
+    assert.equal(status.value.state, 'committed')
+    assert.equal(status.value.result.committedRevision, committed.value.committedRevision)
+  } finally {
+    await close()
+  }
+})

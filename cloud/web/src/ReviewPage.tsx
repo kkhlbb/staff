@@ -44,6 +44,7 @@ interface ReviewDataState {
   readonly mesh: M2ModelMesh | null
   readonly drawingFingerprint: string | null
   readonly rawSvgAvailable: boolean
+  readonly confirmationToken: string | null
 }
 
 function createRequestToken(prefix: string): string {
@@ -105,6 +106,7 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
     return createHttpTransport({
       baseUrl: route.apiBase,
       apiKey: route.apiKey,
+      approvalSecret: route.approvalSecret,
     })
   }, [transportProp, route])
 
@@ -134,6 +136,39 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
 
     if (loadSeqRef.current !== seq) return
 
+    const normalizedMesh = meshRes.ok ? normalizeM2ModelMesh(meshRes.value) : null
+    const drawingFp = drawingRes.ok ? drawingRes.value.fingerprint : null
+    const rawSvgAvailable = drawingRes.ok && drawingRes.value.bytes.byteLength > 0
+
+    if (statusRes.ok && statusRes.value.state === 'committed') {
+      const committed = statusRes.value.result
+      const committedReview: CheckSet = reviewRes.ok
+        ? reviewRes.value.review
+        : {
+            projectId: committed.projectId,
+            draftRevision: committed.committedDraftRevision,
+            checksetFingerprint: committed.checksetFingerprint,
+            checks: [],
+          }
+      setData({
+        review: committedReview,
+        summary: reviewRes.ok ? reviewRes.value.summary : (committed.summary ?? '草稿已正式提交'),
+        baseRevision: reviewRes.ok
+          ? reviewRes.value.baseRevision
+          : committed.previousBaseRevision,
+        mesh: normalizedMesh,
+        drawingFingerprint: drawingFp,
+        rawSvgAvailable,
+        confirmationToken: null,
+      })
+      setSelectedCheckId(committedReview.checks[0]?.checkId ?? null)
+      setSelectedObjectId(committedReview.checks[0]?.linkedFeatureIds[0] ?? null)
+      setSelectedAnnotationId(committedReview.checks[0]?.linkedAnnotationIds[0] ?? null)
+      setCommitResult(committed)
+      setPhase('committed')
+      return
+    }
+
     if (!reviewRes.ok) {
       const conflict = isConflictErrorCode(reviewRes.error.code)
       setLoadError(reviewRes.error)
@@ -141,9 +176,8 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
       return
     }
 
-    const normalizedMesh = meshRes.ok ? normalizeM2ModelMesh(meshRes.value) : null
-    const drawingFp = drawingRes.ok ? drawingRes.value.fingerprint : null
-    const rawSvgAvailable = drawingRes.ok && drawingRes.value.bytes.byteLength > 0
+    const reviewToken = (reviewRes.value as { readonly confirmationToken?: string }).confirmationToken
+    const serverConfirmationToken = reviewToken?.trim() || route.confirmationToken || null
 
     const nextData: ReviewDataState = {
       review: reviewRes.value.review,
@@ -152,6 +186,7 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
       mesh: normalizedMesh,
       drawingFingerprint: drawingFp,
       rawSvgAvailable,
+      confirmationToken: serverConfirmationToken,
     }
     setData(nextData)
 
@@ -163,13 +198,8 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
     setSelectedObjectId(initialCheck?.linkedFeatureIds[0] ?? null)
     setSelectedAnnotationId(initialCheck?.linkedAnnotationIds[0] ?? null)
 
-    if (statusRes.ok && statusRes.value.state === 'committed') {
-      setCommitResult(statusRes.value.result)
-      setPhase('committed')
-    } else {
-      setCommitResult(null)
-      setPhase('ready')
-    }
+    setCommitResult(null)
+    setPhase('ready')
   }, [route, transport])
 
   useEffect(() => {
@@ -334,12 +364,13 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
     setCommitError(null)
 
     const trimmedWebhook = webhookUrl.trim()
+    const confirmationToken = data.confirmationToken ?? route.confirmationToken ?? ''
     const res = await transport.commitDraft({
       projectId: route.projectId,
       baseRevision: data.baseRevision,
       draftRevision: route.draftRevision,
       checksetFingerprint: data.review.checksetFingerprint,
-      confirmationToken: createRequestToken('human-confirm'),
+      confirmationToken,
       requestId: createRequestToken('req-commit'),
       ...(trimmedWebhook ? { webhook: { url: trimmedWebhook } } : {}),
     })

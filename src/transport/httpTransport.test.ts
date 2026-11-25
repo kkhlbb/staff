@@ -349,4 +349,75 @@ describe('HttpTransport', () => {
       'https://cloud.cunlian.test/api/v1/projects/p1/connection?scopeEpoch=3',
     ])
   })
+
+  it('getReview 提取 X-Cunlian-Confirmation-Token 头并在 commitDraft 中自动使用服务端签发凭据', async () => {
+    const serverToken = '1799999999999.' + 'a'.repeat(64)
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            ok: true,
+            value: {
+              review: {
+                projectId: 'p1',
+                draftRevision: 'd1',
+                checksetFingerprint: 'fp-123',
+                checks: [],
+              },
+              summary: 'ok',
+              baseRevision: 'rev-1',
+            },
+          },
+          200,
+          { 'X-Cunlian-Confirmation-Token': serverToken },
+        ),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          ok: true,
+          value: {
+            projectId: 'p1',
+            committedRevision: 'rev-2',
+            previousBaseRevision: 'rev-1',
+            committedDraftRevision: 'd1',
+            checksetFingerprint: 'fp-123',
+            summary: 'committed',
+          },
+        }),
+      )
+
+    const transport = createHttpTransport({
+      baseUrl: 'https://cloud.cunlian.test',
+      apiKey: 'sk-writer',
+      approvalSecret: 'approval-secret-123456',
+      fetchImpl: fetchMock,
+    })
+
+    const reviewRes = await transport.getReview({ projectId: 'p1', draftRevision: 'd1' })
+    expect(reviewRes.ok).toBe(true)
+    if (reviewRes.ok) {
+      expect(reviewRes.value.confirmationToken).toBe(serverToken)
+    }
+    expect(transport.getCachedConfirmationToken({ projectId: 'p1', draftRevision: 'd1' })).toBe(
+      serverToken,
+    )
+
+    const reviewHeaders = fetchMock.mock.calls[0][1]?.headers as Record<string, string>
+    expect(reviewHeaders['X-Cunlian-Approval']).toBe('approval-secret-123456')
+
+    const commitRes = await transport.commitDraft({
+      projectId: 'p1',
+      baseRevision: 'rev-1',
+      draftRevision: 'd1',
+      checksetFingerprint: 'fp-123',
+      confirmationToken: '',
+      requestId: 'req-server-token',
+    })
+    expect(commitRes.ok).toBe(true)
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body)).confirmationToken).toBe(serverToken)
+    expect(
+      transport.getCachedConfirmationToken({ projectId: 'p1', draftRevision: 'd1' }),
+    ).toBeUndefined()
+  })
 })

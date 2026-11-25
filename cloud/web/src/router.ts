@@ -4,6 +4,8 @@ export interface ParsedReviewRouteMatch {
   readonly draftRevision: string
   readonly apiBase: string
   readonly apiKey?: string
+  readonly approvalSecret?: string
+  readonly confirmationToken?: string
   readonly webhookUrl?: string
   readonly theme?: 'light' | 'dark'
 }
@@ -34,16 +36,28 @@ function safeDecode(segment: string): string | null {
 function parseOptionalParams(searchStr: string): {
   readonly apiBase: string
   readonly apiKey?: string
+  readonly approvalSecret?: string
+  readonly confirmationToken?: string
   readonly webhookUrl?: string
   readonly theme?: 'light' | 'dark'
 } {
   const params = new URLSearchParams(searchStr.startsWith('?') ? searchStr.slice(1) : searchStr)
   const apiBase = params.get('apiBase')?.trim() ?? ''
   const apiKey = params.get('apiKey')?.trim() || undefined
+  const approvalSecret =
+    params.get('approvalSecret')?.trim() || params.get('approval')?.trim() || undefined
+  const confirmationToken = params.get('confirmationToken')?.trim() || undefined
   const webhookUrl = params.get('webhookUrl')?.trim() || undefined
   const rawTheme = params.get('theme')?.trim().toLowerCase()
   const theme = rawTheme === 'dark' || rawTheme === 'light' ? rawTheme : undefined
-  return { apiBase, apiKey, webhookUrl, theme }
+  return {
+    apiBase,
+    apiKey,
+    ...(approvalSecret ? { approvalSecret } : {}),
+    ...(confirmationToken ? { confirmationToken } : {}),
+    webhookUrl,
+    theme,
+  }
 }
 
 function matchReviewPath(rawPath: string): { projectId: string; draftRevision: string } | null {

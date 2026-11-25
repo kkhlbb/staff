@@ -4,8 +4,17 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts \
     && test -s node_modules/replicad-opencascadejs/dist/replicad_single.wasm
 
-FROM dependencies AS web
-COPY cloud/deploy/web/ /web/
+FROM node:24-bookworm-slim AS web
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY tsconfig.json tsconfig.app.json tsconfig.node.json ./
+COPY src/ ./src/
+COPY desktop/main/ ./desktop/main/
+COPY desktop/shared/ ./desktop/shared/
+COPY cloud/web/ ./cloud/web/
+RUN npx vite build --config cloud/web/vite.config.ts \
+    && test -s cloud/web/dist/index.html
 
 FROM node:24-bookworm-slim AS runtime
 WORKDIR /app
@@ -18,7 +27,7 @@ COPY desktop/shared/ ./desktop/shared/
 COPY mcp/ ./mcp/
 COPY cloud/contracts/ ./cloud/contracts/
 COPY cloud/server/ ./cloud/server/
-COPY --from=web /web/ /web/
+COPY --from=web /app/cloud/web/dist/ /web/
 RUN install -d -o node -g node -m 0700 /data
 USER node
 EXPOSE 8787
