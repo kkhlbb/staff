@@ -219,6 +219,50 @@ export interface M1WorkbenchIncomingEvent {
   }
 }
 
+export type M1LocalAgentId = 'claude-code' | 'codex' | 'claude-desktop' | 'cursor' | 'windsurf'
+
+export interface M1DetectedLocalAgent {
+  readonly id: M1LocalAgentId
+  readonly name: string
+  readonly detected: boolean
+  readonly configured: boolean
+  readonly method: 'cli' | 'config-file'
+  readonly configPath: string | null
+  readonly detail?: string
+}
+
+export interface M1DetectLocalAgentsResult {
+  readonly agents: readonly M1DetectedLocalAgent[]
+}
+
+export interface M1RegisterLocalAgentRequest {
+  readonly agentId: M1LocalAgentId
+}
+
+export interface M1RegisterLocalAgentResult {
+  readonly agentId: M1LocalAgentId
+  readonly name: string
+  readonly configured: true
+  readonly method: 'cli' | 'config-file'
+  readonly configPath: string | null
+  readonly backupPath: string | null
+  readonly message: string
+  readonly requiresRestart?: boolean
+}
+
+export interface M1ListModelApiModelsRequest {
+  readonly baseUrl: string
+  readonly apiKey: string
+  readonly projectId: string
+  readonly requestId: string
+  readonly scopeEpoch: number
+}
+
+export interface M1ListModelApiModelsResult {
+  readonly models: readonly string[]
+  readonly defaultModel: string | null
+}
+
 export interface M1WorkbenchBridge {
   readonly getM1LocalAgentInstallInfo?: () => Promise<
     M1WorkbenchBridgeResult<M1LocalAgentInstallInfo>
@@ -857,4 +901,285 @@ export function shouldAcceptWorkbenchEventSequence(
     return { accepted: false, nextLastSequence: currentLastSequence }
   }
   return { accepted: true, nextLastSequence: event.sequence }
+}
+
+/* ============================================================================
+   UX-CONN-FE-01: Zero-Manual-Config Connection Extensions
+   - Duck-typing probe for 3 optional backend methods without breaking the
+     existing 9-method M1_WORKBENCH_BRIDGE_METHODS contract.
+   - Built-in 10 Model API provider presets & pure helpers.
+   ============================================================================ */
+
+export const M1_CONNECTION_UX_BRIDGE_METHODS = [
+  'detectM1LocalAgents',
+  'registerM1LocalAgent',
+  'listM1ModelApiModels',
+] as const
+
+export type M1ConnectionUxBridgeMethodName = (typeof M1_CONNECTION_UX_BRIDGE_METHODS)[number]
+
+export interface M1ConnectionUxBridge {
+  readonly detectM1LocalAgents?: () => Promise<
+    M1WorkbenchBridgeResult<M1DetectLocalAgentsResult>
+  >
+  readonly registerM1LocalAgent?: (
+    request: M1RegisterLocalAgentRequest,
+  ) => Promise<M1WorkbenchBridgeResult<M1RegisterLocalAgentResult>>
+  readonly listM1ModelApiModels?: (
+    request: M1ListModelApiModelsRequest,
+  ) => Promise<M1WorkbenchBridgeResult<M1ListModelApiModelsResult>>
+}
+
+export interface M1ConnectionUxBridgeProbe {
+  readonly bridge: M1ConnectionUxBridge
+  readonly capabilities: {
+    readonly detectLocalAgents: boolean
+    readonly registerLocalAgent: boolean
+    readonly listModelApiModels: boolean
+  }
+  readonly anyAvailable: boolean
+  readonly missingMethods: readonly M1ConnectionUxBridgeMethodName[]
+}
+
+export function probeM1ConnectionUxBridge(candidate: unknown): M1ConnectionUxBridgeProbe {
+  const record =
+    candidate !== null && typeof candidate === 'object'
+      ? (candidate as Record<string, unknown>)
+      : null
+
+  const bindMethod = <K extends M1ConnectionUxBridgeMethodName>(
+    name: K,
+  ): M1ConnectionUxBridge[K] | undefined => {
+    if (!record || typeof record[name] !== 'function') {
+      return undefined
+    }
+    const fn = record[name] as (...args: unknown[]) => unknown
+    return ((...args: unknown[]) => fn.apply(record, args)) as M1ConnectionUxBridge[K]
+  }
+
+  const bridge: M1ConnectionUxBridge = {
+    detectM1LocalAgents: bindMethod('detectM1LocalAgents'),
+    registerM1LocalAgent: bindMethod('registerM1LocalAgent'),
+    listM1ModelApiModels: bindMethod('listM1ModelApiModels'),
+  }
+
+  const missingMethods: M1ConnectionUxBridgeMethodName[] = []
+  for (const name of M1_CONNECTION_UX_BRIDGE_METHODS) {
+    if (typeof bridge[name] !== 'function') {
+      missingMethods.push(name)
+    }
+  }
+
+  const capabilities = {
+    detectLocalAgents: typeof bridge.detectM1LocalAgents === 'function',
+    registerLocalAgent: typeof bridge.registerM1LocalAgent === 'function',
+    listModelApiModels: typeof bridge.listM1ModelApiModels === 'function',
+  }
+
+  const anyAvailable = Object.values(capabilities).some(Boolean)
+
+  return {
+    bridge,
+    capabilities,
+    anyAvailable,
+    missingMethods,
+  }
+}
+
+export function resolveWindowM1ConnectionUxBridge(): M1ConnectionUxBridgeProbe {
+  const candidate =
+    typeof window !== 'undefined' ? (window as { cunlian?: unknown }).cunlian : undefined
+  return probeM1ConnectionUxBridge(candidate)
+}
+
+export function sortDetectedLocalAgents(
+  agents: readonly M1DetectedLocalAgent[],
+): {
+  readonly detected: readonly M1DetectedLocalAgent[]
+  readonly undetected: readonly M1DetectedLocalAgent[]
+} {
+  const detected: M1DetectedLocalAgent[] = []
+  const undetected: M1DetectedLocalAgent[] = []
+  for (const agent of agents) {
+    if (agent.detected) {
+      detected.push(agent)
+    } else {
+      undetected.push(agent)
+    }
+  }
+  return { detected, undetected }
+}
+
+export type M1ModelApiProviderPresetId =
+  | 'deepseek'
+  | 'openai'
+  | 'zhipu'
+  | 'qwen'
+  | 'moonshot'
+  | 'siliconflow'
+  | 'openrouter'
+  | 'ollama'
+  | 'lmstudio'
+  | 'custom'
+
+export interface M1ModelApiProviderPreset {
+  readonly id: M1ModelApiProviderPresetId
+  readonly label: string
+  readonly baseUrl: string
+  readonly defaultModel: string
+  readonly apiKeyOptional: boolean
+  readonly isCustom?: boolean
+}
+
+export const M1_MODEL_API_PROVIDER_PRESETS: readonly M1ModelApiProviderPreset[] = [
+  {
+    id: 'deepseek',
+    label: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    defaultModel: 'deepseek-chat',
+    apiKeyOptional: false,
+  },
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    defaultModel: 'gpt-4o',
+    apiKeyOptional: false,
+  },
+  {
+    id: 'zhipu',
+    label: '智谱 GLM',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    defaultModel: 'glm-4-plus',
+    apiKeyOptional: false,
+  },
+  {
+    id: 'qwen',
+    label: '通义千问（阿里云百炼）',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    defaultModel: 'qwen-plus',
+    apiKeyOptional: false,
+  },
+  {
+    id: 'moonshot',
+    label: 'Moonshot / Kimi',
+    baseUrl: 'https://api.moonshot.cn/v1',
+    defaultModel: 'moonshot-v1-8k',
+    apiKeyOptional: false,
+  },
+  {
+    id: 'siliconflow',
+    label: '硅基流动（SiliconFlow）',
+    baseUrl: 'https://api.siliconflow.cn/v1',
+    defaultModel: '',
+    apiKeyOptional: false,
+  },
+  {
+    id: 'openrouter',
+    label: 'OpenRouter',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    defaultModel: '',
+    apiKeyOptional: false,
+  },
+  {
+    id: 'ollama',
+    label: '本地 Ollama',
+    baseUrl: 'http://127.0.0.1:11434/v1',
+    defaultModel: '',
+    apiKeyOptional: true,
+  },
+  {
+    id: 'lmstudio',
+    label: '本地 LM Studio',
+    baseUrl: 'http://127.0.0.1:1234/v1',
+    defaultModel: '',
+    apiKeyOptional: true,
+  },
+  {
+    id: 'custom',
+    label: '自定义 OpenAI 兼容地址',
+    baseUrl: '',
+    defaultModel: '',
+    apiKeyOptional: false,
+    isCustom: true,
+  },
+] as const
+
+export const DEFAULT_M1_MODEL_API_PROVIDER_ID: M1ModelApiProviderPresetId = 'deepseek'
+
+export function getModelApiProviderPreset(
+  id: M1ModelApiProviderPresetId,
+): M1ModelApiProviderPreset {
+  return (
+    M1_MODEL_API_PROVIDER_PRESETS.find((preset) => preset.id === id) ??
+    M1_MODEL_API_PROVIDER_PRESETS[M1_MODEL_API_PROVIDER_PRESETS.length - 1]
+  )
+}
+
+export function findModelApiProviderPresetByUrl(
+  baseUrl: string,
+): M1ModelApiProviderPreset | null {
+  const normalized = baseUrl.trim().replace(/\/+$/, '').toLowerCase()
+  if (!normalized) return null
+  for (const preset of M1_MODEL_API_PROVIDER_PRESETS) {
+    if (preset.isCustom || !preset.baseUrl) continue
+    if (preset.baseUrl.replace(/\/+$/, '').toLowerCase() === normalized) {
+      return preset
+    }
+  }
+  return null
+}
+
+export function isValidModelApiBaseUrl(baseUrl: string): boolean {
+  const trimmed = baseUrl.trim()
+  if (!trimmed) return false
+  try {
+    const parsed = new URL(trimmed)
+    return (
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      parsed.hostname.trim().length > 0
+    )
+  } catch {
+    return false
+  }
+}
+
+export function canAutoFetchModelApiModels(params: {
+  readonly baseUrl: string
+  readonly apiKey: string
+  readonly providerId: M1ModelApiProviderPresetId
+}): boolean {
+  if (!isValidModelApiBaseUrl(params.baseUrl)) {
+    return false
+  }
+  const preset = getModelApiProviderPreset(params.providerId)
+  return preset.apiKeyOptional || params.apiKey.trim().length > 0
+}
+
+export function selectPreferredModelFromList(params: {
+  readonly models: readonly string[]
+  readonly defaultModel: string | null
+  readonly presetDefaultModel: string
+}): string {
+  const cleaned: string[] = []
+  const seen = new Set<string>()
+  for (const raw of params.models) {
+    const trimmed = raw.trim()
+    if (!trimmed || seen.has(trimmed)) continue
+    seen.add(trimmed)
+    cleaned.push(trimmed)
+  }
+  if (cleaned.length === 0) return ''
+
+  const backendDefault = params.defaultModel?.trim() ?? ''
+  if (backendDefault && cleaned.includes(backendDefault)) {
+    return backendDefault
+  }
+
+  const presetDefault = params.presetDefaultModel.trim()
+  if (presetDefault && cleaned.includes(presetDefault)) {
+    return presetDefault
+  }
+
+  return cleaned[0]
 }
