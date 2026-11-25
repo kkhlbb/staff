@@ -63,7 +63,13 @@ parentPort.on('message', async ({ id, request }) => {
     }
     parentPort.postMessage({ id, ok: true, value: { report, metrics: stats }, recycle })
   } catch (error) {
-    cache.clear()
-    parentPort.postMessage({ id, ok: false, error: String(error), recycle: true })
+    let message = String(error)
+    try {
+      cache.clear()
+    } catch (cleanupError) {
+      message += '\n' + String(cleanupError)
+    } finally {
+      parentPort.postMessage({ id, ok: false, error: message, recycle: true })
+    }
   }
 })

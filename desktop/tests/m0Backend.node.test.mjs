@@ -15,9 +15,15 @@ import { loadKernel } from '../main/geometry-prototype/plate.mjs'
 import { evaluate } from '../main/project-agent/m2/evaluate.mjs'
 import { runMountingPlate, runMountingPlateDrawing } from '../main/project-agent/m2/engine.mjs'
 import { createMountingPlate } from '../main/project-agent/m2/model.mjs'
+import { observeNativeHandles } from './fixtures/m0-backend/observeNativeHandles.mjs'
 
 const projectId = 'node-m0-backend'
 const task = (jobId, attempt = 1) => ({ projectId, jobId, attempt })
+const chain = { target: { minQ: 7_000, maxQ: 9_000 }, assumptions: '', terms: [
+  { id: 'A', nominalQ: 10_000, lowerDeviationQ: -33, upperDeviationQ: 41, sign: 1 },
+  { id: 'B', nominalQ: 2_000, lowerDeviationQ: -50, upperDeviationQ: 51, sign: -1 },
+] }
+const extremes = { kind: 'extremes1d', chain }
 const mib = bytes => Math.round(bytes / 1024 ** 2 * 10) / 10
 
 function drawingFixture({ revision, views }) {
@@ -45,20 +51,25 @@ function numericReport({ status, measured, references, invalidations, checks, pl
   return { status, measured, references, invalidations, checks, placement, mesh: { plate, cover }, drawing }
 }
 
-test('ten pure Node construction/check/export rounds match the uncached evaluator and desktop entry', async t => {
+test('30 pure Node construction, solver and export rounds match the uncached evaluator and desktop entry', async t => {
   const geometry = createGeometryManager()
   t.after(() => geometry.close())
   const parser = new DxfParser()
+  const solver = createSolverScheduler()
+  t.after(() => solver.close())
+  const expectedSolution = calculateChain(chain)
   let generation
   const records = []
   const rounds = []
-  for (let round = 1; round <= 10; round++) {
+  for (let round = 1; round <= 30; round++) {
     const model = createMountingPlate('rev-' + round)
     model.holes[1].x.nominalQ += 1_000 * (round - 1)
     const input = { model, deferDrawing: true }
     const start = performance.now()
     const result = await geometry.execute(input, task('build-' + round))
     const { report, metrics } = result
+    assert.equal(report.error, undefined)
+    assert.deepEqual(await solver.run(extremes), expectedSolution)
     const projection = await geometry.execute({ model, measured: report.measured, references: report.references,
       drawingOnly: true }, task('draw-' + round))
     const drawing = { ...projection.report }
@@ -74,17 +85,27 @@ test('ten pure Node construction/check/export rounds match the uncached evaluato
     assert.ok(metrics.wasmHeapBytes > 0)
     generation ??= metrics.threadId
     assert.equal(metrics.threadId, generation)
-    records.push({ round, elapsedMs, rssMiB: mib(metrics.rss), wasmMiB: mib(metrics.wasmHeapBytes),
-      heapUsedMiB: mib(metrics.heapUsed), releasedHandles: released.metrics.cachedShapeHandles })
+    records.push({ round, elapsedMs, threadId: metrics.threadId, wasmInitializations: metrics.wasmInitializations,
+      rssMiB: mib(released.metrics.rss), wasmMiB: mib(released.metrics.wasmHeapBytes),
+      workerJsHeapMiB: mib(released.metrics.heapUsed), mainJsHeapMiB: mib(process.memoryUsage().heapUsed),
+      heldNativeShapes: metrics.cachedShapeHandles, releasedNativeShapes: released.metrics.cachedShapeHandles })
 
     rounds.push({ model, report, drawing, renderedDrawing, artifacts })
   }
   for (const row of records) t.diagnostic(JSON.stringify(row))
 
   // Evaluate every revision against the desktop entry and the uncached evaluator.
-  const kernel = await loadKernel({ print: () => {} })
+  const native = observeNativeHandles(await loadKernel({ print: () => {} }))
   for (const { model, report, drawing, renderedDrawing, artifacts } of rounds) {
-    const direct = evaluate(kernel, model, undefined, 'reference')
+    const before = native.stats()
+    const direct = evaluate(native.oc, model, undefined, 'reference')
+    const after = native.stats()
+    assert.deepEqual(after.live, [])
+    assert.ok(after.created > before.created)
+    assert.equal(after.created - before.created, after.deleted - before.deleted)
+    t.diagnostic(JSON.stringify({ revision: model.revision,
+      nativeCreated: after.created - before.created, nativeDeleted: after.deleted - before.deleted,
+      nativeRemaining: after.live.length }))
     assert.deepEqual(numericReport({ ...report, drawing }), numericReport(direct))
     const desktop = await runMountingPlate(model, { deferDrawing: true })
     const desktopDrawing = await runMountingPlateDrawing(desktop)
@@ -97,7 +118,35 @@ test('ten pure Node construction/check/export rounds match the uncached evaluato
     const dxf = parser.parseSync(new TextDecoder('gbk').decode(artifacts.dxf.bytes))
     assert.equal(dxf.entities.filter(entity => entity.type === 'CIRCLE').length, 2)
   }
+})
 
+test('native build, meshing and STEP failures dispose owned wrappers', async () => {
+  const kernel = await loadKernel({ print: () => {} })
+  const native = observeNativeHandles(kernel)
+  const model = createMountingPlate()
+  const fault = (target, method, behavior, message) => {
+    const original = target[method]
+    target[method] = behavior
+    try {
+      const failed = evaluate(native.oc, model)
+      assert.equal(failed.status, 'executionFailed')
+      assert.match(failed.error.message, message)
+      assert.deepEqual(native.stats().live, [])
+    } finally {
+      target[method] = original
+    }
+  }
+  const cut = kernel.BRepAlgoAPI_Cut.prototype
+  const cutIsDone = cut.IsDone
+  let cuts = 0
+  fault(cut, 'IsDone', function () { return ++cuts < 2 && cutIsDone.call(this) }, /OCCT cut failed/)
+  fault(kernel.BRepMesh_IncrementalMesh.prototype, 'IsDone', () => false, /OCCT meshing failed/)
+  fault(kernel.FS, 'readFile', () => { throw Error('fixture read failure') }, /fixture read failure/)
+  assert.ok(!kernel.FS.readdir('/').includes('plate.step'))
+  assert.equal(evaluate(native.oc, model).status, 'pass')
+  const { created, deleted, live } = native.stats()
+  assert.equal(created, deleted)
+  assert.deepEqual(live, [])
 })
 
 test('shape cache hits, isolates projects and replaces changed inputs at the same revision', async t => {
@@ -134,6 +183,24 @@ test('cache eviction, replacement and clear call each native delete exactly once
   cache.clear()
   assert.equal(cache.handles, 0)
   assert.deepEqual(deleted, ['one-cover', 'one-plate', 'two-cover', 'two-plate', 'three-cover', 'three-plate'])
+})
+
+test('explicit cache release attempts all owned deletes even when a disposer fails', () => {
+  const cache = new ShapeCache()
+  const deleted = []
+  const build = id => () => ({
+    plate: { delete: () => deleted.push(id + '-plate') },
+    cover: { delete: () => {
+      deleted.push(id + '-cover')
+      if (id === 'one') throw new Error('fixture disposal failure')
+    } },
+  })
+  cache.acquire('p', 'a', 'one', build('one'))
+  cache.acquire('p', 'b', 'two', build('two'))
+  assert.throws(() => cache.release('p'), error => error instanceof AggregateError &&
+    error.errors.length === 1 && error.errors[0].message === 'fixture disposal failure')
+  assert.deepEqual(deleted, ['one-cover', 'one-plate', 'two-cover', 'two-plate'])
+  assert.equal(cache.handles, 0)
 })
 
 test('geometry survives timeout, active cancellation and the memory watermark', async t => {
@@ -181,11 +248,6 @@ test('queue fences stale replies and recovers after crash; queued abort preserve
 test('solver matches desktop integer extremes and seeded Monte Carlo, then restarts', async t => {
   const solver = createSolverScheduler()
   t.after(() => solver.close())
-  const chain = { target: { minQ: 7_000, maxQ: 9_000 }, assumptions: '', terms: [
-    { id: 'A', nominalQ: 10_000, lowerDeviationQ: -33, upperDeviationQ: 41, sign: 1 },
-    { id: 'B', nominalQ: 2_000, lowerDeviationQ: -50, upperDeviationQ: 51, sign: -1 },
-  ] }
-  const extremes = { kind: 'extremes1d', chain }
   const expected = calculateChain(chain)
   assert.deepEqual(await solver.run(extremes), expected)
   for (const distribution of ['uniform', 'normal']) {

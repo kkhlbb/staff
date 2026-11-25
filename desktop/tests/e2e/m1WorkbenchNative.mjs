@@ -87,6 +87,8 @@ try {
   await eventually(() => renderer(`Boolean(document.querySelector(${JSON.stringify(workbench)}))`))
   assert.equal(await renderer('location.hash'), '')
   assert.deepEqual(await renderer(`${JSON.stringify(methods)}.filter(name => typeof window.cunlian[name] !== 'function')`), [])
+  await renderer(`document.querySelector('button[aria-label="更多操作"]').click()`)
+  await eventually(() => renderer(`Boolean(document.querySelector('a[href="#/desktop-legacy"]'))`))
   await renderer(`document.querySelector('a[href="#/desktop-legacy"]').click()`)
   await eventually(() => renderer(`Boolean(document.querySelector('main[aria-label="寸链启动页"]'))`))
   assert.equal(await renderer('location.hash'), '#/desktop-legacy')

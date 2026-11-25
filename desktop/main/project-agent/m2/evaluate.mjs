@@ -152,6 +152,7 @@ export function evaluate(oc, model, drawingOptions, frameId, deferDrawing, acqui
     using pose = placement(oc, model.frame)
     const build = () => buildShapes(oc, model)
     const { plate, cover } = acquireShapes ? acquireShapes(build) : build()
+    // The cache owns both wrappers on acquisition. Otherwise this evaluation owns them.
     using ownedPlate = acquireShapes ? undefined : plate
     using ownedCover = acquireShapes ? undefined : cover
     const { measured, features } = verifyPlate(oc, plate, model, toleranceMm)
