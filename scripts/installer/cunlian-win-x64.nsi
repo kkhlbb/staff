@@ -1,6 +1,6 @@
 Unicode true
 RequestExecutionLevel user
-Name "寸链 0.5.2-beta"
+Name "寸链 0.5.3-beta"
 OutFile "${EXECUTABLE}"
 InstallDir "$LOCALAPPDATA\Programs\寸链"
 SetCompressor lzma
@@ -24,11 +24,11 @@ ShowUninstDetails show
 !define MUI_FINISHPAGE_RUN "$INSTDIR\寸链.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "立即启动寸链"
 
-VIProductVersion "0.5.2.0"
+VIProductVersion "0.5.3.0"
 VIAddVersionKey /LANG=2052 "ProductName" "寸链"
 VIAddVersionKey /LANG=2052 "FileDescription" "寸链 Windows x64 安装程序"
-VIAddVersionKey /LANG=2052 "ProductVersion" "0.5.2-beta"
-VIAddVersionKey /LANG=2052 "FileVersion" "0.5.2-beta"
+VIAddVersionKey /LANG=2052 "ProductVersion" "0.5.3-beta"
+VIAddVersionKey /LANG=2052 "FileVersion" "0.5.3-beta"
 VIAddVersionKey /LANG=2052 "LegalCopyright" "寸链"
 
 !insertmacro MUI_PAGE_WELCOME
@@ -98,7 +98,7 @@ Section "寸链（必需）" Core
   File "run-mcp-config.mjs"
   IfErrors failed
   WriteRegStr HKCU "${UNINSTALL}" "DisplayName" "寸链"
-  WriteRegStr HKCU "${UNINSTALL}" "DisplayVersion" "0.5.2-beta"
+  WriteRegStr HKCU "${UNINSTALL}" "DisplayVersion" "0.5.3-beta"
   WriteRegStr HKCU "${UNINSTALL}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${UNINSTALL}" "DisplayIcon" "$INSTDIR\寸链.exe"
   WriteRegStr HKCU "${UNINSTALL}" "UninstallString" '$\"$INSTDIR\uninstall.exe$\"'

@@ -1,6 +1,6 @@
 # 寸链 · 机械制图 Agent 工作台
 
-> **版本**：`v0.5.2-beta`（机械制图 Agent 重构版）｜**架构**：Electron + React + TypeScript + Open CASCADE WASM
+> **版本**：`v0.5.3-beta`（机械制图 Agent 重构版）｜**架构**：Electron + React + TypeScript + Open CASCADE WASM
 > **许可**：MIT（第三方组件与字体许可见 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)）
 
 **寸链**是一个面向机械设计师的本地桌面制图工作台：**把带文本层的零件任务书 PDF 交给常用的本地 Agent（MCP）或内置模型 API，寸链按已确认的尺寸和约束生成可修改的三维实体、二维正投影图纸与多维检查记录，在桌面直接并排展示。**
@@ -9,11 +9,11 @@
 
 ---
 
-## 一、核心能力（`v0.5.2-beta`）
+## 一、核心能力（`v0.5.3-beta`）
 
 | 能力 | 当前实现 |
 |---|---|
-| **双入口 Agent 互联** | **1) 外置本地 Agent（标准 MCP stdio）**：随包提供 `cunlian-local` 桥接（导出标准 `mcpServers` JSON，冷启动唤起桌面、同 UID 本地通道），兼容 Claude Code / Claude Desktop / Codex / Cursor / Windsurf / Orca / DSH 等标准 MCP 客户端；同时保留原 `mcp/server.mjs` 5 个只读/计算工具。<br>**2) 内置模型 API（OpenAI 兼容协议）**：支持 DeepSeek、OpenAI、兼容网关及本机回环 `127.0.0.1`（Ollama / vLLM / LM Studio）；强制通过真实只读工具往返探针（`m1_connection_probe`）后才解锁建模对话。 |
+| **双入口 Agent 互联** | **1) 外置本地 Agent（标准 MCP stdio）**：支持一键检测并自动配置 Claude Code / Codex / Claude Desktop / Cursor / Windsurf（手动复制配置退居折叠项）；随包提供 `cunlian-local` 桥接（导出标准 `mcpServers` JSON，冷启动唤起桌面、同 UID 本地通道），兼容主流标准 MCP 客户端；同时保留原 `mcp/server.mjs` 5 个只读/计算工具。<br>**2) 内置模型 API（OpenAI 兼容协议）**：内置 10 家服务商预设（DeepSeek、OpenAI、智谱 GLM、通义千问、Moonshot/Kimi、硅基流动、OpenRouter、本地 Ollama、本地 LM Studio 及自定义地址），支持自动拉取模型列表下拉选择；强制通过真实只读工具往返探针（`m1_connection_probe`）后才解锁建模对话。 |
 | **无手动参数表的主工作台** | 主流程移除手动参数表、尺寸滑块与坐标编辑器。中央画布内置 **Three.js 真 3D 网格拾取**与 **真 2D SVG 矢量图纸**（主/俯/侧视、实线/圆/隐藏虚线与特征绑定标注），支持模型 / 图纸 / 并排三视图与窄屏标签降级、特征 ↔ 标注双向高亮、连续修改保留 3D 视角与 2D 平移缩放。 |
 | **精确几何与多维检查** | 基于 **OCCT WASM（Replicad OpenCascade.js）** 在可取消独立 worker 中构形与投影；覆盖矩形安装板 + 贯穿圆孔 + 平行参考盖板，并完整保留旧版隔套 + 一维整数 `q`（`1q = 0.0001 mm`）极值尺寸链。<br>支持：**一维尺寸链极值**、**二维轴向孔边距极值**、**三维刚体变换（含绕轴旋转 90°）平行面间隙**、**固定姿态接触 / 干涉 / 间隙判定**，以及**具名持久引用失效检测与显式重绑**。 |
 | **异步出图、乱序守卫与人机确认闭环** | 模型与图纸异步独立生成；图纸失败时保留上一有效版本并明确标明版本号，支持单步重试；同修订指纹对齐后自动并排展示。每项目单写入方，支持原生接管并撤销旧写入租约；必需条款未通过严禁提交正式版，通过后经绑定草稿与检查集指纹的一次性原生确认原子写入。 |
@@ -35,14 +35,14 @@
 
 - **零件与分析范围**：当前覆盖「矩形板件拉伸 + Z 向贯穿圆孔 + 平行参考盖板」与「隔套 + 一维轴向尺寸链」。**不支持**自由曲面、任意装配运动、完整 GD&T / 形位公差、扫描件自动 OCR、DOCX、原生 DWG。
 - **互联协议范围**：
-  - 外置 MCP 仅限本机同用户 stdio 桥接，不支持远程公网 Streamable HTTP / SSE；第三方成品客户端自动改写配置未实现（需复制 `mcpConfigJson` 填入客户端）。
+  - 外置 MCP 仅限本机同用户 stdio 桥接，不支持远程公网 Streamable HTTP / SSE；内置一键自动配置覆盖 Claude Code / Codex / Claude Desktop / Cursor / Windsurf，其他 MCP 客户端可在折叠项中复制 `mcpConfigJson` 手动接入。
   - 内置 API 仅实现 OpenAI 兼容协议（`chat/completions` + `tools`）；Anthropic / Gemini 原生接口需通过 OpenAI 兼容网关接入。
 - **平台与签名**：
   - **macOS arm64**：ad-hoc 签名、未公证；下载后首次打开若遇 Gatekeeper 拦截，可执行：
     ```bash
     xattr -dr com.apple.quarantine /Applications/寸链.app
     ```
-  - **Windows x64**：随 `v0.5.2-beta` 提供 `win32-x64` 解压即用包（本地桥接采用 Windows 命名管道与 `cunlian-mcp.cmd`），未做代码签名，Windows 真机实测持续完善中。
+  - **Windows x64**：随 `v0.5.3-beta` 提供 `win32-x64` 解压即用包与自动安装配置程序（Setup `.exe`），本地桥接采用 Windows 命名管道与 `cunlian-mcp.cmd`，未做代码签名，Windows 真机实测持续完善中。
 
 ---
 
