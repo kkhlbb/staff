@@ -299,7 +299,7 @@ describe('第一部分 §3 错误后焦点自动落点（5 类场景 + 不抢占
     await user.click(screen.getByRole('button', { name: /使用模型 API/ }))
     await user.type(screen.getByLabelText('密钥'), 'sk-valid-key')
     await user.click(screen.getByRole('button', { name: '测试连接' }))
-    await user.click(await screen.findByRole('button', { name: '进入内置建模对话' }))
+    await user.click(await screen.findByRole('button', { name: '开始建模' }))
 
     await user.type(screen.getByLabelText('内置对话输入框'), '把右孔向右移 1 mm')
     await user.click(screen.getByRole('button', { name: '发送' }))
@@ -466,12 +466,12 @@ describe('第一部分 §3 文字+图形状态标识、窄屏降级与键盘全�
     )
 
     const workbench = screen.getByRole('main', { name: '寸链 M1 双入口工作台' })
-    const objectListRegion = screen.getByLabelText('对象列表')
     const canvasRegion = screen.getByLabelText('中央画布')
     const sidebarRegion = screen.getByLabelText('主工作台侧栏')
 
-    // F6 正向循环：对象列表 -> 中央画布 -> 侧栏 -> 对象列表
+    // F6 正向循环：首次 F6 自动展开零件结构浮层并聚焦对象列表 -> 中央画布 -> 侧栏 -> 对象列表
     fireEvent.keyDown(workbench, { key: 'F6' })
+    const objectListRegion = screen.getByLabelText('对象列表')
     expect(document.activeElement).toBe(objectListRegion)
 
     fireEvent.keyDown(workbench, { key: 'F6' })
@@ -499,7 +499,8 @@ describe('第一部分 §3 文字+图形状态标识、窄屏降级与键盘全�
     expect(document.activeElement).toBe(canvasRegion)
 
     // 对象列表内部 ArrowDown / ArrowUp / End / Home
-    const objButtons = within(objectListRegion).getAllByRole('button')
+    const objectGroup = within(objectListRegion).getByRole('group', { name: '可选几何特征对象' })
+    const objButtons = within(objectGroup).getAllByRole('button')
     expect(objButtons.length).toBeGreaterThanOrEqual(2)
     fireEvent.keyDown(objectListRegion, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(objButtons[0])

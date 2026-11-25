@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { flushSync } from 'react-dom'
 import './ProjectAgentPanel.css'
 import {
   applyAuthoritativeScopeEpochSync,
@@ -49,6 +50,7 @@ import {
   normalizeM2BridgeError,
   probeM2WorkbenchBridge,
   reduceM2PreviewEvent,
+  resolveEffectiveViewMode,
   resolveWindowM2WorkbenchBridge,
   type M2CheckItem,
   type M2DrawingAnnotationItem,
@@ -61,7 +63,7 @@ import {
   type M2ViewMode,
   type M2WorkbenchBridgeProbe,
 } from './m2WorkbenchBridge'
-import { M2CenterCanvas } from './M2CenterCanvas'
+import { getArtifactStatusMeta, M2CenterCanvas } from './M2CenterCanvas'
 import { M2SidebarPanels } from './M2SidebarPanels'
 import { M3CompletionView } from './M3CompletionView'
 import { M3MigrationBanner } from './M3MigrationBanner'
@@ -425,6 +427,10 @@ export function ProjectAgentM1Workbench({
   const [skippedConnection, setSkippedConnection] = useState(false)
   const [sidebarSection, setSidebarSection] = useState<M2SidebarSection>(initialSidebarSection)
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('external')
+  const [structureOpen, setStructureOpen] = useState(false)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  const [connectionPopoverOpen, setConnectionPopoverOpen] = useState(false)
+  const [attachPopoverOpen, setAttachPopoverOpen] = useState(false)
 
   // Narrow viewport tracking for automatic split -> tab degradation
   const [windowNarrow, setWindowNarrow] = useState<boolean>(() =>
@@ -1401,31 +1407,52 @@ export function ProjectAgentM1Workbench({
     }))
   }
 
+  const focusObjectListRegion = () => {
+    if (!structureOpen) {
+      flushSync(() => {
+        setStructureOpen(true)
+      })
+    }
+    objectListRegionRef.current?.focus()
+  }
+
   const handleWorkbenchKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    const regions = [
-      objectListRegionRef.current,
-      canvasRegionRef.current,
-      sidebarRegionRef.current,
-    ]
+    if (event.key === 'Escape') {
+      if (moreMenuOpen) setMoreMenuOpen(false)
+      if (connectionPopoverOpen) setConnectionPopoverOpen(false)
+      if (attachPopoverOpen) setAttachPopoverOpen(false)
+      return
+    }
     if (event.key === 'F6') {
       event.preventDefault()
       const active = document.activeElement
-      const currentIdx = regions.findIndex(
+      const regionSlots = [
+        objectListRegionRef.current,
+        canvasRegionRef.current,
+        sidebarRegionRef.current,
+      ]
+      const currentIdx = regionSlots.findIndex(
         (region) => region !== null && (region === active || region.contains(active)),
       )
       const delta = event.shiftKey ? -1 : 1
       const nextIdx =
         currentIdx === -1
           ? event.shiftKey
-            ? regions.length - 1
+            ? 2
             : 0
-          : (currentIdx + delta + regions.length) % regions.length
-      regions[nextIdx]?.focus()
+          : (currentIdx + delta + 3) % 3
+      if (nextIdx === 0) {
+        focusObjectListRegion()
+      } else if (nextIdx === 1) {
+        canvasRegionRef.current?.focus()
+      } else {
+        sidebarRegionRef.current?.focus()
+      }
       return
     }
     if (event.altKey && event.key === '1') {
       event.preventDefault()
-      objectListRegionRef.current?.focus()
+      focusObjectListRegion()
     } else if (event.altKey && event.key === '2') {
       event.preventDefault()
       canvasRegionRef.current?.focus()
@@ -2914,6 +2941,56 @@ export function ProjectAgentM1Workbench({
     setExternalNotifications((prev) => prev.filter((item) => item.eventId !== eventId))
   }
 
+  const effectiveViewMode = resolveEffectiveViewMode(
+    canvasState.viewMode,
+    isNarrow,
+    canvasState.lastSingleTab,
+  )
+  const modelStatusMeta = getArtifactStatusMeta(canvasState.model, '模型')
+  const drawingStatusMeta = getArtifactStatusMeta(
+    canvasState.drawing,
+    '图纸',
+    canvasState.drawingFailure,
+  )
+  const checksSummaryCounts = useMemo(() => {
+    let failed = 0
+    let pending = 0
+    let passed = 0
+    for (const chk of canvasState.checks) {
+      if (chk.status === 'fail' || chk.status === 'executionFailed') failed += 1
+      else if (chk.status === 'needsClarification' || chk.status === 'uncovered') pending += 1
+      else if (chk.status === 'pass') passed += 1
+    }
+    return { total: canvasState.checks.length, failed, pending, passed }
+  }, [canvasState.checks])
+
+  const workflowStep: 1 | 2 | 3 = showOnboarding
+    ? 1
+    : showCompletionView || hasSaveableResult
+      ? 3
+      : connectionState === 'connected' || builtinUnlocked || skippedConnection
+        ? 2
+        : 1
+
+  const compactConnectionLabel =
+    connectionSource === 'local-agent'
+      ? clientName
+        ? `本地 Agent · ${clientName}`
+        : '本地 Agent'
+      : connectionSource === 'model-api'
+        ? apiModel.trim()
+          ? `模型 API · ${apiModel.trim()}`
+          : '模型 API'
+        : skippedConnection
+          ? '本地浏览'
+          : '未连接'
+
+  const starterPrompts = [
+    '生成 80×50×8 安装板',
+    '向右移动选中孔 1 mm',
+    '完成并复核',
+  ] as const
+
   const rootClassName = className ? `pa-workbench ${className}` : 'pa-workbench'
 
   return (
@@ -2923,7 +3000,7 @@ export function ProjectAgentM1Workbench({
       aria-label="寸链 M1 双入口工作台"
       onKeyDown={handleWorkbenchKeyDown}
     >
-      {/* Single-Row 48px Top Status Bar */}
+      {/* Single-Row 48px Minimal Top Bar (Left: pure info, Center: unique view switch, Right: <= 3 controls) */}
       <header className="pa-workbench-topbar" aria-label="顶部连接状态栏">
         <div className="pa-topbar-left">
           <span className="pa-brand-mini" aria-hidden="true">
@@ -2931,169 +3008,334 @@ export function ProjectAgentM1Workbench({
             <span>寸链</span>
           </span>
           <h1 className="pa-title pa-project-title">{projectName}</h1>
-          <span className="pa-project-id-tag pa-mono">{projectId}</span>
           <span className="pa-rev-capsule pa-mono" aria-label="修订版本状态">
             正式版 {baseRevision ?? '无'} · 草稿 {draftRevision ?? '无'}
           </span>
-        </div>
-
-        <div className="pa-topbar-right">
-          <span className="pa-conn-capsule" aria-label="当前连接来源">
+          <span className="pa-workflow-steps" aria-label="三步工作流进度">
+            <span className={workflowStep >= 1 ? 'pa-step pa-step-done' : 'pa-step'}>
+              ① 连接
+            </span>
+            <span className="pa-step-sep" aria-hidden="true">
+              ›
+            </span>
             <span
               className={
-                connectionState === 'connected'
-                  ? 'pa-conn-dot'
-                  : connectionState === 'disconnected'
-                    ? 'pa-conn-dot pa-conn-dot-offline'
-                    : 'pa-conn-dot pa-conn-dot-idle'
+                workflowStep === 2
+                  ? 'pa-step pa-step-active'
+                  : workflowStep > 2
+                    ? 'pa-step pa-step-done'
+                    : 'pa-step'
               }
-              aria-hidden="true"
-            />
-            连接来源：{formatSourceLabel(connectionSource, clientName, apiModel, skippedConnection)}
-          </span>
-          <span
-            className={`pa-pill ${getClientConnectionTone(connectionState)}`}
-            aria-label="顶部客户端连接状态"
-          >
-            客户端：{formatClientConnectionLabel(connectionState, clientName)}
-          </span>
-          <span
-            className={`pa-pill ${getAuthorizationTone(authorizationState)}`}
-            aria-label="顶部项目授权状态"
-          >
-            项目授权：{formatAuthorizationLabel(authorizationState)}
-          </span>
-          {authorizationState === 'unauthorized' && !showOnboarding && !showDisconnectBanner ? (
-            <button
-              type="button"
-              className="pa-btn pa-btn-primary pa-btn-sm"
-              disabled={readonlyAuthPending}
-              onClick={() => {
-                void handleRequestReadonlyAuthorization()
-              }}
             >
-              {readonlyAuthPending ? '申请只读授权中…' : '申请原生只读授权'}
-            </button>
-          ) : null}
-          {authorizationState !== 'authorized-writable' &&
-          draftRevision === null &&
-          !showOnboarding ? (
-            <>
-              {connectionSource === 'none' ? (
-                <select
-                  aria-label="写入目标入口"
-                  className="pa-select"
-                  value={selectedTakeoverTarget}
-                  onChange={(event) =>
-                    setSelectedTakeoverTarget(
-                      event.target.value as 'local-agent' | 'model-api' | '',
-                    )
-                  }
-                >
-                  <option value="">请选择写入目标入口</option>
-                  <option value="local-agent">本地 Agent</option>
-                  <option value="model-api">模型 API</option>
-                </select>
-              ) : null}
+              ② 改图
+            </span>
+            <span className="pa-step-sep" aria-hidden="true">
+              ›
+            </span>
+            <span className={workflowStep === 3 ? 'pa-step pa-step-active' : 'pa-step'}>
+              ③ 保存
+            </span>
+          </span>
+        </div>
+
+        {/* Center: Single Source of Truth for View Switching (Not duplicated in canvas) */}
+        <div className="pa-topbar-center">
+          {!showOnboarding ? (
+            <div className="pa-segmented" role="tablist" aria-label="中央画布视图切换">
               <button
                 type="button"
-                className="pa-btn pa-btn-primary pa-btn-sm"
-                disabled={
-                  takeoverPending ||
-                  authorizationState === 'unauthorized' ||
-                  (connectionSource === 'none' && !selectedTakeoverTarget)
-                }
-                title={
-                  authorizationState === 'unauthorized'
-                    ? '须先完成原生只读授权，再申请写入或接管'
-                    : connectionSource === 'none' && !selectedTakeoverTarget
-                      ? '请先选择写入目标入口（本地 Agent 或模型 API）'
-                      : undefined
-                }
-                onClick={() => {
-                  void handleTakeoverDraft()
-                }}
+                role="tab"
+                aria-selected={effectiveViewMode === 'model'}
+                data-artifact-status={modelStatusMeta.stateKey}
+                title={modelStatusMeta.text}
+                className={effectiveViewMode === 'model' ? 'pa-btn-active' : undefined}
+                onClick={() => handleChangeViewMode('model')}
               >
-                {takeoverPending ? '申请写入中…' : '申请原生写入'}
+                模型
+                {isNarrow ? <span aria-hidden="true"> {modelStatusMeta.symbol}</span> : null}
               </button>
-            </>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={effectiveViewMode === 'drawing'}
+                data-artifact-status={drawingStatusMeta.stateKey}
+                title={drawingStatusMeta.text}
+                className={effectiveViewMode === 'drawing' ? 'pa-btn-active' : undefined}
+                onClick={() => handleChangeViewMode('drawing')}
+              >
+                图纸
+                {isNarrow ? <span aria-hidden="true"> {drawingStatusMeta.symbol}</span> : null}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={effectiveViewMode === 'split'}
+                disabled={isNarrow}
+                title={isNarrow ? '窗口较窄时自动退化为模型/图纸标签页' : '模型与图纸并排联动'}
+                className={effectiveViewMode === 'split' ? 'pa-btn-active' : undefined}
+                onClick={() => handleChangeViewMode('split')}
+              >
+                并排
+              </button>
+            </div>
           ) : null}
+        </div>
 
-          <div className="pa-segmented" role="group" aria-label="顶部入口快捷切换">
+        {/* Right: Strictly <= 3 interactive controls (Connection Capsule + Complete & Save CTA + More Menu) */}
+        <div className="pa-topbar-right">
+          {/* 1. Connection Status Capsule (opens Connection & Auth popover) */}
+          <div className="pa-popover-anchor">
             <button
               type="button"
-              aria-pressed={sidebarSection === 'conversation' && sidebarTab === 'builtin'}
-              className={
-                sidebarSection === 'conversation' && sidebarTab === 'builtin'
-                  ? 'pa-btn-active'
-                  : undefined
-              }
+              data-testid="connection-capsule-btn"
+              className="pa-conn-capsule-btn"
+              aria-label="当前连接来源"
+              aria-haspopup="dialog"
+              aria-expanded={connectionPopoverOpen}
               onClick={() => {
-                setSidebarSection('conversation')
-                setSidebarTab('builtin')
+                setMoreMenuOpen(false)
+                setConnectionPopoverOpen((prev) => !prev)
               }}
             >
-              内置对话
+              <span
+                className={
+                  connectionState === 'connected'
+                    ? 'pa-conn-dot'
+                    : connectionState === 'disconnected' && connectionSource !== 'none'
+                      ? 'pa-conn-dot pa-conn-dot-offline'
+                      : 'pa-conn-dot pa-conn-dot-idle'
+                }
+                aria-hidden="true"
+              />
+              <span>{compactConnectionLabel}</span>
             </button>
-            <button
-              type="button"
-              aria-pressed={sidebarSection === 'conversation' && sidebarTab === 'external'}
-              className={
-                sidebarSection === 'conversation' && sidebarTab === 'external'
-                  ? 'pa-btn-active'
-                  : undefined
-              }
-              onClick={() => {
-                setSidebarSection('conversation')
-                setSidebarTab('external')
-              }}
-            >
-              外置活动
-            </button>
+
+            {connectionPopoverOpen ? (
+              <div
+                className="pa-popover pa-conn-popover"
+                role="dialog"
+                aria-label="连接与授权详情"
+              >
+                <div className="pa-header">
+                  <strong className="pa-title">连接与授权</strong>
+                  <button
+                    type="button"
+                    className="pa-icon-btn"
+                    aria-label="关闭连接与授权详情"
+                    onClick={() => setConnectionPopoverOpen(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="pa-popover-meta">
+                  <span className="pa-muted">
+                    来源：{formatSourceLabel(connectionSource, clientName, apiModel, skippedConnection)}
+                  </span>
+                  <div className="pa-row">
+                    <span
+                      className={`pa-pill ${getClientConnectionTone(connectionState)}`}
+                      aria-label="顶部客户端连接状态"
+                    >
+                      客户端：{formatClientConnectionLabel(connectionState, clientName)}
+                    </span>
+                    <span
+                      className={`pa-pill ${getAuthorizationTone(authorizationState)}`}
+                      aria-label="顶部项目授权状态"
+                    >
+                      项目授权：{formatAuthorizationLabel(authorizationState)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Contextual Single Next-Step Auth Action */}
+                {authorizationState === 'unauthorized' ? (
+                  <button
+                    type="button"
+                    className="pa-btn pa-btn-primary pa-btn-sm"
+                    disabled={readonlyAuthPending}
+                    onClick={() => {
+                      void handleRequestReadonlyAuthorization()
+                    }}
+                  >
+                    {readonlyAuthPending ? '申请只读授权中…' : '申请原生只读授权'}
+                  </button>
+                ) : authorizationState !== 'authorized-writable' && draftRevision === null ? (
+                  <div className="pa-list">
+                    {connectionSource === 'none' ? (
+                      <select
+                        aria-label="写入目标入口"
+                        className="pa-select"
+                        value={selectedTakeoverTarget}
+                        onChange={(event) =>
+                          setSelectedTakeoverTarget(
+                            event.target.value as 'local-agent' | 'model-api' | '',
+                          )
+                        }
+                      >
+                        <option value="">请选择写入目标入口</option>
+                        <option value="local-agent">本地 Agent</option>
+                        <option value="model-api">模型 API</option>
+                      </select>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="pa-btn pa-btn-primary pa-btn-sm"
+                      disabled={
+                        takeoverPending ||
+                        (connectionSource === 'none' && !selectedTakeoverTarget)
+                      }
+                      onClick={() => {
+                        void handleTakeoverDraft()
+                      }}
+                    >
+                      {takeoverPending ? '申请写入中…' : '申请原生写入'}
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="pa-popover-footer">
+                  <button
+                    type="button"
+                    className="pa-btn pa-btn-sm"
+                    onClick={() => {
+                      setConnectionPopoverOpen(false)
+                      setShowOnboarding((prev) => !prev)
+                    }}
+                  >
+                    切换连接
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
-          <button
-            type="button"
-            className="pa-btn pa-btn-sm"
-            onClick={() => setShowOnboarding((prev) => !prev)}
-          >
-            切换连接
-          </button>
-
-          <button
-            type="button"
-            className="pa-btn pa-theme-btn"
-            data-testid="theme-toggle-btn"
-            aria-label="切换浅色/深色主题"
-            aria-pressed={theme === 'dark'}
-            title={theme === 'light' ? '切换至 Dark CAD 深色工程台' : '切换至 Light Studio 浅色制图台'}
-            onClick={handleToggleTheme}
-          >
-            {theme === 'light' ? '☀ Light Studio' : '☾ Dark CAD'}
-          </button>
-
-          {hasSaveableResult ? (
+          {/* 2. Primary Workflow CTA: Complete & Save (only lit when saveable result exists) */}
+          {hasSaveableResult && !showOnboarding ? (
             <button
               type="button"
-              className={
-                showCompletionView ? 'pa-btn pa-btn-primary pa-btn-sm' : 'pa-btn pa-btn-primary pa-btn-sm'
-              }
+              data-testid="complete-and-save-btn"
+              className="pa-btn pa-btn-primary pa-btn-sm"
               aria-expanded={showCompletionView}
               onClick={() => {
                 setCommitFeedback(null)
                 setShowCompletionView((prev) => !prev)
               }}
             >
-              保存此版本 / 完成视图
+              完成并保存
             </button>
           ) : null}
 
-          <a href="#/desktop-m1-readonly" className="pa-link-btn pa-link-ghost">
-            只读授权视图
-          </a>
-          <a href="#/desktop-legacy" className="pa-link-btn pa-link-ghost">
-            返回旧工作台
-          </a>
+          {/* 3. "More ⋯" Menu: All low-frequency controls tucked away cleanly */}
+          <div className="pa-popover-anchor">
+            <button
+              type="button"
+              data-testid="more-menu-btn"
+              className="pa-btn pa-btn-ghost pa-more-btn"
+              aria-label="更多操作"
+              aria-haspopup="menu"
+              aria-expanded={moreMenuOpen}
+              onClick={() => {
+                setConnectionPopoverOpen(false)
+                setMoreMenuOpen((prev) => !prev)
+              }}
+            >
+              ⋯
+            </button>
+
+            {moreMenuOpen ? (
+              <div
+                className="pa-dropdown-menu"
+                role="menu"
+                aria-label="更多操作菜单"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="pa-menu-item"
+                  onClick={() => {
+                    setSidebarSection('conversation')
+                    setSidebarTab((prev) => (prev === 'builtin' ? 'external' : 'builtin'))
+                    setMoreMenuOpen(false)
+                  }}
+                >
+                  <span>
+                    {sidebarTab === 'builtin' ? '切换到外置 Agent 活动' : '切换到内置模型对话'}
+                  </span>
+                  <span className="pa-muted">
+                    {sidebarTab === 'builtin' ? '当前：内置' : '当前：外置'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="theme-toggle-btn"
+                  aria-label="切换浅色/深色主题"
+                  aria-pressed={theme === 'dark'}
+                  className="pa-menu-item"
+                  onClick={() => {
+                    handleToggleTheme()
+                    setMoreMenuOpen(false)
+                  }}
+                >
+                  <span>主题外观</span>
+                  <span className="pa-muted">
+                    {theme === 'light' ? '☀ Light Studio' : '☾ Dark CAD'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="pa-menu-item"
+                  onClick={() => {
+                    setOnboardingChoice('skip-local')
+                    setShowOnboarding(true)
+                    setMoreMenuOpen(false)
+                  }}
+                >
+                  <span>切换本地项目</span>
+                  <span className="pa-muted pa-mono">{projectId}</span>
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="pa-menu-item"
+                  onClick={() => {
+                    setMoreMenuOpen(false)
+                    if (migrationReport) {
+                      setMigrationDrawerOpen(true)
+                    } else {
+                      setSidebarSection('history')
+                      void handleLoadMigrationReport()
+                    }
+                  }}
+                >
+                  <span>查看旧项目迁移差异报告</span>
+                </button>
+
+                <div className="pa-menu-divider" role="separator" />
+
+                <a
+                  href="#/desktop-m1-readonly"
+                  role="menuitem"
+                  className="pa-menu-item pa-menu-link"
+                  onClick={() => setMoreMenuOpen(false)}
+                >
+                  <span>只读授权视图</span>
+                </a>
+                <a
+                  href="#/desktop-legacy"
+                  role="menuitem"
+                  className="pa-menu-item pa-menu-link"
+                  onClick={() => setMoreMenuOpen(false)}
+                >
+                  <span>返回旧工作台</span>
+                </a>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -3199,7 +3441,7 @@ export function ProjectAgentM1Workbench({
         </div>
       ) : null}
 
-      {/* Disconnect & Takeover Banner */}
+      {/* Contextual Disconnect & Takeover Banner: appears ONLY when disconnected */}
       {showDisconnectBanner ? (
         <section
           className="pa-notice pa-disconnect-banner"
@@ -3207,18 +3449,19 @@ export function ProjectAgentM1Workbench({
           aria-label="断线与接管状态"
         >
           <div className="pa-header">
-            <div>
-              <strong>连接已断开</strong> · 项目{' '}
-              <span className="pa-mono">{projectName}</span>（
-              <span className="pa-mono">{projectId}</span>） · 当前版本：正式版{' '}
-              <span className="pa-mono">{baseRevision ?? '无'}</span> / 草稿{' '}
-              <span className="pa-mono">{draftRevision ?? '无'}</span>
+            <div className="pa-row">
+              <strong>连接已断开</strong>
+              <span>
+                · 保留草稿 <span className="pa-mono">{draftRevision ?? '无'}</span>（正式版{' '}
+                <span className="pa-mono">{baseRevision ?? '无'}</span> · 代际{' '}
+                <span className="pa-mono">#{scopeEpoch}/{writerEpoch}</span>）
+              </span>
             </div>
             <div className="pa-controls">
               <button
                 ref={reconnectButtonRef}
                 type="button"
-                className="pa-btn"
+                className="pa-btn pa-btn-primary pa-btn-sm"
                 disabled={takeoverPending}
                 onClick={() => {
                   void handleReconnect()
@@ -3226,17 +3469,10 @@ export function ProjectAgentM1Workbench({
               >
                 重连
               </button>
-              <button
-                type="button"
-                className="pa-btn"
-                onClick={() => setShowOnboarding(true)}
-              >
-                切换入口
-              </button>
               {authorizationState === 'unauthorized' ? (
                 <button
                   type="button"
-                  className="pa-btn pa-btn-active"
+                  className="pa-btn pa-btn-sm"
                   disabled={readonlyAuthPending}
                   onClick={() => {
                     void handleRequestReadonlyAuthorization()
@@ -3244,1029 +3480,1067 @@ export function ProjectAgentM1Workbench({
                 >
                   {readonlyAuthPending ? '申请只读授权中…' : '申请原生只读授权'}
                 </button>
-              ) : null}
-              {connectionSource === 'none' ? (
-                <select
-                  aria-label="接管目标入口"
-                  className="pa-input"
-                  value={selectedTakeoverTarget}
-                  onChange={(event) =>
-                    setSelectedTakeoverTarget(
-                      event.target.value as 'local-agent' | 'model-api' | '',
-                    )
-                  }
-                >
-                  <option value="">请选择接管目标入口</option>
-                  <option value="local-agent">本地 Agent</option>
-                  <option value="model-api">模型 API</option>
-                </select>
-              ) : null}
+              ) : (
+                <>
+                  {connectionSource === 'none' ? (
+                    <select
+                      aria-label="接管目标入口"
+                      className="pa-select"
+                      value={selectedTakeoverTarget}
+                      onChange={(event) =>
+                        setSelectedTakeoverTarget(
+                          event.target.value as 'local-agent' | 'model-api' | '',
+                        )
+                      }
+                    >
+                      <option value="">请选择接管目标入口</option>
+                      <option value="local-agent">本地 Agent</option>
+                      <option value="model-api">模型 API</option>
+                    </select>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="pa-btn pa-btn-sm"
+                    disabled={
+                      takeoverPending ||
+                      (connectionSource === 'none' && !selectedTakeoverTarget)
+                    }
+                    title={
+                      connectionSource === 'none' && !selectedTakeoverTarget
+                        ? '请先选择接管目标入口（本地 Agent 或模型 API）'
+                        : undefined
+                    }
+                    onClick={() => {
+                      void handleTakeoverDraft()
+                    }}
+                  >
+                    接管当前草稿
+                  </button>
+                </>
+              )}
               <button
                 type="button"
-                className="pa-btn pa-btn-active"
-                disabled={
-                  takeoverPending ||
-                  authorizationState === 'unauthorized' ||
-                  (connectionSource === 'none' && !selectedTakeoverTarget)
-                }
-                title={
-                  authorizationState === 'unauthorized'
-                    ? '须先完成原生只读授权，再申请写入或接管'
-                    : connectionSource === 'none' && !selectedTakeoverTarget
-                      ? '请先选择接管目标入口（本地 Agent 或模型 API）'
-                      : undefined
-                }
-                onClick={() => {
-                  void handleTakeoverDraft()
-                }}
+                className="pa-btn pa-btn-ghost pa-btn-sm"
+                onClick={() => setShowOnboarding(true)}
               >
-                接管当前草稿
+                切换连接
               </button>
             </div>
           </div>
           {authorizationState === 'unauthorized' ? (
             <p className="pa-muted" role="note">
-              须先完成原生只读授权，再申请写入或接管。
+              已保留当前项目结果与上下文；须先完成原生只读授权，再申请写入或接管。
             </p>
-          ) : null}
-          {connectionSource === 'none' && authorizationState !== 'unauthorized' ? (
+          ) : connectionSource === 'none' ? (
             <p className="pa-muted" role="note">
-              当前未建立连接来源，请先明确选择目标入口（本地 Agent 或模型 API）后再发起写入或接管。
+              已保留当前项目结果与上下文；请先明确选择接管目标入口（本地 Agent 或模型 API）。
             </p>
           ) : null}
-          <p className="pa-muted">
-            已保留当前项目结果、任务活动与对话上下文，断线不等于清空或取消。当前本地代际{' '}
-            <span className="pa-mono">#{scopeEpoch}</span> / 写入代际{' '}
-            <span className="pa-mono">#{writerEpoch}</span>。
-          </p>
         </section>
       ) : null}
 
       {readonlyAuthNotice ? (
-        <div className="pa-pass-box" role="status">
+        <div className="pa-pass-box pa-inline-status-strip" role="status">
           <span>{readonlyAuthNotice}</span>
         </div>
       ) : null}
 
       {readonlyAuthError ? (
-        <div className="pa-danger-box" role="alert">
+        <div className="pa-danger-box pa-inline-status-strip" role="alert">
           <span>{readonlyAuthError}</span>
         </div>
       ) : null}
 
       {takeoverNotice ? (
-        <div className="pa-pass-box" role="status">
+        <div className="pa-pass-box pa-inline-status-strip" role="status">
           <span>{takeoverNotice}</span>
         </div>
       ) : null}
 
       {takeoverError ? (
-        <div className="pa-danger-box" role="alert">
+        <div className="pa-danger-box pa-inline-status-strip" role="alert">
           <span>{takeoverError}</span>
         </div>
       ) : null}
 
       {discardedStaleCount > 0 ? (
-        <div className="pa-notice" role="status">
+        <div className="pa-notice pa-inline-status-strip" role="status">
           已丢弃来自旧代际/先前客户端的迟到响应或事件（共{' '}
           <span className="pa-mono">{discardedStaleCount}</span> 条）。
         </div>
       ) : null}
 
-      {/* Onboarding / Connection Selector */}
+      {/* Scene 1: Focused Single-Column Onboarding (Exclusive focus — hides workbench clutter) */}
       {showOnboarding ? (
-        <div className="pa-onboarding-shell">
+        <div className="pa-onboarding-shell pa-onboarding-focused">
           <section className="pa-panel pa-onboarding-container" aria-label="首次启动与连接向导">
             <div className="pa-header pa-onboarding-hero">
-              <div className="pa-row">
-                <span className="pa-brand-mini-icon" aria-hidden="true">
-                  寸
-                </span>
-                <h2 className="pa-title">连接方式与入口向导</h2>
-                <span className="pa-pill pa-tone-muted">随时可通过顶部“切换连接”重选</span>
+              <div>
+                <h2 className="pa-onboarding-title">选择一种方式连接 AI，开始建模</h2>
+                <p className="pa-muted">
+                  3 步完成一次设计：① 连上 AI → ② 看图对话改图 → ③ 核查并确认保存
+                </p>
               </div>
               <button
                 type="button"
-                className="pa-btn pa-btn-sm"
+                className="pa-icon-btn"
+                aria-label="收起向导"
+                title="收起向导"
                 onClick={() => setShowOnboarding(false)}
               >
-                收起向导
+                ×
               </button>
             </div>
 
-          <div className="pa-onboarding-options" role="group" aria-label="连接入口选项">
-            <button
-              type="button"
-              className={`pa-option-card ${onboardingChoice === 'local-agent' ? 'pa-option-card-active' : ''}`}
-              aria-pressed={onboardingChoice === 'local-agent'}
-              onClick={() => setOnboardingChoice('local-agent')}
-            >
-              <div className="pa-row">
-                <strong>连接本地 Agent</strong>
-                <span className="pa-pill pa-tone-action">首选</span>
-              </div>
-              <span className="pa-muted">
-                在常用的本地 Agent 中说“连接寸链”或复制本机 MCP 配置接入。
-              </span>
-            </button>
+            {/* 2 Primary Choice Cards */}
+            <div className="pa-onboarding-options-two" role="group" aria-label="连接入口选项">
+              <button
+                type="button"
+                className={`pa-option-card ${onboardingChoice === 'local-agent' ? 'pa-option-card-active' : ''}`}
+                aria-pressed={onboardingChoice === 'local-agent'}
+                onClick={() => setOnboardingChoice('local-agent')}
+              >
+                <div className="pa-row">
+                  <strong>连接本地 Agent</strong>
+                  <span className="pa-pill pa-tone-action">推荐</span>
+                </div>
+                <span className="pa-muted">
+                  复制 MCP 配置接入 Claude Desktop / Cursor 等本地客户端，零密钥外发。
+                </span>
+              </button>
 
-            <button
-              type="button"
-              className={`pa-option-card ${onboardingChoice === 'model-api' ? 'pa-option-card-active' : ''}`}
-              aria-pressed={onboardingChoice === 'model-api'}
-              onClick={() => setOnboardingChoice('model-api')}
-            >
-              <div className="pa-row">
-                <strong>使用模型 API</strong>
-                <span className="pa-pill pa-tone-muted">第二项</span>
-              </div>
-              <span className="pa-muted">
-                配置服务地址、模型名与密钥，通过真实工具往返后启用内置建模对话。
-              </span>
-            </button>
+              <button
+                type="button"
+                className={`pa-option-card ${onboardingChoice === 'model-api' ? 'pa-option-card-active' : ''}`}
+                aria-pressed={onboardingChoice === 'model-api'}
+                onClick={() => setOnboardingChoice('model-api')}
+              >
+                <div className="pa-row">
+                  <strong>使用模型 API</strong>
+                </div>
+                <span className="pa-muted">
+                  填入兼容 OpenAI 的地址、模型名与密钥，直接在寸链内对话建模。
+                </span>
+              </button>
+            </div>
 
-            <button
-              type="button"
-              className={`pa-option-card ${onboardingChoice === 'skip-local' ? 'pa-option-card-active' : ''}`}
-              aria-pressed={onboardingChoice === 'skip-local'}
-              onClick={() => {
-                setOnboardingChoice('skip-local')
-                setSkippedConnection(true)
-              }}
-            >
-              <div className="pa-row">
-                <strong>跳过（查看本地项目与示例）</strong>
-              </div>
-              <span className="pa-muted">
-                暂不连接外部 Agent 或模型 API，先查看本机项目与示例任务。
-              </span>
-            </button>
-          </div>
+            {/* Expanded Step for Selected Card ONLY */}
+            {onboardingChoice === 'local-agent' ? (
+              <section className="pa-card pa-onboarding-step-card" aria-label="连接本地 Agent 配置">
+                {!probe.capabilities.localAgentInstallInfo ||
+                !probe.capabilities.connectionStatus ? (
+                  <div className="pa-notice" role="alert">
+                    后端尚未接线/不可用（缺失方法：
+                    <span className="pa-mono">
+                      {[
+                        !probe.capabilities.localAgentInstallInfo
+                          ? 'getM1LocalAgentInstallInfo'
+                          : null,
+                        !probe.capabilities.connectionStatus ? 'getM1ConnectionStatus' : null,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </span>
+                    ）。下方展示默认配置模板，不会伪造已连接状态。
+                  </div>
+                ) : null}
 
-          {/* Local Agent Config Panel */}
-          {onboardingChoice === 'local-agent' ? (
-            <section className="pa-card" aria-label="连接本地 Agent 配置">
-              <div className="pa-header">
-                <h3 className="pa-title">连接本地 Agent</h3>
-                <div className="pa-controls">
+                {/* Step 1: One-click Copy MCP Config */}
+                <div className="pa-step-block">
+                  <div className="pa-header">
+                    <span className="pa-card-label">第 1 步 · 复制 MCP 配置到你的本地 Agent</span>
+                    <div className="pa-controls">
+                      <button
+                        type="button"
+                        className="pa-btn pa-btn-primary pa-btn-sm"
+                        onClick={() => {
+                          void handleCopy(localAgentConfig.mcpConfigJson, 'MCP 配置', 'local-agent')
+                        }}
+                      >
+                        复制 MCP 配置
+                      </button>
+                    </div>
+                  </div>
+                  <pre className="pa-code-block pa-mono">{localAgentConfig.mcpConfigJson}</pre>
+                  <details className="pa-inline-details">
+                    <summary className="pa-muted">
+                      查看自然语言连接说明与安装路径（{localAgentConfig.installPath}）
+                    </summary>
+                    <div className="pa-details-body">
+                      <pre className="pa-code-block pa-mono">{localAgentConfig.connectPrompt}</pre>
+                      <button
+                        type="button"
+                        className="pa-btn pa-btn-sm"
+                        onClick={() => {
+                          void handleCopy(localAgentConfig.connectPrompt, '连接说明', 'local-agent')
+                        }}
+                      >
+                        复制连接说明
+                      </button>
+                    </div>
+                  </details>
+                </div>
+
+                {/* Step 2: Clearly Separated Client Connection & Project Authorization */}
+                <div className="pa-step-block">
+                  <div className="pa-header">
+                    <span className="pa-card-label">第 2 步 · 确认连接与项目授权</span>
+                    <button
+                      type="button"
+                      className="pa-btn pa-btn-ghost pa-btn-sm"
+                      disabled={statusChecking}
+                      onClick={() => {
+                        void handleRefreshConnectionStatus()
+                      }}
+                    >
+                      {statusChecking ? '检测中…' : '检测连接状态'}
+                    </button>
+                  </div>
+
+                  <div className="pa-grid">
+                    <section className="pa-status-box" aria-label="客户端连接状态">
+                      <span className="pa-card-label">客户端连接状态</span>
+                      <div className="pa-row">
+                        <span className={`pa-pill ${getClientConnectionTone(connectionState)}`}>
+                          {formatClientConnectionLabel(connectionState, clientName)}
+                        </span>
+                        <span className="pa-muted pa-mono">{clientName ?? '未识别'}</span>
+                      </div>
+                    </section>
+
+                    <section className="pa-status-box" aria-label="项目授权状态">
+                      <span className="pa-card-label">项目授权状态</span>
+                      <div className="pa-row">
+                        <span className={`pa-pill ${getAuthorizationTone(authorizationState)}`}>
+                          {formatAuthorizationLabel(authorizationState)}
+                        </span>
+                        {authorizationState === 'unauthorized' ? (
+                          <button
+                            type="button"
+                            className="pa-btn pa-btn-sm pa-btn-active"
+                            disabled={readonlyAuthPending}
+                            onClick={() => {
+                              void handleRequestReadonlyAuthorization()
+                            }}
+                          >
+                            {readonlyAuthPending ? '正在申请…' : '申请原生只读授权'}
+                          </button>
+                        ) : authorizationState === 'authorized-readonly' ? (
+                          <button
+                            type="button"
+                            className="pa-btn pa-btn-sm pa-btn-active"
+                            disabled={takeoverPending}
+                            onClick={() => {
+                              void handleTakeoverDraft('local-agent')
+                            }}
+                          >
+                            {takeoverPending
+                              ? '正在申请…'
+                              : draftRevision === null
+                                ? '申请原生写入权限'
+                                : '申请原生写入 / 接管草稿'}
+                          </button>
+                        ) : (
+                          <span className="pa-muted pa-mono">写入方：{writerOwner ?? '已就绪'}</span>
+                        )}
+                      </div>
+                    </section>
+                  </div>
+                </div>
+
+                {localAgentCopyFeedback ? (
+                  <p className="pa-muted" role="status">
+                    {localAgentCopyFeedback}
+                  </p>
+                ) : null}
+                {localAgentNotice ? (
+                  <div className="pa-notice" role="status">
+                    {localAgentNotice}
+                  </div>
+                ) : null}
+
+                <div className="pa-onboarding-cta-row">
                   <button
                     type="button"
-                    className="pa-btn"
-                    disabled={statusChecking}
-                    onClick={() => {
-                      void handleRefreshConnectionStatus()
-                    }}
-                  >
-                    {statusChecking ? '检测中…' : '检测连接状态'}
-                  </button>
-                  <button
-                    type="button"
-                    className="pa-btn pa-btn-active"
+                    className="pa-btn pa-btn-primary"
                     onClick={() => {
                       setSidebarSection('conversation')
                       setSidebarTab('external')
                       setShowOnboarding(false)
                     }}
                   >
-                    进入外置任务活动
+                    进入工作台
                   </button>
                 </div>
-              </div>
+              </section>
+            ) : null}
 
-              {!probe.capabilities.localAgentInstallInfo || !probe.capabilities.connectionStatus ? (
-                <div className="pa-notice" role="alert">
-                  后端尚未接线/不可用（缺失方法：
-                  <span className="pa-mono">
-                    {[
-                      !probe.capabilities.localAgentInstallInfo ? 'getM1LocalAgentInstallInfo' : null,
-                      !probe.capabilities.connectionStatus ? 'getM1ConnectionStatus' : null,
-                    ]
-                      .filter(Boolean)
-                      .join(', ')}
-                  </span>
-                  ）。下方展示基于默认安装位置生成的配置模板，不会伪造已连接状态。
-                </div>
-              ) : null}
-
-              <div className="pa-grid">
-                <section className="pa-card pa-status-box" aria-label="客户端连接状态">
-                  <span className="pa-card-label">客户端连接状态（握手与能力发现）</span>
-                  <div className="pa-row">
-                    <span className={`pa-pill ${getClientConnectionTone(connectionState)}`}>
-                      {formatClientConnectionLabel(connectionState, clientName)}
-                    </span>
-                    <span className="pa-muted">
-                      客户端名称：<span className="pa-mono">{clientName ?? '未识别'}</span>
-                    </span>
+            {onboardingChoice === 'model-api' ? (
+              <section className="pa-card pa-onboarding-step-card" aria-label="使用模型 API 配置">
+                {!probe.capabilities.modelApiTest ? (
+                  <div className="pa-notice" role="alert">
+                    后端尚未接线/不可用（缺失方法：
+                    <span className="pa-mono">testM1ModelApiConnection</span>
+                    ）。无法执行真实工具往返测试，内置建模对话保持锁定。
                   </div>
-                </section>
+                ) : null}
 
-                <section className="pa-card pa-status-box" aria-label="项目授权状态">
-                  <span className="pa-card-label">项目授权状态（独立于客户端握手）</span>
-                  <div className="pa-row">
-                    <span className={`pa-pill ${getAuthorizationTone(authorizationState)}`}>
-                      {formatAuthorizationLabel(authorizationState)}
-                    </span>
-                    <span className="pa-muted">
-                      写入方：<span className="pa-mono">{writerOwner ?? '无'}</span>
-                    </span>
-                    {authorizationState === 'unauthorized' ? (
-                      <button
-                        type="button"
-                        className="pa-btn pa-btn-sm pa-btn-active"
-                        disabled={readonlyAuthPending}
-                        onClick={() => {
-                          void handleRequestReadonlyAuthorization()
-                        }}
-                      >
-                        {readonlyAuthPending ? '正在申请只读授权…' : '申请原生只读授权'}
-                      </button>
-                    ) : null}
-                    {authorizationState !== 'authorized-writable' ? (
-                      <button
-                        type="button"
-                        className="pa-btn pa-btn-sm pa-btn-active"
-                        disabled={takeoverPending || authorizationState === 'unauthorized'}
-                        title={
-                          authorizationState === 'unauthorized'
-                            ? '须先完成原生只读授权，再申请写入或接管'
-                            : undefined
-                        }
-                        onClick={() => {
-                          void handleTakeoverDraft('local-agent')
-                        }}
-                      >
-                        {takeoverPending
-                          ? '正在申请写入…'
-                          : draftRevision === null
-                            ? '申请原生写入权限'
-                            : '申请原生写入 / 接管草稿'}
-                      </button>
-                    ) : null}
-                  </div>
-                  {authorizationState === 'unauthorized' ? (
-                    <p className="pa-muted">须先完成原生只读授权，再申请写入或接管。</p>
-                  ) : null}
-                </section>
-              </div>
-
-              <div className="pa-row">
-                <span className="pa-muted">
-                  当前安装位置：<span className="pa-mono">{localAgentConfig.installPath}</span>
-                  {localAgentConfig.fromBackend ? '（来自本机服务）' : '（默认安装路径）'}
-                </span>
-              </div>
-
-              <div className="pa-card pa-code-block-wrap">
-                <div className="pa-header pa-code-block-header">
-                  <span className="pa-card-label">自然语言连接说明</span>
-                  <button
-                    type="button"
-                    className="pa-btn pa-btn-sm"
-                    onClick={() => {
-                      void handleCopy(localAgentConfig.connectPrompt, '连接说明', 'local-agent')
-                    }}
-                  >
-                    复制连接说明
-                  </button>
+                <div className="pa-form-grid">
+                  <label className="pa-field">
+                    服务地址
+                    <input
+                      type="text"
+                      aria-label="服务地址"
+                      className="pa-input pa-mono"
+                      value={apiBaseUrl}
+                      onChange={(event) => {
+                        setApiBaseUrl(event.target.value)
+                        resetModelApiUnlock()
+                      }}
+                    />
+                  </label>
+                  <label className="pa-field">
+                    模型名
+                    <input
+                      type="text"
+                      aria-label="模型名"
+                      className="pa-input pa-mono"
+                      value={apiModel}
+                      onChange={(event) => {
+                        setApiModel(event.target.value)
+                        resetModelApiUnlock()
+                      }}
+                    />
+                  </label>
+                  <label className="pa-field">
+                    密钥
+                    <input
+                      type="password"
+                      aria-label="密钥"
+                      className="pa-input pa-mono"
+                      placeholder="sk-..."
+                      value={apiKey}
+                      onChange={(event) => {
+                        setApiKey(event.target.value)
+                        resetModelApiUnlock()
+                      }}
+                    />
+                  </label>
                 </div>
-                <pre className="pa-code-block pa-mono">{localAgentConfig.connectPrompt}</pre>
-              </div>
 
-              <div className="pa-card pa-code-block-wrap">
-                <div className="pa-header pa-code-block-header">
-                  <span className="pa-card-label">MCP 客户端配置片段（JSON）</span>
-                  <button
-                    type="button"
-                    className="pa-btn pa-btn-sm"
-                    onClick={() => {
-                      void handleCopy(localAgentConfig.mcpConfigJson, 'MCP 配置', 'local-agent')
-                    }}
-                  >
-                    复制 MCP 配置
-                  </button>
-                </div>
-                <pre className="pa-code-block pa-mono">{localAgentConfig.mcpConfigJson}</pre>
-              </div>
-
-              {localAgentCopyFeedback ? (
-                <p className="pa-muted" role="status">
-                  {localAgentCopyFeedback}
-                </p>
-              ) : null}
-
-              {localAgentNotice ? (
-                <div className="pa-notice" role="status">
-                  {localAgentNotice}
-                </div>
-              ) : null}
-            </section>
-          ) : null}
-
-          {/* Model API Config Panel */}
-          {onboardingChoice === 'model-api' ? (
-            <section className="pa-card" aria-label="使用模型 API 配置">
-              <div className="pa-header">
-                <h3 className="pa-title">使用模型 API</h3>
-                <span
-                  className={`pa-pill ${builtinUnlocked ? 'pa-tone-pass' : 'pa-tone-pending'}`}
+                {/* Compact Outgoing Context Summary */}
+                <section
+                  className="pa-disclosure-box"
+                  aria-label="本次需发送的文档片段与项目摘要"
                 >
-                  {builtinUnlocked ? '工具往返已通过 · 内置对话已解锁' : '内置对话未解锁'}
-                </span>
-              </div>
-
-              {!probe.capabilities.modelApiTest ? (
-                <div className="pa-notice" role="alert">
-                  后端尚未接线/不可用（缺失方法：
-                  <span className="pa-mono">testM1ModelApiConnection</span>
-                  ）。无法执行真实工具往返测试，内置建模对话保持锁定。
-                </div>
-              ) : null}
-
-              <div className="pa-form-grid">
-                <label className="pa-field">
-                  服务地址
-                  <input
-                    type="text"
-                    aria-label="服务地址"
-                    className="pa-input pa-mono"
-                    value={apiBaseUrl}
-                    onChange={(event) => {
-                      setApiBaseUrl(event.target.value)
-                      resetModelApiUnlock()
-                    }}
-                  />
-                </label>
-                <label className="pa-field">
-                  模型名
-                  <input
-                    type="text"
-                    aria-label="模型名"
-                    className="pa-input pa-mono"
-                    value={apiModel}
-                    onChange={(event) => {
-                      setApiModel(event.target.value)
-                      resetModelApiUnlock()
-                    }}
-                  />
-                </label>
-                <label className="pa-field">
-                  密钥
-                  <input
-                    type="password"
-                    aria-label="密钥"
-                    className="pa-input pa-mono"
-                    placeholder="sk-..."
-                    value={apiKey}
-                    onChange={(event) => {
-                      setApiKey(event.target.value)
-                      resetModelApiUnlock()
-                    }}
-                  />
-                </label>
-              </div>
-
-              {/* Outgoing document excerpts & project summary */}
-              <section
-                className="pa-card pa-disclosure-box"
-                aria-label="本次需发送的文档片段与项目摘要"
-              >
-                <span className="pa-card-label">本次需发送的文档片段与项目摘要</span>
-                <div className="pa-row">
-                  <span>
-                    项目：<span className="pa-mono">{outgoingContextSummary.projectName}</span>（
-                    <span className="pa-mono">{outgoingContextSummary.projectId}</span>）
-                  </span>
-                  <span>
-                    当前草稿：
-                    <span className="pa-mono">
+                  <div className="pa-row">
+                    <span className="pa-card-label">外发上下文摘要</span>
+                    <span className="pa-muted pa-mono">
+                      {outgoingContextSummary.projectName}（{outgoingContextSummary.projectId}）· 草稿{' '}
                       {outgoingContextSummary.draftRevision ?? '无'}
                     </span>
-                  </span>
-                  {outgoingContextSummary.selectedObject ? (
-                    <span>
-                      选中对象：{outgoingContextSummary.selectedObject.breadcrumb}
-                    </span>
-                  ) : null}
-                </div>
-                {outgoingContextSummary.documentExcerpts.length === 0 ? (
-                  <p className="pa-muted">当前未附加任务书片段，仅发送项目基础摘要与最小工具探测请求。</p>
-                ) : (
-                  <ul className="pa-list">
-                    {outgoingContextSummary.documentExcerpts.map((doc) => (
-                      <li key={doc.refId} className="pa-check">
-                        <span>
+                    {outgoingContextSummary.selectedObject ? (
+                      <span className="pa-muted">
+                        · 选中：{outgoingContextSummary.selectedObject.breadcrumb}
+                      </span>
+                    ) : null}
+                  </div>
+                  {outgoingContextSummary.documentExcerpts.length === 0 ? (
+                    <p className="pa-muted">当前未附加任务书片段，仅发送项目基础摘要与最小工具探测请求。</p>
+                  ) : (
+                    <ul className="pa-list">
+                      {outgoingContextSummary.documentExcerpts.map((doc) => (
+                        <li key={doc.refId} className="pa-muted">
                           <strong className="pa-mono">
                             {doc.documentName} · P{doc.page}
                           </strong>
                           ：{doc.excerpt}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+
+                {modelApiFailure ? (
+                  <div className="pa-danger-box" role="alert">
+                    <strong>
+                      {modelApiFailure.title}
+                      {modelApiFailure.code ? `（${modelApiFailure.code}）` : ''}
+                    </strong>
+                    <span>{modelApiFailure.detail}</span>
+                  </div>
+                ) : null}
+
+                {modelApiTestResult ? (
+                  <section
+                    className={builtinUnlocked ? 'pa-pass-box' : 'pa-notice'}
+                    aria-label="模型 API 测试结果"
+                  >
+                    <div className="pa-row">
+                      <strong>
+                        {builtinUnlocked ? '连接与真实工具往返通过' : '连接结果未满足解锁条件'}
+                      </strong>
+                      <span className="pa-mono">当前模型：{modelApiTestResult.selectedModel}</span>
+                    </div>
+                    <div className="pa-row">
+                      <span>
+                        工具调用能力：{modelApiTestResult.toolCallSupported ? '支持' : '不支持'}
+                      </span>
+                      <span>
+                        真实工具往返：
+                        {modelApiTestResult.toolRoundTripPassed
+                          ? `通过${modelApiTestResult.toolRoundTripName ? `（${modelApiTestResult.toolRoundTripName}）` : ''}`
+                          : '未通过'}
+                      </span>
+                    </div>
+                    <div className="pa-row">
+                      <span>
+                        可用模型：
+                        <span className="pa-mono">
+                          {modelApiTestResult.availableModels.length > 0
+                            ? modelApiTestResult.availableModels.join(', ')
+                            : '无'}
                         </span>
+                      </span>
+                    </div>
+                    {modelApiTestResult.sentContextSummary ? (
+                      <div className="pa-row" aria-label="实际发送上下文摘要">
+                        <span>
+                          实际发送上下文摘要：
+                          <span className="pa-mono">{modelApiTestResult.sentContextSummary}</span>
+                        </span>
+                      </div>
+                    ) : null}
+                  </section>
+                ) : null}
+
+                <div className="pa-onboarding-cta-row">
+                  <button
+                    ref={testModelApiButtonRef}
+                    type="button"
+                    className={builtinUnlocked ? 'pa-btn' : 'pa-btn pa-btn-primary'}
+                    disabled={apiTesting}
+                    onClick={() => {
+                      void handleTestModelApi()
+                    }}
+                  >
+                    {apiTesting ? '正在测试连接与工具往返…' : '测试连接'}
+                  </button>
+                  <button
+                    type="button"
+                    className={builtinUnlocked ? 'pa-btn pa-btn-primary' : 'pa-btn'}
+                    disabled={!builtinUnlocked}
+                    onClick={() => {
+                      setSidebarSection('conversation')
+                      setSidebarTab('builtin')
+                      setShowOnboarding(false)
+                    }}
+                  >
+                    开始建模
+                  </button>
+                </div>
+              </section>
+            ) : null}
+
+            {onboardingChoice === 'skip-local' ? (
+              <section className="pa-card pa-onboarding-step-card" aria-label="本地项目与示例">
+                <div className="pa-header">
+                  <h3 className="pa-title">选择本地项目或示例直接体验</h3>
+                  <button
+                    type="button"
+                    className="pa-btn pa-btn-sm"
+                    onClick={() => {
+                      setSkippedConnection(true)
+                      setShowOnboarding(false)
+                    }}
+                  >
+                    直接进入当前工作台
+                  </button>
+                </div>
+                {localProjects.length === 0 ? (
+                  <p className="pa-muted">暂无本地项目与示例</p>
+                ) : (
+                  <ul className="pa-list">
+                    {localProjects.map((item) => (
+                      <li key={item.projectId} className="pa-check">
+                        <div>
+                          <div className="pa-row">
+                            <strong>{item.projectName}</strong>
+                            <span className="pa-mono pa-muted">{item.projectId}</span>
+                            {item.isSample ? (
+                              <span className="pa-pill pa-tone-action">示例</span>
+                            ) : null}
+                            <span className="pa-muted pa-mono">
+                              正式版 {item.baseRevision ?? '无'} · 草稿 {item.draftRevision ?? '无'}
+                            </span>
+                          </div>
+                          {item.summary ? <p className="pa-muted">{item.summary}</p> : null}
+                        </div>
+                        <button
+                          type="button"
+                          className="pa-btn pa-btn-sm"
+                          aria-label={`打开项目 ${item.projectName}`}
+                          onClick={() => handleOpenLocalProject(item)}
+                        >
+                          打开项目
+                        </button>
                       </li>
                     ))}
                   </ul>
                 )}
               </section>
+            ) : null}
 
-              <div className="pa-controls">
-                <button
-                  ref={testModelApiButtonRef}
-                  type="button"
-                  className="pa-btn pa-btn-active"
-                  disabled={apiTesting}
-                  onClick={() => {
-                    void handleTestModelApi()
-                  }}
-                >
-                  {apiTesting ? '正在测试连接与工具往返…' : '测试连接'}
-                </button>
+            {/* Single Subtle Skip Link at Bottom */}
+            {onboardingChoice !== 'skip-local' ? (
+              <div className="pa-onboarding-skip-row">
                 <button
                   type="button"
-                  className="pa-btn"
-                  disabled={!builtinUnlocked}
+                  className="pa-link-subtle"
                   onClick={() => {
-                    setSidebarSection('conversation')
-                    setSidebarTab('builtin')
-                    setShowOnboarding(false)
+                    setOnboardingChoice('skip-local')
+                    setSkippedConnection(true)
                   }}
                 >
-                  进入内置建模对话
+                  先跳过，直接体验工作台
                 </button>
               </div>
-
-              {modelApiFailure ? (
-                <div className="pa-danger-box" role="alert">
-                  <strong>
-                    {modelApiFailure.title}
-                    {modelApiFailure.code ? `（${modelApiFailure.code}）` : ''}
-                  </strong>
-                  <span>{modelApiFailure.detail}</span>
-                </div>
-              ) : null}
-
-              {modelApiTestResult ? (
-                <section
-                  className={builtinUnlocked ? 'pa-pass-box' : 'pa-notice'}
-                  aria-label="模型 API 测试结果"
-                >
-                  <div className="pa-row">
-                    <strong>
-                      {builtinUnlocked ? '连接与真实工具往返通过' : '连接结果未满足解锁条件'}
-                    </strong>
-                    <span className="pa-mono">当前模型：{modelApiTestResult.selectedModel}</span>
-                  </div>
-                  <div className="pa-row">
-                    <span>
-                      工具调用能力：{modelApiTestResult.toolCallSupported ? '支持' : '不支持'}
-                    </span>
-                    <span>
-                      真实工具往返：
-                      {modelApiTestResult.toolRoundTripPassed
-                        ? `通过${modelApiTestResult.toolRoundTripName ? `（${modelApiTestResult.toolRoundTripName}）` : ''}`
-                        : '未通过'}
-                    </span>
-                  </div>
-                  <div className="pa-row">
-                    <span>
-                      可用模型：
-                      <span className="pa-mono">
-                        {modelApiTestResult.availableModels.length > 0
-                          ? modelApiTestResult.availableModels.join(', ')
-                          : '无'}
-                      </span>
-                    </span>
-                  </div>
-                  {modelApiTestResult.sentContextSummary ? (
-                    <div className="pa-row" aria-label="实际发送上下文摘要">
-                      <span>
-                        实际发送上下文摘要：
-                        <span className="pa-mono">{modelApiTestResult.sentContextSummary}</span>
-                      </span>
-                    </div>
-                  ) : null}
-                </section>
-              ) : null}
-            </section>
-          ) : null}
-
-          {/* Skip / Local Projects & Samples Panel */}
-          {onboardingChoice === 'skip-local' ? (
-            <section className="pa-card" aria-label="本地项目与示例">
-              <h3 className="pa-title">本地项目与示例</h3>
-              <p className="pa-muted">
-                无需先连接外部 Agent 或模型 API，可直接打开以下本地项目或示例进行浏览。
-              </p>
-              {localProjects.length === 0 ? (
-                <p className="pa-muted">暂无本地项目与示例</p>
-              ) : (
-                <ul className="pa-list">
-                  {localProjects.map((item) => (
-                    <li key={item.projectId} className="pa-check">
-                      <div>
-                        <div className="pa-row">
-                          <strong>{item.projectName}</strong>
-                          <span className="pa-mono pa-muted">{item.projectId}</span>
-                          {item.isSample ? (
-                            <span className="pa-pill pa-tone-action">示例</span>
-                          ) : null}
-                          <span className="pa-muted pa-mono">
-                            正式版 {item.baseRevision ?? '无'} · 草稿 {item.draftRevision ?? '无'}
-                          </span>
-                        </div>
-                        {item.summary ? <p className="pa-muted">{item.summary}</p> : null}
-                      </div>
-                      <button
-                        type="button"
-                        className="pa-btn"
-                        aria-label={`打开项目 ${item.projectName}`}
-                        onClick={() => handleOpenLocalProject(item)}
-                      >
-                        打开项目
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          ) : null}
+            ) : null}
           </section>
         </div>
-      ) : null}
+      ) : (
+        /* Main Split Area: Pure Center Canvas + Unified Right Collaboration Dock */
+        <div className="pa-workbench-body">
+          <M2CenterCanvas
+            viewMode={canvasState.viewMode}
+            lastSingleTab={canvasState.lastSingleTab}
+            isNarrow={isNarrow}
+            sidebarMode={sidebarTab}
+            model={canvasState.model}
+            drawing={canvasState.drawing}
+            drawingFailure={canvasState.drawingFailure}
+            checksInProgress={canvasState.checksInProgress}
+            naturalCompletionSummary={naturalCompletionSummary}
+            features={canvasState.features}
+            annotations={canvasState.annotations}
+            modelMesh={canvasState.modelMesh}
+            drawingVector={canvasState.drawingVector}
+            selectedObjectId={canvasState.selectedObjectId}
+            selectedAnnotationId={canvasState.selectedAnnotationId}
+            highlightedFeatureIds={highlightedFeatureIds}
+            highlightedAnnotationIds={highlightedAnnotationIds}
+            selectionInvalidated={canvasState.selectionInvalidated}
+            invalidatedObjectLabel={canvasState.invalidatedObjectLabel}
+            camera={canvasState.camera}
+            drawingViewport={canvasState.drawingViewport}
+            structureOpen={structureOpen}
+            retryDrawingPending={retryDrawingPending}
+            retryDrawingFeedback={retryDrawingFeedback}
+            contextActionFeedback={contextActionFeedback}
+            previewMessage={previewMessage}
+            theme={theme}
+            canvasRegionRef={canvasRegionRef}
+            objectListRegionRef={objectListRegionRef}
+            retryDrawingButtonRef={retryDrawingButtonRef}
+            onToggleStructure={() => setStructureOpen((prev) => !prev)}
+            onCloseStructure={() => setStructureOpen(false)}
+            onSelectFeature={handleSelectFeature}
+            onSelectAnnotation={handleSelectAnnotation}
+            onClearSelection={handleClearSelection}
+            onBringIntoNextPrompt={handleBringIntoNextPrompt}
+            onCopyToExternalSession={handleCopyToExternalSession}
+            onRetryDrawing={() => {
+              void handleRetryDrawing()
+            }}
+            onOpenCompletionView={() => {
+              setCommitFeedback(null)
+              setShowCompletionView(true)
+            }}
+            onUpdateCamera={(updater) =>
+              setCanvasState((prev) => ({ ...prev, camera: updater(prev.camera) }))
+            }
+            onUpdateDrawingViewport={(updater) =>
+              setCanvasState((prev) => ({
+                ...prev,
+                drawingViewport: updater(prev.drawingViewport),
+              }))
+            }
+          />
 
-      {/* Main Split Area: Center Dual-View Canvas + 4-Tab Sidebar */}
-      <div className="pa-workbench-body">
-        <M2CenterCanvas
-          projectName={projectName}
-          baseRevision={baseRevision}
-          draftRevision={draftRevision}
-          scopeEpoch={scopeEpoch}
-          writerEpoch={writerEpoch}
-          viewMode={canvasState.viewMode}
-          lastSingleTab={canvasState.lastSingleTab}
-          isNarrow={isNarrow}
-          model={canvasState.model}
-          drawing={canvasState.drawing}
-          drawingFailure={canvasState.drawingFailure}
-          checksInProgress={canvasState.checksInProgress}
-          naturalCompletionSummary={naturalCompletionSummary}
-          features={canvasState.features}
-          annotations={canvasState.annotations}
-          modelMesh={canvasState.modelMesh}
-          drawingVector={canvasState.drawingVector}
-          selectedObjectId={canvasState.selectedObjectId}
-          selectedAnnotationId={canvasState.selectedAnnotationId}
-          highlightedFeatureIds={highlightedFeatureIds}
-          highlightedAnnotationIds={highlightedAnnotationIds}
-          selectionInvalidated={canvasState.selectionInvalidated}
-          invalidatedObjectLabel={canvasState.invalidatedObjectLabel}
-          camera={canvasState.camera}
-          drawingViewport={canvasState.drawingViewport}
-          retryDrawingPending={retryDrawingPending}
-          retryDrawingFeedback={retryDrawingFeedback}
-          contextActionFeedback={contextActionFeedback}
-          previewMessage={previewMessage}
-          theme={theme}
-          canvasRegionRef={canvasRegionRef}
-          objectListRegionRef={objectListRegionRef}
-          retryDrawingButtonRef={retryDrawingButtonRef}
-          onChangeViewMode={handleChangeViewMode}
-          onSelectFeature={handleSelectFeature}
-          onSelectAnnotation={handleSelectAnnotation}
-          onClearSelection={handleClearSelection}
-          onBringIntoNextPrompt={handleBringIntoNextPrompt}
-          onCopyToExternalSession={handleCopyToExternalSession}
-          onRetryDrawing={() => {
-            void handleRetryDrawing()
-          }}
-          onOpenCompletionView={() => {
-            setCommitFeedback(null)
-            setShowCompletionView(true)
-          }}
-          onUpdateCamera={(updater) =>
-            setCanvasState((prev) => ({ ...prev, camera: updater(prev.camera) }))
-          }
-          onUpdateDrawingViewport={(updater) =>
-            setCanvasState((prev) => ({
-              ...prev,
-              drawingViewport: updater(prev.drawingViewport),
-            }))
-          }
-        />
-
-        {/* Right: 4-Tab Sidebar (对话/活动 · 要求 · 检查 · 历史) */}
-        <aside
-          ref={sidebarRegionRef}
-          tabIndex={-1}
-          className="pa-panel pa-sidebar-column pa-focus-region"
-          aria-label="主工作台侧栏"
-        >
-          <div className="pa-sidebar-tabs" role="tablist" aria-label="侧栏功能切换">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={sidebarSection === 'conversation'}
-              className={
-                sidebarSection === 'conversation'
-                  ? 'pa-sidebar-tab pa-sidebar-tab-active'
-                  : 'pa-sidebar-tab'
-              }
-              onClick={() => setSidebarSection('conversation')}
-            >
-              对话/活动
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={sidebarSection === 'requirements'}
-              className={
-                sidebarSection === 'requirements'
-                  ? 'pa-sidebar-tab pa-sidebar-tab-active'
-                  : 'pa-sidebar-tab'
-              }
-              onClick={() => setSidebarSection('requirements')}
-            >
-              要求
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={sidebarSection === 'checks'}
-              className={
-                sidebarSection === 'checks'
-                  ? 'pa-sidebar-tab pa-sidebar-tab-active'
-                  : 'pa-sidebar-tab'
-              }
-              onClick={() => setSidebarSection('checks')}
-            >
-              检查
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={sidebarSection === 'history'}
-              className={
-                sidebarSection === 'history'
-                  ? 'pa-sidebar-tab pa-sidebar-tab-active'
-                  : 'pa-sidebar-tab'
-              }
-              onClick={() => setSidebarSection('history')}
-            >
-              历史
-            </button>
-          </div>
-
-          {sidebarSection === 'conversation' ? (
-            <div className="pa-mode-subbar">
-              <div className="pa-segmented" role="tablist" aria-label="侧栏入口切换">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={sidebarTab === 'external'}
-                  className={sidebarTab === 'external' ? 'pa-btn pa-btn-active' : 'pa-btn'}
-                  onClick={() => setSidebarTab('external')}
-                >
-                  外置任务活动
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={sidebarTab === 'builtin'}
-                  className={sidebarTab === 'builtin' ? 'pa-btn pa-btn-active' : 'pa-btn'}
-                  onClick={() => setSidebarTab('builtin')}
-                >
-                  内置建模对话
-                </button>
-              </div>
+          {/* Right: Minimal Underline-Tab Collaboration Sidebar */}
+          <aside
+            ref={sidebarRegionRef}
+            tabIndex={-1}
+            className="pa-panel pa-sidebar-column pa-focus-region"
+            aria-label="主工作台侧栏"
+          >
+            <div className="pa-sidebar-tabs" role="tablist" aria-label="侧栏功能切换">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sidebarSection === 'conversation'}
+                className={
+                  sidebarSection === 'conversation'
+                    ? 'pa-sidebar-tab pa-sidebar-tab-active'
+                    : 'pa-sidebar-tab'
+                }
+                onClick={() => setSidebarSection('conversation')}
+              >
+                {sidebarTab === 'builtin' ? '对话' : '活动'}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sidebarSection === 'checks'}
+                className={
+                  sidebarSection === 'checks'
+                    ? 'pa-sidebar-tab pa-sidebar-tab-active'
+                    : 'pa-sidebar-tab'
+                }
+                onClick={() => setSidebarSection('checks')}
+              >
+                检查
+                {checksSummaryCounts.total > 0 ? (
+                  <span
+                    className={`pa-tab-dot ${
+                      checksSummaryCounts.failed > 0
+                        ? 'pa-tab-dot-fail'
+                        : checksSummaryCounts.pending > 0
+                          ? 'pa-tab-dot-warn'
+                          : 'pa-tab-dot-pass'
+                    }`}
+                    aria-hidden="true"
+                  />
+                ) : null}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sidebarSection === 'requirements'}
+                className={
+                  sidebarSection === 'requirements'
+                    ? 'pa-sidebar-tab pa-sidebar-tab-active'
+                    : 'pa-sidebar-tab'
+                }
+                onClick={() => setSidebarSection('requirements')}
+              >
+                要求
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sidebarSection === 'history'}
+                className={
+                  sidebarSection === 'history'
+                    ? 'pa-sidebar-tab pa-sidebar-tab-active'
+                    : 'pa-sidebar-tab'
+                }
+                onClick={() => setSidebarSection('history')}
+              >
+                历史
+              </button>
             </div>
-          ) : null}
 
-          <div className="pa-sidebar-content">
-
-          {sidebarSection !== 'conversation' ? (
-            <M2SidebarPanels
-              section={sidebarSection}
-              requirements={canvasState.requirements}
-              checks={canvasState.checks}
-              checksInProgress={canvasState.checksInProgress}
-              history={canvasState.history}
-              formalVersions={formalVersions}
-              uncommittedDrafts={uncommittedDrafts}
-              restoreStatus={restoreStatus}
-              migrationReport={migrationReport}
-              migrationLoading={migrationLoading}
-              migrationNotice={migrationNotice}
-              canUndoBlockedDraft={canUndoBlockedDraft}
-              undoPending={undoPending}
-              undoFeedback={undoFeedback}
-              activeCheckId={activeCheckId}
-              activeEvidence={activeEvidence}
-              evidenceLoading={evidenceLoading}
-              evidenceNotice={evidenceNotice}
-              clarificationFeedback={clarificationFeedback}
-              clarificationPendingId={clarificationPendingId}
-              onSelectCheck={handleSelectCheck}
-              onSelectRequirement={handleSelectRequirement}
-              onSubmitClarification={(params) => {
-                void handleSubmitClarification(params)
-              }}
-              onUndoBlockedDraft={() => {
-                void handleUndoBlockedDraft()
-              }}
-              onLoadMigrationReport={() => {
-                void handleLoadMigrationReport()
-              }}
-              onOpenMigrationDrawer={() => setMigrationDrawerOpen(true)}
-            />
-          ) : null}
-
-          {/* External Mode Sidebar */}
-          {sidebarSection === 'conversation' && sidebarTab === 'external' ? (
-            <section className="pa-list" aria-label="外置模式任务活动侧栏">
-              <div className="pa-controls">
-                <button
-                  type="button"
-                  className="pa-btn"
-                  disabled={!selectedObject}
-                  onClick={() => {
-                    if (!selectedObject) return
-                    void handleCopy(
-                      formatSelectedObjectReference(selectedObject),
-                      '对象引用',
-                      'object-ref',
-                    )
+            <div className="pa-sidebar-content">
+              {sidebarSection !== 'conversation' ? (
+                <M2SidebarPanels
+                  section={sidebarSection}
+                  requirements={canvasState.requirements}
+                  checks={canvasState.checks}
+                  checksInProgress={canvasState.checksInProgress}
+                  history={canvasState.history}
+                  formalVersions={formalVersions}
+                  uncommittedDrafts={uncommittedDrafts}
+                  restoreStatus={restoreStatus}
+                  migrationReport={migrationReport}
+                  migrationLoading={migrationLoading}
+                  migrationNotice={migrationNotice}
+                  canUndoBlockedDraft={canUndoBlockedDraft}
+                  undoPending={undoPending}
+                  undoFeedback={undoFeedback}
+                  activeCheckId={activeCheckId}
+                  activeEvidence={activeEvidence}
+                  evidenceLoading={evidenceLoading}
+                  evidenceNotice={evidenceNotice}
+                  clarificationFeedback={clarificationFeedback}
+                  clarificationPendingId={clarificationPendingId}
+                  onSelectCheck={handleSelectCheck}
+                  onSelectRequirement={handleSelectRequirement}
+                  onSubmitClarification={(params) => {
+                    void handleSubmitClarification(params)
                   }}
-                >
-                  复制当前选中对象引用
-                </button>
-                <button
-                  type="button"
-                  className="pa-btn"
-                  onClick={() => {
-                    void handleRefreshExternalActivities()
+                  onUndoBlockedDraft={() => {
+                    void handleUndoBlockedDraft()
                   }}
-                >
-                  刷新外部活动
-                </button>
-              </div>
-
-              {objectRefCopyFeedback ? (
-                <p className="pa-muted" role="status">
-                  {objectRefCopyFeedback}
-                </p>
+                  onLoadMigrationReport={() => {
+                    void handleLoadMigrationReport()
+                  }}
+                  onOpenMigrationDrawer={() => setMigrationDrawerOpen(true)}
+                />
               ) : null}
 
-              {activitiesNotice ? (
-                <div className="pa-notice" role="status">
-                  {activitiesNotice}
-                </div>
-              ) : null}
-
-              {activities.length === 0 ? (
-                <p className="pa-muted">暂无外部 Agent 任务活动。</p>
-              ) : (
-                <ul className="pa-list" aria-label="外部 Agent 任务活动流">
-                  {activities.map((item) => {
-                    const badge = formatActivityStatusLabel(item.status)
-                    return (
-                      <li key={item.taskId} className="pa-card">
-                        <div className="pa-header">
-                          <div className="pa-row">
-                            <strong>{item.title}</strong>
-                            <span className="pa-mono pa-muted">{item.taskId}</span>
-                          </div>
-                          <span className={`pa-pill ${badge.tone}`}>{badge.label}</span>
-                        </div>
-                        {item.lastStep ? <p className="pa-muted">{item.lastStep}</p> : null}
-                        {item.draftRevision ? (
-                          <span className="pa-muted pa-mono">
-                            关联草稿：{item.draftRevision}
-                          </span>
-                        ) : null}
-                        {item.question ? (
-                          <div className="pa-notice" aria-label="待回答问题">
-                            <span className="pa-pill pa-tone-pending">
-                              {formatQuestionReason(item.question.reason)}
-                            </span>{' '}
-                            <span>{item.question.prompt}</span>
-                            {item.question.sourceExcerpt ? (
-                              <p className="pa-muted">依据：{item.question.sourceExcerpt}</p>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        <div className="pa-controls">
-                          <button
-                            type="button"
-                            className="pa-btn"
-                            onClick={() =>
-                              setPreviewMessage(
-                                `正在预览外部任务 ${item.taskId} 的产物（草稿 ${item.draftRevision ?? draftRevision ?? '无'}）${item.previewSummary ? `：${item.previewSummary}` : ''}。`,
-                              )
-                            }
-                          >
-                            预览结果
-                          </button>
-                          <button
-                            type="button"
-                            className="pa-btn"
-                            onClick={() =>
-                              setPreviewMessage(
-                                `已打开任务 ${item.taskId} 的复核确认视图（草稿 ${item.draftRevision ?? draftRevision ?? '无'}，正式保存需服务端复核确认）。`,
-                              )
-                            }
-                          >
-                            复核与确认
-                          </button>
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </section>
-          ) : null}
-
-          {/* Built-in Mode Sidebar */}
-          {sidebarSection === 'conversation' && sidebarTab === 'builtin' ? (
-            <section className="pa-list" aria-label="内置模式多轮对话侧栏">
-              {!builtinUnlocked ? (
-                <div className="pa-notice" role="alert">
-                  <p>
-                    内置建模对话尚未解锁：需先在「使用模型 API」中完成配置并通过一次真实工具往返测试。
-                  </p>
-                  <div className="pa-controls">
+              {/* External Mode Sidebar (Clean activity stream) */}
+              {sidebarSection === 'conversation' && sidebarTab === 'external' ? (
+                <section className="pa-list" aria-label="外置模式任务活动侧栏">
+                  <div className="pa-header">
+                    <span className="pa-card-label">外部 Agent 活动</span>
                     <button
                       type="button"
-                      className="pa-btn pa-btn-active"
+                      className="pa-btn pa-btn-ghost pa-btn-sm"
+                      aria-label="刷新外部活动"
                       onClick={() => {
-                        setOnboardingChoice('model-api')
-                        setShowOnboarding(true)
+                        void handleRefreshExternalActivities()
                       }}
                     >
-                      前往配置模型 API
+                      ↻ 刷新
                     </button>
                   </div>
-                </div>
+
+                  {objectRefCopyFeedback ? (
+                    <p className="pa-muted" role="status">
+                      {objectRefCopyFeedback}
+                    </p>
+                  ) : null}
+
+                  {activitiesNotice ? (
+                    <div className="pa-notice" role="status">
+                      {activitiesNotice}
+                    </div>
+                  ) : null}
+
+                  {activities.length === 0 ? (
+                    <div className="pa-empty-guide">
+                      <p className="pa-muted">
+                        暂无外部 Agent 任务活动。在本地客户端下达建模指令后，进度与结果会实时同步到这里。
+                      </p>
+                    </div>
+                  ) : (
+                    <ul className="pa-list" aria-label="外部 Agent 任务活动流">
+                      {activities.map((item) => {
+                        const badge = formatActivityStatusLabel(item.status)
+                        return (
+                          <li key={item.taskId} className="pa-card">
+                            <div className="pa-header">
+                              <strong>{item.title}</strong>
+                              <span className={`pa-pill ${badge.tone}`}>{badge.label}</span>
+                            </div>
+                            {item.lastStep ? <p className="pa-muted">{item.lastStep}</p> : null}
+                            {item.draftRevision ? (
+                              <span className="pa-muted pa-mono">
+                                关联草稿：{item.draftRevision}
+                              </span>
+                            ) : null}
+                            {item.question ? (
+                              <div className="pa-notice" aria-label="待回答问题">
+                                <span className="pa-pill pa-tone-pending">
+                                  {formatQuestionReason(item.question.reason)}
+                                </span>{' '}
+                                <span>{item.question.prompt}</span>
+                                {item.question.sourceExcerpt ? (
+                                  <p className="pa-muted">依据：{item.question.sourceExcerpt}</p>
+                                ) : null}
+                              </div>
+                            ) : null}
+                            <div className="pa-controls">
+                              <button
+                                type="button"
+                                className="pa-btn pa-btn-sm"
+                                onClick={() =>
+                                  setPreviewMessage(
+                                    `正在预览外部任务 ${item.taskId} 的产物（草稿 ${item.draftRevision ?? draftRevision ?? '无'}）${item.previewSummary ? `：${item.previewSummary}` : ''}。`,
+                                  )
+                                }
+                              >
+                                预览结果
+                              </button>
+                              <button
+                                type="button"
+                                className="pa-btn pa-btn-ghost pa-btn-sm"
+                                onClick={() =>
+                                  setPreviewMessage(
+                                    `已打开任务 ${item.taskId} 的复核确认视图（草稿 ${item.draftRevision ?? draftRevision ?? '无'}，正式保存需服务端复核确认）。`,
+                                  )
+                                }
+                              >
+                                复核与确认
+                              </button>
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </section>
               ) : null}
 
-              {builtinUnlocked && !probe.capabilities.builtinChat ? (
-                <div className="pa-notice" role="alert">
-                  后端尚未接线/不可用（缺失方法：
-                  <span className="pa-mono">sendM1ChatMessage</span>）。
-                </div>
-              ) : null}
+              {/* Built-in Mode Sidebar (Cursor/Linear-grade clean chat + single composer) */}
+              {sidebarSection === 'conversation' && sidebarTab === 'builtin' ? (
+                <section className="pa-chat-shell" aria-label="内置模式多轮对话侧栏">
+                  {!builtinUnlocked ? (
+                    <div className="pa-notice" role="alert">
+                      <p>
+                        内置对话尚未解锁：需先在「使用模型 API」中完成配置并通过真实工具往返测试。
+                      </p>
+                      <button
+                        type="button"
+                        className="pa-btn pa-btn-primary pa-btn-sm"
+                        onClick={() => {
+                          setOnboardingChoice('model-api')
+                          setShowOnboarding(true)
+                        }}
+                      >
+                        前往配置模型 API
+                      </button>
+                    </div>
+                  ) : null}
 
-              {/* Taskbook references & selected object context controls */}
-              <div className="pa-card" aria-label="对话上下文附加">
-                <span className="pa-card-label">
-                  附加任务书引用（已选 {attachedTaskbooks.length}/{MAX_M1_CHAT_ATTACHMENTS}）
-                </span>
-                {availableTaskbooks.length === 0 ? (
-                  <p className="pa-muted">
-                    当前项目上下文暂无可附加的真实任务书引用，将仅发送空引用列表。
-                  </p>
-                ) : (
-                  <div className="pa-controls">
-                    {availableTaskbooks.map((tb) => {
-                      const active = attachedRefIds.includes(tb.refId)
-                      return (
-                        <button
-                          key={tb.refId}
-                          type="button"
-                          className={active ? 'pa-btn pa-btn-active' : 'pa-btn'}
-                          aria-pressed={active}
-                          onClick={() => toggleTaskbookAttachment(tb.refId)}
-                        >
-                          {active ? '✓ ' : '+ '}
-                          {tb.documentName} · P{tb.page}
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-                <label className="pa-toggle">
-                  <input
-                    type="checkbox"
-                    checked={includeSelectedInChat}
-                    onChange={(event) => setIncludeSelectedInChat(event.target.checked)}
-                  />
-                  带入当前选中对象上下文
-                  {selectedObject ? `（${selectedObject.breadcrumb}）` : '（当前未选中对象）'}
-                </label>
-              </div>
+                  {builtinUnlocked && !probe.capabilities.builtinChat ? (
+                    <div className="pa-notice" role="alert">
+                      后端尚未接线/不可用（缺失方法：
+                      <span className="pa-mono">sendM1ChatMessage</span>）。
+                    </div>
+                  ) : null}
 
-              {/* Chat transcript */}
-              <ul className="pa-chat-list" aria-label="内置对话记录">
-                {messages.length === 0 ? (
-                  <li className="pa-muted">暂无对话记录，可输入修改需求并附加任务书或选中对象。</li>
-                ) : (
-                  messages.map((msg) => (
-                    <li
-                      key={msg.id}
-                      className={`pa-chat-bubble ${msg.role === 'user' ? 'pa-chat-user' : 'pa-chat-assistant'}`}
-                    >
-                      <div className="pa-header">
-                        <strong>{msg.role === 'user' ? '设计师' : '寸链助手'}</strong>
-                        {msg.draftRevision ? (
-                          <span className="pa-pill pa-tone-action pa-mono">
-                            草稿 {msg.draftRevision}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p>{msg.content}</p>
-                      {msg.attachments && msg.attachments.length > 0 ? (
-                        <div className="pa-row">
-                          {msg.attachments.map((att) => (
-                            <span key={att.refId} className="pa-pill pa-tone-muted pa-mono">
-                              引用：{att.documentName} · P{att.page}
-                            </span>
+                  {/* Chat transcript or starter prompts */}
+                  <div className="pa-chat-scroll">
+                    {messages.length === 0 ? (
+                      <div className="pa-empty-guide" aria-label="新手引导示例">
+                        <p className="pa-muted">试试直接描述你的设计或修改需求：</p>
+                        <div className="pa-starter-list">
+                          {starterPrompts.map((promptText) => (
+                            <button
+                              key={promptText}
+                              type="button"
+                              className="pa-starter-chip"
+                              disabled={!builtinUnlocked}
+                              onClick={() => {
+                                setChatInput(promptText)
+                                chatInputRef.current?.focus()
+                              }}
+                            >
+                              {promptText}
+                            </button>
                           ))}
                         </div>
-                      ) : null}
-                      {msg.selectedObject ? (
-                        <span className="pa-pill pa-tone-action">
-                          对象：{msg.selectedObject.breadcrumb}
-                        </span>
-                      ) : null}
-                      {msg.toolCalls && msg.toolCalls.length > 0 ? (
-                        <div className="pa-row">
-                          {msg.toolCalls.map((tc, index) => {
-                            const display = formatChatToolCallItem(tc)
-                            return (
-                              <span
-                                key={`${msg.id}-tool-${index}`}
-                                className={`pa-pill ${display.tone}`}
-                              >
-                                {display.label}
+                      </div>
+                    ) : (
+                      <ul className="pa-chat-list" aria-label="内置对话记录">
+                        {messages.map((msg) => (
+                          <li
+                            key={msg.id}
+                            className={`pa-chat-bubble ${msg.role === 'user' ? 'pa-chat-user' : 'pa-chat-assistant'}`}
+                          >
+                            <div className="pa-header">
+                              <strong>{msg.role === 'user' ? '设计师' : '寸链助手'}</strong>
+                              {msg.draftRevision ? (
+                                <span className="pa-pill pa-tone-action pa-mono">
+                                  草稿 {msg.draftRevision}
+                                </span>
+                              ) : null}
+                            </div>
+                            <p>{msg.content}</p>
+                            {msg.attachments && msg.attachments.length > 0 ? (
+                              <div className="pa-row">
+                                {msg.attachments.map((att) => (
+                                  <span key={att.refId} className="pa-pill pa-tone-muted pa-mono">
+                                    引用：{att.documentName} · P{att.page}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                            {msg.selectedObject ? (
+                              <span className="pa-pill pa-tone-action">
+                                对象：{msg.selectedObject.breadcrumb}
                               </span>
-                            )
-                          })}
-                        </div>
-                      ) : null}
-                    </li>
-                  ))
-                )}
-              </ul>
+                            ) : null}
+                            {msg.toolCalls && msg.toolCalls.length > 0 ? (
+                              <div className="pa-row">
+                                {msg.toolCalls.map((tc, index) => {
+                                  const display = formatChatToolCallItem(tc)
+                                  return (
+                                    <span
+                                      key={`${msg.id}-tool-${index}`}
+                                      className={`pa-pill ${display.tone}`}
+                                    >
+                                      {display.label}
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
 
-              {chatNotice ? (
-                <div className="pa-notice" role="status">
-                  {chatNotice}
-                </div>
+                    {lastFailedTurn && !chatPending ? (
+                      <div className="pa-retry-row">
+                        <button
+                          ref={retryChatButtonRef}
+                          type="button"
+                          className="pa-btn pa-btn-sm"
+                          onClick={() => {
+                            void handleRetryChat()
+                          }}
+                        >
+                          重试
+                        </button>
+                      </div>
+                    ) : null}
+
+                    {chatNotice ? (
+                      <div className="pa-notice" role="status">
+                        {chatNotice}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* Modern Unified Composer: Selected Tags + Clean Textarea + "+ 引用" Popover + Single Send/Stop */}
+                  <div className="pa-composer">
+                    {/* Lightweight inline tags for currently attached taskbooks / selected object */}
+                    {attachedTaskbooks.length > 0 || (includeSelectedInChat && selectedObject) ? (
+                      <div className="pa-composer-tags">
+                        {includeSelectedInChat && selectedObject ? (
+                          <span className="pa-composer-tag pa-composer-tag-obj">
+                            {selectedObject.breadcrumb}
+                          </span>
+                        ) : null}
+                        {attachedTaskbooks.map((tb) => (
+                          <span key={tb.refId} className="pa-composer-tag pa-mono">
+                            {tb.documentName} · P{tb.page}
+                            <button
+                              type="button"
+                              className="pa-tag-remove"
+                              aria-label={`移除引用 ${tb.documentName} P${tb.page}`}
+                              onClick={() => toggleTaskbookAttachment(tb.refId)}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <textarea
+                      ref={chatInputRef}
+                      aria-label="内置对话输入框"
+                      className="pa-composer-input"
+                      placeholder="描述你想创建或修改的零件特征…"
+                      value={chatInput}
+                      disabled={!builtinUnlocked || chatPending}
+                      onChange={(event) => setChatInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                          event.preventDefault()
+                          if (builtinUnlocked && !chatPending && chatInput.trim().length > 0) {
+                            void handleSendChat()
+                          }
+                        }
+                      }}
+                    />
+
+                    <div className="pa-composer-footer">
+                      <div className="pa-popover-anchor">
+                        <button
+                          type="button"
+                          data-testid="attach-ref-btn"
+                          className="pa-btn pa-btn-ghost pa-btn-sm"
+                          aria-label="附加任务书引用"
+                          aria-expanded={attachPopoverOpen}
+                          onClick={() => setAttachPopoverOpen((prev) => !prev)}
+                        >
+                          + 引用
+                          {attachedTaskbooks.length > 0 ? ` (${attachedTaskbooks.length})` : ''}
+                        </button>
+
+                        {attachPopoverOpen ? (
+                          <div
+                            className="pa-popover pa-attach-popover"
+                            role="dialog"
+                            aria-label="对话上下文附加"
+                          >
+                            <div className="pa-header">
+                              <span className="pa-card-label">
+                                附加任务书引用（{attachedTaskbooks.length}/{MAX_M1_CHAT_ATTACHMENTS}）
+                              </span>
+                              <button
+                                type="button"
+                                className="pa-icon-btn"
+                                aria-label="关闭引用选择"
+                                onClick={() => setAttachPopoverOpen(false)}
+                              >
+                                ×
+                              </button>
+                            </div>
+                            {availableTaskbooks.length === 0 ? (
+                              <p className="pa-muted">
+                                当前项目上下文暂无可附加的真实任务书引用。
+                              </p>
+                            ) : (
+                              <div className="pa-list">
+                                {availableTaskbooks.map((tb) => {
+                                  const active = attachedRefIds.includes(tb.refId)
+                                  return (
+                                    <button
+                                      key={tb.refId}
+                                      type="button"
+                                      className={
+                                        active
+                                          ? 'pa-btn pa-btn-active pa-btn-sm'
+                                          : 'pa-btn pa-btn-sm'
+                                      }
+                                      aria-pressed={active}
+                                      onClick={() => toggleTaskbookAttachment(tb.refId)}
+                                    >
+                                      {active ? '✓ ' : '+ '}
+                                      {tb.documentName} · P{tb.page}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            )}
+                            <label className="pa-toggle">
+                              <input
+                                type="checkbox"
+                                checked={includeSelectedInChat}
+                                onChange={(event) => setIncludeSelectedInChat(event.target.checked)}
+                              />
+                              带入当前选中对象上下文
+                            </label>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {chatPending ? (
+                        <button
+                          type="button"
+                          className="pa-btn pa-btn-sm"
+                          onClick={() => {
+                            void handleStopChat()
+                          }}
+                        >
+                          停止
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="pa-btn pa-btn-primary pa-btn-sm"
+                          disabled={!builtinUnlocked || chatInput.trim().length === 0}
+                          onClick={() => {
+                            void handleSendChat()
+                          }}
+                        >
+                          发送
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </section>
               ) : null}
-
-              {/* Input & send/stop/retry */}
-              <div className="pa-card">
-                <label className="pa-field">
-                  对话指令
-                  <textarea
-                    ref={chatInputRef}
-                    aria-label="内置对话输入框"
-                    className="pa-textarea"
-                    placeholder="例如：把这个孔向右移 1 mm，并复核边距要求"
-                    value={chatInput}
-                    disabled={!builtinUnlocked || chatPending}
-                    onChange={(event) => setChatInput(event.target.value)}
-                  />
-                </label>
-                <div className="pa-controls">
-                  <button
-                    type="button"
-                    className="pa-btn pa-btn-active"
-                    disabled={!builtinUnlocked || chatPending || chatInput.trim().length === 0}
-                    onClick={() => {
-                      void handleSendChat()
-                    }}
-                  >
-                    发送
-                  </button>
-                  {chatPending ? (
-                    <button
-                      type="button"
-                      className="pa-btn"
-                      onClick={() => {
-                        void handleStopChat()
-                      }}
-                    >
-                      停止
-                    </button>
-                  ) : null}
-                  {lastFailedTurn && !chatPending ? (
-                    <button
-                      ref={retryChatButtonRef}
-                      type="button"
-                      className="pa-btn"
-                      onClick={() => {
-                        void handleRetryChat()
-                      }}
-                    >
-                      重试
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            </section>
-          ) : null}
-          </div>
-        </aside>
-      </div>
+            </div>
+          </aside>
+        </div>
+      )}
     </main>
   )
 }

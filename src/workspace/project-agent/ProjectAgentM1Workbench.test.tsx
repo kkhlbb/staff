@@ -55,30 +55,28 @@ const TEST_OBJECT_FIXTURES = [
 ] as const
 
 describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
-  it('首次启动展示三路径（连接本地 Agent 首选 / 使用模型 API 第二项 / 跳过）并支持顶部随时重选', async () => {
+  it('首次启动展示三路径（连接本地 Agent 推荐 / 使用模型 API / 跳过）并支持顶部随时重选', async () => {
     const user = userEvent.setup()
     render(<ProjectAgentM1Workbench bridge={{}} />)
 
     expect(screen.getByRole('button', { name: /连接本地 Agent/ })).toBeInTheDocument()
-    expect(screen.getByText('首选')).toBeInTheDocument()
+    expect(screen.getByText('推荐')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /使用模型 API/ })).toBeInTheDocument()
-    expect(screen.getByText('第二项')).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /跳过（查看本地项目与示例）/ }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '先跳过，直接体验工作台' })).toBeInTheDocument()
 
-    // 点击跳过查看本地项目与示例并打开一个示例项目
-    await user.click(screen.getByRole('button', { name: /跳过（查看本地项目与示例）/ }))
-    expect(screen.getByRole('heading', { name: '本地项目与示例' })).toBeInTheDocument()
+    // 点击底部轻量跳过链查看本地项目与示例并打开一个示例项目
+    await user.click(screen.getByRole('button', { name: '先跳过，直接体验工作台' }))
+    expect(screen.getByRole('region', { name: '本地项目与示例' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '打开项目 隔套兼容示例' }))
 
     // 向导收起，顶部栏更新项目名与版本
-    expect(screen.queryByRole('heading', { name: '连接方式与入口向导' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '首次启动与连接向导' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '隔套兼容示例' })).toBeInTheDocument()
 
-    // 顶部“切换连接”可随时重开向导
+    // 顶部连接胶囊 -> “切换连接”可随时重开向导
+    await user.click(screen.getByTestId('connection-capsule-btn'))
     await user.click(screen.getByRole('button', { name: '切换连接' }))
-    expect(screen.getByRole('heading', { name: '连接方式与入口向导' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '首次启动与连接向导' })).toBeInTheDocument()
   })
 
   it('连接本地 Agent 面板支持复制安装位置配置与说明，并严格分离客户端连接状态与项目授权状态', async () => {
@@ -122,9 +120,10 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     )
 
     // 读取到本机安装路径
-    expect(await screen.findByText('/Applications/寸链 Desktop.app')).toBeInTheDocument()
+    expect((await screen.findAllByText(/\/Applications\/寸链 Desktop\.app/)).length).toBeGreaterThan(0)
 
     // 复制连接说明与 MCP 配置片段
+    await user.click(screen.getByText(/查看自然语言连接说明与安装路径/))
     await user.click(screen.getByRole('button', { name: '复制连接说明' }))
     expect(screen.getByText('已复制连接说明')).toBeInTheDocument()
     expect(copiedTexts[0]).toContain('连接寸链')
@@ -159,7 +158,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     await user.click(screen.getByRole('button', { name: '测试连接' }))
 
     expect(screen.getByText(/后端尚未接线\/不可用（BACKEND_UNAVAILABLE）/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '进入内置建模对话' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '开始建模' })).toBeDisabled()
   })
 
   it('模型 API 明确区分鉴权失败与缺少工具调用能力，展示待发送摘要，仅在真实工具往返成功后解锁内置对话', async () => {
@@ -196,7 +195,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     })
     await user.click(screen.getByRole('button', { name: '测试连接' }))
     expect(await screen.findByText(/鉴权失败（AUTH_FAILED）/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '进入内置建模对话' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '开始建模' })).toBeDisabled()
 
     // 2. 缺少工具调用能力
     testMock.mockResolvedValueOnce({
@@ -212,7 +211,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     expect(await screen.findByText('缺少工具调用能力')).toBeInTheDocument()
     const resultRegion = screen.getByRole('region', { name: '模型 API 测试结果' })
     expect(within(resultRegion).getByText('basic-text-v1')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '进入内置建模对话' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '开始建模' })).toBeDisabled()
 
     // 3. 支持工具调用但真实往返未通过 -> 仍不得解锁
     testMock.mockResolvedValueOnce({
@@ -226,7 +225,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     })
     await user.click(screen.getByRole('button', { name: '测试连接' }))
     expect(await screen.findByText('工具往返测试未通过')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '进入内置建模对话' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '开始建模' })).toBeDisabled()
 
     // 4. 真实工具往返通过 -> 解锁内置建模对话
     testMock.mockResolvedValueOnce({
@@ -243,11 +242,11 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     await user.click(screen.getByRole('button', { name: '测试连接' }))
     expect(await screen.findByText('连接与真实工具往返通过')).toBeInTheDocument()
     expect(screen.getByText(/describe_project/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '进入内置建模对话' })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: '开始建模' })).not.toBeDisabled()
 
     // 修改密钥后应重新锁定，防止沿用旧凭证状态
     await user.type(screen.getByLabelText('密钥'), 'x')
-    expect(screen.getByRole('button', { name: '进入内置建模对话' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '开始建模' })).toBeDisabled()
   })
 
   it('支持外置任务活动侧栏与内置对话侧栏切换及核心交互（复制选中对象引用、附加任务书/选中对象、停止与重试）', async () => {
@@ -320,17 +319,18 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     // 确认无手动参数表、尺寸滑块或坐标编辑器
     expect(document.querySelector('input[type="range"]')).toBeNull()
 
-    // 外置任务活动侧栏：活动流、待回答问题、复制当前选中对象引用
+    // 外置任务活动侧栏：活动流、待回答问题、悬浮上下文条复制当前选中对象引用
     expect(screen.getByText('导入安装板任务书')).toBeInTheDocument()
     expect(screen.getByText('请确认右孔中心距基准面。')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '复制当前选中对象引用' }))
+    await user.click(screen.getByRole('button', { name: '复制到外部会话' }))
     expect(copied[0]).toBe('安装板 › 右孔 › 圆柱面 [plate/right-hole/cylinder]')
-    expect(screen.getByText('已复制对象引用')).toBeInTheDocument()
+    expect(screen.getAllByText(/已复制到外部会话/).length).toBeGreaterThan(0)
 
-    // 切换到内置对话：未通过测试前锁定
-    await user.click(screen.getByRole('tab', { name: '内置建模对话' }))
-    expect(screen.getByText(/内置建模对话尚未解锁/)).toBeInTheDocument()
+    // 通过「更多 ⋯」菜单切换到内置对话：未通过测试前锁定
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: /切换到内置模型对话/ }))
+    expect(screen.getByText(/内置对话尚未解锁/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '发送' })).toBeDisabled()
 
     // 前往配置并通过真实工具往返
@@ -338,10 +338,12 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     await user.type(screen.getByLabelText('密钥'), 'sk-valid')
     await user.click(screen.getByRole('button', { name: '测试连接' }))
     await screen.findByText('连接与真实工具往返通过')
-    await user.click(screen.getByRole('button', { name: '进入内置建模对话' }))
+    await user.click(screen.getByRole('button', { name: '开始建模' }))
 
-    // 附加第二份任务书引用并发送，随后点击“停止”
+    // 通过「+ 引用」浮层附加第二份任务书引用并发送，随后点击“停止”
+    await user.click(screen.getByTestId('attach-ref-btn'))
     await user.click(screen.getByRole('button', { name: /\+ 安装板任务书\.pdf · P2/ }))
+    await user.click(screen.getByRole('button', { name: '关闭引用选择' }))
     await user.type(screen.getByLabelText('内置对话输入框'), '把右孔向右移 1 mm')
     await user.click(screen.getByRole('button', { name: '发送' }))
 
@@ -454,7 +456,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     expect(within(banner).getByText('连接已断开')).toBeInTheDocument()
     expect(within(banner).getByText('draft-5')).toBeInTheDocument()
     expect(within(banner).getByRole('button', { name: '重连' })).toBeInTheDocument()
-    expect(within(banner).getByRole('button', { name: '切换入口' })).toBeInTheDocument()
+    expect(within(banner).getByRole('button', { name: '切换连接' })).toBeInTheDocument()
     expect(within(banner).getByRole('button', { name: '接管当前草稿' })).toBeInTheDocument()
     expect(screen.getByText('已有安装板草稿结果')).toBeInTheDocument()
 
@@ -551,7 +553,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     await user.click(within(disconnectBanner).getByRole('button', { name: '重连' }))
     expect(reconnectMock).toHaveBeenCalledTimes(1)
     await user.click(screen.getByRole('button', { name: /使用模型 API/ }))
-    expect(screen.getByRole('button', { name: '进入内置建模对话' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '开始建模' })).toBeDisabled()
 
     // 2. 发起测试连接（在途未返回），立即修改密钥 -> 递增测试代际并撤销原 requestId
     await user.type(screen.getByLabelText('密钥'), 'sk-old-key')
@@ -573,7 +575,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
         },
       })
     })
-    expect(screen.getByRole('button', { name: '进入内置建模对话' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '开始建模' })).toBeDisabled()
     expect(screen.queryByText('连接与真实工具往返通过')).not.toBeInTheDocument()
     expect(screen.getByText(/已丢弃来自旧代际\/先前客户端的迟到响应或事件/)).toBeInTheDocument()
   })
@@ -632,7 +634,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
         type: 'model_ready',
       })
     })
-    expect(screen.getByText(/模型修订：草稿 5/)).toBeInTheDocument()
+    expect(screen.getByText(/3D · 草稿 5/)).toBeInTheDocument()
 
     // 点击接管当前草稿 -> scopeEpoch=2, writerEpoch=2, 开启严格代际守卫
     await user.click(screen.getByRole('button', { name: '接管当前草稿' }))
@@ -679,7 +681,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     expect(screen.queryByText(/草稿 98/)).not.toBeInTheDocument()
     expect(screen.queryByText(/草稿 97/)).not.toBeInTheDocument()
     expect(screen.queryByText(/草稿 96/)).not.toBeInTheDocument()
-    expect(screen.getByText(/模型修订：草稿 5/)).toBeInTheDocument()
+    expect(screen.getByText(/3D · 草稿 5/)).toBeInTheDocument()
 
     // 新代际（scopeEpoch=2, writerEpoch=2）事件正常生效
     await act(async () => {
@@ -693,7 +695,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
         type: 'model_ready',
       })
     })
-    expect(screen.getByText(/模型修订：草稿 6/)).toBeInTheDocument()
+    expect(screen.getByText(/3D · 草稿 6/)).toBeInTheDocument()
   })
 
   it('S1：切项目与接管路径立即重置 apiTesting 并递增测试代际，旧测试迟到返回不卡死按钮也不误清后续新测试状态', async () => {
@@ -764,8 +766,9 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     expect(screen.getByRole('button', { name: /正在测试连接与工具往返/ })).toBeDisabled()
 
     // 4. 切换到其他本地项目 -> 立即重置 apiTesting，按钮不再卡死
-    await user.click(screen.getByRole('button', { name: /跳过（查看本地项目与示例）/ }))
+    await user.click(screen.getByRole('button', { name: '先跳过，直接体验工作台' }))
     await user.click(screen.getByRole('button', { name: '打开项目 隔套兼容示例' }))
+    await user.click(screen.getByTestId('connection-capsule-btn'))
     await user.click(screen.getByRole('button', { name: '切换连接' }))
     await user.click(screen.getByRole('button', { name: /使用模型 API/ }))
     expect(screen.getByRole('button', { name: '测试连接' })).toBeEnabled()
@@ -853,8 +856,8 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
 
     // 2. 在项目 A 发起重试图纸（在途挂起），随后切到项目 B 再让项目 A 的重试结果迟到返回 -> 不得污染项目 B
     await user.click(screen.getByRole('button', { name: '重试图纸' }))
-    await user.click(screen.getByRole('button', { name: '切换连接' }))
-    await user.click(screen.getByRole('button', { name: /跳过（查看本地项目与示例）/ }))
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: /切换本地项目/ }))
     await user.click(screen.getByRole('button', { name: '打开项目 隔套兼容示例' }))
 
     await act(async () => {
@@ -872,8 +875,8 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     expect(screen.queryByText(/草稿 5 图纸重试成功/)).not.toBeInTheDocument()
 
     // 3. 切回项目 A -> strictEpochGuard 仍持久生效，无 epoch 的 M2 事件必须继续 fail-closed 拒绝
-    await user.click(screen.getByRole('button', { name: '切换连接' }))
-    await user.click(screen.getByRole('button', { name: /跳过（查看本地项目与示例）/ }))
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: /切换本地项目/ }))
     await user.click(screen.getByRole('button', { name: '打开项目 安装板项目' }))
 
     await act(async () => {
@@ -888,11 +891,12 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     expect(screen.queryByText(/草稿 99/)).not.toBeInTheDocument()
 
     // 4. 解锁内置对话并发送消息，后端返回缺失 epoch 的应答（在 strictEpochGuard 下被丢弃）-> chatPending 必须正确释放不卡死
+    await user.click(screen.getByTestId('connection-capsule-btn'))
     await user.click(screen.getByRole('button', { name: '切换连接' }))
     await user.click(screen.getByRole('button', { name: /使用模型 API/ }))
     await user.type(screen.getByLabelText('密钥'), 'sk-s2')
     await user.click(screen.getByRole('button', { name: '测试连接' }))
-    await user.click(await screen.findByRole('button', { name: '进入内置建模对话' }))
+    await user.click(await screen.findByRole('button', { name: '开始建模' }))
 
     await user.type(screen.getByLabelText('内置对话输入框'), '测试接管后聊天释放')
     await user.click(screen.getByRole('button', { name: '发送' }))
@@ -1097,13 +1101,13 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     expect(screen.getByRole('button', { name: '接管当前草稿' })).toBeDisabled()
 
     // 2. 切到项目 B -> takeoverPending 立即释放
-    await user.click(screen.getByRole('button', { name: '切换连接' }))
-    await user.click(screen.getByRole('button', { name: /跳过（查看本地项目与示例）/ }))
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: /切换本地项目/ }))
     await user.click(screen.getByRole('button', { name: '打开项目 隔套兼容示例' }))
 
     // 3. 切回项目 A -> 先完成原生只读授权，再确认按钮可用（未卡死）并发起第二次接管
-    await user.click(screen.getByRole('button', { name: '切换连接' }))
-    await user.click(screen.getByRole('button', { name: /跳过（查看本地项目与示例）/ }))
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: /切换本地项目/ }))
     await user.click(screen.getByRole('button', { name: '打开项目 安装板项目' }))
     await user.click(screen.getByRole('button', { name: '申请原生只读授权' }))
     expect(await screen.findByRole('button', { name: '接管当前草稿' })).toBeEnabled()
@@ -1275,7 +1279,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     ).toBeInTheDocument()
 
     // 进入内置建模对话并发送消息
-    await user.click(screen.getByRole('button', { name: '进入内置建模对话' }))
+    await user.click(screen.getByRole('button', { name: '开始建模' }))
     await user.type(screen.getByLabelText('内置对话输入框'), '更新隔套长度')
     await user.click(screen.getByRole('button', { name: '发送' }))
 
@@ -1492,9 +1496,9 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
       expect.any(Function),
     )
 
-    // 2. 无草稿时先完成原生只读授权，再点击“申请原生写入权限”，入参对齐 M1-BE-02D（draftRevision: null, previousScopeEpoch: 5, nextScopeEpoch: 6）
+    // 2. 无草稿时先完成原生只读授权（此时仅显示只读授权按钮，不堆叠写入按钮），授权后再点击“申请原生写入权限”
     const authCard = screen.getByRole('region', { name: '项目授权状态' })
-    expect(within(authCard).getByRole('button', { name: '申请原生写入权限' })).toBeDisabled()
+    expect(within(authCard).queryByRole('button', { name: '申请原生写入权限' })).not.toBeInTheDocument()
     await user.click(within(authCard).getByRole('button', { name: '申请原生只读授权' }))
     expect(await within(authCard).findByText('已授权（只读）')).toBeInTheDocument()
     await user.click(within(authCard).getByRole('button', { name: '申请原生写入权限' }))
@@ -1637,6 +1641,8 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
       })
     })
     expect(screen.getAllByText(/draft-synced-scope2/).length).toBeGreaterThan(0)
+    // 进入工作台查看侧栏已同步的新代际权威快照活动
+    await user.click(screen.getByRole('button', { name: '进入工作台' }))
     expect(screen.getByText('新代际权威快照活动')).toBeInTheDocument()
   })
 
@@ -1664,7 +1670,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     await user.click(screen.getByRole('button', { name: /使用模型 API/ }))
     await user.type(screen.getByLabelText('密钥'), 'sk-real-bridge')
     await user.click(screen.getByRole('button', { name: '测试连接' }))
-    await user.click(await screen.findByRole('button', { name: '进入内置建模对话' }))
+    await user.click(await screen.findByRole('button', { name: '开始建模' }))
 
     await user.type(screen.getByLabelText('内置对话输入框'), '检查当前项目')
     await user.click(screen.getByRole('button', { name: '发送' }))
@@ -1714,7 +1720,7 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     await user.click(screen.getByRole('button', { name: /使用模型 API/ }))
     await user.type(screen.getByLabelText('密钥'), 'sk-real-bridge-2')
     await user.click(screen.getByRole('button', { name: '测试连接' }))
-    await user.click(await screen.findByRole('button', { name: '进入内置建模对话' }))
+    await user.click(await screen.findByRole('button', { name: '开始建模' }))
 
     await user.type(screen.getByLabelText('内置对话输入框'), '复核法兰盘中心孔')
     await user.click(screen.getByRole('button', { name: '发送' }))
@@ -1767,17 +1773,19 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
     await user.click(screen.getByRole('button', { name: /使用模型 API/ }))
     await user.type(screen.getByLabelText('密钥'), 'sk-p1-3')
     await user.click(screen.getByRole('button', { name: '测试连接' }))
-    await user.click(await screen.findByRole('button', { name: '进入内置建模对话' }))
+    await user.click(await screen.findByRole('button', { name: '开始建模' }))
 
-    // 默认已选第 1 条，再连续点击第 2..8 条（共 8 条），然后尝试点击第 9 条 -> 给出上限提示且阻止超限
+    // 打开「+ 引用」浮层：默认已选第 1 条，再连续点击第 2..8 条（共 8 条），尝试第 9 条 -> 给出上限提示且阻止超限
+    await user.click(screen.getByTestId('attach-ref-btn'))
     for (let i = 2; i <= 8; i += 1) {
       await user.click(screen.getByRole('button', { name: new RegExp(`规范文档-${i}\\.pdf`) }))
     }
-    expect(screen.getByText('附加任务书引用（已选 8/8）')).toBeInTheDocument()
+    expect(screen.getByText('附加任务书引用（8/8）')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /规范文档-9\.pdf/ }))
     expect(screen.getByText(/最多可附加 8 份任务书引用，已达到上限/)).toBeInTheDocument()
-    expect(screen.getByText('附加任务书引用（已选 8/8）')).toBeInTheDocument()
+    expect(screen.getByText('附加任务书引用（8/8）')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '关闭引用选择' }))
 
     // 发送聊天：history 裁剪为最近 32 条（历史消息 5..36），attachments 恰好 8 条
     await user.type(screen.getByLabelText('内置对话输入框'), '按上限发送')
@@ -1899,10 +1907,11 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
         }}
       />,
     )
-    expect(screen.getByRole('button', { name: '申请原生写入' })).toBeDisabled()
+    // 未只读授权时仅展示“申请原生只读授权”，严禁暴露/触发写入接管
+    expect(screen.queryByRole('button', { name: '申请原生写入' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '申请原生只读授权' }))
     expect(await screen.findByText(/缺失方法：requestM1ProjectAuthorization/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '申请原生写入' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '申请原生写入' })).not.toBeInTheDocument()
     expect(takeoverSpyMissing).not.toHaveBeenCalled()
     unmountMissing()
 
@@ -1971,18 +1980,17 @@ describe('ProjectAgentM1Workbench (M1-FE-02)', () => {
 
     const banner = screen.getByRole('alert', { name: '断线与接管状态' })
     expect(within(banner).getByText(/须先完成原生只读授权，再申请写入或接管/)).toBeInTheDocument()
-    expect(within(banner).getByRole('button', { name: '接管当前草稿' })).toBeDisabled()
+    expect(within(banner).queryByRole('button', { name: '接管当前草稿' })).not.toBeInTheDocument()
 
     // 第一次申请只读授权返回 AUTH_REQUIRED -> 展示错误且仍未授权
     await user.click(within(banner).getByRole('button', { name: '申请原生只读授权' }))
     expect(await screen.findByText(/AUTH_REQUIRED.*用户拒绝了本次原生只读授权/)).toBeInTheDocument()
-    expect(within(banner).getByRole('button', { name: '接管当前草稿' })).toBeDisabled()
+    expect(within(banner).queryByRole('button', { name: '接管当前草稿' })).not.toBeInTheDocument()
     expect(takeoverSpy).not.toHaveBeenCalled()
 
     // 第二次申请只读授权成功 -> 更新为已授权（只读），但因为 source='none' 尚未选择目标入口，接管按钮仍禁用
     await user.click(within(banner).getByRole('button', { name: '申请原生只读授权' }))
     expect(await screen.findByText(/已完成项目 proj-plate-01 的原生只读授权/)).toBeInTheDocument()
-    expect(screen.getByText('项目授权：已授权（只读）')).toBeInTheDocument()
     expect(within(banner).getByRole('button', { name: '接管当前草稿' })).toBeDisabled()
 
     // 明确选择目标入口为「模型 API」后，接管按钮解锁并以 targetSource='model-api' 调用 takeoverM1Draft

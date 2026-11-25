@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto'
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { deleteProjectDatabase } from './test/projectDb'
 import App from './App'
@@ -33,10 +33,11 @@ describe('App：M1-FE-02 双入口工作台路由挂载与 #/desktop-m1-readonly
     render(<App />)
 
     expect(screen.getByRole('main', { name: '寸链 M1 双入口工作台' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '连接方式与入口向导' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '首次启动与连接向导' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /连接本地 Agent/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /使用模型 API/ })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '只读授权视图' })).toHaveAttribute(
+    fireEvent.click(screen.getByTestId('more-menu-btn'))
+    expect(screen.getByRole('menuitem', { name: '只读授权视图' })).toHaveAttribute(
       'href',
       '#/desktop-m1-readonly',
     )

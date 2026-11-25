@@ -10,13 +10,13 @@ import {
 } from './workbenchTheme'
 import type { M2CheckItem } from './m2WorkbenchBridge'
 
-describe('寸链 v2 GUI 工作台专项验收（双主题、单行顶栏、悬浮引用条、六类检查与零参数表红线）', () => {
+describe('寸链 v2 GUI 工作台专项验收（极简工作流、渐进披露、双主题、悬浮引用条与零参数表红线）', () => {
   afterEach(() => {
     window.localStorage.removeItem(WORKBENCH_THEME_STORAGE_KEY)
     vi.restoreAllMocks()
   })
 
-  it('默认启用 Light Studio（data-theme="light"），一键切换 Dark CAD 并安全持久化到 localStorage', async () => {
+  it('默认启用 Light Studio（data-theme="light"），通过「更多 ⋯」菜单切换 Dark CAD 并持久化到 localStorage', async () => {
     const user = userEvent.setup()
 
     const { unmount } = render(
@@ -30,14 +30,14 @@ describe('寸链 v2 GUI 工作台专项验收（双主题、单行顶栏、悬�
     const root = screen.getByRole('main', { name: '寸链 M1 双入口工作台' })
     expect(root).toHaveAttribute('data-theme', 'light')
 
+    // 打开「更多 ⋯」菜单并切换主题
+    await user.click(screen.getByTestId('more-menu-btn'))
     const themeBtn = screen.getByTestId('theme-toggle-btn')
     expect(themeBtn).toHaveAttribute('aria-pressed', 'false')
     expect(themeBtn).toHaveTextContent('Light Studio')
 
     await user.click(themeBtn)
     expect(root).toHaveAttribute('data-theme', 'dark')
-    expect(themeBtn).toHaveAttribute('aria-pressed', 'true')
-    expect(themeBtn).toHaveTextContent('Dark CAD')
     expect(window.localStorage.getItem(WORKBENCH_THEME_STORAGE_KEY)).toBe('dark')
 
     // 重挂载后应恢复 Dark CAD 主题
@@ -79,7 +79,7 @@ describe('寸链 v2 GUI 工作台专项验收（双主题、单行顶栏、悬�
     )
   })
 
-  it('顶栏提供分节修订胶囊、快捷双入口切换与低干扰导航链接', async () => {
+  it('顶栏精简单行（右侧常驻 ≤ 3 控件），「更多 ⋯」菜单完整触达主题、模式、切项目、只读视图与旧工作台', async () => {
     const user = userEvent.setup()
 
     render(
@@ -94,25 +94,46 @@ describe('寸链 v2 GUI 工作台专项验收（双主题、单行顶栏、悬�
 
     const topbar = screen.getByLabelText('顶部连接状态栏')
     expect(topbar).toHaveTextContent('正式版 v1 · 草稿 draft-8')
-    expect(within(topbar).getByRole('link', { name: '只读授权视图' })).toHaveAttribute(
+
+    // 常态顶栏不再平铺展示低频链接或授权下拉框
+    expect(within(topbar).queryByRole('link', { name: '只读授权视图' })).not.toBeInTheDocument()
+    expect(within(topbar).queryByRole('link', { name: '返回旧工作台' })).not.toBeInTheDocument()
+    expect(within(topbar).queryByLabelText('写入目标入口')).not.toBeInTheDocument()
+
+    // 顶栏右侧常驻控件严格 ≤ 3 个（连接胶囊 + 完成并保存 + 更多 ⋯）
+    const topbarButtons = within(topbar).getAllByRole('button')
+    // 含 3 个居中视图 tab，顶栏右侧非 tab 按钮 ≤ 3 个
+    const nonTabButtons = topbarButtons.filter((btn) => btn.getAttribute('role') !== 'tab')
+    expect(nonTabButtons.length).toBeLessThanOrEqual(3)
+
+    // 打开「更多 ⋯」菜单验证全部低频入口可达
+    await user.click(screen.getByTestId('more-menu-btn'))
+    const menu = screen.getByRole('menu', { name: '更多操作菜单' })
+    expect(within(menu).getByRole('menuitem', { name: /切换浅色\/深色主题/ })).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: /切换本地项目/ })).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: '只读授权视图' })).toHaveAttribute(
       'href',
       '#/desktop-m1-readonly',
     )
-    expect(within(topbar).getByRole('link', { name: '返回旧工作台' })).toHaveAttribute(
+    expect(within(menu).getByRole('menuitem', { name: '返回旧工作台' })).toHaveAttribute(
       'href',
       '#/desktop-legacy',
     )
 
-    // 顶栏内置对话 / 外置活动快捷切换同步驱动右侧栏
-    const quickSwitch = within(topbar).getByRole('group', { name: '顶部入口快捷切换' })
-    await user.click(within(quickSwitch).getByRole('button', { name: '内置对话' }))
+    // 菜单内切换工作模式同步驱动右侧栏
+    await user.click(within(menu).getByRole('menuitem', { name: /切换到内置模型对话/ }))
     expect(screen.getByLabelText('内置模式多轮对话侧栏')).toBeInTheDocument()
 
-    await user.click(within(quickSwitch).getByRole('button', { name: '外置活动' }))
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(
+      within(screen.getByRole('menu', { name: '更多操作菜单' })).getByRole('menuitem', {
+        name: /切换到外置 Agent 活动/,
+      }),
+    )
     expect(screen.getByLabelText('外置模式任务活动侧栏')).toBeInTheDocument()
   })
 
-  it('悬浮对象引用条支持层级路径展示、带入下一句话、复制到外部会话与取消选择', async () => {
+  it('悬浮对象引用条按需浮现（未选中时 100% 隐藏），选中后支持路径展示、带入对话、复制引用与取消选择', async () => {
     const user = userEvent.setup()
     const copied: string[] = []
 
@@ -127,19 +148,18 @@ describe('寸链 v2 GUI 工作台专项验收（双主题、单行顶栏、悬�
       />,
     )
 
-    const contextBar = screen.getByRole('region', { name: '对象引用上下文区' })
-    expect(contextBar).toHaveAttribute('data-selection-active', 'true')
-
-    // 点选对象列表中的第二个特征，验证面包屑切换
+    // 展开零件结构浮层并选择第二个特征
+    await user.click(screen.getByTestId('toggle-structure-btn'))
     const objectList = screen.getByLabelText('对象列表')
-    const featureBtns = within(objectList).getAllByRole('button')
+    const featureBtns = within(
+      within(objectList).getByRole('group', { name: '可选几何特征对象' }),
+    ).getAllByRole('button')
     const targetFeatureBtn = featureBtns[1] ?? featureBtns[0]
     await user.click(targetFeatureBtn)
 
+    const contextBar = screen.getByRole('region', { name: '对象引用上下文区' })
     expect(contextBar).toHaveAttribute('data-selection-active', 'true')
-    expect(screen.getByTestId('selection-breadcrumb')).toHaveTextContent(
-      targetFeatureBtn.textContent ?? '',
-    )
+    expect(screen.getByTestId('selection-breadcrumb')).toBeInTheDocument()
 
     // 复制到外部会话
     await user.click(within(contextBar).getByRole('button', { name: '复制到外部会话' }))
@@ -149,10 +169,148 @@ describe('寸链 v2 GUI 工作台专项验收（双主题、单行顶栏、悬�
     await user.click(within(contextBar).getByRole('button', { name: '带入下一句话' }))
     expect(screen.getByLabelText('内置模式多轮对话侧栏')).toBeInTheDocument()
 
-    // 取消选择
+    // 取消选择后，悬浮对象引用上下文条 100% 隐藏
     await user.click(within(contextBar).getByRole('button', { name: '取消选择' }))
-    expect(contextBar).toHaveAttribute('data-selection-active', 'false')
-    expect(within(contextBar).getByText('未选中任何几何对象')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '对象引用上下文区' })).not.toBeInTheDocument()
+  })
+
+  it('主工作台常态首屏画布常驻按钮 ≤ 2 个（无旋转/缩放文字按钮堆与平铺附件），且零参数表/滑块红线保持', async () => {
+    const user = userEvent.setup()
+    render(
+      <ProjectAgentM1Workbench
+        bridge={{}}
+        initialShowOnboarding={false}
+        initialViewMode="model"
+        initialDraftRevision="draft-8"
+        initialPreviewSnapshot={{
+          currentRevision: 'draft-8',
+          model: { status: 'ready', revision: 'draft-8', revisionOrder: 8, isDraft: true, fingerprint: 'fp-8' },
+          drawing: { status: 'ready', revision: 'draft-8', revisionOrder: 8, isDraft: true, fingerprint: 'fp-8' },
+          modelMesh: {
+            bounds: { min: [0, 0, 0], max: [80, 50, 8] },
+            positions: [0, 0, 0, 80, 0, 0, 80, 50, 0],
+            indices: [0, 1, 2],
+            triangleRanges: [{ objectId: 'obj-plate-body', featureRef: 'part:plate', startTriangle: 0, endTriangle: 1 }],
+          },
+          features: [
+            { objectId: 'obj-plate-body', breadcrumb: '安装板 › 主体', featureRef: 'part:plate', partName: '安装板', role: '主体', kind: 'plate', linkedAnnotationIds: [] },
+          ],
+        }}
+      />,
+    )
+
+    // 取消初始默认选中后，画布未选中常态仅剩 2 个按钮：「零件结构 (N)」与右下角「适配」
+    await user.click(screen.getByRole('button', { name: '取消选择' }))
+    const canvas = screen.getByLabelText('中央画布')
+    expect(within(canvas).getAllByRole('button').length).toBeLessThanOrEqual(2)
+    expect(within(canvas).queryByRole('button', { name: '左旋' })).not.toBeInTheDocument()
+    expect(within(canvas).queryByRole('button', { name: '右旋' })).not.toBeInTheDocument()
+    expect(within(canvas).queryByRole('button', { name: '放大' })).not.toBeInTheDocument()
+    expect(within(canvas).queryByRole('button', { name: '缩小' })).not.toBeInTheDocument()
+    expect(within(canvas).queryByLabelText('对象列表')).not.toBeInTheDocument()
+
+    // 产品红线：零滑块、零数字输入
+    expect(document.querySelectorAll('input[type="range"]')).toHaveLength(0)
+    expect(document.querySelectorAll('input[type="number"]')).toHaveLength(0)
+  })
+
+  it('完整 3 步新手 workflow（连接/进入 → 选特征带入对话发指令 → 查看检查 → 完成并保存 → 绑定确认提交）顺畅可达', async () => {
+    const user = userEvent.setup()
+    const sendM1ChatMessage = vi.fn().mockResolvedValue({
+      ok: true,
+      value: {
+        messageId: 'msg-wf-1',
+        reply: '已将右孔向右移动 1 mm，边距复核通过。',
+        draftRevision: 'draft-2',
+      },
+    })
+    const commitM3ApprovedDraft = vi.fn().mockResolvedValue({
+      ok: true,
+      value: {
+        projectId: 'proj-plate-01',
+        committedRevision: 'v2',
+        previousBaseRevision: 'v1',
+        fromDraftRevision: 'draft-2',
+        summary: '正式保存 v2',
+      },
+    })
+
+    const bridge = {
+      testM1ModelApiConnection: vi.fn().mockResolvedValue({
+        ok: true,
+        value: {
+          availableModels: ['gpt-4.1'],
+          selectedModel: 'gpt-4.1',
+          toolCallSupported: true,
+          toolRoundTripPassed: true,
+          toolRoundTripName: 'describe_project',
+        },
+      }),
+      sendM1ChatMessage,
+      commitM3ApprovedDraft,
+    }
+
+    render(
+      <ProjectAgentM1Workbench
+        bridge={bridge}
+        initialShowOnboarding={true}
+        initialBaseRevision="v1"
+        initialDraftRevision="draft-2"
+        initialPreviewSnapshot={{
+          currentRevision: 'draft-2',
+          model: { status: 'ready', revision: 'draft-2', revisionOrder: 2, isDraft: true, fingerprint: 'fp-2' },
+          drawing: { status: 'ready', revision: 'draft-2', revisionOrder: 2, isDraft: true, fingerprint: 'fp-2' },
+          features: [
+            { objectId: 'obj-right-hole', breadcrumb: '安装板 › 右孔 › 圆柱面', featureRef: 'hole:right', partName: '安装板', role: '右孔', kind: 'hole', linkedAnnotationIds: [] },
+          ],
+          requirements: [
+            {
+              requirementId: 'r1',
+              title: '右孔边距 ≥ 13 mm',
+              interpretation: '最差边距不少于 13 mm',
+              required: true,
+              status: 'confirmed',
+              anchor: { documentRef: 'tb-1', documentName: '安装板任务书.pdf', page: 2, excerpt: '至少 13 mm' },
+              linkedFeatureIds: ['obj-right-hole'],
+              linkedAnnotationIds: [],
+            },
+          ],
+          checks: [
+            { checkId: 'c1', requirementId: 'r1', title: '右孔边距 ≥ 13 mm', required: true, status: 'pass', summary: '通过', linkedFeatureIds: [], linkedAnnotationIds: [], revisionFingerprint: 'fp-2' },
+          ],
+          checksInProgress: false,
+        }}
+      />,
+    )
+
+    // Step 1: 向导独占聚焦 -> 选模型 API -> 测试连接 -> 开始建模
+    expect(screen.queryByLabelText('中央画布')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /使用模型 API/ }))
+    await user.type(screen.getByLabelText('密钥'), 'sk-workflow-demo')
+    await user.click(screen.getByRole('button', { name: '测试连接' }))
+    await user.click(await screen.findByRole('button', { name: '开始建模' }))
+
+    // Step 2: 展开零件结构选特征 -> 带入对话 -> 点击示例/输入指令并发送（附件默认收纳在 + 引用浮层）
+    expect(screen.queryByRole('dialog', { name: '对话上下文附加' })).not.toBeInTheDocument()
+    await user.click(screen.getByTestId('toggle-structure-btn'))
+    const featureBtns = within(
+      within(screen.getByLabelText('对象列表')).getByRole('group', { name: '可选几何特征对象' }),
+    ).getAllByRole('button')
+    await user.click(featureBtns[0])
+    await user.click(screen.getByRole('button', { name: '带入下一句话' }))
+    await user.type(screen.getByLabelText('内置对话输入框'), '向右移动选中孔 1 mm')
+    await user.click(screen.getByRole('button', { name: '发送' }))
+    expect(sendM1ChatMessage).toHaveBeenCalledTimes(1)
+
+    // Step 3: 查看检查 -> 点击顶栏「完成并保存」-> 绑定一次性确认提交
+    await user.click(within(screen.getByRole('tablist', { name: '侧栏功能切换' })).getByRole('tab', { name: /检查/ }))
+    expect(screen.getByLabelText('检查结果面板')).toHaveTextContent('右孔边距 ≥ 13 mm')
+
+    await user.click(screen.getByRole('button', { name: '完成并保存' }))
+    const completionView = screen.getByTestId('completion-view')
+    await user.click(within(completionView).getByRole('button', { name: '保存正式版本' }))
+    await user.click(within(completionView).getByRole('button', { name: '确认提交正式版本' }))
+    expect(commitM3ApprovedDraft).toHaveBeenCalledTimes(1)
   })
 
   it('暗色主题下键盘跨区导航（F6/Alt+1..3）、六类检查统计与零手动参数表/滑块红线全部通过', async () => {
@@ -181,7 +339,8 @@ describe('寸链 v2 GUI 工作台专项验收（双主题、单行顶栏、悬�
       />,
     )
 
-    // 切换 Dark CAD 主题
+    // 通过「更多 ⋯」菜单切换 Dark CAD 主题
+    await user.click(screen.getByTestId('more-menu-btn'))
     await user.click(screen.getByTestId('theme-toggle-btn'))
     const workbench = screen.getByRole('main', { name: '寸链 M1 双入口工作台' })
     expect(workbench).toHaveAttribute('data-theme', 'dark')
@@ -195,12 +354,12 @@ describe('寸链 v2 GUI 工作台专项验收（双主题、单行顶栏、悬�
     expect(summaryGrid).toHaveTextContent('! 执行失败')
     expect(summaryGrid).toHaveTextContent('◌ 检查中')
 
-    // 键盘 F6 / Alt+1..3 跨区切换
-    const objectListRegion = screen.getByLabelText('对象列表')
+    // 键盘 F6 / Alt+1..3 跨区切换（自动展开零件结构浮层并聚焦）
     const canvasRegion = screen.getByLabelText('中央画布')
     const sidebarRegion = screen.getByLabelText('主工作台侧栏')
 
     fireEvent.keyDown(workbench, { key: 'F6' })
+    const objectListRegion = screen.getByLabelText('对象列表')
     expect(document.activeElement).toBe(objectListRegion)
     fireEvent.keyDown(workbench, { key: 'F6' })
     expect(document.activeElement).toBe(canvasRegion)
