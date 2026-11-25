@@ -14,6 +14,7 @@ import type { startM1LocalEndpoint } from './m1LocalEndpoint'
 import { M1AgentRegistration } from './m1AgentRegistration'
 import { listM1ModelApiModels } from './m1ModelList'
 import { getExternalActivities } from './m1LocalAgent'
+import { readMateDrafts } from './mateDraftTool'
 import { M1ModelApi } from './m1ModelApi'
 import type { M1ModelAttachment, M1ModelScope } from './m1ModelApi'
 
@@ -171,6 +172,7 @@ export function installM1WorkbenchChannels(ipc: { handle(channel: string, handle
   }
 
   function modelScope(event: IpcMainInvokeEvent, state: State, generation: number, caller: Caller): M1ModelScope {
+    let topology: { fingerprint: string | null; result: Awaited<ReturnType<typeof readMateDrafts>> } | undefined
     return { sender: toSenderInfo(event), sessionId: state.session.sessionId, projectId: caller.projectId,
       scopeEpoch: generation, authorizationRef: caller.authorizationRef, isCurrent: () => current(state, generation),
       m2Change: ports.m2Change ? async () => {
@@ -182,6 +184,18 @@ export function installM1WorkbenchChannels(ipc: { handle(channel: string, handle
       async readAttachment(ref, signal) {
         check(state, generation)
         return signal.aborted ? null : ports.readAttachment?.(state.windowId, ref) ?? null
+      },
+      async readMateDrafts(signal) {
+        check(state, generation)
+        const session = ports.sessionFor(state.windowId)
+        if (!session || session.sessionId !== state.session.sessionId || session.projectId !== state.session.projectId) {
+          throw Error('REFERENCE_STALE')
+        }
+        if (topology?.fingerprint === session.fingerprint) return topology.result
+        const result = await readMateDrafts(session, signal)
+        check(state, generation)
+        topology = { fingerprint: session.fingerprint, result }
+        return result
       },
       async readSelectedObject(ref, signal) {
         check(state, generation)

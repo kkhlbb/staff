@@ -8,6 +8,7 @@ import { m1CancelChatRequest, m1ChatRequest, m1ModelConnectionRequest,
 import { ModelAdapterError } from '../modelAdapter'
 import type { RealModelRuntime } from '../realModelRuntime'
 import type { SenderInfo } from '../senderGuard'
+import { mateDraftTool, type MateDraftResult } from './mateDraftTool'
 import type { LocalM1Authority, M1WriterConfirmation, M1WriterLease } from './m1LocalAuthority'
 
 type Source = M1SpacerDraft['sources']['lengthQ']
@@ -28,6 +29,7 @@ export type M1ModelScope = Readonly<{
     select(objectId: string): string | null
     stage(requestId: string, deltaQ: number): { jobId: string; revision: string }
   } | null>
+  readMateDrafts?(signal: AbortSignal): Promise<MateDraftResult | null>
   readAttachment?(ref: string, signal: AbortSignal): Promise<M1ModelAttachment | null>
   readSelectedObject?(ref: string, signal: AbortSignal): Promise<string | null>
 }>
@@ -89,9 +91,13 @@ function parseArguments(call: ModelToolCall): unknown {
   try { return JSON.parse(call.argumentsJson) as unknown } catch { throw Error('INVALID_TOOL_CALL') }
 }
 
-function toolExchange(messages: ModelMessage[], call: ModelToolCall & { id: string }, result: object): ModelMessage[] {
+function toolExchange(
+  messages: ModelMessage[], call: ModelToolCall & { id: string }, result: object, redact?: (text: string) => string,
+): ModelMessage[] {
+  const content = JSON.stringify(result, (_, value: unknown) =>
+    redact && typeof value === 'string' ? redact(value) : value)
   return [...messages, { role: 'assistant', content: '', toolCalls: [call] },
-    { role: 'tool', toolCallId: call.id, content: JSON.stringify(result) }]
+    { role: 'tool', toolCallId: call.id, content }]
 }
 
 function finalText(answer: ModelReply, code: string): string {
@@ -282,7 +288,7 @@ export class M1ModelApi {
     }
   }
 
-  async sendM1ChatMessage(raw: unknown): Promise<M1ModelResult<M1ChatResult>> {
+  async sendM1ChatMessage(raw: unknown): Promise<M1ModelResult<M1ChatResult & { mateDrafts?: MateDraftResult }>> {
     const input = m1ChatRequest.safeParse(raw)
     if (!input.success) return failure(null, 'INVALID_REQUEST')
     const request = input.data
@@ -326,7 +332,11 @@ export class M1ModelApi {
       await this.caller(signal)
       const adapter = connection.createAdapter(signal)
       const tool = m2 ? moveHole : stage
-      const args = { taskId: randomUUID(), systemPrompt, tools: [tool], budget }
+      const mateDrafts = await this.scope.readMateDrafts?.(signal)
+      await this.caller(signal)
+      const args = { taskId: randomUUID(), systemPrompt: systemPrompt + (mateDrafts
+        ? ' 可调用 suggest_assembly_mates 读取配合草案。草案须由人工核对，不代表已应用。' : ''),
+      tools: mateDrafts ? [tool, mateDraftTool] : [tool], budget }
       const answer = await adapter.generate({ ...args, messages })
       await this.caller(signal)
       if (writer) await this.authority.readWriterContext(writer)
@@ -334,7 +344,18 @@ export class M1ModelApi {
       const meta = { messageId: randomUUID(), scopeEpoch: this.scope.scopeEpoch, writerEpoch: request.writerEpoch }
       if (!answer.toolCalls.length) return success({ ...meta, reply: connection.redact(finalText(answer, 'DISCONNECTED')) })
       const call = answer.toolCalls[0]
-      if (answer.toolCalls.length !== 1 || !call?.id || connection.containsKey(call.id) || call.name !== tool.name) throw Error('INVALID_TOOL_CALL')
+      if (answer.toolCalls.length !== 1 || !call?.id || connection.containsKey(call.id) ||
+          !args.tools.some(registered => registered.name === call.name)) throw Error('INVALID_TOOL_CALL')
+      if (mateDrafts && call.name === mateDraftTool.name) {
+        if (!z.strictObject({}).safeParse(parseArguments(call)).success) throw Error('INVALID_TOOL_CALL')
+        const followUp = await adapter.generate({ ...args, messages: toolExchange(messages,
+          { id: call.id, name: call.name, argumentsJson: '{}' },
+          { ...mateDrafts, draftCount: mateDrafts.drafts.length, drafts: mateDrafts.drafts.slice(0, 20) },
+          connection.redact) })
+        await this.caller(signal)
+        return success({ ...meta, reply: connection.redact(finalText(followUp, 'TOOL_ROUNDTRIP_FAILED')), mateDrafts,
+          toolCalls: [{ name: call.name, status: 'succeeded' }] })
+      }
       if (!writer || !context) {
         const { snapshot } = await this.authority.readContext(this.scope, caller)
         check()

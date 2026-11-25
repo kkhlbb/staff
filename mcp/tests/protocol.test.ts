@@ -5,11 +5,14 @@
  * 坏 JSON / stdout 纯净度（每个字节都是 JSON-RPC 行）。
  */
 import { spawn } from 'node:child_process'
-import { mkdtemp, rm, stat } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { createInterface } from 'node:readline'
 import { fileURLToPath } from 'node:url'
+import { fixture, face, model, part, pose } from '../../src/core/solver/test/fixture'
+import { createSampleSnapshot } from '../../src/project-file/__fixtures__/sampleProjectFile'
+import { encodeProjectFile } from '../../src/project-file/codec'
 import { describe, expect, it } from 'vitest'
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url))
@@ -61,7 +64,7 @@ const initialize = {
 }
 
 describe('MCP stdio 协议', () => {
-  it('initialize → tools/list → 五个工具；通知不回帧；stdout 只有 JSON-RPC', async () => {
+  it('initialize → tools/list → 六个工具；通知不回帧；stdout 只有 JSON-RPC', async () => {
     const { frames, stdout, stderr } = await runFrames([
       initialize,
       { jsonrpc: '2.0', method: 'notifications/initialized' },
@@ -89,6 +92,7 @@ describe('MCP stdio 协议', () => {
       'check_requirement',
       'render_drawing',
       'describe_project',
+      'analyze_assembly_3d',
     ])
     for (const tool of list.tools) {
       expect(tool.inputSchema.type).toBe('object')
@@ -146,6 +150,58 @@ describe('MCP stdio 协议', () => {
       expect(results[4]).toMatchObject({ project: { id: 'project-a' } })
     } finally {
       await rm(outputDir, { recursive: true, force: true })
+    }
+  })
+
+  it('solves, simulates and returns review-only mate drafts over real stdio', async () => {
+    const input = fixture()
+    const assembly = model([part('a'), part('b')], [
+      face('a-face', 'a', [0, 0, 0], [0, 0, 1]), face('b-face', 'b', [0, 0, 0], [0, 0, -1]),
+    ])
+    const { frames } = await runFrames([initialize, ...[
+      { operation: 'solve', assembly: input.assembly },
+      { operation: 'simulate', ...input, samples: 10_000 },
+      { operation: 'suggest-mates', assembly, candidates: { coplanar: [['b-face', 'a-face']], coaxial: [] } },
+      { operation: 'solve', assembly, path: '/unused.cunlian' },
+    ].map((args, i) => ({ jsonrpc: '2.0', id: i + 2, method: 'tools/call',
+      params: { name: 'analyze_assembly_3d', arguments: args } }))])
+    const [solve, simulate, suggest, invalid] = [2, 3, 4, 5].map(id => frames.find(frame => frame.id === id)?.result)
+    expect(solve).toMatchObject({ isError: false, structuredContent: { readOnly: true, result: {
+      status: 'underconstrained', parts: expect.arrayContaining([{ partId: 'cover', nominalTransform: expect.any(Array) }]),
+    } } })
+    expect(simulate).toMatchObject({ isError: false, structuredContent: { result: { samples: 10_000,
+      measurements: expect.arrayContaining([expect.objectContaining({ measurementId: 'gap', kind: 'gap' })]),
+    } } })
+    expect(suggest).toMatchObject({ isError: false, structuredContent: { readOnly: true, requiresConfirmation: true,
+      drafts: [{ status: 'draft', mate: { kind: 'face-contact', featureIds: ['a-face', 'b-face'] },
+        topologyEvidenceRefs: [{ featureId: 'a-face', partId: 'a' }, { featureId: 'b-face', partId: 'b' }] }],
+    } })
+    expect(invalid).toMatchObject({ isError: true })
+  })
+
+  it('loads a Schema 11 assembly from a real project path without persisting drafts', async () => {
+    const snapshot = await createSampleSnapshot()
+    const plate = (id: string) => ({ id, displayName: id, color: '#808080', nominalTransform: pose(),
+      kind: 'parametric-primitive' as const, baseKind: 'plate' as const,
+      sizeQ: { lengthQ: 30000, widthQ: 40000, thicknessQ: 50000 }, modifiers: [] })
+    const assembly3d = model([plate('a'), plate('b')], [
+      face('a-face', 'a', [0, 0, 0], [0, 0, 1]), face('b-face', 'b', [0, 0, 0], [0, 0, -1]),
+    ])
+    const encoded = await encodeProjectFile({ ...snapshot, project: { ...snapshot.project, assembly3d } })
+    if (!encoded.ok) throw Error(JSON.stringify(encoded.error))
+    const directory = await mkdtemp(path.join(tmpdir(), 'cunlian-3d-'))
+    try {
+      const project = path.join(directory, 'assembly.cunlian')
+      await writeFile(project, encoded.value.bytes)
+      const { frames } = await runFrames([initialize, { jsonrpc: '2.0', id: 2, method: 'tools/call', params: {
+        name: 'analyze_assembly_3d', arguments: { operation: 'suggest-mates', path: project },
+      } }])
+      expect(frames.find(frame => frame.id === 2)?.result).toMatchObject({ isError: false, structuredContent: {
+        readOnly: true, requiresConfirmation: true, drafts: [{ mate: { kind: 'face-contact' } }],
+      } })
+      expect(await readFile(project)).toEqual(Buffer.from(encoded.value.bytes))
+    } finally {
+      await rm(directory, { recursive: true, force: true })
     }
   })
 
