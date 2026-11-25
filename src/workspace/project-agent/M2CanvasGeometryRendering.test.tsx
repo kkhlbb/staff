@@ -498,12 +498,12 @@ describe('M2-FE-02 中央画布真 3D 网格与真 2D SVG 矢量图纸交互渲�
     const modelMeta = screen.getByLabelText('模型视角状态')
     expect(modelMeta).toHaveTextContent('视角 53°/35° · 缩放 115%')
 
-    // 2D 鼠标拖拽平移 + 滚轮缩放 + 按钮缩放 -> viewBox 真实更新
+    // 2D 鼠标拖拽平移 + 两次滚轮缩放 -> viewBox 真实更新
     fireEvent.mouseDown(drawingSvg, { button: 0, clientX: 50, clientY: 50 })
     fireEvent.mouseMove(drawingSvg, { clientX: 90, clientY: 70 })
     fireEvent.mouseUp(drawingSvg)
     fireEvent.wheel(drawingSvg, { deltaY: -100 })
-    await user.click(screen.getByRole('button', { name: '图纸放大' }))
+    fireEvent.wheel(drawingSvg, { deltaY: -100 })
 
     const drawingMeta = screen.getByLabelText('图纸缩放状态')
     expect(drawingMeta).toHaveTextContent('图纸缩放 150% · 平移 (20, 10)')

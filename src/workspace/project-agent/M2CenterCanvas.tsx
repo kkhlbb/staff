@@ -21,14 +21,10 @@ import { M2ThreeMeshViewport } from './M2ThreeMeshViewport'
 import { M2VectorDrawingViewport } from './M2VectorDrawingViewport'
 
 export interface M2CenterCanvasProps {
-  readonly projectName: string
-  readonly baseRevision: string | null
-  readonly draftRevision: string | null
-  readonly scopeEpoch: number
-  readonly writerEpoch: number
   readonly viewMode: M2ViewMode
   readonly lastSingleTab: M2SingleViewTab
   readonly isNarrow: boolean
+  readonly sidebarMode?: 'external' | 'builtin'
   readonly model: M2ArtifactSlotState
   readonly drawing: M2ArtifactSlotState
   readonly drawingFailure: M2DrawingFailureNotice | null
@@ -46,6 +42,7 @@ export interface M2CenterCanvasProps {
   readonly invalidatedObjectLabel: string | null
   readonly camera: M2CameraState
   readonly drawingViewport: M2DrawingViewportState
+  readonly structureOpen: boolean
   readonly retryDrawingPending: boolean
   readonly retryDrawingFeedback: string | null
   readonly contextActionFeedback: string | null
@@ -54,7 +51,8 @@ export interface M2CenterCanvasProps {
   readonly canvasRegionRef: RefObject<HTMLElement | null>
   readonly objectListRegionRef: RefObject<HTMLElement | null>
   readonly retryDrawingButtonRef?: RefObject<HTMLButtonElement | null>
-  readonly onChangeViewMode: (mode: M2ViewMode) => void
+  readonly onToggleStructure: () => void
+  readonly onCloseStructure: () => void
   readonly onSelectFeature: (feature: M2ModelFeatureItem) => void
   readonly onSelectAnnotation: (annotation: M2DrawingAnnotationItem) => void
   readonly onClearSelection: () => void
@@ -133,14 +131,10 @@ export function getArtifactStatusMeta(
 }
 
 export function M2CenterCanvas({
-  projectName,
-  baseRevision,
-  draftRevision,
-  scopeEpoch,
-  writerEpoch,
   viewMode,
   lastSingleTab,
   isNarrow,
+  sidebarMode = 'external',
   model,
   drawing,
   drawingFailure,
@@ -158,6 +152,7 @@ export function M2CenterCanvas({
   invalidatedObjectLabel,
   camera,
   drawingViewport,
+  structureOpen,
   retryDrawingPending,
   retryDrawingFeedback,
   contextActionFeedback,
@@ -166,7 +161,8 @@ export function M2CenterCanvas({
   canvasRegionRef,
   objectListRegionRef,
   retryDrawingButtonRef,
-  onChangeViewMode,
+  onToggleStructure,
+  onCloseStructure,
   onSelectFeature,
   onSelectAnnotation,
   onClearSelection,
@@ -198,6 +194,11 @@ export function M2CenterCanvas({
   }
 
   const handleObjectListKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      onCloseStructure()
+      return
+    }
     if (features.length === 0) return
     const currentIndex = objectItemRefs.current.findIndex(
       (btn) => btn !== null && btn === document.activeElement,
@@ -229,102 +230,25 @@ export function M2CenterCanvas({
       data-effective-view={effectiveViewMode}
       data-narrow-degraded={isNarrow && viewMode === 'split' ? 'true' : 'false'}
     >
-      {/* Canvas Header: Title, Revisions, Draft/Checking Badges, View Mode Switcher */}
-      <div className="pa-canvas-toolbar">
-        <div className="pa-row">
-          <h2 className="pa-title">模型与图纸视图概览</h2>
-          {isDraftDisplay ? (
-            <span className="pa-pill pa-tone-pending" aria-label="草稿预览标识">
-              ✎ 草稿
-            </span>
-          ) : null}
-          {sameRevisionAligned ? (
-            <span className="pa-pill pa-tone-pass" aria-label="同版对齐标识">
-              ✓ 同版就绪
-            </span>
-          ) : null}
-          {checksInProgress ? (
-            <span className="pa-pill pa-tone-action" aria-label="检查进行中标识">
-              ◌ 检查中
-            </span>
-          ) : null}
-        </div>
-
-        <div className="pa-segmented" role="tablist" aria-label="中央画布视图切换">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={effectiveViewMode === 'model'}
+      {/* Contextual Banners: 0 banners in normal state; appear ONLY on real exception / completion */}
+      {isNarrow ? (
+        <div className="pa-canvas-narrow-strip" role="status" aria-label="窄屏标签页降级状态">
+          <span className="pa-pill pa-tone-pending">⇄ 窄屏标签页模式</span>
+          <span
+            className={`pa-pill ${modelStatusMeta.toneClass}`}
             data-artifact-status={modelStatusMeta.stateKey}
-            title={modelStatusMeta.text}
-            className={effectiveViewMode === 'model' ? 'pa-btn pa-btn-active' : 'pa-btn'}
-            onClick={() => onChangeViewMode('model')}
           >
-            模型
-            {isNarrow ? <span aria-hidden="true"> {modelStatusMeta.symbol}</span> : null}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={effectiveViewMode === 'drawing'}
+            <span aria-hidden="true">{modelStatusMeta.symbol}</span> {modelStatusMeta.text}
+          </span>
+          <span
+            className={`pa-pill ${drawingStatusMeta.toneClass}`}
             data-artifact-status={drawingStatusMeta.stateKey}
-            title={drawingStatusMeta.text}
-            className={effectiveViewMode === 'drawing' ? 'pa-btn pa-btn-active' : 'pa-btn'}
-            onClick={() => onChangeViewMode('drawing')}
           >
-            图纸
-            {isNarrow ? <span aria-hidden="true"> {drawingStatusMeta.symbol}</span> : null}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={effectiveViewMode === 'split'}
-            disabled={isNarrow}
-            title={isNarrow ? '窗口较窄时自动退化为模型/图纸标签页' : '模型与图纸并排联动'}
-            className={effectiveViewMode === 'split' ? 'pa-btn pa-btn-active' : 'pa-btn'}
-            onClick={() => onChangeViewMode('split')}
-          >
-            并排
-          </button>
-        </div>
-      </div>
-
-      {/* Explicit Model & Drawing Revision Header */}
-      <div className="pa-canvas-revision-bar" aria-label="画布修订与就绪状态">
-        <div className="pa-row">
-          <span className="pa-pill pa-tone-muted pa-mono">
-            模型修订：{formatRevisionDisplay(model.revision)}
-          </span>
-          <span className="pa-pill pa-tone-muted pa-mono">
-            图纸修订：{formatRevisionDisplay(drawing.revision)}
-          </span>
-          <span className="pa-pill pa-tone-muted pa-mono">
-            项目 {projectName} · 正式版 {baseRevision ?? '无'} · 草稿 {draftRevision ?? '无'}
-          </span>
-          <span className="pa-pill pa-tone-muted pa-mono">
-            代际 #{scopeEpoch} · 写入代际 #{writerEpoch}
+            <span aria-hidden="true">{drawingStatusMeta.symbol}</span> {drawingStatusMeta.text}
           </span>
         </div>
-        {isNarrow ? (
-          <div className="pa-row" role="status" aria-label="窄屏标签页降级状态">
-            <span className="pa-pill pa-tone-pending">⇄ 窄屏自动降级为标签页</span>
-            <span
-              className={`pa-pill ${modelStatusMeta.toneClass}`}
-              data-artifact-status={modelStatusMeta.stateKey}
-            >
-              <span aria-hidden="true">{modelStatusMeta.symbol}</span> {modelStatusMeta.text}
-            </span>
-            <span
-              className={`pa-pill ${drawingStatusMeta.toneClass}`}
-              data-artifact-status={drawingStatusMeta.stateKey}
-            >
-              <span aria-hidden="true">{drawingStatusMeta.symbol}</span> {drawingStatusMeta.text}
-            </span>
-          </div>
-        ) : null}
-      </div>
+      ) : null}
 
-      {/* Partial Artifact Failure Banner */}
       {drawingFailure ? (
         <div
           className="pa-danger-box pa-partial-fail-strip"
@@ -332,13 +256,16 @@ export function M2CenterCanvas({
           aria-label="部分产物失败提示"
         >
           <div className="pa-header">
-            <strong>
-              {formatPartialDrawingFailureMessage(
-                model.revision,
-                drawingFailure,
-                drawing.status === 'ready' ? drawing.revision : null,
-              )}
-            </strong>
+            <div className="pa-row">
+              <strong>
+                {formatPartialDrawingFailureMessage(
+                  model.revision,
+                  drawingFailure,
+                  drawing.status === 'ready' ? drawing.revision : null,
+                )}
+              </strong>
+              <span className="pa-muted">原因：{drawingFailure.reason}</span>
+            </div>
             <button
               ref={retryDrawingButtonRef}
               type="button"
@@ -349,7 +276,6 @@ export function M2CenterCanvas({
               {retryDrawingPending ? '正在重试图纸…' : '重试图纸'}
             </button>
           </div>
-          <span className="pa-muted">失败原因：{drawingFailure.reason}</span>
           {retryDrawingFeedback ? (
             <span role="status" className="pa-muted">
               {retryDrawingFeedback}
@@ -362,14 +288,13 @@ export function M2CenterCanvas({
         </div>
       ) : null}
 
-      {/* Natural Completion / Terminal Pending-Checks Summary Banner (F11 / E4: never auto-commits formal version) */}
       {naturalCompletionSummary ? (
         <div
           className={
             naturalCompletionSummary.allRequiredPassed &&
             !naturalCompletionSummary.isPendingChecksTerminal
-              ? 'pa-pass-box'
-              : 'pa-notice'
+              ? 'pa-pass-box pa-canvas-alert-strip'
+              : 'pa-notice pa-canvas-alert-strip'
           }
           role="status"
           aria-label="自然完成摘要"
@@ -408,25 +333,32 @@ export function M2CenterCanvas({
             <span className="pa-pill pa-tone-pass">
               ✓ 通过 {naturalCompletionSummary.passCount}
             </span>
-            <span className="pa-pill pa-tone-danger">
-              ✕ 失败 {naturalCompletionSummary.failCount}
-            </span>
-            <span className="pa-pill pa-tone-pending">
-              ? 待澄清 {naturalCompletionSummary.needsClarificationCount}
-            </span>
-            <span className="pa-pill pa-tone-muted">
-              ○ 未覆盖 {naturalCompletionSummary.uncoveredCount}
-            </span>
-            <span className="pa-pill pa-tone-danger">
-              ! 执行失败 {naturalCompletionSummary.executionFailedCount}
-            </span>
+            {naturalCompletionSummary.failCount > 0 ? (
+              <span className="pa-pill pa-tone-danger">
+                ✕ 失败 {naturalCompletionSummary.failCount}
+              </span>
+            ) : null}
+            {naturalCompletionSummary.needsClarificationCount > 0 ? (
+              <span className="pa-pill pa-tone-pending">
+                ? 待澄清 {naturalCompletionSummary.needsClarificationCount}
+              </span>
+            ) : null}
+            {naturalCompletionSummary.uncoveredCount > 0 ? (
+              <span className="pa-pill pa-tone-muted">
+                ○ 未覆盖 {naturalCompletionSummary.uncoveredCount}
+              </span>
+            ) : null}
+            {naturalCompletionSummary.executionFailedCount > 0 ? (
+              <span className="pa-pill pa-tone-danger">
+                ! 执行失败 {naturalCompletionSummary.executionFailedCount}
+              </span>
+            ) : null}
           </div>
         </div>
       ) : null}
 
-      {/* Stale Selection Banner */}
       {selectionInvalidated ? (
-        <div className="pa-notice" role="alert" aria-label="选中对象失效提示">
+        <div className="pa-notice pa-canvas-alert-strip" role="alert" aria-label="选中对象失效提示">
           <strong>选中对象已失效，请重新选择或重绑</strong>
           {invalidatedObjectLabel ? (
             <span className="pa-muted">（原对象：{invalidatedObjectLabel}）</span>
@@ -434,144 +366,177 @@ export function M2CenterCanvas({
         </div>
       ) : null}
 
-      {/* Dual View / Single View Split Canvas */}
-      <div
-        className={
-          effectiveViewMode === 'split'
-            ? 'pa-canvas-split pa-canvas-split-dual'
-            : 'pa-canvas-split'
-        }
-      >
-        {/* 3D Model View Pane */}
-        {showModelPane ? (
-          <section className="pa-viewport-card" aria-label="三维模型视图">
-            <div className="pa-viewport-header">
-              <div className="pa-row">
-                <div className="pa-viewport-tag">
-                  <h3 className="pa-title">
-                    3D 模型 · {formatRevisionDisplay(model.revision)}
-                  </h3>
+      {/* Main Canvas Stage with Minimal Floating Overlays */}
+      <div className="pa-canvas-stage-wrap">
+        {/* Top-Left Lightweight Overlay: Collapsible Structure Chip + Quiet Status Pills */}
+        <div className="pa-canvas-overlay-tl">
+          <div className="pa-structure-anchor">
+            <button
+              type="button"
+              data-testid="toggle-structure-btn"
+              className={`pa-float-chip ${structureOpen ? 'pa-float-chip-active' : ''}`}
+              aria-expanded={structureOpen}
+              aria-controls="pa-structure-popover"
+              onClick={onToggleStructure}
+            >
+              零件结构 ({features.length}) <span aria-hidden="true">{structureOpen ? '▴' : '▾'}</span>
+            </button>
+
+            {structureOpen ? (
+              <section
+                id="pa-structure-popover"
+                ref={objectListRegionRef}
+                tabIndex={-1}
+                className="pa-structure-popover pa-focus-region"
+                aria-label="对象列表"
+                onKeyDown={handleObjectListKeyDown}
+              >
+                <div className="pa-header">
+                  <span className="pa-card-label">零件结构（↑/↓ 切换）</span>
+                  <button
+                    type="button"
+                    className="pa-icon-btn"
+                    aria-label="收起零件结构"
+                    onClick={onCloseStructure}
+                  >
+                    ×
+                  </button>
                 </div>
+                {features.length === 0 ? (
+                  <p className="pa-muted">当前暂无可选几何特征。</p>
+                ) : (
+                  <div className="pa-structure-list" role="group" aria-label="可选几何特征对象">
+                    {features.map((obj, index) => {
+                      const isSelected = selectedObjectId === obj.objectId
+                      const isHighlighted = highlightedFeatureIds.has(obj.objectId)
+                      return (
+                        <button
+                          key={obj.objectId}
+                          ref={(el) => {
+                            objectItemRefs.current[index] = el
+                          }}
+                          type="button"
+                          data-feature-id={obj.objectId}
+                          data-highlighted={isHighlighted ? 'true' : 'false'}
+                          aria-pressed={isSelected}
+                          className={`pa-structure-item ${isSelected ? 'pa-structure-item-selected' : ''} ${isHighlighted ? 'pa-structure-item-highlighted' : ''}`}
+                          onClick={() => onSelectFeature(obj)}
+                        >
+                          <span>{obj.breadcrumb}</span>
+                          <span className="pa-mono pa-muted">{obj.featureRef}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </section>
+            ) : null}
+          </div>
+
+          {isDraftDisplay ? (
+            <span className="pa-pill pa-tone-pending pa-float-pill" aria-label="草稿预览标识">
+              ✎ 草稿
+            </span>
+          ) : null}
+          {sameRevisionAligned ? (
+            <span className="pa-pill pa-tone-pass pa-float-pill" aria-label="同版对齐标识">
+              ✓ 同版就绪
+            </span>
+          ) : null}
+          {checksInProgress ? (
+            <span className="pa-pill pa-tone-action pa-float-pill" aria-label="检查进行中标识">
+              ◌ 检查中
+            </span>
+          ) : null}
+        </div>
+
+        {/* Dual View / Single View Split Canvas */}
+        <div
+          className={
+            effectiveViewMode === 'split'
+              ? 'pa-canvas-split pa-canvas-split-dual'
+              : 'pa-canvas-split'
+          }
+        >
+          {/* 3D Model View Pane */}
+          {showModelPane ? (
+            <section className="pa-viewport-card pa-viewport-clean" aria-label="三维模型视图">
+              <div className="pa-viewport-corner-tag">
+                <span className="pa-mono">3D · {formatRevisionDisplay(model.revision)}</span>
                 <span
                   className={`pa-pill ${modelStatusMeta.toneClass}`}
                   data-artifact-status={modelStatusMeta.stateKey}
                 >
                   <span aria-hidden="true">{modelStatusMeta.symbol}</span> {modelStatusMeta.text}
                 </span>
-                {model.isDraft ? (
-                  <span className="pa-pill pa-tone-pending">✎ 草稿 3D</span>
-                ) : null}
               </div>
-              <div className="pa-viewport-tools">
+
+              {model.status === 'empty' ? (
+                <div className="pa-viewport-empty">
+                  <p className="pa-muted">○ 尚未生成三维模型，可在右侧对话中描述需求开始建模。</p>
+                </div>
+              ) : (
+                <div className="pa-viewport-body">
+                  {modelMesh ? (
+                    <M2ThreeMeshViewport
+                      modelMesh={modelMesh}
+                      camera={camera}
+                      selectedObjectId={selectedObjectId}
+                      highlightedFeatureIds={highlightedFeatureIds}
+                      theme={theme}
+                      onPickRange={handlePickMeshRange}
+                      onUpdateCamera={onUpdateCamera}
+                    />
+                  ) : (
+                    <div className="pa-feature-canvas" role="group" aria-label="三维模型特征拾取区">
+                      {features.map((feat) => {
+                        const isSelected = selectedObjectId === feat.objectId
+                        const isHighlighted = highlightedFeatureIds.has(feat.objectId)
+                        return (
+                          <button
+                            key={feat.objectId}
+                            type="button"
+                            data-feature-id={feat.objectId}
+                            data-highlighted={isHighlighted ? 'true' : 'false'}
+                            aria-pressed={isSelected}
+                            className={`pa-canvas-chip ${isHighlighted ? 'pa-canvas-chip-highlighted' : ''} ${isSelected ? 'pa-canvas-chip-selected' : ''}`}
+                            onClick={() => onSelectFeature(feat)}
+                          >
+                            <span className="pa-chip-title">{feat.breadcrumb}</span>
+                            <span className="pa-mono pa-muted">{feat.featureRef}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Subtle Bottom Telemetry + Single Transparent Fit Button */}
+              <div className="pa-viewport-overlay-bottom">
+                <span className="pa-viewport-meta pa-mono" aria-label="模型视角状态">
+                  视角 {camera.yawDeg}°/{camera.pitchDeg}° · 缩放 {camera.zoomPercent}%
+                </span>
                 <button
                   type="button"
-                  className="pa-btn pa-btn-sm"
-                  onClick={() =>
-                    onUpdateCamera((prev) => ({ ...prev, yawDeg: prev.yawDeg - 15 }))
-                  }
-                >
-                  左旋
-                </button>
-                <button
-                  type="button"
-                  className="pa-btn pa-btn-sm"
-                  onClick={() =>
-                    onUpdateCamera((prev) => ({ ...prev, yawDeg: prev.yawDeg + 15 }))
-                  }
-                >
-                  右旋
-                </button>
-                <button
-                  type="button"
-                  className="pa-btn pa-btn-sm"
-                  onClick={() =>
-                    onUpdateCamera((prev) => ({
-                      ...prev,
-                      zoomPercent: Math.min(300, prev.zoomPercent + 20),
-                    }))
-                  }
-                >
-                  放大
-                </button>
-                <button
-                  type="button"
-                  className="pa-btn pa-btn-sm"
-                  onClick={() =>
-                    onUpdateCamera((prev) => ({
-                      ...prev,
-                      zoomPercent: Math.max(40, prev.zoomPercent - 20),
-                    }))
-                  }
-                >
-                  缩小
-                </button>
-                <button
-                  type="button"
-                  className="pa-btn pa-btn-sm"
+                  className="pa-float-fit-btn"
+                  aria-label="适合窗口"
+                  title="复位三维视角并适合窗口（支持拖拽旋转、滚轮缩放）"
                   onClick={() =>
                     onUpdateCamera(() => ({ yawDeg: 35, pitchDeg: 25, zoomPercent: 100 }))
                   }
                 >
-                  适合窗口
+                  适配
                 </button>
               </div>
-            </div>
+            </section>
+          ) : null}
 
-            <div className="pa-viewport-meta pa-mono" aria-label="模型视角状态">
-              视角 {camera.yawDeg}°/{camera.pitchDeg}° · 缩放 {camera.zoomPercent}%
-              {model.fingerprint ? ` · 指纹 ${model.fingerprint}` : ''}
-            </div>
-
-            {model.status === 'empty' ? (
-              <p className="pa-muted">○ 尚未生成可重建的三维模型草稿。</p>
-            ) : (
-              <>
-                {modelMesh ? (
-                  <M2ThreeMeshViewport
-                    modelMesh={modelMesh}
-                    camera={camera}
-                    selectedObjectId={selectedObjectId}
-                    highlightedFeatureIds={highlightedFeatureIds}
-                    theme={theme}
-                    onPickRange={handlePickMeshRange}
-                    onUpdateCamera={onUpdateCamera}
-                  />
-                ) : null}
-                <div className="pa-feature-canvas" role="group" aria-label="三维模型特征拾取区">
-                  {features.map((feat) => {
-                    const isSelected = selectedObjectId === feat.objectId
-                    const isHighlighted = highlightedFeatureIds.has(feat.objectId)
-                    return (
-                      <button
-                        key={feat.objectId}
-                        type="button"
-                        data-feature-id={feat.objectId}
-                        data-highlighted={isHighlighted ? 'true' : 'false'}
-                        aria-pressed={isSelected}
-                        className={`pa-canvas-chip ${isHighlighted ? 'pa-canvas-chip-highlighted' : ''} ${isSelected ? 'pa-canvas-chip-selected' : ''}`}
-                        onClick={() => onSelectFeature(feat)}
-                      >
-                        <span className="pa-chip-title">{feat.breadcrumb}</span>
-                        <span className="pa-mono pa-muted">{feat.featureRef}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </>
-            )}
-          </section>
-        ) : null}
-
-        {/* 2D Drawing View Pane */}
-        {showDrawingPane ? (
-          <section className="pa-viewport-card" aria-label="二维图纸视图">
-            <div className="pa-viewport-header">
-              <div className="pa-row">
-                <div className="pa-viewport-tag">
-                  <h3 className="pa-title">
-                    2D 图纸 · {formatRevisionDisplay(drawing.revision)}
-                  </h3>
-                </div>
+          {/* 2D Drawing View Pane */}
+          {showDrawingPane ? (
+            <section className="pa-viewport-card pa-viewport-clean" aria-label="二维图纸视图">
+              <div className="pa-viewport-corner-tag">
+                <span className="pa-mono">2D · {formatRevisionDisplay(drawing.revision)}</span>
                 <span
                   className={`pa-pill ${drawingStatusMeta.toneClass}`}
                   data-artifact-status={drawingStatusMeta.stateKey}
@@ -582,196 +547,149 @@ export function M2CenterCanvas({
                   <span className="pa-pill pa-tone-pending">⚠ 显示上一有效图纸</span>
                 ) : null}
               </div>
-              <div className="pa-viewport-tools">
+
+              {drawing.status === 'empty' ? (
+                <div className="pa-viewport-empty">
+                  <p className="pa-muted">○ 当前暂无二维图纸，等待投影完成后自动展示。</p>
+                </div>
+              ) : (
+                <div className="pa-viewport-body">
+                  {drawingVector ? (
+                    <M2VectorDrawingViewport
+                      drawingVector={drawingVector}
+                      drawingRevision={drawing.revision}
+                      drawingFailure={drawingFailure}
+                      annotations={annotations}
+                      selectedAnnotationId={selectedAnnotationId}
+                      highlightedAnnotationIds={highlightedAnnotationIds}
+                      drawingViewport={drawingViewport}
+                      onSelectAnnotation={onSelectAnnotation}
+                      onUpdateDrawingViewport={onUpdateDrawingViewport}
+                    />
+                  ) : (
+                    <div className="pa-annotation-list" role="group" aria-label="图纸尺寸标注拾取区">
+                      {annotations.map((ann) => {
+                        const isSelected = selectedAnnotationId === ann.annotationId
+                        const isHighlighted = highlightedAnnotationIds.has(ann.annotationId)
+                        return (
+                          <button
+                            key={ann.annotationId}
+                            type="button"
+                            data-annotation-id={ann.annotationId}
+                            data-highlighted={isHighlighted ? 'true' : 'false'}
+                            aria-pressed={isSelected}
+                            className={`pa-canvas-chip ${isHighlighted ? 'pa-canvas-chip-highlighted' : ''} ${isSelected ? 'pa-canvas-chip-selected' : ''}`}
+                            onClick={() => onSelectAnnotation(ann)}
+                          >
+                            <span className="pa-chip-title">{ann.label}</span>
+                            <span className="pa-mono">{ann.valueText}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Subtle Bottom Telemetry + Single Transparent Fit Button */}
+              <div className="pa-viewport-overlay-bottom">
+                <span className="pa-viewport-meta pa-mono" aria-label="图纸缩放状态">
+                  图纸缩放 {drawingViewport.zoomPercent}% · 平移 ({drawingViewport.panX},{' '}
+                  {drawingViewport.panY})
+                </span>
                 <button
                   type="button"
-                  className="pa-btn pa-btn-sm"
-                  onClick={() =>
-                    onUpdateDrawingViewport((prev) => ({
-                      ...prev,
-                      zoomPercent: Math.min(300, prev.zoomPercent + 25),
-                    }))
-                  }
-                >
-                  图纸放大
-                </button>
-                <button
-                  type="button"
-                  className="pa-btn pa-btn-sm"
-                  onClick={() =>
-                    onUpdateDrawingViewport((prev) => ({
-                      ...prev,
-                      zoomPercent: Math.max(50, prev.zoomPercent - 25),
-                    }))
-                  }
-                >
-                  图纸缩小
-                </button>
-                <button
-                  type="button"
-                  className="pa-btn pa-btn-sm"
+                  className="pa-float-fit-btn"
+                  aria-label="图纸适合窗口"
+                  title="复位二维图纸并适合窗口（支持拖拽平移、滚轮缩放）"
                   onClick={() =>
                     onUpdateDrawingViewport(() => ({ panX: 0, panY: 0, zoomPercent: 100 }))
                   }
                 >
-                  图纸适合窗口
+                  适配
                 </button>
               </div>
-            </div>
-
-            <div className="pa-viewport-meta pa-mono" aria-label="图纸缩放状态">
-              图纸缩放 {drawingViewport.zoomPercent}% · 平移 ({drawingViewport.panX},{' '}
-              {drawingViewport.panY})
-              {drawing.fingerprint ? ` · 指纹 ${drawing.fingerprint}` : ''}
-            </div>
-
-            {drawing.status === 'empty' ? (
-              <p className="pa-muted">○ 当前暂无二维图纸，等待投影完成后自动展示。</p>
-            ) : drawingVector ? (
-              <M2VectorDrawingViewport
-                drawingVector={drawingVector}
-                drawingRevision={drawing.revision}
-                drawingFailure={drawingFailure}
-                annotations={annotations}
-                selectedAnnotationId={selectedAnnotationId}
-                highlightedAnnotationIds={highlightedAnnotationIds}
-                drawingViewport={drawingViewport}
-                onSelectAnnotation={onSelectAnnotation}
-                onUpdateDrawingViewport={onUpdateDrawingViewport}
-              />
-            ) : (
-              <div className="pa-annotation-list" role="group" aria-label="图纸尺寸标注拾取区">
-                {annotations.map((ann) => {
-                  const isSelected = selectedAnnotationId === ann.annotationId
-                  const isHighlighted = highlightedAnnotationIds.has(ann.annotationId)
-                  return (
-                    <button
-                      key={ann.annotationId}
-                      type="button"
-                      data-annotation-id={ann.annotationId}
-                      data-highlighted={isHighlighted ? 'true' : 'false'}
-                      aria-pressed={isSelected}
-                      className={`pa-canvas-chip ${isHighlighted ? 'pa-canvas-chip-highlighted' : ''} ${isSelected ? 'pa-canvas-chip-selected' : ''}`}
-                      onClick={() => onSelectAnnotation(ann)}
-                    >
-                      <span className="pa-chip-title">{ann.label}</span>
-                      <span className="pa-mono">{ann.valueText}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </section>
-        ) : null}
-      </div>
-
-      {/* Floating Selection Context Bar (悬浮对象引用上下文条) */}
-      <div className="pa-context-dock">
-        <section
-          className={
-            selectedFeature
-              ? 'pa-card pa-context-bar pa-context-bar-active'
-              : 'pa-card pa-context-bar'
-          }
-          aria-label="对象引用上下文区"
-          data-selection-active={selectedFeature ? 'true' : 'false'}
-        >
-          <div className="pa-header">
-            <div className="pa-row">
-              <span
-                className={
-                  selectedFeature
-                    ? 'pa-selection-dot'
-                    : 'pa-selection-dot pa-selection-dot-idle'
-                }
-                aria-hidden="true"
-              />
-              <span className="pa-card-label">当前选择</span>
-              {selectedFeature ? (
-                <>
-                  <strong data-testid="selection-breadcrumb">{selectedFeature.breadcrumb}</strong>
-                  <span className="pa-pill pa-tone-action pa-mono">
-                    {selectedFeature.featureRef}
-                  </span>
-                </>
-              ) : (
-                <span className="pa-muted">未选中任何几何对象</span>
-              )}
-            </div>
-
-            <div className="pa-controls">
-              <button
-                type="button"
-                className="pa-btn pa-btn-primary pa-btn-sm"
-                disabled={!selectedFeature}
-                onClick={onBringIntoNextPrompt}
-              >
-                带入下一句话
-              </button>
-              <button
-                type="button"
-                className="pa-btn pa-btn-sm"
-                disabled={!selectedFeature}
-                onClick={onCopyToExternalSession}
-              >
-                复制到外部会话
-              </button>
-              <button
-                type="button"
-                className="pa-btn pa-btn-ghost pa-btn-sm"
-                disabled={!selectedFeature && !selectedAnnotationId}
-                onClick={onClearSelection}
-              >
-                取消选择
-              </button>
-            </div>
-          </div>
-
-          {contextActionFeedback ? (
-            <p className="pa-muted" role="status">
-              {contextActionFeedback}
-            </p>
+            </section>
           ) : null}
+        </div>
 
-          {/* Keyboard-navigable Object List */}
-          <section
-            ref={objectListRegionRef}
-            tabIndex={-1}
-            className="pa-object-list-region pa-focus-region"
-            aria-label="对象列表"
-            onKeyDown={handleObjectListKeyDown}
-          >
-            <div className="pa-header">
-              <span className="pa-card-label">对象列表（↑/↓ 切换对象，F6 / Shift+F6 跨区跳转）</span>
-              <span className="pa-muted">
-                主流程通过对话与特征选取驱动修改，不提供手动参数表、尺寸滑块或坐标编辑器。
-              </span>
-            </div>
-            <div className="pa-controls" role="group" aria-label="可选几何特征对象">
-              {features.map((obj, index) => (
+        {/* Floating Selection Context Bar: 100% HIDDEN when nothing is selected */}
+        {selectedFeature ? (
+          <div className="pa-context-float-bottom">
+            <section
+              className="pa-context-pill"
+              aria-label="对象引用上下文区"
+              data-selection-active="true"
+            >
+              <span className="pa-selection-dot" aria-hidden="true" />
+              <strong data-testid="selection-breadcrumb">{selectedFeature.breadcrumb}</strong>
+              <span className="pa-mono pa-muted pa-context-ref">{selectedFeature.featureRef}</span>
+
+              <div className="pa-context-actions">
+                {sidebarMode === 'builtin' ? (
+                  <>
+                    <button
+                      type="button"
+                      className="pa-btn pa-btn-primary pa-btn-sm"
+                      onClick={onBringIntoNextPrompt}
+                    >
+                      带入下一句话
+                    </button>
+                    <button
+                      type="button"
+                      className="pa-btn pa-btn-ghost pa-btn-sm"
+                      title="复制对象引用到外部会话"
+                      onClick={onCopyToExternalSession}
+                    >
+                      复制到外部会话
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="pa-btn pa-btn-primary pa-btn-sm"
+                      onClick={onCopyToExternalSession}
+                    >
+                      复制到外部会话
+                    </button>
+                    <button
+                      type="button"
+                      className="pa-btn pa-btn-ghost pa-btn-sm"
+                      title="带入内置对话的下一句话"
+                      onClick={onBringIntoNextPrompt}
+                    >
+                      带入下一句话
+                    </button>
+                  </>
+                )}
                 <button
-                  key={obj.objectId}
-                  ref={(el) => {
-                    objectItemRefs.current[index] = el
-                  }}
                   type="button"
-                  aria-pressed={selectedObjectId === obj.objectId}
-                  className={
-                    selectedObjectId === obj.objectId
-                      ? 'pa-btn pa-btn-sm pa-btn-active'
-                      : 'pa-btn pa-btn-sm'
-                  }
-                  onClick={() => onSelectFeature(obj)}
+                  className="pa-icon-btn"
+                  aria-label="取消选择"
+                  title="取消选择"
+                  onClick={onClearSelection}
                 >
-                  {obj.breadcrumb}
+                  ×
                 </button>
-              ))}
-            </div>
-          </section>
-        </section>
+              </div>
+            </section>
+            {contextActionFeedback ? (
+              <span className="pa-context-toast" role="status">
+                {contextActionFeedback}
+              </span>
+            ) : null}
+          </div>
+        ) : contextActionFeedback ? (
+          <div className="pa-context-float-bottom">
+            <span className="pa-context-toast" role="status">
+              {contextActionFeedback}
+            </span>
+          </div>
+        ) : null}
 
         {previewMessage ? (
-          <div className="pa-pass-box" role="status">
+          <div className="pa-preview-toast" role="status">
             <span>{previewMessage}</span>
           </div>
         ) : null}

@@ -129,37 +129,36 @@ export function M2SidebarPanels({
               const answerValue = draftAnswers[req.requirementId] ?? ''
               return (
                 <li key={req.requirementId} className="pa-card">
-                  <div className="pa-header">
-                    <strong>{req.title}</strong>
-                    <span
-                      className={`pa-pill ${
-                        needsClarify
-                          ? 'pa-tone-pending'
+                  {/* Whole row clickable to locate feature & source excerpt */}
+                  <button
+                    type="button"
+                    className="pa-check-trigger"
+                    aria-label={`定位关联特征与原文：${req.title}`}
+                    onClick={() => onSelectRequirement(req)}
+                  >
+                    <div className="pa-header">
+                      <strong>{req.title}</strong>
+                      <span
+                        className={`pa-pill ${
+                          needsClarify
+                            ? 'pa-tone-pending'
+                            : req.status === 'uncovered'
+                              ? 'pa-tone-muted'
+                              : 'pa-tone-pass'
+                        }`}
+                      >
+                        {needsClarify
+                          ? `? 待回答/待澄清（${formatClarificationReason(req.clarificationReason)}）`
                           : req.status === 'uncovered'
-                            ? 'pa-tone-muted'
-                            : 'pa-tone-pass'
-                      }`}
-                    >
-                      {needsClarify
-                        ? `? 待回答/待澄清（${formatClarificationReason(req.clarificationReason)}）`
-                        : req.status === 'uncovered'
-                          ? '○ 未覆盖'
-                          : '✓ 已确认'}
-                    </span>
-                  </div>
-                  <p className="pa-muted">解释：{req.interpretation}</p>
-                  <p className="pa-muted pa-mono">
-                    原文：{req.anchor.documentName} · 第 {req.anchor.page} 页 — {req.anchor.excerpt}
-                  </p>
-                  <div className="pa-controls">
-                    <button
-                      type="button"
-                      className="pa-btn pa-btn-sm"
-                      onClick={() => onSelectRequirement(req)}
-                    >
-                      定位关联特征与原文
-                    </button>
-                  </div>
+                            ? '○ 未覆盖'
+                            : '✓ 已确认'}
+                      </span>
+                    </div>
+                    <p className="pa-muted">解释：{req.interpretation}</p>
+                    <p className="pa-muted pa-mono">
+                      原文：{req.anchor.documentName} · 第 {req.anchor.page} 页 — {req.anchor.excerpt}
+                    </p>
+                  </button>
 
                   {needsClarify ? (
                     <div className="pa-notice" aria-label={`待澄清项 ${req.title}`}>
@@ -417,7 +416,7 @@ export function M2SidebarPanels({
     )
   }
 
-  // History panel (M2 event history + M3 formal versions, uncommitted drafts, undo, reopen restore & migration)
+  // History panel (Timeline: formal versions, uncommitted drafts, contextual undo, restore & migration)
   const formatDraftStatus = (status: M3UncommittedDraftItem['status']) => {
     if (status === 'passed') return { label: '✓ 可提交', tone: 'pa-tone-pass' }
     if (status === 'blocked') return { label: '✕ 已阻塞', tone: 'pa-tone-danger' }
@@ -426,7 +425,6 @@ export function M2SidebarPanels({
 
   return (
     <section className="pa-list" aria-label="修订与事件历史面板">
-      {/* Reopen Restore Status (A09 / A10) */}
       {restoreStatus ? (
         <section className="pa-card" aria-label="重开项目恢复状态">
           <div className="pa-header">
@@ -481,18 +479,18 @@ export function M2SidebarPanels({
         )}
       </section>
 
-      {/* Independent Uncommitted Drafts List & Undo Blocked Change (A04 / A10) */}
+      {/* Independent Uncommitted Drafts List — Undo shown prominently ONLY when blocked draft exists */}
       <section className="pa-card" aria-label="独立未提交草稿列表">
         <div className="pa-header">
           <h3 className="pa-title">独立未提交草稿（{uncommittedDrafts.length}）</h3>
-          {onUndoBlockedDraft ? (
+          {onUndoBlockedDraft && canUndoBlockedDraft ? (
             <button
               type="button"
-              className="pa-btn pa-btn-sm"
-              disabled={!canUndoBlockedDraft || undoPending}
+              className="pa-btn pa-btn-primary pa-btn-sm"
+              disabled={undoPending}
               onClick={onUndoBlockedDraft}
             >
-              {undoPending ? '正在撤销…' : '撤销最近一次被阻塞草稿修改'}
+              {undoPending ? '正在撤销…' : '撤销被阻塞修改'}
             </button>
           ) : null}
         </div>
@@ -529,51 +527,49 @@ export function M2SidebarPanels({
         )}
       </section>
 
-      {/* Legacy Migration Report Entry (A10) */}
-      <section className="pa-card" aria-label="旧项目迁移报告入口">
-        <div className="pa-header">
-          <span className="pa-card-label">旧项目迁移差异与兼容报告</span>
-          <div className="pa-controls">
-            {migrationReport && onOpenMigrationDrawer ? (
-              <button
-                type="button"
-                className="pa-btn pa-btn-sm pa-btn-active"
-                onClick={onOpenMigrationDrawer}
-              >
-                展开迁移差异抽屉
-              </button>
-            ) : null}
-            {onLoadMigrationReport ? (
-              <button
-                type="button"
-                className="pa-btn pa-btn-sm"
-                disabled={migrationLoading}
-                onClick={onLoadMigrationReport}
-              >
-                {migrationLoading ? '读取中…' : '读取迁移差异报告'}
-              </button>
-            ) : null}
+      {/* Legacy Migration Report Entry: compact when loaded or notice active */}
+      {migrationReport || migrationNotice ? (
+        <section className="pa-card" aria-label="旧项目迁移报告入口">
+          <div className="pa-header">
+            <span className="pa-card-label">旧项目迁移差异与兼容报告</span>
+            <div className="pa-controls">
+              {migrationReport && onOpenMigrationDrawer ? (
+                <button
+                  type="button"
+                  className="pa-btn pa-btn-sm pa-btn-active"
+                  onClick={onOpenMigrationDrawer}
+                >
+                  展开迁移差异抽屉
+                </button>
+              ) : null}
+              {onLoadMigrationReport ? (
+                <button
+                  type="button"
+                  className="pa-btn pa-btn-sm"
+                  disabled={migrationLoading}
+                  onClick={onLoadMigrationReport}
+                >
+                  {migrationLoading ? '读取中…' : '刷新迁移报告'}
+                </button>
+              ) : null}
+            </div>
           </div>
-        </div>
-        {migrationReport ? (
-          <p className="pa-muted">
-            格式：{migrationReport.sourceFormat} · 未解释旧字段{' '}
-            {migrationReport.unexplainedLegacyFields.length} 项 · 受限操作{' '}
-            {migrationReport.restrictedOperations.length} 项
-          </p>
-        ) : (
-          <p className="pa-muted">
-            可检查旧 `.cunlian` 隔套项目迁移差异、保留字段与一维尺寸链兼容结论。
-          </p>
-        )}
-        {migrationNotice ? (
-          <p className="pa-muted" role="status">
-            {migrationNotice}
-          </p>
-        ) : null}
-      </section>
+          {migrationReport ? (
+            <p className="pa-muted">
+              格式：{migrationReport.sourceFormat} · 未解释旧字段{' '}
+              {migrationReport.unexplainedLegacyFields.length} 项 · 受限操作{' '}
+              {migrationReport.restrictedOperations.length} 项
+            </p>
+          ) : null}
+          {migrationNotice ? (
+            <p className="pa-muted" role="status">
+              {migrationNotice}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
-      {/* Existing M2 Event History */}
+      {/* M2 Event History */}
       <div className="pa-header">
         <h3 className="pa-title">修订与产物历史（{history.length}）</h3>
       </div>

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto'
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { deleteProjectDatabase } from './test/projectDb'
 import App, { resolveDesktopHashRoute } from './App'
@@ -71,7 +71,8 @@ describe('App：新工作台与旧工作台入口衔接', () => {
     render(<App />)
 
     expect(screen.getByRole('main', { name: '寸链 M1 双入口工作台' })).toBeInTheDocument()
-    const legacyLink = screen.getByRole('link', { name: '返回旧工作台' })
+    fireEvent.click(screen.getByTestId('more-menu-btn'))
+    const legacyLink = screen.getByRole('menuitem', { name: '返回旧工作台' })
     expect(legacyLink).toHaveAttribute('href', '#/desktop-legacy')
 
     act(() => {

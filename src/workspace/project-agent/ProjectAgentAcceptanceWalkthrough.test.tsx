@@ -390,7 +390,7 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
     // 外置模式握手检测
     await user.click(screen.getByRole('button', { name: '检测连接状态' }))
     expect(await screen.findByText(/已检测到客户端 Claude Desktop 握手成功/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '进入外置任务活动' }))
+    await user.click(screen.getByRole('button', { name: '进入工作台' }))
 
     // 推送首草稿 3D 模型（80×50×8 mm，两只 Ø10 通孔）
     const d1Drawing = buildPlateDrawing('draft-1', 60)
@@ -507,7 +507,7 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
     await user.click(screen.getByRole('button', { name: /使用模型 API/ }))
     await user.type(screen.getByLabelText('密钥'), 'sk-test-a01')
     await user.click(screen.getByRole('button', { name: '测试连接' }))
-    await user.click(await screen.findByRole('button', { name: '进入内置建模对话' }))
+    await user.click(await screen.findByRole('button', { name: '开始建模' }))
 
     await user.type(screen.getByLabelText('内置对话输入框'), '按安装板任务书生成模型、图纸与边距检查')
     await user.click(screen.getByRole('button', { name: '发送' }))
@@ -653,7 +653,7 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
     await user.click(screen.getByRole('button', { name: /使用模型 API/ }))
     await user.type(screen.getByLabelText('密钥'), 'sk-a03')
     await user.click(screen.getByRole('button', { name: '测试连接' }))
-    await user.click(await screen.findByRole('button', { name: '进入内置建模对话' }))
+    await user.click(await screen.findByRole('button', { name: '开始建模' }))
 
     // A03 Step 1: 3D 拾取右孔 -> 双向高亮 SVG 标注 ann-right-margin
     const threeViewport = screen.getByTestId('m2-three-viewport')
@@ -666,18 +666,21 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
       screen.getByTestId('m2-drawing-svg').querySelector('g[data-svg-annotation-id="ann-right-margin"]'),
     ).toHaveAttribute('data-highlighted', 'true')
 
-    // 调整 3D 视角与 2D 平移/缩放
-    await user.click(screen.getByRole('button', { name: '右旋' }))
-    await user.click(screen.getByRole('button', { name: '放大' }))
+    // 通过鼠标拖拽旋转/滚轮缩放调整 3D 视角与 2D 平移/缩放
+    const threeSvg = screen.getByTestId('m2-three-fallback-svg')
+    fireEvent.mouseDown(threeSvg, { button: 0, clientX: 100, clientY: 100 })
+    fireEvent.mouseMove(threeSvg, { clientX: 125, clientY: 100 })
+    fireEvent.mouseUp(threeSvg)
+    fireEvent.wheel(threeSvg, { deltaY: -100 })
     const drawingSvg = screen.getByTestId('m2-drawing-svg')
     fireEvent.mouseDown(drawingSvg, { button: 0, clientX: 50, clientY: 50 })
     fireEvent.mouseMove(drawingSvg, { clientX: 90, clientY: 70 })
     fireEvent.mouseUp(drawingSvg)
-    await user.click(screen.getByRole('button', { name: '图纸放大' }))
+    fireEvent.wheel(drawingSvg, { deltaY: -100 })
 
     const camBefore = screen.getByLabelText('模型视角状态').textContent
     const drawBefore = screen.getByLabelText('图纸缩放状态').textContent
-    expect(camBefore).toContain('视角 50°/25° · 缩放 120%')
+    expect(camBefore).toContain('视角 50°/25° · 缩放 115%')
     expect(drawBefore).toContain('图纸缩放 125% · 平移 (20, 10)')
 
     // 带入下一句话并发送“向右移 1 mm”
@@ -727,7 +730,7 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
       })
     })
 
-    expect(screen.getByLabelText('模型视角状态')).toHaveTextContent('视角 50°/25° · 缩放 120%')
+    expect(screen.getByLabelText('模型视角状态')).toHaveTextContent('视角 50°/25° · 缩放 115%')
     expect(screen.getByLabelText('图纸缩放状态')).toHaveTextContent('图纸缩放 125% · 平移 (20, 10)')
     expect(within(screen.getByTestId('m2-drawing-svg')).getByText(/14\.0 mm/)).toBeInTheDocument()
 
@@ -771,7 +774,7 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
     })
 
     // 打开完成视图：正式保存禁用、焦点落到撤销按钮、可调用 locateM2Evidence 定位条款与右孔
-    const completionToggle = screen.getByRole('button', { name: '保存此版本 / 完成视图' })
+    const completionToggle = screen.getByRole('button', { name: '完成并保存' })
     await user.click(completionToggle)
 
     const completionView = screen.getByTestId('completion-view')
@@ -874,8 +877,8 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
     const notice = screen.getByRole('status', { name: '外部项目修改结果通知' })
     expect(within(notice).getByText('参考盖板独立项目')).toBeInTheDocument()
     expect(within(notice).getByRole('button', { name: '打开查看' })).toBeInTheDocument()
-    // 前台项目保持 proj-plate-01 未被打断
-    expect(screen.getByLabelText('顶部连接状态栏')).toHaveTextContent('proj-plate-01')
+    // 前台项目保持安装板项目未被外部通知打断
+    expect(screen.getByLabelText('顶部连接状态栏')).toHaveTextContent('安装板项目')
   })
 
   it('A07（缺项/冲突/未覆盖任务澄清 + 断线保留结果、焦点落到「重连」、接管推进代际拒绝旧包）', async () => {
@@ -1275,7 +1278,7 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
     await user.click(screen.getByRole('button', { name: /使用模型 API/ }))
     await user.type(screen.getByLabelText('密钥'), 'sk-a11')
     await user.click(screen.getByRole('button', { name: '测试连接' }))
-    await user.click(await screen.findByRole('button', { name: '进入内置建模对话' }))
+    await user.click(await screen.findByRole('button', { name: '开始建模' }))
 
     await user.type(screen.getByLabelText('内置对话输入框'), '完成')
     await user.click(screen.getByRole('button', { name: '发送' }))
@@ -1365,9 +1368,10 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
       />,
     )
 
-    // 先选中原右孔（obj-right-hole）
+    // 先展开零件结构浮层并选中原右孔（obj-right-hole）
+    await user.click(screen.getByTestId('toggle-structure-btn'))
     const objectList = screen.getByLabelText('对象列表')
-    await user.click(within(objectList).getByRole('button', { name: '安装板 › 右孔 › 圆柱面' }))
+    await user.click(within(objectList).getByRole('button', { name: /安装板 › 右孔 › 圆柱面/ }))
     expect(screen.getByTestId('selection-breadcrumb')).toHaveTextContent('安装板 › 右孔 › 圆柱面')
 
     // 推送删除原右孔并新建同径孔（objectId 变为 obj-right-hole-v2）的修订
@@ -1401,6 +1405,6 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
     expect(staleAlert).toHaveTextContent('选中对象已失效，请重新选择或重绑')
     expect(staleAlert).toHaveTextContent('安装板 › 右孔 › 圆柱面')
     expect(screen.queryByTestId('selection-breadcrumb')).not.toBeInTheDocument()
-    expect(screen.getByText('未选中任何几何对象')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '对象引用上下文区' })).not.toBeInTheDocument()
   })
 })

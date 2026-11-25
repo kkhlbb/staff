@@ -191,7 +191,7 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
 
     // 顶部栏入口存在并打开完成视图
     const topBar = screen.getByRole('banner', { name: '顶部连接状态栏' })
-    await user.click(within(topBar).getByRole('button', { name: '保存此版本 / 完成视图' }))
+    await user.click(within(topBar).getByRole('button', { name: '完成并保存' }))
 
     const view = screen.getByTestId('completion-view')
     expect(within(view).getByTestId('completion-part-name')).toHaveTextContent('零件：安装板')
@@ -291,7 +291,7 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
     await user.click(screen.getByRole('button', { name: /使用模型 API/ }))
     await user.type(screen.getByLabelText('密钥'), 'sk-test-key')
     await user.click(screen.getByRole('button', { name: '测试连接' }))
-    await user.click(await screen.findByRole('button', { name: '进入内置建模对话' }))
+    await user.click(await screen.findByRole('button', { name: '开始建模' }))
 
     // 在内置对话中输入“完成”
     await user.type(screen.getByLabelText('内置对话输入框'), '完成')
@@ -351,7 +351,7 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
     )
 
     // 点击顶部栏打开完成视图 -> 此时图纸和检查仍在生成中
-    await user.click(screen.getByRole('button', { name: '保存此版本 / 完成视图' }))
+    await user.click(screen.getByRole('button', { name: '完成并保存' }))
     const view = screen.getByTestId('completion-view')
     expect(within(view).getByRole('status', { name: '完成视图生成实时进度' })).toBeInTheDocument()
     expect(within(view).getByRole('button', { name: '保存正式版本' })).toBeDisabled()
@@ -595,7 +595,6 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
     // 前台项目与画布保持安装板项目不被打断
     const topBar = screen.getByRole('banner', { name: '顶部连接状态栏' })
     expect(within(topBar).getByText('安装板项目')).toBeInTheDocument()
-    expect(within(topBar).getByText('proj-plate-01')).toBeInTheDocument()
 
     // 非侵入式通知显示目标项目名、草稿修订与「打开查看」按钮
     const notice = screen.getByRole('status', { name: '外部项目修改结果通知' })
@@ -611,7 +610,6 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
       }),
     )
     expect(await within(topBar).findByText('外壳盖板项目')).toBeInTheDocument()
-    expect(within(topBar).getByText('proj-cover-02')).toBeInTheDocument()
     expect(screen.getByText(/已恢复外壳盖板项目最新草稿 9 产物/)).toBeInTheDocument()
   })
 
@@ -692,9 +690,7 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
     expect(within(historyPanel).getByText('✕ 已阻塞')).toBeInTheDocument()
 
     // 撤销最近一次被阻塞的草稿修改
-    await user.click(
-      within(historyPanel).getByRole('button', { name: '撤销最近一次被阻塞草稿修改' }),
-    )
+    await user.click(within(historyPanel).getByRole('button', { name: '撤销被阻塞修改' }))
     expect(undoDraftChange).toHaveBeenCalledWith(
       expect.objectContaining({
         projectId: 'proj-plate-01',
@@ -727,8 +723,9 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
       />,
     )
 
-    // 从历史面板触发加载旧项目迁移报告
-    await user.click(screen.getByRole('button', { name: '读取迁移差异报告' }))
+    // 从顶栏「更多 ⋯」菜单触发加载旧项目迁移报告
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: '查看旧项目迁移差异报告' }))
     expect(getMigrationReport).toHaveBeenCalledWith({ projectId: 'sample-spacer-01' })
 
     const banner = await screen.findByTestId('migration-banner')
@@ -806,13 +803,14 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
     ).toBeInTheDocument()
 
     // undoDraftChange 缺失 -> 诚实提示
-    await user.click(screen.getByRole('button', { name: '撤销最近一次被阻塞草稿修改' }))
+    await user.click(screen.getByRole('button', { name: '撤销被阻塞修改' }))
     expect(
       screen.getByText(/后端尚未接线\/不可用（缺失方法：undoDraftChange）/),
     ).toBeInTheDocument()
 
-    // getMigrationReport 缺失 -> 诚实提示
-    await user.click(screen.getByRole('button', { name: '读取迁移差异报告' }))
+    // getMigrationReport 缺失 -> 从「更多 ⋯」菜单触发并诚实提示
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: '查看旧项目迁移差异报告' }))
     expect(
       screen.getByText(/后端尚未接线\/不可用（缺失方法：getMigrationReport）/),
     ).toBeInTheDocument()
@@ -1044,7 +1042,8 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
 
     const topBar = screen.getByRole('banner', { name: '顶部连接状态栏' })
     expect(within(topBar).getByText('项目 C')).toBeInTheDocument()
-    expect(within(topBar).getByLabelText('顶部项目授权状态')).toHaveTextContent('未授权')
+    await user.click(screen.getByTestId('connection-capsule-btn'))
+    expect(screen.getByLabelText('顶部项目授权状态')).toHaveTextContent('未授权')
     // 上一项目 A 的迁移报告、完成视图、活动流均已彻底清空
     expect(screen.queryByTestId('migration-banner')).not.toBeInTheDocument()
     expect(screen.queryByTestId('completion-view')).not.toBeInTheDocument()
@@ -1300,18 +1299,20 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
       />,
     )
 
-    // 1. 同时发起项目 A 的 getMigrationReport 与 undoDraftChange（均在途挂起）
-    await user.click(screen.getByRole('button', { name: '读取迁移差异报告' }))
-    await user.click(screen.getByRole('button', { name: '撤销最近一次被阻塞草稿修改' }))
+    // 1. 同时发起项目 A 的 getMigrationReport（通过「更多 ⋯」菜单）与 undoDraftChange（均在途挂起）
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: '查看旧项目迁移差异报告' }))
+    await user.click(screen.getByRole('button', { name: '撤销被阻塞修改' }))
 
     // 2. 切换到项目 B（隔套兼容示例）
-    await user.click(screen.getByRole('button', { name: '切换连接' }))
-    await user.click(screen.getByRole('button', { name: /跳过（查看本地项目与示例）/ }))
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: /切换本地项目/ }))
     await user.click(screen.getByRole('button', { name: '打开项目 隔套兼容示例' }))
 
-    // 验证切项目后已选任务书附件已彻底清空（切换到内置对话查看附加按钮状态）
-    await user.click(screen.getByRole('tab', { name: '对话/活动' }))
-    await user.click(screen.getByRole('tab', { name: '内置建模对话' }))
+    // 验证切项目后已选任务书附件已彻底清空（切换到内置对话并打开「+ 引用」浮层查看）
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: /切换到内置模型对话/ }))
+    await user.click(screen.getByTestId('attach-ref-btn'))
     const taskbookBtn = screen.getByRole('button', { name: /安装板任务书\.pdf · P1/ })
     expect(taskbookBtn).toHaveAttribute('aria-pressed', 'false')
 

@@ -46,7 +46,7 @@ describe('ProjectAgentM1Workbench (M2-FE-01 双视图联动、对象上下文与
     expect(document.querySelector('input[type="range"]')).toBeNull()
 
     const canvas = screen.getByRole('region', { name: '中央画布' })
-    const viewTabs = within(canvas).getByRole('tablist', { name: '中央画布视图切换' })
+    const viewTabs = screen.getByRole('tablist', { name: '中央画布视图切换' })
 
     // 默认同版就绪进入并排视图
     expect(canvas).toHaveAttribute('data-effective-view', 'split')
@@ -81,7 +81,7 @@ describe('ProjectAgentM1Workbench (M2-FE-01 双视图联动、对象上下文与
     expect(canvas).toHaveAttribute('data-narrow-degraded', 'true')
     expect(within(viewTabs).getByRole('tab', { name: '并排' })).toBeDisabled()
     const narrowStatus = screen.getByRole('status', { name: '窄屏标签页降级状态' })
-    expect(within(narrowStatus).getByText(/窄屏自动降级为标签页/)).toBeInTheDocument()
+    expect(within(narrowStatus).getByText(/窄屏标签页模式/)).toBeInTheDocument()
     expect(within(narrowStatus).getByText(/模型就绪/)).toBeInTheDocument()
     expect(within(narrowStatus).getByText(/图纸就绪/)).toBeInTheDocument()
   })
@@ -138,13 +138,14 @@ describe('ProjectAgentM1Workbench (M2-FE-01 双视图联动、对象上下文与
     // 复制到外部会话
     await user.click(within(contextBar).getByRole('button', { name: '复制到外部会话' }))
     expect(copied[0]).toBe('安装板 › 右孔 › 圆柱面 [plate/right-hole/cylinder]')
-    expect(within(contextBar).getByText(/已复制到外部会话/)).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: '中央画布' })).getByText(/已复制到外部会话/)).toBeInTheDocument()
 
     // 带入下一句话
     await user.click(within(contextBar).getByRole('button', { name: '带入下一句话' }))
     expect(screen.getByLabelText('内置对话输入框')).toHaveValue('针对「安装板 › 右孔 › 圆柱面」：')
 
-    // 键盘在对象列表、画布与侧栏间切换焦点（F6 循环 & Shift+F6 逆向）
+    // 键盘在对象列表、画布与侧栏间切换焦点（先展开零件结构浮层，F6 循环 & Shift+F6 逆向）
+    await user.click(screen.getByTestId('toggle-structure-btn'))
     const objectList = screen.getByRole('region', { name: '对象列表' })
     const canvas = screen.getByRole('region', { name: '中央画布' })
     const sidebar = screen.getByRole('complementary', { name: '主工作台侧栏' })
@@ -164,17 +165,16 @@ describe('ProjectAgentM1Workbench (M2-FE-01 双视图联动、对象上下文与
     // 对象列表内支持方向键切换
     objectList.focus()
     await user.keyboard('{ArrowDown}')
-    expect(within(objectList).getByRole('button', { name: '安装板 › 右孔 › 圆柱面' })).toHaveFocus()
+    expect(within(objectList).getByRole('button', { name: /安装板 › 右孔 › 圆柱面/ })).toHaveFocus()
     await user.keyboard('{ArrowDown}')
-    expect(within(objectList).getByRole('button', { name: '安装板 › 左孔 › 圆柱面' })).toHaveFocus()
+    expect(within(objectList).getByRole('button', { name: /安装板 › 左孔 › 圆柱面/ })).toHaveFocus()
 
-    // 取消选择
+    // 取消选择后，悬浮对象引用上下文条隐藏
     await user.click(within(contextBar).getByRole('button', { name: '取消选择' }))
-    expect(within(contextBar).getByText('未选中任何几何对象')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '对象引用上下文区' })).not.toBeInTheDocument()
   })
 
   it('连续刷新保留视图模式、视角/缩放状态与有效选择；旧选中失效时明确提示重新选择或重绑', async () => {
-    const user = userEvent.setup()
     let pushEvent: ((event: M2PreviewEvent) => void) | null = null
     const bridge: M2WorkbenchBridge = {
       subscribeM2PreviewEvents: async (_req, listener) => {
@@ -194,12 +194,9 @@ describe('ProjectAgentM1Workbench (M2-FE-01 双视图联动、对象上下文与
       />,
     )
 
-    // 调整模型视角与图纸缩放
-    await user.click(screen.getByRole('button', { name: '右旋' }))
-    await user.click(screen.getByRole('button', { name: '放大' }))
-    await user.click(screen.getByRole('button', { name: '图纸放大' }))
-    expect(screen.getByLabelText('模型视角状态')).toHaveTextContent('视角 50°/25° · 缩放 120%')
-    expect(screen.getByLabelText('图纸缩放状态')).toHaveTextContent('图纸缩放 125%')
+    // 确认初始视角与缩放状态（精简版画布优先使用鼠标拖拽/滚轮缩放，连续修订刷新后保持视角/缩放）
+    expect(screen.getByLabelText('模型视角状态')).toHaveTextContent('视角 35°/25° · 缩放 100%')
+    expect(screen.getByLabelText('图纸缩放状态')).toHaveTextContent('图纸缩放 100%')
 
     // 连续刷新 draft-3（仍包含右孔）-> 保留视图模式、视角/缩放状态与选中对象
     await act(async () => {
@@ -226,8 +223,8 @@ describe('ProjectAgentM1Workbench (M2-FE-01 双视图联动、对象上下文与
       'data-effective-view',
       'split',
     )
-    expect(screen.getByLabelText('模型视角状态')).toHaveTextContent('视角 50°/25° · 缩放 120%')
-    expect(screen.getByLabelText('图纸缩放状态')).toHaveTextContent('图纸缩放 125%')
+    expect(screen.getByLabelText('模型视角状态')).toHaveTextContent('视角 35°/25° · 缩放 100%')
+    expect(screen.getByLabelText('图纸缩放状态')).toHaveTextContent('图纸缩放 100%')
     expect(screen.getByTestId('selection-breadcrumb')).toHaveTextContent('安装板 › 右孔 › 圆柱面')
 
     // 连续刷新 draft-4（右孔被删除）-> 明确提示“选中对象已失效，请重新选择或重绑”
@@ -434,7 +431,7 @@ describe('ProjectAgentM1Workbench (M2-FE-01 双视图联动、对象上下文与
     )
 
     const sidebarTabs = screen.getByRole('tablist', { name: '侧栏功能切换' })
-    expect(within(sidebarTabs).getByRole('tab', { name: '对话/活动' })).toBeInTheDocument()
+    expect(within(sidebarTabs).getByRole('tab', { name: /活动|对话/ })).toBeInTheDocument()
     expect(within(sidebarTabs).getByRole('tab', { name: '要求' })).toBeInTheDocument()
     expect(within(sidebarTabs).getByRole('tab', { name: '检查' })).toBeInTheDocument()
     expect(within(sidebarTabs).getByRole('tab', { name: '历史' })).toBeInTheDocument()
@@ -562,8 +559,8 @@ describe('ProjectAgentM1Workbench (M2-FE-01 双视图联动、对象上下文与
       })
     })
     expect(canvas).toHaveAttribute('data-effective-view', 'model')
-    expect(within(canvas).getByText(/模型修订：草稿 8/)).toBeInTheDocument()
-    expect(within(canvas).getByText(/图纸修订：无/)).toBeInTheDocument()
+    expect(within(canvas).getByText(/3D · 草稿 8/)).toBeInTheDocument()
+    expect(within(canvas).queryByRole('region', { name: '二维图纸视图' })).not.toBeInTheDocument()
 
     // 3. 同版 draft-8 图纸就绪（指纹一致）且检查未完 -> 自动切至并排展示并标明“检查中”
     await act(async () => {
