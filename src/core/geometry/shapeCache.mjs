@@ -3,9 +3,11 @@ export class ShapeCache {
   #limit
 
   constructor(limit = 8) {
+    if (!Number.isSafeInteger(limit) || limit < 1) throw new RangeError('Invalid shape cache capacity')
     this.#limit = limit
   }
 
+  // build transfers the two owned wrappers to the cache. Callers borrow the returned shapes.
   acquire(projectId, revision, fingerprint, build) {
     const key = JSON.stringify([projectId, revision])
     const previous = this.#entries.get(key)
@@ -26,13 +28,24 @@ export class ShapeCache {
   }
 
   release(projectId, revision) {
-    for (const [key, entry] of this.#entries) {
-      if (entry.projectId === projectId && (revision === undefined || entry.revision === revision)) this.#delete(key)
-    }
+    this.#releaseWhere(entry => entry.projectId === projectId && (revision === undefined || entry.revision === revision))
   }
 
   clear() {
-    for (const key of this.#entries.keys()) this.#delete(key)
+    this.#releaseWhere(() => true)
+  }
+
+  #releaseWhere(matches) {
+    const errors = []
+    for (const [key, entry] of this.#entries) {
+      if (!matches(entry)) continue
+      try {
+        this.#delete(key)
+      } catch (error) {
+        errors.push(error)
+      }
+    }
+    if (errors.length) throw new AggregateError(errors, 'Failed to release cached native shapes')
   }
 
   #delete(key) {

@@ -19,6 +19,8 @@ export function loadKernel(options = {}, bundled = false) {
 export const xyz = (p) => [p.X(), p.Y(), p.Z()]
 const dot = (a, b) => a.reduce((sum, value, index) => sum + value * b[index], 0)
 
+// Native inputs are borrowed. Shape-producing functions transfer the returned wrapper to the caller.
+// Embind implements Symbol.dispose with delete(), so using scopes release temporaries on exit.
 export function box(oc, z, thickness, xLength = length, yWidth = width) {
   using origin = new oc.gp_Pnt(0, 0, z)
   using maker = new oc.BRepPrimAPI_MakeBox(origin, xLength, yWidth, thickness)
@@ -56,6 +58,7 @@ export function volume(oc, shape) {
   return props.Mass()
 }
 
+// The explorer returns an owned Embind wrapper. The synchronous callback borrows it.
 export function visit(oc, shape, kind, inspect) {
   using explorer = new oc.TopExp_Explorer(shape, kind, oc.TopAbs_ShapeEnum.TopAbs_SHAPE)
   while (explorer.More()) {
@@ -96,11 +99,13 @@ export function exportPlateStep(oc, shape) {
   using progress = new oc.Message_ProgressRange()
   const done = oc.IFSelect_ReturnStatus.IFSelect_RetDone
   const filename = '/plate.step'
-  if (writer.Transfer(shape, oc.STEPControl_StepModelType.STEPControl_AsIs, true, progress) !== done ||
-      writer.Write(filename) !== done) throw new Error('STEP export failed')
-  const step = Buffer.from(oc.FS.readFile(filename))
-  oc.FS.unlink(filename)
-  return step
+  try {
+    if (writer.Transfer(shape, oc.STEPControl_StepModelType.STEPControl_AsIs, true, progress) !== done ||
+        writer.Write(filename) !== done) throw new Error('STEP export failed')
+    return Buffer.from(oc.FS.readFile(filename))
+  } finally {
+    if (oc.FS.readdir('/').includes(filename.slice(1))) oc.FS.unlink(filename)
+  }
 }
 
 export function readA01(oc, step) {

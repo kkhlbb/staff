@@ -13,13 +13,15 @@
  * 默认路径 out/寸链-darwin-arm64/寸链.app/Contents/MacOS/寸链
  */
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { once } from 'node:events'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 const appExecutable =
   process.argv[2] ??
   path.join(process.cwd(), 'out', '寸链-darwin-arm64', '寸链.app', 'Contents', 'MacOS', '寸链')
-const port = Number(process.argv[3] ?? 9333)
+let port = Number(process.argv[3] ?? 0)
 
 if (!existsSync(appExecutable)) {
   console.error(`BLOCKED: 找不到打包产物 ${appExecutable}，先运行 npm run package:desktop -- --arch=arm64`)
@@ -36,7 +38,8 @@ function check(name, condition, detail = '') {
   }
 }
 
-const child = spawn(appExecutable, [`--remote-debugging-port=${port}`], {
+const profile = mkdtempSync(path.join(tmpdir(), 'cunlian-desktop-smoke-'))
+const child = spawn(appExecutable, [`--remote-debugging-port=${port}`, `--user-data-dir=${profile}`], {
   stdio: ['ignore', 'pipe', 'pipe'],
 })
 let appOutput = ''
@@ -47,15 +50,22 @@ child.on('exit', (code, signal) => {
   childExit = { code, signal }
 })
 
+process.once('exit', () => {
+  if (childExit === null) child.kill('SIGKILL')
+  rmSync(profile, { recursive: true, force: true })
+})
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 async function findPageTarget() {
   for (let attempt = 0; attempt < 80; attempt += 1) {
     if (childExit !== null) {
-      // 单实例锁被占（例如上一次测试实例未退出）时应用会立刻以 0 退出。
       return null
     }
     try {
+      if (port === 0) {
+        port = Number(readFileSync(path.join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0])
+      }
       const response = await fetch(`http://127.0.0.1:${port}/json/list`)
       const targets = await response.json()
       const page = targets.find((target) => target.type === 'page')
@@ -73,12 +83,10 @@ if (!target) {
   console.error('BLOCKED: 打包应用没有在 20 秒内暴露 page target')
   if (childExit !== null) {
     console.error(
-      `应用提前退出 code=${childExit.code} signal=${childExit.signal}；` +
-        '若本机已有“寸链”实例在运行（单实例锁），先退出该实例再重跑。',
+      `应用提前退出 code=${childExit.code} signal=${childExit.signal}`,
     )
   }
   console.error(appOutput)
-  child.kill('SIGKILL')
   process.exit(2)
 }
 
@@ -117,28 +125,58 @@ async function evaluate(expression) {
   return response.result?.result?.value
 }
 
+async function waitForElement(selector) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    if (await evaluate(`Boolean(document.querySelector(${JSON.stringify(selector)}))`)) return true
+    await sleep(150)
+  }
+  return false
+}
+
 await send('Runtime.enable')
-await sleep(1200)
+const defaultWorkbench = await waitForElement('main[aria-label="寸链 M1 双入口工作台"]')
 
 const title = await evaluate('document.title')
 check('窗口标题为 寸链', title === '寸链', `got=${title}`)
 
+check('渲染出默认工作台', defaultWorkbench === true)
+await evaluate(`document.querySelector('button[aria-label="更多操作"]')?.click()`)
+const legacyLink = 'a[href="#/desktop-legacy"]'
+check('更多菜单提供旧工作台入口', await waitForElement(legacyLink))
+await evaluate(`document.querySelector(${JSON.stringify(legacyLink)})?.click()`)
+await waitForElement('main[aria-label="寸链启动页"]')
 const bodyText = await evaluate('document.body.innerText')
 check('渲染出桌面壳内容', String(bodyText).includes('打开项目，继续设计'), `got=${String(bodyText).slice(0, 80)}`)
 
 const apiKeys = await evaluate('Object.keys(window.cunlian).sort()')
 const expectedKeys = [
-  'newProject', 'openProject', 'stageDraft', 'saveProject', 'saveProjectAs',
-  'listRecent', 'relinkRecent', 'listRecovery', 'restoreRecovery', 'reattachSession',
-  'readAttachment', 'revealProject', 'requestClose', 'inspectV2', 'commitV2',
-  'onMenuAction', 'onEditorFlush', 'respondEditorFlush',
-  'pickModel', 'readModel', 'commitModel', 'releaseModel', 'linkModel',
-  'updateSpacerDrawing', 'exportDrawingPdf', 'exportDrawingSvg',
+  'agentCancel', 'agentPreviewSummary', 'agentProviderStatus', 'agentResume', 'agentStart',
+  'agentTaskState', 'applyChange', 'applyConfirmedInputs', 'attestExtractionUnits', 'bindParameter',
+  'cancelExtraction', 'cancelM1ChatMessage', 'cancelM1ProjectSubscription', 'clearAgentProviderKey', 'commitApprovedDraft',
+  'commitM3ApprovedDraft', 'commitModel', 'commitV2', 'compareDrawings', 'confirmExtractionBatch',
+  'confirmRequirement', 'decideExtraction', 'deleteExtractionDraft', 'detectM1LocalAgents', 'exportApprovedVersion',
+  'exportDrawingDxf2000', 'exportDrawingDxfR12', 'exportDrawingPdf', 'exportDrawingSvg', 'getConfirmedInputs',
+  'getM1ConnectionStatus', 'getM1ExternalActivities', 'getM1LocalAgentInstallInfo', 'getM1ProjectContext', 'getM1ReadCapabilities',
+  'getM2PreviewSnapshot', 'getMigrationReport', 'getProjectContext', 'importSketchImage', 'importSource',
+  'ingestSketchReadings', 'inspectV2', 'intentApply', 'intentConfirmCandidate', 'intentCreateProject',
+  'intentIssueApproval', 'intentPreview', 'intentState', 'issueAgentApproval', 'linkModel',
+  'listM1ModelApiModels', 'listRecent', 'listRecovery', 'locateEvidence', 'locateM2Evidence',
+  'newProject', 'onAgentEvent', 'onEditorFlush', 'onMenuAction', 'openDxf',
+  'openExternalProjectResult', 'openProject', 'pickModel', 'previewAndCheck', 'previewChange',
+  'readAttachment', 'readM1ProjectEvents', 'readModel', 'reattachSession', 'reconnectM1Session',
+  'registerM1LocalAgent', 'releaseModel', 'relinkRecent', 'requestClose', 'requestM1ProjectAuthorization',
+  'respondEditorFlush', 'restoreRecovery', 'restoreRevisionDraft', 'retryM2Drawing', 'revealProject',
+  'revokeExtractionUnits', 'revokeM1ProjectAuthorization', 'runExtraction', 'saveAgentProvider', 'saveProject',
+  'saveProjectAs', 'sendM1ChatMessage', 'stageChangeDraft', 'stageDraft', 'stageParameterChange',
+  'stageRequirementEdit', 'stepCancel', 'stepExport', 'submitM2Clarification', 'subscribeM1ProjectEvents',
+  'subscribeM1WorkbenchEvents', 'subscribeM2PreviewEvents', 'subscribeM3ExternalProjectEvents', 'takePendingDxf', 'takeoverM1Draft',
+  'testAgentProvider', 'testM1ModelApiConnection', 'unbindParameter', 'undoDraftChange', 'updateSpacerDrawing',
 ].sort()
+const nonFunctions = await evaluate('Object.keys(window.cunlian).filter(key => typeof window.cunlian[key] !== "function")')
 check(
   'window.cunlian 只暴露具体函数',
-  JSON.stringify(apiKeys) === JSON.stringify(expectedKeys),
-  `got=${JSON.stringify(apiKeys)}`,
+  JSON.stringify(apiKeys) === JSON.stringify(expectedKeys) && nonFunctions.length === 0,
+  `got=${JSON.stringify(apiKeys)}, nonFunctions=${JSON.stringify(nonFunctions)}`,
 )
 
 const genericEscape = await evaluate(
@@ -162,12 +200,11 @@ const frameBridge = await evaluate(`(() => {
 })()`)
 check('子框架拿不到 preload 桥', frameBridge === 'undefined', `got=${frameBridge}`)
 
-// 编辑屏障 + 关闭：renderer 收到 editor:flush 后回复，requestClose 返回 ok 后窗口销毁。
+// 记录真实 renderer 收到的 editor:flush，回复由旧工作台的会话适配器发送。
 const flushSeen = await evaluate(`(async () => {
   window.__flushRequestId = null
   window.cunlian.onEditorFlush((payload) => {
     window.__flushRequestId = payload.requestId
-    window.cunlian.respondEditorFlush({ requestId: payload.requestId, editSeq: 0 })
   })
   const result = await window.cunlian.requestClose()
   return { result, flushRequestId: window.__flushRequestId }
@@ -202,8 +239,10 @@ try {
 } catch {
   // 窗口已销毁时连接可能已断开
 }
-// 用 SIGKILL 收尾：避免被测进程在退出流程里残留并占用单实例锁，影响下一次运行。
-child.kill('SIGKILL')
-
+if (childExit === null) {
+  const exited = once(child, 'exit')
+  child.kill('SIGKILL')
+  await exited
+}
 console.log(failures.length === 0 ? 'E2E_RESULT=PASS' : `E2E_RESULT=FAIL(${failures.join(',')})`)
 process.exit(failures.length === 0 ? 0 : 1)

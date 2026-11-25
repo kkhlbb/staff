@@ -33,14 +33,15 @@ export function buildPlate(oc, model) {
   let shape = box(oc, 0, thickness, mm(plate.lengthQ), mm(plate.widthQ))
   try {
     for (const hole of holes) {
-      const next = drill(oc, shape, { xQ: hole.x.nominalQ, yQ: hole.y.nominalQ, diameterQ: hole.diameter.nominalQ }, thickness)
-      shape.delete()
-      shape = next
+      using previous = shape
+      shape = undefined
+      shape = drill(oc, previous, { xQ: hole.x.nominalQ, yQ: hole.y.nominalQ, diameterQ: hole.diameter.nominalQ }, thickness)
     }
-    return shape
-  } catch (error) {
-    shape.delete()
-    throw error
+    const result = shape
+    shape = undefined
+    return result
+  } finally {
+    shape?.delete()
   }
 }
 
@@ -108,6 +109,7 @@ export function tessellate(oc, shape, solid, pose, model, features, tolerance, f
   visit(oc, shape, oc.TopAbs_ShapeEnum.TopAbs_FACE, child => {
     using face = oc.TopoDS.Face(child)
     using location = new oc.TopLoc_Location()
+    // Dispose the returned handle. The face retains its own reference to the triangulation.
     using triangulation = oc.BRep_Tool.Triangulation(face, location, 0)
     if (!triangulation || !triangulation.NbTriangles()) throw new Error('Missing face triangulation')
     using localPose = location.Transformation()

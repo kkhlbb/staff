@@ -4,11 +4,14 @@ import { createGeometryManager, fingerprint } from '../../../../src/core/geometr
 export { fingerprint }
 
 const managers = new Map()
-const sourceWorker = new URL('../../../../src/core/geometry/geometryWorker.mjs', import.meta.url)
 
-function manager(workerUrl = sourceWorker) {
-  if (!managers.has(workerUrl.href)) managers.set(workerUrl.href, createGeometryManager(workerUrl))
-  return managers.get(workerUrl.href)
+// Packaged main supplies the unpacked worker URL. Only source callers need the manager's default.
+const workerKey = workerUrl => workerUrl?.href
+
+function manager(workerUrl) {
+  const key = workerKey(workerUrl)
+  if (!managers.has(key)) managers.set(key, createGeometryManager(workerUrl))
+  return managers.get(key)
 }
 
 async function run(payload, { jobId = randomUUID(), attempt = 1, workerUrl, ...options }) {
@@ -26,6 +29,6 @@ export function runMountingPlateDrawing(report, { drawing, ...options } = {}) {
   return run({ model, measured, references, drawing, drawingOnly: true }, options)
 }
 
-export async function releaseMountingPlate(projectId, revision, workerUrl = sourceWorker) {
-  await managers.get(workerUrl.href)?.release(projectId, revision)
+export async function releaseMountingPlate(projectId, revision, workerUrl) {
+  await managers.get(workerKey(workerUrl))?.release(projectId, revision)
 }
