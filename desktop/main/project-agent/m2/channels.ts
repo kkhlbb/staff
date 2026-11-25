@@ -9,7 +9,7 @@ import { toSenderInfo } from '../../ipc'
 import type { SenderGuard } from '../../senderGuard'
 import type { LocalM1Authority, LocalM1Session, M1ExternalScope, M1WriterLease } from '../m1LocalAuthority'
 import { openM2DraftStore } from './draftStore'
-import { fingerprint, runMountingPlate, runMountingPlateDrawing } from './engine.mjs'
+import { fingerprint, releaseMountingPlate, runMountingPlate, runMountingPlateDrawing } from './engine.mjs'
 import { M2Pipeline } from './pipeline'
 import type { RequirementsSource } from './requirements'
 
@@ -144,6 +144,7 @@ export function installM2PreviewChannels(ipc: { handle(channel: string, handler:
         windowId: sender.webContentsId,
         pipeline: new M2Pipeline(projectId, ports.scopeEpoch?.(sender.webContentsId) ?? 1, writerEpoch, {
           build: (model, options) => runMountingPlate(model, { ...options, workerUrl: ports.workerUrl }),
+          release: (project, revision) => releaseMountingPlate(project, revision, ports.workerUrl),
           draw: (report, options) => runMountingPlateDrawing(report, { ...options, workerUrl: ports.workerUrl }),
         }, () => created.live(), ports.draftRoot && cut.bindingKey
           ? openM2DraftStore(ports.draftRoot, projectId, cut.bindingKey) : undefined), frame: frame!, session: { ...binding! },

@@ -131,16 +131,29 @@ function resolveReferences(model, features) {
   return { references, invalidations }
 }
 
-export function evaluate(oc, model, drawingOptions, frameId, deferDrawing) {
+function buildShapes(oc, model) {
+  const plate = buildPlate(oc, model)
+  try {
+    const cover = box(oc, mm(model.cover.bottom.nominalQ), mm(model.cover.thicknessQ),
+      mm(model.plate.lengthQ), mm(model.plate.widthQ))
+    return { plate, cover }
+  } catch (error) {
+    plate.delete()
+    throw error
+  }
+}
+
+export function evaluate(oc, model, drawingOptions, frameId, deferDrawing, acquireShapes) {
   const toleranceMm = oc.Precision.Confusion()
   const metadata = { revision: model.revision, unit: model.unit, modelingToleranceMm: toleranceMm,
     solverVersion: 'mounting-plate-1', rulesVersion: 'mounting-plate-taskbook-1', source }
   try {
     validate(model, toleranceMm)
     using pose = placement(oc, model.frame)
-    using plate = buildPlate(oc, model)
-    using cover = box(oc, mm(model.cover.bottom.nominalQ), mm(model.cover.thicknessQ),
-      mm(model.plate.lengthQ), mm(model.plate.widthQ))
+    const build = () => buildShapes(oc, model)
+    const { plate, cover } = acquireShapes ? acquireShapes(build) : build()
+    using ownedPlate = acquireShapes ? undefined : plate
+    using ownedCover = acquireShapes ? undefined : cover
     const { measured, features } = verifyPlate(oc, plate, model, toleranceMm)
     const { min, max } = bounds(oc, cover)
     features.push({ featureId: model.cover.id, role: 'cover.bottomFace',
@@ -174,6 +187,7 @@ export function evaluate(oc, model, drawingOptions, frameId, deferDrawing) {
         cover: tessellate(oc, cover, 'cover', pose, model, features, toleranceMm, frameId) },
       plateStep: exportPlateStep(oc, plate), placement: { frame: model.frame, worldPlateBounds: evidence.worldPlateBounds } }
   } catch (error) {
+    if (error instanceof WebAssembly.RuntimeError) throw error
     return { ...metadata, status: 'executionFailed', error: { code: 'geometryFailed', message: String(error) },
       checks: checkSpecs.map(([id]) => ({ id, status: 'executionFailed' })) }
   }

@@ -5,7 +5,7 @@ import type {
   M2DrawingFailureNotice, M2LocateEvidenceRequest, M2ModelFeatureItem, M2PreviewEvent,
   M2PreviewSnapshot, M2RetryDrawingRequest, M2RetryDrawingResult,
 } from '../../../shared/project-agent/m2-preview'
-import { fingerprint, runMountingPlate, runMountingPlateDrawing, type Drawing, type GeometryReport } from './engine.mjs'
+import { fingerprint, releaseMountingPlate, runMountingPlate, runMountingPlateDrawing, type Drawing, type GeometryReport } from './engine.mjs'
 import type { M2DraftInputs, M2Journal, openM2DraftStore } from './draftStore'
 import type { MountingPlate } from './model.mjs'
 import { importRequirements, interpret, type RequirementsSource } from './requirements'
@@ -61,10 +61,10 @@ export class M2Pipeline {
   readonly projectId: string
   private scopeEpoch: number
   private writerEpoch: number
-  private readonly engine: { build: typeof runMountingPlate; draw: typeof runMountingPlateDrawing }
+  private readonly engine: { build: typeof runMountingPlate; draw: typeof runMountingPlateDrawing; release?: typeof releaseMountingPlate }
 
   constructor(projectId: string, scopeEpoch: number, writerEpoch: number,
-    engine = { build: runMountingPlate, draw: runMountingPlateDrawing }, seal = () => {}, store?: ReturnType<typeof openM2DraftStore>) {
+    engine: M2Pipeline['engine'] = { build: runMountingPlate, draw: runMountingPlateDrawing, release: releaseMountingPlate }, seal = () => {}, store?: ReturnType<typeof openM2DraftStore>) {
     this.projectId = projectId
     this.scopeEpoch = scopeEpoch
     this.writerEpoch = writerEpoch
@@ -96,12 +96,14 @@ export class M2Pipeline {
   dispose() {
     this.importGeneration++
     if (this.current) this.cancelJob(this.current.job.id)
+    this.releaseShapes()
     this.listeners.clear()
   }
 
   reconcileSources(keys: ReadonlySet<string>) {
     if (!this.sourceKey || keys.has(this.sourceKey)) return
     if (this.current) this.cancelJob(this.current.job.id)
+    this.releaseShapes()
     this.current = undefined
     this.sourceKey = undefined
     this.sourceCurrent = () => {}
@@ -173,6 +175,7 @@ export class M2Pipeline {
     const state = this.current
     if (!state || state.job.id !== jobId || state.completed || state.job.controller.signal.aborted) return false
     state.job.controller.abort()
+    this.releaseShapes(state.model.revision)
     state.checking = false
     return true
   }
@@ -342,7 +345,7 @@ export class M2Pipeline {
 
   private start(model: MountingPlate, clauses: Clause[], requirements: Revision['requirements'], order = this.revisionOrder + 1, jobId = randomUUID()) {
     const previous = this.current
-    if (previous) this.cancelJob(previous.job.id)
+    if (previous && !this.cancelJob(previous.job.id)) this.releaseShapes(previous.model.revision)
     model = { ...model, revision: 'draft-' + order }
     const state: Revision = {
       order, model, clauses, requirements, fingerprint: fingerprint({ model, clauses }),
@@ -354,6 +357,13 @@ export class M2Pipeline {
     this.revisionOrder = order
     this.revisions.set(model.revision, state)
     return { ...this.buildAndCheck(model.revision), revision: model.revision }
+  }
+
+  private releaseShapes(revision?: string) {
+    void this.engine.release?.(this.projectId, revision).catch(error => {
+      // A terminated worker already discarded its cache.
+      console.warn('M2 geometry cache release failed', error)
+    })
   }
 
   private live(state: Revision) {
@@ -385,7 +395,7 @@ export class M2Pipeline {
     if (!this.live(state)) return
     try {
       const report = await this.engine.build(state.model, {
-        jobId: state.job.id, signal: state.job.controller.signal, deferDrawing: true,
+        projectId: this.projectId, jobId: state.job.id, signal: state.job.controller.signal, deferDrawing: true,
       })
       if (!this.live(state)) return
       if (!('model' in report)) throw Error(report.error.message)
@@ -448,7 +458,7 @@ export class M2Pipeline {
     const attempt = ++state.drawAttempt
     let drawing: Drawing
     try {
-      drawing = await this.engine.draw(state.report, { jobId: state.job.id, attempt, signal: state.job.controller.signal })
+      drawing = await this.engine.draw(state.report, { projectId: this.projectId, jobId: state.job.id, attempt, signal: state.job.controller.signal })
       if (drawing.revision !== state.model.revision) throw Error('图纸修订与模型不一致')
       if (drawing.errors.length) throw Error(drawing.errors.map(error => error.code === 'projectionFailed'
         ? `${error.code}: ${error.message}` : JSON.stringify(error)).join('；'))

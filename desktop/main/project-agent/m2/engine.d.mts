@@ -100,6 +100,7 @@ export type EngineReport = GeometryReport | (ReportMetadata & {
 
 export interface RunOptions {
   workerUrl?: URL
+  projectId?: string
   deferDrawing?: boolean
   signal?: AbortSignal
   timeoutMs?: number
@@ -112,3 +113,5 @@ export function runMountingPlate(model: MountingPlate, options?: RunOptions): Pr
 
 export function fingerprint(payload: unknown): string
 export function runMountingPlateDrawing(report: GeometryReport, options?: RunOptions): Promise<Drawing>
+
+export function releaseMountingPlate(projectId: string, revision?: string, workerUrl?: URL): Promise<void>

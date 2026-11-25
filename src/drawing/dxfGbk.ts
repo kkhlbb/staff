@@ -13,7 +13,7 @@ import {
   DXF_GBK_BYTES_BASE64,
   DXF_GBK_CODEPOINTS_BASE64,
   DXF_GBK_ENTRY_COUNT,
-} from './dxfGbkTable'
+} from './dxfGbkTable.ts'
 
 export class DxfEncodingError extends Error {
   readonly code = 'DXF_TEXT_UNENCODABLE' as const

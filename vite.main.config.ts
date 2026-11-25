@@ -46,20 +46,25 @@ function m2WorkerAssets(): Plugin {
     apply: 'build',
     async generateBundle() {
       const resolve = (file: string) => fileURLToPath(new URL(file, import.meta.url))
-      const worker = await build({
-        configFile: false,
-        publicDir: false,
-        logLevel: 'error',
-        build: {
-          write: false, minify: false,
-          ssr: resolve('./desktop/main/project-agent/m2/worker.mjs'),
-          target: 'esnext',
-          rolldownOptions: { output: { entryFileNames: 'm2-geometry-worker.mjs', inlineDynamicImports: true } },
-        },
-      })
-      if (!('output' in worker)) throw Error('Expected one M2 worker output')
-      for (const output of worker.output) {
-        this.emitFile({ type: 'asset', fileName: 'm2-worker/' + output.fileName, source: output.type === 'chunk' ? output.code : output.source })
+      for (const [entry, fileName] of [
+        ['./src/core/geometry/geometryWorker.mjs', 'm2-geometry-worker.mjs'],
+        ['./src/core/solver/solverWorker.mjs', 'solverWorker.mjs'],
+      ]) {
+        const worker = await build({
+          configFile: false,
+          publicDir: false,
+          logLevel: 'error',
+          build: {
+            write: false, minify: false,
+            ssr: resolve(entry),
+            target: 'esnext',
+            rolldownOptions: { output: { entryFileNames: fileName, inlineDynamicImports: true } },
+          },
+        })
+        if (Array.isArray(worker) || !('output' in worker)) throw Error('Expected one M2 worker output')
+        for (const output of worker.output) {
+          this.emitFile({ type: 'asset', fileName: 'm2-worker/' + output.fileName, source: output.type === 'chunk' ? output.code : output.source })
+        }
       }
       for (const [fileName, source] of [
         ['fixture.json', './desktop/main/geometry-prototype/fixture.json'],

@@ -27,8 +27,8 @@
  * 编码：$DWGCODEPAGE = ANSI_936，文本按 GBK 写出（见 dxfGbk.ts）；直径符号 ⌀ 写成
  * R12 控制码 %%c，避免依赖 Unicode。
  */
-import { dimensionText, resolveDimension } from './formatDimension'
-import { DxfEncodingError, encodeDxfText } from './dxfGbk'
+import { dimensionText, resolveDimension } from './formatDimension.ts'
+import { DxfEncodingError, encodeDxfText } from './dxfGbk.ts'
 import {
   DRAFT_STATUS_TEXT,
   MISSING_TEXT,
@@ -41,7 +41,7 @@ import {
   type Point,
   type PolylineGeometry,
   type TextGeometry,
-} from './types'
+} from './types.ts'
 
 export const DXF_VERSIONS = ['r12', '2000'] as const
 export type DxfVersion = (typeof DXF_VERSIONS)[number]
