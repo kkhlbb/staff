@@ -218,7 +218,7 @@ describe('UX-CONN-FE-01 零手动配置连接体验', () => {
     expect(await screen.findByText('Codex')).toBeInTheDocument()
   })
 
-  it('模型 API 服务商下拉完整包含 10 个预设：选中预设自动填充 URL 与推荐模型并隐藏 URL 输入框，选自定义地址时展开 URL 输入框', async () => {
+  it('模型 API 服务商下拉完整包含 11 个预设（含华为云 AgentArts）：选中预设自动填充 URL 与推荐模型并隐藏 URL 输入框，选自定义地址时展开 URL 输入框', async () => {
     const user = userEvent.setup()
     render(<ProjectAgentM1Workbench bridge={{}} />)
 
@@ -227,7 +227,7 @@ describe('UX-CONN-FE-01 零手动配置连接体验', () => {
     const providerSelect = screen.getByLabelText('服务商') as HTMLSelectElement
     const optionValues = Array.from(providerSelect.options).map((o) => o.value)
     expect(optionValues).toEqual(M1_MODEL_API_PROVIDER_PRESETS.map((p) => p.id))
-    expect(optionValues).toHaveLength(10)
+    expect(optionValues).toHaveLength(11)
 
     // 默认选中 DeepSeek：隐藏 URL 输入框，展示只读 URL 提示并预填 deepseek-chat
     expect(providerSelect.value).toBe('deepseek')
@@ -251,6 +251,11 @@ describe('UX-CONN-FE-01 零手动配置连接体验', () => {
     await user.selectOptions(providerSelect, 'moonshot')
     expect(screen.getByText('https://api.moonshot.cn/v1')).toBeInTheDocument()
     expect((screen.getByLabelText('模型名') as HTMLInputElement).value).toBe('moonshot-v1-8k')
+
+    // 切换到华为云 AgentArts（OpenAI 兼容）
+    await user.selectOptions(providerSelect, 'huawei-agentarts')
+    expect(screen.getByText('https://api.modelarts-maas.com/v1')).toBeInTheDocument()
+    expect((screen.getByLabelText('模型名') as HTMLInputElement).value).toBe('DeepSeek-V3')
 
     // 切换到自定义地址：展开可编辑「服务地址」输入框
     await user.selectOptions(providerSelect, 'custom')

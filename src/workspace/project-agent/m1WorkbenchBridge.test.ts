@@ -536,8 +536,8 @@ describe('m1WorkbenchBridge', () => {
     expect(partialProbe.missingMethods).toEqual(['registerM1LocalAgent'])
   })
 
-  it('UX-CONN-FE-01：内置 10 个服务商预设完整，URL 校验、自动拉取资格与模型优先级选择符合规范', () => {
-    expect(M1_MODEL_API_PROVIDER_PRESETS).toHaveLength(10)
+  it('UX-CONN-FE-01：内置 11 个服务商预设完整（含华为云 AgentArts），URL 校验、自动拉取资格与模型优先级选择符合规范', () => {
+    expect(M1_MODEL_API_PROVIDER_PRESETS).toHaveLength(11)
     expect(M1_MODEL_API_PROVIDER_PRESETS.map((p) => p.id)).toEqual([
       'deepseek',
       'openai',
@@ -546,6 +546,7 @@ describe('m1WorkbenchBridge', () => {
       'moonshot',
       'siliconflow',
       'openrouter',
+      'huawei-agentarts',
       'ollama',
       'lmstudio',
       'custom',
@@ -557,6 +558,28 @@ describe('m1WorkbenchBridge', () => {
     expect(getModelApiProviderPreset('zhipu').defaultModel).toBe('glm-4-plus')
     expect(getModelApiProviderPreset('qwen').defaultModel).toBe('qwen-plus')
     expect(getModelApiProviderPreset('moonshot').defaultModel).toBe('moonshot-v1-8k')
+    const agentArts = getModelApiProviderPreset('huawei-agentarts')
+    expect(agentArts.label).toBe('华为云 AgentArts（OpenAI 兼容）')
+    expect(agentArts.baseUrl).toBe('https://api.modelarts-maas.com/v1')
+    expect(agentArts.defaultModel).toBe('DeepSeek-V3')
+    expect(agentArts.apiKeyOptional).toBe(false)
+    expect(findModelApiProviderPresetByUrl('https://api.modelarts-maas.com/v1/')?.id).toBe(
+      'huawei-agentarts',
+    )
+    expect(
+      canAutoFetchModelApiModels({
+        baseUrl: agentArts.baseUrl,
+        apiKey: '',
+        providerId: 'huawei-agentarts',
+      }),
+    ).toBe(false)
+    expect(
+      canAutoFetchModelApiModels({
+        baseUrl: agentArts.baseUrl,
+        apiKey: 'ak-agentarts-key',
+        providerId: 'huawei-agentarts',
+      }),
+    ).toBe(true)
     expect(getModelApiProviderPreset('ollama').apiKeyOptional).toBe(true)
     expect(getModelApiProviderPreset('lmstudio').apiKeyOptional).toBe(true)
     expect(getModelApiProviderPreset('custom').isCustom).toBe(true)

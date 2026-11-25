@@ -1018,6 +1018,7 @@ export type M1ModelApiProviderPresetId =
   | 'moonshot'
   | 'siliconflow'
   | 'openrouter'
+  | 'huawei-agentarts'
   | 'ollama'
   | 'lmstudio'
   | 'custom'
@@ -1079,6 +1080,13 @@ export const M1_MODEL_API_PROVIDER_PRESETS: readonly M1ModelApiProviderPreset[] 
     label: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
     defaultModel: '',
+    apiKeyOptional: false,
+  },
+  {
+    id: 'huawei-agentarts',
+    label: '华为云 AgentArts（OpenAI 兼容）',
+    baseUrl: 'https://api.modelarts-maas.com/v1',
+    defaultModel: 'DeepSeek-V3',
     apiKeyOptional: false,
   },
   {
