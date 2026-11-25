@@ -2,22 +2,31 @@ import { describe, expect, it } from 'vitest'
 import {
   applyAuthoritativeScopeEpochSync,
   buildLocalAgentConfigSnippet,
+  canAutoFetchModelApiModels,
   canUseBuiltinModelApiChat,
   classifyModelApiFailure,
   computeModelApiConfigFingerprint,
+  findModelApiProviderPresetByUrl,
   formatChatToolCallItem,
   formatSelectedObjectReference,
+  getModelApiProviderPreset,
   isEventAcceptedForScope,
   isModelApiUnlocked,
   isReplyAcceptedForScope,
   isScopedArtifactEventAccepted,
+  isValidModelApiBaseUrl,
+  M1_CONNECTION_UX_BRIDGE_METHODS,
+  M1_MODEL_API_PROVIDER_PRESETS,
   M1_WORKBENCH_BRIDGE_METHODS,
   MAX_M1_CHAT_ATTACHMENTS,
   MAX_M1_CHAT_HISTORY,
   parseAuthoritativeScopeEpochFromError,
+  probeM1ConnectionUxBridge,
   probeM1ProjectAuthorization,
   probeM1WorkbenchBridge,
+  selectPreferredModelFromList,
   shouldAcceptWorkbenchEventSequence,
+  sortDetectedLocalAgents,
   trimM1ChatAttachments,
   trimM1ChatHistory,
 } from './m1WorkbenchBridge'
@@ -494,5 +503,160 @@ describe('m1WorkbenchBridge', () => {
     })
     expect(probed.available).toBe(true)
     expect(typeof probed.requestM1ProjectAuthorization).toBe('function')
+  })
+
+  it('UX-CONN-FE-01：probeM1ConnectionUxBridge 精确探测 3 个新窄接口且不影响既有 9 项 M1_WORKBENCH_BRIDGE_METHODS', () => {
+    expect(M1_WORKBENCH_BRIDGE_METHODS).toHaveLength(9)
+    expect(M1_CONNECTION_UX_BRIDGE_METHODS).toEqual([
+      'detectM1LocalAgents',
+      'registerM1LocalAgent',
+      'listM1ModelApiModels',
+    ])
+
+    const emptyProbe = probeM1ConnectionUxBridge(undefined)
+    expect(emptyProbe.anyAvailable).toBe(false)
+    expect(emptyProbe.capabilities).toEqual({
+      detectLocalAgents: false,
+      registerLocalAgent: false,
+      listModelApiModels: false,
+    })
+    expect(emptyProbe.missingMethods).toEqual([...M1_CONNECTION_UX_BRIDGE_METHODS])
+
+    const partialProbe = probeM1ConnectionUxBridge({
+      detectM1LocalAgents: async () => ({ ok: true, value: { agents: [] } }),
+      listM1ModelApiModels: async () => ({
+        ok: true,
+        value: { models: ['deepseek-chat'], defaultModel: 'deepseek-chat' },
+      }),
+    })
+    expect(partialProbe.anyAvailable).toBe(true)
+    expect(partialProbe.capabilities.detectLocalAgents).toBe(true)
+    expect(partialProbe.capabilities.registerLocalAgent).toBe(false)
+    expect(partialProbe.capabilities.listModelApiModels).toBe(true)
+    expect(partialProbe.missingMethods).toEqual(['registerM1LocalAgent'])
+  })
+
+  it('UX-CONN-FE-01：内置 10 个服务商预设完整，URL 校验、自动拉取资格与模型优先级选择符合规范', () => {
+    expect(M1_MODEL_API_PROVIDER_PRESETS).toHaveLength(10)
+    expect(M1_MODEL_API_PROVIDER_PRESETS.map((p) => p.id)).toEqual([
+      'deepseek',
+      'openai',
+      'zhipu',
+      'qwen',
+      'moonshot',
+      'siliconflow',
+      'openrouter',
+      'ollama',
+      'lmstudio',
+      'custom',
+    ])
+
+    expect(getModelApiProviderPreset('deepseek').baseUrl).toBe('https://api.deepseek.com/v1')
+    expect(getModelApiProviderPreset('deepseek').defaultModel).toBe('deepseek-chat')
+    expect(getModelApiProviderPreset('openai').defaultModel).toBe('gpt-4o')
+    expect(getModelApiProviderPreset('zhipu').defaultModel).toBe('glm-4-plus')
+    expect(getModelApiProviderPreset('qwen').defaultModel).toBe('qwen-plus')
+    expect(getModelApiProviderPreset('moonshot').defaultModel).toBe('moonshot-v1-8k')
+    expect(getModelApiProviderPreset('ollama').apiKeyOptional).toBe(true)
+    expect(getModelApiProviderPreset('lmstudio').apiKeyOptional).toBe(true)
+    expect(getModelApiProviderPreset('custom').isCustom).toBe(true)
+
+    expect(findModelApiProviderPresetByUrl('https://api.deepseek.com/v1/')?.id).toBe('deepseek')
+    expect(findModelApiProviderPresetByUrl('https://custom.local/v1')).toBeNull()
+
+    expect(isValidModelApiBaseUrl('https://api.openai.com/v1')).toBe(true)
+    expect(isValidModelApiBaseUrl('http://127.0.0.1:11434/v1')).toBe(true)
+    expect(isValidModelApiBaseUrl('ftp://invalid')).toBe(false)
+    expect(isValidModelApiBaseUrl('not-a-url')).toBe(false)
+
+    // 普通服务商需非空 Key；Ollama / LM Studio 允许空 Key
+    expect(
+      canAutoFetchModelApiModels({
+        baseUrl: 'https://api.deepseek.com/v1',
+        apiKey: '',
+        providerId: 'deepseek',
+      }),
+    ).toBe(false)
+    expect(
+      canAutoFetchModelApiModels({
+        baseUrl: 'https://api.deepseek.com/v1',
+        apiKey: 'sk-123',
+        providerId: 'deepseek',
+      }),
+    ).toBe(true)
+    expect(
+      canAutoFetchModelApiModels({
+        baseUrl: 'http://127.0.0.1:11434/v1',
+        apiKey: '',
+        providerId: 'ollama',
+      }),
+    ).toBe(true)
+    expect(
+      canAutoFetchModelApiModels({
+        baseUrl: 'http://127.0.0.1:1234/v1',
+        apiKey: '',
+        providerId: 'lmstudio',
+      }),
+    ).toBe(true)
+
+    // 选模型优先级：defaultModel -> presetDefaultModel -> 首项
+    expect(
+      selectPreferredModelFromList({
+        models: ['m-a', 'deepseek-chat', 'deepseek-reasoner'],
+        defaultModel: 'deepseek-reasoner',
+        presetDefaultModel: 'deepseek-chat',
+      }),
+    ).toBe('deepseek-reasoner')
+    expect(
+      selectPreferredModelFromList({
+        models: ['m-a', 'deepseek-chat', 'deepseek-reasoner'],
+        defaultModel: 'non-existent',
+        presetDefaultModel: 'deepseek-chat',
+      }),
+    ).toBe('deepseek-chat')
+    expect(
+      selectPreferredModelFromList({
+        models: ['m-a', 'm-b'],
+        defaultModel: null,
+        presetDefaultModel: 'deepseek-chat',
+      }),
+    ).toBe('m-a')
+    expect(
+      selectPreferredModelFromList({
+        models: [],
+        defaultModel: 'm-a',
+        presetDefaultModel: 'deepseek-chat',
+      }),
+    ).toBe('')
+
+    // 本地 Agent 排序：已检测优先，未检测归入次级分组
+    const sorted = sortDetectedLocalAgents([
+      {
+        id: 'windsurf',
+        name: 'Windsurf',
+        detected: false,
+        configured: false,
+        method: 'config-file',
+        configPath: null,
+      },
+      {
+        id: 'claude-code',
+        name: 'Claude Code',
+        detected: true,
+        configured: true,
+        method: 'cli',
+        configPath: '~/.claude.json',
+      },
+      {
+        id: 'cursor',
+        name: 'Cursor',
+        detected: true,
+        configured: false,
+        method: 'config-file',
+        configPath: '~/.cursor/mcp.json',
+      },
+    ])
+    expect(sorted.detected.map((a) => a.id)).toEqual(['claude-code', 'cursor'])
+    expect(sorted.undetected.map((a) => a.id)).toEqual(['windsurf'])
   })
 })

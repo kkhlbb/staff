@@ -4,29 +4,41 @@ import './ProjectAgentPanel.css'
 import {
   applyAuthoritativeScopeEpochSync,
   buildLocalAgentConfigSnippet,
+  canAutoFetchModelApiModels,
   canUseBuiltinModelApiChat,
   classifyModelApiFailure,
   computeModelApiConfigFingerprint,
+  DEFAULT_M1_MODEL_API_PROVIDER_ID,
   formatChatToolCallItem,
   formatSelectedObjectReference,
+  getModelApiProviderPreset,
   isEventAcceptedForScope,
   isReplyAcceptedForScope,
   isScopedArtifactEventAccepted,
+  M1_MODEL_API_PROVIDER_PRESETS,
   MAX_M1_CHAT_ATTACHMENTS,
   normalizeWorkbenchBridgeError,
+  probeM1ConnectionUxBridge,
   probeM1ProjectAuthorization,
   probeM1WorkbenchBridge,
+  resolveWindowM1ConnectionUxBridge,
   resolveWindowM1ProjectAuthorization,
   resolveWindowM1WorkbenchBridge,
+  selectPreferredModelFromList,
   shouldAcceptWorkbenchEventSequence,
+  sortDetectedLocalAgents,
   trimM1ChatAttachments,
   trimM1ChatHistory,
   type M1ChatToolCallItem,
   type M1ClientConnectionState,
   type M1ConnectionSource,
   type M1ConnectionStatusSnapshot,
+  type M1ConnectionUxBridgeProbe,
+  type M1DetectedLocalAgent,
   type M1ExternalActivityItem,
+  type M1LocalAgentId,
   type M1LocalAgentInstallInfo,
+  type M1ModelApiProviderPresetId,
   type M1ModelApiTestResult,
   type M1OutgoingContextSummary,
   type M1ProjectAuthorizationProbe,
@@ -308,6 +320,9 @@ interface WorkbenchTracker {
   mounted: boolean
   requestSeq: number
   modelApiTestEpoch: number
+  detectLocalAgentsEpoch: number
+  registerLocalAgentEpoch: number
+  modelListFetchEpoch: number
   commitRequestEpoch: number
   switchProjectEpoch: number
   takeoverRequestEpoch: number
@@ -360,6 +375,13 @@ export function ProjectAgentM1Workbench({
       return probeM1ProjectAuthorization(bridgeProp)
     }
     return resolveWindowM1ProjectAuthorization()
+  }, [bridgeProp])
+
+  const connUxProbe: M1ConnectionUxBridgeProbe = useMemo(() => {
+    if (bridgeProp !== undefined) {
+      return probeM1ConnectionUxBridge(bridgeProp)
+    }
+    return resolveWindowM1ConnectionUxBridge()
   }, [bridgeProp])
 
   const m2Probe: M2WorkbenchBridgeProbe = useMemo(() => {
@@ -508,17 +530,46 @@ export function ProjectAgentM1Workbench({
   const [retryDrawingFailureSeq, setRetryDrawingFailureSeq] = useState(0)
   const [modelApiFailureSeq, setModelApiFailureSeq] = useState(0)
 
-  // Local Agent config state
+  // Local Agent config & auto-detection state
   const [installInfo, setInstallInfo] = useState<M1LocalAgentInstallInfo | null>(null)
   const [localAgentNotice, setLocalAgentNotice] = useState<string | null>(null)
   const [localAgentCopyFeedback, setLocalAgentCopyFeedback] = useState<string | null>(null)
   const [objectRefCopyFeedback, setObjectRefCopyFeedback] = useState<string | null>(null)
   const [statusChecking, setStatusChecking] = useState(false)
+  const [detectedLocalAgents, setDetectedLocalAgents] = useState<readonly M1DetectedLocalAgent[]>(
+    [],
+  )
+  const [detectingLocalAgents, setDetectingLocalAgents] = useState(false)
+  const [localAgentDetectCompleted, setLocalAgentDetectCompleted] = useState(false)
+  const [localAgentDetectError, setLocalAgentDetectError] = useState<string | null>(null)
+  const [registeringAgentId, setRegisteringAgentId] = useState<M1LocalAgentId | null>(null)
+  const [registerFeedback, setRegisterFeedback] = useState<{
+    readonly ok: boolean
+    readonly agentId: M1LocalAgentId
+    readonly agentName: string
+    readonly message: string
+    readonly configPath?: string | null
+    readonly backupPath?: string | null
+    readonly requiresRestart?: boolean
+  } | null>(null)
 
-  // Model API form & test state
-  const [apiBaseUrl, setApiBaseUrl] = useState('https://api.openai.com/v1')
-  const [apiModel, setApiModel] = useState('gpt-4.1')
+  // Model API form, provider preset, auto-fetched model list & test state
+  const defaultProviderPreset = getModelApiProviderPreset(DEFAULT_M1_MODEL_API_PROVIDER_ID)
+  const [apiProviderId, setApiProviderId] = useState<M1ModelApiProviderPresetId>(
+    DEFAULT_M1_MODEL_API_PROVIDER_ID,
+  )
+  const [apiBaseUrl, setApiBaseUrl] = useState(defaultProviderPreset.baseUrl)
+  const [apiModel, setApiModel] = useState(defaultProviderPreset.defaultModel)
   const [apiKey, setApiKey] = useState('')
+  const [availableApiModels, setAvailableApiModels] = useState<readonly string[]>([])
+  const [modelListLoading, setModelListLoading] = useState(false)
+  const [modelListNotice, setModelListNotice] = useState<string | null>(null)
+  const [manualModelInputMode, setManualModelInputMode] = useState(false)
+  const modelListDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const apiModelRef = useRef(apiModel)
+  useEffect(() => {
+    apiModelRef.current = apiModel
+  }, [apiModel])
   const [apiTesting, setApiTesting] = useState(false)
   const [modelApiTestResult, setModelApiTestResult] = useState<M1ModelApiTestResult | null>(null)
   const [testedModelApiConfigFingerprint, setTestedModelApiConfigFingerprint] = useState<
@@ -665,6 +716,9 @@ export function ProjectAgentM1Workbench({
     strictEpochGuardByProject: {},
     requestSeq: 0,
     modelApiTestEpoch: 0,
+    detectLocalAgentsEpoch: 0,
+    registerLocalAgentEpoch: 0,
+    modelListFetchEpoch: 0,
     commitRequestEpoch: 0,
     switchProjectEpoch: 0,
     takeoverRequestEpoch: 0,
@@ -1620,7 +1674,30 @@ export function ProjectAgentM1Workbench({
     )
   }
 
-  const resetModelApiUnlock = () => {
+  const currentProviderPreset = useMemo(
+    () => getModelApiProviderPreset(apiProviderId),
+    [apiProviderId],
+  )
+
+  const sortedDetectedLocalAgents = useMemo(
+    () => sortDetectedLocalAgents(detectedLocalAgents),
+    [detectedLocalAgents],
+  )
+
+  const clearPendingModelListDebounce = useCallback(() => {
+    if (modelListDebounceTimerRef.current !== null) {
+      clearTimeout(modelListDebounceTimerRef.current)
+      modelListDebounceTimerRef.current = null
+    }
+  }, [])
+
+  const invalidateModelListFetch = useCallback(() => {
+    clearPendingModelListDebounce()
+    trackerRef.current.modelListFetchEpoch += 1
+    setModelListLoading(false)
+  }, [clearPendingModelListDebounce])
+
+  const resetModelApiUnlock = useCallback(() => {
     const tracker = trackerRef.current
     // F03: Immediately invalidate any in-flight model API test request generation
     // so a late success reply for previous form values cannot unlock the edited form.
@@ -1630,6 +1707,353 @@ export function ProjectAgentM1Workbench({
     setModelApiTestResult(null)
     setTestedModelApiConfigFingerprint(null)
     setModelApiFailure(null)
+  }, [])
+
+  const handleDetectLocalAgents = useCallback(async (): Promise<void> => {
+    const tracker = trackerRef.current
+    tracker.detectLocalAgentsEpoch += 1
+    const capturedEpoch = tracker.detectLocalAgentsEpoch
+    setLocalAgentDetectError(null)
+
+    if (!connUxProbe.capabilities.detectLocalAgents || !connUxProbe.bridge.detectM1LocalAgents) {
+      setDetectingLocalAgents(false)
+      setLocalAgentDetectCompleted(false)
+      setDetectedLocalAgents([])
+      return
+    }
+
+    setDetectingLocalAgents(true)
+    let result
+    try {
+      result = await connUxProbe.bridge.detectM1LocalAgents()
+    } catch (err) {
+      result = {
+        ok: false as const,
+        error: normalizeWorkbenchBridgeError(err, '检测本地 Agent 客户端失败'),
+      }
+    }
+
+    if (!tracker.mounted || tracker.detectLocalAgentsEpoch !== capturedEpoch) {
+      return
+    }
+
+    setDetectingLocalAgents(false)
+    setLocalAgentDetectCompleted(true)
+    if (!result.ok) {
+      setLocalAgentDetectError(`检测失败（${result.error.code}）：${result.error.message}`)
+      return
+    }
+    setDetectedLocalAgents(result.value.agents)
+  }, [connUxProbe])
+
+  useEffect(() => {
+    if (
+      !showOnboarding ||
+      onboardingChoice !== 'local-agent' ||
+      !connUxProbe.capabilities.detectLocalAgents ||
+      !connUxProbe.bridge.detectM1LocalAgents
+    ) {
+      return
+    }
+    const tracker = trackerRef.current
+    tracker.detectLocalAgentsEpoch += 1
+    const capturedEpoch = tracker.detectLocalAgentsEpoch
+    let cancelled = false
+
+    void connUxProbe.bridge
+      .detectM1LocalAgents()
+      .then((result) => {
+        if (cancelled || !tracker.mounted || tracker.detectLocalAgentsEpoch !== capturedEpoch) {
+          return
+        }
+        setDetectingLocalAgents(false)
+        setLocalAgentDetectCompleted(true)
+        if (!result.ok) {
+          setLocalAgentDetectError(`检测失败（${result.error.code}）：${result.error.message}`)
+          return
+        }
+        setLocalAgentDetectError(null)
+        setDetectedLocalAgents(result.value.agents)
+      })
+      .catch((err) => {
+        if (cancelled || !tracker.mounted || tracker.detectLocalAgentsEpoch !== capturedEpoch) {
+          return
+        }
+        const normalized = normalizeWorkbenchBridgeError(err, '检测本地 Agent 客户端失败')
+        setDetectingLocalAgents(false)
+        setLocalAgentDetectCompleted(true)
+        setLocalAgentDetectError(`检测失败（${normalized.code}）：${normalized.message}`)
+      })
+
+    return () => {
+      cancelled = true
+      tracker.detectLocalAgentsEpoch += 1
+    }
+  }, [showOnboarding, onboardingChoice, connUxProbe])
+
+  const handleRegisterLocalAgent = useCallback(
+    async (agent: M1DetectedLocalAgent): Promise<void> => {
+      setRegisterFeedback(null)
+      if (
+        !connUxProbe.capabilities.registerLocalAgent ||
+        !connUxProbe.bridge.registerM1LocalAgent
+      ) {
+        setRegisterFeedback({
+          ok: false,
+          agentId: agent.id,
+          agentName: agent.name,
+          message:
+            '后端尚未接线/不可用（缺失方法：registerM1LocalAgent），请展开下方手动复制 MCP 配置。',
+        })
+        return
+      }
+
+      const tracker = trackerRef.current
+      tracker.registerLocalAgentEpoch += 1
+      const capturedEpoch = tracker.registerLocalAgentEpoch
+      setRegisteringAgentId(agent.id)
+
+      let result
+      try {
+        result = await connUxProbe.bridge.registerM1LocalAgent({ agentId: agent.id })
+      } catch (err) {
+        result = {
+          ok: false as const,
+          error: normalizeWorkbenchBridgeError(err, `配置 ${agent.name} 连接失败`),
+        }
+      }
+
+      if (!tracker.mounted || tracker.registerLocalAgentEpoch !== capturedEpoch) {
+        return
+      }
+
+      setRegisteringAgentId(null)
+      if (!result.ok) {
+        setRegisterFeedback({
+          ok: false,
+          agentId: agent.id,
+          agentName: agent.name,
+          message: `配置 ${agent.name} 失败（${result.error.code}）：${result.error.message}`,
+        })
+        return
+      }
+
+      const registered = result.value
+      setDetectedLocalAgents((prev) =>
+        prev.map((item) =>
+          item.id === registered.agentId
+            ? {
+                ...item,
+                configured: true,
+                configPath: registered.configPath ?? item.configPath,
+              }
+            : item,
+        ),
+      )
+      setRegisterFeedback({
+        ok: true,
+        agentId: registered.agentId,
+        agentName: registered.name,
+        message: registered.message || `已为 ${registered.name} 配置寸链连接`,
+        configPath: registered.configPath,
+        backupPath: registered.backupPath,
+        requiresRestart: registered.requiresRestart,
+      })
+    },
+    [connUxProbe],
+  )
+
+  const fetchModelApiModels = useCallback(
+    async (params: {
+      readonly baseUrl: string
+      readonly apiKey: string
+      readonly providerId: M1ModelApiProviderPresetId
+      readonly explicit?: boolean
+    }): Promise<void> => {
+      clearPendingModelListDebounce()
+      const tracker = trackerRef.current
+      tracker.modelListFetchEpoch += 1
+      const capturedFetchEpoch = tracker.modelListFetchEpoch
+      const capturedProjectId = tracker.projectId
+      const capturedScopeEpoch = tracker.scopeEpoch
+
+      if (!canAutoFetchModelApiModels(params)) {
+        setModelListLoading(false)
+        if (params.explicit) {
+          const preset = getModelApiProviderPreset(params.providerId)
+          setModelListNotice(
+            preset.apiKeyOptional
+              ? '请先填写有效的服务地址（http:// 或 https://）后再刷新模型列表。'
+              : '请先填写有效的服务地址与密钥后再刷新模型列表。',
+          )
+        }
+        return
+      }
+
+      if (
+        !connUxProbe.capabilities.listModelApiModels ||
+        !connUxProbe.bridge.listM1ModelApiModels
+      ) {
+        setAvailableApiModels([])
+        setModelListLoading(false)
+        setModelListNotice('当前环境未接线自动拉取模型列表，请直接输入模型名。')
+        return
+      }
+
+      const requestId = allocateRequestId('model-list')
+      setModelListLoading(true)
+      setModelListNotice(null)
+
+      let result
+      try {
+        result = await connUxProbe.bridge.listM1ModelApiModels({
+          baseUrl: params.baseUrl.trim(),
+          apiKey: params.apiKey.trim(),
+          projectId: capturedProjectId,
+          requestId,
+          scopeEpoch: capturedScopeEpoch,
+        })
+      } catch (err) {
+        result = {
+          ok: false as const,
+          error: normalizeWorkbenchBridgeError(err, '拉取模型列表失败'),
+        }
+      }
+
+      if (
+        !tracker.mounted ||
+        tracker.modelListFetchEpoch !== capturedFetchEpoch ||
+        tracker.projectId !== capturedProjectId ||
+        tracker.scopeEpoch !== capturedScopeEpoch
+      ) {
+        return
+      }
+
+      setModelListLoading(false)
+      if (!result.ok) {
+        setAvailableApiModels([])
+        setModelListNotice(
+          `自动拉取模型列表失败（${result.error.code}）：${result.error.message}，请手动输入模型名继续测试。`,
+        )
+        return
+      }
+
+      const cleanedModels: string[] = []
+      const seen = new Set<string>()
+      for (const raw of result.value.models) {
+        const trimmed = raw.trim()
+        if (!trimmed || seen.has(trimmed)) continue
+        seen.add(trimmed)
+        cleanedModels.push(trimmed)
+      }
+
+      if (cleanedModels.length === 0) {
+        setAvailableApiModels([])
+        setModelListNotice('服务商未返回可用模型列表，请手动输入模型名继续测试。')
+        return
+      }
+
+      const preset = getModelApiProviderPreset(params.providerId)
+      const preferred = selectPreferredModelFromList({
+        models: cleanedModels,
+        defaultModel: result.value.defaultModel,
+        presetDefaultModel: preset.defaultModel,
+      })
+
+      setAvailableApiModels(cleanedModels)
+      setManualModelInputMode(false)
+      setModelListNotice(null)
+      if (preferred && preferred !== apiModelRef.current) {
+        setApiModel(preferred)
+        resetModelApiUnlock()
+      }
+    },
+    [clearPendingModelListDebounce, connUxProbe, resetModelApiUnlock],
+  )
+
+  const effectiveModelListNotice = useMemo(() => {
+    if (modelListNotice) return modelListNotice
+    if (
+      showOnboarding &&
+      onboardingChoice === 'model-api' &&
+      !connUxProbe.capabilities.listModelApiModels &&
+      canAutoFetchModelApiModels({
+        baseUrl: apiBaseUrl,
+        apiKey,
+        providerId: apiProviderId,
+      })
+    ) {
+      return '当前环境未接线自动拉取模型列表，请直接输入模型名。'
+    }
+    return null
+  }, [
+    modelListNotice,
+    showOnboarding,
+    onboardingChoice,
+    connUxProbe.capabilities.listModelApiModels,
+    apiBaseUrl,
+    apiKey,
+    apiProviderId,
+  ])
+
+  useEffect(() => {
+    clearPendingModelListDebounce()
+    const tracker = trackerRef.current
+    tracker.modelListFetchEpoch += 1
+
+    if (!showOnboarding || onboardingChoice !== 'model-api') {
+      return
+    }
+
+    if (
+      !canAutoFetchModelApiModels({
+        baseUrl: apiBaseUrl,
+        apiKey,
+        providerId: apiProviderId,
+      })
+    ) {
+      return
+    }
+
+    if (!connUxProbe.capabilities.listModelApiModels) {
+      return
+    }
+
+    modelListDebounceTimerRef.current = setTimeout(() => {
+      modelListDebounceTimerRef.current = null
+      void fetchModelApiModels({
+        baseUrl: apiBaseUrl,
+        apiKey,
+        providerId: apiProviderId,
+      })
+    }, 400)
+
+    return () => {
+      clearPendingModelListDebounce()
+      tracker.modelListFetchEpoch += 1
+    }
+  }, [
+    showOnboarding,
+    onboardingChoice,
+    apiProviderId,
+    apiBaseUrl,
+    apiKey,
+    projectId,
+    connUxProbe,
+    clearPendingModelListDebounce,
+    fetchModelApiModels,
+  ])
+
+  const handleProviderChange = (nextProviderId: M1ModelApiProviderPresetId): void => {
+    const nextPreset = getModelApiProviderPreset(nextProviderId)
+    invalidateModelListFetch()
+    resetModelApiUnlock()
+    setApiProviderId(nextProviderId)
+    setApiBaseUrl(nextPreset.baseUrl)
+    setApiModel(nextPreset.defaultModel)
+    setAvailableApiModels([])
+    setModelListNotice(null)
+    setManualModelInputMode(false)
   }
 
   const handleTestModelApi = async (): Promise<void> => {
@@ -1637,10 +2061,13 @@ export function ProjectAgentM1Workbench({
     setModelApiTestResult(null)
     setTestedModelApiConfigFingerprint(null)
 
-    if (!apiBaseUrl.trim() || !apiModel.trim() || !apiKey.trim()) {
+    const needsApiKey = !currentProviderPreset.apiKeyOptional
+    if (!apiBaseUrl.trim() || !apiModel.trim() || (needsApiKey && !apiKey.trim())) {
       setModelApiFailure({
         title: '配置不完整',
-        detail: '请填写服务地址、模型名与密钥后再测试连接。',
+        detail: needsApiKey
+          ? '请填写服务地址、模型名与密钥后再测试连接。'
+          : '请填写服务地址与模型名后再测试连接。',
       })
       setModelApiFailureSeq((seq) => seq + 1)
       return
@@ -1757,6 +2184,9 @@ export function ProjectAgentM1Workbench({
     setDraftRevision(params.nextDraftRevision)
 
     // F12 + S1 + S4: Thoroughly reset all project-scoped state so zero data or stuck pending flags leak.
+    invalidateModelListFetch()
+    setAvailableApiModels([])
+    setModelListNotice(null)
     setAuthorizationState('unauthorized')
     setWriterOwner(null)
     setApiTesting(false)
@@ -3645,38 +4075,165 @@ export function ProjectAgentM1Workbench({
                   </div>
                 ) : null}
 
-                {/* Step 1: One-click Copy MCP Config */}
+                {/* Step 1: One-click Local Agent Auto-Detection & Registration */}
                 <div className="pa-step-block">
                   <div className="pa-header">
-                    <span className="pa-card-label">第 1 步 · 复制 MCP 配置到你的本地 Agent</span>
-                    <div className="pa-controls">
-                      <button
-                        type="button"
-                        className="pa-btn pa-btn-primary pa-btn-sm"
-                        onClick={() => {
-                          void handleCopy(localAgentConfig.mcpConfigJson, 'MCP 配置', 'local-agent')
-                        }}
-                      >
-                        复制 MCP 配置
-                      </button>
-                    </div>
+                    <span className="pa-card-label">第 1 步 · 一键配置本地 Agent 客户端</span>
+                    <button
+                      type="button"
+                      className="pa-btn pa-btn-ghost pa-btn-sm"
+                      disabled={detectingLocalAgents || !connUxProbe.capabilities.detectLocalAgents}
+                      onClick={() => {
+                        void handleDetectLocalAgents()
+                      }}
+                    >
+                      {detectingLocalAgents ? '检测中…' : '刷新检测'}
+                    </button>
                   </div>
-                  <pre className="pa-code-block pa-mono">{localAgentConfig.mcpConfigJson}</pre>
-                  <details className="pa-inline-details">
-                    <summary className="pa-muted">
-                      查看自然语言连接说明与安装路径（{localAgentConfig.installPath}）
-                    </summary>
+
+                  {!connUxProbe.capabilities.detectLocalAgents ? (
+                    <div className="pa-notice" role="status">
+                      本地 Agent 自动检测尚未接线/不可用，请展开下方「其他客户端 / 手动复制 MCP 配置」完成配置。
+                    </div>
+                  ) : detectingLocalAgents && !localAgentDetectCompleted ? (
+                    <p className="pa-muted" role="status">
+                      正在检测本机已安装的 Agent 客户端…
+                    </p>
+                  ) : localAgentDetectError ? (
+                    <div className="pa-danger-box" role="alert">
+                      <span>{localAgentDetectError}</span>
+                    </div>
+                  ) : (
+                    <>
+                      {sortedDetectedLocalAgents.detected.length > 0 ? (
+                        <ul className="pa-agent-list" aria-label="已检测到的本地 Agent 列表">
+                          {sortedDetectedLocalAgents.detected.map((agent) => (
+                            <li key={agent.id} className="pa-agent-item">
+                              <div className="pa-agent-item-info">
+                                <div className="pa-row">
+                                  <span className="pa-agent-item-name">{agent.name}</span>
+                                  <span className="pa-muted">
+                                    {agent.method === 'cli' ? 'CLI' : '配置文件'}
+                                  </span>
+                                </div>
+                                {agent.detail || agent.configPath ? (
+                                  <span className="pa-agent-item-meta pa-mono">
+                                    {agent.detail ?? agent.configPath}
+                                  </span>
+                                ) : null}
+                              </div>
+                              {agent.configured ? (
+                                <span className="pa-pill pa-tone-pass">已配置 ✓</span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="pa-btn pa-btn-primary pa-btn-sm"
+                                  disabled={registeringAgentId === agent.id}
+                                  aria-label={`一键配置连接 ${agent.name}`}
+                                  onClick={() => {
+                                    void handleRegisterLocalAgent(agent)
+                                  }}
+                                >
+                                  {registeringAgentId === agent.id ? '配置中…' : '一键配置连接'}
+                                </button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="pa-muted" role="status">
+                          暂未在本机检测到支持的 Agent 客户端，请展开下方手动复制 MCP 配置。
+                        </p>
+                      )}
+
+                      {sortedDetectedLocalAgents.undetected.length > 0 ? (
+                        <details className="pa-inline-details">
+                          <summary className="pa-muted">
+                            未检测到的其他支持客户端（{sortedDetectedLocalAgents.undetected.length}）
+                          </summary>
+                          <div className="pa-details-body">
+                            <ul className="pa-agent-list" aria-label="未检测到的本地 Agent 列表">
+                              {sortedDetectedLocalAgents.undetected.map((agent) => (
+                                <li key={agent.id} className="pa-agent-item pa-agent-item-muted">
+                                  <div className="pa-agent-item-info">
+                                    <span className="pa-agent-item-name">{agent.name}</span>
+                                    {agent.detail ? (
+                                      <span className="pa-agent-item-meta">{agent.detail}</span>
+                                    ) : null}
+                                  </div>
+                                  <span className="pa-pill pa-tone-muted">未检测到</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </details>
+                      ) : null}
+                    </>
+                  )}
+
+                  {registerFeedback ? (
+                    <div
+                      className={registerFeedback.ok ? 'pa-pass-box' : 'pa-danger-box'}
+                      role={registerFeedback.ok ? 'status' : 'alert'}
+                    >
+                      <strong>{registerFeedback.message}</strong>
+                      {registerFeedback.ok && registerFeedback.requiresRestart ? (
+                        <span>请重启 {registerFeedback.agentName} 以加载新配置。</span>
+                      ) : null}
+                      {registerFeedback.ok && registerFeedback.configPath ? (
+                        <span className="pa-mono">配置文件：{registerFeedback.configPath}</span>
+                      ) : null}
+                      {registerFeedback.ok && registerFeedback.backupPath ? (
+                        <span className="pa-mono">原配置备份：{registerFeedback.backupPath}</span>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  <details className="pa-inline-details pa-manual-mcp-details">
+                    <summary className="pa-muted">其他客户端 / 手动复制 MCP 配置</summary>
                     <div className="pa-details-body">
-                      <pre className="pa-code-block pa-mono">{localAgentConfig.connectPrompt}</pre>
-                      <button
-                        type="button"
-                        className="pa-btn pa-btn-sm"
-                        onClick={() => {
-                          void handleCopy(localAgentConfig.connectPrompt, '连接说明', 'local-agent')
-                        }}
-                      >
-                        复制连接说明
-                      </button>
+                      <div className="pa-header">
+                        <span className="pa-muted">手动复制 MCP JSON 配置片段</span>
+                        <div className="pa-controls">
+                          <button
+                            type="button"
+                            className="pa-btn pa-btn-sm"
+                            onClick={() => {
+                              void handleCopy(
+                                localAgentConfig.mcpConfigJson,
+                                'MCP 配置',
+                                'local-agent',
+                              )
+                            }}
+                          >
+                            复制 MCP 配置
+                          </button>
+                        </div>
+                      </div>
+                      <pre className="pa-code-block pa-mono">{localAgentConfig.mcpConfigJson}</pre>
+                      <details className="pa-inline-details">
+                        <summary className="pa-muted">
+                          查看自然语言连接说明与安装路径（{localAgentConfig.installPath}）
+                        </summary>
+                        <div className="pa-details-body">
+                          <pre className="pa-code-block pa-mono">
+                            {localAgentConfig.connectPrompt}
+                          </pre>
+                          <button
+                            type="button"
+                            className="pa-btn pa-btn-sm"
+                            onClick={() => {
+                              void handleCopy(
+                                localAgentConfig.connectPrompt,
+                                '连接说明',
+                                'local-agent',
+                              )
+                            }}
+                          >
+                            复制连接说明
+                          </button>
+                        </div>
+                      </details>
                     </div>
                   </details>
                 </div>
@@ -3785,47 +4342,144 @@ export function ProjectAgentM1Workbench({
                   </div>
                 ) : null}
 
-                <div className="pa-form-grid">
+                <div className="pa-form-stack">
                   <label className="pa-field">
-                    服务地址
-                    <input
-                      type="text"
-                      aria-label="服务地址"
-                      className="pa-input pa-mono"
-                      value={apiBaseUrl}
+                    服务商
+                    <select
+                      aria-label="服务商"
+                      className="pa-input"
+                      value={apiProviderId}
                       onChange={(event) => {
-                        setApiBaseUrl(event.target.value)
-                        resetModelApiUnlock()
+                        handleProviderChange(event.target.value as M1ModelApiProviderPresetId)
                       }}
-                    />
+                    >
+                      {M1_MODEL_API_PROVIDER_PRESETS.map((preset) => (
+                        <option key={preset.id} value={preset.id}>
+                          {preset.label}
+                        </option>
+                      ))}
+                    </select>
+                    {!currentProviderPreset.isCustom ? (
+                      <span className="pa-provider-url-hint pa-mono">
+                        {currentProviderPreset.baseUrl}
+                      </span>
+                    ) : null}
                   </label>
-                  <label className="pa-field">
-                    模型名
-                    <input
-                      type="text"
-                      aria-label="模型名"
-                      className="pa-input pa-mono"
-                      value={apiModel}
-                      onChange={(event) => {
-                        setApiModel(event.target.value)
-                        resetModelApiUnlock()
-                      }}
-                    />
-                  </label>
-                  <label className="pa-field">
-                    密钥
-                    <input
-                      type="password"
-                      aria-label="密钥"
-                      className="pa-input pa-mono"
-                      placeholder="sk-..."
-                      value={apiKey}
-                      onChange={(event) => {
-                        setApiKey(event.target.value)
-                        resetModelApiUnlock()
-                      }}
-                    />
-                  </label>
+
+                  {currentProviderPreset.isCustom ? (
+                    <label className="pa-field">
+                      服务地址
+                      <input
+                        type="text"
+                        aria-label="服务地址"
+                        className="pa-input pa-mono"
+                        placeholder="https://api.example.com/v1"
+                        value={apiBaseUrl}
+                        onChange={(event) => {
+                          setApiBaseUrl(event.target.value)
+                          setAvailableApiModels([])
+                          setModelListNotice(null)
+                          resetModelApiUnlock()
+                        }}
+                      />
+                    </label>
+                  ) : null}
+
+                  <div className="pa-form-grid-two">
+                    <label className="pa-field">
+                      <span>
+                        密钥
+                        {currentProviderPreset.apiKeyOptional ? '（可选）' : ''}
+                      </span>
+                      <input
+                        type="password"
+                        aria-label="密钥"
+                        className="pa-input pa-mono"
+                        placeholder={
+                          currentProviderPreset.apiKeyOptional
+                            ? '本地服务通常无需密钥（密钥可选）'
+                            : 'sk-...'
+                        }
+                        value={apiKey}
+                        onChange={(event) => {
+                          setApiKey(event.target.value)
+                          resetModelApiUnlock()
+                        }}
+                      />
+                    </label>
+
+                    <div className="pa-field">
+                      <div className="pa-model-field-meta">
+                        <span>模型名</span>
+                        {availableApiModels.length > 0 ? (
+                          <button
+                            type="button"
+                            className="pa-link-subtle"
+                            onClick={() => setManualModelInputMode((prev) => !prev)}
+                          >
+                            {manualModelInputMode ? '选择列表' : '手动输入'}
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className="pa-input-inline-row">
+                        {availableApiModels.length > 0 && !manualModelInputMode ? (
+                          <select
+                            aria-label="模型名"
+                            className="pa-input pa-mono"
+                            value={apiModel}
+                            onChange={(event) => {
+                              setApiModel(event.target.value)
+                              resetModelApiUnlock()
+                            }}
+                          >
+                            {availableApiModels.map((modelName) => (
+                              <option key={modelName} value={modelName}>
+                                {modelName}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            aria-label="模型名"
+                            className="pa-input pa-mono"
+                            placeholder="例如 deepseek-chat / gpt-4o"
+                            value={apiModel}
+                            onChange={(event) => {
+                              setApiModel(event.target.value)
+                              resetModelApiUnlock()
+                            }}
+                          />
+                        )}
+                        <button
+                          type="button"
+                          className="pa-btn pa-btn-sm"
+                          aria-label="刷新模型列表"
+                          title="刷新模型列表"
+                          disabled={modelListLoading}
+                          onClick={() => {
+                            void fetchModelApiModels({
+                              baseUrl: apiBaseUrl,
+                              apiKey,
+                              providerId: apiProviderId,
+                              explicit: true,
+                            })
+                          }}
+                        >
+                          ↻
+                        </button>
+                      </div>
+                      {modelListLoading ? (
+                        <span className="pa-provider-url-hint" role="status">
+                          正在拉取可用模型…
+                        </span>
+                      ) : effectiveModelListNotice ? (
+                        <span className="pa-provider-url-hint" role="status">
+                          {effectiveModelListNotice}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Compact Outgoing Context Summary */}

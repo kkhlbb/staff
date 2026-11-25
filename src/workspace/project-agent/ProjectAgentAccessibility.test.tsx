@@ -177,8 +177,9 @@ describe('第一部分 §3 错误后焦点自动落点（5 类场景 + 不抢占
       />,
     )
 
-    // 切到模型 API 面板并聚焦到服务地址输入框
+    // 切到模型 API 面板、选择自定义地址并聚焦到服务地址输入框
     fireEvent.click(screen.getByRole('button', { name: /使用模型 API/ }))
+    fireEvent.change(screen.getByLabelText('服务商'), { target: { value: 'custom' } })
     const baseUrlInput = screen.getByLabelText('服务地址')
     baseUrlInput.focus()
     expect(document.activeElement).toBe(baseUrlInput)
