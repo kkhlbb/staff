@@ -379,7 +379,7 @@ export function M2CenterCanvas({
               aria-controls="pa-structure-popover"
               onClick={onToggleStructure}
             >
-              零件结构 ({features.length})
+              零件结构 ({features.length}) <span aria-hidden="true">{structureOpen ? '▴' : '▾'}</span>
             </button>
 
             {structureOpen ? (

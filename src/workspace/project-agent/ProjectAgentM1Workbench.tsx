@@ -4102,15 +4102,17 @@ export function ProjectAgentM1Workbench({
                 检查
                 {checksSummaryCounts.total > 0 ? (
                   <span
-                    className={`pa-tab-dot ${
+                    className={`pa-tab-badge ${
                       checksSummaryCounts.failed > 0
-                        ? 'pa-tab-dot-fail'
+                        ? 'pa-tab-badge-fail'
                         : checksSummaryCounts.pending > 0
-                          ? 'pa-tab-dot-warn'
-                          : 'pa-tab-dot-pass'
+                          ? 'pa-tab-badge-warn'
+                          : 'pa-tab-badge-pass'
                     }`}
                     aria-hidden="true"
-                  />
+                  >
+                    {checksSummaryCounts.passed}/{checksSummaryCounts.total}
+                  </span>
                 ) : null}
               </button>
               <button
