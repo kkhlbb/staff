@@ -1,1 +1,1 @@
-export function buildLocalAgent(arch: string, localAgentResource: string): Promise<void>
+export function buildLocalAgent(arch: string, localAgentResource: string, platform?: NodeJS.Platform): Promise<void>

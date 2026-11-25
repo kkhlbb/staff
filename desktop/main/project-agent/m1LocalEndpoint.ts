@@ -1,6 +1,8 @@
 import { constants, chmodSync, closeSync, fstatSync, mkdirSync, openSync, unlinkSync } from 'node:fs'
 import net from 'node:net'
 import type { Socket } from 'node:net'
+import type { Duplex } from 'node:stream'
+import { listenM1WindowsPipe } from './m1WindowsPipe.ts'
 import path from 'node:path'
 import { nat, object, oneOf, q, text, type Infer } from '../../shared/project-agent/schema.ts'
 import type { LocalM1Authority, M1ExternalScope, M1WriterConfirmation, M1WriterLease } from './m1LocalAuthority'
@@ -64,8 +66,8 @@ async function removeStaleSocket(socketPath: string) {
   unlinkSync(socketPath)
 }
 
-export async function startM1LocalEndpoint(ports: EndpointPorts) {
-  const { socketPath, peerHelper, authority } = ports
+async function listenM1DarwinPipe(socketPath: string, peerHelper: string, accept: (socket: Socket) => void,
+  diagnostic?: (code: string) => void) {
   const directory = path.dirname(socketPath)
   if (!checkM1Directory(socketPath)) {
     try { mkdirSync(directory, { mode: 0o700 }) } catch (error) {
@@ -75,7 +77,55 @@ export async function startM1LocalEndpoint(ports: EndpointPorts) {
   }
   const lock = path.join(directory, 'owner.lock')
   const lockFd = openSync(lock, constants.O_CREAT | constants.O_RDWR | constants.O_NOFOLLOW | constants.O_NONBLOCK, 0o600)
-  const peers = new Map<Socket, Peer>()
+  const connections = new Set<Socket>()
+  const server = net.createServer(socket => {
+    connections.add(socket)
+    socket.once('close', () => connections.delete(socket))
+    socket.on('error', () => socket.destroy())
+    if (sameM1Peer(peerHelper, socket)) accept(socket)
+    else socket.destroy()
+  })
+  try {
+    const held = fstatSync(lockFd)
+    const named = optionalStat(lock)
+    if (!held.isFile() || held.nlink !== 1 || !isPrivateM1Node(held, 0o600) ||
+      !named || named.dev !== held.dev || named.ino !== held.ino) throw Error('UNSAFE_ENDPOINT')
+    if (!nativeM1Check(peerHelper, 'lock', lockFd)) throw Error('LOCAL_ENDPOINT_BUSY')
+    await removeStaleSocket(socketPath)
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject)
+      // libuv binds synchronously for a filesystem path. Restrict the socket from its creation.
+      const previous = process.umask(0o177)
+      try {
+        server.listen(socketPath, () => {
+          server.off('error', reject)
+          resolve()
+        })
+      } finally {
+        process.umask(previous)
+      }
+    })
+    chmodSync(socketPath, 0o600)
+    if (!checkM1Socket(socketPath)) throw Error('UNSAFE_ENDPOINT')
+  } catch (error) {
+    for (const socket of connections) socket.destroy()
+    if (server.listening) await new Promise<void>(resolve => server.close(() => resolve()))
+    closeSync(lockFd)
+    throw error
+  }
+  server.on('error', () => diagnostic?.('LOCAL_ENDPOINT_FAILED'))
+  return async () => {
+    try {
+      await new Promise<void>(resolve => server.close(() => resolve()))
+    } finally {
+      closeSync(lockFd)
+    }
+  }
+}
+
+export async function startM1LocalEndpoint(ports: EndpointPorts) {
+  const { socketPath, peerHelper, authority } = ports
+  const peers = new Map<Duplex, Peer>()
   const pending = new Set<Promise<void>>()
   let stopping = false
 
@@ -87,7 +137,7 @@ export async function startM1LocalEndpoint(ports: EndpointPorts) {
     })
   }
 
-  function disconnect(socket: Socket, peer: Peer) {
+  function disconnect(socket: Duplex, peer: Peer) {
     if (peer.abort.signal.aborted) return
     peers.delete(socket)
     peer.abort.abort()
@@ -188,9 +238,9 @@ export async function startM1LocalEndpoint(ports: EndpointPorts) {
     throw Error('INVALID_REQUEST')
   }
 
-  const server = net.createServer(socket => {
+  function accept(socket: Duplex) {
     socket.on('error', () => socket.destroy())
-    if (stopping || peers.size >= 16 || !sameM1Peer(peerHelper, socket)) {
+    if (stopping || peers.size >= 16) {
       socket.destroy()
       return
     }
@@ -220,37 +270,10 @@ export async function startM1LocalEndpoint(ports: EndpointPorts) {
         reply({ ok: false, code })
       }).finally(() => { busy = false }))
     })
-  })
-  try {
-    const held = fstatSync(lockFd)
-    const named = optionalStat(lock)
-    if (!held.isFile() || held.nlink !== 1 || !isPrivateM1Node(held, 0o600) ||
-      !named || named.dev !== held.dev || named.ino !== held.ino) throw Error('UNSAFE_ENDPOINT')
-    if (!nativeM1Check(peerHelper, 'lock', lockFd)) throw Error('LOCAL_ENDPOINT_BUSY')
-    await removeStaleSocket(socketPath)
-    await new Promise<void>((resolve, reject) => {
-      server.once('error', reject)
-      // libuv binds synchronously for a filesystem path. Restrict the socket from its creation.
-      const previous = process.umask(0o177)
-      try {
-        server.listen(socketPath, () => {
-          server.off('error', reject)
-          resolve()
-        })
-      } finally {
-        process.umask(previous)
-      }
-    })
-    chmodSync(socketPath, 0o600)
-    if (!checkM1Socket(socketPath)) throw Error('UNSAFE_ENDPOINT')
-  } catch (error) {
-    stopping = true
-    for (const [socket, peer] of peers) disconnect(socket, peer)
-    if (server.listening) await new Promise<void>(resolve => server.close(() => resolve()))
-    closeSync(lockFd)
-    throw error
   }
-  server.on('error', () => ports.diagnostic?.('LOCAL_ENDPOINT_FAILED'))
+  const stopListening = process.platform === 'win32'
+    ? await listenM1WindowsPipe(peerHelper, socketPath, accept, ports.diagnostic)
+    : await listenM1DarwinPipe(socketPath, peerHelper, accept, ports.diagnostic)
   let closing: Promise<void> | undefined
   return {
     connections: () => [...peers.values()].flatMap(peer => peer.clientName ?
@@ -280,12 +303,8 @@ export async function startM1LocalEndpoint(ports: EndpointPorts) {
     close: () => closing ??= (async () => {
       stopping = true
       for (const [socket, peer] of peers) disconnect(socket, peer)
-      try {
-        await new Promise<void>(resolve => server.close(() => resolve()))
-        while (pending.size) await Promise.allSettled([...pending])
-      } finally {
-        closeSync(lockFd)
-      }
+      await stopListening()
+      while (pending.size) await Promise.allSettled([...pending])
     })(),
   }
 }

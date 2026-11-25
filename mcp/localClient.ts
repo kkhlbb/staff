@@ -1,24 +1,25 @@
 import { spawn } from 'node:child_process'
 import net from 'node:net'
-import type { Socket } from 'node:net'
+import type { Duplex } from 'node:stream'
+import { connectM1WindowsPipe } from '../desktop/main/project-agent/m1WindowsPipe.ts'
 import path from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { setTimeout as delay } from 'node:timers/promises'
-import { checkM1Socket, isM1ClientName, M1_LAUNCH_ARGUMENT, M1_LOCAL_VERSION, readM1Frames, sameM1Peer } from '../desktop/main/project-agent/m1LocalTransport.ts'
+import { checkM1Socket, isM1WindowsAbsolute, isM1ClientName, M1_LAUNCH_ARGUMENT, M1_LOCAL_VERSION, readM1Frames, sameM1Peer } from '../desktop/main/project-agent/m1LocalTransport.ts'
 
 type Launcher = (command: string, args: string[], signal: AbortSignal) => Promise<void>
 export const launchLocalDesktop: Launcher = (command, args, signal) => new Promise((resolve, reject) => {
   const env = { ...process.env }
-  delete env.ELECTRON_RUN_AS_NODE
-  delete env.ELECTRON_NO_ASAR
-  delete env.NODE_OPTIONS
+  for (const name of Object.keys(env)) {
+    if (['ELECTRON_RUN_AS_NODE', 'ELECTRON_NO_ASAR', 'NODE_OPTIONS'].includes(name.toUpperCase())) delete env[name]
+  }
   signal.throwIfAborted()
-  const child = spawn(command, args, { detached: true, stdio: 'ignore', env })
+  const child = spawn(command, args, { detached: true, stdio: 'ignore', env, windowsHide: true })
   child.on('error', reject)
   child.once('spawn', () => { child.unref(); resolve() })
 })
 
-function connect(socketPath: string, helper: string, signal: AbortSignal): Promise<Socket> {
+function connect(socketPath: string, helper: string, signal: AbortSignal): Promise<Duplex> {
   return new Promise((resolve, reject) => {
     if (!checkM1Socket(socketPath)) throw Object.assign(Error('ENOENT'), { code: 'ENOENT' })
     signal.throwIfAborted()
@@ -45,18 +46,21 @@ interface ClientPorts {
   peerHelper: string
   startupTimeoutMs?: number
   launch?: Launcher
+  platform?: NodeJS.Platform
+  connectWindows?: typeof connectM1WindowsPipe
 }
 
 export class LocalM1Client {
   private readonly ports: ClientPorts
   private readonly lifetime = new AbortController()
-  private socket?: Socket
-  private connecting?: Promise<Socket>
+  private socket?: Duplex
+  private connecting?: Promise<Duplex>
   private pending?: { id: number; finish(error: Error | null, result?: Record<string, unknown>): void }
   private id = 0
   private clientName: string | null = null
   constructor(ports: ClientPorts) {
-    if (!path.isAbsolute(ports.executable)) throw Error('LOCAL_ENDPOINT_UNAVAILABLE')
+    const isAbsolute = (ports.platform ?? process.platform) === 'win32' ? isM1WindowsAbsolute : path.isAbsolute
+    if (!isAbsolute(ports.executable)) throw Error('LOCAL_ENDPOINT_UNAVAILABLE')
     this.ports = ports
   }
 
@@ -73,13 +77,17 @@ export class LocalM1Client {
 
   private async locate(signal: AbortSignal) {
     const { executable, socketPath, peerHelper, launch = launchLocalDesktop } = this.ports
+    const windows = (this.ports.platform ?? process.platform) === 'win32'
+    const connectWindows = this.ports.connectWindows ?? connectM1WindowsPipe
     let launched = false
     while (!signal.aborted) {
       try {
-        return await connect(socketPath, peerHelper, signal)
+        return windows ? await connectWindows(peerHelper, socketPath, signal) : await connect(socketPath, peerHelper, signal)
       } catch (error) {
-        if (!['ENOENT', 'ECONNREFUSED'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error
-        if (!launched) {
+        const code = (error as NodeJS.ErrnoException).code
+        const missing = code === 'ENOENT' || code === 'ECONNREFUSED'
+        if (!missing && !(windows && code === 'EBUSY')) throw error
+        if (missing && !launched) {
           launched = true
           await Promise.race([launch(executable, [M1_LAUNCH_ARGUMENT], signal),
             delay(this.ports.startupTimeoutMs ?? 10_000, undefined, { signal, ref: false }).then(() => { throw Error('DESKTOP_TIMEOUT') })])
@@ -95,12 +103,13 @@ export class LocalM1Client {
     const budget = this.ports.startupTimeoutMs ?? 10_000
     const deadline = performance.now() + budget
     const startup = AbortSignal.any([this.lifetime.signal, AbortSignal.timeout(budget)])
-    let socket: Socket
+    let socket: Duplex
     try { socket = await this.locate(startup) } catch (error) {
       if (startup.aborted) throw Error('DESKTOP_TIMEOUT', { cause: error })
       throw error
     }
     this.socket = socket
+    socket.on('error', () => socket.destroy())
     socket.on('close', () => {
       if (this.socket !== socket) return
       this.socket = undefined
@@ -129,7 +138,7 @@ export class LocalM1Client {
     }
   }
 
-  private exchange(socket: Socket, method: string, params: unknown, timeoutMs: number): Promise<Record<string, unknown>> {
+  private exchange(socket: Duplex, method: string, params: unknown, timeoutMs: number): Promise<Record<string, unknown>> {
     return new Promise((resolve, reject) => {
       if (socket.destroyed || this.lifetime.signal.aborted) throw Error('DESKTOP_DISCONNECTED')
       if (this.pending) throw Error('BUSY')

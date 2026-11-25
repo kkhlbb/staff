@@ -1,11 +1,29 @@
 import path from 'node:path'
 import type { LocalM1Authority } from './m1LocalAuthority'
-import { M1_BRIDGE_RESOURCE } from './m1LocalTransport'
+import { isM1WindowsAbsolute, M1_BRIDGE_RESOURCE } from './m1LocalTransport'
 
 const mcpServerName = 'cunlian-local'
 
-export function getLocalAgentInstallInfo(executable: string, resourcesPath: string) {
-  if (!path.isAbsolute(executable) || !path.isAbsolute(resourcesPath) ||
+export function getLocalAgentInstallInfo(executable: string, resourcesPath: string, platform = process.platform) {
+  if (platform === 'win32') {
+    const win = path.win32
+    const installPath = win.dirname(win.normalize(executable))
+    if (!isM1WindowsAbsolute(executable) || !isM1WindowsAbsolute(resourcesPath) ||
+      win.basename(executable).toLowerCase() !== '寸链.exe' ||
+      win.join(installPath, 'resources').toLowerCase() !== win.normalize(resourcesPath).replace(/\\$/, '').toLowerCase()) {
+      throw Error('LOCAL_ENDPOINT_UNAVAILABLE')
+    }
+    const bridgeDir = win.join(resourcesPath, M1_BRIDGE_RESOURCE)
+    const bridgeCommand = win.join(bridgeDir, 'cunlian-mcp.cmd')
+    const bridgeArgs: string[] = []
+    // MCP clients can spawn the PE directly. A .cmd file would require shell-specific quoting.
+    const server = { command: win.normalize(executable),
+      args: [win.join(bridgeDir, 'local-bridge.mjs'), win.normalize(executable)],
+      env: { ELECTRON_RUN_AS_NODE: '1', NODE_OPTIONS: '', ELECTRON_NO_ASAR: '' } }
+    return { installPath, bridgeCommand, bridgeArgs, mcpServerName,
+      mcpConfigJson: JSON.stringify({ mcpServers: { [mcpServerName]: server } }, null, 2) }
+  }
+  if (platform !== 'darwin' || !path.isAbsolute(executable) || !path.isAbsolute(resourcesPath) ||
     path.basename(path.dirname(executable)) !== 'MacOS' ||
     path.resolve(path.dirname(executable), '..', 'Resources') !== resourcesPath) {
     throw Error('LOCAL_ENDPOINT_UNAVAILABLE')

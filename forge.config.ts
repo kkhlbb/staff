@@ -28,7 +28,9 @@ const config: ForgeConfig = {
     extraResource: resources,
     afterCopyExtraResources: [async ({ buildPath, platform, arch }) => {
       if (platform === 'darwin') {
-        await buildLocalAgent(arch, path.join(buildPath, '寸链.app/Contents/Resources/cunlian-agent'))
+        await buildLocalAgent(arch, path.join(buildPath, '寸链.app/Contents/Resources/cunlian-agent'), platform)
+      } else if (platform === 'win32') {
+        await buildLocalAgent(arch, path.join(buildPath, 'resources/cunlian-agent'), platform)
       }
     }],
     ...(electronZipDir === undefined ? {} : { electronZipDir }),

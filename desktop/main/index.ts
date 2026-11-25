@@ -7,7 +7,7 @@ import { LocalM1Authority } from './project-agent/m1LocalAuthority'
 import { installM1AuthorizationChannels } from './project-agent/m1AuthorizationChannels'
 import { installM1ReadChannels } from './project-agent/m1ReadChannels'
 import { startM1LocalEndpoint } from './project-agent/m1LocalEndpoint'
-import { M1_BRIDGE_RESOURCE, localM1Socket } from './project-agent/m1LocalTransport'
+import { localM1PeerHelper, localM1Socket, localM1WindowsProfile } from './project-agent/m1LocalTransport'
 import {
   BrowserWindow,
   Menu,
@@ -83,10 +83,14 @@ import { createMainWindow, type MainWindowHandle } from './window'
 app.setName(DESKTOP_APP_NAME)
 // 允许标准 Electron 开关 `--user-data-dir=`（便携/取证隔离配置）；未给定时用默认目录。
 const userDataOverride = process.argv.find((argument) => argument.startsWith('--user-data-dir='))
+const defaultUserData = path.join(app.getPath('appData'), DESKTOP_APP_NAME)
+// Chromium's singleton lock is keyed by userData. Each packaged Windows copy
+// needs its own profile so an already running copy cannot intercept cold start.
+const windowsInstall = app.isPackaged && process.platform === 'win32'
 app.setPath(
   'userData',
   userDataOverride === undefined
-    ? path.join(app.getPath('appData'), DESKTOP_APP_NAME)
+    ? (windowsInstall ? path.join(defaultUserData, 'installations', localM1WindowsProfile(process.execPath)) : defaultUserData)
     : path.resolve(userDataOverride.slice('--user-data-dir='.length)),
 )
 
@@ -611,11 +615,12 @@ function installIpcHandlers(): void {
     },
   })
   m1AuthorityForClose = m1Authority
-  if (app.isPackaged && process.platform === 'darwin') {
+  if (app.isPackaged && (process.platform === 'darwin' || process.platform === 'win32')) {
     let confirming = false
+    const peerHelper = localM1PeerHelper(process.resourcesPath)
     localAgentEndpoint = Promise.resolve().then(() => startM1LocalEndpoint({
-      socketPath: localM1Socket(process.execPath),
-      peerHelper: path.join(process.resourcesPath, M1_BRIDGE_RESOURCE, 'm1-peer'),
+      socketPath: localM1Socket(process.execPath, peerHelper),
+      peerHelper,
       authority: m1Authority,
       mountingPlateRevision: (scope, lease) => m2PreviewForClose!.mountingPlateRevision(scope, lease),
       moveRightHoleX: (scope, lease, request) => m2PreviewForClose!.moveRightHoleX(scope, lease, request),
@@ -736,9 +741,9 @@ function installIpcHandlers(): void {
     },
     endpoint: async () => localAgentEndpoint,
     async installInfo() {
-      if (!app.isPackaged || process.platform !== 'darwin') throw Error('LOCAL_ENDPOINT_UNAVAILABLE')
+      if (!app.isPackaged || (process.platform !== 'darwin' && process.platform !== 'win32')) throw Error('LOCAL_ENDPOINT_UNAVAILABLE')
       const info = getLocalAgentInstallInfo(process.execPath, process.resourcesPath)
-      await fsp.access(info.bridgeCommand, fsConstants.X_OK).catch(() => { throw Error('LOCAL_ENDPOINT_UNAVAILABLE') })
+      await fsp.access(info.bridgeCommand, process.platform === 'win32' ? fsConstants.F_OK : fsConstants.X_OK).catch(() => { throw Error('LOCAL_ENDPOINT_UNAVAILABLE') })
       return info
     },
     async confirm(source, target, signal, clientName) {

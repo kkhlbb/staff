@@ -1,8 +1,9 @@
-import { spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { lstatSync, realpathSync } from 'node:fs'
 import type { Stats } from 'node:fs'
 import type { Socket } from 'node:net'
+import type { Duplex } from 'node:stream'
 import path from 'node:path'
 
 export const M1_BRIDGE_RESOURCE = 'cunlian-agent'
@@ -28,7 +29,53 @@ export function currentM1Uid() {
   return process.geteuid()
 }
 
-export function localM1Socket(executable: string) {
+export function isM1WindowsAbsolute(value: string) {
+  if (/[\0\r\n]/.test(value)) return false
+  const normalized = value.replaceAll('/', '\\')
+  return /^(?:\\\\\?\\)?[a-z]:\\/i.test(normalized) ||
+    /^(?:\\\\\?\\UNC\\|\\\\)(?![?.]\\)[^\\]+\\[^\\]+(?:\\|$)/i.test(normalized)
+}
+
+const windowsPipePrefix = '\\\\.\\pipe\\cunlian-m1-'
+
+export function isM1WindowsPipe(value: string) {
+  return value.startsWith(windowsPipePrefix) && /^[a-f0-9]{64}$/.test(value.slice(windowsPipePrefix.length))
+}
+
+export function localM1WindowsPipe(canonicalExecutable: string, sid: string) {
+  if (!isM1WindowsAbsolute(canonicalExecutable) || !/^S-1-(?:[0-9]+-)*[0-9]+$/.test(sid)) {
+    throw Error('LOCAL_ENDPOINT_UNAVAILABLE')
+  }
+  const key = createHash('sha256').update(sid).update('\0')
+    .update(windowsExecutableIdentity(canonicalExecutable)).digest('hex')
+  return windowsPipePrefix + key
+}
+
+function windowsExecutableIdentity(executable: string) {
+  // realpath supplies filesystem casing, including case-sensitive Windows directories.
+  return path.win32.normalize(executable)
+    .replace(/^\\\\\?\\UNC\\/i, '\\\\').replace(/^\\\\\?\\/, '')
+    .replace(/^[a-z]:/i, drive => drive.toUpperCase())
+}
+
+export function localM1WindowsProfile(executable: string) {
+  const canonical = realpathSync.native(executable)
+  return createHash('sha256').update(windowsExecutableIdentity(canonical)).digest('hex').slice(0, 24)
+}
+
+export function localM1PeerHelper(resourcesPath: string, platform = process.platform) {
+  return (platform === 'win32' ? path.win32 : path).join(resourcesPath, M1_BRIDGE_RESOURCE,
+    platform === 'win32' ? 'm1-peer.exe' : 'm1-peer')
+}
+
+export function localM1Socket(executable: string, peerHelper?: string) {
+  if (process.platform === 'win32') {
+    if (!isM1WindowsAbsolute(executable) || !peerHelper || !isM1WindowsAbsolute(peerHelper)) {
+      throw Error('LOCAL_ENDPOINT_UNAVAILABLE')
+    }
+    const sid = execFileSync(peerHelper, ['sid'], { encoding: 'utf8', timeout: 3_000, windowsHide: true }).trim()
+    return localM1WindowsPipe(realpathSync.native(executable), sid)
+  }
   if (process.platform !== 'darwin' || !path.isAbsolute(executable)) throw Error('LOCAL_ENDPOINT_UNAVAILABLE')
   const shared = lstatSync('/private/tmp')
   if (!shared.isDirectory() || shared.uid !== 0 || !(shared.mode & 0o1000)) throw Error('UNSAFE_ENDPOINT')
@@ -81,7 +128,7 @@ export function sameM1Peer(helper: string, socket: Socket) {
   return fd !== undefined && nativeM1Check(helper, 'peer', fd)
 }
 
-export function readM1Frames(socket: Socket, maxBytes: number, receive: (value: unknown) => void) {
+export function readM1Frames(socket: Duplex, maxBytes: number, receive: (value: unknown) => void) {
   let chunks: Buffer[] = []
   let size = 0
   socket.on('data', (data: Buffer) => {
