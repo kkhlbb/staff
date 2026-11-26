@@ -620,4 +620,91 @@ describe('ReviewPage', () => {
     expect(screen.getByTestId('review-rigid-warning')).toHaveTextContent('纯刚体基线')
     expect(viewport).toHaveAttribute('data-deformation-mode', 'nominal')
   })
+
+  it('M4-QA-01: 直接读取服务端 GET /review 返回的 compliantSnapshot 与 gdtSnapshot 合并展示', async () => {
+    const flexReview: CheckSet = {
+      projectId: 'proj-flex-srv',
+      draftRevision: 'draft-12',
+      checksetFingerprint: 'csfp-flex-12',
+      checks: [
+        {
+          checkId: 'chk-gap-srv',
+          requirementId: 'req-gap-srv',
+          title: '盖板-底座残余间隙',
+          required: true,
+          status: 'pass',
+          summary: '柔性耦合 Cpk 1.15',
+          linkedFeatureIds: ['feat-plate-body'],
+          linkedAnnotationIds: ['ann-gap'],
+        },
+      ],
+      evidenceByCheckId: SAMPLE_EVIDENCE,
+    }
+    const baseTransport = createMockTransport({ review: flexReview })
+    const transport: Transport = {
+      ...baseTransport,
+      capabilities: async () => ({
+        ok: true,
+        value: {
+          transport: 'http',
+          stepExport: false,
+          stepImport: false,
+          FEATURE_3D_ASSEMBLY_M1: true,
+        },
+      }),
+      getReview: async (draftRef) => {
+        const res = await baseTransport.getReview(draftRef)
+        if (!res.ok) return res
+        return {
+          ok: true,
+          value: {
+            ...res.value,
+            gdtSnapshot: {
+              datums: [{ id: 'datum-A', label: 'A', featureId: 'feat-plate-body' }],
+              gdt: [],
+              contributions: [],
+              warnings: [],
+            },
+            compliantSnapshot: {
+              physics: { enabled: true },
+              summary: {
+                rigidBaseline: { cpk: 1.6, ppm: 2, threeSigmaIntervalMm: [0.1, 0.25] },
+                compliantResult: { cpk: 1.15, ppm: 550, threeSigmaIntervalMm: [0.05, 0.32] },
+                flexDeltaCpk: -0.45,
+                flexContributionItems: [
+                  {
+                    modelId: 'cm-cover',
+                    kind: 'plate-clamping',
+                    label: '盖板锁紧',
+                    varianceSharePct: 48.5,
+                  },
+                ],
+              },
+              displacementFields: [
+                {
+                  partId: 'part-cover',
+                  maxDisplacementMm: 0.24,
+                  minDisplacementMm: 0.0,
+                  samples: [{ posMm: [40, 25, 10], dispMm: [0, 0, 0.24], magMm: 0.24 }],
+                },
+              ],
+            },
+          } as typeof res.value,
+        }
+      },
+    }
+
+    render(
+      <ReviewPage
+        locationLike={{ pathname: '/review/proj-flex-srv/draft-12' }}
+        transport={transport}
+      />,
+    )
+
+    const compCard = await screen.findByTestId('review-compliant-comparison-card')
+    expect(compCard).toHaveTextContent('Cpk 1.60')
+    expect(compCard).toHaveTextContent('Cpk 1.15')
+    expect(screen.getByTestId('review-flex-delta-cpk')).toHaveTextContent('ΔCpk -0.45')
+    expect(screen.getByTestId('review-flex-contrib-cm-cover')).toHaveTextContent('48.5%')
+  })
 })

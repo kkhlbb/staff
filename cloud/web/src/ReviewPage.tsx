@@ -196,6 +196,10 @@ export function ReviewPage({
       if (!raw || typeof raw !== 'object') return null
       const rec = raw as {
         readonly gdtSnapshot?: ReviewGdtReadonlySnapshot
+        readonly compliantSnapshot?: {
+          readonly summary?: CompliantSimulationSummary | null
+          readonly displacementFields?: readonly PartDisplacementField[]
+        }
         readonly datums?: readonly DatumDefinition[]
         readonly gdt?: readonly GdtFeatureControl[]
         readonly gdtContributions?: readonly GdtContributionItem[]
@@ -207,13 +211,26 @@ export function ReviewPage({
           readonly gdt?: readonly GdtFeatureControl[]
         }
       }
-      if (rec.gdtSnapshot) return rec.gdtSnapshot
+      const compliantSummary =
+        rec.gdtSnapshot?.compliantSummary ??
+        rec.compliantSnapshot?.summary ??
+        rec.compliantSummary ??
+        undefined
+      const displacementFields =
+        rec.gdtSnapshot?.displacementFields ??
+        rec.compliantSnapshot?.displacementFields ??
+        rec.displacementFields
+      if (rec.gdtSnapshot) {
+        return {
+          ...rec.gdtSnapshot,
+          ...(compliantSummary ? { compliantSummary } : {}),
+          ...(displacementFields ? { displacementFields } : {}),
+        }
+      }
       const datums = rec.datums ?? rec.assembly3d?.datums
       const gdt = rec.gdt ?? rec.assembly3d?.gdt
       const contributions = rec.gdtContributions
       const warnings = rec.gdtWarnings
-      const compliantSummary = rec.compliantSummary
-      const displacementFields = rec.displacementFields
       if (!datums && !gdt && !contributions && !warnings && !compliantSummary && !displacementFields) {
         return null
       }
