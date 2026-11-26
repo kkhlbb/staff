@@ -494,3 +494,13 @@ body,
   border-color: var(--accent);
   background: var(--accent-soft);
 }
+
+.cw-report-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-hairline);
+}

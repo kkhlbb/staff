@@ -11,14 +11,13 @@ import type {
   DeformationViewMode,
   GdtDisplayMode,
   GdtFeatureControl,
-  GdtMaterialModifier,
   MaterialSpec,
   MicMatrixPayloadV1,
   PartDisplacementField,
   PartMesh,
   PickedFeatureGeometryKind,
 } from './assembly3dTypes'
-import type { DatumLetter } from './gdt3dMath'
+import type { DatumLetter, GdtCalloutPatch } from './gdt3dMath'
 import {
   areArtifactsRevisionAligned,
   formatPartialDrawingFailureMessage,
@@ -37,7 +36,11 @@ import {
   type M2SingleViewTab,
   type M2ViewMode,
 } from './m2WorkbenchBridge'
-import { M2ThreeMeshViewport, type AssemblyPickPayload } from './M2ThreeMeshViewport'
+import {
+  M2ThreeMeshViewport,
+  type AssemblyPickPayload,
+  type ViewportSnapshotHandle,
+} from './M2ThreeMeshViewport'
 import { M2VectorDrawingViewport } from './M2VectorDrawingViewport'
 import { AssemblyTreeOverlay } from './components/AssemblyTreeOverlay'
 import { ContextActionPill } from './components/ContextActionPill'
@@ -142,9 +145,11 @@ export interface M2CenterCanvasProps {
   readonly onCreateGdtControl?: (control: GdtFeatureControl) => void
   readonly onUpdateGdtCallout?: (
     gdtId: string,
-    patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
+    patch: GdtCalloutPatch,
   ) => void
   readonly onDeleteGdtCallout?: (gdtId: string) => void
+  /** Optional handle ref for capturing 3D viewport PNG snapshots during report export. */
+  readonly snapshotHandleRef?: { current: ViewportSnapshotHandle | null }
   /** M4F1 compliant deformation viewport, assembly tree badges & physics popover bundle. */
   readonly physicsM4?: {
     readonly physicsSpec?: AssemblyPhysicsSpec
@@ -308,6 +313,7 @@ export function M2CenterCanvas({
   onCreateGdtControl,
   onUpdateGdtCallout,
   onDeleteGdtCallout,
+  snapshotHandleRef,
   physicsM4,
 }: M2CenterCanvasProps) {
   const effectiveViewMode = resolveEffectiveViewMode(viewMode, isNarrow, lastSingleTab)
@@ -581,6 +587,7 @@ export function M2CenterCanvas({
                       onHoverGdtCallout={feature3dAssemblyM1 ? onHoverGdtCallout : undefined}
                       onUpdateGdtCallout={feature3dAssemblyM1 ? onUpdateGdtCallout : undefined}
                       onDeleteGdtCallout={feature3dAssemblyM1 ? onDeleteGdtCallout : undefined}
+                      snapshotHandleRef={snapshotHandleRef}
                       displacementFields={feature3dAssemblyM1 ? physicsM4?.displacementFields : undefined}
                       deformationMode={feature3dAssemblyM1 ? physicsM4?.deformationMode : undefined}
                       onChangeDeformationMode={

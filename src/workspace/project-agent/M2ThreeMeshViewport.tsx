@@ -45,7 +45,6 @@ import type {
   DeformationViewMode,
   GdtDisplayMode,
   GdtFeatureControl,
-  GdtMaterialModifier,
   PartDisplacementField,
   PartEdgeSegment,
   PartMesh,
@@ -53,8 +52,9 @@ import type {
   VertexColorFieldChannel,
   VertexDisplacementChannel,
 } from './assembly3dTypes'
+import type { ReportViewportSnapshots } from '../../report/types'
 import { Gdt3dOverlayLayer, type ProjectedGdtAnchor } from './components/Gdt3dOverlayLayer'
-import { computeFeatureWorldAnchor } from './gdt3dMath'
+import { computeFeatureWorldAnchor, type GdtCalloutPatch } from './gdt3dMath'
 import {
   applyExaggeratedDisplacement,
   buildVertexColorBuffer,
@@ -78,6 +78,10 @@ export interface AssemblyPickPayload {
   readonly featureLabel: string
   readonly geometryKind: PickedFeatureGeometryKind
   readonly additive: boolean
+}
+
+export interface ViewportSnapshotHandle {
+  captureSnapshots(): ReportViewportSnapshots
 }
 
 export interface M2ThreeMeshViewportProps {
@@ -122,9 +126,11 @@ export interface M2ThreeMeshViewportProps {
   ) => void
   readonly onUpdateGdtCallout?: (
     gdtId: string,
-    patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
+    patch: GdtCalloutPatch,
   ) => void
   readonly onDeleteGdtCallout?: (gdtId: string) => void
+  /** Optional handle ref exposing on-demand 3D PNG snapshot capture (nominal & heatmap). */
+  readonly snapshotHandleRef?: { current: ViewportSnapshotHandle | null }
   /** M4 pre-wired BufferGeometry vertexColors & displacement channels. */
   readonly colorFieldChannels?: readonly VertexColorFieldChannel[]
   readonly displacementChannels?: readonly VertexDisplacementChannel[]
@@ -309,6 +315,7 @@ interface ThreeSceneController {
     }>,
   ): void
   updateTheme(theme: 'light' | 'dark'): void
+  captureSnapshots(hasDisplacementFields: boolean): ReportViewportSnapshots
   dispose(): void
 }
 
@@ -365,6 +372,7 @@ export function M2ThreeMeshViewport({
   exaggerationScale: exaggerationScaleProp,
   onChangeExaggerationScale,
   showDeformationControls,
+  snapshotHandleRef,
 }: M2ThreeMeshViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const css2dHostRef = useRef<HTMLDivElement | null>(null)
@@ -383,6 +391,20 @@ export function M2ThreeMeshViewport({
     1,
     Math.min(50, exaggerationScaleProp ?? localExaggerationScale),
   )
+
+  useEffect(() => {
+    if (!snapshotHandleRef) return
+    const hasFields = Boolean(displacementFields && displacementFields.length > 0)
+    snapshotHandleRef.current = {
+      captureSnapshots: () => {
+        if (renderMode !== 'webgl' || !controllerRef.current) return {}
+        return controllerRef.current.captureSnapshots(hasFields)
+      },
+    }
+    return () => {
+      snapshotHandleRef.current = null
+    }
+  }, [snapshotHandleRef, renderMode, displacementFields])
   const displayDeformationHud =
     showDeformationControls ?? (isMultiPart || Boolean(displacementFields && displacementFields.length > 0))
 
@@ -1110,6 +1132,21 @@ export function M2ThreeMeshViewport({
         highlightMaterial.color.setHex(isDark ? 0x4b83ff : 0x1e5eff)
         highlightMaterial.emissive.setHex(isDark ? 0x1e40af : 0x1749cc)
         scheduleRender()
+      },
+      captureSnapshots(hasDisplacementFields) {
+        if (disposed) return {}
+        try {
+          renderFrame()
+          const currentUrl = canvas.toDataURL('image/png')
+          if (!currentUrl || !currentUrl.startsWith('data:image/png')) {
+            return {}
+          }
+          return hasDisplacementFields
+            ? { nominalPngDataUrl: currentUrl, heatmapPngDataUrl: currentUrl }
+            : { nominalPngDataUrl: currentUrl }
+        } catch {
+          return {}
+        }
       },
       dispose() {
         if (disposed) return

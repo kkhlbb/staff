@@ -40,6 +40,7 @@ import {
 import { AiGdtDraftsCard } from './AiGdtDraftsCard'
 import { AiMateDraftsCard } from './AiMateDraftsCard'
 import { AiPhysicsDraftsCard } from './AiPhysicsDraftsCard'
+import type { ReportExportMenuProps } from './ReportExportMenu'
 import { SimulationWhatIfPanel } from './SimulationWhatIfPanel'
 
 export interface CollaborationSidebarProps {
@@ -80,7 +81,12 @@ export interface CollaborationSidebarProps {
   readonly onFocusGdtDraft?: (draft: AiGdtDraftItem) => void
   readonly onUpdateGdtControl?: (
     gdtId: string,
-    patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
+    patch: {
+      readonly toleranceQ?: number
+      readonly modifier?: GdtMaterialModifier
+      readonly unequalProfileOuterFraction?: number
+      readonly lowerSegment?: GdtFeatureControl['lowerSegment']
+    },
   ) => void
   readonly onChangeContributorTolerance?: (contributorId: string, nextTolMm: number) => void
   readonly onHoverContributor?: (
@@ -105,6 +111,8 @@ export interface CollaborationSidebarProps {
     readonly onHoverPhysicsDraft?: (draft: AiPhysicsDraftItem | null) => void
     readonly onFocusPhysicsDraft?: (draft: AiPhysicsDraftItem) => void
   }
+  /** V100 one-click engineering simulation report export props. */
+  readonly reportExport?: Omit<ReportExportMenuProps, 'variant' | 'simulationResult'>
 
   // M2SidebarPanels props
   readonly requirements: readonly M2RequirementItem[]
@@ -207,6 +215,7 @@ export function CollaborationSidebar({
   onHoverContributor,
   onClickContributor,
   physicsM4,
+  reportExport,
   requirements,
   checks,
   checksInProgress,
@@ -358,6 +367,7 @@ export function CollaborationSidebar({
           <SimulationWhatIfPanel
             result={simulationResult}
             computing={simulationComputing}
+            reportExport={reportExport}
             activeFeatureId={activeAssemblyFeatureId}
             activeGdtId={activeGdtId}
             gdtControls={gdtControls}

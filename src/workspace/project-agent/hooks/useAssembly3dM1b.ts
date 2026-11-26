@@ -802,7 +802,12 @@ export function useAssembly3dM1b({
   const updateGdtControl = useCallback(
     (
       gdtId: string,
-      patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
+      patch: {
+        readonly toleranceQ?: number
+        readonly modifier?: GdtMaterialModifier
+        readonly unequalProfileOuterFraction?: number
+        readonly lowerSegment?: GdtFeatureControl['lowerSegment']
+      },
     ) => {
       let updatedControl: GdtFeatureControl | null = null
       const nextControls = gdtControls.map((c) => {
@@ -811,6 +816,10 @@ export function useAssembly3dM1b({
           ...c,
           ...(patch.toleranceQ !== undefined ? { toleranceQ: patch.toleranceQ } : {}),
           ...(patch.modifier !== undefined ? { modifier: patch.modifier } : {}),
+          ...(patch.unequalProfileOuterFraction !== undefined
+            ? { unequalProfileOuterFraction: patch.unequalProfileOuterFraction }
+            : {}),
+          ...(patch.lowerSegment !== undefined ? { lowerSegment: patch.lowerSegment } : {}),
         }
         updatedControl = next
         return next

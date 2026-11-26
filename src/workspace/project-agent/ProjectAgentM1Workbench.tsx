@@ -1,10 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import './ProjectAgentPanel.css'
-import {
-  resolveWorkbenchTransport,
-  type ElectronTransport,
-} from '../../transport/electronTransport'
+import { resolveWorkbenchTransport, type ElectronTransport } from '../../transport/electronTransport'
 import type { Transport } from '../../transport/types'
+import type { ViewportSnapshotHandle } from './M2ThreeMeshViewport'
 import type {
   AiGdtDraftItem,
   AiMateDraftItem,
@@ -135,6 +133,7 @@ export function ProjectAgentM1Workbench({
   const [simulationTabActive, setSimulationTabActive] = useState(
     initialSidebarSection === 'simulation',
   )
+  const snapshotHandleRef = useRef<ViewportSnapshotHandle | null>(null)
   const transport = useMemo(
     () =>
       resolveWorkbenchTransport({
@@ -258,6 +257,17 @@ export function ProjectAgentM1Workbench({
     session.setSidebarSection(nextSection)
   }
 
+  const reportExportProps = useMemo(
+    () => ({
+      transport, projectId: session.projectId, projectName: session.projectName,
+      baseRevision: session.baseRevision, draftRevision: session.draftRevision,
+      checksetFingerprint: session.checkSetFingerprint, simulationResult: physics.simulationResult,
+      captureSnapshots: () => snapshotHandleRef.current?.captureSnapshots() ?? {},
+      onExportComplete: (msg: string) => session.setPreviewMessage(msg),
+    }),
+    [transport, session, physics.simulationResult],
+  )
+
   const rootClassName = className ? `pa-workbench ${className}` : 'pa-workbench'
 
   return (
@@ -337,13 +347,10 @@ export function ProjectAgentM1Workbench({
         }}
         onOpenMigrationReport={() => {
           session.setMoreMenuOpen(false)
-          if (session.migrationReport) {
-            session.setMigrationDrawerOpen(true)
-          } else {
-            session.setSidebarSection('history')
-            void session.handleLoadMigrationReport()
-          }
+          if (session.migrationReport) session.setMigrationDrawerOpen(true)
+          else { session.setSidebarSection('history'); void session.handleLoadMigrationReport() }
         }}
+        reportExport={reportExportProps}
       />
 
       <WorkbenchStatusBanners
@@ -390,9 +397,8 @@ export function ProjectAgentM1Workbench({
         }}
         onStartOneTimeConfirm={session.handleStartOneTimeConfirm}
         onCancelOneTimeConfirm={session.handleCancelOneTimeConfirm}
-        onConfirmCommitFormal={() => {
-          void session.handleConfirmCommitFormal()
-        }}
+        onConfirmCommitFormal={() => { void session.handleConfirmCommitFormal() }}
+        reportExport={reportExportProps}
         showDisconnectBanner={session.showDisconnectBanner}
         scopeEpoch={session.scopeEpoch}
         writerEpoch={session.writerEpoch}
@@ -626,6 +632,7 @@ export function ProjectAgentM1Workbench({
             onCreateGdtControl={assembly3d.createGdtControl}
             onUpdateGdtCallout={assembly3d.updateGdtControl}
             onDeleteGdtCallout={assembly3d.deleteGdtControl}
+            snapshotHandleRef={snapshotHandleRef}
             physicsM4={physics.canvasBundle}
           />
 
@@ -704,13 +711,10 @@ export function ProjectAgentM1Workbench({
               )
             }}
             onClickContributor={(target) => {
-              assembly3d.setFourWayTarget({
-                featureId: target.featureId,
-                partId: target.partId,
-                gdtId: target.gdtId,
-              })
+              assembly3d.setFourWayTarget({ featureId: target.featureId, partId: target.partId, gdtId: target.gdtId })
               assembly3d.focusFeatureById(target.featureId)
             }}
+            reportExport={reportExportProps}
             requirements={viewport.canvasState.requirements}
             checks={viewport.canvasState.checks}
             checksInProgress={viewport.canvasState.checksInProgress}

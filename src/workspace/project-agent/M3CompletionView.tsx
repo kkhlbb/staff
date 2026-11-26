@@ -7,6 +7,7 @@ import {
 } from './m2WorkbenchBridge'
 import type { M3BoundConfirmation, M3CompletionReadiness } from './m3WorkbenchBridge'
 import { focusRecoveryElement } from './focusRecovery'
+import { ReportExportMenu, type ReportExportMenuProps } from './components/ReportExportMenu'
 
 export interface M3CompletionViewProps {
   readonly partName: string
@@ -31,6 +32,8 @@ export interface M3CompletionViewProps {
   readonly onStartOneTimeConfirm: () => void
   readonly onCancelOneTimeConfirm: () => void
   readonly onConfirmCommitFormal: () => void
+  /** Optional one-click engineering simulation report export props. */
+  readonly reportExport?: Omit<ReportExportMenuProps, 'variant'>
 }
 
 function formatSlotStatus(slot: M2ArtifactSlotState, label: string): {
@@ -86,6 +89,7 @@ export function M3CompletionView({
   onStartOneTimeConfirm,
   onCancelOneTimeConfirm,
   onConfirmCommitFormal,
+  reportExport,
 }: M3CompletionViewProps) {
   const modelStatus = formatSlotStatus(model, '模型')
   const drawingStatus = formatSlotStatus(drawing, '图纸')
@@ -383,6 +387,8 @@ export function M3CompletionView({
           <span>{commitFeedback.message}</span>
         </div>
       ) : null}
+
+      {reportExport ? <ReportExportMenu {...reportExport} variant="inline" /> : null}
 
       {/* Primary Action Bar */}
       <div className="pa-header">

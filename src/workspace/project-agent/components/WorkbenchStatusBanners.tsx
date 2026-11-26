@@ -10,6 +10,7 @@ import {
 } from '../m2WorkbenchBridge'
 import { M3CompletionView } from '../M3CompletionView'
 import { M3MigrationBanner } from '../M3MigrationBanner'
+import type { ReportExportMenuProps } from './ReportExportMenu'
 import type {
   M3BoundConfirmation,
   M3CompletionReadiness,
@@ -54,6 +55,7 @@ export interface WorkbenchStatusBannersProps {
   readonly onStartOneTimeConfirm: () => void
   readonly onCancelOneTimeConfirm: () => void
   readonly onConfirmCommitFormal: () => void
+  readonly reportExport?: Omit<ReportExportMenuProps, 'variant'>
 
   // Disconnect & takeover banner
   readonly showDisconnectBanner: boolean
@@ -119,6 +121,7 @@ export function WorkbenchStatusBanners({
   onStartOneTimeConfirm,
   onCancelOneTimeConfirm,
   onConfirmCommitFormal,
+  reportExport,
   showDisconnectBanner,
   scopeEpoch,
   writerEpoch,
@@ -224,6 +227,7 @@ export function WorkbenchStatusBanners({
             onStartOneTimeConfirm={onStartOneTimeConfirm}
             onCancelOneTimeConfirm={onCancelOneTimeConfirm}
             onConfirmCommitFormal={onConfirmCommitFormal}
+            reportExport={reportExport}
           />
         </div>
       ) : null}

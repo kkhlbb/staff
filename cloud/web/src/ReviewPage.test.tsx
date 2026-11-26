@@ -707,4 +707,110 @@ describe('ReviewPage', () => {
     expect(screen.getByTestId('review-flex-delta-cpk')).toHaveTextContent('ΔCpk -0.45')
     expect(screen.getByTestId('review-flex-contrib-cm-cover')).toHaveTextContent('48.5%')
   })
+
+  it('V100-FE-01: 云端只读审核页渲染 5 类新框格与双层复合框格，并支持一键下载离线 HTML 报告与打印 PDF', async () => {
+    const user = userEvent.setup()
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {})
+    const exportMock = vi.fn(async () => ({
+      ok: true as const,
+      value: {
+        fileName: 'proj-v100-review-report.html',
+        mimeType: 'text/html' as const,
+        sha256: 'deadbeef1234567890abcdef1234567890abcdef1234567890abcdef12345678',
+        revision: 'draft-v100',
+        checksetFingerprint: 'csfp-v100',
+        content: '<!doctype html><html><body>OK</body></html>',
+      },
+    }))
+    const v100Review: CheckSet = {
+      projectId: 'proj-v100-review',
+      draftRevision: 'draft-v100',
+      checksetFingerprint: 'csfp-v100',
+      checks: [
+        {
+          checkId: 'chk-v100-1',
+          requirementId: 'req-v100-1',
+          title: '复合位置度与面轮廓度检查',
+          required: true,
+          status: 'pass',
+          summary: '满足公差要求',
+          linkedFeatureIds: ['feat-hole-right'],
+          linkedAnnotationIds: ['ann-v100'],
+        },
+      ],
+      evidenceByCheckId: SAMPLE_EVIDENCE,
+    }
+    const baseTransport = createMockTransport({ review: v100Review })
+    const transport: Transport = {
+      ...baseTransport,
+      exportSimulationReport: exportMock,
+    }
+
+    render(
+      <ReviewPage
+        locationLike={{ pathname: '/review/proj-v100-review/draft-v100' }}
+        transport={transport}
+        feature3dAssemblyM1={true}
+        initialGdtSnapshot={{
+          datums: [
+            { id: 'datum-A', label: 'A', featureId: 'feat-plate-body' },
+            { id: 'datum-B', label: 'B', featureId: 'feat-hole-right' },
+          ],
+          gdt: [
+            {
+              id: 'gdt-web-prof',
+              featureId: 'feat-plate-body',
+              kind: 'profile-surface',
+              toleranceQ: 10000,
+              datumIds: ['datum-A'],
+              unequalProfileOuterFraction: 0.3,
+            },
+            {
+              id: 'gdt-web-comp',
+              featureId: 'feat-hole-right',
+              kind: 'composite-position',
+              toleranceQ: 2000,
+              modifier: 'MMC',
+              datumIds: ['datum-A', 'datum-B'],
+              lowerSegment: {
+                toleranceQ: 800,
+                modifier: 'MMC',
+                datumIds: ['datum-A'],
+              },
+            },
+          ],
+          contributions: [],
+          warnings: [],
+        }}
+      />,
+    )
+
+    expect(await screen.findByTestId('review-fingerprint')).toHaveTextContent('csfp-v100')
+    await user.click(screen.getByTestId('gdt-mode-expand-all'))
+
+    expect(screen.getByTestId('gdt-fcf-box-gdt-web-prof')).toHaveTextContent('⌒')
+    expect(screen.getByTestId('gdt-fcf-uz-gdt-web-prof')).toHaveTextContent('UZ 0.3')
+    const compBox = screen.getByTestId('gdt-fcf-box-gdt-web-comp')
+    expect(compBox).toHaveAttribute('data-composite', 'true')
+    expect(screen.getByTestId('gdt-fcf-upper-gdt-web-comp')).toHaveTextContent('Ø0.20Ⓜ')
+    expect(screen.getByTestId('gdt-fcf-lower-gdt-web-comp')).toHaveTextContent('Ø0.08Ⓜ')
+
+    // 顶部「下载离线 HTML 报告」调用 transport.exportSimulationReport
+    await user.click(screen.getByTestId('review-export-html-btn'))
+    await waitFor(() => {
+      expect(exportMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: 'proj-v100-review',
+          format: 'html',
+          includeSnapshots: true,
+        }),
+      )
+    })
+    expect(screen.getByTestId('review-report-feedback')).toHaveTextContent('proj-v100-review-report.html')
+    expect(screen.getByTestId('review-report-feedback')).toHaveTextContent('deadbeef1234')
+
+    // 顶部「打印 PDF」调用 window.print()
+    await user.click(screen.getByTestId('review-print-pdf-btn'))
+    expect(printSpy).toHaveBeenCalledTimes(1)
+  })
 })

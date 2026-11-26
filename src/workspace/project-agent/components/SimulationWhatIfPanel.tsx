@@ -7,6 +7,7 @@ import type {
 } from '../assembly3dTypes'
 import { formatFcfCells, GDT_KIND_META, GDT_MODIFIER_LABELS, mmToToleranceQ } from '../gdt3dMath'
 import { buildUnifiedParetoItems } from '../physics3dMath'
+import { ReportExportMenu, type ReportExportMenuProps } from './ReportExportMenu'
 
 export interface SimulationWhatIfPanelProps {
   readonly result: SimulationDiagnosticResult
@@ -22,7 +23,12 @@ export interface SimulationWhatIfPanelProps {
   readonly onChangeContributorTolerance: (contributorId: string, nextTolMm: number) => void
   readonly onUpdateGdtControl?: (
     gdtId: string,
-    patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
+    patch: {
+      readonly toleranceQ?: number
+      readonly modifier?: GdtMaterialModifier
+      readonly unequalProfileOuterFraction?: number
+      readonly lowerSegment?: GdtFeatureControl['lowerSegment']
+    },
   ) => void
   readonly onHoverContributor?: (
     target: { readonly featureId: string; readonly partId?: string; readonly gdtId?: string } | null,
@@ -32,6 +38,8 @@ export interface SimulationWhatIfPanelProps {
     readonly partId?: string
     readonly gdtId?: string
   }) => void
+  /** V100 one-click engineering simulation report export props. */
+  readonly reportExport?: Omit<ReportExportMenuProps, 'variant' | 'simulationResult'>
 }
 
 const GDT_QUICK_MODIFIERS: readonly GdtMaterialModifier[] = ['RFS', 'MMC', 'LMC']
@@ -66,6 +74,7 @@ export function SimulationWhatIfPanel({
   onUpdateGdtControl,
   onHoverContributor,
   onClickContributor,
+  reportExport,
 }: SimulationWhatIfPanelProps) {
   const statusMeta = formatStatusLabel(result.status)
   const gdtById = new Map(gdtControls.map((g) => [g.id, g]))
@@ -570,6 +579,11 @@ export function SimulationWhatIfPanel({
             ))}
           </ul>
         </div>
+      ) : null}
+
+      {/* One-Click Engineering Simulation Report Export */}
+      {reportExport ? (
+        <ReportExportMenu {...reportExport} simulationResult={result} variant="card" />
       ) : null}
     </section>
   )

@@ -16,8 +16,9 @@ import { PhysicsConfigPopover } from './PhysicsConfigPopover'
 import {
   DATUM_LETTER_OPTIONS,
   GDT_KIND_META,
-  GDT_KIND_ORDER,
   GDT_MODIFIER_LABELS,
+  getRecommendedGdtKindsForFeature,
+  isRunoutGdtKind,
   mmToToleranceQ,
   validateGdtControlDraft,
   type DatumLetter,
@@ -94,8 +95,16 @@ export function ContextActionPill({
   const [datumModifiers, setDatumModifiers] = useState<Readonly<Record<string, GdtMaterialModifier>>>({})
   const [sizeLowerMm, setSizeLowerMm] = useState('-0.05')
   const [sizeUpperMm, setSizeUpperMm] = useState('0.05')
+  const [unequalOuterFractionInput, setUnequalOuterFractionInput] = useState('0.5')
+  const [lowerToleranceMmInput, setLowerToleranceMmInput] = useState('0.06')
+  const [lowerModifier, setLowerModifier] = useState<GdtMaterialModifier>('RFS')
+  const [lowerDatumIds, setLowerDatumIds] = useState<readonly string[]>([])
 
   const primarySelected = selectedAssemblyItems[0] ?? null
+  const recommendedGdtKinds = useMemo(
+    () => getRecommendedGdtKindsForFeature(primarySelected?.geometryKind),
+    [primarySelected?.geometryKind],
+  )
   const effectiveFeatureKindMap = useMemo(() => {
     const map = new Map<string, PickedFeatureGeometryKind>(featureKindById ?? [])
     for (const item of selectedAssemblyItems) {
@@ -109,9 +118,15 @@ export function ContextActionPill({
     const tolMm = Number(toleranceMmInput)
     const lowerMm = Number(sizeLowerMm)
     const upperMm = Number(sizeUpperMm)
+    const lowerTolMm = Number(lowerToleranceMmInput)
+    const outerFrac = Number(unequalOuterFractionInput)
     const isCyl = primarySelected.geometryKind === 'cylindrical-hole-axis'
     const zoneShape: GdtFeatureControl['zoneShape'] =
-      gdtKind === 'coaxiality' || (gdtKind === 'position' && isCyl) ? 'cylindrical' : 'planar'
+      gdtKind === 'coaxiality' ||
+      gdtKind === 'composite-position' ||
+      (gdtKind === 'position' && isCyl)
+        ? 'cylindrical'
+        : 'planar'
     return {
       id: `gdt-draft-preview-${primarySelected.featureId}`,
       featureId: primarySelected.featureId,
@@ -124,6 +139,18 @@ export function ContextActionPill({
           ? selectedDatumIds.map((id) => datumModifiers[id] ?? 'RFS')
           : undefined,
       zoneShape,
+      ...(gdtKind === 'profile-surface' && Number.isFinite(outerFrac) && Math.abs(outerFrac - 0.5) > 1e-6
+        ? { unequalProfileOuterFraction: outerFrac }
+        : {}),
+      ...(gdtKind === 'composite-position'
+        ? {
+            lowerSegment: {
+              toleranceQ: Number.isFinite(lowerTolMm) ? mmToToleranceQ(lowerTolMm) : 0,
+              modifier: lowerModifier,
+              datumIds: [...lowerDatumIds],
+            },
+          }
+        : {}),
       ...(modifier === 'MMC' || modifier === 'LMC'
         ? {
             featureSizeToleranceQ: {
@@ -133,7 +160,20 @@ export function ContextActionPill({
           }
         : {}),
     }
-  }, [primarySelected, gdtKind, toleranceMmInput, modifier, selectedDatumIds, datumModifiers, sizeLowerMm, sizeUpperMm])
+  }, [
+    primarySelected,
+    gdtKind,
+    toleranceMmInput,
+    modifier,
+    selectedDatumIds,
+    datumModifiers,
+    sizeLowerMm,
+    sizeUpperMm,
+    unequalOuterFractionInput,
+    lowerToleranceMmInput,
+    lowerModifier,
+    lowerDatumIds,
+  ])
 
   const validation = useMemo(() => {
     if (!draftGdtControl) {
@@ -270,11 +310,11 @@ export function ContextActionPill({
               </button>
             </div>
 
-            {/* 5 GD&T Symbol Selector */}
+            {/* Smart-filtered GD&T Symbol Selector (up to 10 kinds) */}
             <div className="pa-gdt-field-group">
-              <span className="pa-gdt-field-label">几何公差类型</span>
+              <span className="pa-gdt-field-label">几何公差类型（按特征智能推荐）</span>
               <div className="pa-gdt-symbol-grid" role="group" aria-label="选择 GD&T 符号">
-                {GDT_KIND_ORDER.map((kind) => {
+                {recommendedGdtKinds.map((kind) => {
                   const meta = GDT_KIND_META[kind]
                   const active = gdtKind === kind
                   return (
@@ -288,8 +328,32 @@ export function ContextActionPill({
                       }
                       onClick={() => {
                         setGdtKind(kind)
-                        if (kind === 'flatness') {
+                        if (kind === 'flatness' || kind === 'cylindricity') {
                           setModifier('RFS')
+                          setSelectedDatumIds([])
+                        } else if (isRunoutGdtKind(kind)) {
+                          setModifier('RFS')
+                          if (selectedDatumIds.length === 0) {
+                            const axisDatum = datums.find(
+                              (d) => effectiveFeatureKindMap.get(d.featureId) === 'cylindrical-hole-axis',
+                            )
+                            if (axisDatum) {
+                              setSelectedDatumIds([axisDatum.id])
+                            }
+                          }
+                        } else if (kind === 'composite-position') {
+                          const upperVal = Number(toleranceMmInput)
+                          const halfVal = Number.isFinite(upperVal) && upperVal > 0.02 ? upperVal / 2 : 0.05
+                          setLowerToleranceMmInput(halfVal.toFixed(2))
+                          setLowerModifier(modifier)
+                          const initialUpper =
+                            selectedDatumIds.length > 0
+                              ? selectedDatumIds
+                              : datums.slice(0, 2).map((d) => d.id)
+                          if (selectedDatumIds.length === 0 && initialUpper.length > 0) {
+                            setSelectedDatumIds(initialUpper)
+                          }
+                          setLowerDatumIds(initialUpper.slice(0, 1))
                         }
                       }}
                     >
@@ -362,6 +426,94 @@ export function ContextActionPill({
                     onChange={(event) => setSizeUpperMm(event.target.value)}
                   />
                 </label>
+              </div>
+            ) : null}
+
+            {/* Profile-surface unequal UZ outer fraction */}
+            {gdtKind === 'profile-surface' ? (
+              <div className="pa-gdt-config-row" data-testid="gdt-profile-uz-row">
+                <label className="pa-gdt-field-inline">
+                  <span>外侧比例 UZ（0.5 = 对称）</span>
+                  <input
+                    type="number"
+                    data-testid="gdt-config-uz-input"
+                    aria-label="面轮廓度不等距外侧比例"
+                    className="pa-gdt-inline-num"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={unequalOuterFractionInput}
+                    onChange={(event) => setUnequalOuterFractionInput(event.target.value)}
+                  />
+                </label>
+              </div>
+            ) : null}
+
+            {/* Composite-position lower segment (FRTZF) */}
+            {gdtKind === 'composite-position' ? (
+              <div className="pa-gdt-field-group pa-gdt-lower-segment-box" data-testid="gdt-composite-lower-box">
+                <span className="pa-gdt-field-label">下格 FRTZF（公差须 ≤ 上格，基准为上格前缀）</span>
+                <div className="pa-gdt-config-row">
+                  <label className="pa-gdt-field-inline">
+                    <span>下格公差 (mm)</span>
+                    <input
+                      type="number"
+                      data-testid="gdt-config-lower-tolerance-input"
+                      aria-label="复合位置度下格公差 (mm)"
+                      className="pa-gdt-inline-num"
+                      min={0.01}
+                      max={2}
+                      step={0.01}
+                      value={lowerToleranceMmInput}
+                      onChange={(event) => setLowerToleranceMmInput(event.target.value)}
+                    />
+                  </label>
+                  <div className="pa-gdt-inline-mods" role="group" aria-label="下格实体条件">
+                    {MODIFIER_OPTIONS.map((mod) => (
+                      <button
+                        key={`lower-${mod}`}
+                        type="button"
+                        data-testid={`gdt-config-lower-mod-${mod}`}
+                        aria-pressed={lowerModifier === mod}
+                        className={
+                          lowerModifier === mod
+                            ? 'pa-btn pa-btn-primary pa-btn-sm'
+                            : 'pa-btn pa-btn-ghost pa-btn-sm'
+                        }
+                        onClick={() => setLowerModifier(mod)}
+                      >
+                        {GDT_MODIFIER_LABELS[mod]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="pa-gdt-datum-ref-list" role="group" aria-label="下格基准前缀选择">
+                  {datums.map((datum) => {
+                    const checked = lowerDatumIds.includes(datum.id)
+                    return (
+                      <button
+                        key={`lower-datum-${datum.id}`}
+                        type="button"
+                        data-testid={`gdt-config-lower-datum-${datum.label}`}
+                        aria-pressed={checked}
+                        className={
+                          checked ? 'pa-btn pa-btn-active pa-btn-sm' : 'pa-btn pa-btn-ghost pa-btn-sm'
+                        }
+                        onClick={() => {
+                          setLowerDatumIds((prev) =>
+                            prev.includes(datum.id)
+                              ? prev.filter((id) => id !== datum.id)
+                              : prev.length < 2
+                                ? [...prev, datum.id]
+                                : prev,
+                          )
+                        }}
+                      >
+                        {checked ? '✓ ' : ''}下格基准 {datum.label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             ) : null}
 
