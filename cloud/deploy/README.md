@@ -16,7 +16,7 @@
 - Node 仅从 `CUNLIAN_TRUSTED_PROXIES` 中精确匹配的直连 IP 接受 `X-Real-IP` 和 HTTPS 标记。这些头只影响来源校验与审计元数据。建议固定 `CUNLIAN_PUBLIC_ORIGIN`。可信代理须覆盖客户端同名头。代理地址按照 Node 实际观察到的 IP 配置。
 - 每个项目的 ZIP 档案、正式修订、草稿、租约、事件、附件、REST 导出和 Webhook outbox 由一个卷内 JSON 状态保存。文件写临时路径、同步后执行原子重命名。MCP 导出按身份存放。备份卷时暂停实例。结构化请求日志输出 JSON，域事件随项目写入，正式提交事件也进入 `.cunlian` 档案。
 - 原始上传默认最多 16 MiB（含 multipart 开销）。超时由服务和 worker 共同约束。删除与保留策略由部署管理员管理。
-- 本版本加载固定安装板和隔套几何。通用装配和 STEP API 保持关闭。预先拒绝开启尚无 Track B 运行时的配置，避免能力端点或健康探针发布错误状态。
+- `FEATURE_3D_ASSEMBLY_M1=false` 为默认比赛保底态，提供固定安装板与隔套工作流。`true` 启用 3D 装配运行时下的 GD&T、柔性/MIC 和报告接口。报告支持 HTML、CSV 和 JSON，PDF 使用 Electron 桌面端。进阶求解能力以部署版本为准。
 - 模型探针只连接已配置的精确 HTTPS Base URL，发送合成探针与随机回执。未配置时，能力端点返回 `modelConnection: false`。它不会发送项目上下文。
 
 ## 审核确认与回调

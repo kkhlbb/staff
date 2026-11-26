@@ -386,25 +386,42 @@ it('passes compliant physics, MIC, stackup, and FEA sidecar operations to preloa
   }
   const denied = { ok: false, error: { code: 'WRITER_REVOKED', message: 'lease revoked' } }
   const feaRes = { ok: true, value: { available: false, statuses: [{ solver: 'calculix', available: false }] } }
+  const reportReq = { projectId: draft.projectId, format: 'html' as const, seed: 42 }
+  const reportRes = {
+    ok: true,
+    value: {
+      fileName: 'simulation-project-draft.html',
+      mimeType: 'text/html' as const,
+      sha256: 'c'.repeat(64),
+      revision: 'draft',
+      checksetFingerprint: 'fp-1',
+      content: '<!doctype html>',
+    },
+  }
   const bridge = {
     stagePhysics: vi.fn().mockResolvedValue(physicsRes),
     importMicMatrix: vi.fn().mockResolvedValue(micRes),
     analyzeCompliantStackup: vi.fn().mockResolvedValue(denied),
     detectFeaSidecars: vi.fn().mockResolvedValue(feaRes),
+    exportSimulationReport: vi.fn().mockResolvedValue(reportRes),
   }
   const off = createElectronTransport({ bridge, feature3dAssemblyM1: false })
   await expect(off.stagePhysics!(physicsReq)).resolves.toMatchObject({ ok: false, error: { code: 'FEATURE_DISABLED' } })
   await expect(off.importMicMatrix!(micReq)).resolves.toMatchObject({ ok: false, error: { code: 'FEATURE_DISABLED' } })
   await expect(off.analyzeCompliantStackup!(analyzeReq)).resolves.toMatchObject({ ok: false, error: { code: 'FEATURE_DISABLED' } })
+  await expect(off.exportSimulationReport!(reportReq)).resolves.toMatchObject({ ok: false, error: { code: 'FEATURE_DISABLED' } })
   expect(bridge.stagePhysics).not.toHaveBeenCalled()
+  expect(bridge.exportSimulationReport).not.toHaveBeenCalled()
 
   const on = createElectronTransport({ bridge, feature3dAssemblyM1: true })
   await expect(on.stagePhysics!(physicsReq)).resolves.toEqual(physicsRes)
   await expect(on.importMicMatrix!(micReq)).resolves.toEqual(micRes)
   await expect(on.analyzeCompliantStackup!(analyzeReq)).resolves.toEqual(denied)
   await expect(on.detectFeaSidecars!()).resolves.toEqual(feaRes)
+  await expect(on.exportSimulationReport!(reportReq)).resolves.toEqual(reportRes)
   expect(bridge.stagePhysics).toHaveBeenCalledExactlyOnceWith(physicsReq)
   expect(bridge.importMicMatrix).toHaveBeenCalledExactlyOnceWith(micReq)
   expect(bridge.analyzeCompliantStackup).toHaveBeenCalledExactlyOnceWith(analyzeReq)
   expect(bridge.detectFeaSidecars).toHaveBeenCalledTimes(1)
+  expect(bridge.exportSimulationReport).toHaveBeenCalledExactlyOnceWith(reportReq)
 })

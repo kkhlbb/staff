@@ -287,7 +287,7 @@ export function installM1WorkbenchChannels(ipc: { handle(channel: string, handle
     }
     if (!desktopGdtEnabled()) return { ok: false, error: { code: 'FEATURE_DISABLED', message: '未启用 3D 装配功能' } }
     const request = z.looseObject({ projectId: id }).safeParse(raw)
-    if (extra.length || typeof operation !== 'string' || (!isGdtTool(operation) && !isCompliantTool(operation)) || !request.success) {
+    if (extra.length || typeof operation !== 'string' || (operation !== 'export_simulation_report' && !isGdtTool(operation) && !isCompliantTool(operation)) || !request.success) {
       throw Error('INVALID_REQUEST')
     }
     const sender = toSenderInfo(event)
@@ -297,6 +297,7 @@ export function installM1WorkbenchChannels(ipc: { handle(channel: string, handle
         !guard.verify(toSenderInfo(event)).ok) throw Error('FORBIDDEN_SENDER')
     }
     try {
+      if (operation === 'export_simulation_report') return ok(await authority.exportSimulationReport(raw, sender, checkRequest))
       return ok(isGdtTool(operation)
         ? await authority.runWindowGdtTool(sender, request.data.projectId, operation, raw, checkRequest)
         : await authority.runWindowCompliantTool(sender, request.data.projectId, operation, raw, checkRequest))

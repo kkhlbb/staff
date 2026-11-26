@@ -155,7 +155,7 @@ const expectedKeys = [
   'cancelExtraction', 'cancelM1ChatMessage', 'cancelM1ProjectSubscription', 'clearAgentProviderKey', 'commitApprovedDraft',
   'commitM3ApprovedDraft', 'commitModel', 'commitV2', 'compareDrawings', 'confirmExtractionBatch',
   'confirmRequirement', 'decideExtraction', 'deleteExtractionDraft', 'detectFeaSidecars', 'detectM1LocalAgents', 'exportApprovedVersion',
-  'exportDrawingDxf2000', 'exportDrawingDxfR12', 'exportDrawingPdf', 'exportDrawingSvg', 'getConfirmedInputs',
+  'exportDrawingDxf2000', 'exportDrawingDxfR12', 'exportDrawingPdf', 'exportDrawingSvg', 'exportSimulationReport', 'getConfirmedInputs',
   'getGdtCapability', 'getM1ConnectionStatus', 'getM1ExternalActivities', 'getM1LocalAgentInstallInfo', 'getM1ProjectContext', 'getM1ReadCapabilities',
   'getM2PreviewSnapshot', 'getMigrationReport', 'getProjectContext', 'importMicMatrix', 'importSketchImage', 'importSource',
   'ingestSketchReadings', 'inspectV2', 'intentApply', 'intentConfirmCandidate', 'intentCreateProject',

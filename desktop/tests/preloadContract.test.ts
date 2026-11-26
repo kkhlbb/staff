@@ -53,7 +53,7 @@ const ADDED_FUNCTIONS = [
   'getM1ExternalActivities',
   'commitM3ApprovedDraft',
   'getGdtCapability', 'stageDatum', 'stageGdt', 'analyzeGdtStackup',
-  'stagePhysics', 'importMicMatrix', 'analyzeCompliantStackup', 'detectFeaSidecars',
+  'stagePhysics', 'importMicMatrix', 'analyzeCompliantStackup', 'detectFeaSidecars', 'exportSimulationReport',
   'undoDraftChange',
   'getMigrationReport',
   'openExternalProjectResult',
@@ -323,6 +323,11 @@ it('routes GD&T through the actual preload and preserves the host flag and write
   electron.invoke.mockResolvedValueOnce(revoked)
   await expect(transport.analyzeCompliantStackup!(analysis)).resolves.toEqual(revoked)
   expect(electron.invoke).toHaveBeenLastCalledWith(ipc.gdt, 'analyze_compliant_stackup', analysis)
+
+  const reportRequest = { projectId: stage.projectId, format: 'json' as const }
+  electron.invoke.mockResolvedValueOnce(revoked)
+  await expect(transport.exportSimulationReport!(reportRequest)).resolves.toEqual(revoked)
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.gdt, 'export_simulation_report', reportRequest)
 
   const feaRes = { ok: true, value: { available: false, statuses: [{ solver: 'calculix', available: false }] } }
   electron.invoke.mockResolvedValueOnce(feaRes)

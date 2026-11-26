@@ -6,6 +6,7 @@ import { findTool } from '../../mcp/tools/index.ts'
 import { tools, validate, HttpError } from './contracts.mjs'
 import { gdtTools } from '../../mcp/lib/gdt.ts'
 import { compliantTools } from '../../mcp/lib/compliant.ts'
+import reportCatalog from '../contracts/mcp-report-tools.json' with { type: 'json' }
 import { digest } from './projects.mjs'
 
 const operations = tools.slice(5).map(tool => tool.name)
@@ -13,7 +14,7 @@ const protocols = ['2025-06-18', '2025-03-26', '2024-11-05']
 const enabled = (principal, tool) => !principal.tools || principal.tools.includes(tool.name)
 
 export function createMcp(projects, config) {
-  const available = config.feature3dAssemblyM1 ? [...tools, ...gdtTools, ...compliantTools] : tools
+  const available = config.feature3dAssemblyM1 ? [...tools, ...gdtTools, ...compliantTools, ...reportCatalog.tools] : tools
   const streams = new Map()
   const exportRoot = join(config.root, 'mcp-exports')
 
@@ -74,6 +75,7 @@ export function createMcp(projects, config) {
       case 'stage_physics': return projects.stagePhysics(args, principal, signal)
       case 'import_mic_matrix': return projects.importMicMatrix(args, principal, signal)
       case 'analyze_compliant_stackup': return projects.analyzeCompliant(args, principal, signal)
+      case 'export_simulation_report': return projects.exportReport(args, principal, signal)
       case 'stageChange': return projects.stage(projectId, change, principal, signal)
       case 'moveRightHoleX': return projects.move(projectId, args, principal, signal)
       default: {

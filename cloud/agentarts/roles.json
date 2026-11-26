@@ -8,7 +8,8 @@
     "design": {
       "write": true,
       "takeover": false,
-      "tools": ["readWriterContext", "acquireWriter", "stageChange", "moveRightHoleX", "revokeWriter"]
+      "tools": ["readWriterContext", "acquireWriter", "stageChange", "moveRightHoleX", "revokeWriter"],
+      "advancedTools": ["stage_datum", "stage_gdt", "stage_physics", "import_mic_matrix", "analyze_gdt_stackup", "analyze_compliant_stackup"]
     },
     "validation": {
       "write": false,
@@ -18,7 +19,8 @@
     "reporting": {
       "write": false,
       "takeover": false,
-      "tools": ["describe_project", "getContext", "getExternalActivities"]
+      "tools": ["describe_project", "getContext", "getExternalActivities"],
+      "advancedTools": ["export_simulation_report"]
     }
   },
   "workflow": {

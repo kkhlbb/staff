@@ -22,7 +22,7 @@ const stage = object({ projectId: text, change: (value): value is M1StageChangeR
 const move = object({ projectId: text, baseRevision: text, expectedDraftRevision: text, idempotencyKey: text, deltaQ: q })
 type MoveRightHole = Infer<typeof move>
 const empty = object({})
-const envelope = object({ id: nat, method: oneOf('hello', ...M1_LOCAL_OPERATIONS, ...gdtToolNames, ...compliantToolNames), params: (value): value is object => !!value && typeof value === 'object' && !Array.isArray(value) })
+const envelope = object({ id: nat, method: oneOf('hello', ...M1_LOCAL_OPERATIONS, ...gdtToolNames, ...compliantToolNames, 'export_simulation_report'), params: (value): value is object => !!value && typeof value === 'object' && !Array.isArray(value) })
 const hello = object({ version: (value): value is 1 => value === M1_LOCAL_VERSION,
   clientName: isM1ClientName })
 
@@ -171,7 +171,7 @@ export async function startM1LocalEndpoint(ports: EndpointPorts) {
       peer.ready = true
       const operations = M1_LOCAL_OPERATIONS.filter(name => name !== 'moveRightHoleX' || ports.moveRightHoleX)
       return { protocol: M1_LOCAL_VERSION, operations, draftOperations: ['createSpacerDraft', 'resumeSpacerDraft'],
-        ...(desktopGdtEnabled() && { gdtOperations: gdtToolNames, compliantOperations: compliantToolNames }) }
+        ...(desktopGdtEnabled() && { gdtOperations: gdtToolNames, compliantOperations: [...compliantToolNames, 'export_simulation_report'] }) }
     }
     if (!peer.ready) throw Error('INVALID_REQUEST')
     if (method === 'authorizeProject') {
@@ -194,6 +194,11 @@ export async function startM1LocalEndpoint(ports: EndpointPorts) {
       return { projectId: scope.projectId, authorized: true }
     }
     const scope = peer.scope
+    if (method === 'export_simulation_report') {
+      if (!desktopGdtEnabled()) throw Error('FEATURE_DISABLED')
+      if (!scope) throw Error('AUTH_REQUIRED')
+      return authority.exportSimulationReport(params, scope, () => peer.abort.signal.throwIfAborted())
+    }
     if (isGdtTool(method)) {
       if (!desktopGdtEnabled()) throw Error('FEATURE_DISABLED')
       if (!scope || !('projectId' in params) || params.projectId !== scope.projectId) throw Error('AUTH_REQUIRED')
