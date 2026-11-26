@@ -4,14 +4,24 @@ import type {
   AssemblyMate,
   AssemblyModelV1,
   AssemblyPart,
+  AssemblyPhysicsSpec,
+  CompliantModelSpec,
   DatumDefinition,
   GdtFeatureControl,
   GdtMaterialModifier,
   GdtValidationWarning,
+  MaterialSpec,
   MeasurementSpec,
+  MicMatrixPayloadV1,
   PersistentFeature,
 } from '../../project-file/assembly3d'
-import type { GdtContributionItem } from '../../transport/types'
+import type {
+  CompliantSimulationSummary,
+  FlexContributionItem,
+  GdtContributionItem,
+  PartDisplacementField,
+  PhysicsPatch,
+} from '../../transport/types'
 import type { M2MeshBounds, M2MeshTriangleRange, M2SidebarSection } from './m2WorkbenchBridge'
 
 export type {
@@ -19,14 +29,22 @@ export type {
   AssemblyMate,
   AssemblyModelV1,
   AssemblyPart,
+  AssemblyPhysicsSpec,
+  CompliantModelSpec,
+  CompliantSimulationSummary,
   DatumDefinition,
   EvidenceRef,
+  FlexContributionItem,
   GdtContributionItem,
   GdtFeatureControl,
   GdtMaterialModifier,
   GdtValidationWarning,
+  MaterialSpec,
   MeasurementSpec,
+  MicMatrixPayloadV1,
+  PartDisplacementField,
   PersistentFeature,
+  PhysicsPatch,
 }
 
 export type WorkbenchSidebarSection = M2SidebarSection | 'simulation'
@@ -97,12 +115,32 @@ export interface AssemblyFeatureSelectionItem {
 export type ContextPillActionId =
   | 'set-datum'
   | 'attach-gdt'
+  | 'configure-physics'
+  | 'set-clamp-warpage'
   | 'add-second-feature'
   | 'create-face-contact'
   | 'create-coaxial'
   | 'create-distance-align'
   | 'create-3d-loop'
   | 'send-to-ai'
+
+export type DeformationViewMode = 'nominal' | 'heatmap' | 'animation'
+
+export interface AiPhysicsDraftItem {
+  readonly id: string
+  readonly title: string
+  readonly partId: string
+  readonly partName: string
+  readonly materialPresetId?: string
+  readonly materialName?: string
+  readonly modelSummary: string
+  readonly physicsPatch: PhysicsPatch
+  readonly confidencePercent: number
+  readonly rationale: string
+  readonly evidenceRefs: readonly EvidenceRef[]
+  readonly selected: boolean
+  readonly applied?: boolean
+}
 
 export type GdtDisplayMode = 'smart' | 'expand-all'
 
@@ -254,6 +292,8 @@ export interface SimulationDiagnosticResult {
   readonly pareto: readonly ParetoContributionItem[]
   readonly gdtContributions?: readonly GdtContributionItem[]
   readonly gdtWarnings?: readonly GdtValidationWarning[]
+  readonly compliantSummary?: CompliantSimulationSummary
+  readonly includeCompliant?: boolean
   readonly computeMs: number
   readonly source: 'transport' | 'local-fallback'
 }

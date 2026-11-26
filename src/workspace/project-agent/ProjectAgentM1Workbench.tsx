@@ -8,9 +8,11 @@ import type { Transport } from '../../transport/types'
 import type {
   AiGdtDraftItem,
   AiMateDraftItem,
+  AiPhysicsDraftItem,
   AssemblyModelV1,
   DatumDefinition,
   GdtFeatureControl,
+  PartDisplacementField,
   PartMesh,
   SimulationLoopSpec,
   WorkbenchSidebarSection,
@@ -39,6 +41,7 @@ import {
   type WorkbenchLocalProject,
 } from './workbenchHelpers'
 import { useAssembly3dM1b } from './hooks/useAssembly3dM1b'
+import { usePhysicsM4f1 } from './hooks/usePhysicsM4f1'
 import { useWorkbenchSession } from './hooks/useWorkbenchSession'
 import { WorkbenchTopBar } from './components/WorkbenchTopBar'
 import { WorkbenchStatusBanners } from './components/WorkbenchStatusBanners'
@@ -83,6 +86,8 @@ export interface ProjectAgentM1WorkbenchProps {
   readonly initialPartMeshes?: readonly PartMesh[]
   readonly initialAiMateDrafts?: readonly AiMateDraftItem[]
   readonly initialAiGdtDrafts?: readonly AiGdtDraftItem[]
+  readonly initialAiPhysicsDrafts?: readonly AiPhysicsDraftItem[]
+  readonly initialDisplacementFields?: readonly PartDisplacementField[]
   readonly initialDatums?: readonly DatumDefinition[]
   readonly initialGdtControls?: readonly GdtFeatureControl[]
   readonly initialSimulationSpec?: SimulationLoopSpec
@@ -121,6 +126,8 @@ export function ProjectAgentM1Workbench({
   initialPartMeshes,
   initialAiMateDrafts,
   initialAiGdtDrafts,
+  initialAiPhysicsDrafts,
+  initialDisplacementFields,
   initialDatums,
   initialGdtControls,
   initialSimulationSpec,
@@ -191,6 +198,14 @@ export function ProjectAgentM1Workbench({
       session.setSidebarTab('builtin')
       session.setChatInput((prev) => (prev.trim().length > 0 ? `${prev}\n${promptText}` : promptText))
     },
+  })
+
+  const physics = usePhysicsM4f1({
+    transport, enabled: assembly3d.feature3dAssemblyM1, projectId: session.projectId,
+    baseRevision: session.baseRevision, draftRevision: session.draftRevision, writerEpoch: session.writerEpoch,
+    partMeshes: assembly3d.partMeshes, baseSimulationResult: assembly3d.simulationResult,
+    initialPhysics: initialAssembly3d?.physics, initialAiPhysicsDrafts, initialDisplacementFields,
+    onSetContextFeedback: viewport.setContextActionFeedback,
   })
 
   const effectiveHighlightedFeatureIds = useMemo(() => {
@@ -611,6 +626,7 @@ export function ProjectAgentM1Workbench({
             onCreateGdtControl={assembly3d.createGdtControl}
             onUpdateGdtCallout={assembly3d.updateGdtControl}
             onDeleteGdtCallout={assembly3d.deleteGdtControl}
+            physicsM4={physics.canvasBundle}
           />
 
           <CollaborationSidebar
@@ -660,15 +676,27 @@ export function ProjectAgentM1Workbench({
               assembly3d.focusFeatureById(draft.featureId)
             }}
             onUpdateGdtControl={assembly3d.updateGdtControl}
-            simulationResult={assembly3d.simulationResult}
-            simulationComputing={assembly3d.simulationComputing}
+            simulationResult={physics.simulationResult}
+            simulationComputing={assembly3d.simulationComputing || physics.compliantComputing}
             activeAssemblyFeatureId={
               assembly3d.fourWayTarget?.featureId ??
               assembly3d.hoveredFeatureId ??
               viewport.canvasState.selectedObjectId
             }
             activeGdtId={assembly3d.fourWayTarget?.gdtId ?? assembly3d.editingGdtId}
-            onChangeContributorTolerance={assembly3d.updateWhatIfTolerance}
+            onChangeContributorTolerance={(id, val) => {
+              assembly3d.updateWhatIfTolerance(id, val)
+              physics.scheduleCompliantAnalysis()
+            }}
+            physicsM4={{
+              physicsSpec: physics.physicsSpec, includeCompliant: physics.includeCompliant,
+              onToggleIncludeCompliant: physics.toggleIncludeCompliant, aiPhysicsDrafts: physics.aiPhysicsDrafts,
+              appliedPhysicsCount: physics.appliedPhysicsCount, physicsDraftsFeedback: physics.physicsDraftsFeedback,
+              activePartId: physics.hoveredPhysicsDraft?.partId ?? assembly3d.fourWayTarget?.partId ?? null,
+              onTogglePhysicsDraft: physics.togglePhysicsDraft, onApplySelectedPhysicsDrafts: physics.applySelectedPhysicsDrafts,
+              onHoverPhysicsDraft: physics.setHoveredPhysicsDraft,
+              onFocusPhysicsDraft: (draft) => assembly3d.selectPart(draft.partId),
+            }}
             onHoverContributor={(target) => {
               assembly3d.setHoveredFeatureId(target ? target.featureId : null)
               assembly3d.setFourWayTarget(

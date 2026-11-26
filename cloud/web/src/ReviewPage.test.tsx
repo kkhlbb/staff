@@ -544,4 +544,80 @@ describe('ReviewPage', () => {
     expect(contribPanel).toHaveTextContent('MMC Bonus +0.045 mm')
     expect(contribPanel).toHaveTextContent('Datum Shift 12.0%')
   })
+
+  it('M4F1-FE-01: 云端审核页只读展示 3D 形变热力云图三态切换/色标 Legend（无编辑浮层）与刚体/柔性对比卡', async () => {
+    const user = userEvent.setup()
+    const flexReview: CheckSet = {
+      projectId: 'proj-flex-cloud',
+      draftRevision: 'draft-11',
+      checksetFingerprint: 'csfp-flex-11',
+      checks: [
+        {
+          checkId: 'chk-gap',
+          requirementId: 'req-gap',
+          title: '盖板-底座残余间隙',
+          required: true,
+          status: 'pass',
+          summary: '柔性耦合 Cpk 1.12',
+          linkedFeatureIds: ['feat-plate-body'],
+          linkedAnnotationIds: ['ann-gap'],
+        },
+      ],
+      evidenceByCheckId: SAMPLE_EVIDENCE,
+    }
+
+    const transport = createMockTransport({ review: flexReview })
+    render(
+      <ReviewPage
+        locationLike={{ pathname: '/review/proj-flex-cloud/draft-11' }}
+        transport={transport}
+        feature3dAssemblyM1={true}
+        initialGdtSnapshot={{
+          compliantSummary: {
+            rigidBaseline: { cpk: 1.54, ppm: 4, threeSigmaIntervalMm: [0.11, 0.29] },
+            compliantResult: { cpk: 1.12, ppm: 780, threeSigmaIntervalMm: [0.06, 0.34] },
+            flexDeltaCpk: -0.42,
+            flexContributionItems: [
+              {
+                modelId: 'model-cover-warp',
+                kind: 'plate-clamping',
+                label: '薄铝盖板初始翘曲 0.28mm',
+                varianceSharePct: 54.0,
+              },
+            ],
+          },
+          displacementFields: [
+            {
+              partId: 'part-cover',
+              maxDisplacementMm: 0.28,
+              minDisplacementMm: 0.01,
+              samples: [{ posMm: [60, 40, 12], dispMm: [0, 0, 0.28], magMm: 0.28 }],
+            },
+          ],
+        }}
+      />,
+    )
+
+    expect(await screen.findByTestId('review-fingerprint')).toHaveTextContent('csfp-flex-11')
+
+    // 3D 视口左下角三态切换与色标 Legend，且无编辑配置浮层
+    const viewport = screen.getByTestId('m2-three-viewport')
+    expect(viewport).toHaveAttribute('data-deformation-mode', 'nominal')
+    await user.click(screen.getByTestId('deformation-mode-heatmap'))
+    expect(viewport).toHaveAttribute('data-deformation-mode', 'heatmap')
+    expect(screen.getByTestId('deformation-heatmap-legend')).toHaveTextContent('0.280 mm 变形')
+    expect(screen.queryByTestId('physics-config-popover')).not.toBeInTheDocument()
+
+    // 右侧审核栏只读展示「刚体 vs 柔性对比卡」与柔性因素贡献度
+    const compCard = screen.getByTestId('review-compliant-comparison-card')
+    expect(compCard).toHaveTextContent('Cpk 1.54')
+    expect(compCard).toHaveTextContent('Cpk 1.12')
+    expect(screen.getByTestId('review-flex-delta-cpk')).toHaveTextContent('ΔCpk -0.42')
+    expect(screen.getByTestId('review-flex-contrib-model-cover-warp')).toHaveTextContent('54.0%')
+
+    // 取消勾选「计入柔性」切换查看纯刚体基线并给出风险提示
+    await user.click(screen.getByTestId('review-toggle-rigid-baseline'))
+    expect(screen.getByTestId('review-rigid-warning')).toHaveTextContent('纯刚体基线')
+    expect(viewport).toHaveAttribute('data-deformation-mode', 'nominal')
+  })
 })

@@ -4,11 +4,18 @@ import { createHttpTransport } from '../../../src/transport/httpTransport'
 import type {
   CheckSet,
   CommitDraftResult,
+  CompliantSimulationSummary,
   GdtContributionItem,
+  PartDisplacementField,
   Transport,
 } from '../../../src/transport/types'
-import type { GdtDisplayMode, PartMesh } from '../../../src/workspace/project-agent/assembly3dTypes'
+import type {
+  DeformationViewMode,
+  GdtDisplayMode,
+  PartMesh,
+} from '../../../src/workspace/project-agent/assembly3dTypes'
 import { formatFcfCells, GDT_KIND_META } from '../../../src/workspace/project-agent/gdt3dMath'
+import { COMPLIANT_MODEL_LABELS } from '../../../src/workspace/project-agent/physics3dMath'
 import { M2ThreeMeshViewport } from '../../../src/workspace/project-agent/M2ThreeMeshViewport'
 import { M2VectorDrawingViewport } from '../../../src/workspace/project-agent/M2VectorDrawingViewport'
 import {
@@ -46,6 +53,9 @@ export interface ReviewGdtReadonlySnapshot {
     readonly threeSigmaIntervalMm: readonly [number, number]
   } | null
   readonly partMeshes?: readonly PartMesh[]
+  /** M4F1 read-only compliant deformation summary & displacement fields. */
+  readonly compliantSummary?: CompliantSimulationSummary
+  readonly displacementFields?: readonly PartDisplacementField[]
 }
 
 export interface ReviewPageProps {
@@ -122,6 +132,8 @@ export function ReviewPage({
   const [activeGdtId, setActiveGdtId] = useState<string | null>(null)
   const [hoveredGdtFeatureId, setHoveredGdtFeatureId] = useState<string | null>(null)
   const [capability3dAssembly, setCapability3dAssembly] = useState<boolean>(false)
+  const [reviewDeformationMode, setReviewDeformationMode] = useState<DeformationViewMode>('nominal')
+  const [reviewIncludeCompliant, setReviewIncludeCompliant] = useState<boolean>(true)
 
   const [humanConfirmed, setHumanConfirmed] = useState(false)
   const [webhookUrl, setWebhookUrl] = useState(() =>
@@ -188,6 +200,8 @@ export function ReviewPage({
         readonly gdt?: readonly GdtFeatureControl[]
         readonly gdtContributions?: readonly GdtContributionItem[]
         readonly gdtWarnings?: readonly GdtValidationWarning[]
+        readonly compliantSummary?: CompliantSimulationSummary
+        readonly displacementFields?: readonly PartDisplacementField[]
         readonly assembly3d?: {
           readonly datums?: readonly DatumDefinition[]
           readonly gdt?: readonly GdtFeatureControl[]
@@ -198,8 +212,12 @@ export function ReviewPage({
       const gdt = rec.gdt ?? rec.assembly3d?.gdt
       const contributions = rec.gdtContributions
       const warnings = rec.gdtWarnings
-      if (!datums && !gdt && !contributions && !warnings) return null
-      return { datums, gdt, contributions, warnings }
+      const compliantSummary = rec.compliantSummary
+      const displacementFields = rec.displacementFields
+      if (!datums && !gdt && !contributions && !warnings && !compliantSummary && !displacementFields) {
+        return null
+      }
+      return { datums, gdt, contributions, warnings, compliantSummary, displacementFields }
     }
 
     const normalizedMesh = meshRes.ok ? normalizeM2ModelMesh(meshRes.value) : null
@@ -340,6 +358,19 @@ export function ReviewPage({
     () => (showReadonlyGdt ? (effectiveGdtSnapshot?.warnings ?? []) : []),
     [showReadonlyGdt, effectiveGdtSnapshot],
   )
+  const readonlyCompliantSummary = showReadonlyGdt
+    ? (effectiveGdtSnapshot?.compliantSummary ?? null)
+    : null
+  const readonlyDisplacementFields = useMemo(
+    () =>
+      showReadonlyGdt && reviewIncludeCompliant
+        ? (effectiveGdtSnapshot?.displacementFields ?? [])
+        : [],
+    [showReadonlyGdt, reviewIncludeCompliant, effectiveGdtSnapshot],
+  )
+  const showReadonlyDeformationHud =
+    showReadonlyGdt &&
+    ((effectiveGdtSnapshot?.displacementFields?.length ?? 0) > 0 || readonlyCompliantSummary !== null)
 
   const highlightedFeatureIds = useMemo(() => {
     const ids = new Set<string>(failedFeatureIds)
@@ -709,6 +740,12 @@ export function ReviewPage({
                       goldenPulseFeatureIds={showReadonlyGdt ? goldenPulseFeatureIds : undefined}
                       goldenPulseGdtIds={showReadonlyGdt ? goldenPulseGdtIds : undefined}
                       gdtReadOnly={true}
+                      displacementFields={showReadonlyDeformationHud ? readonlyDisplacementFields : undefined}
+                      deformationMode={showReadonlyDeformationHud ? reviewDeformationMode : undefined}
+                      onChangeDeformationMode={
+                        showReadonlyDeformationHud ? setReviewDeformationMode : undefined
+                      }
+                      showDeformationControls={showReadonlyDeformationHud}
                       onSelectGdtCallout={
                         showReadonlyGdt
                           ? (gdtId) => {
@@ -912,6 +949,100 @@ export function ReviewPage({
                   {readonlyGdtWarnings.map((w, idx) => (
                     <div key={`${w.code}-${idx}`}>
                       <span className="pa-mono">[{w.code}]</span> {w.message}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {readonlyCompliantSummary ? (
+            <div className="cw-section" data-testid="review-compliant-comparison-card">
+              <h2 className="cw-section-title">
+                <span>刚体 vs 柔性对比（只读）</span>
+                <label className="cw-compliant-toggle">
+                  <input
+                    type="checkbox"
+                    data-testid="review-toggle-rigid-baseline"
+                    checked={reviewIncludeCompliant}
+                    onChange={(e) => {
+                      const next = e.target.checked
+                      setReviewIncludeCompliant(next)
+                      if (!next) setReviewDeformationMode('nominal')
+                    }}
+                  />
+                  <span>计入柔性</span>
+                </label>
+              </h2>
+
+              {!reviewIncludeCompliant ? (
+                <div className="cw-alert cw-alert-danger" role="alert" data-testid="review-rigid-warning">
+                  ⚠ 当前正在查看纯刚体基线，忽略柔性形变将低估风险。
+                </div>
+              ) : null}
+
+              <div className="cw-compliant-grid">
+                <div
+                  className={`cw-compliant-metric ${!reviewIncludeCompliant ? 'cw-compliant-metric-active' : ''}`}
+                  data-testid="review-rigid-baseline-box"
+                >
+                  <span className="cw-kv-label">纯刚体基线</span>
+                  <strong className="pa-mono">
+                    Cpk {readonlyCompliantSummary.rigidBaseline.cpk?.toFixed(2) ?? '—'}
+                  </strong>
+                  <span className="pa-mono pa-muted">
+                    {readonlyCompliantSummary.rigidBaseline.ppm.toLocaleString('en-US')} PPM
+                  </span>
+                </div>
+                <div
+                  className={`cw-compliant-metric ${reviewIncludeCompliant ? 'cw-compliant-metric-active' : ''}`}
+                  data-testid="review-compliant-result-box"
+                >
+                  <span className="cw-kv-label">柔性耦合</span>
+                  <strong className="pa-mono">
+                    Cpk {readonlyCompliantSummary.compliantResult.cpk?.toFixed(2) ?? '—'}
+                  </strong>
+                  <span className="pa-mono pa-muted">
+                    {readonlyCompliantSummary.compliantResult.ppm.toLocaleString('en-US')} PPM
+                  </span>
+                </div>
+              </div>
+
+              {readonlyCompliantSummary.flexDeltaCpk !== null ? (
+                <div className="cw-check-head">
+                  <span className="cw-kv-label">柔性 Cpk 变化量</span>
+                  <span
+                    className={`pa-pill pa-mono ${
+                      readonlyCompliantSummary.flexDeltaCpk < 0 ? 'pa-tone-danger' : 'pa-tone-pass'
+                    }`}
+                    data-testid="review-flex-delta-cpk"
+                  >
+                    ΔCpk {readonlyCompliantSummary.flexDeltaCpk >= 0 ? '+' : ''}
+                    {readonlyCompliantSummary.flexDeltaCpk.toFixed(2)}
+                  </span>
+                </div>
+              ) : null}
+
+              {readonlyCompliantSummary.flexContributionItems.length > 0 ? (
+                <div className="cw-gdt-contrib-list" role="list" aria-label="柔性因素方差贡献">
+                  {readonlyCompliantSummary.flexContributionItems.map((item) => (
+                    <div
+                      key={item.modelId}
+                      role="listitem"
+                      className="cw-check-item"
+                      data-testid={`review-flex-contrib-${item.modelId}`}
+                    >
+                      <div className="cw-check-head">
+                        <span className="cw-check-title">
+                          <span className="pa-pill pa-tone-pending">
+                            {COMPLIANT_MODEL_LABELS[item.kind]}
+                          </span>{' '}
+                          {item.label}
+                        </span>
+                        <span className="pa-pill pa-tone-action pa-mono">
+                          {item.varianceSharePct.toFixed(1)}%
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
