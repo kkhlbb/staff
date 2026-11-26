@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type {
   M1ClientConnectionState,
   M1ConnectionSource,
@@ -116,6 +117,29 @@ export function WorkbenchTopBar({
   onOpenMigrationReport,
   reportExport,
 }: WorkbenchTopBarProps) {
+  const connPopoverAnchorRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!connectionPopoverOpen) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onCloseConnectionPopover()
+      }
+    }
+    const handlePointerDown = (event: MouseEvent) => {
+      const anchor = connPopoverAnchorRef.current
+      if (anchor && event.target instanceof Node && !anchor.contains(event.target)) {
+        onCloseConnectionPopover()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('mousedown', handlePointerDown)
+    }
+  }, [connectionPopoverOpen, onCloseConnectionPopover])
+
   return (
     <header className="pa-workbench-topbar" aria-label="顶部连接状态栏">
       <div className="pa-topbar-left">
@@ -196,7 +220,7 @@ export function WorkbenchTopBar({
       {/* Right: Strictly <= 3 interactive controls (Connection Capsule + Complete & Save CTA + More Menu) */}
       <div className="pa-topbar-right">
         {/* 1. Connection Status Capsule */}
-        <div className="pa-popover-anchor">
+        <div className="pa-popover-anchor" ref={connPopoverAnchorRef}>
           <button
             type="button"
             data-testid="connection-capsule-btn"
@@ -225,8 +249,10 @@ export function WorkbenchTopBar({
                 <strong className="pa-title">连接与授权</strong>
                 <button
                   type="button"
+                  data-testid="close-connection-popover-btn"
                   className="pa-icon-btn"
                   aria-label="关闭连接与授权详情"
+                  title="关闭"
                   onClick={onCloseConnectionPopover}
                 >
                   ×
@@ -294,6 +320,13 @@ export function WorkbenchTopBar({
               ) : null}
 
               <div className="pa-popover-footer">
+                <button
+                  type="button"
+                  className="pa-btn pa-btn-ghost pa-btn-sm"
+                  onClick={onCloseConnectionPopover}
+                >
+                  取消 / 退出
+                </button>
                 <button
                   type="button"
                   className="pa-btn pa-btn-sm"

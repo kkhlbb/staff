@@ -1595,6 +1595,7 @@
 .pa-icon-btn {
   width: 24px;
   height: 24px;
+  flex-shrink: 0;
   padding: 0;
   border: none;
   border-radius: 6px;
@@ -1606,9 +1607,11 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.pa-icon-btn:hover {
+.pa-icon-btn:hover,
+.pa-icon-btn:focus-visible {
   background: var(--bg-hover);
   color: var(--text-primary);
 }
@@ -1653,7 +1656,9 @@
   padding-top: 8px;
   border-top: 1px solid var(--border-hairline);
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 8px;
 }
 
 .pa-menu-item {
@@ -1860,7 +1865,9 @@
 
 .pa-onboarding-skip-row {
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 12px;
   padding-top: 2px;
 }
 

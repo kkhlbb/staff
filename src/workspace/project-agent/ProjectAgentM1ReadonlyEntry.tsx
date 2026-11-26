@@ -38,6 +38,7 @@ export interface ProjectAgentM1ReadonlyEntryProps {
   readonly localProjects?: readonly LocalProjectItem[]
   readonly synthetic?: boolean
   readonly className?: string
+  readonly onExit?: () => void
 }
 
 interface ScopeTracker {
@@ -80,6 +81,7 @@ export function ProjectAgentM1ReadonlyEntry({
   localProjects = [],
   synthetic = false,
   className,
+  onExit,
 }: ProjectAgentM1ReadonlyEntryProps) {
   const probe: M1ReadonlyBridgeProbe = useMemo(() => {
     if (bridgeProp !== undefined) {
@@ -495,6 +497,32 @@ export function ProjectAgentM1ReadonlyEntry({
     }
   }
 
+  const handleExitToWorkbench = (): void => {
+    if (onExit) {
+      onExit()
+      return
+    }
+    if (typeof window !== 'undefined') {
+      window.location.hash = '#/desktop-m1-workbench'
+    }
+  }
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (onExit) {
+          onExit()
+        } else if (typeof window !== 'undefined') {
+          window.location.hash = '#/desktop-m1-workbench'
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onExit])
+
   const rootClassName = className ? `pa-preview ${className}` : 'pa-preview'
   const isAuthorized = grantedScope !== null
 
@@ -529,6 +557,16 @@ export function ProjectAgentM1ReadonlyEntry({
           <a href="#/desktop-m1-workbench" className="pa-link-btn">
             切换至 M1 双入口工作台
           </a>
+          <button
+            type="button"
+            data-testid="close-readonly-entry-btn"
+            className="pa-icon-btn"
+            aria-label="关闭只读授权视图"
+            title="关闭并返回工作台"
+            onClick={handleExitToWorkbench}
+          >
+            ×
+          </button>
         </div>
       </header>
 
@@ -654,6 +692,16 @@ export function ProjectAgentM1ReadonlyEntry({
             已丢弃过期或格式不符的回包（<span className="pa-mono">{lastRejection.requestId}</span>）。
           </div>
         ) : null}
+
+        <div className="pa-popover-footer">
+          <button
+            type="button"
+            className="pa-btn pa-btn-sm"
+            onClick={handleExitToWorkbench}
+          >
+            取消 / 退出
+          </button>
+        </div>
       </section>
 
       <ProjectAgentM1Session

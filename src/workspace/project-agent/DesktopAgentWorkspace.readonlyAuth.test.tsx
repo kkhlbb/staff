@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ProjectOpenValue, SnapshotDto } from '../../../desktop/shared/contracts'
 import { DesktopAgentWorkspace } from './DesktopAgentWorkspace'
+import { ProjectAgentM1ReadonlyEntry } from './ProjectAgentM1ReadonlyEntry'
 
 const originalCunlianDescriptor = Object.getOwnPropertyDescriptor(window, 'cunlian')
 
@@ -237,3 +238,99 @@ describe('DesktopAgentWorkspace：申请原生只读授权直接拉起回归测�
     ).toBeInTheDocument()
   })
 })
+
+describe('授予项目只读权限界面：关闭 / 退出按钮与 Esc / 外部点击退出', () => {
+  it('WorkbenchTopBar 连接与授权弹层具备右上角 ×、底部「取消 / 退出」、Esc 与点击外部关闭', async () => {
+    const user = userEvent.setup()
+    installDesktopCunlianMock({})
+    render(<DesktopAgentWorkspace />)
+
+    // Close onboarding first to inspect workbench topbar popover
+    await user.click(screen.getByTestId('close-onboarding-wizard-btn'))
+    expect(screen.queryByRole('region', { name: '首次启动与连接向导' })).not.toBeInTheDocument()
+
+    // 1. Top-right × button
+    await user.click(screen.getByTestId('connection-capsule-btn'))
+    const dialog1 = screen.getByRole('dialog', { name: '连接与授权详情' })
+    const closeX = within(dialog1).getByRole('button', { name: '关闭连接与授权详情' })
+    expect(closeX).toBeVisible()
+    await user.click(closeX)
+    expect(screen.queryByRole('dialog', { name: '连接与授权详情' })).not.toBeInTheDocument()
+
+    // 2. Bottom「取消 / 退出」button
+    await user.click(screen.getByTestId('connection-capsule-btn'))
+    const dialog2 = screen.getByRole('dialog', { name: '连接与授权详情' })
+    const exitBtn = within(dialog2).getByRole('button', { name: '取消 / 退出' })
+    expect(exitBtn).toBeVisible()
+    await user.click(exitBtn)
+    expect(screen.queryByRole('dialog', { name: '连接与授权详情' })).not.toBeInTheDocument()
+
+    // 3. Esc key
+    await user.click(screen.getByTestId('connection-capsule-btn'))
+    expect(screen.getByRole('dialog', { name: '连接与授权详情' })).toBeVisible()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: '连接与授权详情' })).not.toBeInTheDocument()
+
+    // 4. Outside click
+    await user.click(screen.getByTestId('connection-capsule-btn'))
+    expect(screen.getByRole('dialog', { name: '连接与授权详情' })).toBeVisible()
+    fireEvent.mouseDown(document.body)
+    expect(screen.queryByRole('dialog', { name: '连接与授权详情' })).not.toBeInTheDocument()
+  })
+
+  it('OnboardingWizard 具备右上角 ×、底部「取消 / 退出」、Esc 与点击外层遮罩关闭', async () => {
+    const user = userEvent.setup()
+    installDesktopCunlianMock({})
+    render(<DesktopAgentWorkspace />)
+
+    const reopenWizard = async () => {
+      await user.click(screen.getByTestId('connection-capsule-btn'))
+      await user.click(screen.getByRole('button', { name: '切换连接' }))
+      expect(screen.getByRole('region', { name: '首次启动与连接向导' })).toBeVisible()
+    }
+
+    // 1. Top-right × button
+    const closeX = screen.getByRole('button', { name: '收起向导' })
+    expect(closeX).toBeVisible()
+    await user.click(closeX)
+    expect(screen.queryByRole('region', { name: '首次启动与连接向导' })).not.toBeInTheDocument()
+
+    // 2. Bottom「取消 / 退出」button
+    await reopenWizard()
+    const exitBtn = screen.getByRole('button', { name: '取消 / 退出' })
+    expect(exitBtn).toBeVisible()
+    await user.click(exitBtn)
+    expect(screen.queryByRole('region', { name: '首次启动与连接向导' })).not.toBeInTheDocument()
+
+    // 3. Esc key
+    await reopenWizard()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('region', { name: '首次启动与连接向导' })).not.toBeInTheDocument()
+
+    // 4. Backdrop click
+    await reopenWizard()
+    fireEvent.click(screen.getByTestId('onboarding-wizard-backdrop'))
+    expect(screen.queryByRole('region', { name: '首次启动与连接向导' })).not.toBeInTheDocument()
+  })
+
+  it('ProjectAgentM1ReadonlyEntry 具备右上角 ×、底部「取消 / 退出」与 Esc 返回工作台', async () => {
+    const user = userEvent.setup()
+    const onExit = vi.fn()
+    render(<ProjectAgentM1ReadonlyEntry onExit={onExit} />)
+
+    const closeX = screen.getByRole('button', { name: '关闭只读授权视图' })
+    const exitBtn = screen.getByRole('button', { name: '取消 / 退出' })
+    expect(closeX).toBeVisible()
+    expect(exitBtn).toBeVisible()
+
+    await user.click(closeX)
+    expect(onExit).toHaveBeenCalledTimes(1)
+
+    await user.click(exitBtn)
+    expect(onExit).toHaveBeenCalledTimes(2)
+
+    await user.keyboard('{Escape}')
+    expect(onExit).toHaveBeenCalledTimes(3)
+  })
+})
+

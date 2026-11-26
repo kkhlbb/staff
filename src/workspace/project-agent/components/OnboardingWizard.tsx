@@ -1,4 +1,4 @@
-import type { RefObject } from 'react'
+import { useEffect, type RefObject } from 'react'
 import {
   M1_MODEL_API_PROVIDER_PRESETS,
   type M1ClientConnectionState,
@@ -177,8 +177,28 @@ export function OnboardingWizard({
   onSkipToLocalProjects,
   onOpenLocalProject,
 }: OnboardingWizardProps) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onClose])
+
   return (
-    <div className="pa-onboarding-shell pa-onboarding-focused">
+    <div
+      className="pa-onboarding-shell pa-onboarding-focused"
+      data-testid="onboarding-wizard-backdrop"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose()
+        }
+      }}
+    >
       <section className="pa-panel pa-onboarding-container" aria-label="首次启动与连接向导">
         <div className="pa-header pa-onboarding-hero">
           <div>
@@ -189,9 +209,10 @@ export function OnboardingWizard({
           </div>
           <button
             type="button"
+            data-testid="close-onboarding-wizard-btn"
             className="pa-icon-btn"
             aria-label="收起向导"
-            title="收起向导"
+            title="关闭并返回工作台"
             onClick={onClose}
           >
             ×
@@ -762,9 +783,9 @@ export function OnboardingWizard({
           </section>
         ) : null}
 
-        {/* Single Subtle Skip Link at Bottom */}
-        {onboardingChoice !== 'skip-local' ? (
-          <div className="pa-onboarding-skip-row">
+        {/* Bottom Skip & Exit Row */}
+        <div className="pa-onboarding-skip-row">
+          {onboardingChoice !== 'skip-local' ? (
             <button
               type="button"
               className="pa-link-subtle"
@@ -772,8 +793,15 @@ export function OnboardingWizard({
             >
               先跳过，直接体验工作台
             </button>
-          </div>
-        ) : null}
+          ) : null}
+          <button
+            type="button"
+            className="pa-btn pa-btn-ghost pa-btn-sm"
+            onClick={onClose}
+          >
+            取消 / 退出
+          </button>
+        </div>
       </section>
     </div>
   )
