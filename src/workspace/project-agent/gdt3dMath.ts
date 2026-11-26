@@ -63,6 +63,41 @@ export const GDT_KIND_META: Readonly<Record<GdtFeatureControl['kind'], GdtKindMe
     requiresDatum: true,
     defaultZoneShape: 'cylindrical',
   },
+  'profile-surface': {
+    kind: 'profile-surface',
+    symbol: '⌒',
+    label: '面轮廓度',
+    requiresDatum: false,
+    defaultZoneShape: 'planar',
+  },
+  'circular-runout': {
+    kind: 'circular-runout',
+    symbol: '↗',
+    label: '圆跳动',
+    requiresDatum: true,
+    defaultZoneShape: 'cylindrical',
+  },
+  'total-runout': {
+    kind: 'total-runout',
+    symbol: '↗↗',
+    label: '全跳动',
+    requiresDatum: true,
+    defaultZoneShape: 'cylindrical',
+  },
+  'cylindricity': {
+    kind: 'cylindricity',
+    symbol: '⌭',
+    label: '圆柱度',
+    requiresDatum: false,
+    defaultZoneShape: 'cylindrical',
+  },
+  'composite-position': {
+    kind: 'composite-position',
+    symbol: '⌖',
+    label: '复合位置度',
+    requiresDatum: true,
+    defaultZoneShape: 'cylindrical',
+  },
 }
 
 export const GDT_KIND_ORDER: readonly GdtFeatureControl['kind'][] = [
