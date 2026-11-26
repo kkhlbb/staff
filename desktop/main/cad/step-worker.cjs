@@ -1,7 +1,8 @@
-// Fixed narrow C ABI; one fresh WASM heap per job, terminated by the parent.
+// Unified OCCT WASM spacer worker; one fresh WASM heap per job, terminated by the parent.
 const { parentPort, workerData } = require('node:worker_threads');
 const fs = require('node:fs');
 const path = require('node:path');
+const { pathToFileURL } = require('node:url');
 const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 (async () => {
@@ -14,7 +15,7 @@ const assert = require('node:assert/strict');
   assert.ok(input.outerDiameter - input.innerDiameter >= 200, 'STEP_UNSUPPORTED');
   const d = input.innerDiameter / 10000, D = input.outerDiameter / 10000, L = input.length / 10000;
   assert.ok(Math.max(D, L) / Math.min(d / 2, (D - d) / 2, L) <= 10000, 'STEP_UNSUPPORTED');
-  const originalWasm = fs.readFileSync(path.join(assetDirectory, 'spacer.wasm'));
+  const originalWasm = fs.readFileSync(path.join(assetDirectory, 'cunlian_occt.wasm'));
   let wasmBinary = originalWasm;
   const prefix = workerData.localWasm ? 'STEP_LOCAL_' : 'STEP_';
   if (workerData.localWasm) {
@@ -89,7 +90,7 @@ const assert = require('node:assert/strict');
       assert.equal(uleb(end), 1, prefix + 'MEMORY');
       assert.equal(uleb(end), 1, prefix + 'MEMORY');
       const initial = uleb(end), maximum = uleb(end);
-      assert.ok(initial <= maximum && maximum <= 8192 && cursor === end, prefix + 'MEMORY');
+      assert.ok(initial <= maximum && maximum <= 32768 && cursor === end, prefix + 'MEMORY');
       memories++;
     }
     cursor = end;
@@ -98,7 +99,8 @@ const assert = require('node:assert/strict');
   assert.equal(tables, 1, prefix + 'TABLE');
   let oc;
   try {
-    oc = await require(path.join(assetDirectory, 'spacer.cjs'))({
+    const { default: initialize } = await import(pathToFileURL(path.join(assetDirectory, 'cunlian_occt.mjs')).href);
+    oc = await initialize({
       instantiateWasm(imports, receive) {
         const instance = new WebAssembly.Instance(module, imports);
         receive(instance, module);

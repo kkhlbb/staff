@@ -1,8 +1,8 @@
-// Reviewed narrow ABI runtime bytes; preparation never rewrites these pins.
+// Reviewed unified OCCT WASM runtime bytes; preparation never rewrites these pins.
 export const STEP_ASSET_HASHES = {
-  'spacer.cjs': '96ff4cea09e0fcbc3cbdcd07e83c6e03470735db01bcab32b689972b4e57b94f',
-  'spacer.wasm': 'c309d6a202aab5b2b2a498bdd1515b8b03f470ea238dfb99ba5ccb00b8a80108',
-  'step-worker.cjs': '2eb428ddaa2a22c243d60e2ab8a14dfe696a0a0594acf3d75cbbf54d711ed36c'
+  'cunlian_occt.mjs': '0727731066be7847ab67312f187592db3ee5fe285621cf94cd6baa6aac4eed91',
+  'cunlian_occt.wasm': '6cb34be8e7cd73b121618bb8d3900d2950dc1b67043e59c9e499771afaf89282',
+  'step-worker.cjs': '389fe39a8dc571247d5a6aa2d3b2cd4789d91f721a84ffe32ac1b8ecb84e0790'
 } as const
-export const STEP_GENERATOR_VERSION = 'spacer-ap214is-v2-narrow'
-export const STEP_KERNEL_VERSION = 'OCCT 8.0.1 narrow C ABI / source b8f597c'
+export const STEP_GENERATOR_VERSION = 'spacer-ap214is-v3-unified'
+export const STEP_KERNEL_VERSION = 'OCCT 7.8.1 unified WASM / source bd2a789'

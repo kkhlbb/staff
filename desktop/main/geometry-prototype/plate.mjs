@@ -1,18 +1,17 @@
 import { readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import { qToGeometryMm as mm } from '../../shared/project-agent/index.ts'
 
-const require = createRequire(import.meta.url)
 const fixture = JSON.parse(readFileSync(new URL('fixture.json', import.meta.url)))
 const { plate, holes, cover } = fixture
 const length = mm(plate.lengthQ)
 const width = mm(plate.widthQ)
 
-export function loadKernel(options = {}, bundled = false) {
-  const modulePath = bundled ? './m2-replicad.cjs' : 'replicad-opencascadejs'
-  return require(modulePath)({
+export async function loadKernel(options = {}, bundled = false) {
+  const kernelDir = new URL(bundled ? '../../../../occt-unified/' : '../../../vendor/occt-unified/', import.meta.url)
+  const { default: initialize } = await import(/* @vite-ignore */ new URL('cunlian_occt.mjs', kernelDir).href)
+  return initialize({
     ...options,
-    wasmBinary: readFileSync(require.resolve(bundled ? './replicad_single.wasm' : 'replicad-opencascadejs/wasm')),
+    wasmBinary: readFileSync(new URL('cunlian_occt.wasm', kernelDir)),
   })
 }
 

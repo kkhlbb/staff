@@ -33,10 +33,10 @@ export async function generateStep(input: StepInput, options: { signal?: AbortSi
     // process.defaultApp identifies development Electron; plain Node uses this worktree.
     const runtime = process as NodeJS.Process & { resourcesPath?: string; defaultApp?: boolean }
     const assetDirectory = runtime.resourcesPath && !runtime.defaultApp
-      ? path.join(runtime.resourcesPath, 'step-narrow-v1')
+      ? path.join(runtime.resourcesPath, 'occt-unified')
       : typeof __dirname === 'string'
-        ? path.resolve(__dirname, path.basename(__dirname) === 'cad' ? '../../..' : '../..', 'node_modules/.cache/step-narrow-v1')
-        : fileURLToPath(new URL('../../../node_modules/.cache/step-narrow-v1/', import.meta.url))
+        ? path.resolve(__dirname, path.basename(__dirname) === 'cad' ? '../../..' : '../..', 'node_modules/.cache/occt-unified')
+        : fileURLToPath(new URL('../../../node_modules/.cache/occt-unified/', import.meta.url))
     for (const [name, expected] of Object.entries(STEP_ASSET_HASHES)) {
       let bytes: Buffer
       try { bytes = await readFile(path.join(assetDirectory, name)) }
@@ -61,7 +61,7 @@ export async function generateStep(input: StepInput, options: { signal?: AbortSi
         // Do not resolve/reject until the worker has actually exited and its heap is released.
         void worker.terminate().then(() => {
           if (error) reject(error)
-          else resolve({ bytes: bytes!, kernelVersion: localWasm ? 'user-selected-local-wasm (unverified source identity)' : STEP_KERNEL_VERSION, wasmSha256: localWasm?.sha256 ?? STEP_ASSET_HASHES['spacer.wasm'],
+          else resolve({ bytes: bytes!, kernelVersion: localWasm ? 'user-selected-local-wasm (unverified source identity)' : STEP_KERNEL_VERSION, wasmSha256: localWasm?.sha256 ?? STEP_ASSET_HASHES['cunlian_occt.wasm'],
             generatorVersion: `${STEP_GENERATOR_VERSION};worker-sha256=${STEP_ASSET_HASHES['step-worker.cjs']}${localWasm ? ';local-wasm-opt-in-v1' : ''}` })
         }, reject)
       }

@@ -58,12 +58,12 @@ describe('fixed low-level STEP worker', () => {
     Object.defineProperty(process, 'defaultApp', { configurable: true, value: false })
     try {
       await expect(generateStep(good)).rejects.toThrow('STEP_ASSET_MISSING')
-      cpSync(path.join(process.cwd(), 'node_modules/.cache/step-narrow-v1'), path.join(root, 'step-narrow-v1'), { recursive: true })
+      cpSync(path.join(process.cwd(), 'node_modules/.cache/occt-unified'), path.join(root, 'occt-unified'), { recursive: true })
       expect((await generateStep(good)).bytes.length).toBeGreaterThan(8000)
-      for (const name of ['spacer.cjs', 'spacer.wasm', 'step-worker.cjs']) {
-        writeFileSync(path.join(root, 'step-narrow-v1', name), 'tampered')
+      for (const name of ['cunlian_occt.mjs', 'cunlian_occt.wasm', 'step-worker.cjs']) {
+        writeFileSync(path.join(root, 'occt-unified', name), 'tampered')
         await expect(generateStep(good)).rejects.toThrow(`STEP_ASSET_HASH: ${name}`)
-        cpSync(path.join(process.cwd(), 'node_modules/.cache/step-narrow-v1', name), path.join(root, 'step-narrow-v1', name))
+        cpSync(path.join(process.cwd(), 'node_modules/.cache/occt-unified', name), path.join(root, 'occt-unified', name))
       }
     } finally {
       if (original) Object.defineProperty(process, 'resourcesPath', original)
@@ -80,8 +80,8 @@ describe('fixed low-level STEP worker', () => {
     expect(text).toMatch(/SI_UNIT\(\.MILLI\.,\.METRE\.\)/)
     expect(text).toContain('MANIFOLD_SOLID_BREP')
     expect(text).not.toContain('B_SPLINE_SURFACE')
-    expect(result.wasmSha256).toBe('c309d6a202aab5b2b2a498bdd1515b8b03f470ea238dfb99ba5ccb00b8a80108')
-    expect(result.kernelVersion).toBe('OCCT 8.0.1 narrow C ABI / source b8f597c')
-    expect(result.generatorVersion).toMatch(/^spacer-ap214is-v2-narrow/)
+    expect(result.wasmSha256).toBe('6cb34be8e7cd73b121618bb8d3900d2950dc1b67043e59c9e499771afaf89282')
+    expect(result.kernelVersion).toBe('OCCT 7.8.1 unified WASM / source bd2a789')
+    expect(result.generatorVersion).toMatch(/^spacer-ap214is-v3-unified/)
   }, 30000)
 })

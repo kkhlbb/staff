@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs'
 
-export const narrowWasm = () => Buffer.from(readFileSync('vendor/step-narrow-v1/spacer.wasm'))
+export const narrowWasm = () => Buffer.from(readFileSync('vendor/occt-unified/cunlian_occt.wasm'))
 export function behaviorModifiedWasm() {
   const bytes = narrowWasm()
-  for (const text of ['Open CASCADE STEP translator 8.0', 'Open CASCADE %s processor 8.0']) {
+  for (const text of ['Open CASCADE STEP translator 7.8', 'Open CASCADE %s processor 7.8']) {
     const offset = bytes.indexOf(text)
     if (offset < 0) throw new Error('fixture identity mismatch')
     Buffer.from(text.replace('Open CASCADE', 'USER PATCHED')).copy(bytes, offset)

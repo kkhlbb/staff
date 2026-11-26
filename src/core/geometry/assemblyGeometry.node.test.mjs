@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import { test } from 'node:test'
 import { box, loadKernel } from '../../../desktop/main/geometry-prototype/plate.mjs'
 import { assemblyModelV1Schema } from '../../project-file/assembly3d.ts'
@@ -313,10 +312,117 @@ test('worker recovers from bad STEP and discards failed cache entries', async ()
   }
 })
 
-test('loads the locked single existing WASM asset byte-for-byte', () => {
-  const require = createRequire(import.meta.url)
-  const binary = readFileSync(require.resolve('replicad-opencascadejs/wasm'))
-  assert.equal(require('replicad-opencascadejs/package.json').version, '1.2.1')
-  assert.equal(binary.length, 22942327)
-  assert.equal(hash(binary), 'a9335919fa64bfeaee3e241d3139ad134022682429c6688e20d8ca12093d33d9')
+async function xcafStepFixture() {
+  const oc = await loadKernel({ print: () => {}, printErr: () => {} })
+  using app = oc.XCAFApp_Application.GetApplication()
+  using document = app.NewDocument()
+  const translate = (x, y, z) => {
+    using trsf = new oc.gp_Trsf()
+    trsf.SetValues(1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z)
+    return new oc.TopLoc_Location(trsf)
+  }
+  try {
+    using main = document.Main()
+    using shapes = oc.XCAFDoc_DocumentTool.ShapeTool(main)
+    using colors = oc.XCAFDoc_DocumentTool.ColorTool(main)
+    using progress = new oc.Message_ProgressRange()
+    using blank = box(oc, 0, 5, 20, 15)
+    using root = shapes.NewShape()
+    using nested = shapes.NewShape()
+    using plate = shapes.AddShape(blank, false, false)
+    oc.TDataStd_Name.Set(root, 'Fixture')
+    oc.TDataStd_Name.Set(nested, 'Clamp assembly')
+    oc.TDataStd_Name.Set(plate, '夹紧座')
+    using leftLoc = translate(30, 0, 0)
+    using left = shapes.AddComponent(root, nested, leftLoc)
+    oc.TDataStd_Name.Set(left, 'Left clamp')
+    using rightLoc = translate(0, 40, 0)
+    using right = shapes.AddComponent(root, nested, rightLoc)
+    oc.TDataStd_Name.Set(right, 'Right clamp')
+    using platePose = new oc.gp_Trsf()
+    platePose.SetValues(0, -1, 0, 2, 1, 0, 0, 3, 0, 0, 1, 4)
+    using plateLoc = new oc.TopLoc_Location(platePose)
+    using component = shapes.AddComponent(nested, plate, plateLoc)
+    oc.TDataStd_Name.Set(component, 'Mounted base')
+    colors.SetColor(plate, [0.25, 0.5, 0.75], oc.XCAFDoc_ColorType.XCAFDoc_ColorSurf)
+    shapes.UpdateAssemblies()
+    using writer = new oc.STEPCAFControl_Writer()
+    writer.SetNameMode(true)
+    writer.SetColorMode(true)
+    assert.equal(writer.Transfer(document, progress), true)
+    assert.equal(writer.Write('/xcaf-fixture.step'), oc.IFSelect_ReturnStatus.IFSelect_RetDone)
+    return attachment(oc.FS.readFile('/xcaf-fixture.step'), 'xcaf-attachment-1')
+  } finally {
+    if (oc.FS.readdir('/').includes('xcaf-fixture.step')) oc.FS.unlink('/xcaf-fixture.step')
+    app.Close(document)
+  }
+}
+
+test('XCAF multi-level STEP imports assemblyGroups, UTF-8 names, composed transforms, RGB colors, and leaks 0 Embind handles', async () => {
+  const step = await xcafStepFixture()
+  const oc = await loadKernel({ print: () => {}, printErr: () => {} })
+  const wrappers = observeNativeWrappers(oc)
+  const files = oc.FS.readdir('/')
+
+  const imported = runAssemblyGeometry(oc, { operation: 'import-step', attachmentId: step.id, attachments: [step] })
+  assert.deepEqual(oc.FS.readdir('/'), files)
+  assert.deepEqual(wrappers.live(), [])
+
+  const { assembly, parts } = imported
+  assert.ok(assemblyModelV1Schema.safeParse(assembly).success)
+  assert.deepEqual(assembly.mates, [])
+  assert.equal(parts.length, 2)
+  assert.equal(assembly.assemblyGroups?.length, 3)
+
+  const rootGroup = assembly.assemblyGroups.find(g => g.name === 'Fixture')
+  const leftGroup = assembly.assemblyGroups.find(g => g.name === 'Left clamp')
+  const rightGroup = assembly.assemblyGroups.find(g => g.name === 'Right clamp')
+  assert.ok(rootGroup && !rootGroup.parentGroupId)
+  assert.equal(leftGroup?.parentGroupId, rootGroup.id)
+  assert.equal(rightGroup?.parentGroupId, rootGroup.id)
+
+  for (const [index, expectedGroup, expectedTranslation] of [
+    [0, leftGroup, [32, 3, 4]],
+    [1, rightGroup, [2, 43, 4]],
+  ]) {
+    const partModel = assembly.parts[index]
+    assert.equal(partModel.displayName, '夹紧座')
+    assert.equal(partModel.color, '#4080bf')
+    assert.equal(partModel.groupId, expectedGroup.id)
+    assert.equal(partModel.solidIndex, index)
+    closeTo(partModel.nominalTransform[0][0], 0)
+    closeTo(partModel.nominalTransform[0][1], -1)
+    closeTo(partModel.nominalTransform[1][0], 1)
+    closeTo(partModel.nominalTransform[1][1], 0)
+    closeTo(partModel.nominalTransform[2][2], 1)
+    closeTo(partModel.nominalTransform[0][3], expectedTranslation[0])
+    closeTo(partModel.nominalTransform[1][3], expectedTranslation[1])
+    closeTo(partModel.nominalTransform[2][3], expectedTranslation[2])
+    closeTo(parts[index].volumeMm3, 1500)
+  }
+
+  // Rebuild assembly round-trip and worker cache hit preserve XCAF metadata and leak 0 handles.
+  const rebuilt = runAssemblyGeometry(oc, { operation: 'rebuild-assembly', model: assembly, attachments: [step] })
+  assert.deepEqual(oc.FS.readdir('/'), files)
+  assert.deepEqual(wrappers.live(), [])
+  assert.deepEqual(rebuilt.parts, parts)
+
+  const manager = createGeometryManager()
+  try {
+    const opts = options({ projectId: 'xcaf-p', revision: 'r1' })
+    const first = await manager.importStep(step, opts)
+    const cached = await manager.importStep({ ...step, fileName: 'other-name.step' }, opts)
+    assert.equal(cached.metrics.cachedShapeBuilds, first.metrics.cachedShapeBuilds)
+    assert.deepEqual(cached.report.assembly.assemblyGroups, first.report.assembly.assemblyGroups)
+    assert.equal(cached.report.assembly.parts[0].displayName, '夹紧座')
+    assert.equal(cached.report.assembly.parts[0].color, '#4080bf')
+  } finally {
+    await manager.close()
+  }
+})
+
+test('loads the locked unified OCCT WASM asset byte-for-byte', () => {
+  const binary = readFileSync(new URL('../../../vendor/occt-unified/cunlian_occt.wasm', import.meta.url))
+  assert.equal(binary.length, 34129104)
+  assert.equal(hash(binary), '6cb34be8e7cd73b121618bb8d3900d2950dc1b67043e59c9e499771afaf89282')
 })

@@ -68,10 +68,6 @@ function m2WorkerAssets(): Plugin {
       }
       for (const [fileName, source] of [
         ['fixture.json', './desktop/main/geometry-prototype/fixture.json'],
-        ['m2-replicad.cjs', './node_modules/replicad-opencascadejs/dist/replicad_single.cjs'],
-        ['replicad_single.js', './node_modules/replicad-opencascadejs/dist/replicad_single.js'],
-        ['replicad_single.wasm', './node_modules/replicad-opencascadejs/dist/replicad_single.wasm'],
-        ['m2-replicad-LICENSE', './node_modules/replicad-opencascadejs/LICENSE'],
       ]) this.emitFile({ type: 'asset', fileName: 'm2-worker/' + fileName, source: readFileSync(resolve(source)) })
     },
   }
