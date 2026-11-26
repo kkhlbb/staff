@@ -468,4 +468,80 @@ describe('ReviewPage', () => {
     expect(screen.getByTestId('review-status-pill')).toHaveTextContent('已正式提交')
     expect(screen.queryByTestId('review-load-error')).not.toBeInTheDocument()
   })
+
+  it('M3G-FE-01: FEATURE_3D_ASSEMBLY_M1 开启时云端审核页只读展示 3D FCF 框格、基准徽标、防遮挡切换与 GdtContributionItem（不弹编辑气泡）', async () => {
+    const user = userEvent.setup()
+    const gdtReview: CheckSet = {
+      projectId: 'proj-gdt-cloud',
+      draftRevision: 'draft-9',
+      checksetFingerprint: 'csfp-gdt-09',
+      checks: [
+        {
+          checkId: 'chk-pos',
+          requirementId: 'req-pos',
+          title: '右孔位置度校核',
+          required: true,
+          status: 'pass',
+          summary: 'Cpk 1.48，满足要求',
+          linkedFeatureIds: ['feat-right-hole'],
+          linkedAnnotationIds: ['ann-pos'],
+        },
+      ],
+      evidenceByCheckId: SAMPLE_EVIDENCE,
+    }
+
+    const transport = createMockTransport({ review: gdtReview })
+    render(
+      <ReviewPage
+        locationLike={{ pathname: '/review/proj-gdt-cloud/draft-9' }}
+        transport={transport}
+        feature3dAssemblyM1={true}
+        initialGdtSnapshot={{
+          datums: [{ id: 'datum-A', label: 'A', featureId: 'feat-plate-body' }],
+          gdt: [
+            {
+              id: 'gdt-cloud-pos',
+              featureId: 'feat-right-hole',
+              kind: 'position',
+              toleranceQ: 1200,
+              modifier: 'MMC',
+              datumIds: ['datum-A'],
+              datumModifiers: ['RFS'],
+              zoneShape: 'cylindrical',
+            },
+          ],
+          contributions: [
+            {
+              gdtId: 'gdt-cloud-pos',
+              label: '右孔位置度',
+              kind: 'position',
+              varianceSharePct: 62.5,
+              bonusMeanMm: 0.045,
+              datumShiftContributionPct: 12.0,
+            },
+          ],
+        }}
+      />,
+    )
+
+    expect(await screen.findByTestId('review-fingerprint')).toHaveTextContent('csfp-gdt-09')
+
+    // 3D GD&T 标注层 + 基准徽标 + 智能防遮挡↔全部展开切换
+    expect(screen.getByTestId('gdt-3d-overlay-layer')).toBeInTheDocument()
+    expect(screen.getByTestId('gdt-datum-datum-A')).toHaveTextContent('基准 A')
+    await user.click(screen.getByTestId('gdt-mode-expand-all'))
+    const fcfBox = screen.getByTestId('gdt-fcf-box-gdt-cloud-pos')
+    expect(fcfBox).toHaveTextContent('⌖')
+    expect(fcfBox).toHaveTextContent('Ø0.12Ⓜ')
+
+    // 只读模式：点击 3D FCF 仅高亮联动，绝不弹出编辑微调气泡
+    await user.click(fcfBox)
+    expect(screen.queryByTestId('gdt-inline-editor')).not.toBeInTheDocument()
+
+    // 右侧只读展示 GdtContributionItem 明细（方差占比、MMC Bonus、Datum Shift）
+    const contribPanel = screen.getByTestId('review-gdt-contributions')
+    expect(contribPanel).toHaveTextContent('62.5%')
+    expect(contribPanel).toHaveTextContent('MMC Bonus +0.045 mm')
+    expect(contribPanel).toHaveTextContent('Datum Shift 12.0%')
+  })
 })

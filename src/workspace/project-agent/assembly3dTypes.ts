@@ -4,9 +4,13 @@ import type {
   AssemblyModelV1,
   AssemblyPart,
   DatumDefinition,
+  GdtFeatureControl,
+  GdtMaterialModifier,
+  GdtValidationWarning,
   MeasurementSpec,
   PersistentFeature,
-} from '../../project-file/types'
+} from '../../project-file/assembly3d'
+import type { GdtContributionItem } from '../../transport/types'
 import type { M2MeshBounds, M2MeshTriangleRange, M2SidebarSection } from './m2WorkbenchBridge'
 
 export type {
@@ -15,6 +19,10 @@ export type {
   AssemblyPart,
   DatumDefinition,
   EvidenceRef,
+  GdtContributionItem,
+  GdtFeatureControl,
+  GdtMaterialModifier,
+  GdtValidationWarning,
   MeasurementSpec,
   PersistentFeature,
 }
@@ -77,12 +85,41 @@ export interface AssemblyFeatureSelectionItem {
 
 export type ContextPillActionId =
   | 'set-datum'
+  | 'attach-gdt'
   | 'add-second-feature'
   | 'create-face-contact'
   | 'create-coaxial'
   | 'create-distance-align'
   | 'create-3d-loop'
   | 'send-to-ai'
+
+export type GdtDisplayMode = 'smart' | 'expand-all'
+
+export interface AiGdtDraftItem {
+  readonly id: string
+  readonly draftKind: 'datum' | 'gdt'
+  readonly title: string
+  readonly featureId: string
+  readonly partId: string
+  readonly featureLabel: string
+  readonly datum?: DatumDefinition
+  readonly gdt?: GdtFeatureControl
+  readonly confidencePercent: number
+  readonly rationale: string
+  readonly evidenceRefs: readonly EvidenceRef[]
+  readonly linkedAnnotationId?: string
+  readonly selected: boolean
+  readonly applied?: boolean
+}
+
+export interface FourWayHighlightTarget {
+  readonly featureId: string
+  readonly partId?: string
+  readonly gdtId?: string
+  readonly datumId?: string
+  readonly annotationId?: string
+  readonly evidenceKey?: string
+}
 
 export interface ContextPillActionSpec {
   readonly id: ContextPillActionId
@@ -204,6 +241,8 @@ export interface SimulationDiagnosticResult {
   readonly sampleCount: number
   readonly histogram: readonly HistogramBin[]
   readonly pareto: readonly ParetoContributionItem[]
+  readonly gdtContributions?: readonly GdtContributionItem[]
+  readonly gdtWarnings?: readonly GdtValidationWarning[]
   readonly computeMs: number
   readonly source: 'transport' | 'local-fallback'
 }
@@ -212,6 +251,9 @@ export interface Assembly3dInitialState {
   readonly assembly3d?: AssemblyModelV1
   readonly partMeshes?: readonly PartMesh[]
   readonly aiMateDrafts?: readonly AiMateDraftItem[]
+  readonly aiGdtDrafts?: readonly AiGdtDraftItem[]
+  readonly datums?: readonly DatumDefinition[]
+  readonly gdtControls?: readonly GdtFeatureControl[]
   readonly simulationSpec?: SimulationLoopSpec
 }
 

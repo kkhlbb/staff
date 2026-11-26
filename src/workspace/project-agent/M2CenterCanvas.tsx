@@ -4,8 +4,14 @@ import type {
   AssemblyFeatureSelectionItem,
   CameraPresetId,
   ContextPillActionId,
+  DatumDefinition,
+  GdtDisplayMode,
+  GdtFeatureControl,
+  GdtMaterialModifier,
   PartMesh,
+  PickedFeatureGeometryKind,
 } from './assembly3dTypes'
+import type { DatumLetter } from './gdt3dMath'
 import {
   areArtifactsRevisionAligned,
   formatPartialDrawingFailureMessage,
@@ -102,6 +108,34 @@ export interface M2CenterCanvasProps {
   readonly onPickAssemblyFeature?: (payload: AssemblyPickPayload) => void
   readonly onExecuteAssemblyAction?: (actionId: ContextPillActionId) => void
   readonly onSelectCameraPreset?: (preset: CameraPresetId) => void
+  /** M3G 3D GD&T & Datum overlays + inline micro-editing. */
+  readonly datums?: readonly DatumDefinition[]
+  readonly gdtControls?: readonly GdtFeatureControl[]
+  readonly gdtPreviewControls?: readonly GdtFeatureControl[]
+  readonly gdtPreviewDatums?: readonly DatumDefinition[]
+  readonly gdtDisplayMode?: GdtDisplayMode
+  readonly onChangeGdtDisplayMode?: (mode: GdtDisplayMode) => void
+  readonly focusedLoopFeatureIds?: ReadonlySet<string>
+  readonly goldenPulseFeatureIds?: ReadonlySet<string>
+  readonly goldenPulseGdtIds?: ReadonlySet<string>
+  readonly editingGdtId?: string | null
+  readonly featureKindById?: ReadonlyMap<string, PickedFeatureGeometryKind>
+  readonly onSelectGdtCallout?: (gdtId: string | null) => void
+  readonly onHoverGdtCallout?: (
+    target: {
+      readonly gdtId?: string
+      readonly datumId?: string
+      readonly featureId: string
+      readonly partId?: string
+    } | null,
+  ) => void
+  readonly onAssignDatum?: (featureId: string, letter: DatumLetter) => void
+  readonly onCreateGdtControl?: (control: GdtFeatureControl) => void
+  readonly onUpdateGdtCallout?: (
+    gdtId: string,
+    patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
+  ) => void
+  readonly onDeleteGdtCallout?: (gdtId: string) => void
 }
 
 export interface M2ArtifactStatusMeta {
@@ -226,6 +260,23 @@ export function M2CenterCanvas({
   onPickAssemblyFeature,
   onExecuteAssemblyAction,
   onSelectCameraPreset,
+  datums = [],
+  gdtControls = [],
+  gdtPreviewControls = [],
+  gdtPreviewDatums = [],
+  gdtDisplayMode = 'smart',
+  onChangeGdtDisplayMode,
+  focusedLoopFeatureIds,
+  goldenPulseFeatureIds,
+  goldenPulseGdtIds,
+  editingGdtId = null,
+  featureKindById,
+  onSelectGdtCallout,
+  onHoverGdtCallout,
+  onAssignDatum,
+  onCreateGdtControl,
+  onUpdateGdtCallout,
+  onDeleteGdtCallout,
 }: M2CenterCanvasProps) {
   const effectiveViewMode = resolveEffectiveViewMode(viewMode, isNarrow, lastSingleTab)
   const showModelPane = effectiveViewMode === 'model' || effectiveViewMode === 'split'
@@ -475,6 +526,26 @@ export function M2CenterCanvas({
                       hiddenPartIds={feature3dAssemblyM1 ? hiddenPartIds : undefined}
                       additivePickMode={feature3dAssemblyM1 ? additivePickMode : false}
                       onPickAssemblyFeature={feature3dAssemblyM1 ? onPickAssemblyFeature : undefined}
+                      datums={feature3dAssemblyM1 ? datums : undefined}
+                      gdtControls={feature3dAssemblyM1 ? gdtControls : undefined}
+                      gdtPreviewControls={feature3dAssemblyM1 ? gdtPreviewControls : undefined}
+                      gdtPreviewDatums={feature3dAssemblyM1 ? gdtPreviewDatums : undefined}
+                      gdtDisplayMode={feature3dAssemblyM1 ? gdtDisplayMode : undefined}
+                      onChangeGdtDisplayMode={
+                        feature3dAssemblyM1 ? onChangeGdtDisplayMode : undefined
+                      }
+                      focusedLoopFeatureIds={
+                        feature3dAssemblyM1 ? focusedLoopFeatureIds : undefined
+                      }
+                      goldenPulseFeatureIds={
+                        feature3dAssemblyM1 ? goldenPulseFeatureIds : undefined
+                      }
+                      goldenPulseGdtIds={feature3dAssemblyM1 ? goldenPulseGdtIds : undefined}
+                      editingGdtId={feature3dAssemblyM1 ? editingGdtId : null}
+                      onSelectGdtCallout={feature3dAssemblyM1 ? onSelectGdtCallout : undefined}
+                      onHoverGdtCallout={feature3dAssemblyM1 ? onHoverGdtCallout : undefined}
+                      onUpdateGdtCallout={feature3dAssemblyM1 ? onUpdateGdtCallout : undefined}
+                      onDeleteGdtCallout={feature3dAssemblyM1 ? onDeleteGdtCallout : undefined}
                     />
                   ) : (
                     <div className="pa-feature-canvas" role="group" aria-label="三维模型特征拾取区">
@@ -641,6 +712,10 @@ export function M2CenterCanvas({
           selectedAssemblyItems={feature3dAssemblyM1 ? selectedAssemblyItems : undefined}
           additivePickMode={feature3dAssemblyM1 ? additivePickMode : false}
           onExecuteAssemblyAction={feature3dAssemblyM1 ? onExecuteAssemblyAction : undefined}
+          datums={feature3dAssemblyM1 ? datums : undefined}
+          featureKindById={feature3dAssemblyM1 ? featureKindById : undefined}
+          onAssignDatum={feature3dAssemblyM1 ? onAssignDatum : undefined}
+          onCreateGdtControl={feature3dAssemblyM1 ? onCreateGdtControl : undefined}
         />
 
         {previewMessage ? (

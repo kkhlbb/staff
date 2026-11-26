@@ -281,8 +281,12 @@ export function resolveContextPillActions(
 ): readonly ContextPillActionSpec[] {
   if (selectedItems.length === 0) return []
   if (selectedItems.length === 1) {
+    const first = selectedItems[0]
+    const supportsGdt =
+      first.geometryKind === 'face' || first.geometryKind === 'cylindrical-hole-axis'
     return [
-      { id: 'set-datum', label: '设为基准' },
+      { id: 'set-datum', label: '设为基准 A/B/C' },
+      ...(supportsGdt ? [{ id: 'attach-gdt' as const, label: '贴 GD&T 框格' }] : []),
       {
         id: 'add-second-feature',
         label: '+ 加选第二特征',

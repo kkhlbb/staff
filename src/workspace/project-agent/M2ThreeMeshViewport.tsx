@@ -30,6 +30,7 @@ import {
   WebGLRenderer,
 } from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import {
   applyPartGroupTransform,
   applyVertexColorField,
@@ -40,12 +41,18 @@ import {
 } from './assembly3dMath'
 import type {
   Css2dAnnotationItem,
+  DatumDefinition,
+  GdtDisplayMode,
+  GdtFeatureControl,
+  GdtMaterialModifier,
   PartEdgeSegment,
   PartMesh,
   PickedFeatureGeometryKind,
   VertexColorFieldChannel,
   VertexDisplacementChannel,
 } from './assembly3dTypes'
+import { Gdt3dOverlayLayer, type ProjectedGdtAnchor } from './components/Gdt3dOverlayLayer'
+import { computeFeatureWorldAnchor } from './gdt3dMath'
 import {
   resolveMeshTrianglePick,
   type M2CameraState,
@@ -81,6 +88,32 @@ export interface M2ThreeMeshViewportProps {
   /** M3 pre-wired CSS2DRenderer annotation container & items. */
   readonly annotationLayerRef?: RefObject<HTMLDivElement | null>
   readonly css2dAnnotations?: readonly Css2dAnnotationItem[]
+  /** M3G 3D GD&T Feature Control Frames, Datums & interactive overlay props. */
+  readonly gdtControls?: readonly GdtFeatureControl[]
+  readonly datums?: readonly DatumDefinition[]
+  readonly gdtPreviewControls?: readonly GdtFeatureControl[]
+  readonly gdtPreviewDatums?: readonly DatumDefinition[]
+  readonly gdtDisplayMode?: GdtDisplayMode
+  readonly onChangeGdtDisplayMode?: (mode: GdtDisplayMode) => void
+  readonly focusedLoopFeatureIds?: ReadonlySet<string>
+  readonly goldenPulseFeatureIds?: ReadonlySet<string>
+  readonly goldenPulseGdtIds?: ReadonlySet<string>
+  readonly gdtReadOnly?: boolean
+  readonly editingGdtId?: string | null
+  readonly onSelectGdtCallout?: (gdtId: string | null) => void
+  readonly onHoverGdtCallout?: (
+    target: {
+      readonly gdtId?: string
+      readonly datumId?: string
+      readonly featureId: string
+      readonly partId?: string
+    } | null,
+  ) => void
+  readonly onUpdateGdtCallout?: (
+    gdtId: string,
+    patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
+  ) => void
+  readonly onDeleteGdtCallout?: (gdtId: string) => void
   /** M4 pre-wired BufferGeometry vertexColors & displacement channels. */
   readonly colorFieldChannels?: readonly VertexColorFieldChannel[]
   readonly displacementChannels?: readonly VertexDisplacementChannel[]
@@ -242,6 +275,13 @@ interface ThreeSceneController {
     camera: M2CameraState,
     bounds: { readonly min: readonly [number, number, number]; readonly max: readonly [number, number, number] },
   ): void
+  updateCss2dAnchors(
+    anchors: ReadonlyArray<{
+      readonly id: string
+      readonly label: string
+      readonly position: readonly [number, number, number]
+    }>,
+  ): void
   updateTheme(theme: 'light' | 'dark'): void
   dispose(): void
 }
@@ -276,10 +316,26 @@ export function M2ThreeMeshViewport({
   onPickAssemblyFeature,
   annotationLayerRef,
   css2dAnnotations = [],
+  gdtControls = [],
+  datums = [],
+  gdtPreviewControls = [],
+  gdtPreviewDatums = [],
+  gdtDisplayMode = 'smart',
+  onChangeGdtDisplayMode,
+  focusedLoopFeatureIds,
+  goldenPulseFeatureIds,
+  goldenPulseGdtIds,
+  gdtReadOnly = false,
+  editingGdtId = null,
+  onSelectGdtCallout,
+  onHoverGdtCallout,
+  onUpdateGdtCallout,
+  onDeleteGdtCallout,
   colorFieldChannels,
   displacementChannels,
 }: M2ThreeMeshViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const css2dHostRef = useRef<HTMLDivElement | null>(null)
   const controllerRef = useRef<ThreeSceneController | null>(null)
   const [renderMode, setRenderMode] = useState<'webgl' | 'fallback'>(() =>
     canAttemptWebGL() ? 'webgl' : 'fallback',
@@ -466,6 +522,20 @@ export function M2ThreeMeshViewport({
     scene.add(assemblyRoot)
     const partEntries = new Map<string, PartSceneEntry>()
 
+    // Three.js CSS2DRenderer for 3D-tracked GD&T surface anchor nodes
+    const css2dGroup = new Group()
+    scene.add(css2dGroup)
+    const css2dRenderer = new CSS2DRenderer()
+    css2dRenderer.domElement.className = 'pa-three-css2d-dom'
+    css2dRenderer.domElement.style.position = 'absolute'
+    css2dRenderer.domElement.style.top = '0'
+    css2dRenderer.domElement.style.left = '0'
+    css2dRenderer.domElement.style.pointerEvents = 'none'
+    const css2dHost = css2dHostRef.current
+    if (css2dHost) {
+      css2dHost.appendChild(css2dRenderer.domElement)
+    }
+
     const raycaster = new Raycaster()
     raycaster.params.Line = { threshold: 2.5 }
     let rafId = 0
@@ -480,6 +550,8 @@ export function M2ThreeMeshViewport({
       threeCamera.updateProjectionMatrix()
       renderer.setSize(width, height, false)
       renderer.render(scene, threeCamera)
+      css2dRenderer.setSize(width, height)
+      css2dRenderer.render(scene, threeCamera)
     }
 
     const scheduleRender = () => {
@@ -860,6 +932,22 @@ export function M2ThreeMeshViewport({
         if (disposed) return
         syncCamera(camState, bounds)
       },
+      updateCss2dAnchors(anchors) {
+        if (disposed) return
+        while (css2dGroup.children.length > 0) {
+          css2dGroup.remove(css2dGroup.children[0])
+        }
+        for (const item of anchors) {
+          const el = document.createElement('div')
+          el.className = 'pa-css2d-world-anchor'
+          el.dataset.anchorId = item.id
+          el.setAttribute('aria-hidden', 'true')
+          const obj = new CSS2DObject(el)
+          obj.position.set(item.position[0], item.position[1], item.position[2])
+          css2dGroup.add(obj)
+        }
+        scheduleRender()
+      },
       updateTheme(nextTheme) {
         if (disposed) return
         const isDark = nextTheme === 'dark'
@@ -886,8 +974,12 @@ export function M2ThreeMeshViewport({
         canvas.removeEventListener('pointerup', onPointerUp)
         canvas.removeEventListener('pointercancel', onPointerCancel)
         canvas.removeEventListener('webglcontextlost', onContextLost)
+        while (css2dGroup.children.length > 0) {
+          css2dGroup.remove(css2dGroup.children[0])
+        }
+        css2dRenderer.domElement.remove()
         disposeParts()
-        scene.remove(singleGroup, assemblyRoot)
+        scene.remove(singleGroup, assemblyRoot, css2dGroup)
         primaryGeometry.dispose()
         edgeGeometry.dispose()
         highlightGeometry?.dispose()
@@ -1142,6 +1234,199 @@ export function M2ThreeMeshViewport({
     return set
   }, [selectedObjectId, selectedObjectIds])
 
+  const featureKindById = useMemo(() => {
+    const map = new Map<string, PickedFeatureGeometryKind>()
+    if (partMeshes) {
+      for (const part of partMeshes) {
+        for (const range of part.faceTriangleRanges) {
+          map.set(range.objectId, range.geometryKind ?? 'face')
+        }
+        for (const seg of part.edgeSegments ?? []) {
+          map.set(seg.featureId, seg.kind)
+        }
+      }
+    }
+    return map
+  }, [partMeshes])
+
+  const focusedPartIds = useMemo(() => {
+    const set = new Set<string>()
+    if (!partMeshes || selectedIdSet.size === 0) return set
+    for (const part of partMeshes) {
+      const hasSelected =
+        part.faceTriangleRanges.some((r) => selectedIdSet.has(r.objectId)) ||
+        (part.edgeSegments ?? []).some((s) => selectedIdSet.has(s.featureId))
+      if (hasSelected) set.add(part.partId)
+    }
+    return set
+  }, [partMeshes, selectedIdSet])
+
+  const { worldGdtAnchors, projectedGdtAnchors } = useMemo(() => {
+    const hasAnyGdt =
+      gdtControls.length > 0 ||
+      datums.length > 0 ||
+      gdtPreviewControls.length > 0 ||
+      gdtPreviewDatums.length > 0
+    if (!hasAnyGdt) {
+      return {
+        worldGdtAnchors: [] as Array<{
+          readonly id: string
+          readonly label: string
+          readonly position: readonly [number, number, number]
+        }>,
+        projectedGdtAnchors: [] as ProjectedGdtAnchor[],
+      }
+    }
+
+    const bounds =
+      isMultiPart && partMeshes
+        ? computeAssemblyBounds(partMeshes, explosionFactor, hiddenPartIds)
+        : modelMesh.bounds
+    const { center, radius } = computeBoundsCenterAndRadius(bounds)
+
+    const resolveAnchor3d = (
+      featureId: string,
+      anchorOffsetMm?: readonly [number, number, number],
+    ): { readonly position: readonly [number, number, number]; readonly partId?: string } => {
+      if (isMultiPart && partMeshes) {
+        const found = computeFeatureWorldAnchor(
+          partMeshes,
+          featureId,
+          explosionFactor,
+          hiddenPartIds,
+          anchorOffsetMm,
+        )
+        if (found) return found
+      }
+      // Single-mesh triangleRange centroid fallback (used by cloud/web review page)
+      const range = modelMesh.triangleRanges.find((r) => r.objectId === featureId)
+      if (range) {
+        const totalTris = Math.floor(modelMesh.indices.length / 3)
+        const start = Math.max(0, range.startTriangle)
+        const end = Math.min(totalTris, range.endTriangle)
+        let sx = 0
+        let sy = 0
+        let sz = 0
+        let count = 0
+        for (let t = start; t < end; t += 1) {
+          for (let k = 0; k < 3; k += 1) {
+            const idx = modelMesh.indices[t * 3 + k]
+            sx += modelMesh.positions[idx * 3] ?? 0
+            sy += modelMesh.positions[idx * 3 + 1] ?? 0
+            sz += modelMesh.positions[idx * 3 + 2] ?? 0
+            count += 1
+          }
+        }
+        if (count > 0) {
+          return {
+            position: [
+              sx / count + (anchorOffsetMm?.[0] ?? 0),
+              sy / count + (anchorOffsetMm?.[1] ?? 0),
+              sz / count + (anchorOffsetMm?.[2] ?? 0),
+            ],
+          }
+        }
+      }
+      return {
+        position: [
+          center[0] + (anchorOffsetMm?.[0] ?? 0),
+          center[1] + (anchorOffsetMm?.[1] ?? 0),
+          center[2] + (anchorOffsetMm?.[2] ?? 0),
+        ],
+      }
+    }
+
+    const worldList: Array<{
+      readonly id: string
+      readonly label: string
+      readonly position: readonly [number, number, number]
+    }> = []
+    const projectedList: ProjectedGdtAnchor[] = []
+
+    const pushDatum = (datum: DatumDefinition, isPreview: boolean) => {
+      const anchor = resolveAnchor3d(datum.featureId)
+      const [sx, sy] = projectPointFallback(
+        anchor.position[0],
+        anchor.position[1],
+        anchor.position[2],
+        center,
+        radius,
+        camera,
+      )
+      const id = isPreview ? `preview-datum-${datum.id}` : `datum-${datum.id}`
+      worldList.push({ id, label: `基准 ${datum.label}`, position: anchor.position })
+      projectedList.push({
+        id,
+        kind: 'datum',
+        featureId: datum.featureId,
+        partId: anchor.partId,
+        anchorX: sx,
+        anchorY: sy,
+        isPreview,
+        datum,
+      })
+    }
+
+    const pushControl = (control: GdtFeatureControl, isPreview: boolean) => {
+      const anchor = resolveAnchor3d(control.featureId, control.anchorOffsetMm)
+      const [sx, sy] = projectPointFallback(
+        anchor.position[0],
+        anchor.position[1],
+        anchor.position[2],
+        center,
+        radius,
+        camera,
+      )
+      const id = isPreview ? `preview-fcf-${control.id}` : control.id
+      worldList.push({ id, label: control.kind, position: anchor.position })
+      projectedList.push({
+        id,
+        kind: 'fcf',
+        featureId: control.featureId,
+        partId: anchor.partId,
+        anchorX: sx,
+        anchorY: sy,
+        isPreview,
+        control,
+      })
+    }
+
+    for (const datum of datums) pushDatum(datum, false)
+    for (const datum of gdtPreviewDatums) pushDatum(datum, true)
+    for (const control of gdtControls) pushControl(control, false)
+    for (const control of gdtPreviewControls) pushControl(control, true)
+
+    return { worldGdtAnchors: worldList, projectedGdtAnchors: projectedList }
+  }, [
+    gdtControls,
+    datums,
+    gdtPreviewControls,
+    gdtPreviewDatums,
+    isMultiPart,
+    partMeshes,
+    explosionFactor,
+    hiddenPartIds,
+    modelMesh,
+    camera,
+  ])
+
+  useEffect(() => {
+    controllerRef.current?.updateCss2dAnchors(worldGdtAnchors)
+  }, [worldGdtAnchors])
+
+  const effectiveGoldenFeatures = useMemo(
+    () => goldenPulseFeatureIds ?? new Set<string>(),
+    [goldenPulseFeatureIds],
+  )
+  const effectiveGoldenGdts = useMemo(
+    () => goldenPulseGdtIds ?? new Set<string>(),
+    [goldenPulseGdtIds],
+  )
+  const effectiveLoopFeatures = useMemo(
+    () => focusedLoopFeatureIds ?? new Set<string>(),
+    [focusedLoopFeatureIds],
+  )
+
   return (
     <div
       className="pa-three-stage"
@@ -1155,12 +1440,15 @@ export function M2ThreeMeshViewport({
       data-selected-object-id={selectedObjectId ?? ''}
     >
       {renderMode === 'webgl' ? (
-        <canvas
-          ref={canvasRef}
-          className="pa-three-canvas"
-          role="img"
-          aria-label="三维实体网格画布：左键拖拽旋转，右键平移，滚轮缩放，点击面或孔轴拾取特征"
-        />
+        <>
+          <canvas
+            ref={canvasRef}
+            className="pa-three-canvas"
+            role="img"
+            aria-label="三维实体网格画布：左键拖拽旋转，右键平移，滚轮缩放，点击面或孔轴拾取特征"
+          />
+          <div ref={css2dHostRef} className="pa-css2d-webgl-host" aria-hidden="true" />
+        </>
       ) : (
         <svg
           className="pa-three-fallback-svg"
@@ -1297,13 +1585,35 @@ export function M2ThreeMeshViewport({
         </svg>
       )}
 
+      {/* M3G 3D GD&T Feature Control Frames, Datums & Smart Anti-Occlusion Layer */}
+      {projectedGdtAnchors.length > 0 || onChangeGdtDisplayMode ? (
+        <Gdt3dOverlayLayer
+          anchors={projectedGdtAnchors}
+          datums={[...datums, ...gdtPreviewDatums]}
+          featureKindById={featureKindById}
+          displayMode={gdtDisplayMode}
+          onChangeDisplayMode={onChangeGdtDisplayMode}
+          focusedPartIds={focusedPartIds}
+          focusedFeatureIds={selectedIdSet}
+          focusedLoopFeatureIds={effectiveLoopFeatures}
+          goldenPulseFeatureIds={effectiveGoldenFeatures}
+          goldenPulseGdtIds={effectiveGoldenGdts}
+          readOnly={gdtReadOnly}
+          editingGdtId={editingGdtId}
+          onSelectGdtCallout={onSelectGdtCallout}
+          onHoverGdtCallout={onHoverGdtCallout}
+          onUpdateGdtCallout={onUpdateGdtCallout}
+          onDeleteGdtCallout={onDeleteGdtCallout}
+        />
+      ) : null}
+
       {/* M3 pre-wired CSS2DRenderer annotation overlay container */}
       {isMultiPart || annotationLayerRef || css2dAnnotations.length > 0 ? (
         <div
           ref={annotationLayerRef}
           className="pa-css2d-annotation-layer"
           data-testid="css2d-annotation-layer"
-          aria-hidden={css2dAnnotations.length === 0}
+          aria-hidden={css2dAnnotations.length === 0 && projectedGdtAnchors.length === 0}
         >
           {css2dAnnotations.map((ann) => (
             <div key={ann.id} className="pa-css2d-anchor" data-annotation-id={ann.id}>
