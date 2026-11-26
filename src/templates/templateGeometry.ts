@@ -99,6 +99,104 @@ function buildCylinderPrism(
   return { positions, indices }
 }
 
+/**
+ * Builds a rectangular plate mesh with a subdivided nx*ny grid on both bottom and top faces
+ * so interior vertices (including center) capture smooth 3D warpage/displacement fields.
+ */
+function buildSubdividedPlateGeometry(
+  x0: number,
+  y0: number,
+  z0: number,
+  x1: number,
+  y1: number,
+  z1: number,
+  nx = 4,
+  ny = 4,
+): {
+  readonly positions: number[]
+  readonly indices: number[]
+  readonly bottomTriCount: number
+  readonly topTriCount: number
+} {
+  const positions: number[] = []
+  const indices: number[] = []
+  const stride = nx + 1
+  const layerVerts = (nx + 1) * (ny + 1)
+
+  // Bottom grid (0 .. layerVerts - 1)
+  for (let iy = 0; iy <= ny; iy += 1) {
+    const y = y0 + ((y1 - y0) * iy) / ny
+    for (let ix = 0; ix <= nx; ix += 1) {
+      const x = x0 + ((x1 - x0) * ix) / nx
+      positions.push(x, y, z0)
+    }
+  }
+  // Top grid (layerVerts .. 2 * layerVerts - 1)
+  for (let iy = 0; iy <= ny; iy += 1) {
+    const y = y0 + ((y1 - y0) * iy) / ny
+    for (let ix = 0; ix <= nx; ix += 1) {
+      const x = x0 + ((x1 - x0) * ix) / nx
+      positions.push(x, y, z1)
+    }
+  }
+
+  // Bottom triangles (2 * nx * ny)
+  for (let iy = 0; iy < ny; iy += 1) {
+    for (let ix = 0; ix < nx; ix += 1) {
+      const a = iy * stride + ix
+      const b = a + 1
+      const c = a + stride + 1
+      const d = a + stride
+      indices.push(a, c, b, a, d, c)
+    }
+  }
+  const bottomTriCount = 2 * nx * ny
+
+  // Top triangles (2 * nx * ny)
+  for (let iy = 0; iy < ny; iy += 1) {
+    for (let ix = 0; ix < nx; ix += 1) {
+      const a = layerVerts + iy * stride + ix
+      const b = a + 1
+      const c = a + stride + 1
+      const d = a + stride
+      indices.push(a, b, c, a, c, d)
+    }
+  }
+  const topTriCount = 2 * nx * ny
+
+  // 4 side walls
+  for (let ix = 0; ix < nx; ix += 1) {
+    // Front wall (iy = 0)
+    const b0 = ix
+    const b1 = ix + 1
+    const t0 = layerVerts + b0
+    const t1 = layerVerts + b1
+    indices.push(b0, b1, t1, b0, t1, t0)
+    // Back wall (iy = ny)
+    const rb0 = ny * stride + ix
+    const rb1 = rb0 + 1
+    const rt0 = layerVerts + rb0
+    const rt1 = layerVerts + rb1
+    indices.push(rb1, rb0, rt0, rb1, rt0, rt1)
+  }
+  for (let iy = 0; iy < ny; iy += 1) {
+    // Left wall (ix = 0)
+    const b0 = iy * stride
+    const b1 = (iy + 1) * stride
+    const t0 = layerVerts + b0
+    const t1 = layerVerts + b1
+    indices.push(b1, b0, t0, b1, t0, t1)
+    // Right wall (ix = nx)
+    const rb0 = iy * stride + nx
+    const rb1 = (iy + 1) * stride + nx
+    const rt0 = layerVerts + rb0
+    const rt1 = layerVerts + rb1
+    indices.push(rb0, rb1, rt1, rb0, rt1, rt0)
+  }
+
+  return { positions, indices, bottomTriCount, topTriCount }
+}
+
 function buildRectLines(
   x0: number,
   y0: number,
@@ -648,7 +746,7 @@ export const SHAFT_SPACER_SIMULATION_SPEC: SimulationLoopSpec = {
 
 const warpagePlateBox = buildBoxGeometry(0, 0, 0, 80, 50, 8)
 const elasticSpacerCyl = buildCylinderPrism(6, 2, 12, 'z', [0, 0, 0])
-const thinCoverBox = buildBoxGeometry(0, 0, 0, 80, 50, 1.5)
+const thinCoverBox = buildSubdividedPlateGeometry(0, 0, 0, 80, 50, 1.5, 4, 4)
 
 export const COMPLIANT_COVER_PART_MESHES: readonly PartMesh[] = [
   {
@@ -746,7 +844,7 @@ export const COMPLIANT_COVER_PART_MESHES: readonly PartMesh[] = [
         label: '底面（翘曲 0.28 mm）',
         geometryKind: 'face',
         startTriangle: 0,
-        endTriangle: 2,
+        endTriangle: thinCoverBox.bottomTriCount,
       },
       {
         partId: 'part-thin-al-cover',
@@ -754,8 +852,8 @@ export const COMPLIANT_COVER_PART_MESHES: readonly PartMesh[] = [
         featureRef: 'cover/top-face',
         label: '盖板顶面',
         geometryKind: 'face',
-        startTriangle: 2,
-        endTriangle: 4,
+        startTriangle: thinCoverBox.bottomTriCount,
+        endTriangle: thinCoverBox.bottomTriCount + thinCoverBox.topTriCount,
       },
     ],
     edgeSegments: [
@@ -795,7 +893,7 @@ export const COMPLIANT_COVER_MODEL_MESH: M2ModelMesh = {
     { startTriangle: 4, endTriangle: 8, objectId: 'obj-plate-datum-b', featureRef: 'plate/left-hole/cylinder', role: '基准 B 孔区', partName: '双定位孔安装板' },
     { startTriangle: 8, endTriangle: 12, objectId: 'obj-plate-right-hole', featureRef: 'plate/right-hole/cylinder', role: '右定位孔区', partName: '双定位孔安装板' },
     { startTriangle: 12, endTriangle: 60, objectId: 'obj-elastic-spacer', featureRef: 'spacer/top-face', role: '弹性隔套', partName: '弹性隔套' },
-    { startTriangle: 60, endTriangle: 72, objectId: 'obj-cover-surface', featureRef: 'cover/bottom-face', role: '薄铝盖板底面', partName: '薄铝盖板' },
+    { startTriangle: 60, endTriangle: 60 + thinCoverBox.indices.length / 3, objectId: 'obj-cover-surface', featureRef: 'cover/bottom-face', role: '薄铝盖板底面', partName: '薄铝盖板' },
   ],
   bounds: { min: [0, 0, 0], max: [80, 50, 11.5] },
 }

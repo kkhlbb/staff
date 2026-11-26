@@ -443,4 +443,110 @@ describe('V100-FE-01: 5 类进阶 GD&T 3D 框格（含双层复合框格）+ 一
       expect(screen.getByTestId('report-export-feedback')).toHaveTextContent(/已生成本地报告.*\.json/)
     })
   })
+
+  it('6. 离线 PDF 回退通过隐藏 iframe 打印完整工程报告（含 checksetFingerprint/seed/50000/EvidenceRef），绝不直接调用宿主 window.print()', async () => {
+    const user = userEvent.setup()
+    const hostPrintSpy = vi.spyOn(window, 'print').mockImplementation(() => {})
+    const framePrintSpy = vi.fn()
+    let capturedHtml = ''
+
+    let afterPrintHandler: (() => void) | null = null
+    const originalCreateElement = document.createElement.bind(document)
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
+      const el = originalCreateElement(tagName, options)
+      if (tagName.toLowerCase() === 'iframe') {
+        const iframe = el as HTMLIFrameElement
+        Object.defineProperty(iframe, 'srcdoc', {
+          configurable: true,
+          get: () => capturedHtml,
+          set: (val: string) => {
+            capturedHtml = val
+          },
+        })
+        Object.defineProperty(iframe, 'contentWindow', {
+          configurable: true,
+          get: () => ({
+            focus: vi.fn(),
+            print: framePrintSpy,
+            addEventListener: vi.fn((event: string, cb: () => void) => {
+              if (event === 'afterprint') afterPrintHandler = cb
+            }),
+          }),
+        })
+      }
+      return el
+    }) as typeof document.createElement)
+
+    const baseTransport = createElectronTransport({ bridge: {}, feature3dAssemblyM1: true })
+    const authRequiredTransport: Transport = {
+      ...baseTransport,
+      exportSimulationReport: vi.fn(async () => ({
+        ok: false as const,
+        error: { code: 'AUTH_REQUIRED', message: '请先授权当前窗口访问项目' },
+      })),
+    }
+
+    render(
+      <ReportExportMenu
+        transport={authRequiredTransport}
+        projectId="sample-cover-warpage-01"
+        projectName="薄铝盖板翘曲锁紧"
+        draftRevision="draft-1"
+        checksetFingerprint="fp-audit-pdf-001"
+        seed={20261128}
+      />,
+    )
+
+    await user.click(screen.getByTestId('export-report-pdf'))
+    await waitFor(() => {
+      expect(framePrintSpy).toHaveBeenCalledTimes(1)
+    })
+
+    expect(hostPrintSpy).not.toHaveBeenCalled()
+    expect(capturedHtml).toContain('fp-audit-pdf-001')
+    expect(capturedHtml).toContain('20261128')
+    expect(capturedHtml).toContain('50000')
+    expect(capturedHtml).toContain('EvidenceRef')
+    expect(capturedHtml).toContain('user-attestation')
+    expect(screen.getByTestId('report-export-feedback')).toHaveTextContent(/打印对话框导出.*\.pdf/)
+    ;(afterPrintHandler as (() => void) | null)?.()
+    expect(document.querySelector('[data-testid="report-pdf-print-iframe"]')).toBeNull()
+  })
+
+  it('7. 薄铝盖板模板默认启用柔性形变并输出非零位移场（形变云图无 0.000 mm/暂无位移场），取消勾选后归零', async () => {
+    const user = userEvent.setup()
+    const baseTransport = createElectronTransport({ bridge: {}, feature3dAssemblyM1: true })
+
+    render(
+      <ProjectAgentM1Workbench
+        transport={baseTransport}
+        feature3dAssemblyM1={true}
+        initialShowOnboarding={false}
+        initialViewMode="model"
+      />,
+    )
+
+    // 切换到薄铝盖板翘曲锁紧模板
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: /切换本地项目/i }))
+    await user.click(screen.getByRole('button', { name: '打开项目 薄铝盖板翘曲锁紧' }))
+
+    const viewport = await screen.findByTestId('m2-three-viewport')
+    const maxDispMm = Number(viewport.getAttribute('data-max-displacement-mm'))
+    expect(maxDispMm).toBeGreaterThan(0.15)
+
+    // 切换到「形变云图」应立即展示真实非零色标，且不显示「暂无柔性形变位移场」
+    await user.click(screen.getByTestId('deformation-mode-heatmap'))
+    expect(screen.queryByTestId('deformation-empty-hint')).not.toBeInTheDocument()
+    expect(screen.getByTestId('deformation-heatmap-legend')).toHaveTextContent(/0\.[1-9]\d{2} mm/)
+
+    // 切到仿真区取消勾选「计入柔性形变」-> 位移场归零
+    await user.click(screen.getByRole('tab', { name: /仿真/i }))
+    const toggleCompliant = screen.getByTestId('toggle-include-compliant') as HTMLInputElement
+    expect(toggleCompliant.checked).toBe(true)
+    await user.click(toggleCompliant)
+    await waitFor(() => {
+      expect(Number(screen.getByTestId('m2-three-viewport').getAttribute('data-max-displacement-mm'))).toBe(0)
+    })
+  })
 })

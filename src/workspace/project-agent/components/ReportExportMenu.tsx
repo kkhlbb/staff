@@ -290,6 +290,78 @@ const LOCAL_FALLBACK_ERROR_CODES = new Set([
   'BACKEND_UNAVAILABLE',
 ])
 
+async function printHtmlViaHiddenIframe(html: string): Promise<boolean> {
+  if (typeof document === 'undefined' || !document.body) {
+    return false
+  }
+  const iframe = document.createElement('iframe')
+  iframe.setAttribute('aria-hidden', 'true')
+  iframe.setAttribute('data-testid', 'report-pdf-print-iframe')
+  iframe.style.position = 'fixed'
+  iframe.style.right = '0'
+  iframe.style.bottom = '0'
+  iframe.style.width = '0'
+  iframe.style.height = '0'
+  iframe.style.border = '0'
+  iframe.style.visibility = 'hidden'
+
+  let cleaned = false
+  let cleanupTimer: ReturnType<typeof setTimeout> | null = null
+  const cleanup = () => {
+    if (cleaned) return
+    cleaned = true
+    if (cleanupTimer !== null) {
+      clearTimeout(cleanupTimer)
+      cleanupTimer = null
+    }
+    iframe.remove()
+  }
+
+  try {
+    const loadPromise = new Promise<void>((resolve) => {
+      let settled = false
+      const done = () => {
+        if (settled) return
+        settled = true
+        resolve()
+      }
+      iframe.addEventListener('load', done, { once: true })
+      setTimeout(done, 80)
+    })
+
+    iframe.srcdoc = html
+    document.body.appendChild(iframe)
+
+    const doc = iframe.contentDocument
+    if (doc && (!doc.body || doc.body.innerHTML.trim().length === 0)) {
+      try {
+        doc.open()
+        doc.write(html)
+        doc.close()
+      } catch {
+        // Ignore cross-origin or readonly document errors when srcdoc is active
+      }
+    }
+
+    await loadPromise
+
+    const frameWin = iframe.contentWindow
+    if (!frameWin || typeof frameWin.print !== 'function') {
+      cleanup()
+      return false
+    }
+
+    frameWin.addEventListener?.('afterprint', cleanup, { once: true })
+    cleanupTimer = setTimeout(cleanup, 60_000)
+    frameWin.focus?.()
+    frameWin.print()
+    return true
+  } catch {
+    cleanup()
+    return false
+  }
+}
+
 export interface ExportExecutionOutcome {
   readonly ok: boolean
   readonly message: string
@@ -374,17 +446,6 @@ export async function executeSimulationReportExport(params: {
   const seed = params.seed ?? 42
   const isDraft = params.isDraft ?? /^draft/i.test(params.revision)
   if (params.format === 'pdf') {
-    if (typeof window !== 'undefined' && typeof window.print === 'function') {
-      try {
-        window.print()
-        return {
-          ok: true,
-          message: '已调用打印对话框导出 PDF（离线模板模式）。',
-        }
-      } catch {
-        // Fall through to printable offline HTML download
-      }
-    }
     const printableHtml = await buildLocalFallbackReportContent({
       format: 'html',
       projectId: params.projectId,
@@ -398,6 +459,16 @@ export async function executeSimulationReportExport(params: {
       viewportSnapshots,
     })
     const sha256 = await computeFallbackSha256Hex(printableHtml.content)
+    const printedViaFrame = await printHtmlViaHiddenIframe(printableHtml.content)
+    if (printedViaFrame) {
+      const pdfFileName = printableHtml.fileName.replace(/\.html$/i, '.pdf')
+      return {
+        ok: true,
+        fileName: pdfFileName,
+        sha256,
+        message: `已生成工程报告并通过打印对话框导出 ${pdfFileName}（SHA-256 ${sha256.slice(0, 12)}…）`,
+      }
+    }
     triggerBrowserBlobDownload(printableHtml.fileName, printableHtml.mimeType, printableHtml.content, false)
     return {
       ok: true,

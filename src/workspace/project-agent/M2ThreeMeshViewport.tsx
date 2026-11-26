@@ -408,32 +408,6 @@ export function M2ThreeMeshViewport({
   const displayDeformationHud =
     showDeformationControls ?? (isMultiPart || Boolean(displacementFields && displacementFields.length > 0))
 
-  const handleSelectDeformationMode = (nextMode: DeformationViewMode) => {
-    const hasFields = Boolean(displacementFields && displacementFields.length > 0)
-    if (nextMode !== 'nominal' && !hasFields) {
-      setDeformationEmptyHint('当前暂无柔性形变位移场，请先选中零件「开启/配置柔性形变」。')
-    } else {
-      setDeformationEmptyHint(null)
-    }
-    if (nextMode === 'animation') {
-      setIsAnimationPlaying(true)
-    }
-    if (onChangeDeformationMode) {
-      onChangeDeformationMode(nextMode)
-    } else {
-      setLocalDeformationMode(nextMode)
-    }
-  }
-
-  const handleChangeExaggeration = (nextScale: number) => {
-    const clamped = Math.max(1, Math.min(50, Math.round(nextScale)))
-    if (onChangeExaggerationScale) {
-      onChangeExaggerationScale(clamped)
-    } else {
-      setLocalExaggerationScale(clamped)
-    }
-  }
-
   // Pre-compute per-part interpolated displacement fields (zero rebuild of BufferGeometry!)
   const { interpolatedByPart, globalMaxDisplacementMm } = useMemo(() => {
     const map = new Map<string, InterpolatedPartDisplacement>()
@@ -457,6 +431,32 @@ export function M2ThreeMeshViewport({
     }
     return { interpolatedByPart: map, globalMaxDisplacementMm: globalMax }
   }, [displacementFields, isMultiPart, partMeshes])
+
+  const handleSelectDeformationMode = (nextMode: DeformationViewMode) => {
+    const hasFields = Boolean(displacementFields && displacementFields.length > 0 && globalMaxDisplacementMm > 1e-6)
+    if (nextMode !== 'nominal' && !hasFields) {
+      setDeformationEmptyHint('当前暂无柔性形变位移场，请先选中零件「开启/配置柔性形变」。')
+    } else {
+      setDeformationEmptyHint(null)
+    }
+    if (nextMode === 'animation') {
+      setIsAnimationPlaying(true)
+    }
+    if (onChangeDeformationMode) {
+      onChangeDeformationMode(nextMode)
+    } else {
+      setLocalDeformationMode(nextMode)
+    }
+  }
+
+  const handleChangeExaggeration = (nextScale: number) => {
+    const clamped = Math.max(1, Math.min(50, Math.round(nextScale)))
+    if (onChangeExaggerationScale) {
+      onChangeExaggerationScale(clamped)
+    } else {
+      setLocalExaggerationScale(clamped)
+    }
+  }
 
   // Stable key representing part geometry identity (excludes explosionFactor & nominalTransform)
   const partGeometryIdentity = useMemo(() => {
@@ -1937,7 +1937,7 @@ export function M2ThreeMeshViewport({
             </div>
           ) : null}
 
-          {deformationEmptyHint ? (
+          {deformationEmptyHint && globalMaxDisplacementMm <= 1e-6 ? (
             <div
               className="pa-deformation-hint"
               role="status"
