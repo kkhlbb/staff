@@ -16,8 +16,9 @@ import type {
 } from '../../../src/workspace/project-agent/assembly3dTypes'
 import { formatFcfCells, GDT_KIND_META } from '../../../src/workspace/project-agent/gdt3dMath'
 import { COMPLIANT_MODEL_LABELS } from '../../../src/workspace/project-agent/physics3dMath'
-import { M2ThreeMeshViewport } from '../../../src/workspace/project-agent/M2ThreeMeshViewport'
+import { M2ThreeMeshViewport, type ViewportSnapshotHandle } from '../../../src/workspace/project-agent/M2ThreeMeshViewport'
 import { M2VectorDrawingViewport } from '../../../src/workspace/project-agent/M2VectorDrawingViewport'
+import { executeSimulationReportExport } from '../../../src/workspace/project-agent/components/ReportExportMenu'
 import {
   DEFAULT_M2_CAMERA,
   DEFAULT_M2_DRAWING_VIEWPORT,
@@ -147,6 +148,9 @@ export function ReviewPage({
     readonly isConflict: boolean
   } | null>(null)
   const [commitResult, setCommitResult] = useState<CommitDraftResult | null>(null)
+  const [exportingReport, setExportingReport] = useState(false)
+  const [reportFeedback, setReportFeedback] = useState<{ readonly ok: boolean; readonly message: string } | null>(null)
+  const snapshotHandleRef = useRef<ViewportSnapshotHandle | null>(null)
 
   const transport = useMemo<Transport | null>(() => {
     if (transportProp) return transportProp
@@ -552,6 +556,30 @@ export function ReviewPage({
     setPhase('committed')
   }, [route, transport, data, canCommit, webhookUrl])
 
+  const handleDownloadHtmlReport = useCallback(async () => {
+    if (!route.matched || exportingReport) return
+    setExportingReport(true)
+    setReportFeedback(null)
+    const outcome = await executeSimulationReportExport({
+      transport,
+      projectId: route.projectId,
+      projectName: route.projectId,
+      format: 'html',
+      revision: route.draftRevision,
+      checksetFingerprint: data?.review.checksetFingerprint ?? 'fp-review',
+      captureSnapshots: () => snapshotHandleRef.current?.captureSnapshots() ?? {},
+    })
+    setExportingReport(false)
+    setReportFeedback({ ok: outcome.ok, message: outcome.message })
+  }, [route, exportingReport, transport, data])
+
+  const handlePrintPdfReport = useCallback(() => {
+    if (typeof window !== 'undefined' && typeof window.print === 'function') {
+      window.print()
+      setReportFeedback({ ok: true, message: '已打开浏览器打印对话框，可选择「另存为 PDF」。' })
+    }
+  }, [])
+
   if (!route.matched) {
     return (
       <div className="pa-workbench cw-shell" data-theme={theme} data-testid="review-invalid-route">
@@ -640,6 +668,24 @@ export function ReviewPage({
           <button
             type="button"
             className="cw-btn"
+            data-testid="review-export-html-btn"
+            onClick={() => void handleDownloadHtmlReport()}
+            disabled={exportingReport || phase === 'loading'}
+          >
+            {exportingReport ? '导出中…' : '下载离线 HTML 报告'}
+          </button>
+          <button
+            type="button"
+            className="cw-btn"
+            data-testid="review-print-pdf-btn"
+            onClick={handlePrintPdfReport}
+            disabled={phase === 'loading'}
+          >
+            打印 PDF
+          </button>
+          <button
+            type="button"
+            className="cw-btn"
             onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
           >
             {theme === 'light' ? '深色 CAD' : '浅色工作台'}
@@ -654,6 +700,23 @@ export function ReviewPage({
           </button>
         </div>
       </header>
+
+      {reportFeedback ? (
+        <div
+          className={`cw-report-feedback ${reportFeedback.ok ? 'cw-alert-pass' : 'cw-alert-danger'}`}
+          role={reportFeedback.ok ? 'status' : 'alert'}
+          data-testid="review-report-feedback"
+        >
+          <span>{reportFeedback.message}</span>
+          <button
+            type="button"
+            className="cw-btn"
+            onClick={() => setReportFeedback(null)}
+          >
+            关闭
+          </button>
+        </div>
+      ) : null}
 
       {/* 主体：中央 3D/2D 视口 + 右侧检查溯源与人工确认 */}
       <main className="cw-main">
@@ -757,6 +820,7 @@ export function ReviewPage({
                       goldenPulseFeatureIds={showReadonlyGdt ? goldenPulseFeatureIds : undefined}
                       goldenPulseGdtIds={showReadonlyGdt ? goldenPulseGdtIds : undefined}
                       gdtReadOnly={true}
+                      snapshotHandleRef={snapshotHandleRef}
                       displacementFields={showReadonlyDeformationHud ? readonlyDisplacementFields : undefined}
                       deformationMode={showReadonlyDeformationHud ? reviewDeformationMode : undefined}
                       onChangeDeformationMode={

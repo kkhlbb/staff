@@ -102,11 +102,56 @@ export const GDT_KIND_META: Readonly<Record<GdtFeatureControl['kind'], GdtKindMe
 
 export const GDT_KIND_ORDER: readonly GdtFeatureControl['kind'][] = [
   'position',
+  'composite-position',
   'perpendicularity',
   'parallelism',
   'flatness',
   'coaxiality',
+  'profile-surface',
+  'circular-runout',
+  'total-runout',
+  'cylindricity',
 ]
+
+const FACE_RECOMMENDED_GDT_KINDS: readonly GdtFeatureControl['kind'][] = [
+  'flatness',
+  'perpendicularity',
+  'parallelism',
+  'profile-surface',
+  'position',
+]
+
+const CYLINDER_RECOMMENDED_GDT_KINDS: readonly GdtFeatureControl['kind'][] = [
+  'position',
+  'composite-position',
+  'coaxiality',
+  'circular-runout',
+  'total-runout',
+  'cylindricity',
+  'perpendicularity',
+  'parallelism',
+  'profile-surface',
+]
+
+export function isRunoutGdtKind(kind: GdtFeatureControl['kind']): boolean {
+  return kind === 'circular-runout' || kind === 'total-runout'
+}
+
+/** Smart feature-type filtering for GD&T symbol pickers (planes exclude runout/cylindricity/coaxiality). */
+export function getRecommendedGdtKindsForFeature(
+  featureKind?: PickedFeatureGeometryKind,
+): readonly GdtFeatureControl['kind'][] {
+  if (featureKind === 'face') return FACE_RECOMMENDED_GDT_KINDS
+  if (featureKind === 'cylindrical-hole-axis') return CYLINDER_RECOMMENDED_GDT_KINDS
+  return GDT_KIND_ORDER
+}
+
+export interface GdtCalloutPatch {
+  readonly toleranceQ?: number
+  readonly modifier?: GdtMaterialModifier
+  readonly unequalProfileOuterFraction?: number
+  readonly lowerSegment?: GdtFeatureControl['lowerSegment']
+}
 
 export const GDT_MODIFIER_SYMBOL: Readonly<Record<GdtMaterialModifier, string>> = {
   RFS: '',
@@ -141,11 +186,25 @@ export function isCylindricalGdtZone(
   control: GdtFeatureControl,
   featureKind?: PickedFeatureGeometryKind,
 ): boolean {
+  if (
+    control.kind === 'flatness' ||
+    control.kind === 'profile-surface' ||
+    control.kind === 'circular-runout' ||
+    control.kind === 'total-runout' ||
+    control.kind === 'cylindricity'
+  ) {
+    return false
+  }
   if (control.zoneShape === 'cylindrical') return true
   if (control.zoneShape === 'planar' || control.zoneShape === 'bidirectional') return false
-  if (control.kind === 'coaxiality') return true
+  if (control.kind === 'coaxiality' || control.kind === 'composite-position') return true
   if (control.kind === 'position' && featureKind === 'cylindrical-hole-axis') return true
   return false
+}
+
+function formatUzMmValue(outerMm: number): string {
+  const rounded = Math.round(Math.max(0, outerMm) * 1000) / 1000
+  return String(rounded)
 }
 
 export interface FormattedFcfDatumCell {
@@ -155,9 +214,7 @@ export interface FormattedFcfDatumCell {
   readonly modifierSymbol: string
 }
 
-export interface FormattedFcfCells {
-  readonly symbol: string
-  readonly kindLabel: string
+export interface FormattedFcfLowerSegment {
   readonly diameterPrefix: string
   readonly toleranceText: string
   readonly modifier: GdtMaterialModifier
@@ -166,7 +223,21 @@ export interface FormattedFcfCells {
   readonly summaryText: string
 }
 
-/** Formats an ISO/ASME Feature Control Frame into structured renderable cells. */
+export interface FormattedFcfCells {
+  readonly symbol: string
+  readonly kindLabel: string
+  readonly diameterPrefix: string
+  readonly toleranceText: string
+  readonly modifier: GdtMaterialModifier
+  readonly modifierSymbol: string
+  readonly unequalUzText?: string
+  readonly datumCells: readonly FormattedFcfDatumCell[]
+  readonly isComposite: boolean
+  readonly lowerSegment?: FormattedFcfLowerSegment
+  readonly summaryText: string
+}
+
+/** Formats an ISO/ASME Feature Control Frame into structured renderable cells (including UZ & composite FRTZF). */
 export function formatFcfCells(
   control: GdtFeatureControl,
   datums: readonly DatumDefinition[],
@@ -179,22 +250,64 @@ export function formatFcfCells(
   const modifier: GdtMaterialModifier = control.modifier ?? 'RFS'
   const modifierSymbol = GDT_MODIFIER_SYMBOL[modifier]
 
-  const datumCells: FormattedFcfDatumCell[] = control.datumIds.map((datumId, index) => {
-    const found = datumById.get(datumId)
-    const datumMod: GdtMaterialModifier = control.datumModifiers?.[index] ?? 'RFS'
-    return {
-      datumId,
-      label: found?.label ?? datumId.replace(/^datum-/i, '').toUpperCase(),
-      modifier: datumMod,
-      modifierSymbol: GDT_MODIFIER_SYMBOL[datumMod],
+  const formatDatumList = (
+    ids: readonly string[],
+    mods?: readonly GdtMaterialModifier[],
+  ): FormattedFcfDatumCell[] =>
+    ids.map((datumId, index) => {
+      const found = datumById.get(datumId)
+      const datumMod: GdtMaterialModifier = mods?.[index] ?? 'RFS'
+      return {
+        datumId,
+        label: found?.label ?? datumId.replace(/^datum-/i, '').toUpperCase(),
+        modifier: datumMod,
+        modifierSymbol: GDT_MODIFIER_SYMBOL[datumMod],
+      }
+    })
+
+  const datumCells = formatDatumList(control.datumIds, control.datumModifiers)
+
+  let unequalUzText: string | undefined
+  if (
+    control.kind === 'profile-surface' &&
+    control.unequalProfileOuterFraction !== undefined &&
+    Math.abs(control.unequalProfileOuterFraction - 0.5) > 1e-6
+  ) {
+    const outerMm = (Math.max(0, control.toleranceQ) / 10000) * control.unequalProfileOuterFraction
+    unequalUzText = `UZ ${formatUzMmValue(outerMm)}`
+  }
+
+  let lowerSegment: FormattedFcfLowerSegment | undefined
+  if (control.kind === 'composite-position' && control.lowerSegment) {
+    const lowerMod: GdtMaterialModifier = control.lowerSegment.modifier ?? 'RFS'
+    const lowerModSym = GDT_MODIFIER_SYMBOL[lowerMod]
+    const lowerTolText = formatGdtToleranceMm(control.lowerSegment.toleranceQ)
+    const lowerDatumCells = formatDatumList(
+      control.lowerSegment.datumIds,
+      control.lowerSegment.datumModifiers,
+    )
+    const lowerDatumPart =
+      lowerDatumCells.length > 0
+        ? ` | ${lowerDatumCells.map((c) => `${c.label}${c.modifierSymbol}`).join(' | ')}`
+        : ''
+    lowerSegment = {
+      diameterPrefix,
+      toleranceText: lowerTolText,
+      modifier: lowerMod,
+      modifierSymbol: lowerModSym,
+      datumCells: lowerDatumCells,
+      summaryText: `${diameterPrefix}${lowerTolText}${lowerModSym}${lowerDatumPart}`,
     }
-  })
+  }
 
   const datumPart =
     datumCells.length > 0
       ? ` | ${datumCells.map((c) => `${c.label}${c.modifierSymbol}`).join(' | ')}`
       : ''
-  const summaryText = `[ ${meta.symbol} | ${diameterPrefix}${toleranceText}${modifierSymbol}${datumPart} ]`
+  const uzPart = unequalUzText ? ` ${unequalUzText}` : ''
+  const summaryText = lowerSegment
+    ? `[ ${meta.symbol} | ${diameterPrefix}${toleranceText}${modifierSymbol}${datumPart} / ${lowerSegment.summaryText} ]`
+    : `[ ${meta.symbol} | ${diameterPrefix}${toleranceText}${uzPart}${modifierSymbol}${datumPart} ]`
 
   return {
     symbol: meta.symbol,
@@ -203,7 +316,10 @@ export function formatFcfCells(
     toleranceText,
     modifier,
     modifierSymbol,
+    ...(unequalUzText ? { unequalUzText } : {}),
     datumCells,
+    isComposite: Boolean(lowerSegment),
+    ...(lowerSegment ? { lowerSegment } : {}),
     summaryText,
   }
 }
@@ -245,6 +361,35 @@ export function validateGdtControlDraft(
         message: msg,
       })
     }
+  } else if (control.kind === 'cylindricity') {
+    if (control.datumIds.length > 0) {
+      const msg = '圆柱度（⌭）属于形状公差，不可引用基准。'
+      errors.push(msg)
+      warnings.push({
+        code: 'DRF_REDUNDANT',
+        gdtId: control.id,
+        datumId: control.datumIds[0],
+        message: msg,
+      })
+    }
+    if (featureKind && featureKind !== 'cylindrical-hole-axis') {
+      const msg = '圆柱度（⌭）仅适用于圆柱孔/轴特征。'
+      errors.push(msg)
+      warnings.push({
+        code: 'DRF_DEGENERATE',
+        gdtId: control.id,
+        message: msg,
+      })
+    }
+  } else if (control.kind === 'profile-surface') {
+    if (
+      control.unequalProfileOuterFraction !== undefined &&
+      (!Number.isFinite(control.unequalProfileOuterFraction) ||
+        control.unequalProfileOuterFraction < 0 ||
+        control.unequalProfileOuterFraction > 1)
+    ) {
+      errors.push('面轮廓度不等距外侧比例（UZ）必须在 0 与 1 之间。')
+    }
   } else if (control.datumIds.length === 0) {
     const msg = `${GDT_KIND_META[control.kind].label}（${GDT_KIND_META[control.kind].symbol}）至少需要引用 1 个基准。`
     errors.push(msg)
@@ -275,8 +420,48 @@ export function validateGdtControlDraft(
     })
   }
 
+  if (isRunoutGdtKind(control.kind)) {
+    if (featureKind && featureKind !== 'cylindrical-hole-axis') {
+      const msg = `${GDT_KIND_META[control.kind].label}（${GDT_KIND_META[control.kind].symbol}）仅适用于圆柱/回转体特征。`
+      errors.push(msg)
+      warnings.push({
+        code: 'DRF_DEGENERATE',
+        gdtId: control.id,
+        message: msg,
+      })
+    }
+    if (control.datumIds.length > 0) {
+      const datumKindsKnown = control.datumIds.some((datumId) => {
+        const datum = datumById.get(datumId)
+        return datum ? context.featureKindById.has(datum.featureId) : false
+      })
+      const hasAxisDatum = control.datumIds.some((datumId) => {
+        const datum = datumById.get(datumId)
+        return datum ? context.featureKindById.get(datum.featureId) === 'cylindrical-hole-axis' : false
+      })
+      if (datumKindsKnown && !hasAxisDatum) {
+        const msg = `${GDT_KIND_META[control.kind].label}至少需要引用 1 个圆柱/轴类基准。`
+        errors.push(msg)
+        warnings.push({
+          code: 'DRF_DEGENERATE',
+          gdtId: control.id,
+          datumId: control.datumIds[0],
+          message: msg,
+        })
+      }
+    }
+  }
+
   const mod = control.modifier ?? 'RFS'
-  if ((mod === 'MMC' || mod === 'LMC') && featureKind && featureKind !== 'cylindrical-hole-axis') {
+  if (isRunoutGdtKind(control.kind) && (mod === 'MMC' || mod === 'LMC')) {
+    const msg = `${GDT_KIND_META[control.kind].label}仅允许 RFS，不可使用 ${mod} 实体修正符。`
+    errors.push(msg)
+    warnings.push({
+      code: 'ILLEGAL_MODIFIER',
+      gdtId: control.id,
+      message: msg,
+    })
+  } else if ((mod === 'MMC' || mod === 'LMC') && featureKind && featureKind !== 'cylindrical-hole-axis') {
     const msg = `非尺寸要素（平面）不可使用 ${mod} 实体修正符，请改用 RFS。`
     errors.push(msg)
     warnings.push({
@@ -300,6 +485,17 @@ export function validateGdtControlDraft(
       const datumMod = control.datumModifiers?.[idx] ?? 'RFS'
       if (datumMod === 'MMC' || datumMod === 'LMC') {
         const datum = datumById.get(datumId)
+        if (isRunoutGdtKind(control.kind)) {
+          const msg = `跳动公差基准 ${datum?.label ?? datumId} 仅允许 RFS，不可附加 ${datumMod}。`
+          errors.push(msg)
+          warnings.push({
+            code: 'ILLEGAL_MODIFIER',
+            gdtId: control.id,
+            datumId,
+            message: msg,
+          })
+          return
+        }
         const datumKind = datum ? context.featureKindById.get(datum.featureId) : undefined
         if (datumKind && datumKind !== 'cylindrical-hole-axis') {
           const msg = `基准 ${datum?.label ?? datumId} 为非尺寸要素平面，不可附加 ${datumMod} 修饰符。`
@@ -313,6 +509,50 @@ export function validateGdtControlDraft(
         }
       }
     })
+  }
+
+  if (control.kind === 'composite-position') {
+    const lower = control.lowerSegment
+    if (!lower) {
+      const msg = '复合位置度必须配置下格（FRTZF）控制段。'
+      errors.push(msg)
+      warnings.push({
+        code: 'DRF_UNDERCONSTRAINED',
+        gdtId: control.id,
+        message: msg,
+      })
+    } else {
+      if (!Number.isFinite(lower.toleranceQ) || lower.toleranceQ <= 0) {
+        errors.push('复合位置度下格（FRTZF）公差值必须大于 0 mm。')
+      } else if (lower.toleranceQ > control.toleranceQ) {
+        const msg = '复合位置度下格（FRTZF）公差值不可大于上格（PLTZF）公差值。'
+        errors.push(msg)
+        warnings.push({
+          code: 'DRF_DEGENERATE',
+          gdtId: control.id,
+          message: msg,
+        })
+      }
+      if (lower.datumIds.some((datumId, idx) => datumId !== control.datumIds[idx])) {
+        const msg = '复合位置度下格基准必须为上格基准的顺序前缀（或为空）。'
+        errors.push(msg)
+        warnings.push({
+          code: 'DRF_REDUNDANT',
+          gdtId: control.id,
+          message: msg,
+        })
+      }
+      const lowerMod = lower.modifier ?? 'RFS'
+      if ((lowerMod === 'MMC' || lowerMod === 'LMC') && featureKind && featureKind !== 'cylindrical-hole-axis') {
+        const msg = `复合位置度下格非尺寸要素不可使用 ${lowerMod}。`
+        errors.push(msg)
+        warnings.push({
+          code: 'ILLEGAL_MODIFIER',
+          gdtId: control.id,
+          message: msg,
+        })
+      }
+    }
   }
 
   if (
@@ -598,7 +838,13 @@ export function computeLocalGdtSimulationDiagnostics(
     })
     gdtWarnings.push(...resolved.warnings)
 
-    const baseTolMm = Math.max(0.005, control.toleranceQ / 10000)
+    const upperTolMm = Math.max(0.005, control.toleranceQ / 10000)
+    const lowerTolMm =
+      control.kind === 'composite-position' && control.lowerSegment
+        ? Math.max(0.005, control.lowerSegment.toleranceQ / 10000)
+        : null
+    const baseTolMm =
+      lowerTolMm !== null ? Math.min(upperTolMm, upperTolMm * 0.65 + lowerTolMm * 0.35) : upperTolMm
     const isCyl = featureKindById.get(control.featureId) === 'cylindrical-hole-axis'
 
     // Compute MMC/LMC mean bonus (mm)

@@ -8,6 +8,7 @@ import {
   mmToToleranceQ,
   shouldCollapseGdtAnnotation,
   validateGdtControlDraft,
+  type GdtCalloutPatch,
 } from '../gdt3dMath'
 import type {
   DatumDefinition,
@@ -53,7 +54,7 @@ export interface Gdt3dOverlayLayerProps {
   ) => void
   readonly onUpdateGdtCallout?: (
     gdtId: string,
-    patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
+    patch: GdtCalloutPatch,
   ) => void
   readonly onDeleteGdtCallout?: (gdtId: string) => void
 }
@@ -93,8 +94,8 @@ export function Gdt3dOverlayLayer({
       id: item.id,
       anchorX: item.anchorX,
       anchorY: item.anchorY,
-      width: item.kind === 'fcf' ? 136 : 78,
-      height: item.kind === 'fcf' ? 26 : 24,
+      width: item.kind === 'fcf' ? (item.control?.kind === 'composite-position' ? 164 : 136) : 78,
+      height: item.kind === 'fcf' ? (item.control?.kind === 'composite-position' ? 46 : 26) : 24,
     }))
     if (displayMode === 'expand-all') {
       return computeAntiOverlapOffsets(boxes, 6)
@@ -323,6 +324,63 @@ export function Gdt3dOverlayLayer({
                   <span>{cells.symbol}</span>
                   <span className="pa-gdt-dot-idx">{indexNum}</span>
                 </button>
+              ) : cells.isComposite && cells.lowerSegment ? (
+                <button
+                  type="button"
+                  className={`pa-fcf-box pa-fcf-composite ${isGolden ? 'gdt-fcf-golden-pulse' : ''} ${editingGdtId === control.id && !readOnly ? 'pa-fcf-editing' : ''}`}
+                  data-testid={`gdt-fcf-box-${control.id}`}
+                  data-composite="true"
+                  data-golden-pulse={isGolden ? 'true' : 'false'}
+                  aria-label={`复合 GD&T 特征控制框 ${cells.summaryText}`}
+                  onClick={() => {
+                    setInlineWarning(null)
+                    onSelectGdtCallout?.(control.id)
+                  }}
+                >
+                  <span className="pa-fcf-cell pa-fcf-sym pa-fcf-sym-span">{cells.symbol}</span>
+                  <span className="pa-fcf-segments">
+                    <span
+                      className="pa-fcf-segment pa-fcf-segment-upper"
+                      data-testid={`gdt-fcf-upper-${control.id}`}
+                    >
+                      <span className="pa-fcf-cell pa-fcf-val">
+                        {cells.diameterPrefix}
+                        {cells.toleranceText}
+                        {cells.modifierSymbol ? (
+                          <span className="pa-fcf-mod">{cells.modifierSymbol}</span>
+                        ) : null}
+                      </span>
+                      {cells.datumCells.map((dc) => (
+                        <span key={`${control.id}-u-${dc.datumId}`} className="pa-fcf-cell pa-fcf-datum">
+                          {dc.label}
+                          {dc.modifierSymbol ? (
+                            <span className="pa-fcf-mod">{dc.modifierSymbol}</span>
+                          ) : null}
+                        </span>
+                      ))}
+                    </span>
+                    <span
+                      className="pa-fcf-segment pa-fcf-segment-lower"
+                      data-testid={`gdt-fcf-lower-${control.id}`}
+                    >
+                      <span className="pa-fcf-cell pa-fcf-val">
+                        {cells.lowerSegment.diameterPrefix}
+                        {cells.lowerSegment.toleranceText}
+                        {cells.lowerSegment.modifierSymbol ? (
+                          <span className="pa-fcf-mod">{cells.lowerSegment.modifierSymbol}</span>
+                        ) : null}
+                      </span>
+                      {cells.lowerSegment.datumCells.map((dc) => (
+                        <span key={`${control.id}-l-${dc.datumId}`} className="pa-fcf-cell pa-fcf-datum">
+                          {dc.label}
+                          {dc.modifierSymbol ? (
+                            <span className="pa-fcf-mod">{dc.modifierSymbol}</span>
+                          ) : null}
+                        </span>
+                      ))}
+                    </span>
+                  </span>
+                </button>
               ) : (
                 <button
                   type="button"
@@ -339,6 +397,11 @@ export function Gdt3dOverlayLayer({
                   <span className="pa-fcf-cell pa-fcf-val">
                     {cells.diameterPrefix}
                     {cells.toleranceText}
+                    {cells.unequalUzText ? (
+                      <span className="pa-fcf-uz" data-testid={`gdt-fcf-uz-${control.id}`}>
+                        {cells.unequalUzText}
+                      </span>
+                    ) : null}
                     {cells.modifierSymbol ? (
                       <span className="pa-fcf-mod">{cells.modifierSymbol}</span>
                     ) : null}
@@ -388,7 +451,7 @@ export function Gdt3dOverlayLayer({
           </div>
 
           <label className="pa-gdt-inline-row">
-            <span>公差值 (mm)</span>
+            <span>{editingAnchor.control.kind === 'composite-position' ? '上格 PLTZF (mm)' : '公差值 (mm)'}</span>
             <input
               type="range"
               data-testid="gdt-inline-slider"
@@ -399,6 +462,16 @@ export function Gdt3dOverlayLayer({
               value={Number((editingAnchor.control.toleranceQ / 10000).toFixed(3))}
               onChange={(event) => {
                 const nextQ = mmToToleranceQ(Number(event.target.value))
+                const lower = editingAnchor.control?.lowerSegment
+                if (editingAnchor.control?.kind === 'composite-position' && lower && lower.toleranceQ > nextQ) {
+                  setInlineWarning('上格公差不可小于下格 FRTZF 公差，已自动同步下格上限。')
+                  onUpdateGdtCallout?.(editingAnchor.control.id, {
+                    toleranceQ: nextQ,
+                    lowerSegment: { ...lower, toleranceQ: nextQ },
+                  })
+                  return
+                }
+                setInlineWarning(null)
                 onUpdateGdtCallout?.(editingAnchor.control!.id, { toleranceQ: nextQ })
               }}
             />
@@ -414,13 +487,81 @@ export function Gdt3dOverlayLayer({
               onChange={(event) => {
                 const parsed = Number(event.target.value)
                 if (Number.isFinite(parsed) && parsed > 0) {
+                  const nextQ = mmToToleranceQ(parsed)
+                  const lower = editingAnchor.control?.lowerSegment
+                  if (editingAnchor.control?.kind === 'composite-position' && lower && lower.toleranceQ > nextQ) {
+                    setInlineWarning('上格（PLTZF）公差不可小于下格（FRTZF）公差。')
+                    return
+                  }
+                  setInlineWarning(null)
                   onUpdateGdtCallout?.(editingAnchor.control!.id, {
-                    toleranceQ: mmToToleranceQ(parsed),
+                    toleranceQ: nextQ,
                   })
                 }
               }}
             />
           </label>
+
+          {editingAnchor.control.kind === 'composite-position' && editingAnchor.control.lowerSegment ? (
+            <label className="pa-gdt-inline-row" data-testid="gdt-inline-lower-row">
+              <span>下格 FRTZF (mm)</span>
+              <input
+                type="range"
+                data-testid="gdt-inline-lower-slider"
+                aria-label="复合位置度下格公差滑块"
+                min={0.01}
+                max={Number((editingAnchor.control.toleranceQ / 10000).toFixed(3))}
+                step={0.01}
+                value={Number((editingAnchor.control.lowerSegment.toleranceQ / 10000).toFixed(3))}
+                onChange={(event) => {
+                  const nextLowerQ = mmToToleranceQ(Number(event.target.value))
+                  const candidate: GdtFeatureControl = {
+                    ...editingAnchor.control!,
+                    lowerSegment: { ...editingAnchor.control!.lowerSegment!, toleranceQ: nextLowerQ },
+                  }
+                  const validation = validateGdtControlDraft(candidate, { featureKindById, datums })
+                  if (!validation.valid) {
+                    setInlineWarning(validation.errors[0] ?? '下格公差不可大于上格公差。')
+                    return
+                  }
+                  setInlineWarning(null)
+                  onUpdateGdtCallout?.(editingAnchor.control!.id, {
+                    lowerSegment: candidate.lowerSegment,
+                  })
+                }}
+              />
+              <span className="pa-mono">
+                {formatGdtToleranceMm(editingAnchor.control.lowerSegment.toleranceQ)}
+              </span>
+            </label>
+          ) : null}
+
+          {editingAnchor.control.kind === 'profile-surface' ? (
+            <label className="pa-gdt-inline-row" data-testid="gdt-inline-uz-row">
+              <span>UZ 外侧比例</span>
+              <input
+                type="range"
+                data-testid="gdt-inline-uz-slider"
+                aria-label="面轮廓度 UZ 不等距外侧比例"
+                min={0}
+                max={1}
+                step={0.05}
+                value={editingAnchor.control.unequalProfileOuterFraction ?? 0.5}
+                onChange={(event) => {
+                  const nextFrac = Number(event.target.value)
+                  setInlineWarning(null)
+                  onUpdateGdtCallout?.(editingAnchor.control!.id, {
+                    unequalProfileOuterFraction: nextFrac,
+                  })
+                }}
+              />
+              <span className="pa-mono">
+                {Math.abs((editingAnchor.control.unequalProfileOuterFraction ?? 0.5) - 0.5) < 1e-6
+                  ? '对称'
+                  : `${Math.round((editingAnchor.control.unequalProfileOuterFraction ?? 0.5) * 100)}%`}
+              </span>
+            </label>
+          ) : null}
 
           <div className="pa-gdt-inline-mods" role="group" aria-label="实体条件切换">
             {MODIFIER_OPTIONS.map((mod) => {

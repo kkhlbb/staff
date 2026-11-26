@@ -14,6 +14,7 @@ import {
   getClientConnectionTone,
   type SidebarTab,
 } from '../workbenchHelpers'
+import { ReportExportMenu, type ReportExportMenuProps } from './ReportExportMenu'
 
 export interface WorkbenchTopBarProps {
   readonly projectId: string
@@ -63,6 +64,7 @@ export interface WorkbenchTopBarProps {
   readonly onToggleTheme: () => void
   readonly onOpenLocalProjectSelector: () => void
   readonly onOpenMigrationReport: () => void
+  readonly reportExport?: Omit<ReportExportMenuProps, 'variant'>
 }
 
 /**
@@ -112,6 +114,7 @@ export function WorkbenchTopBar({
   onToggleTheme,
   onOpenLocalProjectSelector,
   onOpenMigrationReport,
+  reportExport,
 }: WorkbenchTopBarProps) {
   return (
     <header className="pa-workbench-topbar" aria-label="顶部连接状态栏">
@@ -379,6 +382,20 @@ export function WorkbenchTopBar({
               >
                 <span>查看旧项目迁移差异报告</span>
               </button>
+
+              {reportExport ? (
+                <>
+                  <div className="pa-menu-divider" role="separator" />
+                  <ReportExportMenu
+                    {...reportExport}
+                    variant="menu-items"
+                    onExportComplete={(msg) => {
+                      reportExport.onExportComplete?.(msg)
+                      onCloseMoreMenu()
+                    }}
+                  />
+                </>
+              ) : null}
 
               <div className="pa-menu-divider" role="separator" />
 
