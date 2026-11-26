@@ -3,6 +3,59 @@
   "info": {"title": "Cunlian Cloud API", "version": "1.0.0"},
   "security": [{"bearerAuth": []}, {"apiKey": []}],
   "paths": {
+    "/api/v1/projects/{projectId}/report": {
+      "post": {
+        "operationId": "export_simulation_report",
+        "description": "Export a read-only simulation report from an authorized project revision. Include the revision and draft state, check-set fingerprint, seed, and complete EvidenceRef audit trail. This operation does not commit project changes or bypass human confirmation.",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportSimulationReportBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Exported report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "ok",
+                    "value"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "value": {
+                      "$ref": "#/components/schemas/ExportSimulationReportResult"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{projectId}/drafts/physics": {
       "post": {
         "operationId": "stage_physics",
@@ -1681,6 +1734,142 @@
       "apiKey": {"type": "apiKey", "in": "header", "name": "X-API-Key"}
     },
     "schemas": {
+      "ExportSimulationReportBody": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "format"
+        ],
+        "properties": {
+          "format": {
+            "enum": [
+              "html",
+              "pdf",
+              "csv",
+              "json"
+            ]
+          },
+          "includeSnapshots": {
+            "type": "boolean"
+          },
+          "viewportSnapshots": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "nominalPngDataUrl": {
+                "type": "string",
+                "pattern": "^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$"
+              },
+              "heatmapPngDataUrl": {
+                "type": "string",
+                "pattern": "^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$"
+              }
+            }
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          }
+        }
+      },
+      "ExportSimulationReportResult": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "fileName",
+              "mimeType",
+              "sha256",
+              "revision",
+              "checksetFingerprint",
+              "content"
+            ],
+            "properties": {
+              "fileName": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "mimeType": {
+                "enum": [
+                  "text/html",
+                  "application/pdf",
+                  "text/csv",
+                  "application/json"
+                ]
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$",
+                "description": "SHA-256 of the exported file bytes."
+              },
+              "revision": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "checksetFingerprint": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "content": {
+                "type": "string",
+                "description": "Inline PDF is base64. HTML, CSV and JSON are UTF-8 text."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "fileName",
+              "mimeType",
+              "sha256",
+              "revision",
+              "checksetFingerprint",
+              "filePath"
+            ],
+            "properties": {
+              "fileName": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "mimeType": {
+                "enum": [
+                  "text/html",
+                  "application/pdf",
+                  "text/csv",
+                  "application/json"
+                ]
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$",
+                "description": "SHA-256 of the exported file bytes."
+              },
+              "revision": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "checksetFingerprint": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "filePath": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            }
+          }
+        ]
+      },
       "AssemblyPhysicsSpec": {
         "type": "object",
         "properties": {
@@ -3772,7 +3961,7 @@
                 "featureId": {"type": "string", "minLength": 1, "maxLength": 200},
                 "kind": {
                   "type": "string",
-                  "enum": ["position", "perpendicularity", "parallelism", "flatness", "coaxiality"]
+                  "enum": ["position", "perpendicularity", "parallelism", "flatness", "coaxiality", "profile-surface", "circular-runout", "total-runout", "cylindricity", "composite-position"]
                 },
                 "toleranceQ": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
                 "modifier": {"type": "string", "enum": ["MMC", "LMC", "RFS"]},
@@ -3798,7 +3987,10 @@
                   "items": false,
                   "minItems": 3,
                   "maxItems": 3
-                }
+                },
+                "unequalProfileOuterFraction": {"default":0.5,"type":"number","minimum":0,"maximum":1},
+                "lowerSegment": {"type":"object","properties":{"toleranceQ":{"type":"integer","exclusiveMinimum":0,"maximum":9007199254740991},"modifier":{"type":"string","enum":["MMC","LMC","RFS"]},"datumIds":{"maxItems":2,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}},"datumModifiers":{"maxItems":2,"type":"array","items":{"type":"string","enum":["MMC","LMC","RFS"]}}},"required":["toleranceQ","datumIds"],"additionalProperties":false},
+                "patternGroupId": {"type":"string","minLength":1,"maxLength":200}
               },
               "required": ["id", "featureId", "kind", "toleranceQ", "datumIds"],
               "additionalProperties": false
@@ -4036,7 +4228,21 @@
         "properties": {
           "id": {"type":"string","minLength":1,"maxLength":200},
           "featureId": {"type":"string","minLength":1,"maxLength":200},
-          "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality"]},
+          "kind": {
+            "type": "string",
+            "enum": [
+              "position",
+              "perpendicularity",
+              "parallelism",
+              "flatness",
+              "coaxiality",
+              "profile-surface",
+              "circular-runout",
+              "total-runout",
+              "cylindricity",
+              "composite-position"
+            ]
+          },
           "toleranceQ": {"type":"integer","minimum":0,"maximum":9007199254740991},
           "modifier": {"type":"string","enum":["MMC","LMC","RFS"]},
           "datumIds": {"maxItems":3,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}},
@@ -4051,31 +4257,49 @@
             "required": ["lowerQ","upperQ"],
             "additionalProperties": false
           },
-          "anchorOffsetMm": {
-            "type": "array",
-            "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
-            "items": false,
-            "minItems": 3,
-            "maxItems": 3
+          "anchorOffsetMm": {"type":"array","prefixItems":[{"type":"number"},{"type":"number"},{"type":"number"}],"items":false,"minItems":3,"maxItems":3},
+          "unequalProfileOuterFraction": {"type":"number","minimum":0,"maximum":1,"default":0.5},
+          "patternGroupId": {"type":"string","minLength":1,"maxLength":200},
+          "lowerSegment": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["toleranceQ","datumIds"],
+            "properties": {
+              "toleranceQ": {"type":"integer","minimum":1,"maximum":9007199254740991},
+              "modifier": {"type":"string","enum":["MMC","LMC","RFS"]},
+              "datumIds": {"maxItems":2,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}},
+              "datumModifiers": {"maxItems":2,"type":"array","items":{"type":"string","enum":["MMC","LMC","RFS"]}}
+            }
           }
         },
         "required": ["id","featureId","kind","toleranceQ","datumIds"],
         "additionalProperties": false,
-        "description": "Datum modifier count must not exceed the datum count. Upper size deviation must be at least the lower deviation.",
+        "description": "Datum modifier count must not exceed the datum count. Upper size deviation must be at least the lower deviation. Composite lower tolerance cannot exceed the upper tolerance. Lower datums must be an ordered prefix, and lower modifiers require corresponding datums. Cylindricity requires a cylindrical feature. Runout requires an axis datum and resolves MMC/LMC to RFS with warnings.",
         "oneOf": [
           {
             "type": "object",
             "properties": {
-              "kind": {"const":"flatness"},
-              "datumIds": {"maxItems":0,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}}
+              "kind": {"enum":["flatness","cylindricity"]},
+              "datumIds": {"maxItems":0,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}},
+              "lowerSegment": false
             }
           },
           {
             "type": "object",
             "properties": {
-              "kind": {"enum":["position","perpendicularity","parallelism","coaxiality"]},
-              "datumIds": {"maxItems":3,"type":"array","items":{"type":"string","minLength":1,"maxLength":200},"minItems":1}
+              "kind": {"enum":["position","perpendicularity","parallelism","coaxiality","circular-runout","total-runout"]},
+              "datumIds": {"maxItems":3,"type":"array","items":{"type":"string","minLength":1,"maxLength":200},"minItems":1},
+              "lowerSegment": false
             }
+          },
+          {
+            "type": "object",
+            "properties": {"kind":{"const":"profile-surface"},"lowerSegment":false}
+          },
+          {
+            "type": "object",
+            "properties": {"kind":{"const":"composite-position"},"lowerSegment":{"type":"object"}},
+            "required": ["lowerSegment"]
           }
         ]
       },
@@ -4095,7 +4319,7 @@
         "properties": {
           "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
           "label": {"type":"string","minLength":1,"pattern":"\\S"},
-          "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality"]},
+          "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality","profile-surface","circular-runout","total-runout","cylindricity","composite-position"]},
           "varianceSharePct": {"type":"number","minimum":0,"maximum":100},
           "bonusMeanMm": {"type":"number","minimum":0},
           "datumShiftContributionPct": {"type":"number","minimum":0,"maximum":100}

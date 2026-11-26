@@ -399,3 +399,93 @@ describe('M4 MIC matrix attachment', () => {
     expect(await encodeProjectFile(original)).toMatchObject({ ok: false, error: { code: 'INVALID_RECORD' } })
   })
 })
+
+describe('Schema 11 advanced GD&T', () => {
+  const model: AssemblyModelV1 = {
+    ...assembly3d,
+    features: [...assembly3d.features, {
+      id: 'axis', partId: 'plate', kind: 'cylindrical-hole-axis', signature: 'axis',
+      originQ: [0, 0, 0], axis: [0, 0, 1], radiusQ: 20_000,
+    }],
+    datums: [...assembly3d.datums, { id: 'b', label: 'B', featureId: 'axis' },
+      { id: 'c', label: 'C', featureId: 'f2' }],
+  }
+  const profile = { id: 'profile', kind: 'profile-surface', featureId: 'f2', toleranceQ: 200, datumIds: [] } as const
+  const composite = {
+    id: 'composite', kind: 'composite-position', featureId: 'axis',
+    toleranceQ: 200, datumIds: ['a', 'b', 'c'], patternGroupId: 'bolt-pattern',
+    lowerSegment: { toleranceQ: 100, modifier: 'MMC', datumIds: ['a', 'b'], datumModifiers: ['RFS', 'MMC'] },
+  } satisfies AssemblyModelV1['gdt'][number]
+  const cylindricity = { ...profile, id: 'cylinder', kind: 'cylindricity', featureId: 'axis', datumIds: [] } as const
+  const checkAssembly = (control: unknown) => assemblyModelV1Schema.safeParse({ ...model, gdt: [control] })
+
+  it('supports zero through three profile datums and inclusive unequal-zone limits', () => {
+    for (const datumIds of [[], ['a'], ['a', 'b'], ['a', 'b', 'c']]) {
+      for (const unequalProfileOuterFraction of [0, 0.5, 1]) {
+        const control = { ...profile, datumIds, unequalProfileOuterFraction }
+        expect(gdtFeatureControlEditSchema.parse(control)).toEqual(control)
+        expect(checkAssembly(control).success).toBe(true)
+      }
+    }
+    expect(gdtFeatureControlEditSchema.parse(profile)).toEqual(profile)
+    for (const fields of [{ unequalProfileOuterFraction: -0.1 }, { unequalProfileOuterFraction: 1.1 },
+      { datumIds: ['a', 'b', 'c', 'd'] }]) {
+      expect(checkAssembly({ ...profile, ...fields }).success).toBe(false)
+    }
+  })
+
+  it('restricts cylindricity to cylindrical features without datums', () => {
+    expect(checkAssembly(cylindricity).success).toBe(true)
+    expect(checkAssembly({ ...cylindricity, datumIds: ['b'] }).success).toBe(false)
+    expect(checkAssembly({ ...cylindricity, featureId: 'f1' }).success).toBe(false)
+  })
+
+  it.each(['circular-runout', 'total-runout'] as const)('requires an axis datum and resolves %s material conditions', kind => {
+    const runout = { ...cylindricity, kind, datumIds: ['b'], modifier: 'MMC', datumModifiers: ['LMC'] } satisfies AssemblyModelV1['gdt'][number]
+    expect(checkAssembly(runout).success).toBe(true)
+    expect(checkAssembly({ ...runout, datumIds: [], datumModifiers: [] }).success).toBe(false)
+    expect(checkAssembly({ ...runout, datumIds: ['a'] }).success).toBe(false)
+    expect(resolveGdtMaterialConditions(runout, model)).toEqual({
+      modifier: 'RFS', datumModifiers: ['RFS'], warnings: [
+        { code: 'ILLEGAL_MODIFIER', gdtId: runout.id, message: expect.stringContaining('MMC. Using RFS.') },
+        { code: 'ILLEGAL_MODIFIER', gdtId: runout.id, datumId: 'b', message: expect.stringContaining('LMC. Using RFS.') },
+      ],
+    })
+    expect(resolveGdtMaterialConditions({ ...runout, modifier: 'RFS', datumModifiers: ['RFS'] }, model).warnings).toEqual([])
+  })
+
+  it('validates both composite frames, including empty lower datums', () => {
+    expect(checkAssembly(composite).success).toBe(true)
+    expect(checkAssembly({ ...composite, lowerSegment: { toleranceQ: 200, datumIds: [] } }).success).toBe(true)
+    expect(checkAssembly({ ...composite, lowerSegment: undefined }).success).toBe(false)
+    for (const overrides of [
+      { toleranceQ: 201 }, { toleranceQ: 0 }, { datumIds: ['b', 'a'] }, { datumIds: ['a', 'b', 'c'] },
+      { datumIds: ['a'] },
+    ]) {
+      expect(checkAssembly({ ...composite, lowerSegment: { ...composite.lowerSegment, ...overrides } }).success).toBe(false)
+    }
+    expect(checkAssembly({ ...profile, lowerSegment: composite.lowerSegment }).success).toBe(false)
+  })
+
+  it('round trips the five added kinds and fields in active and archived Schema 11 records', async () => {
+    const snapshot = await fixture()
+    const gdt: AssemblyModelV1['gdt'] = [
+      { ...profile, datumIds: [], unequalProfileOuterFraction: 0.8 },
+      { ...cylindricity, datumIds: [] },
+      { ...cylindricity, id: 'round-runout', kind: 'circular-runout', datumIds: ['b'] },
+      { ...cylindricity, id: 'total-runout', kind: 'total-runout', datumIds: ['b'], modifier: 'LMC' },
+      composite,
+    ]
+    snapshot.project.assembly3d = { ...model, gdt }
+    snapshot.fileRevisions = snapshot.fileRevisions.map(revision => ({
+      ...revision, project: { ...revision.project, assembly3d: { ...model, gdt } },
+    }))
+    const encoded = await encodeProjectFile(snapshot)
+    if (!encoded.ok) throw Error(JSON.stringify(encoded))
+    const decoded = await decodeProjectFile(encoded.value.bytes)
+    if (!decoded.ok) throw Error(JSON.stringify(decoded))
+    expect(decoded.value.manifest.project.projectSchemaVersion).toBe(11)
+    expect(decoded.value.snapshot.project.assembly3d).toEqual(snapshot.project.assembly3d)
+    expect(decoded.value.snapshot.fileRevisions).toEqual(snapshot.fileRevisions)
+  })
+})

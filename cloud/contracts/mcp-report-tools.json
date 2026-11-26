@@ -1,0 +1,151 @@
+{
+  "tools": [
+    {
+      "name": "export_simulation_report",
+      "description": "Export a read-only simulation report from an authorized project revision. Include the revision and draft state, check-set fingerprint, seed, and complete EvidenceRef audit trail. This operation does not commit project changes or bypass human confirmation.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "format"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "format": {
+            "enum": [
+              "html",
+              "pdf",
+              "csv",
+              "json"
+            ]
+          },
+          "includeSnapshots": {
+            "type": "boolean"
+          },
+          "viewportSnapshots": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "nominalPngDataUrl": {
+                "type": "string",
+                "pattern": "^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$"
+              },
+              "heatmapPngDataUrl": {
+                "type": "string",
+                "pattern": "^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$"
+              }
+            }
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "fileName",
+              "mimeType",
+              "sha256",
+              "revision",
+              "checksetFingerprint",
+              "content"
+            ],
+            "properties": {
+              "fileName": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "mimeType": {
+                "enum": [
+                  "text/html",
+                  "application/pdf",
+                  "text/csv",
+                  "application/json"
+                ]
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$",
+                "description": "SHA-256 of the exported file bytes."
+              },
+              "revision": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "checksetFingerprint": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "content": {
+                "type": "string",
+                "description": "Inline PDF is base64. HTML, CSV and JSON are UTF-8 text."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "fileName",
+              "mimeType",
+              "sha256",
+              "revision",
+              "checksetFingerprint",
+              "filePath"
+            ],
+            "properties": {
+              "fileName": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "mimeType": {
+                "enum": [
+                  "text/html",
+                  "application/pdf",
+                  "text/csv",
+                  "application/json"
+                ]
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$",
+                "description": "SHA-256 of the exported file bytes."
+              },
+              "revision": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "checksetFingerprint": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "filePath": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

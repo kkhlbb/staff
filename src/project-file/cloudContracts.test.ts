@@ -10,6 +10,8 @@ import { M1_LOCAL_OPERATIONS } from '../../desktop/main/project-agent/m1LocalTra
 import mcp from '../../cloud/contracts/mcp-tools.json'
 import gdt from '../../cloud/contracts/mcp-gdt-tools.json'
 import compliant from '../../cloud/contracts/mcp-compliant-tools.json'
+import report from '../../cloud/contracts/mcp-report-tools.json'
+import type { ExportSimulationReportRequest, ExportSimulationReportResult } from '../transport/types'
 import rest from '../../cloud/contracts/openapi.json'
 import flags from '../../cloud/contracts/feature-flags.schema.json'
 import { FEATURE_3D_ASSEMBLY_M1 } from '../transport'
@@ -163,6 +165,27 @@ describe('Cloud contract freeze', () => {
       const response = resolve(operation.responses['200'].content['application/json'].schema)
       expect(fromJson(response).safeParse({ ok: true, value: output }).success).toBe(true)
       const restInput = resolve(operation.requestBody.content['application/json'].schema)
+      if (tool.name === 'stage_gdt') {
+        const advanced = [
+          { ...control, kind: 'profile-surface', datumIds: [], unequalProfileOuterFraction: 0.75 },
+          { ...control, kind: 'circular-runout', modifier: 'MMC' },
+          { ...control, kind: 'total-runout' },
+          { ...control, kind: 'cylindricity', datumIds: [] },
+          { ...control, kind: 'composite-position', lowerSegment: { toleranceQ: 100, datumIds: [] } },
+        ]
+        const invalid = [
+          { ...advanced[0], unequalProfileOuterFraction: 1.1 },
+          { ...advanced[1], datumIds: [] },
+          { ...advanced[3], datumIds: ['a'] },
+          { ...advanced[4], lowerSegment: undefined },
+        ]
+        for (const value of [...advanced, ...invalid]) {
+          const body = { ...revision, expectedWriterEpoch: writer.expectedWriterEpoch, items: [{ value, evidence: [evidence] }] }
+          const request = { ...body, projectId: writer.projectId }
+          expect(mcpInput.safeParse(request).success, value.kind).toBe(advanced.includes(value))
+          expect(fromJson(restInput).safeParse(body).success, value.kind).toBe(advanced.includes(value))
+        }
+      }
       const body = Object.fromEntries(Object.entries(input)
         .filter(([key]) => key !== 'projectId' && key !== 'draftRevision'))
       expect(fromJson(restInput).safeParse(body).success).toBe(true)
@@ -237,6 +260,56 @@ describe('Cloud contract freeze', () => {
       const body = Object.fromEntries(Object.entries(input)
         .filter(([key]) => key !== 'projectId' && key !== 'draftRevision'))
       expect(restInput.safeParse(body).success).toBe(true)
+    }
+  })
+
+  it('freezes report request and result parity between REST and remote MCP', () => {
+    const path = rest.paths['/api/v1/projects/{projectId}/report'].post
+    expect(report.tools).toHaveLength(1)
+    const [tool] = report.tools
+    expect(tool.name).toBe(path.operationId)
+    const { projectId: projectIdSchema, ...bodyProperties } = tool.inputSchema.properties
+    expect(path.parameters[0].schema).toEqual(projectIdSchema)
+    const bodySchema = resolve(path.requestBody.content['application/json'].schema)
+    expect(bodySchema).toEqual({
+      ...tool.inputSchema, properties: bodyProperties, required: ['format'],
+    })
+    expect(tool.outputSchema.oneOf).toEqual(rest.components.schemas.ExportSimulationReportResult.oneOf)
+
+    const restInput = fromJson(bodySchema)
+    const mcpInput = fromJson(tool.inputSchema)
+    const mcpOutput = fromJson(tool.outputSchema)
+    const response = fromJson(resolve(path.responses['200'].content['application/json'].schema))
+    const request: ExportSimulationReportRequest = {
+      projectId: 'demo', format: 'html', seed: 4294967295, includeSnapshots: true,
+      viewportSnapshots: { nominalPngDataUrl: 'data:image/png;base64,aGVsbG8=' },
+    }
+    const { projectId, ...body } = request
+    for (const format of ['html', 'pdf', 'csv', 'json']) {
+      expect(mcpInput.safeParse({ projectId, format }).success).toBe(true)
+      expect(restInput.safeParse({ ...body, format }).success).toBe(true)
+    }
+    for (const patch of [{ format: 'svg' }, { seed: -1 }, { seed: 4294967296 }, { seed: 1.5 },
+      { viewportSnapshots: { nominalPngDataUrl: 'https://example.test/image.png' } }]) {
+      expect(mcpInput.safeParse({ ...request, ...patch }).success).toBe(false)
+      expect(restInput.safeParse({ ...body, ...patch }).success).toBe(false)
+    }
+    expect(mcpInput.safeParse(body).success).toBe(false)
+    const binding = {
+      fileName: 'report.html', mimeType: 'text/html', sha256: 'a'.repeat(64),
+      revision: 'draft-1', checksetFingerprint: 'checkset-1',
+    } as const
+    const inline: ExportSimulationReportResult = { ...binding, content: '<html></html>' }
+    const pathResult: ExportSimulationReportResult = { ...binding, filePath: '/reports/report.html' }
+    for (const result of [inline, pathResult]) {
+      expect(mcpOutput.safeParse(result).success).toBe(true)
+      expect(response.safeParse({ ok: true, value: result }).success).toBe(true)
+    }
+    for (const result of [binding, { ...inline, filePath: '/report.html' },
+      { ...inline, sha256: 'invalid' }, { ...inline, revision: undefined },
+      { ...inline, checksetFingerprint: undefined }]) {
+      expect(mcpOutput.safeParse(result).success).toBe(false)
+      expect(response.safeParse({ ok: true, value: result }).success).toBe(false)
     }
   })
 

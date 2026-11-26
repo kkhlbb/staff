@@ -5,6 +5,7 @@ import type { M2CheckItem, M2ModelMeshInput, M2Result } from '../../desktop/shar
 import type { M3CommitApprovedDraftRequest, M3CommitApprovedDraftResult } from '../../desktop/shared/project-agent/m3-lifecycle'
 import type { ChainDefinition, ChainResult } from '../domain/types'
 import type { MonteCarloOptions, StatisticalSummary } from '../domain/statistics'
+import type { ReportViewportSnapshots } from '../report/types'
 import type { EvidenceRef } from '../document-extraction/types'
 import type {
   AssemblyModelV1, AssemblyPhysicsSpec, CompliantModelSpec, DatumDefinition,
@@ -215,6 +216,26 @@ export interface DrawingRequest extends DraftRef {
   format: 'svg' | 'dxf-r12' | 'dxf-2000'
 }
 
+export interface ExportSimulationReportRequest extends ProjectRef {
+  format: 'html' | 'pdf' | 'csv' | 'json'
+  includeSnapshots?: boolean
+  viewportSnapshots?: ReportViewportSnapshots
+  seed?: number
+}
+
+export type ExportSimulationReportResult = {
+  fileName: string
+  mimeType: 'text/html' | 'application/pdf' | 'text/csv' | 'application/json'
+  /** Lowercase SHA-256 hex of the exported file bytes. */
+  sha256: string
+  revision: string
+  checksetFingerprint: string
+} & (
+  /** PDF is base64; other inline formats carry UTF-8 text. */
+  | { content: string; filePath?: never }
+  | { filePath: string; content?: never }
+)
+
 export interface TransportCapabilities {
   attachments: readonly AttachmentUpload['kind'][]
   drawingFormats: readonly DrawingRequest['format'][]
@@ -239,6 +260,8 @@ export interface Transport {
   triangulate(request: DraftRef): Promise<M2Result<M2ModelMeshInput>>
   runChecks(request: DraftRef): Promise<M2Result<CheckSet>>
   runSimulation(request: SimulationRequest): Promise<M2Result<SimulationResult>>
+  /** Read-only, available on hosts implementing the simulation report export contract. */
+  exportSimulationReport?(request: ExportSimulationReportRequest): Promise<M2Result<ExportSimulationReportResult>>
   getDrawing(request: DrawingRequest): Promise<M2Result<{ bytes: Uint8Array; fingerprint: string }>>
   acquireWriter(request: WriterRequest): Promise<M2Result<WriterState>>
   takeOverWriter(request: WriterRequest): Promise<M2Result<WriterState>>

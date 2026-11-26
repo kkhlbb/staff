@@ -290,7 +290,21 @@
                   "properties": {
                     "id": {"type":"string","minLength":1,"maxLength":200},
                     "featureId": {"type":"string","minLength":1,"maxLength":200},
-                    "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality"]},
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "position",
+                        "perpendicularity",
+                        "parallelism",
+                        "flatness",
+                        "coaxiality",
+                        "profile-surface",
+                        "circular-runout",
+                        "total-runout",
+                        "cylindricity",
+                        "composite-position"
+                      ]
+                    },
                     "toleranceQ": {"type":"integer","minimum":0,"maximum":9007199254740991},
                     "modifier": {"type":"string","enum":["MMC","LMC","RFS"]},
                     "datumIds": {"maxItems":3,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}},
@@ -305,31 +319,49 @@
                       "required": ["lowerQ","upperQ"],
                       "additionalProperties": false
                     },
-                    "anchorOffsetMm": {
-                      "type": "array",
-                      "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
-                      "items": false,
-                      "minItems": 3,
-                      "maxItems": 3
+                    "anchorOffsetMm": {"type":"array","prefixItems":[{"type":"number"},{"type":"number"},{"type":"number"}],"items":false,"minItems":3,"maxItems":3},
+                    "unequalProfileOuterFraction": {"type":"number","minimum":0,"maximum":1,"default":0.5},
+                    "patternGroupId": {"type":"string","minLength":1,"maxLength":200},
+                    "lowerSegment": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["toleranceQ","datumIds"],
+                      "properties": {
+                        "toleranceQ": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                        "modifier": {"type":"string","enum":["MMC","LMC","RFS"]},
+                        "datumIds": {"maxItems":2,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}},
+                        "datumModifiers": {"maxItems":2,"type":"array","items":{"type":"string","enum":["MMC","LMC","RFS"]}}
+                      }
                     }
                   },
                   "required": ["id","featureId","kind","toleranceQ","datumIds"],
                   "additionalProperties": false,
-                  "description": "Datum modifier count must not exceed the datum count. Upper size deviation must be at least the lower deviation.",
+                  "description": "Datum modifier count must not exceed the datum count. Upper size deviation must be at least the lower deviation. Composite lower tolerance cannot exceed the upper tolerance. Lower datums must be an ordered prefix, and lower modifiers require corresponding datums. Cylindricity requires a cylindrical feature. Runout requires an axis datum and resolves MMC/LMC to RFS with warnings.",
                   "oneOf": [
                     {
                       "type": "object",
                       "properties": {
-                        "kind": {"const":"flatness"},
-                        "datumIds": {"maxItems":0,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}}
+                        "kind": {"enum":["flatness","cylindricity"]},
+                        "datumIds": {"maxItems":0,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}},
+                        "lowerSegment": false
                       }
                     },
                     {
                       "type": "object",
                       "properties": {
-                        "kind": {"enum":["position","perpendicularity","parallelism","coaxiality"]},
-                        "datumIds": {"maxItems":3,"type":"array","items":{"type":"string","minLength":1,"maxLength":200},"minItems":1}
+                        "kind": {"enum":["position","perpendicularity","parallelism","coaxiality","circular-runout","total-runout"]},
+                        "datumIds": {"maxItems":3,"type":"array","items":{"type":"string","minLength":1,"maxLength":200},"minItems":1},
+                        "lowerSegment": false
                       }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {"kind":{"const":"profile-surface"},"lowerSegment":false}
+                    },
+                    {
+                      "type": "object",
+                      "properties": {"kind":{"const":"composite-position"},"lowerSegment":{"type":"object"}},
+                      "required": ["lowerSegment"]
                     }
                   ]
                 },
@@ -632,7 +664,7 @@
                   "properties": {
                     "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
                     "label": {"type":"string","minLength":1,"pattern":"\\S"},
-                    "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality"]},
+                    "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality","profile-surface","circular-runout","total-runout","cylindricity","composite-position"]},
                     "varianceSharePct": {"type":"number","minimum":0,"maximum":100},
                     "bonusMeanMm": {"type":"number","minimum":0},
                     "datumShiftContributionPct": {"type":"number","minimum":0,"maximum":100}
@@ -672,7 +704,7 @@
                   "properties": {
                     "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
                     "label": {"type":"string","minLength":1,"pattern":"\\S"},
-                    "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality"]},
+                    "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality","profile-surface","circular-runout","total-runout","cylindricity","composite-position"]},
                     "varianceSharePct": {"type":"number","minimum":0,"maximum":100},
                     "bonusMeanMm": {"type":"number","minimum":0},
                     "datumShiftContributionPct": {"type":"number","minimum":0,"maximum":100}

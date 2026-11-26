@@ -62,9 +62,14 @@ export const datumDefinitionSchema = z.strictObject({
   id, label: id, featureId: id, sizeToleranceQ: sizeToleranceSchema.optional(),
 })
 
+export const DEFAULT_PROFILE_OUTER_FRACTION = 0.5
+
+const isRunout = (kind: string) => kind === 'circular-runout' || kind === 'total-runout'
+
 export const gdtFeatureControlSchema = z.strictObject({
   id, featureId: id,
-  kind: z.enum(['position', 'perpendicularity', 'parallelism', 'flatness', 'coaxiality']),
+  kind: z.enum(['position', 'perpendicularity', 'parallelism', 'flatness', 'coaxiality',
+    'profile-surface', 'circular-runout', 'total-runout', 'cylindricity', 'composite-position']),
   toleranceQ: q.nonnegative(),
   modifier: materialModifierSchema.optional(),
   datumIds: z.array(id).max(3),
@@ -72,7 +77,37 @@ export const gdtFeatureControlSchema = z.strictObject({
   zoneShape: z.enum(['cylindrical', 'planar', 'bidirectional']).optional(),
   featureSizeToleranceQ: sizeToleranceSchema.optional(),
   anchorOffsetMm: vector.optional(),
+  /** Omission denotes symmetric profile, with DEFAULT_PROFILE_OUTER_FRACTION on the outside. */
+  unequalProfileOuterFraction: number.min(0).max(1).optional().meta({ default: DEFAULT_PROFILE_OUTER_FRACTION }),
+  lowerSegment: z.strictObject({
+    toleranceQ: positiveQ,
+    modifier: materialModifierSchema.optional(),
+    datumIds: z.array(id).max(2),
+    datumModifiers: z.array(materialModifierSchema).max(2).optional(),
+  }).optional(),
+  patternGroupId: id.optional(),
 }).superRefine((control, context) => {
+  const issue = (path: string[], message: string) => context.addIssue({ code: 'custom', path, message })
+  if (control.kind === 'cylindricity' && control.datumIds.length) {
+    issue(['datumIds'], 'Cylindricity cannot reference datums')
+  }
+  if (isRunout(control.kind) && !control.datumIds.length) {
+    issue(['datumIds'], 'Runout requires at least one axis datum')
+  }
+  const lower = control.lowerSegment
+  if (control.kind === 'composite-position' && !lower) {
+    issue(['lowerSegment'], 'Composite position requires a lower segment')
+  }
+  if (lower) {
+    if (control.kind !== 'composite-position') issue(['lowerSegment'], 'Only composite position can have a lower segment')
+    if (lower.toleranceQ > control.toleranceQ) issue(['lowerSegment', 'toleranceQ'], 'Lower tolerance cannot exceed the upper tolerance')
+    if (lower.datumIds.some((id, index) => id !== control.datumIds[index])) {
+      issue(['lowerSegment', 'datumIds'], 'Lower datums must be an ordered prefix of the upper datums')
+    }
+    if (lower.datumModifiers && lower.datumModifiers.length > lower.datumIds.length) {
+      issue(['lowerSegment', 'datumModifiers'], 'Each lower datum modifier requires a corresponding datum')
+    }
+  }
   if (control.datumModifiers && control.datumModifiers.length > control.datumIds.length) {
     context.addIssue({ code: 'custom', path: ['datumModifiers'], message: 'Each datum modifier requires a corresponding datum' })
   }
@@ -81,6 +116,8 @@ export const gdtFeatureControlSchema = z.strictObject({
 // Apply to new or changed controls. The archive schema accepts the datum counts
 // allowed by v0.6.0-beta, including controls in historical revisions.
 export const gdtFeatureControlEditSchema = gdtFeatureControlSchema.superRefine((control, context) => {
+  if (control.kind === 'profile-surface' || control.kind === 'cylindricity'
+    || control.kind === 'composite-position' || isRunout(control.kind)) return
   const isFlatness = control.kind === 'flatness'
   if (isFlatness ? control.datumIds.length > 0 : control.datumIds.length === 0) {
     context.addIssue({
@@ -212,7 +249,7 @@ export const assemblyModelV1Schema = z.strictObject({
   }
   const partIds = new Set(model.parts.map(item => item.id))
   const features = new Map(model.features.map(item => [item.id, item]))
-  const datumIds = new Set(model.datums.map(item => item.id))
+  const datums = new Map(model.datums.map(item => [item.id, item]))
   const checkFeatures = (ids: readonly string[], path: (string | number)[]) => {
     for (const id of ids) if (!features.has(id)) issue(path, `Unknown feature: ${id}`)
   }
@@ -241,7 +278,17 @@ export const assemblyModelV1Schema = z.strictObject({
   model.datums.forEach((item, index) => checkFeatures([item.featureId], ['datums', index]))
   model.gdt.forEach((item, index) => {
     checkFeatures([item.featureId], ['gdt', index])
-    if (item.datumIds.some(id => !datumIds.has(id))) issue(['gdt', index, 'datumIds'], 'Unknown datum')
+    if (item.datumIds.some(id => !datums.has(id))) issue(['gdt', index, 'datumIds'], 'Unknown datum')
+    if (item.kind === 'cylindricity' && features.get(item.featureId)?.kind !== 'cylindrical-hole-axis') {
+      issue(['gdt', index, 'featureId'], 'Cylindricity requires a cylindrical feature')
+    }
+    if (isRunout(item.kind) && !item.datumIds.some(id => {
+      const featureId = datums.get(id)?.featureId
+      const kind = featureId === undefined ? undefined : features.get(featureId)?.kind
+      return kind === 'cylindrical-hole-axis' || kind === 'cone'
+    })) {
+      issue(['gdt', index, 'datumIds'], 'Runout requires at least one axis datum')
+    }
   })
   model.measurements.forEach((item, index) => checkFeatures(item.featureIds, ['measurements', index]))
   model.physics?.materials?.forEach((item, index) => {
@@ -284,11 +331,16 @@ export function resolveGdtMaterialConditions(
   const datums = new Map(model.datums.map(datum => [datum.id, datum]))
   const warnings: GdtValidationWarning[] = []
   const resolve = (modifier: GdtMaterialModifier = 'RFS', featureId?: string, datumId?: string): GdtMaterialModifier => {
-    if (modifier === 'RFS' || (featureId && features.get(featureId)?.kind === 'cylindrical-hole-axis')) return modifier
+    if (modifier === 'RFS') return modifier
+    const runout = isRunout(control.kind)
+    if (!runout && featureId && features.get(featureId)?.kind === 'cylindrical-hole-axis') return modifier
+    const subject = datumId === undefined ? 'Controlled feature' : `Datum ${datumId}`
     warnings.push({
       code: 'ILLEGAL_MODIFIER', gdtId: control.id,
       ...(datumId === undefined ? {} : { datumId }),
-      message: `${datumId === undefined ? 'Controlled feature' : `Datum ${datumId}`} requires a size feature for ${modifier}. Using RFS.`,
+      message: runout
+        ? `${subject}: runout does not permit ${modifier}. Using RFS.`
+        : `${subject} requires a size feature for ${modifier}. Using RFS.`,
     })
     return 'RFS'
   }
