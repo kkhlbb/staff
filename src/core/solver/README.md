@@ -29,6 +29,12 @@ For assemblies with controls, `multivariate` returns `gdt.baseline` with the fro
 - GD&T PPM is the sample fraction failing at least one valid control (20 PPM per trial at 50,000 samples). Cpk is the minimum one-sided margin index across controls, computed as mean of `T_eff - error` divided by three sample standard deviations of that margin. A zero margin standard deviation yields null. The reported 3σ interval is mean error ± three sample standard deviations for the governing control, in mm. If all indices are null, the first valid control supplies the interval. With no valid controls, the frozen metric fields carry null Cpk, zero PPM and `[0, 0]` alongside warnings and an empty contributions list.
 - Variance shares are each control's marginal error variance divided by the sum of marginal variances. They do not allocate cross-feature covariance. Datum shift percentage uses paired draws and is the sum of squared changes caused by datum motion divided by that sum plus the centered sum of squares of the shifted error. Mean bonus is sampled additional zone width in mm.
 
+- **Surface profile.** A local profile uses peak-to-valley form plus the tangent tilt envelope. A referenced profile checks both signed extremes against `[-(1-f)T, fT]`, including the one-sided limits at `f=0` and `f=1`. Its reported error interval uses twice the largest absolute distance to the basic surface. The capability index follows the smaller signed margin to either boundary.
+- **Runout.** Circular runout checks diameter variation in the central section. Total runout checks the largest eccentricity along the entire span, including both ends, plus the radial form allowance. Both use the first axis datum in the ordered frame and resolve non-RFS feature and datum modifiers with warnings.
+- **Cylindricity.** Roundness, longitudinal form and axial radius variation share a local radial width. The flexible check projects local radial deformation at three axial sections in four radial directions after subtracting the feature twist.
+- **Composite position.** PLTZF rotates and translates the pattern about its nominal centroid with one small-displacement twist per trial. Members with matching upper datum references and boundary modifiers share the DRF shift. FRTZF samples independent per-hole center and endpoint residuals. Its ordered datum prefix restrains rotation, while a datum-free lower segment floats with the pattern. The hole size draw is common to both bonus calculations. Overall PPM includes failure of either segment, and the lower segment can govern capability. The frozen per-control contribution reports the upper segment bonus and the combined segment variances.
+- A solver What-If request may include `{ gdtId, toleranceQ, modifier, lowerSegment: { toleranceQ, modifier } }` for composite position. Upper and lower tolerance and feature modifier are independently optional. Their effective tolerance ordering is checked after merging prior edits. The worker retains the same process and compliance draws when only acceptance changes.
+
 Run the analytical and worker tests with `node --import ./mcp/register-ts.mjs --test src/core/solver/test/gdt.node.test.mjs`. Run `node src/core/solver/test/gdtBenchmark.mjs` for six full round trips at 50,000 samples and 144 edits covering every control and all three modifiers. Its performance gates apply to this fixture.
 
 - [ASME Y14.5](https://www.asme.org/codes-standards/find-codes-standards/dimensioning-and-tolerancing)
@@ -51,3 +57,19 @@ The result includes the frozen `compliant` summary and `displacementFields`. Whe
 Fields contain nominal world-space intrinsic deformation at recorded feature origins and added model support or grid points. Rigid movement transmitted through mates contributes to stack-up measurements. The intrinsic fields are for interpolation over each modeled part. Force, warp and temperature tolerances are symmetric half-widths. The default is uniform sampling. Normal GD&T mode uses a three-sigma-truncated normal on the same half-width. Independent model streams derive from mulberry32 and stable model IDs. An optional worker-side `createSimulation(workerId, { micEvaluator })` compiler hook can supply extra linear bases for the referenced MIC asset. Its basis and amplitude interface is documented in `compliance.mjs`.
 
 Run the analytical and worker suite with `node --import ./mcp/register-ts.mjs --test src/core/solver/test/compliance.node.test.mjs`. Run `node src/core/solver/test/complianceBenchmark.mjs` for six full 50,000-trial worker round trips and the corresponding preload, warp, temperature, cached toggle and first-enable operations. The benchmark includes queueing, message cloning, computation and result delivery. Its first full call includes worker startup. Use `GDT_DISTRIBUTION=uniform` for the uniform variant.
+
+
+## Joint GD&T and flexibility benchmark
+
+Run `node src/core/solver/test/advancedGdtBenchmark.mjs`. One resident worker runs six 50,000-trial normal-distribution simulations at seed 319705 on the same four parts, five mates, nine parameters, five 3D measurements, eleven controls covering all ten GD&T kinds, and four analytical flexibility models. Each round applies a joint upper/lower composite and profile edit, a 3D manufacturing parameter edit, and a thermal-model edit. The first full round includes startup. All timings are scheduler round trips in milliseconds.
+
+Recorded on Apple M4 (10 logical CPUs), Darwin 25.4.0 arm64, Node v26.12.1.
+
+| Round | Full | GD&T edit | 3D parameter edit | Thermal edit |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 818.72 | 16.32 | 226.76 | 193.25 |
+| 2 | 743.34 | 6.44 | 211.13 | 185.37 |
+| 3 | 732.59 | 5.22 | 225.94 | 183.76 |
+| 4 | 718.54 | 5.25 | 223.76 | 182.22 |
+| 5 | 737.61 | 5.40 | 217.00 | 183.42 |
+| 6 | 698.18 | 5.18 | 223.31 | 178.87 |

@@ -11,6 +11,9 @@ type ParameterBinding = { id: string; partId: string; featureId: string }
 export type ToleranceParameter = ParameterBinding & (
   { dof: 'tx' | 'ty' | 'tz'; sigmaQ: number; lowerQ: number; upperQ: number } |
   { dof: 'rx' | 'ry' | 'rz'; sigmaRad: number; lowerRad: number; upperRad: number })
+type SolverGdtEdit = GdtWhatIfEdit & {
+  lowerSegment?: Pick<GdtWhatIfEdit, 'toleranceQ' | 'modifier'>
+}
 export type SimulationInput = AssemblyInput & {
   samples?: number
   seed?: number
@@ -20,14 +23,14 @@ export type SimulationInput = AssemblyInput & {
   /** Opt in to GD&T sampling from 1 to 50,000 trials. Existing 3D parameter draws retain their normal model. */
   gdtDistribution?: 'normal' | 'uniform'
   gdtFeatureGeometry?: Record<string, { spanQ?: number; external?: boolean }>
-  gdtEdits?: readonly GdtWhatIfEdit[]
+  gdtEdits?: readonly SolverGdtEdit[]
 }
 type IncrementalInput = { incremental: {
   baselineRevision: string
   parameter?: ToleranceParameter
-  edits?: readonly GdtWhatIfEdit[]
+  edits?: readonly SolverGdtEdit[]
   physics?: PhysicsPatch
-} & ({ parameter: ToleranceParameter } | { edits: readonly GdtWhatIfEdit[] } | { physics: PhysicsPatch }) }
+} & ({ parameter: ToleranceParameter } | { edits: readonly SolverGdtEdit[] } | { physics: PhysicsPatch }) }
 export type SolverRequest =
   | { kind: 'extremes1d'; chain: ChainDefinition }
   | { kind: 'monteCarlo1d'; chain: ChainDefinition; options?: MonteCarloOptions }

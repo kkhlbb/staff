@@ -248,13 +248,14 @@ function gdtMetrics({ cpk, ppm, threeSigmaIntervalMm }) {
   return { cpk, ppm, threeSigmaIntervalMm }
 }
 
-function simulateCompliance(baseline, options) {
+function simulateCompliance(baseline, options, previous) {
   const { assembly, geometry, parameters, response, gdt, gdtModel, measurements, results, rigidCapture, limits, samples, bins } = baseline
-  const { models, displacementFields } = prepareCompliance(assembly, geometry, { ...options, parameters, response }) ?? {}
+  const prepared = previous?.prepared ?? prepareCompliance(assembly, geometry, { ...options, parameters, response })
+  const { models, displacementFields } = prepared ?? {}
   if (!models) return null
   const useGdt = gdt?.scores.size > 0
   const flexCapture = []
-  const flexResults = measurements.map((m, i) => {
+  const flexResults = previous?.measurements ?? measurements.map((m, i) => {
     const limit = limitFor(limits, m.spec.id)
     const capture = !useGdt && m.spec.kind !== 'angle'
     const projected = projectCompliance(models, 12, (effects, j) => m.features.flatMap(feature => effects.get(feature.id)[j]))
@@ -268,9 +269,11 @@ function simulateCompliance(baseline, options) {
   let rigidBaseline
   let compliantResult
   let compliantGdt
+  let flexCache
   let weights
   if (useGdt) {
-    const flex = evaluateCompliantGdt(gdtModel, parameters, gdt, models)
+    const flex = evaluateCompliantGdt(gdtModel, parameters, gdt, models, previous?.flexCache)
+    flexCache = flex.cached
     rigidBaseline = gdtMetrics(gdt.metrics)
     compliantResult = gdtMetrics(flex.metrics)
     weights = complianceWeights(models, flex.weights, flex.rigidVariance)
@@ -288,7 +291,7 @@ function simulateCompliance(baseline, options) {
     flexDeltaCpk: rigidBaseline.cpk === null || compliantResult.cpk === null ? null : compliantResult.cpk - rigidBaseline.cpk,
     flexContributionItems: weights.flexContributionItems,
   }
-  return { compliant, displacementFields, measurements: flexResults, compliantGdt }
+  return { compliant, displacementFields, measurements: flexResults, compliantGdt, prepared, flexCache }
 }
 
 export function createSimulation(workerId, { micEvaluator } = {}) {
@@ -307,8 +310,9 @@ export function createSimulation(workerId, { micEvaluator } = {}) {
     }
     const plateCache = new Map(current.plateCache)
     const streams = new Map(current.streams)
+    const reusable = previous?.key === key && previous.parameters === current.parameters ? previous.result : undefined
     const result = simulateCompliance(current, { seed: current.seed, samples: current.samples,
-      distribution: current.gdtDistribution ?? 'uniform', micEvaluator, plateCache, streams })
+      distribution: current.gdtDistribution ?? 'uniform', micEvaluator, plateCache, streams }, reusable)
     // Bound geometry/draw caches when a long-lived session changes many model definitions.
     for (const cache of [plateCache, streams]) {
       while (cache.size > 64) cache.delete(cache.keys().next().value)
