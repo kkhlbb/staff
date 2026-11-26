@@ -151,12 +151,12 @@ check('渲染出桌面壳内容', String(bodyText).includes('打开项目，继�
 const apiKeys = await evaluate('Object.keys(window.cunlian).sort()')
 const expectedKeys = [
   'agentCancel', 'agentPreviewSummary', 'agentProviderStatus', 'agentResume', 'agentStart',
-  'agentTaskState', 'applyChange', 'applyConfirmedInputs', 'attestExtractionUnits', 'bindParameter',
+  'agentTaskState', 'analyzeGdtStackup', 'applyChange', 'applyConfirmedInputs', 'attestExtractionUnits', 'bindParameter',
   'cancelExtraction', 'cancelM1ChatMessage', 'cancelM1ProjectSubscription', 'clearAgentProviderKey', 'commitApprovedDraft',
   'commitM3ApprovedDraft', 'commitModel', 'commitV2', 'compareDrawings', 'confirmExtractionBatch',
   'confirmRequirement', 'decideExtraction', 'deleteExtractionDraft', 'detectM1LocalAgents', 'exportApprovedVersion',
   'exportDrawingDxf2000', 'exportDrawingDxfR12', 'exportDrawingPdf', 'exportDrawingSvg', 'getConfirmedInputs',
-  'getM1ConnectionStatus', 'getM1ExternalActivities', 'getM1LocalAgentInstallInfo', 'getM1ProjectContext', 'getM1ReadCapabilities',
+  'getGdtCapability', 'getM1ConnectionStatus', 'getM1ExternalActivities', 'getM1LocalAgentInstallInfo', 'getM1ProjectContext', 'getM1ReadCapabilities',
   'getM2PreviewSnapshot', 'getMigrationReport', 'getProjectContext', 'importSketchImage', 'importSource',
   'ingestSketchReadings', 'inspectV2', 'intentApply', 'intentConfirmCandidate', 'intentCreateProject',
   'intentIssueApproval', 'intentPreview', 'intentState', 'issueAgentApproval', 'linkModel',
@@ -167,7 +167,7 @@ const expectedKeys = [
   'registerM1LocalAgent', 'releaseModel', 'relinkRecent', 'requestClose', 'requestM1ProjectAuthorization',
   'respondEditorFlush', 'restoreRecovery', 'restoreRevisionDraft', 'retryM2Drawing', 'revealProject',
   'revokeExtractionUnits', 'revokeM1ProjectAuthorization', 'runExtraction', 'saveAgentProvider', 'saveProject',
-  'saveProjectAs', 'sendM1ChatMessage', 'stageChangeDraft', 'stageDraft', 'stageParameterChange',
+  'saveProjectAs', 'sendM1ChatMessage', 'stageChangeDraft', 'stageDatum', 'stageDraft', 'stageGdt', 'stageParameterChange',
   'stageRequirementEdit', 'stepCancel', 'stepExport', 'submitM2Clarification', 'subscribeM1ProjectEvents',
   'subscribeM1WorkbenchEvents', 'subscribeM2PreviewEvents', 'subscribeM3ExternalProjectEvents', 'takePendingDxf', 'takeoverM1Draft',
   'testAgentProvider', 'testM1ModelApiConnection', 'unbindParameter', 'undoDraftChange', 'updateSpacerDrawing',
