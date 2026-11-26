@@ -1,0 +1,49 @@
+{
+  "source": "Synthetic Liu & Hu-style fixture. Independent FEA displacement field has not been supplied.",
+  "thicknessMm": 1.5,
+  "warpMm": 0.28,
+  "clampsMm": [
+    [
+      -18,
+      -8
+    ],
+    [
+      18,
+      -8
+    ],
+    [
+      18,
+      8
+    ],
+    [
+      -18,
+      8
+    ]
+  ],
+  "probesMm": [
+    [
+      0,
+      0
+    ],
+    [
+      -9,
+      0
+    ],
+    [
+      9,
+      0
+    ],
+    [
+      0,
+      -4
+    ],
+    [
+      0,
+      4
+    ]
+  ],
+  "material": {
+    "youngsModulusMpa": 68900,
+    "poissonRatio": 0.33
+  }
+}
