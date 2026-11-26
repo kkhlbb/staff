@@ -30,7 +30,7 @@ const modifiers = z.array(z.discriminatedUnion('kind', [
   z.strictObject({ ...modifierId, kind: z.literal('extrude-offset'), faceFeatureId: id, offsetQ: q }),
 ]))
 const stepPart = z.strictObject({
-  ...part, kind: z.literal('imported-step'), attachmentId: id, solidIndex: q.nonnegative(),
+  ...part, kind: z.literal('imported-step'), attachmentId: id, solidIndex: q.nonnegative(), groupId: id.optional(),
 })
 const primitiveParts = baseParameters.options.map(base => base.extend({
   ...part, kind: z.literal('parametric-primitive'), modifiers,
@@ -54,6 +54,44 @@ const mates = z.array(z.discriminatedUnion('kind', [
   z.strictObject({ ...mate, kind: z.literal('3-2-1'), contactPairs: z.tuple([pair, pair, pair, pair, pair, pair]) }),
 ]))
 
+const sizeToleranceSchema = z.strictObject({ lowerQ: q, upperQ: q })
+  .refine(value => value.lowerQ <= value.upperQ, { path: ['upperQ'], message: 'Upper deviation must be at least the lower deviation' })
+const materialModifierSchema = z.enum(['MMC', 'LMC', 'RFS'])
+
+export const datumDefinitionSchema = z.strictObject({
+  id, label: id, featureId: id, sizeToleranceQ: sizeToleranceSchema.optional(),
+})
+
+export const gdtFeatureControlSchema = z.strictObject({
+  id, featureId: id,
+  kind: z.enum(['position', 'perpendicularity', 'parallelism', 'flatness', 'coaxiality']),
+  toleranceQ: q.nonnegative(),
+  modifier: materialModifierSchema.optional(),
+  datumIds: z.array(id).max(3),
+  datumModifiers: z.array(materialModifierSchema).max(3).optional(),
+  zoneShape: z.enum(['cylindrical', 'planar', 'bidirectional']).optional(),
+  featureSizeToleranceQ: sizeToleranceSchema.optional(),
+  anchorOffsetMm: vector.optional(),
+}).superRefine((control, context) => {
+  if (control.datumModifiers && control.datumModifiers.length > control.datumIds.length) {
+    context.addIssue({ code: 'custom', path: ['datumModifiers'], message: 'Each datum modifier requires a corresponding datum' })
+  }
+})
+
+// Apply to new or changed controls. The archive schema accepts the datum counts
+// allowed by v0.6.0-beta, including controls in historical revisions.
+export const gdtFeatureControlEditSchema = gdtFeatureControlSchema.superRefine((control, context) => {
+  const isFlatness = control.kind === 'flatness'
+  if (isFlatness ? control.datumIds.length > 0 : control.datumIds.length === 0) {
+    context.addIssue({
+      code: 'custom', path: ['datumIds'],
+      message: isFlatness ? 'Flatness cannot reference datums' : 'This GD&T control requires at least one datum',
+    })
+  }
+})
+
+export const assemblyGroupSchema = z.strictObject({ id, name: id, parentGroupId: id.optional() })
+
 export const stepAttachmentSchema = z.strictObject({ id, blobKey: id, fileName: id })
 export const assemblyModelV1Schema = z.strictObject({
   schemaVersion: z.literal(1),
@@ -61,14 +99,9 @@ export const assemblyModelV1Schema = z.strictObject({
   parts: z.array(z.union([stepPart, ...primitiveParts])),
   features: z.array(persistentFeature),
   mates,
-  datums: z.array(z.strictObject({ id, label: id, featureId: id })),
-  gdt: z.array(z.strictObject({
-    id, featureId: id,
-    kind: z.enum(['position', 'perpendicularity', 'parallelism', 'flatness', 'coaxiality']),
-    toleranceQ: q.nonnegative(),
-    modifier: z.enum(['MMC', 'LMC', 'RFS']).optional(),
-    datumIds: z.array(id).max(3),
-  })),
+  datums: z.array(datumDefinitionSchema),
+  gdt: z.array(gdtFeatureControlSchema),
+  assemblyGroups: z.array(assemblyGroupSchema).optional(),
   physics: z.strictObject({
     materials: z.array(z.strictObject({
       partId: id, youngsModulusMpa: number.positive(), poissonRatio: number.gt(-1).lt(0.5),
@@ -140,3 +173,39 @@ export type GdtFeatureControl = AssemblyModelV1['gdt'][number]
 export type AssemblyPhysicsSpec = NonNullable<AssemblyModelV1['physics']>
 export type MeasurementSpec = AssemblyModelV1['measurements'][number]
 export type StepAttachment = z.infer<typeof stepAttachmentSchema>
+
+export type AssemblyGroup = z.infer<typeof assemblyGroupSchema>
+export type GdtMaterialModifier = z.infer<typeof materialModifierSchema>
+
+export interface GdtValidationWarning {
+  code: 'DRF_UNDERCONSTRAINED' | 'DRF_REDUNDANT' | 'ILLEGAL_MODIFIER' | 'DRF_DEGENERATE'
+  gdtId: string
+  message: string
+  datumId?: string
+}
+
+/** Resolve material conditions for solving while preserving the requested values for review and archiving. */
+export function resolveGdtMaterialConditions(
+  control: GdtFeatureControl,
+  model: Pick<AssemblyModelV1, 'features' | 'datums'>,
+): { modifier: GdtMaterialModifier; datumModifiers: GdtMaterialModifier[]; warnings: GdtValidationWarning[] } {
+  const features = new Map(model.features.map(feature => [feature.id, feature]))
+  const datums = new Map(model.datums.map(datum => [datum.id, datum]))
+  const warnings: GdtValidationWarning[] = []
+  const resolve = (modifier: GdtMaterialModifier = 'RFS', featureId?: string, datumId?: string): GdtMaterialModifier => {
+    if (modifier === 'RFS' || (featureId && features.get(featureId)?.kind === 'cylindrical-hole-axis')) return modifier
+    warnings.push({
+      code: 'ILLEGAL_MODIFIER', gdtId: control.id,
+      ...(datumId === undefined ? {} : { datumId }),
+      message: `${datumId === undefined ? 'Controlled feature' : `Datum ${datumId}`} requires a size feature for ${modifier}. Using RFS.`,
+    })
+    return 'RFS'
+  }
+
+  return {
+    modifier: resolve(control.modifier, control.featureId),
+    datumModifiers: control.datumIds.map((datumId, index) =>
+      resolve(control.datumModifiers?.[index], datums.get(datumId)?.featureId, datumId)),
+    warnings,
+  }
+}

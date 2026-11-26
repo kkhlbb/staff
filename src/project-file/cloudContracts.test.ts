@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { TOOLS } from '../../mcp/tools'
 import { M1_LOCAL_OPERATIONS } from '../../desktop/main/project-agent/m1LocalTransport'
 import mcp from '../../cloud/contracts/mcp-tools.json'
+import gdt from '../../cloud/contracts/mcp-gdt-tools.json'
 import rest from '../../cloud/contracts/openapi.json'
 import flags from '../../cloud/contracts/feature-flags.schema.json'
 import { FEATURE_3D_ASSEMBLY_M1 } from '../transport'
@@ -103,6 +104,67 @@ describe('Cloud contract freeze', () => {
     expect(rest.components.schemas.EvidenceRef.anyOf).toHaveLength(5)
     expect(flags.properties.FEATURE_3D_ASSEMBLY_M1.default).toBe(FEATURE_3D_ASSEMBLY_M1)
     expect(FEATURE_3D_ASSEMBLY_M1).toBe(false)
+  })
+
+  it('binds M3 drafting to a lease, revision, and EvidenceRef, with the same REST and MCP schemas', () => {
+    const draft = { projectId: 'p', draftRevision: 'draft-1' }
+    const writer = { projectId: draft.projectId, expectedWriterEpoch: 1 }
+    const revision = { baseRevision: 'base-1', expectedDraftRevision: null, idempotencyKey: 'stage-1' }
+    const evidence = { kind: 'user-attestation', actorId: 'reviewer', at: '2026-01-01',
+      sessionSeq: 1, sessionLabel: null, statement: 'Use datum A', fieldPath: 'datumIds' }
+    const control = { id: 'gdt-1', kind: 'position', featureId: 'hole', toleranceQ: 200, datumIds: ['a'] }
+    const monteCarlo = { seed: 7, samples: 50000, distribution: 'normal' }
+    const metrics = { cpk: 1.2, ppm: 7, threeSigmaIntervalMm: [0.1, 0.2], contributions: [{
+      gdtId: control.id, label: 'Position', kind: 'position', varianceSharePct: 20,
+      bonusMeanMm: 0.03, datumShiftContributionPct: 15,
+    }], warnings: [{ code: 'DRF_DEGENERATE', gdtId: control.id, message: 'Coincident axes' }] }
+    const examples = [
+      { input: { ...writer, ...revision, items: [{ value: { id: 'a', label: 'A', featureId: 'hole' }, evidence: [evidence] }] },
+        output: { ...draft, warnings: [] } },
+      { input: { ...writer, ...revision, items: [{ value: control, evidence: [evidence] }] },
+        output: { ...draft, warnings: metrics.warnings } },
+      { input: { ...draft, ...writer, monteCarlo, edits: [{ gdtId: control.id, modifier: 'LMC' }] },
+        output: { ...draft, monteCarlo, baseline: metrics, whatIf: metrics } },
+    ]
+    const resolve = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(resolve)
+      if (!value || typeof value !== 'object') return value
+      if ('$ref' in value && typeof value.$ref === 'string') {
+        const name = value.$ref.split('/').at(-1) as keyof typeof rest.components.schemas
+        return resolve(rest.components.schemas[name])
+      }
+      return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, resolve(child)]))
+    }
+
+    expect(gdt.tools.map(tool => tool.name)).toEqual(['stage_datum', 'stage_gdt', 'analyze_gdt_stackup'])
+    for (const [index, tool] of gdt.tools.entries()) {
+      const operation = Object.values(rest.paths).flatMap(path => Object.values(path))
+        .find(candidate => candidate.operationId === tool.name)
+      if (!operation || !('x-feature-flag' in operation)) throw Error('Missing gated operation')
+      expect(operation['x-feature-flag']).toBe('FEATURE_3D_ASSEMBLY_M1')
+      const { input, output } = examples[index]
+      const mcpInput = fromJson(tool.inputSchema)
+      const mcpOutput = fromJson(tool.outputSchema)
+      expect(mcpInput.safeParse(input).success, tool.name).toBe(true)
+      expect(mcpInput.safeParse({ ...input, expectedWriterEpoch: undefined }).success).toBe(false)
+      expect(mcpInput.safeParse({ ...input, confirmationToken: 'human-only' }).success).toBe(false)
+      expect(mcpOutput.safeParse(output).success, tool.name).toBe(true)
+      if ('items' in input) {
+        expect(mcpInput.safeParse({ ...input, items: [{ ...input.items[0], evidence: [] }] }).success).toBe(false)
+        expect(mcpInput.safeParse({ ...input, expectedDraftRevision: undefined }).success).toBe(false)
+      }
+      if (tool.name === 'stage_gdt') {
+        for (const value of [{ ...control, datumIds: [] }, { ...control, kind: 'flatness' }]) {
+          expect(mcpInput.safeParse({ ...input, items: [{ value, evidence: [evidence] }] }).success).toBe(false)
+        }
+      }
+      const response = resolve(operation.responses['200'].content['application/json'].schema)
+      expect(fromJson(response).safeParse({ ok: true, value: output }).success).toBe(true)
+      const restInput = resolve(operation.requestBody.content['application/json'].schema)
+      const body = Object.fromEntries(Object.entries(input)
+        .filter(([key]) => key !== 'projectId' && key !== 'draftRevision'))
+      expect(fromJson(restInput).safeParse(body).success).toBe(true)
+    }
   })
 
   it('resolves each OpenAPI reference and matches paths, path parameters, and unique operation IDs', () => {

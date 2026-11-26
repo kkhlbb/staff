@@ -25,7 +25,7 @@ import {
 
 export type {
   AssemblyModelV1, AssemblyPart, PersistentFeature, AssemblyMate, DatumDefinition,
-  GdtFeatureControl, AssemblyPhysicsSpec, MeasurementSpec, StepAttachment,
+  GdtFeatureControl, GdtMaterialModifier, AssemblyGroup, AssemblyPhysicsSpec, MeasurementSpec, StepAttachment,
 } from './assembly3d'
 
 export const PROJECT_FILE_FORMAT = 'cunlian-project'

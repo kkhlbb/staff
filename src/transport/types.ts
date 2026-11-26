@@ -6,7 +6,10 @@ import type { M3CommitApprovedDraftRequest, M3CommitApprovedDraftResult } from '
 import type { ChainDefinition, ChainResult } from '../domain/types'
 import type { MonteCarloOptions, StatisticalSummary } from '../domain/statistics'
 import type { EvidenceRef } from '../document-extraction/types'
-import type { ProjectFileAttachmentRef, AssemblyModelV1 } from '../project-file/types'
+import type { ProjectFileAttachmentRef, AssemblyModelV1, DatumDefinition, GdtFeatureControl } from '../project-file/types'
+import type { GdtValidationWarning } from '../project-file/assembly3d'
+
+export type { GdtValidationWarning } from '../project-file/assembly3d'
 
 export const FEATURE_3D_ASSEMBLY_M1 = false
 
@@ -80,6 +83,55 @@ export interface SimulationResult {
   statistical: StatisticalSummary | null
 }
 
+export interface GdtContributionItem {
+  gdtId: string
+  label: string
+  kind: GdtFeatureControl['kind']
+  varianceSharePct: number
+  bonusMeanMm: number
+  datumShiftContributionPct: number
+}
+
+/** Draft-only upserts bound to the active writer and both revisions. */
+interface GdtStageRequest<T> extends WriterRequest {
+  baseRevision: string
+  expectedDraftRevision: string | null
+  idempotencyKey: string
+  items: readonly { value: T; evidence: readonly EvidenceRef[] }[]
+}
+
+export type StageDatumRequest = GdtStageRequest<DatumDefinition>
+export type StageGdtRequest = GdtStageRequest<GdtFeatureControl>
+
+export interface GdtStageResult extends DraftRef {
+  warnings: readonly GdtValidationWarning[]
+}
+
+export interface GdtWhatIfEdit {
+  gdtId: string
+  toleranceQ?: GdtFeatureControl['toleranceQ']
+  modifier?: GdtFeatureControl['modifier']
+}
+
+export interface AnalyzeGdtStackupRequest extends DraftRef, WriterRequest {
+  monteCarlo: MonteCarloOptions
+  edits?: readonly GdtWhatIfEdit[]
+}
+
+export interface GdtStackupMetrics {
+  cpk: number | null
+  ppm: number
+  threeSigmaIntervalMm: readonly [number, number]
+  contributions: readonly GdtContributionItem[]
+  warnings: readonly GdtValidationWarning[]
+}
+
+export interface AnalyzeGdtStackupResult extends DraftRef {
+  monteCarlo: MonteCarloOptions
+  baseline: GdtStackupMetrics
+  whatIf?: GdtStackupMetrics
+}
+
 export interface DrawingRequest extends DraftRef {
   format: 'svg' | 'dxf-r12' | 'dxf-2000'
 }
@@ -114,6 +166,10 @@ export interface Transport {
   revokeWriter(request: ProjectRef): Promise<M2Result<{ revoked: true }>>
   readWriterContext(request: ProjectRef): Promise<M2Result<M1WriterContext & { mountingPlateDraftRevision?: string }>>
   stageChange(request: ProjectRef & { change: M1StageChangeRequest }): Promise<M2Result<M1StageResult>>
+  /** Available on hosts implementing the gated GD&T tool contract. */
+  stageDatum?(request: StageDatumRequest): Promise<M2Result<GdtStageResult>>
+  stageGdt?(request: StageGdtRequest): Promise<M2Result<GdtStageResult>>
+  analyzeGdtStackup?(request: AnalyzeGdtStackupRequest): Promise<M2Result<AnalyzeGdtStackupResult>>
   /** Requires explicit, single-use human confirmation bound to this draft and check set. */
   commitDraft(request: CommitDraftRequest): Promise<M2Result<CommitDraftResult>>
   authorizeProject(request: ProjectRef): Promise<M2Result<ProjectRef & { authorized: true }>>

@@ -3,6 +3,251 @@
   "info": {"title": "Cunlian Cloud API", "version": "1.0.0"},
   "security": [{"bearerAuth": []}, {"apiKey": []}],
   "paths": {
+    "/api/v1/projects/{projectId}/drafts/datums": {
+      "post": {
+        "operationId": "stage_datum",
+        "description": "Stage datums upserts with EvidenceRef citations. Requires the authorized active writer and matching epoch and revisions. Use the existing fingerprint-bound human review and commit flow to apply the draft.",
+        "x-feature-flag": "FEATURE_3D_ASSEMBLY_M1",
+        "parameters": [{"name":"projectId","in":"path","required":true,"schema":{"type":"string","minLength":1,"pattern":"\\S"}}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedWriterEpoch": {"type":"integer","minimum":0,"maximum":9007199254740991},
+                  "baseRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+                  "expectedDraftRevision": {"anyOf":[{"type":"string","minLength":1,"pattern":"\\S"},{"type":"null"}]},
+                  "idempotencyKey": {"type":"string","minLength":1,"pattern":"\\S"},
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {"$ref":"#/components/schemas/DatumDefinition"},
+                        "evidence": {"type":"array","items":{"$ref":"#/components/schemas/EvidenceRef"},"minItems":1}
+                      },
+                      "required": ["value","evidence"],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": ["expectedWriterEpoch","baseRevision","expectedDraftRevision","idempotencyKey","items"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {"const":true},
+                    "value": {
+                      "type": "object",
+                      "properties": {
+                        "projectId": {"type":"string","minLength":1,"pattern":"\\S"},
+                        "draftRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+                        "warnings": {"type":"array","items":{"$ref":"#/components/schemas/GdtValidationWarning"}}
+                      },
+                      "required": ["projectId","draftRevision","warnings"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok","value"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {"description":"Request failed","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/drafts/gdt": {
+      "post": {
+        "operationId": "stage_gdt",
+        "description": "Stage gdt upserts with EvidenceRef citations. Requires the authorized active writer and matching epoch and revisions. Use the existing fingerprint-bound human review and commit flow to apply the draft.",
+        "x-feature-flag": "FEATURE_3D_ASSEMBLY_M1",
+        "parameters": [{"name":"projectId","in":"path","required":true,"schema":{"type":"string","minLength":1,"pattern":"\\S"}}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedWriterEpoch": {"type":"integer","minimum":0,"maximum":9007199254740991},
+                  "baseRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+                  "expectedDraftRevision": {"anyOf":[{"type":"string","minLength":1,"pattern":"\\S"},{"type":"null"}]},
+                  "idempotencyKey": {"type":"string","minLength":1,"pattern":"\\S"},
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {"$ref":"#/components/schemas/GdtFeatureControlEdit"},
+                        "evidence": {"type":"array","items":{"$ref":"#/components/schemas/EvidenceRef"},"minItems":1}
+                      },
+                      "required": ["value","evidence"],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": ["expectedWriterEpoch","baseRevision","expectedDraftRevision","idempotencyKey","items"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {"const":true},
+                    "value": {
+                      "type": "object",
+                      "properties": {
+                        "projectId": {"type":"string","minLength":1,"pattern":"\\S"},
+                        "draftRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+                        "warnings": {"type":"array","items":{"$ref":"#/components/schemas/GdtValidationWarning"}}
+                      },
+                      "required": ["projectId","draftRevision","warnings"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok","value"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {"description":"Request failed","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/drafts/{draftRevision}/gdt-stackup": {
+      "post": {
+        "operationId": "analyze_gdt_stackup",
+        "description": "Run the deterministic GD&T solver for the leased draft. What-if edits are temporary and the result is advisory. Use fingerprint-bound human review to approve staged changes.",
+        "x-feature-flag": "FEATURE_3D_ASSEMBLY_M1",
+        "parameters": [
+          {"name":"projectId","in":"path","required":true,"schema":{"type":"string","minLength":1,"pattern":"\\S"}},
+          {"name":"draftRevision","in":"path","required":true,"schema":{"type":"string","minLength":1,"pattern":"\\S"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedWriterEpoch": {"type":"integer","minimum":0,"maximum":9007199254740991},
+                  "monteCarlo": {
+                    "type": "object",
+                    "properties": {
+                      "seed": {"type":"integer","minimum":0,"maximum":4294967295},
+                      "samples": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                      "distribution": {"enum":["normal","uniform"]}
+                    },
+                    "required": ["seed","samples","distribution"],
+                    "additionalProperties": false
+                  },
+                  "edits": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
+                        "toleranceQ": {"type":"integer","minimum":0,"maximum":9007199254740991},
+                        "modifier": {"type":"string","enum":["MMC","LMC","RFS"]}
+                      },
+                      "required": ["gdtId"],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": ["expectedWriterEpoch","monteCarlo"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {"const":true},
+                    "value": {
+                      "type": "object",
+                      "properties": {
+                        "projectId": {"type":"string","minLength":1,"pattern":"\\S"},
+                        "draftRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+                        "monteCarlo": {
+                          "type": "object",
+                          "properties": {
+                            "seed": {"type":"integer","minimum":0,"maximum":4294967295},
+                            "samples": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                            "distribution": {"enum":["normal","uniform"]}
+                          },
+                          "required": ["seed","samples","distribution"],
+                          "additionalProperties": false
+                        },
+                        "baseline": {
+                          "type": "object",
+                          "properties": {
+                            "cpk": {"anyOf":[{"type":"number"},{"type":"null"}]},
+                            "ppm": {"type":"number","minimum":0,"maximum":1000000},
+                            "threeSigmaIntervalMm": {"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2},
+                            "contributions": {"type":"array","items":{"$ref":"#/components/schemas/GdtContributionItem"}},
+                            "warnings": {"type":"array","items":{"$ref":"#/components/schemas/GdtValidationWarning"}}
+                          },
+                          "required": ["cpk","ppm","threeSigmaIntervalMm","contributions","warnings"],
+                          "additionalProperties": false
+                        },
+                        "whatIf": {
+                          "type": "object",
+                          "properties": {
+                            "cpk": {"anyOf":[{"type":"number"},{"type":"null"}]},
+                            "ppm": {"type":"number","minimum":0,"maximum":1000000},
+                            "threeSigmaIntervalMm": {"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2},
+                            "contributions": {"type":"array","items":{"$ref":"#/components/schemas/GdtContributionItem"}},
+                            "warnings": {"type":"array","items":{"$ref":"#/components/schemas/GdtValidationWarning"}}
+                          },
+                          "required": ["cpk","ppm","threeSigmaIntervalMm","contributions","warnings"],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": ["projectId","draftRevision","monteCarlo","baseline"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok","value"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {"description":"Request failed","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}
+        }
+      }
+    },
     "/healthz": {
       "get": {
         "operationId": "health",
@@ -1382,7 +1627,8 @@
                     },
                     "kind": {"type": "string", "const": "imported-step"},
                     "attachmentId": {"type": "string", "minLength": 1, "maxLength": 200},
-                    "solidIndex": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+                    "solidIndex": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+                    "groupId": {"type":"string","minLength":1,"maxLength":200}
                   },
                   "required": [
                     "id",
@@ -2784,7 +3030,16 @@
               "properties": {
                 "id": {"type": "string", "minLength": 1, "maxLength": 200},
                 "label": {"type": "string", "minLength": 1, "maxLength": 200},
-                "featureId": {"type": "string", "minLength": 1, "maxLength": 200}
+                "featureId": {"type": "string", "minLength": 1, "maxLength": 200},
+                "sizeToleranceQ": {
+                  "type": "object",
+                  "properties": {
+                    "lowerQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                    "upperQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}
+                  },
+                  "required": ["lowerQ","upperQ"],
+                  "additionalProperties": false
+                }
               },
               "required": ["id", "label", "featureId"],
               "additionalProperties": false
@@ -2807,9 +3062,40 @@
                   "maxItems": 3,
                   "type": "array",
                   "items": {"type": "string", "minLength": 1, "maxLength": 200}
+                },
+                "datumModifiers": {"maxItems":3,"type":"array","items":{"type":"string","enum":["MMC","LMC","RFS"]}},
+                "zoneShape": {"type":"string","enum":["cylindrical","planar","bidirectional"]},
+                "featureSizeToleranceQ": {
+                  "type": "object",
+                  "properties": {
+                    "lowerQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                    "upperQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}
+                  },
+                  "required": ["lowerQ","upperQ"],
+                  "additionalProperties": false
+                },
+                "anchorOffsetMm": {
+                  "type": "array",
+                  "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": ["id", "featureId", "kind", "toleranceQ", "datumIds"],
+              "additionalProperties": false
+            }
+          },
+          "assemblyGroups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {"type":"string","minLength":1,"maxLength":200},
+                "name": {"type":"string","minLength":1,"maxLength":200},
+                "parentGroupId": {"type":"string","minLength":1,"maxLength":200}
+              },
+              "required": ["id","name"],
               "additionalProperties": false
             }
           },
@@ -2908,6 +3194,97 @@
           }
         },
         "required": ["schemaVersion", "units", "parts", "features", "mates", "datums", "gdt", "measurements"],
+        "additionalProperties": false
+      },
+      "DatumDefinition": {
+        "type": "object",
+        "properties": {
+          "id": {"type":"string","minLength":1,"maxLength":200},
+          "label": {"type":"string","minLength":1,"maxLength":200},
+          "featureId": {"type":"string","minLength":1,"maxLength":200},
+          "sizeToleranceQ": {
+            "type": "object",
+            "properties": {
+              "lowerQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+              "upperQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}
+            },
+            "required": ["lowerQ","upperQ"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id","label","featureId"],
+        "additionalProperties": false
+      },
+      "GdtFeatureControlEdit": {
+        "type": "object",
+        "properties": {
+          "id": {"type":"string","minLength":1,"maxLength":200},
+          "featureId": {"type":"string","minLength":1,"maxLength":200},
+          "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality"]},
+          "toleranceQ": {"type":"integer","minimum":0,"maximum":9007199254740991},
+          "modifier": {"type":"string","enum":["MMC","LMC","RFS"]},
+          "datumIds": {"maxItems":3,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}},
+          "datumModifiers": {"maxItems":3,"type":"array","items":{"type":"string","enum":["MMC","LMC","RFS"]}},
+          "zoneShape": {"type":"string","enum":["cylindrical","planar","bidirectional"]},
+          "featureSizeToleranceQ": {
+            "type": "object",
+            "properties": {
+              "lowerQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+              "upperQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}
+            },
+            "required": ["lowerQ","upperQ"],
+            "additionalProperties": false
+          },
+          "anchorOffsetMm": {
+            "type": "array",
+            "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
+            "items": false,
+            "minItems": 3,
+            "maxItems": 3
+          }
+        },
+        "required": ["id","featureId","kind","toleranceQ","datumIds"],
+        "additionalProperties": false,
+        "description": "Datum modifier count must not exceed the datum count. Upper size deviation must be at least the lower deviation.",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {"const":"flatness"},
+              "datumIds": {"maxItems":0,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}}
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {"enum":["position","perpendicularity","parallelism","coaxiality"]},
+              "datumIds": {"maxItems":3,"type":"array","items":{"type":"string","minLength":1,"maxLength":200},"minItems":1}
+            }
+          }
+        ]
+      },
+      "GdtValidationWarning": {
+        "type": "object",
+        "properties": {
+          "code": {"enum":["DRF_UNDERCONSTRAINED","DRF_REDUNDANT","ILLEGAL_MODIFIER","DRF_DEGENERATE"]},
+          "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
+          "message": {"type":"string","minLength":1,"pattern":"\\S"},
+          "datumId": {"type":"string","minLength":1,"pattern":"\\S"}
+        },
+        "required": ["code","gdtId","message"],
+        "additionalProperties": false
+      },
+      "GdtContributionItem": {
+        "type": "object",
+        "properties": {
+          "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
+          "label": {"type":"string","minLength":1,"pattern":"\\S"},
+          "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality"]},
+          "varianceSharePct": {"type":"number","minimum":0,"maximum":100},
+          "bonusMeanMm": {"type":"number","minimum":0},
+          "datumShiftContributionPct": {"type":"number","minimum":0,"maximum":100}
+        },
+        "required": ["gdtId","label","kind","varianceSharePct","bonusMeanMm","datumShiftContributionPct"],
         "additionalProperties": false
       },
       "EvidenceRef": {

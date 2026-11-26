@@ -1,0 +1,709 @@
+{
+  "tools": [
+    {
+      "name": "stage_datum",
+      "description": "Stage datums upserts with EvidenceRef citations. Requires the authorized active writer and matching epoch and revisions. Use the existing fingerprint-bound human review and commit flow to apply the draft.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type":"string","minLength":1,"pattern":"\\S"},
+          "expectedWriterEpoch": {"type":"integer","minimum":0,"maximum":9007199254740991},
+          "baseRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+          "expectedDraftRevision": {"anyOf":[{"type":"string","minLength":1,"pattern":"\\S"},{"type":"null"}]},
+          "idempotencyKey": {"type":"string","minLength":1,"pattern":"\\S"},
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type":"string","minLength":1,"maxLength":200},
+                    "label": {"type":"string","minLength":1,"maxLength":200},
+                    "featureId": {"type":"string","minLength":1,"maxLength":200},
+                    "sizeToleranceQ": {
+                      "type": "object",
+                      "properties": {
+                        "lowerQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                        "upperQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}
+                      },
+                      "required": ["lowerQ","upperQ"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["id","label","featureId"],
+                  "additionalProperties": false
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {"type":"string","const":"agent-read"},
+                          "actorId": {"type":"string","minLength":1,"maxLength":200},
+                          "at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          "sessionSeq": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                          "turnId": {"type":"string","minLength":1,"maxLength":240},
+                          "modelId": {"anyOf":[{"type":"string","minLength":1,"maxLength":240},{"type":"null"}]},
+                          "statement": {"type":"string","minLength":1,"maxLength":4000},
+                          "source": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {"type":"string","const":"pdf-page"},
+                                  "revisionId": {"type":"string","minLength":1,"maxLength":240},
+                                  "sha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+                                  "page": {"type":"integer","minimum":1,"maximum":9007199254740991}
+                                },
+                                "required": ["kind","revisionId","sha256","page"],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {"type":"string","const":"image"},
+                                  "imageId": {"type":"string","minLength":1,"maxLength":240},
+                                  "sha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+                                  "region": {
+                                    "type": "object",
+                                    "properties": {
+                                      "index": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                                      "rect": {
+                                        "anyOf": [
+                                          {
+                                            "type": "array",
+                                            "prefixItems": [
+                                              {"type":"integer","minimum":0,"maximum":9007199254740991},
+                                              {"type":"integer","minimum":0,"maximum":9007199254740991},
+                                              {"type":"integer","minimum":1,"maximum":9007199254740991},
+                                              {"type":"integer","minimum":1,"maximum":9007199254740991}
+                                            ],
+                                            "items": false,
+                                            "minItems": 4,
+                                            "maxItems": 4
+                                          },
+                                          {"type":"null"}
+                                        ]
+                                      }
+                                    },
+                                    "required": ["index","rect"],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": ["kind","imageId","sha256"],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["kind","actorId","at","sessionSeq","turnId","modelId","statement","source"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "documentId": {"type":"string","minLength":1,"maxLength":240},
+                          "revisionId": {"type":"string","minLength":1,"maxLength":240},
+                          "sha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+                          "blobKey": {"type":"string","minLength":1,"maxLength":240},
+                          "page": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                          "rectPdf": {
+                            "type": "array",
+                            "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}],
+                            "items": false,
+                            "minItems": 4,
+                            "maxItems": 4
+                          },
+                          "pageBoxPdf": {
+                            "type": "array",
+                            "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}],
+                            "items": false,
+                            "minItems": 4,
+                            "maxItems": 4
+                          },
+                          "textSnippet": {"type":"string","minLength":1,"maxLength":4000},
+                          "normalizedSnippet": {"type":"string","maxLength":4000},
+                          "textItemIndexes": {"maxItems":64,"type":"array","items":{"type":"integer","minimum":0,"maximum":9007199254740991}},
+                          "kind": {"type":"string","const":"pdf-text"}
+                        },
+                        "required": [
+                          "documentId",
+                          "revisionId",
+                          "sha256",
+                          "blobKey",
+                          "page",
+                          "rectPdf",
+                          "pageBoxPdf",
+                          "textSnippet",
+                          "normalizedSnippet",
+                          "textItemIndexes"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "documentId": {"type":"string","minLength":1,"maxLength":240},
+                          "revisionId": {"type":"string","minLength":1,"maxLength":240},
+                          "sha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+                          "blobKey": {"type":"string","minLength":1,"maxLength":240},
+                          "page": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                          "rectPdf": {
+                            "type": "array",
+                            "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}],
+                            "items": false,
+                            "minItems": 4,
+                            "maxItems": 4
+                          },
+                          "pageBoxPdf": {
+                            "type": "array",
+                            "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}],
+                            "items": false,
+                            "minItems": 4,
+                            "maxItems": 4
+                          },
+                          "textSnippet": {"type":"string","minLength":1,"maxLength":4000},
+                          "normalizedSnippet": {"type":"string","maxLength":4000},
+                          "textItemIndexes": {"maxItems":64,"type":"array","items":{"type":"integer","minimum":0,"maximum":9007199254740991}},
+                          "kind": {"type":"string","const":"pdf-ocr"},
+                          "confidence": {"type":"number","minimum":0,"maximum":1}
+                        },
+                        "required": [
+                          "documentId",
+                          "revisionId",
+                          "sha256",
+                          "blobKey",
+                          "page",
+                          "rectPdf",
+                          "pageBoxPdf",
+                          "textSnippet",
+                          "normalizedSnippet",
+                          "textItemIndexes",
+                          "kind",
+                          "confidence"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {"type":"string","const":"image-ocr"},
+                          "imageId": {"type":"string","minLength":1,"maxLength":240},
+                          "sha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+                          "fileName": {"type":"string","minLength":1,"maxLength":400},
+                          "rectPdf": {
+                            "type": "array",
+                            "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}],
+                            "items": false,
+                            "minItems": 4,
+                            "maxItems": 4
+                          },
+                          "recognizedText": {"type":"string","minLength":1,"maxLength":4000},
+                          "confidence": {"type":"number","minimum":0,"maximum":1}
+                        },
+                        "required": ["kind","imageId","sha256","fileName","rectPdf","recognizedText","confidence"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {"type":"string","const":"user-attestation"},
+                          "actorId": {"type":"string","minLength":1,"maxLength":200},
+                          "at": {"type":"string","minLength":1,"maxLength":64},
+                          "sessionSeq": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                          "sessionLabel": {"anyOf":[{"type":"string","maxLength":200},{"type":"null"}]},
+                          "statement": {"type":"string","minLength":1,"maxLength":4000},
+                          "fieldPath": {"type":"string","minLength":1,"maxLength":400},
+                          "turnId": {"anyOf":[{"type":"string","minLength":1,"maxLength":240},{"type":"null"}]},
+                          "revokedAt": {"anyOf":[{"type":"string","minLength":1,"maxLength":64},{"type":"null"}]},
+                          "revokedBy": {"anyOf":[{"type":"string","minLength":1,"maxLength":200},{"type":"null"}]},
+                          "revokedStatement": {"anyOf":[{"type":"string","minLength":1,"maxLength":2000},{"type":"null"}]}
+                        },
+                        "required": ["kind","actorId","at","sessionSeq","sessionLabel","statement","fieldPath"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": ["value","evidence"],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": ["projectId","expectedWriterEpoch","baseRevision","expectedDraftRevision","idempotencyKey","items"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type":"string","minLength":1,"pattern":"\\S"},
+          "draftRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {"enum":["DRF_UNDERCONSTRAINED","DRF_REDUNDANT","ILLEGAL_MODIFIER","DRF_DEGENERATE"]},
+                "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
+                "message": {"type":"string","minLength":1,"pattern":"\\S"},
+                "datumId": {"type":"string","minLength":1,"pattern":"\\S"}
+              },
+              "required": ["code","gdtId","message"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["projectId","draftRevision","warnings"],
+        "additionalProperties": false
+      },
+      "annotations": {"readOnlyHint":false}
+    },
+    {
+      "name": "stage_gdt",
+      "description": "Stage gdt upserts with EvidenceRef citations. Requires the authorized active writer and matching epoch and revisions. Use the existing fingerprint-bound human review and commit flow to apply the draft.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type":"string","minLength":1,"pattern":"\\S"},
+          "expectedWriterEpoch": {"type":"integer","minimum":0,"maximum":9007199254740991},
+          "baseRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+          "expectedDraftRevision": {"anyOf":[{"type":"string","minLength":1,"pattern":"\\S"},{"type":"null"}]},
+          "idempotencyKey": {"type":"string","minLength":1,"pattern":"\\S"},
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type":"string","minLength":1,"maxLength":200},
+                    "featureId": {"type":"string","minLength":1,"maxLength":200},
+                    "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality"]},
+                    "toleranceQ": {"type":"integer","minimum":0,"maximum":9007199254740991},
+                    "modifier": {"type":"string","enum":["MMC","LMC","RFS"]},
+                    "datumIds": {"maxItems":3,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}},
+                    "datumModifiers": {"maxItems":3,"type":"array","items":{"type":"string","enum":["MMC","LMC","RFS"]}},
+                    "zoneShape": {"type":"string","enum":["cylindrical","planar","bidirectional"]},
+                    "featureSizeToleranceQ": {
+                      "type": "object",
+                      "properties": {
+                        "lowerQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                        "upperQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}
+                      },
+                      "required": ["lowerQ","upperQ"],
+                      "additionalProperties": false
+                    },
+                    "anchorOffsetMm": {
+                      "type": "array",
+                      "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
+                      "items": false,
+                      "minItems": 3,
+                      "maxItems": 3
+                    }
+                  },
+                  "required": ["id","featureId","kind","toleranceQ","datumIds"],
+                  "additionalProperties": false,
+                  "description": "Datum modifier count must not exceed the datum count. Upper size deviation must be at least the lower deviation.",
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {"const":"flatness"},
+                        "datumIds": {"maxItems":0,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}}
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {"enum":["position","perpendicularity","parallelism","coaxiality"]},
+                        "datumIds": {"maxItems":3,"type":"array","items":{"type":"string","minLength":1,"maxLength":200},"minItems":1}
+                      }
+                    }
+                  ]
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {"type":"string","const":"agent-read"},
+                          "actorId": {"type":"string","minLength":1,"maxLength":200},
+                          "at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          "sessionSeq": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                          "turnId": {"type":"string","minLength":1,"maxLength":240},
+                          "modelId": {"anyOf":[{"type":"string","minLength":1,"maxLength":240},{"type":"null"}]},
+                          "statement": {"type":"string","minLength":1,"maxLength":4000},
+                          "source": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {"type":"string","const":"pdf-page"},
+                                  "revisionId": {"type":"string","minLength":1,"maxLength":240},
+                                  "sha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+                                  "page": {"type":"integer","minimum":1,"maximum":9007199254740991}
+                                },
+                                "required": ["kind","revisionId","sha256","page"],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {"type":"string","const":"image"},
+                                  "imageId": {"type":"string","minLength":1,"maxLength":240},
+                                  "sha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+                                  "region": {
+                                    "type": "object",
+                                    "properties": {
+                                      "index": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                                      "rect": {
+                                        "anyOf": [
+                                          {
+                                            "type": "array",
+                                            "prefixItems": [
+                                              {"type":"integer","minimum":0,"maximum":9007199254740991},
+                                              {"type":"integer","minimum":0,"maximum":9007199254740991},
+                                              {"type":"integer","minimum":1,"maximum":9007199254740991},
+                                              {"type":"integer","minimum":1,"maximum":9007199254740991}
+                                            ],
+                                            "items": false,
+                                            "minItems": 4,
+                                            "maxItems": 4
+                                          },
+                                          {"type":"null"}
+                                        ]
+                                      }
+                                    },
+                                    "required": ["index","rect"],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": ["kind","imageId","sha256"],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["kind","actorId","at","sessionSeq","turnId","modelId","statement","source"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "documentId": {"type":"string","minLength":1,"maxLength":240},
+                          "revisionId": {"type":"string","minLength":1,"maxLength":240},
+                          "sha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+                          "blobKey": {"type":"string","minLength":1,"maxLength":240},
+                          "page": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                          "rectPdf": {
+                            "type": "array",
+                            "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}],
+                            "items": false,
+                            "minItems": 4,
+                            "maxItems": 4
+                          },
+                          "pageBoxPdf": {
+                            "type": "array",
+                            "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}],
+                            "items": false,
+                            "minItems": 4,
+                            "maxItems": 4
+                          },
+                          "textSnippet": {"type":"string","minLength":1,"maxLength":4000},
+                          "normalizedSnippet": {"type":"string","maxLength":4000},
+                          "textItemIndexes": {"maxItems":64,"type":"array","items":{"type":"integer","minimum":0,"maximum":9007199254740991}},
+                          "kind": {"type":"string","const":"pdf-text"}
+                        },
+                        "required": [
+                          "documentId",
+                          "revisionId",
+                          "sha256",
+                          "blobKey",
+                          "page",
+                          "rectPdf",
+                          "pageBoxPdf",
+                          "textSnippet",
+                          "normalizedSnippet",
+                          "textItemIndexes"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "documentId": {"type":"string","minLength":1,"maxLength":240},
+                          "revisionId": {"type":"string","minLength":1,"maxLength":240},
+                          "sha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+                          "blobKey": {"type":"string","minLength":1,"maxLength":240},
+                          "page": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                          "rectPdf": {
+                            "type": "array",
+                            "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}],
+                            "items": false,
+                            "minItems": 4,
+                            "maxItems": 4
+                          },
+                          "pageBoxPdf": {
+                            "type": "array",
+                            "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}],
+                            "items": false,
+                            "minItems": 4,
+                            "maxItems": 4
+                          },
+                          "textSnippet": {"type":"string","minLength":1,"maxLength":4000},
+                          "normalizedSnippet": {"type":"string","maxLength":4000},
+                          "textItemIndexes": {"maxItems":64,"type":"array","items":{"type":"integer","minimum":0,"maximum":9007199254740991}},
+                          "kind": {"type":"string","const":"pdf-ocr"},
+                          "confidence": {"type":"number","minimum":0,"maximum":1}
+                        },
+                        "required": [
+                          "documentId",
+                          "revisionId",
+                          "sha256",
+                          "blobKey",
+                          "page",
+                          "rectPdf",
+                          "pageBoxPdf",
+                          "textSnippet",
+                          "normalizedSnippet",
+                          "textItemIndexes",
+                          "kind",
+                          "confidence"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {"type":"string","const":"image-ocr"},
+                          "imageId": {"type":"string","minLength":1,"maxLength":240},
+                          "sha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+                          "fileName": {"type":"string","minLength":1,"maxLength":400},
+                          "rectPdf": {
+                            "type": "array",
+                            "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}],
+                            "items": false,
+                            "minItems": 4,
+                            "maxItems": 4
+                          },
+                          "recognizedText": {"type":"string","minLength":1,"maxLength":4000},
+                          "confidence": {"type":"number","minimum":0,"maximum":1}
+                        },
+                        "required": ["kind","imageId","sha256","fileName","rectPdf","recognizedText","confidence"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {"type":"string","const":"user-attestation"},
+                          "actorId": {"type":"string","minLength":1,"maxLength":200},
+                          "at": {"type":"string","minLength":1,"maxLength":64},
+                          "sessionSeq": {"type":"integer","minimum":1,"maximum":9007199254740991},
+                          "sessionLabel": {"anyOf":[{"type":"string","maxLength":200},{"type":"null"}]},
+                          "statement": {"type":"string","minLength":1,"maxLength":4000},
+                          "fieldPath": {"type":"string","minLength":1,"maxLength":400},
+                          "turnId": {"anyOf":[{"type":"string","minLength":1,"maxLength":240},{"type":"null"}]},
+                          "revokedAt": {"anyOf":[{"type":"string","minLength":1,"maxLength":64},{"type":"null"}]},
+                          "revokedBy": {"anyOf":[{"type":"string","minLength":1,"maxLength":200},{"type":"null"}]},
+                          "revokedStatement": {"anyOf":[{"type":"string","minLength":1,"maxLength":2000},{"type":"null"}]}
+                        },
+                        "required": ["kind","actorId","at","sessionSeq","sessionLabel","statement","fieldPath"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": ["value","evidence"],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": ["projectId","expectedWriterEpoch","baseRevision","expectedDraftRevision","idempotencyKey","items"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type":"string","minLength":1,"pattern":"\\S"},
+          "draftRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {"enum":["DRF_UNDERCONSTRAINED","DRF_REDUNDANT","ILLEGAL_MODIFIER","DRF_DEGENERATE"]},
+                "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
+                "message": {"type":"string","minLength":1,"pattern":"\\S"},
+                "datumId": {"type":"string","minLength":1,"pattern":"\\S"}
+              },
+              "required": ["code","gdtId","message"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["projectId","draftRevision","warnings"],
+        "additionalProperties": false
+      },
+      "annotations": {"readOnlyHint":false}
+    },
+    {
+      "name": "analyze_gdt_stackup",
+      "description": "Run the deterministic GD&T solver for the leased draft. What-if edits are temporary and the result is advisory. Use fingerprint-bound human review to approve staged changes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type":"string","minLength":1,"pattern":"\\S"},
+          "draftRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+          "expectedWriterEpoch": {"type":"integer","minimum":0,"maximum":9007199254740991},
+          "monteCarlo": {
+            "type": "object",
+            "properties": {
+              "seed": {"type":"integer","minimum":0,"maximum":4294967295},
+              "samples": {"type":"integer","minimum":1,"maximum":9007199254740991},
+              "distribution": {"enum":["normal","uniform"]}
+            },
+            "required": ["seed","samples","distribution"],
+            "additionalProperties": false
+          },
+          "edits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
+                "toleranceQ": {"type":"integer","minimum":0,"maximum":9007199254740991},
+                "modifier": {"type":"string","enum":["MMC","LMC","RFS"]}
+              },
+              "required": ["gdtId"],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": ["projectId","draftRevision","expectedWriterEpoch","monteCarlo"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type":"string","minLength":1,"pattern":"\\S"},
+          "draftRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+          "monteCarlo": {
+            "type": "object",
+            "properties": {
+              "seed": {"type":"integer","minimum":0,"maximum":4294967295},
+              "samples": {"type":"integer","minimum":1,"maximum":9007199254740991},
+              "distribution": {"enum":["normal","uniform"]}
+            },
+            "required": ["seed","samples","distribution"],
+            "additionalProperties": false
+          },
+          "baseline": {
+            "type": "object",
+            "properties": {
+              "cpk": {"anyOf":[{"type":"number"},{"type":"null"}]},
+              "ppm": {"type":"number","minimum":0,"maximum":1000000},
+              "threeSigmaIntervalMm": {"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2},
+              "contributions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
+                    "label": {"type":"string","minLength":1,"pattern":"\\S"},
+                    "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality"]},
+                    "varianceSharePct": {"type":"number","minimum":0,"maximum":100},
+                    "bonusMeanMm": {"type":"number","minimum":0},
+                    "datumShiftContributionPct": {"type":"number","minimum":0,"maximum":100}
+                  },
+                  "required": ["gdtId","label","kind","varianceSharePct","bonusMeanMm","datumShiftContributionPct"],
+                  "additionalProperties": false
+                }
+              },
+              "warnings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "code": {"enum":["DRF_UNDERCONSTRAINED","DRF_REDUNDANT","ILLEGAL_MODIFIER","DRF_DEGENERATE"]},
+                    "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
+                    "message": {"type":"string","minLength":1,"pattern":"\\S"},
+                    "datumId": {"type":"string","minLength":1,"pattern":"\\S"}
+                  },
+                  "required": ["code","gdtId","message"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["cpk","ppm","threeSigmaIntervalMm","contributions","warnings"],
+            "additionalProperties": false
+          },
+          "whatIf": {
+            "type": "object",
+            "properties": {
+              "cpk": {"anyOf":[{"type":"number"},{"type":"null"}]},
+              "ppm": {"type":"number","minimum":0,"maximum":1000000},
+              "threeSigmaIntervalMm": {"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2},
+              "contributions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
+                    "label": {"type":"string","minLength":1,"pattern":"\\S"},
+                    "kind": {"type":"string","enum":["position","perpendicularity","parallelism","flatness","coaxiality"]},
+                    "varianceSharePct": {"type":"number","minimum":0,"maximum":100},
+                    "bonusMeanMm": {"type":"number","minimum":0},
+                    "datumShiftContributionPct": {"type":"number","minimum":0,"maximum":100}
+                  },
+                  "required": ["gdtId","label","kind","varianceSharePct","bonusMeanMm","datumShiftContributionPct"],
+                  "additionalProperties": false
+                }
+              },
+              "warnings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "code": {"enum":["DRF_UNDERCONSTRAINED","DRF_REDUNDANT","ILLEGAL_MODIFIER","DRF_DEGENERATE"]},
+                    "gdtId": {"type":"string","minLength":1,"pattern":"\\S"},
+                    "message": {"type":"string","minLength":1,"pattern":"\\S"},
+                    "datumId": {"type":"string","minLength":1,"pattern":"\\S"}
+                  },
+                  "required": ["code","gdtId","message"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["cpk","ppm","threeSigmaIntervalMm","contributions","warnings"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["projectId","draftRevision","monteCarlo","baseline"],
+        "additionalProperties": false
+      },
+      "annotations": {"readOnlyHint":true}
+    }
+  ]
+}

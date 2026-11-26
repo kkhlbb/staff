@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { readZipEntries, writeZipEntries } from '../backup/zip'
 import { sha256Hex } from '../sources/hash'
 import { createSampleSnapshot } from './__fixtures__/sampleProjectFile'
+import { assemblyModelV1Schema, gdtFeatureControlEditSchema, resolveGdtMaterialConditions } from './assembly3d'
 import { decodeProjectFile, encodeProjectFile } from './codec'
 import type { AssemblyModelV1, ProjectFileSnapshot } from './types'
 import { upgradeSnapshotToCurrent } from './upgrade'
@@ -128,5 +129,96 @@ describe('Schema 11 assembly and STEP', () => {
     const decoded = await decodeProjectFile(encoded.value.bytes)
     if (!decoded.ok) throw Error(JSON.stringify(decoded))
     expect(decoded.value.snapshot.fileRevisions[0]).toEqual(historical)
+  })
+})
+
+describe('M3 additive Schema 11 fields', () => {
+  it('round trips GD&T, datum size deviations, and nested STEP groups with history intact', async () => {
+    const snapshot = await fixture()
+    const model = structuredClone(assembly3d)
+    const imported = model.parts[0]
+    if (imported.kind !== 'imported-step') throw Error('Expected STEP fixture')
+    imported.groupId = 'child'
+    model.assemblyGroups = [{ id: 'root', name: 'Parent' }, { id: 'child', name: 'Child', parentGroupId: 'root' }]
+    model.features.push({ id: 'axis', partId: imported.id, kind: 'cylindrical-hole-axis', signature: 'axis',
+      radiusQ: 4000, originQ: [0, 0, 0], axis: [0, 0, 1] })
+    model.datums[0] = { ...model.datums[0], featureId: 'axis', sizeToleranceQ: { lowerQ: -10, upperQ: 25 } }
+    model.gdt[0] = { ...model.gdt[0], featureId: 'axis', kind: 'position', modifier: 'MMC',
+      datumModifiers: ['LMC'], zoneShape: 'cylindrical', featureSizeToleranceQ: { lowerQ: 0, upperQ: 20 },
+      anchorOffsetMm: [-3.25, 1, 0] }
+    snapshot.project = { ...snapshot.project, assembly3d: model }
+
+    const encoded = await encodeProjectFile(snapshot)
+    if (!encoded.ok) throw Error(JSON.stringify(encoded))
+    const decoded = await decodeProjectFile(encoded.value.bytes)
+    if (!decoded.ok) throw Error(JSON.stringify(decoded))
+    expect(decoded.value.manifest.project.projectSchemaVersion).toBe(11)
+    expect(decoded.value.snapshot.project.assembly3d).toEqual(model)
+    expect(decoded.value.snapshot.fileRevisions).toEqual(snapshot.fileRevisions)
+    expect(decoded.value.snapshot.attachments).toEqual(snapshot.attachments)
+    expect(resolveGdtMaterialConditions(model.gdt[0], model)).toEqual({
+      modifier: 'MMC', datumModifiers: ['LMC'], warnings: [],
+    })
+  })
+
+  it('preserves v0.6.0-beta controls in active and historical records where new edits would fail', async () => {
+    const snapshot = await fixture()
+    const legacy = structuredClone(assembly3d)
+    legacy.gdt = [
+      { ...legacy.gdt[0], kind: 'flatness', modifier: 'MMC' },
+      { ...legacy.gdt[0], id: 'g2', kind: 'position', datumIds: [] },
+    ]
+    snapshot.project.assembly3d = legacy
+    const encoded = await encodeProjectFile(snapshot)
+    if (!encoded.ok) throw Error(JSON.stringify(encoded))
+    const decoded = await decodeProjectFile(encoded.value.bytes)
+    if (!decoded.ok) throw Error(JSON.stringify(decoded))
+    expect(decoded.value.snapshot.project.assembly3d).toEqual(legacy)
+    expect(decoded.value.snapshot.fileRevisions).toEqual(snapshot.fileRevisions)
+    expect(decoded.value.snapshot.analysisSnapshots).toEqual(snapshot.analysisSnapshots)
+    expect(legacy.gdt.every(control => !gdtFeatureControlEditSchema.safeParse(control).success)).toBe(true)
+  })
+
+  it.each(['position', 'perpendicularity', 'parallelism', 'coaxiality', 'flatness'] as const)(
+    'enforces datum count for new %s edits',
+    (kind) => {
+      const control = { ...assembly3d.gdt[0], kind }
+      expect(gdtFeatureControlEditSchema.safeParse({ ...control, datumIds: [] }).success).toBe(kind === 'flatness')
+      expect(gdtFeatureControlEditSchema.safeParse(control).success).toBe(kind !== 'flatness')
+    },
+  )
+
+  it('rejects inverted tolerances and invalid datum modifier values or counts', () => {
+    const control = assembly3d.gdt[0]
+    const datum = assembly3d.datums[0]
+    const inverted = { lowerQ: 15, upperQ: -1 }
+    expect(assemblyModelV1Schema.safeParse({ ...assembly3d, datums: [{ ...datum, sizeToleranceQ: inverted }] }).success).toBe(false)
+    for (const fields of [
+      { featureSizeToleranceQ: inverted },
+      { datumModifiers: ['RFS', 'LMC'] },
+      { datumIds: ['a', 'a', 'a'], datumModifiers: ['MMC', 'LMC', 'RFS', 'RFS'] },
+      { datumModifiers: ['unsupported'] },
+    ]) {
+      expect(gdtFeatureControlEditSchema.safeParse({ ...control, ...fields }).success).toBe(false)
+    }
+    expect(gdtFeatureControlEditSchema.safeParse({ ...control, datumModifiers: ['MMC'] }).success).toBe(true)
+  })
+
+  it.each(['MMC', 'LMC'] as const)('reports non-size %s modifiers and solves with RFS', (modifier) => {
+    const control = { ...assembly3d.gdt[0], modifier, datumModifiers: [modifier] }
+    expect(gdtFeatureControlEditSchema.safeParse(control).success).toBe(true)
+    const result = resolveGdtMaterialConditions(control, assembly3d)
+    expect(result).toMatchObject({
+      modifier: 'RFS', datumModifiers: ['RFS'],
+      warnings: [
+        { code: 'ILLEGAL_MODIFIER', gdtId: 'g1', message: expect.stringContaining(modifier) },
+        { code: 'ILLEGAL_MODIFIER', gdtId: 'g1', datumId: 'a', message: expect.stringContaining(modifier) },
+      ],
+    })
+    expect(control.modifier).toBe(modifier)
+    expect(control.datumModifiers).toEqual([modifier])
+    expect(resolveGdtMaterialConditions(assembly3d.gdt[0], assembly3d)).toEqual({
+      modifier: 'RFS', datumModifiers: ['RFS'], warnings: [],
+    })
   })
 })
