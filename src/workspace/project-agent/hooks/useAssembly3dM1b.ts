@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ElectronTransport } from '../../../transport/electronTransport'
+import type { GdtStackupMetrics, GdtWhatIfEdit } from '../../../transport/types'
 import {
   CAMERA_PRESETS,
   createDefaultM1bAssemblyFixture,
@@ -19,6 +20,7 @@ import type {
   CameraPresetId,
   ContextPillActionId,
   DatumDefinition,
+  EvidenceRef,
   FourWayHighlightTarget,
   GdtDisplayMode,
   GdtFeatureControl,
@@ -33,7 +35,9 @@ import type { M2CameraState, M2ModelFeatureItem } from '../m2WorkbenchBridge'
 export interface UseAssembly3dM1bOptions {
   readonly transport: ElectronTransport
   readonly projectId: string
+  readonly baseRevision?: string | null
   readonly draftRevision: string | null
+  readonly writerEpoch?: number
   readonly feature3dAssemblyM1Prop?: boolean
   readonly initialAssembly3d?: AssemblyModelV1
   readonly initialPartMeshes?: readonly PartMesh[]
@@ -107,6 +111,58 @@ function deriveFeaturesFromPartMeshes(partMeshes: readonly PartMesh[]): {
   return { features, itemById }
 }
 
+function createUserAttestationEvidence(
+  statement: string,
+  fieldPath: string,
+  sessionSeq: number,
+): EvidenceRef {
+  return {
+    kind: 'user-attestation',
+    actorId: 'workbench-user',
+    at: new Date().toISOString(),
+    sessionSeq,
+    sessionLabel: '3D 装配工作台交互',
+    statement,
+    fieldPath,
+  }
+}
+
+function applyGdtStackupMetrics(
+  prev: SimulationDiagnosticResult,
+  metrics: GdtStackupMetrics,
+): SimulationDiagnosticResult {
+  const [threeSigmaLowMm, threeSigmaHighMm] = metrics.threeSigmaIntervalMm
+  const meanMm = (threeSigmaLowMm + threeSigmaHighMm) / 2
+  const sigmaMm = Math.max(0, (threeSigmaHighMm - threeSigmaLowMm) / 6)
+  const cpk = metrics.cpk ?? prev.cpk
+  const status: SimulationDiagnosticResult['status'] =
+    metrics.cpk !== null
+      ? metrics.cpk >= 1.33
+        ? 'pass'
+        : metrics.cpk >= 1.0
+          ? 'warn'
+          : 'fail'
+      : metrics.ppm <= 63
+        ? 'pass'
+        : metrics.ppm <= 2700
+          ? 'warn'
+          : 'fail'
+
+  return {
+    ...prev,
+    meanMm,
+    sigmaMm,
+    threeSigmaLowMm,
+    threeSigmaHighMm,
+    cpk,
+    ppm: metrics.ppm,
+    status,
+    gdtContributions: [...metrics.contributions],
+    gdtWarnings: [...metrics.warnings],
+    source: 'transport',
+  }
+}
+
 /**
  * Manages M1B 3D assembly state gated strictly by `FEATURE_3D_ASSEMBLY_M1`:
  * - Multi-part visibility, camera presets, additive pick mode
@@ -118,7 +174,9 @@ function deriveFeaturesFromPartMeshes(partMeshes: readonly PartMesh[]): {
 export function useAssembly3dM1b({
   transport,
   projectId,
+  baseRevision,
   draftRevision,
+  writerEpoch,
   feature3dAssemblyM1Prop,
   initialAssembly3d,
   initialPartMeshes,
@@ -237,6 +295,13 @@ export function useAssembly3dM1b({
     }),
   )
   const simDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const latestDraftRevisionRef = useRef<string | null>(draftRevision)
+  const gdtSeqRef = useRef<number>(0)
+  const simSeqRef = useRef<number>(0)
+
+  useEffect(() => {
+    latestDraftRevisionRef.current = draftRevision
+  }, [draftRevision])
 
   const focusedLoopFeatureIds = useMemo(() => {
     const ids = new Set<string>()
@@ -393,11 +458,97 @@ export function useAssembly3dM1b({
     )
   }, [aiMateDrafts])
 
+  const stageDatumToTransport = useCallback(
+    async (
+      items: readonly { readonly value: DatumDefinition; readonly evidence: readonly EvidenceRef[] }[],
+      onFailure?: (message: string) => void,
+    ) => {
+      if (items.length === 0 || typeof transport.stageDatum !== 'function') return null
+      gdtSeqRef.current += 1
+      const seq = gdtSeqRef.current
+      try {
+        const res = await transport.stageDatum({
+          projectId,
+          expectedWriterEpoch: writerEpoch ?? 0,
+          baseRevision: baseRevision ?? 'v1',
+          expectedDraftRevision: latestDraftRevisionRef.current,
+          idempotencyKey: `ui-stage-datum-${projectId}-${seq}-${items.map((i) => i.value.id).join(',')}`,
+          items,
+        })
+        if (res.ok) {
+          latestDraftRevisionRef.current = res.value.draftRevision
+          if (res.value.warnings.length > 0) {
+            setSimulationResult((prev) => ({
+              ...prev,
+              gdtWarnings: [...res.value.warnings],
+            }))
+          }
+        } else if (
+          res.error.code !== 'BACKEND_UNAVAILABLE' &&
+          res.error.code !== 'FEATURE_DISABLED'
+        ) {
+          onFailure?.(`基准暂存失败（${res.error.code}）：${res.error.message}`)
+        }
+        return res
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        onFailure?.(`基准暂存异常：${message}`)
+        return null
+      }
+    },
+    [transport, projectId, baseRevision, writerEpoch],
+  )
+
+  const stageGdtToTransport = useCallback(
+    async (
+      items: readonly {
+        readonly value: GdtFeatureControl
+        readonly evidence: readonly EvidenceRef[]
+      }[],
+      onFailure?: (message: string) => void,
+    ) => {
+      if (items.length === 0 || typeof transport.stageGdt !== 'function') return null
+      gdtSeqRef.current += 1
+      const seq = gdtSeqRef.current
+      try {
+        const res = await transport.stageGdt({
+          projectId,
+          expectedWriterEpoch: writerEpoch ?? 0,
+          baseRevision: baseRevision ?? 'v1',
+          expectedDraftRevision: latestDraftRevisionRef.current,
+          idempotencyKey: `ui-stage-gdt-${projectId}-${seq}-${items.map((i) => i.value.id).join(',')}`,
+          items,
+        })
+        if (res.ok) {
+          latestDraftRevisionRef.current = res.value.draftRevision
+          if (res.value.warnings.length > 0) {
+            setSimulationResult((prev) => ({
+              ...prev,
+              gdtWarnings: [...res.value.warnings],
+            }))
+          }
+        } else if (
+          res.error.code !== 'BACKEND_UNAVAILABLE' &&
+          res.error.code !== 'FEATURE_DISABLED'
+        ) {
+          onFailure?.(`GD&T 暂存失败（${res.error.code}）：${res.error.message}`)
+        }
+        return res
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        onFailure?.(`GD&T 暂存异常：${message}`)
+        return null
+      }
+    },
+    [transport, projectId, baseRevision, writerEpoch],
+  )
+
   const scheduleSimulationRefresh = useCallback(
     (
       nextOverrides: Readonly<Record<string, number>>,
       nextControls: readonly GdtFeatureControl[],
       nextDatums: readonly DatumDefinition[],
+      gdtEdits?: readonly GdtWhatIfEdit[],
     ) => {
       // Fast deterministic local recomputation (< 5ms) ensures responsive <350ms UI
       const localResult = computeLocalGdtSimulationDiagnostics(simulationSpec, {
@@ -413,56 +564,110 @@ export function useAssembly3dM1b({
         clearTimeout(simDebounceRef.current)
       }
       setSimulationComputing(true)
+      simSeqRef.current += 1
+      const seq = simSeqRef.current
+
       simDebounceRef.current = setTimeout(() => {
         simDebounceRef.current = null
-        const terms = simulationSpec.contributors.map((c, idx) => {
-          const tolMm = nextOverrides[c.id] ?? c.currentTolMm
-          const halfQ = Math.max(1, Math.round(tolMm * 10000))
-          return {
-            id: c.id,
-            symbol: `A${idx + 1}`,
-            name: c.label,
-            nominalQ: Math.round(simulationSpec.nominalMm * 10000),
-            upperDeviationQ: halfQ,
-            lowerDeviationQ: -halfQ,
-            sign: c.sign,
-            sourceNote: c.label,
-            termRevision: 1,
-          }
-        })
-        void transport
-          .runSimulation({
-            projectId,
-            draftRevision: draftRevision ?? 'draft-1',
-            chain: {
-              terms,
-              target: {
-                minQ: Math.round(simulationSpec.lslMm * 10000),
-                maxQ: Math.round(simulationSpec.uslMm * 10000),
-              },
-              assumptions: `3D 封闭环 What-If 试算：${simulationSpec.title}`,
-            },
-            monteCarlo: {
-              distribution: 'normal',
-              seed: simulationSpec.seed,
-              samples: Math.min(simulationSpec.sampleCount, 10000),
-            },
-          })
-          .then((res) => {
-            setSimulationComputing(false)
-            if (res.ok && res.value.statistical) {
-              setSimulationResult((prev) => ({
-                ...prev,
-                source: 'transport',
-              }))
+        const activeDraftRevision = latestDraftRevisionRef.current ?? draftRevision ?? 'draft-1'
+        const monteCarlo = {
+          distribution: 'normal' as const,
+          seed: simulationSpec.seed,
+          samples: Math.min(simulationSpec.sampleCount, 10000),
+        }
+
+        const runLegacySimulation = () => {
+          const terms = simulationSpec.contributors.map((c, idx) => {
+            const tolMm = nextOverrides[c.id] ?? c.currentTolMm
+            const halfQ = Math.max(1, Math.round(tolMm * 10000))
+            return {
+              id: c.id,
+              symbol: `A${idx + 1}`,
+              name: c.label,
+              nominalQ: Math.round(simulationSpec.nominalMm * 10000),
+              upperDeviationQ: halfQ,
+              lowerDeviationQ: -halfQ,
+              sign: c.sign,
+              sourceNote: c.label,
+              termRevision: 1,
             }
           })
-          .catch(() => {
-            setSimulationComputing(false)
-          })
+          return transport
+            .runSimulation({
+              projectId,
+              draftRevision: activeDraftRevision,
+              chain: {
+                terms,
+                target: {
+                  minQ: Math.round(simulationSpec.lslMm * 10000),
+                  maxQ: Math.round(simulationSpec.uslMm * 10000),
+                },
+                assumptions: `3D 封闭环 What-If 试算：${simulationSpec.title}`,
+              },
+              monteCarlo,
+            })
+            .then((res) => {
+              if (seq !== simSeqRef.current) return
+              setSimulationComputing(false)
+              if (res.ok && res.value.statistical) {
+                setSimulationResult((prev) => ({
+                  ...prev,
+                  source: 'transport',
+                }))
+              }
+            })
+            .catch(() => {
+              if (seq !== simSeqRef.current) return
+              setSimulationComputing(false)
+            })
+        }
+
+        if (typeof transport.analyzeGdtStackup === 'function') {
+          void transport
+            .analyzeGdtStackup({
+              projectId,
+              draftRevision: activeDraftRevision,
+              expectedWriterEpoch: writerEpoch ?? 0,
+              monteCarlo,
+              ...(gdtEdits && gdtEdits.length > 0 ? { edits: gdtEdits } : {}),
+            })
+            .then((res) => {
+              if (seq !== simSeqRef.current) return
+              if (res.ok) {
+                setSimulationComputing(false)
+                const metrics = res.value.whatIf ?? res.value.baseline
+                setSimulationResult((prev) => applyGdtStackupMetrics(prev, metrics))
+                return
+              }
+              if (res.error.code === 'BACKEND_UNAVAILABLE') {
+                void runLegacySimulation()
+                return
+              }
+              setSimulationComputing(false)
+              if (res.error.code !== 'FEATURE_DISABLED') {
+                onSetContextFeedback(`GD&T 仿真调用失败（${res.error.code}）：${res.error.message}`)
+              }
+            })
+            .catch(() => {
+              if (seq !== simSeqRef.current) return
+              setSimulationComputing(false)
+            })
+          return
+        }
+
+        void runLegacySimulation()
       }, 60)
     },
-    [simulationSpec, featureKindById, featureLabelById, transport, projectId, draftRevision],
+    [
+      simulationSpec,
+      featureKindById,
+      featureLabelById,
+      transport,
+      projectId,
+      draftRevision,
+      writerEpoch,
+      onSetContextFeedback,
+    ],
   )
 
   const updateWhatIfTolerance = useCallback(
@@ -490,6 +695,21 @@ export function useAssembly3dM1b({
       setDatums(nextDatums)
       const label = featureLabelById.get(featureId) ?? featureId
       onSetContextFeedback(`已将「${label}」设为装配基准 ${letter}。`)
+      void stageDatumToTransport(
+        [
+          {
+            value: nextDatum,
+            evidence: [
+              createUserAttestationEvidence(
+                `将「${label}」设为装配基准 ${letter}`,
+                `assembly3d.datums.${nextDatum.id}`,
+                gdtSeqRef.current + 1,
+              ),
+            ],
+          },
+        ],
+        onSetContextFeedback,
+      )
       scheduleSimulationRefresh(toleranceOverrides, gdtControls, nextDatums)
     },
     [
@@ -497,6 +717,7 @@ export function useAssembly3dM1b({
       featureKindById,
       featureLabelById,
       onSetContextFeedback,
+      stageDatumToTransport,
       scheduleSimulationRefresh,
       toleranceOverrides,
       gdtControls,
@@ -510,6 +731,21 @@ export function useAssembly3dM1b({
       const summary = formatFcfCells(control, datums, featureKindById.get(control.featureId)).summaryText
       const label = featureLabelById.get(control.featureId) ?? control.featureId
       onSetContextFeedback(`已为「${label}」贴附 GD&T 框格 ${summary}。`)
+      void stageGdtToTransport(
+        [
+          {
+            value: control,
+            evidence: [
+              createUserAttestationEvidence(
+                `为「${label}」贴附 GD&T 框格 ${summary}`,
+                `assembly3d.gdt.${control.id}`,
+                gdtSeqRef.current + 1,
+              ),
+            ],
+          },
+        ],
+        onSetContextFeedback,
+      )
       scheduleSimulationRefresh(toleranceOverrides, nextControls, datums)
     },
     [
@@ -518,6 +754,7 @@ export function useAssembly3dM1b({
       featureKindById,
       featureLabelById,
       onSetContextFeedback,
+      stageGdtToTransport,
       scheduleSimulationRefresh,
       toleranceOverrides,
     ],
@@ -528,19 +765,58 @@ export function useAssembly3dM1b({
       gdtId: string,
       patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
     ) => {
-      const nextControls = gdtControls.map((c) =>
-        c.id === gdtId
-          ? {
-              ...c,
-              ...(patch.toleranceQ !== undefined ? { toleranceQ: patch.toleranceQ } : {}),
-              ...(patch.modifier !== undefined ? { modifier: patch.modifier } : {}),
-            }
-          : c,
-      )
+      let updatedControl: GdtFeatureControl | null = null
+      const nextControls = gdtControls.map((c) => {
+        if (c.id !== gdtId) return c
+        const next: GdtFeatureControl = {
+          ...c,
+          ...(patch.toleranceQ !== undefined ? { toleranceQ: patch.toleranceQ } : {}),
+          ...(patch.modifier !== undefined ? { modifier: patch.modifier } : {}),
+        }
+        updatedControl = next
+        return next
+      })
       setGdtControls(nextControls)
-      scheduleSimulationRefresh(toleranceOverrides, nextControls, datums)
+      if (updatedControl) {
+        const controlToStage: GdtFeatureControl = updatedControl
+        const label = featureLabelById.get(controlToStage.featureId) ?? controlToStage.featureId
+        void stageGdtToTransport(
+          [
+            {
+              value: controlToStage,
+              evidence: [
+                createUserAttestationEvidence(
+                  `调整「${label}」GD&T 控制项 ${controlToStage.id}`,
+                  `assembly3d.gdt.${controlToStage.id}`,
+                  gdtSeqRef.current + 1,
+                ),
+              ],
+            },
+          ],
+          onSetContextFeedback,
+        )
+      }
+      const edits: GdtWhatIfEdit[] =
+        patch.toleranceQ !== undefined || patch.modifier !== undefined
+          ? [
+              {
+                gdtId,
+                ...(patch.toleranceQ !== undefined ? { toleranceQ: patch.toleranceQ } : {}),
+                ...(patch.modifier !== undefined ? { modifier: patch.modifier } : {}),
+              },
+            ]
+          : []
+      scheduleSimulationRefresh(toleranceOverrides, nextControls, datums, edits)
     },
-    [gdtControls, toleranceOverrides, datums, scheduleSimulationRefresh],
+    [
+      gdtControls,
+      featureLabelById,
+      stageGdtToTransport,
+      onSetContextFeedback,
+      toleranceOverrides,
+      datums,
+      scheduleSimulationRefresh,
+    ],
   )
 
   const deleteGdtControl = useCallback(
@@ -567,13 +843,41 @@ export function useAssembly3dM1b({
 
     let nextDatums = [...datums]
     let nextControls = [...gdtControls]
+    const datumItemsToStage: { readonly value: DatumDefinition; readonly evidence: readonly EvidenceRef[] }[] = []
+    const gdtItemsToStage: { readonly value: GdtFeatureControl; readonly evidence: readonly EvidenceRef[] }[] = []
 
     for (const draft of toApply) {
       if (draft.draftKind === 'datum' && draft.datum) {
         nextDatums = [...nextDatums.filter((d) => d.label !== draft.datum!.label), draft.datum]
+        datumItemsToStage.push({
+          value: draft.datum,
+          evidence:
+            draft.evidenceRefs.length > 0
+              ? draft.evidenceRefs
+              : [
+                  createUserAttestationEvidence(
+                    `应用 AI 基准草案：${draft.title}`,
+                    `assembly3d.datums.${draft.datum.id}`,
+                    gdtSeqRef.current + 1,
+                  ),
+                ],
+        })
       }
       if (draft.draftKind === 'gdt' && draft.gdt) {
         nextControls = [...nextControls.filter((g) => g.id !== draft.gdt!.id), draft.gdt]
+        gdtItemsToStage.push({
+          value: draft.gdt,
+          evidence:
+            draft.evidenceRefs.length > 0
+              ? draft.evidenceRefs
+              : [
+                  createUserAttestationEvidence(
+                    `应用 AI GD&T 草案：${draft.title}`,
+                    `assembly3d.gdt.${draft.gdt.id}`,
+                    gdtSeqRef.current + 1,
+                  ),
+                ],
+        })
       }
     }
 
@@ -585,8 +889,26 @@ export function useAssembly3dM1b({
     setAppliedGdtCount((prev) => prev + toApply.length)
     setHoveredGdtDraft(null)
     setGdtDraftsFeedback(`已确认并应用 ${toApply.length} 条 AI 建议基准/GD&T 草案。`)
+
+    void (async () => {
+      if (datumItemsToStage.length > 0) {
+        await stageDatumToTransport(datumItemsToStage, setGdtDraftsFeedback)
+      }
+      if (gdtItemsToStage.length > 0) {
+        await stageGdtToTransport(gdtItemsToStage, setGdtDraftsFeedback)
+      }
+    })()
+
     scheduleSimulationRefresh(toleranceOverrides, nextControls, nextDatums)
-  }, [aiGdtDrafts, datums, gdtControls, scheduleSimulationRefresh, toleranceOverrides])
+  }, [
+    aiGdtDrafts,
+    datums,
+    gdtControls,
+    stageDatumToTransport,
+    stageGdtToTransport,
+    scheduleSimulationRefresh,
+    toleranceOverrides,
+  ])
 
   const gdtPreviewControls = useMemo(
     () => (hoveredGdtDraft?.draftKind === 'gdt' && hoveredGdtDraft.gdt ? [hoveredGdtDraft.gdt] : []),

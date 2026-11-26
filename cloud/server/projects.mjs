@@ -359,6 +359,15 @@ export function createProjects(storage, engine, config) {
         throw new HttpError(422, /^[A-Z_]+$/.test(error.message) ? error.message : 'SIMULATION_FAILED')
       }
       verify(await read(raw.projectId, principal))
+      try {
+        await mutate(raw.projectId, principal, signal, current => {
+          if (current.gdtDraft && current.draftRevision === request.draftRevision) {
+            current.gdtDraft.analysis = { draftRevision: request.draftRevision, baseline: result.baseline }
+          }
+        })
+      } catch {
+        // Non-fatal cache update; analysis result is still valid
+      }
       return result
     },
     stage: (projectId, change, principal, signal) => mutate(projectId, principal, signal, state => {
@@ -439,7 +448,56 @@ export function createProjects(storage, engine, config) {
         const expires = String(Date.now() + config.confirmationMs)
         token = expires + '.' + confirmation(state, principal, review, expires)
       }
-      return { token, value: { review, summary: review.checks.map(item => item.title + ' ' + item.status).join(', '), baseRevision: state.baseRevision } }
+      const value = {
+        review,
+        summary: review.checks.map(item => item.title + ' ' + item.status).join(', '),
+        baseRevision: state.baseRevision,
+      }
+      if (config.feature3dAssemblyM1) {
+        const assembly = state.gdtDraft?.assembly ?? null
+        const hasStagedGdt = Boolean(
+          assembly && (assembly.datums.length > 0 || assembly.gdt.length > 0 || state.gdtDraft?.analysis),
+        )
+        if (hasStagedGdt) {
+          let analysisMetrics =
+            state.gdtDraft?.analysis?.draftRevision === revision ? state.gdtDraft.analysis.baseline : null
+          if (!analysisMetrics && assembly.gdt.length > 0) {
+            try {
+              const analyzed = await engine.gdtAnalyzer.run(
+                assembly,
+                {
+                  projectId: state.projectId,
+                  draftRevision: revision,
+                  expectedWriterEpoch: state.epoch,
+                  monteCarlo: { seed: 42, samples: 2000, distribution: 'normal' },
+                },
+                { signal, timeoutMs: config.timeoutMs },
+              )
+              analysisMetrics = analyzed.baseline
+            } catch {
+              signal.throwIfAborted()
+              analysisMetrics = null
+            }
+          }
+          value.gdtSnapshot = {
+            datums: assembly.datums,
+            gdt: assembly.gdt,
+            gdtControls: assembly.gdt,
+            contributions: analysisMetrics?.contributions ?? [],
+            warnings: analysisMetrics?.warnings ?? assemblyWarnings(assembly),
+            ...(analysisMetrics
+              ? {
+                  metrics: {
+                    cpk: analysisMetrics.cpk,
+                    ppm: analysisMetrics.ppm,
+                    threeSigmaIntervalMm: analysisMetrics.threeSigmaIntervalMm,
+                  },
+                }
+              : {}),
+          }
+        }
+      }
+      return { token, value }
     },
     draftMatches,
     activities: state => state.activities.map(({ parameters, sources, ...activity }) => activity),

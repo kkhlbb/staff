@@ -37,8 +37,14 @@ import { parseReviewRoute, type ParsedReviewRoute, type RouteLocationLike } from
 export interface ReviewGdtReadonlySnapshot {
   readonly datums?: readonly DatumDefinition[]
   readonly gdt?: readonly GdtFeatureControl[]
+  readonly gdtControls?: readonly GdtFeatureControl[]
   readonly contributions?: readonly GdtContributionItem[]
   readonly warnings?: readonly GdtValidationWarning[]
+  readonly metrics?: {
+    readonly cpk: number | null
+    readonly ppm: number
+    readonly threeSigmaIntervalMm: readonly [number, number]
+  } | null
   readonly partMeshes?: readonly PartMesh[]
 }
 
@@ -323,7 +329,7 @@ export function ReviewPage({
     [showReadonlyGdt, effectiveGdtSnapshot],
   )
   const readonlyGdtControls = useMemo(
-    () => (showReadonlyGdt ? (effectiveGdtSnapshot?.gdt ?? []) : []),
+    () => (showReadonlyGdt ? (effectiveGdtSnapshot?.gdt ?? effectiveGdtSnapshot?.gdtControls ?? []) : []),
     [showReadonlyGdt, effectiveGdtSnapshot],
   )
   const readonlyGdtContributions = useMemo(

@@ -388,3 +388,82 @@ test('GD&T stages A/B/C and all controls via REST and MCP, keeps the official ar
   assert.equal(decoded.value.snapshot.project.currentRevisionId, committed.committedRevision)
   assert.equal(decoded.value.snapshot.project.assembly3d.gdt.length, assembly.gdt.length)
 })
+
+test('GET /review returns real gdtSnapshot when FEATURE_3D_ASSEMBLY_M1=true and omits it when false', async t => {
+  const { gdtFixture } = await import('../../src/core/solver/test/gdtFixture.mjs')
+  const { createNewProjectSnapshot } = await import('../../desktop/main/newProject.ts')
+  const { encodeProjectFile } = await import('../../src/project-file/codec.ts')
+  const { assembly } = gdtFixture()
+
+  // 1) FEATURE_3D_ASSEMBLY_M1=true -> staging datums + GD&T controls -> GET /review returns gdtSnapshot
+  const onFixture = await fixture(t, { FEATURE_3D_ASSEMBLY_M1: 'true' })
+  const onService = await onFixture.start()
+  try {
+    const post = (path, body) => onService.request(path, { method: 'POST', body })
+    const snapshot = createNewProjectSnapshot({
+      name: 'GD&T review snapshot', template: 'empty', appVersion: 'fixture', electronVersion: 'fixture',
+    })
+    snapshot.project.assembly3d = { ...assembly, datums: [], gdt: [] }
+    const bytes = Buffer.from('ISO-10303-21;\nEND-ISO-10303-21;')
+    const sha256 = createHash('sha256').update(bytes).digest('hex')
+    const blobKey = 'step-a-bytes'
+    snapshot.project.stepAttachments = [{ id: 'step-a', blobKey, fileName: 'fixture.step' }]
+    snapshot.blobs.push({ projectId: snapshot.project.id, blobKey, sha256, byteSize: bytes.length })
+    snapshot.attachments.push({ blobKey, bytes })
+    const encoded = await encodeProjectFile(snapshot)
+    assert(encoded.ok, JSON.stringify(encoded))
+
+    const ref = await value(await post('/api/v1/projects/import', form('cunlian', 'review.cunlian', encoded.value.bytes)), 201)
+    const { projectId, baseRevision } = ref
+    const path = '/api/v1/projects/' + projectId
+    const { writerEpoch } = await value(await post(path + '/writer', { expectedWriterEpoch: 0 }))
+    const evidence = [{
+      kind: 'user-attestation', actorId: 'operator', at: '2026-11-26T00:00:00Z',
+      sessionSeq: 1, sessionLabel: null, statement: 'Staged for cloud review', fieldPath: 'assembly3d',
+    }]
+
+    const stagedDatums = await value(await post(path + '/drafts/datums', {
+      baseRevision, expectedDraftRevision: null, expectedWriterEpoch: writerEpoch,
+      idempotencyKey: 'review-datums', items: assembly.datums.map(item => ({ value: item, evidence })),
+    }))
+    const stagedGdt = await value(await post(path + '/drafts/gdt', {
+      baseRevision, expectedDraftRevision: stagedDatums.draftRevision, expectedWriterEpoch: writerEpoch,
+      idempotencyKey: 'review-gdt', items: assembly.gdt.map(item => ({ value: item, evidence })),
+    }))
+
+    const reviewBody = await value(
+      await onService.request(`${path}/drafts/${stagedGdt.draftRevision}/review`, {
+        headers: { 'x-cunlian-approval': human },
+      }),
+    )
+    assert.ok(reviewBody.gdtSnapshot, 'expected gdtSnapshot in GET /review when FEATURE_3D_ASSEMBLY_M1=true')
+    assert.equal(reviewBody.gdtSnapshot.datums.length, assembly.datums.length)
+    assert.equal(reviewBody.gdtSnapshot.gdt.length, assembly.gdt.length)
+    assert.equal(reviewBody.gdtSnapshot.gdtControls.length, assembly.gdt.length)
+    assert.equal(reviewBody.gdtSnapshot.contributions.length, assembly.gdt.length)
+    assert.ok(Array.isArray(reviewBody.gdtSnapshot.warnings))
+    assert.ok(reviewBody.gdtSnapshot.metrics, 'expected real solver metrics in gdtSnapshot')
+    assert.equal(typeof reviewBody.gdtSnapshot.metrics.ppm, 'number')
+    assert.equal(reviewBody.gdtSnapshot.metrics.threeSigmaIntervalMm.length, 2)
+  } finally {
+    await onService.close()
+  }
+
+  // 2) FEATURE_3D_ASSEMBLY_M1=false -> GET /review omits gdtSnapshot (100% backward compatible)
+  const offFixture = await fixture(t, { FEATURE_3D_ASSEMBLY_M1: 'false' })
+  const offService = await offFixture.start()
+  try {
+    const project = await value(
+      await offService.request('/api/v1/projects', {
+        method: 'POST', body: { name: 'legacy-review', template: 'builtin-shaft-spacer' },
+      }),
+      201,
+    )
+    const reviewBody = await value(
+      await offService.request(`/api/v1/projects/${project.projectId}/drafts/${project.draftRevision}/review`),
+    )
+    assert.equal('gdtSnapshot' in reviewBody, false)
+  } finally {
+    await offService.close()
+  }
+})

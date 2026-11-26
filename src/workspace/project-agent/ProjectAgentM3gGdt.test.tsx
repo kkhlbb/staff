@@ -377,4 +377,214 @@ describe('M3G-FE-01: 3D CSS2D GD&T 框格、智能防遮挡/全部展开、上�
     const header = document.querySelector('header')
     expect(header?.textContent ?? '').not.toMatch(/位置度|垂直度|平行度|平面度|同轴度|贴 GD&T/)
   })
+
+  it('7. 真实接线：编辑 FCF 调用 transport.analyzeGdtStackup 并渲染服务端返回的真实 PPM、Cpk、贡献度与告警', async () => {
+    const user = userEvent.setup()
+    const baseTransport = createElectronTransport({ bridge: {}, feature3dAssemblyM1: true })
+    const analyzeGdtStackupMock = vi.fn(async () => ({
+      ok: true as const,
+      value: {
+        projectId: 'proj-plate-01',
+        draftRevision: 'draft-1',
+        monteCarlo: { distribution: 'normal' as const, seed: 42, samples: 10000 },
+        baseline: {
+          cpk: 1.5,
+          ppm: 120,
+          threeSigmaIntervalMm: [0.1, 0.3] as const,
+          contributions: [],
+          warnings: [],
+        },
+        whatIf: {
+          cpk: 0.42,
+          ppm: 123456,
+          threeSigmaIntervalMm: [0.05, 0.35] as const,
+          contributions: [
+            {
+              gdtId: 'gdt-bracket-hole-pos',
+              label: '服务端真实位置度贡献',
+              kind: 'position' as const,
+              varianceSharePct: 77.7,
+              bonusMeanMm: 0.088,
+              datumShiftContributionPct: 19.5,
+            },
+          ],
+          warnings: [
+            {
+              code: 'DRF_UNDERCONSTRAINED' as const,
+              gdtId: 'gdt-bracket-hole-pos',
+              message: '服务端返回的真实基准告警',
+            },
+          ],
+        },
+      },
+    }))
+    const wiredTransport = {
+      ...baseTransport,
+      analyzeGdtStackup: analyzeGdtStackupMock,
+    }
+
+    render(
+      <ProjectAgentM1Workbench
+        transport={wiredTransport}
+        feature3dAssemblyM1={true}
+        initialShowOnboarding={false}
+        initialViewMode="model"
+        initialSidebarSection="simulation"
+        initialDraftRevision="draft-1"
+      />,
+    )
+
+    await user.click(screen.getByTestId('gdt-mode-expand-all'))
+    await user.click(screen.getByTestId('gdt-fcf-box-gdt-bracket-hole-pos'))
+    fireEvent.change(screen.getByTestId('gdt-inline-slider'), { target: { value: '0.24' } })
+
+    await waitFor(() => {
+      expect(analyzeGdtStackupMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: 'proj-plate-01',
+          draftRevision: 'draft-1',
+          edits: [expect.objectContaining({ gdtId: 'gdt-bracket-hole-pos', toleranceQ: 2400 })],
+        }),
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sim-kpi-ppm')).toHaveTextContent('123,456')
+    })
+    expect(screen.getByTestId('sim-kpi-cpk')).toHaveTextContent('/ 0.42')
+    expect(screen.getByTestId('sim-kpi-3sigma')).toHaveTextContent('0.050~0.350')
+    expect(screen.getByTestId('gdt-contrib-pct-gdt-bracket-hole-pos')).toHaveTextContent('77.7%')
+    expect(screen.getByTestId('gdt-bonus-gdt-bracket-hole-pos')).toHaveTextContent('+0.088 mm')
+    expect(screen.getByTestId('gdt-shift-gdt-bracket-hole-pos')).toHaveTextContent('19.5%')
+    expect(screen.getByTestId('sim-gdt-warnings')).toHaveTextContent('服务端返回的真实基准告警')
+  })
+
+  it('8. 真实接线：指派基准、创建/微调 GD&T 框格与一键应用 AI 草案均调用 transport.stageDatum / transport.stageGdt', async () => {
+    const user = userEvent.setup()
+    let revCounter = 1
+    const baseTransport = createElectronTransport({ bridge: {}, feature3dAssemblyM1: true })
+    const stageDatumMock = vi.fn(async (req) => ({
+      ok: true as const,
+      value: {
+        projectId: req.projectId,
+        draftRevision: `draft-${++revCounter}`,
+        warnings: [],
+      },
+    }))
+    const stageGdtMock = vi.fn(async (req) => ({
+      ok: true as const,
+      value: {
+        projectId: req.projectId,
+        draftRevision: `draft-${++revCounter}`,
+        warnings: [],
+      },
+    }))
+    const wiredTransport = {
+      ...baseTransport,
+      stageDatum: stageDatumMock,
+      stageGdt: stageGdtMock,
+    }
+
+    render(
+      <ProjectAgentM1Workbench
+        transport={wiredTransport}
+        feature3dAssemblyM1={true}
+        initialShowOnboarding={false}
+        initialViewMode="model"
+        initialSidebarSection="conversation"
+        initialBaseRevision="rev-base-1"
+        initialDraftRevision="draft-1"
+      />,
+    )
+
+    // 1) 指派基准 C -> 调用 stageDatum
+    const svg = screen.getByTestId('m2-three-fallback-svg')
+    const baseTopFace = svg.querySelector('[data-range-object-id="feat-base-top-face"]') as Element
+    fireEvent.click(baseTopFace)
+    await user.click(screen.getByTestId('ctx-action-set-datum'))
+    await user.click(screen.getByTestId('assign-datum-C'))
+
+    await waitFor(() => {
+      expect(stageDatumMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: 'proj-plate-01',
+          baseRevision: 'rev-base-1',
+          expectedDraftRevision: 'draft-1',
+          items: [
+            expect.objectContaining({
+              value: expect.objectContaining({ id: 'datum-C', label: 'C', featureId: 'feat-base-top-face' }),
+              evidence: expect.arrayContaining([expect.objectContaining({ kind: 'user-attestation' })]),
+            }),
+          ],
+        }),
+      )
+    })
+
+    // 2) 创建新 GD&T 框格 -> 调用 stageGdt（携带更新后的 expectedDraftRevision）
+    await user.click(screen.getByTestId('ctx-action-attach-gdt'))
+    await user.click(screen.getByTestId('gdt-kind-perpendicularity'))
+    await user.click(screen.getByTestId('gdt-config-datum-A'))
+    await user.click(screen.getByTestId('gdt-config-submit'))
+
+    await waitFor(() => {
+      expect(stageGdtMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: 'proj-plate-01',
+          baseRevision: 'rev-base-1',
+          expectedDraftRevision: 'draft-2',
+          items: [
+            expect.objectContaining({
+              value: expect.objectContaining({
+                featureId: 'feat-base-top-face',
+                kind: 'perpendicularity',
+                datumIds: ['datum-A'],
+              }),
+              evidence: expect.arrayContaining([expect.objectContaining({ kind: 'user-attestation' })]),
+            }),
+          ],
+        }),
+      )
+    })
+
+    // 3) 就地微调现有 FCF -> 再次调用 stageGdt
+    await user.click(screen.getByTestId('gdt-mode-expand-all'))
+    await user.click(screen.getByTestId('gdt-fcf-box-gdt-bracket-hole-pos'))
+    await user.click(screen.getByTestId('gdt-inline-mod-RFS'))
+
+    await waitFor(() => {
+      expect(stageGdtMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          items: [
+            expect.objectContaining({
+              value: expect.objectContaining({ id: 'gdt-bracket-hole-pos', modifier: 'RFS' }),
+            }),
+          ],
+        }),
+      )
+    })
+
+    // 4) 一键应用 AI 建议基准/GD&T 草案 -> 依次调用 stageDatum 和 stageGdt，并透传草案 evidenceRefs
+    const datumCallsBeforeAi = stageDatumMock.mock.calls.length
+    const gdtCallsBeforeAi = stageGdtMock.mock.calls.length
+    await user.click(screen.getByTestId('apply-gdt-drafts-btn'))
+
+    await waitFor(() => {
+      expect(stageDatumMock.mock.calls.length).toBe(datumCallsBeforeAi + 1)
+      expect(stageGdtMock.mock.calls.length).toBe(gdtCallsBeforeAi + 1)
+    })
+    const aiDatumCall = stageDatumMock.mock.calls.at(-1)?.[0]
+    expect(aiDatumCall.items).toEqual([
+      expect.objectContaining({
+        value: expect.objectContaining({ id: 'datum-C', label: 'C', featureId: 'feat-spacer-top-face' }),
+        evidence: expect.arrayContaining([expect.objectContaining({ kind: 'pdf-text', page: 4 })]),
+      }),
+    ])
+    const aiGdtCall = stageGdtMock.mock.calls.at(-1)?.[0]
+    expect(aiGdtCall.items).toEqual([
+      expect.objectContaining({
+        value: expect.objectContaining({ id: 'gdt-ai-base-hole-pos', kind: 'position' }),
+        evidence: expect.arrayContaining([expect.objectContaining({ kind: 'pdf-text', page: 5 })]),
+      }),
+    ])
+  })
 })

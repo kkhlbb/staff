@@ -169,7 +169,9 @@ export function ProjectAgentM1Workbench({
   const assembly3d = useAssembly3dM1b({
     transport,
     projectId: session.projectId,
+    baseRevision: session.baseRevision,
     draftRevision: session.draftRevision,
+    writerEpoch: session.writerEpoch,
     feature3dAssemblyM1Prop,
     initialAssembly3d,
     initialPartMeshes,
