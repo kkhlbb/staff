@@ -22,30 +22,30 @@ for (const name of Object.keys(legalFiles)) {
     assert.doesNotThrow(() => verifyAssets(target))
   })
 }
-test('rejects legacy or unknown executable kernel files in new resources', () => {
-  for (const name of ['replicad_single.wasm', 'replicad_single.js', 'foreign.cjs']) {
+test('rejects legacy or unknown executable kernel files in unified resources', () => {
+  for (const name of ['replicad_single.wasm', 'replicad_single.js', 'spacer.wasm', 'spacer.cjs', 'foreign.cjs']) {
     const target = path.join(directory, 'unexpected-' + name)
     cpSync(original, target, { recursive: true })
     writeFileSync(path.join(target, name), 'unexpected kernel')
     assert.throws(() => verifyAssets(target), /STEP_UNEXPECTED_RUNTIME_ASSET/)
   }
 })
-test('release gate verifies the selected packaged assets rather than borrowing source provenance', () => {
+test('release gate approves verified unified OCCT resources and rejects tampered binaries', () => {
   const resources = path.join(directory, 'release-resources')
-  cpSync(original, path.join(resources, 'step-narrow-v1'), { recursive: true })
+  cpSync(original, path.join(resources, 'occt-unified'), { recursive: true })
   const invoke = () => spawnSync(process.execPath, [new URL('./check-step-release.mjs', import.meta.url).pathname, resources], { encoding: 'utf8' })
   const valid = invoke()
-  assert.equal(valid.status, 1)
-  assert.equal(JSON.parse(valid.stderr).packageVerification, 'VERIFIED')
-  writeFileSync(path.join(resources, 'step-narrow-v1/spacer.wasm'), 'corrupt')
+  assert.equal(valid.status, 0)
+  assert.equal(JSON.parse(valid.stdout).packageVerification, 'VERIFIED')
+  assert.equal(JSON.parse(valid.stdout).status, 'APPROVED_UNIFIED_OCCT_LGPL_21')
+  writeFileSync(path.join(resources, 'occt-unified/cunlian_occt.wasm'), 'corrupt')
   const corrupt = invoke()
   assert.equal(corrupt.status, 1)
   assert.equal(JSON.parse(corrupt.stderr).status, 'BLOCKED_PACKAGED_ASSET_VERIFICATION')
 })
-test('local packaging verification does not approve release', () => {
+test('release gate succeeds on prepared unified OCCT assets', () => {
   assert.doesNotThrow(() => verifyAssets(original))
   const result = spawnSync(process.execPath, [new URL('./check-step-release.mjs', import.meta.url).pathname], { encoding: 'utf8' })
-  assert.equal(result.status, 1)
-  assert.match(result.stderr, /BLOCKED_PROVENANCE_AND_LGPL_SOURCE_SUPPLY/)
-  assert.match(result.stderr, /FORMAL_SOURCE_DELIVERY/)
+  assert.equal(result.status, 0)
+  assert.equal(JSON.parse(result.stdout).status, 'APPROVED_UNIFIED_OCCT_LGPL_21')
 })

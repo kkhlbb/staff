@@ -5,7 +5,7 @@ import { cpSync, mkdtempSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
 import { STEP_ASSET_HASHES } from '../main/cad/stepAssetManifest'
-const assetDirectory = path.join(process.cwd(), 'node_modules/.cache/step-narrow-v1')
+const assetDirectory = path.join(process.cwd(), 'node_modules/.cache/occt-unified')
 const good = { innerDiameter: 200001, outerDiameter: 320000, length: 120000 }
 async function run(bytes: Uint8Array, defaults?: { directory: string; hashes: Record<string, string> }) {
   const worker = new Worker(path.join(defaults?.directory ?? assetDirectory, 'step-worker.cjs'), {
@@ -23,11 +23,11 @@ describe('local WASM remains inside pinned worker/glue', () => {
   }, 30000)
   it('enforces real memory and table declarations on the default branch too', async () => {
     // Isolated worker fixtures have their own explicit pins; never relax main pins.
-    for (const [bytes, reason] of [[sectionChanged(5, [1, 1, 0x80, 2, 0x80, 0x80, 1]), 'STEP_MEMORY'], [sectionChanged(4, [1, 0x70, 1, 1, 0xff, 0xff, 0x7f]), 'STEP_TABLE']] as const) {
+    for (const [bytes, reason] of [[sectionChanged(5, [1, 1, 0x80, 2, 0x80, 0x80, 4]), 'STEP_MEMORY'], [sectionChanged(4, [1, 0x70, 1, 1, 0xff, 0xff, 0x7f]), 'STEP_TABLE']] as const) {
       const directory = mkdtempSync(path.join(process.cwd(), 'node_modules/.cache/narrow-limits-'))
       cpSync(assetDirectory, directory, { recursive: true })
-      writeFileSync(path.join(directory, 'spacer.wasm'), bytes)
-      const hashes = { ...STEP_ASSET_HASHES, 'spacer.wasm': createHash('sha256').update(bytes).digest('hex') }
+      writeFileSync(path.join(directory, 'cunlian_occt.wasm'), bytes)
+      const hashes = { ...STEP_ASSET_HASHES, 'cunlian_occt.wasm': createHash('sha256').update(bytes).digest('hex') }
       expect((await run(bytes, { directory, hashes })).error).toContain(reason)
     }
   }, 30000)
@@ -37,14 +37,14 @@ describe('local WASM remains inside pinned worker/glue', () => {
     const result = await run(bytes)
     expect(result.error).toBeUndefined()
     const text = Buffer.from(result.bytes!).toString('ascii')
-    expect(text).toContain('USER PATCHED STEP translator 8.0')
+    expect(text).toContain('USER PATCHED STEP translator 7.8')
     expect(text).toContain('MANIFOLD_SOLID_BREP')
     expect(text).toContain('AUTOMOTIVE_DESIGN')
   }, 30000)
   it('rejects invalid binary, wrong ABI, and excessive memory instead of default fallback', async () => {
     const excessiveTable = sectionChanged(4, [1, 0x70, 1, 1, 0xff, 0xff, 0x7f])
     const sharedMemory = sectionChanged(5, [1, 3, 0x80, 2, 0x80, 0x40])
-    const excessiveMemory = sectionChanged(5, [1, 1, 0x80, 2, 0x80, 0x80, 1])
+    const excessiveMemory = sectionChanged(5, [1, 1, 0x80, 2, 0x80, 0x80, 4])
     const unboundedMemory = sectionChanged(5, [1, 0, 0x80, 2])
     for (const bytes of [excessiveTable, sharedMemory, excessiveMemory, unboundedMemory]) expect(WebAssembly.validate(bytes)).toBe(true)
     for (const [bytes, reason] of [

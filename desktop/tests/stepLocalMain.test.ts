@@ -19,14 +19,14 @@ it('captures launch consent, reads only selected bytes, isolates worker, and nev
   const defaultApp = Object.getOwnPropertyDescriptor(process, 'defaultApp')
   Object.defineProperty(process, 'resourcesPath', { configurable: true, value: root })
   Object.defineProperty(process, 'defaultApp', { configurable: true, value: false })
-  cpSync('node_modules/.cache/step-narrow-v1', path.join(root, 'step-narrow-v1'), { recursive: true })
+  cpSync('node_modules/.cache/occt-unified', path.join(root, 'occt-unified'), { recursive: true })
   const terminate = vi.spyOn(Worker.prototype, 'terminate')
   try {
     const input = { innerDiameter: 200001, outerDiameter: 320000, length: 120000 }
     const result = await generateStep(input)
     expect(result.wasmSha256).toBe(sha); expect(result.kernelVersion).toContain('user-selected-local-wasm')
     expect(result.generatorVersion).toContain('local-wasm-opt-in-v1')
-    expect(Buffer.from(result.bytes).toString()).toContain('USER PATCHED STEP translator 8.0')
+    expect(Buffer.from(result.bytes).toString()).toContain('USER PATCHED STEP translator 7.8')
     expect(terminate).toHaveBeenCalledOnce(); await expect(terminate.mock.results[0].value).resolves.toBeTypeOf('number')
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     try {
@@ -44,8 +44,8 @@ it('captures launch consent, reads only selected bytes, isolates worker, and nev
     } finally { vi.useRealTimers() }
     expect(terminate).toHaveBeenCalledTimes(3)
     expect((await generateStep(input)).wasmSha256).toBe(sha)
-    for (const name of ['spacer.wasm', 'spacer.cjs', 'step-worker.cjs']) {
-      const target = path.join(root, 'step-narrow-v1', name), original = readFileSync(target)
+    for (const name of ['cunlian_occt.wasm', 'cunlian_occt.mjs', 'step-worker.cjs']) {
+      const target = path.join(root, 'occt-unified', name), original = readFileSync(target)
       writeFileSync(target, 'tampered')
       try { await expect(generateStep(input)).rejects.toThrow(`STEP_ASSET_HASH: ${name}`) }
       finally { writeFileSync(target, original) }

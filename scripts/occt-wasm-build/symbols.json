@@ -1,0 +1,12 @@
+{
+  "construction": ["BRepPrimAPI_MakeBox", "BRepPrimAPI_MakeCylinder", "BRepPrimAPI_MakePrism", "BRepBuilderAPI_Transform", "gp_Pnt", "gp_Dir", "gp_Vec", "gp_Ax1", "gp_Ax2", "gp_Trsf", "Message_ProgressRange"],
+  "booleans": ["BRepAlgoAPI_Cut", "BRepAlgoAPI_Fuse", "BRepAlgoAPI_Common"],
+  "finishing": ["BRepFilletAPI_MakeChamfer", "BRepFilletAPI_MakeFillet", "ChFi3d_FilletShape", "BRepOffsetAPI_MakeThickSolid", "TopTools_ListOfShape"],
+  "measurement": ["BRepExtrema_DistShapeShape", "BRepBndLib", "Bnd_Box", "BRepGProp", "GProp_GProps", "Precision", "BRepCheck_Analyzer"],
+  "topology": ["BRepAdaptor_Surface", "BRepAdaptor_Curve", "GeomAbs_SurfaceType", "GeomAbs_CurveType", "TopExp_Explorer", "TopLoc_Location", "TopAbs_Orientation", "TopAbs_ShapeEnum", "TopoDS", "TopoDS_Shape", "TopoDS_Builder", "TopoDS_Compound", "gp_Ax1", "gp_Circ", "gp_Cylinder", "gp_Pln"],
+  "tessellation": ["BRepMesh_IncrementalMesh", "BRep_Tool", "Poly_Triangulation", "Poly_Triangle"],
+  "hiddenLine": ["HLRAlgo_Projector", "HLRBRep_Algo", "HLRBRep_HLRToShape", "BRepLib"],
+  "step": ["STEPControl_Reader", "STEPControl_Writer", "STEPControl_StepModelType", "IFSelect_ReturnStatus", "_spacer_step", "FS"],
+  "runtime": ["wasmMemory", "getExceptionMessage", "decrementExceptionRefcount"],
+  "xcaf": ["XCAFApp_Application", "TDocStd_Document", "STEPCAFControl_Reader", "STEPCAFControl_Writer", "XCAFDoc_DocumentTool", "XCAFDoc_ShapeTool", "XCAFDoc_ColorTool", "TDataStd_Name", "TDF_Label", "TDF_LabelSequence", "XCAFDoc_ColorType"]
+}

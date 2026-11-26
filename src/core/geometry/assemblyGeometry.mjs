@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { volume } from '../../../desktop/main/geometry-prototype/plate.mjs'
 import { assertRigidPose, exportOrthographic, projectAssembly } from './orthographic.mjs'
 import { buildPrimitive } from './primitives.mjs'
-import { readStepSolids, verifiedStep } from './stepImport.mjs'
+import { readStepAssembly, verifiedStep } from './stepImport.mjs'
 import { candidateSummary, extractPart } from './topology.mjs'
 
 const identity = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
@@ -44,15 +44,28 @@ function attachmentMap(input) {
   return attachments
 }
 
-function importedModel(attachment, solidCount) {
+function importedModel(attachment, solidCount, stepMeta) {
   const { id, fileName } = attachment
   const label = fileName.replace(/\.(stp|step)$/i, '') || 'STEP'
-  const parts = Array.from({ length: solidCount }, (_, solidIndex) => ({
-    id: 'step:' + digest([id, solidIndex]), kind: 'imported-step', attachmentId: id, solidIndex,
-    nominalTransform: identity, displayName: (solidCount === 1 ? label : label + ' ' + (solidIndex + 1)).slice(0, 200),
-    color: '#8094a6',
-  }))
-  return { schemaVersion: 1, units: 'mm', parts, features: [], mates: [], datums: [], gdt: [], measurements: [] }
+  const items = stepMeta?.usedXcaf ? stepMeta.items : undefined
+  const groups = stepMeta?.usedXcaf && stepMeta.groups?.length ? stepMeta.groups : undefined
+  const parts = Array.from({ length: solidCount }, (_, solidIndex) => {
+    const meta = items?.[solidIndex]
+    return {
+      id: 'step:' + digest([id, solidIndex]),
+      kind: 'imported-step',
+      attachmentId: id,
+      solidIndex,
+      nominalTransform: meta?.nominalTransform ?? identity,
+      displayName: (meta?.displayName ?? (solidCount === 1 ? label : label + ' ' + (solidIndex + 1))).slice(0, 200),
+      color: meta?.color ?? '#8094a6',
+      ...(meta?.groupId ? { groupId: meta.groupId } : {}),
+    }
+  })
+  return {
+    schemaVersion: 1, units: 'mm', parts, features: [], mates: [], datums: [], gdt: [], measurements: [],
+    ...(groups ? { assemblyGroups: groups } : {}),
+  }
 }
 
 function shapeInputs(model, attachments) {
@@ -68,7 +81,7 @@ function evaluate(oc, payload, acquire) {
   using reads = new DisposableStack()
   const parsed = new Map()
   const read = attachment => {
-    if (!parsed.has(attachment.sha256)) parsed.set(attachment.sha256, readStepSolids(oc, attachment.bytes, reads))
+    if (!parsed.has(attachment.sha256)) parsed.set(attachment.sha256, readStepAssembly(oc, attachment.bytes, reads))
     return parsed.get(attachment.sha256)
   }
   const importAttachment = payload.operation === 'import-step' ? attachments.get(payload.attachmentId) : undefined
@@ -78,28 +91,39 @@ function evaluate(oc, payload, acquire) {
     ? digest(['import-step', importAttachment.id, importAttachment.sha256])
     : digest(['rebuild-assembly', shapeInputs(model, attachments)])
   const build = () => {
-    model ??= importedModel(importAttachment, read(importAttachment).length)
+    let stepMeta
+    if (!model) {
+      const step = read(importAttachment)
+      stepMeta = {
+        usedXcaf: step.usedXcaf,
+        groups: step.groups,
+        items: step.items.map(({ displayName, color, groupId, nominalTransform }) => ({
+          displayName, color, groupId, nominalTransform,
+        })),
+      }
+      model = importedModel(importAttachment, step.items.length, stepMeta)
+    }
     using scope = new DisposableStack()
     const entries = model.parts.map(part => {
       let shape
       if (part.kind === 'imported-step') {
         const attachment = attachments.get(part.attachmentId)
         if (!attachment) throw new Error('STEP attachment unavailable: ' + part.attachmentId)
-        const solid = read(attachment)[part.solidIndex]
-        if (!solid) throw new Error('STEP solid index unavailable: ' + part.solidIndex)
-        shape = scope.use(solid.clone())
+        const item = read(attachment).items[part.solidIndex]
+        if (!item) throw new Error('STEP solid index unavailable: ' + part.solidIndex)
+        shape = scope.use(item.solid.clone())
       } else {
         shape = scope.use(buildPrimitive(oc, part, model.features))
       }
       return { shape, data: { ...extractPart(oc, shape, part), volumeMm3: volume(oc, shape) } }
     })
-    return { entries, scope: scope.move() }
+    return { entries, stepMeta, scope: scope.move() }
   }
   using temporary = new DisposableStack()
   const assembly = acquire ? acquire(key, build) : build()
   if (!acquire) temporary.use(assembly.scope)
   // Import labels may change without re-reading the bytes. Placement stays external to cached B-Reps.
-  if (!model) model = importedModel(importAttachment, assembly.entries.length)
+  if (!model) model = importedModel(importAttachment, assembly.entries.length, assembly.stepMeta)
   const entries = assembly.entries.map(({ shape, data }, i) => {
     const part = model.parts[i]
     return { shape, part, data: { ...data, mesh: { ...data.mesh, nominalTransform: part.nominalTransform } } }

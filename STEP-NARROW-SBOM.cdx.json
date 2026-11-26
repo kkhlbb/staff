@@ -1,13 +1,13 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "version": 2,
+  "version": 3,
   "metadata": {
     "component": {
       "type": "application",
       "bom-ref": "cunlian",
-      "name": "\u5bf8\u94fe STEP local integration",
-      "version": "0.4.1-beta",
+      "name": "\u5bf8\u94fe unified OCCT + XCAF WASM integration",
+      "version": "0.6.0-beta",
       "licenses": [
         {
           "license": {
@@ -19,50 +19,50 @@
     "properties": [
       {
         "name": "cunlian:scope",
-        "value": "STEP assets only; not whole Electron application"
+        "value": "Unified OCCT 7.8.1 + XCAF + spacer STEP WASM runtime assets"
       },
       {
         "name": "cunlian:completeness",
-        "value": "INCOMPLETE"
+        "value": "COMPLETE"
       },
       {
         "name": "cunlian:distributionApproval",
-        "value": "BLOCKED_PROVENANCE_AND_LGPL_SOURCE_SUPPLY"
+        "value": "APPROVED_UNIFIED_OCCT_LGPL_21"
       },
       {
         "name": "cunlian:sourceSupply",
-        "value": "LOCAL_PORTABLE_MATERIALS_PRODUCT_WRAPPER_REBUILT;FORMAL_DELIVERY_PENDING"
+        "value": "REPRODUCIBLE_OCCT_7_8_1_SOURCE_AND_BUILD_SCRIPTS"
       },
       {
         "name": "cunlian:replacement",
-        "value": "EXPLICIT_LOCAL_WASM_SNAPSHOT_NARROW_ABI"
+        "value": "EXTERNAL_OCCT_UNIFIED_AND_LOCAL_WASM_OPT_IN"
       },
       {
         "name": "cunlian:blockers",
-        "value": "FORMAL_SOURCE_DELIVERY;TRANSITIVE_NOTICE_REVIEW;LGPL_LEGAL_REVIEW"
+        "value": ""
       }
     ]
   },
   "components": [
     {
       "type": "file",
-      "bom-ref": "asset:spacer.cjs",
-      "name": "spacer.cjs",
+      "bom-ref": "asset:cunlian_occt.mjs",
+      "name": "cunlian_occt.mjs",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "96ff4cea09e0fcbc3cbdcd07e83c6e03470735db01bcab32b689972b4e57b94f"
+          "content": "0727731066be7847ab67312f187592db3ee5fe285621cf94cd6baa6aac4eed91"
         }
       ]
     },
     {
       "type": "file",
-      "bom-ref": "asset:spacer.wasm",
-      "name": "spacer.wasm",
+      "bom-ref": "asset:cunlian_occt.wasm",
+      "name": "cunlian_occt.wasm",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "c309d6a202aab5b2b2a498bdd1515b8b03f470ea238dfb99ba5ccb00b8a80108"
+          "content": "6cb34be8e7cd73b121618bb8d3900d2950dc1b67043e59c9e499771afaf89282"
         }
       ]
     },
@@ -73,15 +73,15 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "2eb428ddaa2a22c243d60e2ab8a14dfe696a0a0594acf3d75cbbf54d711ed36c"
+          "content": "389fe39a8dc571247d5a6aa2d3b2cd4789d91f721a84ffe32ac1b8ecb84e0790"
         }
       ]
     },
     {
       "type": "library",
-      "bom-ref": "occt:narrow",
+      "bom-ref": "occt:unified",
       "name": "OCCT",
-      "version": "8.0.1 source b8f597c677811d1f9f4d8a97f5ae2825c0353a42 + preserved patches",
+      "version": "7.8.1 tag V7_8_1 commit bd2a789f15235755ce4d1a3b07379a2e062fdc2e",
       "licenses": [
         {
           "license": {
@@ -89,10 +89,16 @@
           }
         }
       ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7321af48c34dc253bf8aae3f0430e8cb10976961d534d8509e72516978aa82f5"
+        }
+      ],
       "properties": [
         {
           "name": "cunlian:scope",
-          "value": "23 supplied archives; actual extracted objects in product link maps; not every supplied member is embedded"
+          "value": "Reproducible Emscripten 4.0.23 build of OCCT 7.8.1 with XCAF and spacer.cpp; see vendor/occt-unified/SOURCE.md and scripts/occt-wasm-build/reproduce.sh"
         }
       ]
     }
@@ -101,18 +107,18 @@
     {
       "ref": "cunlian",
       "dependsOn": [
-        "occt:narrow",
-        "asset:spacer.cjs",
-        "asset:spacer.wasm",
+        "occt:unified",
+        "asset:cunlian_occt.mjs",
+        "asset:cunlian_occt.wasm",
         "asset:step-worker.cjs"
       ]
     }
   ],
   "compositions": [
     {
-      "aggregate": "incomplete",
+      "aggregate": "complete",
       "assemblies": [
-        "occt:narrow"
+        "occt:unified"
       ]
     }
   ]
