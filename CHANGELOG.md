@@ -2,6 +2,26 @@
 
 All notable changes to **寸链 (Cunlian)** are documented in this file.
 
+## v1.0.1 - 2026-11-26
+
+Patch release fixing out-of-the-box desktop GA workflows, built-in template switching, read-only authorization ergonomics, and Windows P0 packaging/IPC reliability.
+
+### Fixed
+- **Desktop Out-of-the-Box 3D / GD&T / Compliant / Report GA**:
+  - Enabled 3D assembly, 10-type GD&T, compliant physics, and audit reporting by default in the packaged desktop workbench.
+  - Fixed offline PDF report printing via a hidden iframe (no external popups or network dependency) with clean HTML/CSV/JSON export fallbacks.
+- **Built-in Templates & Warpage Displacement Field**:
+  - Verified all 3 built-in templates (`builtin-mounting-plate`, `builtin-shaft-spacer`, `builtin-compliant-cover-warpage`) load distinct 3D assemblies and 2D drawings, with subdivided cover mesh geometry producing non-zero warpage displacement fields.
+- **Read-Only Authorization Controls**:
+  - Added direct read-only launch and full close/exit affordances (`×`, `取消/退出`, `Esc`, and backdrop click) on the authorization modal.
+- **Windows P0 Fixes**:
+  - Normalized Windows `file:///C:/...` and UNC paths in `rendererUrl.ts` for the IPC `SenderGuard` (resolving "没有 IPC 权限" errors on Windows).
+  - Replaced macOS `ditto` with a UTF-8 clean Windows ZIP builder (`scripts/build-win-zip.mjs`, 100% UTF-8 flag bit `0x800` and 0 AppleDouble `._*` entries).
+  - Added `startupDiagnostics.ts` crash logging and native error dialogs for startup failures.
+  - Hardened the NSIS Windows x64 installer with PE `VersionInfo` (`1.0.1.0`), standard `zlib` compression, and an optional Authenticode RFC 3161 signing hook.
+
+---
+
 ## [1.0.0] - 2026-11-26 (GA)
 
 Official General Availability release completing the 3D assembly, full 10-type GD&T, compliant physics + MIC/FEA sidecar, offline audit reporting, and dual-mode Desktop + Cloud/AgentArts platform.

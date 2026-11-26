@@ -1,15 +1,15 @@
 # 寸链 · 机械制图与三维装配公差 Agent 工作台
 
-> **版本**：`v1.0.0`（GA 正式版）｜**架构**：Electron + React + TypeScript + Open CASCADE 7.8.1 Unified XCAF WASM
+> **版本**：`v1.0.1`（GA 正式版）｜**架构**：Electron + React + TypeScript + Open CASCADE 7.8.1 Unified XCAF WASM
 > **许可**：MIT（Open CASCADE LGPL-2.1-only + OCCT Exception 与第三方组件许可见 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)）
 
 **寸链**是一个面向机械设计师与工程团队的**桌面 + 云端双模**可审计制图与三维装配公差分析工作台：**把零件任务书 PDF、STEP 装配模型与工程约束交给本地 Agent（MCP）或云端 AgentArts / REST 服务，寸链基于确定性几何与物理内核完成三维构形、二维正投影出图、10 类 GD&T 形位公差与柔性装配仿真，并输出离线可审计报告；任何写入授权、接管与正式版本提交都必须由人确认。**
 
 ---
 
-## 一、核心能力（`v1.0.0` GA）
+## 一、核心能力（`v1.0.1` GA）
 
-| 能力领域 | `v1.0.0` GA 正式版实现 |
+| 能力领域 | `v1.0.1` GA 正式版实现 |
 |---|---|
 | **3D 装配与统一 XCAF OCCT 内核** | 单一统一 `cunlian_occt.wasm`（Open CASCADE 7.8.1，LGPL 2.1 + OCCT Exception，支持动态替换与完整源码/SBOM 溯源），覆盖 STEP AP214/AP203 装配导入、XCAF 装配树与特征提取、三维构形、二维正投影与 AP214 STEP 导出，以及 Three.js 真 3D 拾取与真 2D SVG/DXF/PDF 工程图。 |
 | **10 类三维 GD&T 形位公差引擎** | 支持 3-2-1 基准参考系（DRF A/B/C）、MMC/LMC 实体补偿与基准偏移（Datum Shift），完整覆盖 **10 类 GD&T**：位置度（Position）、平行度（Parallelism）、垂直度（Perpendicularity）、平面度（Flatness）、同轴度（Coaxiality）、**轮廓度（Profile of a Surface，含不等双边 `UZ`）**、**圆跳动（Circular Runout）**、**全跳动（Total Runout）**、**圆柱度（Cylindricity）**与**复合位置度（Composite Position）**；50,000 样本三维耦合仿真 `< 1s`（Apple M4），增量 What-If `< 260ms`。 |
@@ -29,13 +29,13 @@
 
 ## 三、平台安装包与签名说明
 
-- **macOS arm64**（`cunlian-v1.0.0-macOS-arm64.zip`）：ad-hoc 签名、未公证；下载解压后首次打开若遇 Gatekeeper 提示，可执行：
+- **macOS arm64**（`cunlian-v1.0.1-macOS-arm64.zip`）：ad-hoc 签名、未公证；下载解压后首次打开若遇 Gatekeeper 提示，可执行：
   ```bash
   xattr -dr com.apple.quarantine /Applications/寸链.app
   ```
-- **Windows x64**（`cunlian-v1.0.0-windows-x64.zip` 免安装版 & `cunlian-v1.0.0-windows-x64-setup.exe` NSIS 每用户安装程序）：内置 Windows 命名管道与 `cunlian-mcp.cmd` 本地桥接；当前社区版未附商业代码签名，首次下载运行前请先对照 `SHA256SUMS.txt` 校验完整性：
+- **Windows x64**（`cunlian-v1.0.1-windows-x64.zip` 免安装版 & `cunlian-v1.0.1-windows-x64-setup.exe` NSIS 每用户安装程序）：内置 Windows 命名管道与 `cunlian-mcp.cmd` 本地桥接；当前社区版未附商业代码签名，首次下载运行前请先对照 `SHA256SUMS.txt` 校验完整性：
   ```cmd
-  certutil -hashfile cunlian-v1.0.0-windows-x64-setup.exe SHA256
+  certutil -hashfile cunlian-v1.0.1-windows-x64-setup.exe SHA256
   ```
   校验一致后，若遇 Windows SmartScreen 拦截提示，点击「更多信息」→「仍要运行」（或直接使用免安装 `.zip`）。如需配置 Authenticode 代码签名（SignPath.io 开源免费 / Azure Trusted Signing / 本地 PFX），详见 [`docs/windows-code-signing.md`](docs/windows-code-signing.md)。
 
