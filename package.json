@@ -25,6 +25,8 @@
     "step:assets": "node scripts/step-assets.mjs",
     "test:step-kernel": "node scripts/step-assets.mjs && vitest run --config vitest.desktop.config.ts desktop/tests/stepKernel.test.ts",
     "check:package:step": "node scripts/assert-packaged-step.mjs",
+    "bench:v1": "node benchmarks/cunlian-bench-v1/run.mjs --offline",
+    "bench:v1:external": "node benchmarks/cunlian-bench-v1/run.mjs --external",
     "check:release:step": "node scripts/check-step-release.mjs",
     "test:step-license": "node --test scripts/step-license.test.mjs",
     "test:real-docs": "vitest run --config vitest.realdocs.config.ts",

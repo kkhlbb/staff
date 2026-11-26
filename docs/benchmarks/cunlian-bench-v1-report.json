@@ -1,0 +1,4364 @@
+{
+  "benchVersion": "cunlian-bench-v1",
+  "appVersion": "1.0.1",
+  "gitSha": "23087d69207d34c86e4014f78e77a9a38eb52f6e",
+  "timestampIso": "2026-11-26T19:35:07.173Z",
+  "environment": {
+    "cpu": "Apple M4",
+    "logicalCpuCount": 10,
+    "memoryBytes": 17179869184,
+    "os": "darwin",
+    "osRelease": "25.4.0",
+    "arch": "arm64",
+    "node": "v26.12.1"
+  },
+  "options": {
+    "repoRoot": "/Users/aston/DSH/wt/cunlian-bench-03/",
+    "cacheDir": "/Users/aston/DSH/wt/cunlian-bench-03/.cache/benchmarks",
+    "allowExternal": true,
+    "offlineDir": null,
+    "seed": 20261126,
+    "samples": 50000
+  },
+  "external": {
+    "status": "PASS"
+  },
+  "durationMs": 76838.65675000001,
+  "summary": {
+    "pass": 19,
+    "fail": 10,
+    "skipped": 4,
+    "total": 33
+  },
+  "suites": [
+    {
+      "suiteId": "A",
+      "title": "STEP / XCAF geometry and topology",
+      "authority": "https://www.nist.gov/ctl/smart-connected-systems-division/smart-connected-manufacturing-systems-group/mbe-pmi-0",
+      "status": "FAIL",
+      "durationMs": 42343.004166,
+      "summary": {
+        "externalAttempted": 10,
+        "externalSkipped": 0,
+        "import": {
+          "passed": 9,
+          "attempted": 10,
+          "rate": 0.9
+        },
+        "assemblyTree": {
+          "passed": 0,
+          "attempted": 4,
+          "rate": 0
+        },
+        "projection": {
+          "passed": 9,
+          "attempted": 10,
+          "rate": 0.9
+        },
+        "importMs": {
+          "count": 10,
+          "p50": 740.7431670000005,
+          "p95": 1600.564750000005
+        },
+        "hlrMs": {
+          "count": 9,
+          "p50": 446.7054999999964,
+          "p95": 2537.0643750000017
+        },
+        "timing": "Nearest-rank percentiles; import includes topology, HLR is a warm-cache worker request including IPC.",
+        "rss": "MiB; process-wide RSS sampled at request completion. The final five release samples are checked for monotonic growth."
+      },
+      "cases": [
+        {
+          "id": "A1-STC-06",
+          "name": "A1 STC-06",
+          "status": "PASS",
+          "durationMs": 983.3739999999998,
+          "metrics": {
+            "solidCount": 1,
+            "groupCount": 0,
+            "faceCount": 144,
+            "holeAxisCount": 58,
+            "importMs": 740.7431670000005,
+            "hlrMs": 239.8997500000005,
+            "rssDeltaMb": 160.25823974609375,
+            "source": {
+              "assemblyOccurrences": 0,
+              "solidEntities": 1,
+              "advancedFaceEntities": 144,
+              "productNames": [
+                "nist_stc_06_asme1"
+              ],
+              "rgbEntities": 4
+            },
+            "xcafGroups": [],
+            "xcafInstances": [
+              {
+                "displayName": "nist_stc_06_asme1",
+                "color": "#8094a6",
+                "nominalTransform": [
+                  [
+                    1,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    1,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                ]
+              }
+            ],
+            "importAccepted": true,
+            "hlrViews": [
+              {
+                "id": "front",
+                "edges": 186,
+                "hasVisible": true
+              },
+              {
+                "id": "top",
+                "edges": 360,
+                "hasVisible": true
+              },
+              {
+                "id": "left",
+                "edges": 265,
+                "hasVisible": true
+              }
+            ],
+            "hlrCacheHit": true,
+            "hlrAccepted": true
+          },
+          "thresholds": {
+            "solidCountMin": 1,
+            "faceCountMin": 1,
+            "hlrViews": [
+              "front",
+              "top",
+              "left"
+            ]
+          }
+        },
+        {
+          "id": "A1-STC-07",
+          "name": "A1 STC-07",
+          "status": "PASS",
+          "durationMs": 1324.5205419999984,
+          "metrics": {
+            "solidCount": 1,
+            "groupCount": 1,
+            "faceCount": 304,
+            "holeAxisCount": 133,
+            "importMs": 852.0136670000029,
+            "hlrMs": 467.13983299999745,
+            "rssDeltaMb": 73.55408477783203,
+            "source": {
+              "assemblyOccurrences": 0,
+              "solidEntities": 1,
+              "advancedFaceEntities": 306,
+              "productNames": [
+                "nist_stc_07_asme1",
+                "nist_ftc_07_asme1",
+                "ASME Y14.5",
+                "ASME Y14.41M",
+                "ANSI B4.2",
+                "Y14.36M"
+              ],
+              "rgbEntities": 1
+            },
+            "xcafGroups": [
+              {
+                "id": "group:50c2454be4873e32",
+                "name": "nist_ftc_07_asme1"
+              }
+            ],
+            "xcafInstances": [
+              {
+                "displayName": "=>[0:1:1:4]",
+                "color": "#d2d2ff",
+                "nominalTransform": [
+                  [
+                    1,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    1,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                ],
+                "groupId": "group:50c2454be4873e32"
+              }
+            ],
+            "importAccepted": true,
+            "hlrViews": [
+              {
+                "id": "front",
+                "edges": 845,
+                "hasVisible": true
+              },
+              {
+                "id": "top",
+                "edges": 512,
+                "hasVisible": true
+              },
+              {
+                "id": "left",
+                "edges": 517,
+                "hasVisible": true
+              }
+            ],
+            "hlrCacheHit": true,
+            "hlrAccepted": true
+          },
+          "thresholds": {
+            "solidCountMin": 1,
+            "faceCountMin": 1,
+            "hlrViews": [
+              "front",
+              "top",
+              "left"
+            ]
+          }
+        },
+        {
+          "id": "A2-CTC-01",
+          "name": "A2 CTC-01",
+          "status": "PASS",
+          "durationMs": 281.4724160000005,
+          "metrics": {
+            "solidCount": 1,
+            "groupCount": 1,
+            "faceCount": 117,
+            "holeAxisCount": 57,
+            "importMs": 129.75720799999908,
+            "hlrMs": 150.49112500000047,
+            "rssDeltaMb": 0.6562957763671875,
+            "source": {
+              "assemblyOccurrences": 0,
+              "solidEntities": 1,
+              "advancedFaceEntities": 117,
+              "productNames": [
+                "NIST Test Case 1",
+                "NIST Complex Test Case 1"
+              ],
+              "rgbEntities": 3
+            },
+            "xcafGroups": [
+              {
+                "id": "group:d0469cef794b4797",
+                "name": "NIST Complex Test Case 1"
+              }
+            ],
+            "xcafInstances": [
+              {
+                "displayName": "=>[0:1:1:2]",
+                "color": "#c0a9f9",
+                "nominalTransform": [
+                  [
+                    1,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    1,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                ],
+                "groupId": "group:d0469cef794b4797"
+              }
+            ],
+            "importAccepted": true,
+            "hlrViews": [
+              {
+                "id": "front",
+                "edges": 198,
+                "hasVisible": true
+              },
+              {
+                "id": "top",
+                "edges": 176,
+                "hasVisible": true
+              },
+              {
+                "id": "left",
+                "edges": 160,
+                "hasVisible": true
+              }
+            ],
+            "hlrCacheHit": true,
+            "hlrAccepted": true
+          },
+          "thresholds": {
+            "solidCountMin": 1,
+            "faceCountMin": 1,
+            "hlrViews": [
+              "front",
+              "top",
+              "left"
+            ]
+          }
+        },
+        {
+          "id": "A2-CTC-02",
+          "name": "A2 CTC-02",
+          "status": "PASS",
+          "durationMs": 2679.229540999997,
+          "metrics": {
+            "solidCount": 1,
+            "groupCount": 2,
+            "faceCount": 635,
+            "holeAxisCount": 314,
+            "importMs": 1458.4073749999989,
+            "hlrMs": 1215.087666000003,
+            "rssDeltaMb": 96.83732604980469,
+            "source": {
+              "assemblyOccurrences": 0,
+              "solidEntities": 1,
+              "advancedFaceEntities": 637,
+              "productNames": [
+                "NIST Test Case 02",
+                "Test Case 2 Baseline"
+              ],
+              "rgbEntities": 4
+            },
+            "xcafGroups": [
+              {
+                "id": "group:10f7fc5d59f21fa3",
+                "name": "Test Case 2 Baseline"
+              },
+              {
+                "id": "group:27a25f7b7d07a214",
+                "name": "=>[0:1:1:3]",
+                "parentGroupId": "group:10f7fc5d59f21fa3"
+              }
+            ],
+            "xcafInstances": [
+              {
+                "displayName": "=>[0:1:1:2]",
+                "color": "#d2d2ff",
+                "nominalTransform": [
+                  [
+                    1,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    1,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                ],
+                "groupId": "group:10f7fc5d59f21fa3"
+              }
+            ],
+            "importAccepted": true,
+            "hlrViews": [
+              {
+                "id": "front",
+                "edges": 1040,
+                "hasVisible": true
+              },
+              {
+                "id": "top",
+                "edges": 1004,
+                "hasVisible": true
+              },
+              {
+                "id": "left",
+                "edges": 881,
+                "hasVisible": true
+              }
+            ],
+            "hlrCacheHit": true,
+            "hlrAccepted": true
+          },
+          "thresholds": {
+            "solidCountMin": 1,
+            "faceCountMin": 1,
+            "hlrViews": [
+              "front",
+              "top",
+              "left"
+            ]
+          }
+        },
+        {
+          "id": "A3-FTC-07",
+          "name": "A3 FTC-07",
+          "status": "FAIL",
+          "durationMs": 1246.9017079999976,
+          "metrics": {
+            "solidCount": 1,
+            "groupCount": 1,
+            "faceCount": 304,
+            "holeAxisCount": 133,
+            "importMs": 795.8759580000042,
+            "hlrMs": 446.7054999999964,
+            "rssDeltaMb": -0.9843978881835938,
+            "source": {
+              "assemblyOccurrences": 0,
+              "solidEntities": 1,
+              "advancedFaceEntities": 306,
+              "productNames": [
+                "nist_ftc_07_asme1",
+                "nist_ftc_07_asme1",
+                "ASME Y14.41"
+              ],
+              "rgbEntities": 1
+            },
+            "assemblyAccepted": false,
+            "xcafGroups": [
+              {
+                "id": "group:50c2454be4873e32",
+                "name": "nist_ftc_07_asme1"
+              }
+            ],
+            "xcafInstances": [
+              {
+                "displayName": "=>[0:1:1:2]",
+                "color": "#d2d2ff",
+                "nominalTransform": [
+                  [
+                    1,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    1,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                ],
+                "groupId": "group:50c2454be4873e32"
+              }
+            ],
+            "importAccepted": true,
+            "hlrViews": [
+              {
+                "id": "front",
+                "edges": 848,
+                "hasVisible": true
+              },
+              {
+                "id": "top",
+                "edges": 536,
+                "hasVisible": true
+              },
+              {
+                "id": "left",
+                "edges": 546,
+                "hasVisible": true
+              }
+            ],
+            "hlrCacheHit": true,
+            "hlrAccepted": true
+          },
+          "thresholds": {
+            "solidCountMin": 2,
+            "faceCountMin": 1,
+            "hlrViews": [
+              "front",
+              "top",
+              "left"
+            ],
+            "groupCountMin": 1,
+            "sourceOccurrenceCountMin": 2
+          },
+          "defectNote": "Official FTC input has no STEP assembly occurrences"
+        },
+        {
+          "id": "A3-FTC-08",
+          "name": "A3 FTC-08",
+          "status": "FAIL",
+          "durationMs": 706.8239160000012,
+          "metrics": {
+            "solidCount": 1,
+            "groupCount": 1,
+            "faceCount": 247,
+            "holeAxisCount": 134,
+            "importMs": 490.1657500000001,
+            "hlrMs": 207.95700000000215,
+            "rssDeltaMb": 44.095855712890625,
+            "source": {
+              "assemblyOccurrences": 0,
+              "solidEntities": 1,
+              "advancedFaceEntities": 247,
+              "productNames": [
+                "nist_ftc_08_asme1_rc",
+                "nist_ftc_08_asme1_rc"
+              ],
+              "rgbEntities": 2
+            },
+            "assemblyAccepted": false,
+            "xcafGroups": [
+              {
+                "id": "group:ff08aa69c558bc6a",
+                "name": "nist_ftc_08_asme1_rc"
+              }
+            ],
+            "xcafInstances": [
+              {
+                "displayName": "=>[0:1:1:2]",
+                "color": "#98aaaf",
+                "nominalTransform": [
+                  [
+                    1,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    1,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                ],
+                "groupId": "group:ff08aa69c558bc6a"
+              }
+            ],
+            "importAccepted": true,
+            "hlrViews": [
+              {
+                "id": "front",
+                "edges": 322,
+                "hasVisible": true
+              },
+              {
+                "id": "top",
+                "edges": 350,
+                "hasVisible": true
+              },
+              {
+                "id": "left",
+                "edges": 359,
+                "hasVisible": true
+              }
+            ],
+            "hlrCacheHit": true,
+            "hlrAccepted": true
+          },
+          "thresholds": {
+            "solidCountMin": 2,
+            "faceCountMin": 1,
+            "hlrViews": [
+              "front",
+              "top",
+              "left"
+            ],
+            "groupCountMin": 1,
+            "sourceOccurrenceCountMin": 2
+          },
+          "defectNote": "Official FTC input has no STEP assembly occurrences"
+        },
+        {
+          "id": "A3-FTC-09",
+          "name": "A3 FTC-09",
+          "status": "FAIL",
+          "durationMs": 434.19495800000004,
+          "metrics": {
+            "solidCount": null,
+            "groupCount": null,
+            "faceCount": null,
+            "holeAxisCount": null,
+            "importMs": 373.4452919999967,
+            "hlrMs": null,
+            "rssDeltaMb": -178.48490142822266,
+            "source": {
+              "assemblyOccurrences": 0,
+              "solidEntities": 1,
+              "advancedFaceEntities": 163,
+              "productNames": [],
+              "rgbEntities": 4
+            },
+            "assemblyAccepted": false
+          },
+          "thresholds": {
+            "solidCountMin": 2,
+            "faceCountMin": 1,
+            "hlrViews": [
+              "front",
+              "top",
+              "left"
+            ],
+            "groupCountMin": 1,
+            "sourceOccurrenceCountMin": 2
+          },
+          "defectNote": "Official FTC input has no STEP assembly occurrences; Error: STEP root transfer failed"
+        },
+        {
+          "id": "A3-FTC-10",
+          "name": "A3 FTC-10",
+          "status": "FAIL",
+          "durationMs": 4143.798292000007,
+          "metrics": {
+            "solidCount": 1,
+            "groupCount": 1,
+            "faceCount": 264,
+            "holeAxisCount": 145,
+            "importMs": 1600.564750000005,
+            "hlrMs": 2537.0643750000017,
+            "rssDeltaMb": 161.32878875732422,
+            "source": {
+              "assemblyOccurrences": 0,
+              "solidEntities": 1,
+              "advancedFaceEntities": 282,
+              "productNames": [
+                "nist_ftc_10_asme1",
+                "nist_ftc_10_asme1",
+                "ASME Y14.41"
+              ],
+              "rgbEntities": 2
+            },
+            "assemblyAccepted": false,
+            "xcafGroups": [
+              {
+                "id": "group:a51aaf489ba16d20",
+                "name": "nist_ftc_10_asme1"
+              }
+            ],
+            "xcafInstances": [
+              {
+                "displayName": "=>[0:1:1:2]",
+                "color": "#d2d2ff",
+                "nominalTransform": [
+                  [
+                    1,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    1,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                ],
+                "groupId": "group:a51aaf489ba16d20"
+              }
+            ],
+            "importAccepted": true,
+            "hlrViews": [
+              {
+                "id": "front",
+                "edges": 710,
+                "hasVisible": true
+              },
+              {
+                "id": "top",
+                "edges": 701,
+                "hasVisible": true
+              },
+              {
+                "id": "left",
+                "edges": 433,
+                "hasVisible": true
+              }
+            ],
+            "hlrCacheHit": true,
+            "hlrAccepted": true
+          },
+          "thresholds": {
+            "solidCountMin": 2,
+            "faceCountMin": 1,
+            "hlrViews": [
+              "front",
+              "top",
+              "left"
+            ],
+            "groupCountMin": 1,
+            "sourceOccurrenceCountMin": 2
+          },
+          "defectNote": "Official FTC input has no STEP assembly occurrences"
+        },
+        {
+          "id": "A4-CTC-04",
+          "name": "A4 CTC-04",
+          "status": "PASS",
+          "durationMs": 1559.3783330000006,
+          "metrics": {
+            "solidCount": 1,
+            "groupCount": 1,
+            "faceCount": 483,
+            "holeAxisCount": 228,
+            "importMs": 1000.5792079999956,
+            "hlrMs": 553.3230840000033,
+            "rssDeltaMb": -10.749862670898438,
+            "source": {
+              "assemblyOccurrences": 0,
+              "solidEntities": 1,
+              "advancedFaceEntities": 484,
+              "productNames": [
+                "2012_CTC_04_ASME1_RD",
+                "NIST PMI Test Case 4 Complex Model"
+              ],
+              "rgbEntities": 1
+            },
+            "xcafGroups": [
+              {
+                "id": "group:da83abe28a4bf908",
+                "name": "NIST PMI Test Case 4 Complex Model"
+              }
+            ],
+            "xcafInstances": [
+              {
+                "displayName": "=>[0:1:1:2]",
+                "color": "#9993bf",
+                "nominalTransform": [
+                  [
+                    1,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    1,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                ],
+                "groupId": "group:da83abe28a4bf908"
+              }
+            ],
+            "importAccepted": true,
+            "hlrViews": [
+              {
+                "id": "front",
+                "edges": 873,
+                "hasVisible": true
+              },
+              {
+                "id": "top",
+                "edges": 761,
+                "hasVisible": true
+              },
+              {
+                "id": "left",
+                "edges": 650,
+                "hasVisible": true
+              }
+            ],
+            "hlrCacheHit": true,
+            "hlrAccepted": true
+          },
+          "thresholds": {
+            "solidCountMin": 1,
+            "faceCountMin": 1,
+            "hlrViews": [
+              "front",
+              "top",
+              "left"
+            ]
+          }
+        },
+        {
+          "id": "A4-CTC-05",
+          "name": "A4 CTC-05",
+          "status": "PASS",
+          "durationMs": 785.3415830000013,
+          "metrics": {
+            "solidCount": 1,
+            "groupCount": 0,
+            "faceCount": 156,
+            "holeAxisCount": 67,
+            "importMs": 369.69441599999845,
+            "hlrMs": 410.6202919999996,
+            "rssDeltaMb": 8.781753540039062,
+            "source": {
+              "assemblyOccurrences": 0,
+              "solidEntities": 1,
+              "advancedFaceEntities": 156,
+              "productNames": [
+                "nist_ctc_05_asme1",
+                "nist_ctc_05_asme1",
+                "nist_ctc_05_asme1"
+              ],
+              "rgbEntities": 7
+            },
+            "xcafGroups": [],
+            "xcafInstances": [
+              {
+                "displayName": "nist_ctc_05_asme1",
+                "color": "#8094a6",
+                "nominalTransform": [
+                  [
+                    1,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    1,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                ]
+              }
+            ],
+            "importAccepted": true,
+            "hlrViews": [
+              {
+                "id": "front",
+                "edges": 322,
+                "hasVisible": true
+              },
+              {
+                "id": "top",
+                "edges": 301,
+                "hasVisible": true
+              },
+              {
+                "id": "left",
+                "edges": 288,
+                "hasVisible": true
+              }
+            ],
+            "hlrCacheHit": true,
+            "hlrAccepted": true
+          },
+          "thresholds": {
+            "solidCountMin": 1,
+            "faceCountMin": 1,
+            "hlrViews": [
+              "front",
+              "top",
+              "left"
+            ]
+          }
+        },
+        {
+          "id": "A3-LOCAL-XCAF",
+          "name": "Local XCAF assembly metadata control",
+          "status": "PASS",
+          "durationMs": 167.57395800000086,
+          "metrics": {
+            "instances": [
+              {
+                "displayName": "L bracket",
+                "nominalTransform": [
+                  [
+                    1,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    1,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                ],
+                "color": "#597aa3",
+                "groupId": "group:e0b017f8cb79b2fe"
+              },
+              {
+                "displayName": "Flange",
+                "nominalTransform": [
+                  [
+                    1,
+                    0,
+                    0,
+                    26
+                  ],
+                  [
+                    0,
+                    1,
+                    0,
+                    19
+                  ],
+                  [
+                    0,
+                    0,
+                    1,
+                    5
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                ],
+                "color": "#9e917d",
+                "groupId": "group:e0b017f8cb79b2fe"
+              }
+            ],
+            "groups": [
+              {
+                "id": "group:e0b017f8cb79b2fe",
+                "name": "l-bracket-flange"
+              }
+            ]
+          },
+          "thresholds": {
+            "distanceMmMax": 0.000001,
+            "expected": [
+              {
+                "displayName": "L bracket",
+                "translation": [
+                  0,
+                  0,
+                  0
+                ],
+                "color": "#597aa3"
+              },
+              {
+                "displayName": "Flange",
+                "translation": [
+                  26,
+                  19,
+                  5
+                ],
+                "color": "#9e917d"
+              }
+            ]
+          }
+        },
+        {
+          "id": "A5",
+          "name": "10 rounds of complex STEP load/release",
+          "status": "PASS",
+          "durationMs": 28012.019500000002,
+          "metrics": {
+            "samples": [
+              {
+                "round": 1,
+                "loads": [
+                  {
+                    "id": "CTC-01",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 1,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 33619968,
+                    "rss": 481606400,
+                    "heapUsed": 19790264,
+                    "external": 75252584,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-02",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 2,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 518028512,
+                    "heapUsed": 55345392,
+                    "external": 46963809,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-04",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 3,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 520650048,
+                    "heapUsed": 62552272,
+                    "external": 50105916,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-05",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 4,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 526122568,
+                    "heapUsed": 59772704,
+                    "external": 52174178,
+                    "solidCount": 1
+                  }
+                ],
+                "released": {
+                  "threadId": 3,
+                  "wasmInitializations": 1,
+                  "cachedShapeBuilds": 4,
+                  "cachedShapeHandles": 0,
+                  "wasmHeapBytes": 100663296,
+                  "rss": 526138952,
+                  "heapUsed": 59830880,
+                  "external": 52174178
+                },
+                "peakSampleRssMb": 501.7652053833008,
+                "releasedRssMb": 501.7652053833008
+              },
+              {
+                "round": 2,
+                "loads": [
+                  {
+                    "id": "CTC-01",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 5,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 526188104,
+                    "heapUsed": 55644528,
+                    "external": 52863807,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-02",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 6,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 551649440,
+                    "heapUsed": 85920560,
+                    "external": 58704096,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-04",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 7,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 439254312,
+                    "heapUsed": 54182240,
+                    "external": 47831390,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-05",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 8,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 443072048,
+                    "heapUsed": 57635872,
+                    "external": 49899652,
+                    "solidCount": 1
+                  }
+                ],
+                "released": {
+                  "threadId": 3,
+                  "wasmInitializations": 1,
+                  "cachedShapeBuilds": 8,
+                  "cachedShapeHandles": 0,
+                  "wasmHeapBytes": 100663296,
+                  "rss": 432553112,
+                  "heapUsed": 16756016,
+                  "external": 49899652
+                },
+                "peakSampleRssMb": 526.0939025878906,
+                "releasedRssMb": 412.5147933959961
+              },
+              {
+                "round": 3,
+                "loads": [
+                  {
+                    "id": "CTC-01",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 9,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 431127704,
+                    "heapUsed": 43758504,
+                    "external": 42710197,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-02",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 10,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 452263496,
+                    "heapUsed": 70354416,
+                    "external": 48154041,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-04",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 11,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 435945056,
+                    "heapUsed": 49096016,
+                    "external": 47831390,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-05",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 12,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 441057224,
+                    "heapUsed": 45452152,
+                    "external": 49899652,
+                    "solidCount": 1
+                  }
+                ],
+                "released": {
+                  "threadId": 3,
+                  "wasmInitializations": 1,
+                  "cachedShapeBuilds": 12,
+                  "cachedShapeHandles": 0,
+                  "wasmHeapBytes": 100663296,
+                  "rss": 431259208,
+                  "heapUsed": 12012512,
+                  "external": 49897371
+                },
+                "peakSampleRssMb": 431.3120803833008,
+                "releasedRssMb": 411.2808303833008
+              },
+              {
+                "round": 4,
+                "loads": [
+                  {
+                    "id": "CTC-01",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 13,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 428113480,
+                    "heapUsed": 38874808,
+                    "external": 42707916,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-02",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 14,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 448430072,
+                    "heapUsed": 64985400,
+                    "external": 48151760,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-04",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 15,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 427556208,
+                    "heapUsed": 48582776,
+                    "external": 47829109,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-05",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 16,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 430997040,
+                    "heapUsed": 44877336,
+                    "external": 49897371,
+                    "solidCount": 1
+                  }
+                ],
+                "released": {
+                  "threadId": 3,
+                  "wasmInitializations": 1,
+                  "cachedShapeBuilds": 16,
+                  "cachedShapeHandles": 0,
+                  "wasmHeapBytes": 100663296,
+                  "rss": 430997040,
+                  "heapUsed": 44972776,
+                  "external": 49897371
+                },
+                "peakSampleRssMb": 427.65624237060547,
+                "releasedRssMb": 411.0308074951172
+              },
+              {
+                "round": 5,
+                "loads": [
+                  {
+                    "id": "CTC-01",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 17,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 430997040,
+                    "heapUsed": 39958840,
+                    "external": 50587000,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-02",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 18,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 452247544,
+                    "heapUsed": 68504496,
+                    "external": 56427289,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-04",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 19,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 427179472,
+                    "heapUsed": 48404504,
+                    "external": 47829109,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-05",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 20,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 425426504,
+                    "heapUsed": 39039544,
+                    "external": 44354688,
+                    "solidCount": 1
+                  }
+                ],
+                "released": {
+                  "threadId": 3,
+                  "wasmInitializations": 1,
+                  "cachedShapeBuilds": 20,
+                  "cachedShapeHandles": 0,
+                  "wasmHeapBytes": 100663296,
+                  "rss": 425426504,
+                  "heapUsed": 39133224,
+                  "external": 44354688
+                },
+                "peakSampleRssMb": 431.29686737060547,
+                "releasedRssMb": 405.7183303833008
+              },
+              {
+                "round": 6,
+                "loads": [
+                  {
+                    "id": "CTC-01",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 21,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 425459272,
+                    "heapUsed": 34077328,
+                    "external": 45044317,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-02",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 22,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 447643808,
+                    "heapUsed": 63023992,
+                    "external": 50884606,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-04",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 23,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 428359480,
+                    "heapUsed": 48273280,
+                    "external": 47829109,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-05",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 24,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 425049864,
+                    "heapUsed": 40389128,
+                    "external": 44354688,
+                    "solidCount": 1
+                  }
+                ],
+                "released": {
+                  "threadId": 3,
+                  "wasmInitializations": 1,
+                  "cachedShapeBuilds": 24,
+                  "cachedShapeHandles": 0,
+                  "wasmHeapBytes": 100663296,
+                  "rss": 425049864,
+                  "heapUsed": 40482736,
+                  "external": 44354688
+                },
+                "peakSampleRssMb": 426.9064025878906,
+                "releasedRssMb": 405.35913848876953
+              },
+              {
+                "round": 7,
+                "loads": [
+                  {
+                    "id": "CTC-01",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 25,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 425049864,
+                    "heapUsed": 35801776,
+                    "external": 45044317,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-02",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 26,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 441663408,
+                    "heapUsed": 65264576,
+                    "external": 50884606,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-04",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 27,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 424197872,
+                    "heapUsed": 48414712,
+                    "external": 47829109,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-05",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 28,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 422199168,
+                    "heapUsed": 39009560,
+                    "external": 44354688,
+                    "solidCount": 1
+                  }
+                ],
+                "released": {
+                  "threadId": 3,
+                  "wasmInitializations": 1,
+                  "cachedShapeBuilds": 28,
+                  "cachedShapeHandles": 0,
+                  "wasmHeapBytes": 100663296,
+                  "rss": 422264704,
+                  "heapUsed": 39103192,
+                  "external": 44354688
+                },
+                "peakSampleRssMb": 421.2030487060547,
+                "releasedRssMb": 402.7030029296875
+              },
+              {
+                "round": 8,
+                "loads": [
+                  {
+                    "id": "CTC-01",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 29,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 422150016,
+                    "heapUsed": 34276976,
+                    "external": 45044317,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-02",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 30,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 441762072,
+                    "heapUsed": 62909040,
+                    "external": 50884606,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-04",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 31,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 423526368,
+                    "heapUsed": 48486120,
+                    "external": 47829109,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-05",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 32,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 421478440,
+                    "heapUsed": 39989592,
+                    "external": 44354688,
+                    "solidCount": 1
+                  }
+                ],
+                "released": {
+                  "threadId": 3,
+                  "wasmInitializations": 1,
+                  "cachedShapeBuilds": 32,
+                  "cachedShapeHandles": 0,
+                  "wasmHeapBytes": 100663296,
+                  "rss": 421478440,
+                  "heapUsed": 40083160,
+                  "external": 44354688
+                },
+                "peakSampleRssMb": 421.2971420288086,
+                "releasedRssMb": 401.95316314697266
+              },
+              {
+                "round": 9,
+                "loads": [
+                  {
+                    "id": "CTC-01",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 33,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 421478440,
+                    "heapUsed": 35420720,
+                    "external": 45044317,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-02",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 34,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 443433600,
+                    "heapUsed": 65300832,
+                    "external": 50884606,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-04",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 35,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 426574176,
+                    "heapUsed": 48167144,
+                    "external": 47829109,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-05",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 36,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 421773520,
+                    "heapUsed": 39628856,
+                    "external": 44354688,
+                    "solidCount": 1
+                  }
+                ],
+                "released": {
+                  "threadId": 3,
+                  "wasmInitializations": 1,
+                  "cachedShapeBuilds": 36,
+                  "cachedShapeHandles": 0,
+                  "wasmHeapBytes": 100663296,
+                  "rss": 421773520,
+                  "heapUsed": 39722544,
+                  "external": 44354688
+                },
+                "peakSampleRssMb": 422.8912353515625,
+                "releasedRssMb": 402.2345733642578
+              },
+              {
+                "round": 10,
+                "loads": [
+                  {
+                    "id": "CTC-01",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 37,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 421789904,
+                    "heapUsed": 34699040,
+                    "external": 45044317,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-02",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 38,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 431161072,
+                    "heapUsed": 63777680,
+                    "external": 50884606,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-04",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 39,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 413056488,
+                    "heapUsed": 49191040,
+                    "external": 47829109,
+                    "solidCount": 1
+                  },
+                  {
+                    "id": "CTC-05",
+                    "threadId": 3,
+                    "wasmInitializations": 1,
+                    "cachedShapeBuilds": 40,
+                    "cachedShapeHandles": 1,
+                    "wasmHeapBytes": 100663296,
+                    "rss": 411074120,
+                    "heapUsed": 38983392,
+                    "external": 44354688,
+                    "solidCount": 1
+                  }
+                ],
+                "released": {
+                  "threadId": 3,
+                  "wasmInitializations": 1,
+                  "cachedShapeBuilds": 40,
+                  "cachedShapeHandles": 0,
+                  "wasmHeapBytes": 100663296,
+                  "rss": 411074120,
+                  "heapUsed": 39076960,
+                  "external": 44354688
+                },
+                "peakSampleRssMb": 411.18724060058594,
+                "releasedRssMb": 392.0308303833008
+              }
+            ],
+            "models": [
+              {
+                "id": "CTC-01",
+                "sha256": "85a5752da05f53c456ca3a9e038c90358e1d5a3141d1f0d6e5f0970f2356e821",
+                "source": "NIST AP242"
+              },
+              {
+                "id": "CTC-02",
+                "sha256": "99a0a2079ddeb64d05c2432cbe931fa17c89da60d8b0bcb0b11bd0ed94fa2e68",
+                "source": "NIST AP242"
+              },
+              {
+                "id": "CTC-04",
+                "sha256": "20b43b54ce25d4ed17cff794084c406e831c687f5b62471d3371eef33669e355",
+                "source": "NIST AP242"
+              },
+              {
+                "id": "CTC-05",
+                "sha256": "59bbc09a34621c03106e4c1b2a5bc909fdb67463117c16c4965ee7a6fe5c1521",
+                "source": "NIST AP242"
+              }
+            ],
+            "baselineRssMb": 380.2637405395508,
+            "peakSampleRssMb": 526.0939025878906,
+            "releasedRssMb": 392.0308303833008,
+            "rssDeltaMb": 11.76708984375,
+            "firstToLastReleasedRssDeltaMb": -109.734375,
+            "sustainedRssGrowth": false,
+            "threadCount": 1
+          },
+          "thresholds": {
+            "rounds": 10,
+            "minimumModels": 2,
+            "releasedHandles": 0,
+            "workerThreads": 1,
+            "wasmInitializations": 1
+          }
+        }
+      ]
+    },
+    {
+      "suiteId": "B",
+      "title": "Assembly mates and SE(3) solver",
+      "authority": "https://github.com/AutodeskAILab/Fusion360GalleryDataset/blob/1084b881f3bb710267801d812d6e9286b8667059/docs/assembly.md",
+      "status": "FAIL",
+      "durationMs": 1127.0464590000047,
+      "summary": {
+        "tp": 25,
+        "fp": 30,
+        "fn": 6,
+        "precision": 0.45454545454545453,
+        "recall": 0.8064516129032258,
+        "f1": 0.5813953488372093,
+        "offlineCases": 5,
+        "scoredCases": 5,
+        "convergenceRate": 1,
+        "groundTruthConvergenceRate": 1,
+        "underConstrainedAccuracy": 1,
+        "solveCalls": 10,
+        "avgSolveMs": 2.6660747999994783,
+        "externalSkipped": 1
+      },
+      "cases": [
+        {
+          "id": "B-plate-spacer-cover-pins",
+          "name": "plate-spacer-cover-pins",
+          "status": "FAIL",
+          "durationMs": 511.8372079999972,
+          "metrics": {
+            "partCount": 5,
+            "cleanAnalysis": {
+              "tool": "analyze_assembly_3d",
+              "status": "underconstrained",
+              "remainingDof": 24
+            },
+            "mateKinds": {
+              "face-contact": {
+                "recommended": 2,
+                "expected": 2
+              },
+              "coaxial": {
+                "recommended": 6,
+                "expected": 4
+              },
+              "floating-clearance": {
+                "recommended": 0,
+                "expected": 0
+              }
+            },
+            "tp": 6,
+            "fp": 2,
+            "fn": 0,
+            "unmatchedDrafts": [
+              {
+                "id": "mate-draft:a64a911f7909b33d9e6a9d76",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:119d4df926838a3f281e4001f24c1fac628552b0c8e26c634297ae0979819375",
+                  "feature:5184f6ac5b8469aee70e78aee75d735670ee1f122f2da26fb61f593e5bb2c3d7"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:119d4df926838a3f281e4001f24c1fac628552b0c8e26c634297ae0979819375",
+                    "part": "Cover",
+                    "plane": false,
+                    "point": [
+                      9,
+                      8,
+                      11
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2
+                  },
+                  {
+                    "id": "feature:5184f6ac5b8469aee70e78aee75d735670ee1f122f2da26fb61f593e5bb2c3d7",
+                    "part": "Mounting plate",
+                    "plane": false,
+                    "point": [
+                      9,
+                      8,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:f5653febc8192b4f6b57386e",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:09ea75d6284dd067b840caa4a265043a1fcc99b125af8c86cd117192a6f7f58d",
+                  "feature:d0f1a48d2fa2d6471ff47486cc41e49ea251460c098de0bbb6f423246608e225"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:09ea75d6284dd067b840caa4a265043a1fcc99b125af8c86cd117192a6f7f58d",
+                    "part": "Mounting plate",
+                    "plane": false,
+                    "point": [
+                      33,
+                      8,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2
+                  },
+                  {
+                    "id": "feature:d0f1a48d2fa2d6471ff47486cc41e49ea251460c098de0bbb6f423246608e225",
+                    "part": "Cover",
+                    "plane": false,
+                    "point": [
+                      33,
+                      8,
+                      11
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2
+                  }
+                ]
+              }
+            ],
+            "missedTruth": [],
+            "precision": 0.75,
+            "recall": 1,
+            "f1": 0.8571428571428571,
+            "truthSolve": {
+              "status": "underconstrained",
+              "remainingDof": 7,
+              "contradictions": [],
+              "conflictMateIds": [],
+              "converged": true,
+              "durationMs": 4.8495830000028946
+            },
+            "draftSolve": {
+              "status": "underconstrained",
+              "remainingDof": 7,
+              "contradictions": [],
+              "conflictMateIds": [],
+              "converged": true,
+              "durationMs": 3.7604580000042915
+            },
+            "expectedUnderConstrained": true,
+            "underConstrainedCorrect": true,
+            "remainingDofDelta": 0
+          },
+          "thresholds": {
+            "axisCrossMax": 0.001,
+            "distanceMmMax": 0.05
+          },
+          "defectNote": "Topology drafts differ from independent mate truth"
+        },
+        {
+          "id": "B-l-bracket-flange",
+          "name": "l-bracket-flange",
+          "status": "FAIL",
+          "durationMs": 119.92883299999812,
+          "metrics": {
+            "partCount": 2,
+            "cleanAnalysis": {
+              "tool": "analyze_assembly_3d",
+              "status": "underconstrained",
+              "remainingDof": 6
+            },
+            "mateKinds": {
+              "face-contact": {
+                "recommended": 1,
+                "expected": 1
+              },
+              "coaxial": {
+                "recommended": 3,
+                "expected": 2
+              },
+              "floating-clearance": {
+                "recommended": 0,
+                "expected": 0
+              }
+            },
+            "tp": 3,
+            "fp": 1,
+            "fn": 0,
+            "unmatchedDrafts": [
+              {
+                "id": "mate-draft:c6f240a9ddb9bc7b18876fe3",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:a12c0a4f6052be318020de3a4235b44edca2c6ccc2a0d8605721da1dbb019763",
+                  "feature:b0e69dcea5faa9de9e3fa73638d9d8fca7e43910bf77a9b2b24e5e5ff557f39b"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:a12c0a4f6052be318020de3a4235b44edca2c6ccc2a0d8605721da1dbb019763",
+                    "part": "Flange",
+                    "plane": false,
+                    "point": [
+                      26,
+                      19,
+                      5
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 15
+                  },
+                  {
+                    "id": "feature:b0e69dcea5faa9de9e3fa73638d9d8fca7e43910bf77a9b2b24e5e5ff557f39b",
+                    "part": "L bracket",
+                    "plane": false,
+                    "point": [
+                      26,
+                      19,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 3
+                  }
+                ]
+              }
+            ],
+            "missedTruth": [],
+            "precision": 0.75,
+            "recall": 1,
+            "f1": 0.8571428571428571,
+            "truthSolve": {
+              "status": "solved",
+              "remainingDof": 0,
+              "contradictions": [],
+              "conflictMateIds": [],
+              "converged": true,
+              "durationMs": 0.2469159999891417
+            },
+            "draftSolve": {
+              "status": "solved",
+              "remainingDof": 0,
+              "contradictions": [],
+              "conflictMateIds": [],
+              "converged": true,
+              "durationMs": 0.23350000000209548
+            },
+            "expectedUnderConstrained": false,
+            "underConstrainedCorrect": true,
+            "remainingDofDelta": 0
+          },
+          "thresholds": {
+            "axisCrossMax": 0.001,
+            "distanceMmMax": 0.05
+          },
+          "defectNote": "Topology drafts differ from independent mate truth"
+        },
+        {
+          "id": "B-stepped-shaft-seat-cover",
+          "name": "stepped-shaft-seat-cover",
+          "status": "FAIL",
+          "durationMs": 100.94037500000559,
+          "metrics": {
+            "partCount": 3,
+            "cleanAnalysis": {
+              "tool": "analyze_assembly_3d",
+              "status": "underconstrained",
+              "remainingDof": 12
+            },
+            "mateKinds": {
+              "face-contact": {
+                "recommended": 2,
+                "expected": 2
+              },
+              "coaxial": {
+                "recommended": 11,
+                "expected": 2
+              },
+              "floating-clearance": {
+                "recommended": 0,
+                "expected": 0
+              }
+            },
+            "tp": 4,
+            "fp": 9,
+            "fn": 0,
+            "unmatchedDrafts": [
+              {
+                "id": "mate-draft:0e4cd29f2463e76603ffd858",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:848275daf01aa9c098ba96476a9ed7df5ed44ab6205cfc10f8c0b7c11648fd8d",
+                  "feature:df617434ece2ff9739ad683e8e9119e25e216e403908ccf20a933868e84bf277"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:848275daf01aa9c098ba96476a9ed7df5ed44ab6205cfc10f8c0b7c11648fd8d",
+                    "part": "Stepped shaft",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      9
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 9
+                  },
+                  {
+                    "id": "feature:df617434ece2ff9739ad683e8e9119e25e216e403908ccf20a933868e84bf277",
+                    "part": "Bearing seat",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 6
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:e6452f8ee0a5d365e858c5d0",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:6d092f1a7da59ea974078f4e79449ee3147c19711dcd73cb1e2f0d183180b64a",
+                  "feature:df617434ece2ff9739ad683e8e9119e25e216e403908ccf20a933868e84bf277"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:6d092f1a7da59ea974078f4e79449ee3147c19711dcd73cb1e2f0d183180b64a",
+                    "part": "Stepped shaft",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      12
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 4
+                  },
+                  {
+                    "id": "feature:df617434ece2ff9739ad683e8e9119e25e216e403908ccf20a933868e84bf277",
+                    "part": "Bearing seat",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 6
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:e68a4d9a71671d01cc33bd4c",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:0708df4df67e4628bb4bcc9479ef7f0b0e0354fe0526580e6e5e4d9a8be5c6c6",
+                  "feature:df617434ece2ff9739ad683e8e9119e25e216e403908ccf20a933868e84bf277"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:0708df4df67e4628bb4bcc9479ef7f0b0e0354fe0526580e6e5e4d9a8be5c6c6",
+                    "part": "End cap",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      12
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 13
+                  },
+                  {
+                    "id": "feature:df617434ece2ff9739ad683e8e9119e25e216e403908ccf20a933868e84bf277",
+                    "part": "Bearing seat",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 6
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:5e0e6e3ddfc65d9586f8244e",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:cff41b04c7dd48499fdde6727d30a32096779b53c736eca0aa02623eb900c98e",
+                  "feature:df617434ece2ff9739ad683e8e9119e25e216e403908ccf20a933868e84bf277"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:cff41b04c7dd48499fdde6727d30a32096779b53c736eca0aa02623eb900c98e",
+                    "part": "End cap",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      11
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 4
+                  },
+                  {
+                    "id": "feature:df617434ece2ff9739ad683e8e9119e25e216e403908ccf20a933868e84bf277",
+                    "part": "Bearing seat",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 6
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:81de9cc4f65c68531e4bdf86",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:0708df4df67e4628bb4bcc9479ef7f0b0e0354fe0526580e6e5e4d9a8be5c6c6",
+                  "feature:848275daf01aa9c098ba96476a9ed7df5ed44ab6205cfc10f8c0b7c11648fd8d"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:0708df4df67e4628bb4bcc9479ef7f0b0e0354fe0526580e6e5e4d9a8be5c6c6",
+                    "part": "End cap",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      12
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 13
+                  },
+                  {
+                    "id": "feature:848275daf01aa9c098ba96476a9ed7df5ed44ab6205cfc10f8c0b7c11648fd8d",
+                    "part": "Stepped shaft",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      9
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 9
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:d8a915777bc7edfc19b768fb",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:848275daf01aa9c098ba96476a9ed7df5ed44ab6205cfc10f8c0b7c11648fd8d",
+                  "feature:cff41b04c7dd48499fdde6727d30a32096779b53c736eca0aa02623eb900c98e"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:848275daf01aa9c098ba96476a9ed7df5ed44ab6205cfc10f8c0b7c11648fd8d",
+                    "part": "Stepped shaft",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      9
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 9
+                  },
+                  {
+                    "id": "feature:cff41b04c7dd48499fdde6727d30a32096779b53c736eca0aa02623eb900c98e",
+                    "part": "End cap",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      11
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 4
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:336fbac75a7d0a8865a0aa41",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:0708df4df67e4628bb4bcc9479ef7f0b0e0354fe0526580e6e5e4d9a8be5c6c6",
+                  "feature:6d092f1a7da59ea974078f4e79449ee3147c19711dcd73cb1e2f0d183180b64a"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:0708df4df67e4628bb4bcc9479ef7f0b0e0354fe0526580e6e5e4d9a8be5c6c6",
+                    "part": "End cap",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      12
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 13
+                  },
+                  {
+                    "id": "feature:6d092f1a7da59ea974078f4e79449ee3147c19711dcd73cb1e2f0d183180b64a",
+                    "part": "Stepped shaft",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      12
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 4
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:591954f015de622520fc5545",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:0708df4df67e4628bb4bcc9479ef7f0b0e0354fe0526580e6e5e4d9a8be5c6c6",
+                  "feature:a3c86a091c6a79556075c4a51f658b9d59820a13edbaa59cf354b9f7f7d1b3f9"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:0708df4df67e4628bb4bcc9479ef7f0b0e0354fe0526580e6e5e4d9a8be5c6c6",
+                    "part": "End cap",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      12
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 13
+                  },
+                  {
+                    "id": "feature:a3c86a091c6a79556075c4a51f658b9d59820a13edbaa59cf354b9f7f7d1b3f9",
+                    "part": "Stepped shaft",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 6
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:6819f3096a6122ab6751031a",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:a3c86a091c6a79556075c4a51f658b9d59820a13edbaa59cf354b9f7f7d1b3f9",
+                  "feature:cff41b04c7dd48499fdde6727d30a32096779b53c736eca0aa02623eb900c98e"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:a3c86a091c6a79556075c4a51f658b9d59820a13edbaa59cf354b9f7f7d1b3f9",
+                    "part": "Stepped shaft",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 6
+                  },
+                  {
+                    "id": "feature:cff41b04c7dd48499fdde6727d30a32096779b53c736eca0aa02623eb900c98e",
+                    "part": "End cap",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      11
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 4
+                  }
+                ]
+              }
+            ],
+            "missedTruth": [],
+            "precision": 0.3076923076923077,
+            "recall": 1,
+            "f1": 0.47058823529411764,
+            "truthSolve": {
+              "status": "underconstrained",
+              "remainingDof": 2,
+              "contradictions": [],
+              "conflictMateIds": [],
+              "converged": true,
+              "durationMs": 0.5964999999996508
+            },
+            "draftSolve": {
+              "status": "underconstrained",
+              "remainingDof": 2,
+              "contradictions": [],
+              "conflictMateIds": [],
+              "converged": true,
+              "durationMs": 2.7120409999915864
+            },
+            "expectedUnderConstrained": true,
+            "underConstrainedCorrect": true,
+            "remainingDofDelta": 0
+          },
+          "thresholds": {
+            "axisCrossMax": 0.001,
+            "distanceMmMax": 0.05
+          },
+          "defectNote": "Topology drafts differ from independent mate truth"
+        },
+        {
+          "id": "B-shell-four-corner-clamps",
+          "name": "shell-four-corner-clamps",
+          "status": "FAIL",
+          "durationMs": 179.77716599999985,
+          "metrics": {
+            "partCount": 6,
+            "cleanAnalysis": {
+              "tool": "analyze_assembly_3d",
+              "status": "underconstrained",
+              "remainingDof": 30
+            },
+            "mateKinds": {
+              "face-contact": {
+                "recommended": 5,
+                "expected": 5
+              },
+              "coaxial": {
+                "recommended": 20,
+                "expected": 4
+              },
+              "floating-clearance": {
+                "recommended": 0,
+                "expected": 4
+              }
+            },
+            "tp": 9,
+            "fp": 16,
+            "fn": 4,
+            "unmatchedDrafts": [
+              {
+                "id": "mate-draft:530886a055667f649be55211",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:5432d1b368f197d10521bb1d93ddc2ffa16173afaafaf82c5d03ac9c2ebf7ba3",
+                  "feature:b2396885dbf10f4302cb7e20f6655c74342fbf1f42c30b9e7c49aec7643b5884"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:5432d1b368f197d10521bb1d93ddc2ffa16173afaafaf82c5d03ac9c2ebf7ba3",
+                    "part": "Thin-wall housing",
+                    "plane": false,
+                    "point": [
+                      2,
+                      2,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  },
+                  {
+                    "id": "feature:b2396885dbf10f4302cb7e20f6655c74342fbf1f42c30b9e7c49aec7643b5884",
+                    "part": "Lid",
+                    "plane": false,
+                    "point": [
+                      2,
+                      2,
+                      13
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:22d6986ee16df59f5b51c3bf",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:5432d1b368f197d10521bb1d93ddc2ffa16173afaafaf82c5d03ac9c2ebf7ba3",
+                  "feature:7e8eb126370e12aca5c773586202384e86b8d77374dd875bc18076c5991e824e"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:5432d1b368f197d10521bb1d93ddc2ffa16173afaafaf82c5d03ac9c2ebf7ba3",
+                    "part": "Thin-wall housing",
+                    "plane": false,
+                    "point": [
+                      2,
+                      2,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  },
+                  {
+                    "id": "feature:7e8eb126370e12aca5c773586202384e86b8d77374dd875bc18076c5991e824e",
+                    "part": "Clamp screw 1",
+                    "plane": false,
+                    "point": [
+                      2,
+                      2,
+                      17
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2.7
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:1e9c67111a3fa6bd3c5b8b8c",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:07c95c236166198b0edf1162e4563fac0d4ef8f543f0dcf5b06b72c4619fdac4",
+                  "feature:5800e970963c8b1cbeb7d0ea0beb9539502b0b29531df5b414eff9de45b6774a"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:07c95c236166198b0edf1162e4563fac0d4ef8f543f0dcf5b06b72c4619fdac4",
+                    "part": "Lid",
+                    "plane": false,
+                    "point": [
+                      48,
+                      2,
+                      13
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  },
+                  {
+                    "id": "feature:5800e970963c8b1cbeb7d0ea0beb9539502b0b29531df5b414eff9de45b6774a",
+                    "part": "Thin-wall housing",
+                    "plane": false,
+                    "point": [
+                      48,
+                      2,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:863253dacb0affe198eb220d",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:5800e970963c8b1cbeb7d0ea0beb9539502b0b29531df5b414eff9de45b6774a",
+                  "feature:d791fd59f252d032216ad7ba9391eac165a3dee7257bc7b2268d55a9641a35aa"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:5800e970963c8b1cbeb7d0ea0beb9539502b0b29531df5b414eff9de45b6774a",
+                    "part": "Thin-wall housing",
+                    "plane": false,
+                    "point": [
+                      48,
+                      2,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  },
+                  {
+                    "id": "feature:d791fd59f252d032216ad7ba9391eac165a3dee7257bc7b2268d55a9641a35aa",
+                    "part": "Clamp screw 2",
+                    "plane": false,
+                    "point": [
+                      48,
+                      2,
+                      17
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2.7
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:f98facccc6993e821c7ef86f",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:0d12bff764d182d4708f0604afd44b6a9e97e5182dae2d5a6e2d417a8c43eb5f",
+                  "feature:370e159106436e7ec20519afc2600443e71ed3bbea0aaa632fa03c04af0ee843"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:0d12bff764d182d4708f0604afd44b6a9e97e5182dae2d5a6e2d417a8c43eb5f",
+                    "part": "Lid",
+                    "plane": false,
+                    "point": [
+                      2,
+                      32,
+                      13
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  },
+                  {
+                    "id": "feature:370e159106436e7ec20519afc2600443e71ed3bbea0aaa632fa03c04af0ee843",
+                    "part": "Thin-wall housing",
+                    "plane": false,
+                    "point": [
+                      2,
+                      32,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:e1628863922ca5fb9925aff2",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:370e159106436e7ec20519afc2600443e71ed3bbea0aaa632fa03c04af0ee843",
+                  "feature:68da7a3e1250138fcffa3641267d486b75f744881bbd7e2aec32dd912d891617"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:370e159106436e7ec20519afc2600443e71ed3bbea0aaa632fa03c04af0ee843",
+                    "part": "Thin-wall housing",
+                    "plane": false,
+                    "point": [
+                      2,
+                      32,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  },
+                  {
+                    "id": "feature:68da7a3e1250138fcffa3641267d486b75f744881bbd7e2aec32dd912d891617",
+                    "part": "Clamp screw 3",
+                    "plane": false,
+                    "point": [
+                      2,
+                      32,
+                      17
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2.7
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:8be9b817aa3fc9f1e4cf5797",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:7fb3807127f8ec9374e8dd5a62d8a37aa4b591e40c96ea54de0fcc614e36ac0f",
+                  "feature:cdb1923fa348afd1259abebcc94e7c8bfcf816f80a2a7cd921dc6bb91faaa98c"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:7fb3807127f8ec9374e8dd5a62d8a37aa4b591e40c96ea54de0fcc614e36ac0f",
+                    "part": "Thin-wall housing",
+                    "plane": false,
+                    "point": [
+                      48,
+                      32,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  },
+                  {
+                    "id": "feature:cdb1923fa348afd1259abebcc94e7c8bfcf816f80a2a7cd921dc6bb91faaa98c",
+                    "part": "Lid",
+                    "plane": false,
+                    "point": [
+                      48,
+                      32,
+                      13
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:2eebfba4f8aea48bbb566fc9",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:7fb3807127f8ec9374e8dd5a62d8a37aa4b591e40c96ea54de0fcc614e36ac0f",
+                  "feature:a8f49ccf68586994d4808168f7002e35adabc66506c5e7426005f107764d6b3d"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:7fb3807127f8ec9374e8dd5a62d8a37aa4b591e40c96ea54de0fcc614e36ac0f",
+                    "part": "Thin-wall housing",
+                    "plane": false,
+                    "point": [
+                      48,
+                      32,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  },
+                  {
+                    "id": "feature:a8f49ccf68586994d4808168f7002e35adabc66506c5e7426005f107764d6b3d",
+                    "part": "Clamp screw 4",
+                    "plane": false,
+                    "point": [
+                      48,
+                      32,
+                      17
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2.7
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:6d0a825fd46f794de897971e",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:7e8eb126370e12aca5c773586202384e86b8d77374dd875bc18076c5991e824e",
+                  "feature:b2396885dbf10f4302cb7e20f6655c74342fbf1f42c30b9e7c49aec7643b5884"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:7e8eb126370e12aca5c773586202384e86b8d77374dd875bc18076c5991e824e",
+                    "part": "Clamp screw 1",
+                    "plane": false,
+                    "point": [
+                      2,
+                      2,
+                      17
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2.7
+                  },
+                  {
+                    "id": "feature:b2396885dbf10f4302cb7e20f6655c74342fbf1f42c30b9e7c49aec7643b5884",
+                    "part": "Lid",
+                    "plane": false,
+                    "point": [
+                      2,
+                      2,
+                      13
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:e694d9fbf73365cff5362e55",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:1c9a88be5651f0b25c50c181248f74054ed77c1b49682367ac6fe604b8f15d3a",
+                  "feature:b2396885dbf10f4302cb7e20f6655c74342fbf1f42c30b9e7c49aec7643b5884"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:1c9a88be5651f0b25c50c181248f74054ed77c1b49682367ac6fe604b8f15d3a",
+                    "part": "Clamp screw 1",
+                    "plane": false,
+                    "point": [
+                      2,
+                      2,
+                      9
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  },
+                  {
+                    "id": "feature:b2396885dbf10f4302cb7e20f6655c74342fbf1f42c30b9e7c49aec7643b5884",
+                    "part": "Lid",
+                    "plane": false,
+                    "point": [
+                      2,
+                      2,
+                      13
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:ff9e323aa2c3bab966b199a2",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:07c95c236166198b0edf1162e4563fac0d4ef8f543f0dcf5b06b72c4619fdac4",
+                  "feature:d791fd59f252d032216ad7ba9391eac165a3dee7257bc7b2268d55a9641a35aa"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:07c95c236166198b0edf1162e4563fac0d4ef8f543f0dcf5b06b72c4619fdac4",
+                    "part": "Lid",
+                    "plane": false,
+                    "point": [
+                      48,
+                      2,
+                      13
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  },
+                  {
+                    "id": "feature:d791fd59f252d032216ad7ba9391eac165a3dee7257bc7b2268d55a9641a35aa",
+                    "part": "Clamp screw 2",
+                    "plane": false,
+                    "point": [
+                      48,
+                      2,
+                      17
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2.7
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:9667e38fd65491514d3bf9af",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:07c95c236166198b0edf1162e4563fac0d4ef8f543f0dcf5b06b72c4619fdac4",
+                  "feature:3f7ca86a0753471ee189fe390cc02f384042c7717752eb146cada893ce2e83ab"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:07c95c236166198b0edf1162e4563fac0d4ef8f543f0dcf5b06b72c4619fdac4",
+                    "part": "Lid",
+                    "plane": false,
+                    "point": [
+                      48,
+                      2,
+                      13
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  },
+                  {
+                    "id": "feature:3f7ca86a0753471ee189fe390cc02f384042c7717752eb146cada893ce2e83ab",
+                    "part": "Clamp screw 2",
+                    "plane": false,
+                    "point": [
+                      48,
+                      2,
+                      9
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:b6f0a1cdf366b9ff2858590f",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:0d12bff764d182d4708f0604afd44b6a9e97e5182dae2d5a6e2d417a8c43eb5f",
+                  "feature:68da7a3e1250138fcffa3641267d486b75f744881bbd7e2aec32dd912d891617"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:0d12bff764d182d4708f0604afd44b6a9e97e5182dae2d5a6e2d417a8c43eb5f",
+                    "part": "Lid",
+                    "plane": false,
+                    "point": [
+                      2,
+                      32,
+                      13
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  },
+                  {
+                    "id": "feature:68da7a3e1250138fcffa3641267d486b75f744881bbd7e2aec32dd912d891617",
+                    "part": "Clamp screw 3",
+                    "plane": false,
+                    "point": [
+                      2,
+                      32,
+                      17
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2.7
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:4e5f26a5f5e092e47646b398",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:0d12bff764d182d4708f0604afd44b6a9e97e5182dae2d5a6e2d417a8c43eb5f",
+                  "feature:86442333916351730f2b0f501e7269759db82c4b1ceb50651062446a8015fc23"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:0d12bff764d182d4708f0604afd44b6a9e97e5182dae2d5a6e2d417a8c43eb5f",
+                    "part": "Lid",
+                    "plane": false,
+                    "point": [
+                      2,
+                      32,
+                      13
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  },
+                  {
+                    "id": "feature:86442333916351730f2b0f501e7269759db82c4b1ceb50651062446a8015fc23",
+                    "part": "Clamp screw 3",
+                    "plane": false,
+                    "point": [
+                      2,
+                      32,
+                      9
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:51b7da68675279fdcb48f872",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:a8f49ccf68586994d4808168f7002e35adabc66506c5e7426005f107764d6b3d",
+                  "feature:cdb1923fa348afd1259abebcc94e7c8bfcf816f80a2a7cd921dc6bb91faaa98c"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:a8f49ccf68586994d4808168f7002e35adabc66506c5e7426005f107764d6b3d",
+                    "part": "Clamp screw 4",
+                    "plane": false,
+                    "point": [
+                      48,
+                      32,
+                      17
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2.7
+                  },
+                  {
+                    "id": "feature:cdb1923fa348afd1259abebcc94e7c8bfcf816f80a2a7cd921dc6bb91faaa98c",
+                    "part": "Lid",
+                    "plane": false,
+                    "point": [
+                      48,
+                      32,
+                      13
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:53440e8f8be662ad7e83fe5c",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:3519b364f55eb24063ff851025416b0e417fb3dcfeec29bb8a2af508c80a3ad7",
+                  "feature:cdb1923fa348afd1259abebcc94e7c8bfcf816f80a2a7cd921dc6bb91faaa98c"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:3519b364f55eb24063ff851025416b0e417fb3dcfeec29bb8a2af508c80a3ad7",
+                    "part": "Clamp screw 4",
+                    "plane": false,
+                    "point": [
+                      48,
+                      32,
+                      9
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  },
+                  {
+                    "id": "feature:cdb1923fa348afd1259abebcc94e7c8bfcf816f80a2a7cd921dc6bb91faaa98c",
+                    "part": "Lid",
+                    "plane": false,
+                    "point": [
+                      48,
+                      32,
+                      13
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  }
+                ]
+              }
+            ],
+            "missedTruth": [
+              {
+                "kind": "floating-clearance",
+                "features": [
+                  {
+                    "part": "Lid",
+                    "point": [
+                      2,
+                      2,
+                      14
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  },
+                  {
+                    "part": "Clamp screw 1",
+                    "point": [
+                      2,
+                      2,
+                      9
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  }
+                ],
+                "minMm": 0,
+                "maxMm": 0.3
+              },
+              {
+                "kind": "floating-clearance",
+                "features": [
+                  {
+                    "part": "Lid",
+                    "point": [
+                      48,
+                      2,
+                      14
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  },
+                  {
+                    "part": "Clamp screw 2",
+                    "point": [
+                      48,
+                      2,
+                      9
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  }
+                ],
+                "minMm": 0,
+                "maxMm": 0.3
+              },
+              {
+                "kind": "floating-clearance",
+                "features": [
+                  {
+                    "part": "Lid",
+                    "point": [
+                      2,
+                      32,
+                      14
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  },
+                  {
+                    "part": "Clamp screw 3",
+                    "point": [
+                      2,
+                      32,
+                      9
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  }
+                ],
+                "minMm": 0,
+                "maxMm": 0.3
+              },
+              {
+                "kind": "floating-clearance",
+                "features": [
+                  {
+                    "part": "Lid",
+                    "point": [
+                      48,
+                      32,
+                      14
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.7
+                  },
+                  {
+                    "part": "Clamp screw 4",
+                    "point": [
+                      48,
+                      32,
+                      9
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 1.4
+                  }
+                ],
+                "minMm": 0,
+                "maxMm": 0.3
+              }
+            ],
+            "precision": 0.36,
+            "recall": 0.6923076923076923,
+            "f1": 0.47368421052631576,
+            "truthSolve": {
+              "status": "underconstrained",
+              "remainingDof": 7,
+              "contradictions": [],
+              "conflictMateIds": [],
+              "converged": true,
+              "durationMs": 5.002458000002662
+            },
+            "draftSolve": {
+              "status": "underconstrained",
+              "remainingDof": 4,
+              "contradictions": [],
+              "conflictMateIds": [],
+              "converged": true,
+              "durationMs": 8.021292000004905
+            },
+            "expectedUnderConstrained": true,
+            "underConstrainedCorrect": true,
+            "remainingDofDelta": -3
+          },
+          "thresholds": {
+            "axisCrossMax": 0.001,
+            "distanceMmMax": 0.05
+          },
+          "defectNote": "Topology drafts differ from independent mate truth; Draft and truth solves leave different numbers of free degrees"
+        },
+        {
+          "id": "B-eccentric-coupling",
+          "name": "eccentric-coupling",
+          "status": "FAIL",
+          "durationMs": 101.65545799999381,
+          "metrics": {
+            "partCount": 3,
+            "cleanAnalysis": {
+              "tool": "analyze_assembly_3d",
+              "status": "underconstrained",
+              "remainingDof": 12
+            },
+            "mateKinds": {
+              "face-contact": {
+                "recommended": 1,
+                "expected": 1
+              },
+              "coaxial": {
+                "recommended": 4,
+                "expected": 2
+              },
+              "floating-clearance": {
+                "recommended": 0,
+                "expected": 2
+              }
+            },
+            "tp": 3,
+            "fp": 2,
+            "fn": 2,
+            "unmatchedDrafts": [
+              {
+                "id": "mate-draft:65a4204e3dd841501b3f57f2",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:4e6f0e91844f2b9588157723df1034a7bfc0b75364c27e206cd12128e7319bf9",
+                  "feature:9bd32077a531bf55557fac0716d7afa1c3b505677d0ab60e80d55180db4e83b8"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:4e6f0e91844f2b9588157723df1034a7bfc0b75364c27e206cd12128e7319bf9",
+                    "part": "Driving hub",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 15
+                  },
+                  {
+                    "id": "feature:9bd32077a531bf55557fac0716d7afa1c3b505677d0ab60e80d55180db4e83b8",
+                    "part": "Driven hub",
+                    "plane": false,
+                    "point": [
+                      0,
+                      0,
+                      7
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 15
+                  }
+                ]
+              },
+              {
+                "id": "mate-draft:00e46e04098a3f011b6f9789",
+                "kind": "coaxial",
+                "featureIds": [
+                  "feature:22e8a62ca811670743b8552d1e793d1f4fd961484b41d401f64800a638fdc2c9",
+                  "feature:2b6ffad9c70a8736cfc474032ab6f91969ce50c6de79165c7aec74451f14ec66"
+                ],
+                "constrainedDofs": [
+                  "tx",
+                  "ty",
+                  "rx",
+                  "ry"
+                ],
+                "features": [
+                  {
+                    "id": "feature:22e8a62ca811670743b8552d1e793d1f4fd961484b41d401f64800a638fdc2c9",
+                    "part": "Driving hub",
+                    "plane": false,
+                    "point": [
+                      3,
+                      0,
+                      -1
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2.2
+                  },
+                  {
+                    "id": "feature:2b6ffad9c70a8736cfc474032ab6f91969ce50c6de79165c7aec74451f14ec66",
+                    "part": "Driven hub",
+                    "plane": false,
+                    "point": [
+                      3,
+                      0,
+                      6
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2.2
+                  }
+                ]
+              }
+            ],
+            "missedTruth": [
+              {
+                "kind": "floating-clearance",
+                "features": [
+                  {
+                    "part": "Driving hub",
+                    "point": [
+                      3,
+                      0,
+                      0
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2.2
+                  },
+                  {
+                    "part": "Eccentric key",
+                    "point": [
+                      3.1,
+                      0,
+                      0
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2
+                  }
+                ],
+                "minMm": 0,
+                "maxMm": 0.2
+              },
+              {
+                "kind": "floating-clearance",
+                "features": [
+                  {
+                    "part": "Driven hub",
+                    "point": [
+                      3,
+                      0,
+                      0
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2.2
+                  },
+                  {
+                    "part": "Eccentric key",
+                    "point": [
+                      3.1,
+                      0,
+                      0
+                    ],
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "radius": 2
+                  }
+                ],
+                "minMm": 0,
+                "maxMm": 0.2
+              }
+            ],
+            "precision": 0.6,
+            "recall": 0.6,
+            "f1": 0.6,
+            "truthSolve": {
+              "status": "underconstrained",
+              "remainingDof": 4,
+              "contradictions": [],
+              "conflictMateIds": [],
+              "converged": true,
+              "durationMs": 0.668707999997423
+            },
+            "draftSolve": {
+              "status": "underconstrained",
+              "remainingDof": 6,
+              "contradictions": [],
+              "conflictMateIds": [],
+              "converged": true,
+              "durationMs": 0.5692920000001322
+            },
+            "expectedUnderConstrained": true,
+            "underConstrainedCorrect": true,
+            "remainingDofDelta": 2
+          },
+          "thresholds": {
+            "axisCrossMax": 0.001,
+            "distanceMmMax": 0.05
+          },
+          "defectNote": "Topology drafts differ from independent mate truth; Draft and truth solves leave different numbers of free degrees"
+        },
+        {
+          "id": "B-FUSION360",
+          "name": "FUSION360",
+          "status": "SKIPPED_EXTERNAL_ASSET",
+          "reason": "No verified research subset is supplied. Official downloads contain 7z collections; STEP is exported per body, while occurrence poses, joints and contact indices are kept separately. The source indexes refer to SMT B-Reps. A verified, license-eligible subset with normalized world-space truth and pinned hashes is required.",
+          "durationMs": 0,
+          "metrics": {},
+          "thresholds": {
+            "axisCrossMax": 0.001,
+            "distanceMmMax": 0.05
+          }
+        }
+      ]
+    },
+    {
+      "suiteId": "C",
+      "title": "GD&T and dimensional accuracy",
+      "authority": "ASME Y14.5.1 and analytical stack-up",
+      "status": "PASS",
+      "durationMs": 1142.1552910000028,
+      "summary": {
+        "pass": 6,
+        "fail": 0,
+        "skipped": 0,
+        "total": 6
+      },
+      "cases": [
+        {
+          "id": "C1",
+          "name": "Axial clearance",
+          "thresholds": {
+            "maxErrorQ": 0,
+            "relativeErrorLt": 0.015
+          },
+          "metrics": {
+            "nominalQ": 3000,
+            "minQ": 2520,
+            "maxQ": 3480,
+            "rss3SigmaQ": 253.37718918639854,
+            "mc3SigmaQ": 252.68642444186884,
+            "expected": {
+              "nominalQ": 3000,
+              "minQ": 2520,
+              "maxQ": 3480,
+              "rss3SigmaQ": 253.37718918639857
+            },
+            "maxErrorQ": 0,
+            "relativeError": 0.002726230986884792
+          },
+          "status": "PASS",
+          "durationMs": 10.655333000002429
+        },
+        {
+          "id": "C2",
+          "name": "MMC bonus and shared datum shift",
+          "thresholds": {
+            "relativeErrorLt": 0.02,
+            "coupledFraction": 1
+          },
+          "metrics": {
+            "widthsMm": [
+              0.25001555681013155,
+              0.25000384838546336
+            ],
+            "expectedWidthMm": 0.25,
+            "relativeError": 0.00006222724052618034,
+            "coupledFraction": 1,
+            "maxProjectionError": 0,
+            "nonzeroDatumDraws": 50000,
+            "couplingBasis": "Shared world-space rigid twist, before projection at individual holes"
+          },
+          "status": "PASS",
+          "durationMs": 95.95008399999642
+        },
+        {
+          "id": "C3",
+          "name": "Coaxiality and matched runout",
+          "thresholds": {
+            "relativeErrorLt": 0.02,
+            "orderingViolations": 0
+          },
+          "metrics": {
+            "maxima": {
+              "coaxiality": 0.19999943165959133,
+              "circular-runout": 0.19999992191091237,
+              "total-runout": 0.19999999118262848
+            },
+            "analyticalMaxMm": 0.2,
+            "maxRelativeError": 0.0000028417020433990636,
+            "orderingViolations": 0,
+            "maxReferenceErrorMm": 5.551115123125783e-17,
+            "fullExceedsFirstSection": 25101,
+            "implementation": "sampleSdt and zoneError, comparing matched end cross sections"
+          },
+          "status": "PASS",
+          "durationMs": 33.845000000001164
+        },
+        {
+          "id": "C4",
+          "name": "Four-hole composite position",
+          "thresholds": {
+            "centroidMaxMm": 0.2,
+            "pairErrorMaxMm": 0.1
+          },
+          "metrics": {
+            "maxCentroidDriftMm": 0.17090026965169555,
+            "maxPairDistanceErrorMm": 0.0904129846740247,
+            "maxUpperZoneMm": 0.3955966324697039,
+            "maxLowerZoneMm": 0.09999999999971684
+          },
+          "status": "PASS",
+          "durationMs": 275.25900000000547
+        },
+        {
+          "id": "C5",
+          "name": "Unequal profile, form and orientation",
+          "thresholds": {
+            "relativeErrorLt": 0.02
+          },
+          "metrics": {
+            "meanOffsetMm": 0.1000550415334929,
+            "expectedMeanMm": 0.1,
+            "relativeError": 0.0005504153349289442,
+            "maxima": {
+              "profile-surface": 0.39999967289699345,
+              "flatness": 0.39999921678359673,
+              "cylindricity": 0.39999999362197874,
+              "perpendicularity": 0.39999651064505626,
+              "parallelism": 0.39999619036030065
+            },
+            "spanMm": 80,
+            "orientationBounds": {
+              "perpendicularity": 0.4,
+              "parallelism": 0.4
+            },
+            "asymmetricBoundsMm": [
+              -0.1,
+              0.30000000000000004
+            ],
+            "observedProfileEnvelopeMm": [
+              -0.0999998424447214,
+              0.2999997546727451
+            ],
+            "maxProjectionErrorMm": 1.6653345369377348e-16
+          },
+          "status": "PASS",
+          "durationMs": 30.53429199999664
+        },
+        {
+          "id": "C6",
+          "name": "3D and GD&T performance",
+          "thresholds": {
+            "samples": 50000,
+            "fullMsLt": 1800,
+            "incrementalMsLt": 350
+          },
+          "metrics": {
+            "fullMs": 688.0725419999944,
+            "incrementalMs": {
+              "MMC": 3.290500000002794,
+              "RFS": 2.641084000002593
+            },
+            "samples": 50000,
+            "gdtKinds": 10,
+            "measurements": 5,
+            "compliantModels": 0,
+            "compliantKinds": []
+          },
+          "status": "PASS",
+          "durationMs": 695.809625000009
+        }
+      ]
+    },
+    {
+      "suiteId": "D",
+      "title": "Compliance and MIC",
+      "authority": "Roark, thermal beam theory, and Liu & Hu-style fixture",
+      "status": "PARTIAL",
+      "durationMs": 956.3632500000094,
+      "summary": {
+        "pass": 4,
+        "fail": 0,
+        "skipped": 1,
+        "total": 5
+      },
+      "cases": [
+        {
+          "id": "D1",
+          "name": "Axial compression and rebound",
+          "thresholds": {
+            "relativeErrorLt": 0.005
+          },
+          "metrics": {
+            "expectedMm": -0.0020388349514563107,
+            "actualMm": -0.0020388349514563107,
+            "relativeError": 0
+          },
+          "status": "PASS",
+          "durationMs": 1.9575410000106785
+        },
+        {
+          "id": "D2",
+          "name": "Cantilever and simply supported beam",
+          "thresholds": {
+            "relativeErrorLt": 0.005
+          },
+          "metrics": {
+            "implementations": "createSimulation beam-bending displacement and angle",
+            "beams": [
+              {
+                "kind": "cantilever",
+                "actualMm": 0.37155297532656023,
+                "expectedMm": 0.37155297532656023,
+                "actualAngleRad": 0.013933236574746008,
+                "expectedAngleRad": 0.01393323657474601,
+                "relativeError": 1.2450254947375208e-16
+              },
+              {
+                "kind": "simply-supported",
+                "actualMm": 0.007766990291262136,
+                "expectedMm": 0.007766990291262136,
+                "actualAngleRad": 0,
+                "expectedAngleRad": 0,
+                "relativeError": 0
+              }
+            ]
+          },
+          "status": "PASS",
+          "durationMs": 1.1987499999959255
+        },
+        {
+          "id": "D3",
+          "name": "Thermal growth and bilayer bending",
+          "thresholds": {
+            "growthRelativeErrorLt": 0.005,
+            "bendRelativeErrorLt": 0.05
+          },
+          "metrics": {
+            "growthMm": 0.061360000000000005,
+            "expectedGrowthMm": 0.06136,
+            "bendMm": 0.21836246881721327,
+            "expectedBendMm": 0.21836246881721333,
+            "curvaturePerMm": 0.0002729530860215166,
+            "expectedCurvaturePerMm": 0.00027295308602151667,
+            "growthRelativeError": 1.1308497235833162e-16,
+            "bendRelativeError": 2.5421562382922615e-16,
+            "curvatureRelativeError": 1.9860595611658291e-16
+          },
+          "status": "PASS",
+          "durationMs": 0.6356249999953434
+        },
+        {
+          "id": "D4",
+          "name": "Warped four-corner cover plate",
+          "thresholds": {
+            "maxClampResidualMm": 1e-10,
+            "strictMonotonicity": true
+          },
+          "metrics": {
+            "source": "Synthetic Liu & Hu-style fixture. Independent FEA displacement field has not been supplied.",
+            "implementation": "createSimulation plate-clamping and preparePlate rigidity",
+            "lockedResidualsMm": [
+              4.163336342344337e-17,
+              1.3877787807814457e-17,
+              2.7755575615628914e-17,
+              2.7755575615628914e-17
+            ],
+            "thicknessSweep": [
+              {
+                "thickness": 1.25,
+                "centerResidualMm": 0.2733118424120075
+              },
+              {
+                "thickness": 1.5,
+                "centerResidualMm": 0.2761295384328747
+              },
+              {
+                "thickness": 2,
+                "centerResidualMm": 0.27836714902636905
+              }
+            ],
+            "warpSweep": [
+              0.07375054836791518,
+              0.11062582255187277,
+              0.14750109673583037
+            ],
+            "rigidityRatio": 4.096,
+            "expectedRigidityRatio": 4.096000000000001,
+            "rigidClampField": [
+              {
+                "point": [
+                  0,
+                  0
+                ],
+                "residualMm": 0.14750109673583037
+              },
+              {
+                "point": [
+                  -9,
+                  0
+                ],
+                "residualMm": 0.10093064493911613
+              },
+              {
+                "point": [
+                  9,
+                  0
+                ],
+                "residualMm": 0.10093064493911608
+              },
+              {
+                "point": [
+                  0,
+                  -4
+                ],
+                "residualMm": 0.13677854186153376
+              },
+              {
+                "point": [
+                  0,
+                  4
+                ],
+                "residualMm": 0.1367785418615337
+              }
+            ]
+          },
+          "status": "SKIPPED_NO_CCX",
+          "reason": "No provenance-locked FEA displacement field or equivalent CalculiX input deck is available, and ccx was not found on PATH.",
+          "durationMs": 6.9644160000025295
+        },
+        {
+          "id": "D5",
+          "name": "MIC precision, batch and compliant throughput",
+          "thresholds": {
+            "relativeErrorLt": 1e-9,
+            "samples": 50000,
+            "micBatchMsLt": 50,
+            "coupledMsLt": 2200
+          },
+          "metrics": {
+            "batch16x6": {
+              "rows": 16,
+              "cols": 6,
+              "samples": 50000,
+              "batchMs": 7.944208000000799,
+              "maxRelativeError": 0,
+              "maxAbsoluteErrorMm": 0
+            },
+            "accuracy64x12": {
+              "rows": 64,
+              "cols": 12,
+              "samples": 256,
+              "batchMs": 0.2831659999937983,
+              "maxRelativeError": 0,
+              "maxAbsoluteErrorMm": 0
+            },
+            "coupled": {
+              "fullMs": 913.6072920000006,
+              "incrementalMs": {},
+              "samples": 50000,
+              "gdtKinds": 10,
+              "measurements": 5,
+              "compliantModels": 4,
+              "compliantKinds": [
+                "plate-clamping",
+                "thermal-expansion",
+                "axial-compression",
+                "beam-bending"
+              ]
+            }
+          },
+          "status": "PASS",
+          "durationMs": 945.5824580000044
+        }
+      ]
+    },
+    {
+      "suiteId": "E",
+      "title": "End-to-end and engineering safety",
+      "authority": "Repository PDF ground truth, server, desktop and export contracts",
+      "status": "FAIL",
+      "durationMs": 3315.936707999994,
+      "summary": {
+        "pass": 1,
+        "fail": 1,
+        "skipped": 2,
+        "total": 4
+      },
+      "cases": [
+        {
+          "id": "E1",
+          "name": "Real PDF extraction",
+          "thresholds": {
+            "documents": 6,
+            "pages": 269,
+            "wrongPending": 0
+          },
+          "metrics": {
+            "source": "Historical checked-in GT-02 audit and extraction baseline",
+            "corpusDir": "/Users/aston/DSH/tmp/cunlian-v36/real-docs",
+            "documents": 6,
+            "pages": 269,
+            "correctness": {
+              "gtVersion": "gt-02",
+              "pendingTotal": 58,
+              "pendingChecked": 58,
+              "wrongPending": 0,
+              "wrongRate": 0,
+              "nominalChecked": 58,
+              "nominalWrong": 0,
+              "upperDeviationChecked": 20,
+              "lowerDeviationChecked": 20,
+              "unchecked": [],
+              "uncheckedReasons": {},
+              "uncheckedDetails": []
+            },
+            "candidates": {
+              "total": 140,
+              "pending": 58,
+              "blocked": 82,
+              "confirmed": 0
+            },
+            "confirmableRate": 0.414286
+          },
+          "status": "SKIPPED_EXTERNAL_ASSET",
+          "reason": "语料校验失败（/Users/aston/DSH/tmp/cunlian-v36/real-docs）：\nMISSING r1-assembly-course.pdf（期望在 /Users/aston/DSH/tmp/cunlian-v36/real-docs/r1-assembly-course.pdf）\nMISSING r2-tolerance-domain.pdf（期望在 /Users/aston/DSH/tmp/cunlian-v36/real-docs/r2-tolerance-domain.pdf）\nMISSING r3-rv-3dcs.pdf（期望在 /Users/aston/DSH/tmp/cunlian-v36/real-docs/r3-rv-3dcs.pdf）\nMISSING r4-mtt1097.pdf（期望在 /Users/aston/DSH/tmp/cunlian-v36/real-docs/r4-mtt1097.pdf）\nMISSING r5-tolerance-analysis.pdf（期望在 /Users/aston/DSH/tmp/cunlian-v36/real-docs/r5-tolerance-analysis.pdf）\nMISSING r6-segments-assembly.pdf（期望在 /Users/aston/DSH/tmp/cunlian-v36/real-docs/r6-segments-assembly.pdf）\n本任务不允许静默跳过或用别的文件顶替；请按 README 获取这 6 份并放在 REAL_DOC_CORPUS 目录。",
+          "durationMs": 1.4086249999963911
+        },
+        {
+          "id": "E2",
+          "name": "Desktop and cloud feature-flag parity",
+          "thresholds": {
+            "numericalDeviation": 0
+          },
+          "metrics": {
+            "states": {
+              "false": {
+                "featureFlagCorrect": true,
+                "dimensionsExact": true,
+                "disabledEndpoints": {
+                  "gdt": {
+                    "status": 422,
+                    "code": "FEATURE_DISABLED"
+                  },
+                  "flexible": {
+                    "status": 422,
+                    "code": "FEATURE_DISABLED"
+                  },
+                  "report": {
+                    "status": 422,
+                    "code": "FEATURE_DISABLED"
+                  }
+                },
+                "gatedAsConfigured": true
+              },
+              "true": {
+                "featureFlagCorrect": true,
+                "dimensionsExact": true,
+                "gdtExact": true,
+                "flexibleExact": true,
+                "reportExact": true
+              }
+            },
+            "localImplementation": "Desktop authority analyzer modules and report numerical core",
+            "cloudImplementation": "Live loopback REST service; synthetic archive for numerical parity"
+          },
+          "status": "SKIPPED_EXTERNAL_ASSET",
+          "reason": "Flag-off cloud intentionally exposes no GD&T, compliance, or report results to compare.",
+          "durationMs": 2610.543208000003
+        },
+        {
+          "id": "E3",
+          "name": "Engineering input validation and service guard coverage",
+          "thresholds": {
+            "rejectionOrWarningRate": 1
+          },
+          "metrics": {
+            "warnings": [
+              {
+                "code": "DRF_DEGENERATE",
+                "gdtId": "parallel-datums",
+                "message": "Datum references cannot define the required orthogonal frame.",
+                "datumId": "B"
+              },
+              {
+                "code": "DRF_DEGENERATE",
+                "gdtId": "cylinder-datum",
+                "message": "Cylindricity cannot reference datums."
+              },
+              {
+                "code": "DRF_UNDERCONSTRAINED",
+                "gdtId": "runout-mmc",
+                "message": "Datum references leave 2 rigid-body degrees of freedom."
+              },
+              {
+                "code": "ILLEGAL_MODIFIER",
+                "gdtId": "runout-mmc",
+                "message": "Controlled feature: runout does not permit MMC. Using RFS."
+              }
+            ],
+            "validated": 3,
+            "expected": 3,
+            "writerLease": {
+              "statuses": [
+                200,
+                409
+              ],
+              "conflictFraction": 1
+            },
+            "commitRejections": {
+              "supersededFingerprint": {
+                "status": 409,
+                "code": "STALE_CHECKSET",
+                "state": "awaiting-confirmation",
+                "lookupStatus": 200,
+                "rejectedAsExpected": true
+              },
+              "changedFingerprint": {
+                "status": 409,
+                "code": "STALE_CHECKSET",
+                "state": "awaiting-confirmation",
+                "lookupStatus": 200,
+                "rejectedAsExpected": true
+              },
+              "missingConfirmationToken": {
+                "status": 400,
+                "code": "INVALID_REQUEST",
+                "state": "awaiting-confirmation",
+                "lookupStatus": 200,
+                "rejectedAsExpected": true
+              }
+            }
+          },
+          "status": "PASS",
+          "durationMs": 617.3842080000031
+        },
+        {
+          "id": "E4",
+          "name": "Report provenance and seed replay",
+          "thresholds": {
+            "formatsComplete": 1,
+            "numericalDeviation": 0
+          },
+          "metrics": {
+            "formats": {
+              "html": {
+                "projectId": true,
+                "revision": true,
+                "checksetFingerprint": true,
+                "seed": true,
+                "evidence": true
+              },
+              "csv": {
+                "projectId": true,
+                "revision": true,
+                "checksetFingerprint": true,
+                "seed": true,
+                "evidence": false
+              },
+              "json": {
+                "projectId": true,
+                "revision": true,
+                "checksetFingerprint": true,
+                "seed": true,
+                "evidence": true
+              }
+            },
+            "seedFromReport": 20261126,
+            "conclusionCount": 12,
+            "numericalReplayEqual": true
+          },
+          "status": "FAIL",
+          "defectNote": "Production report export omits required fields: csv.evidence",
+          "durationMs": 86.57095899998967
+        }
+      ]
+    }
+  ],
+  "defects": [
+    {
+      "suiteId": "A",
+      "caseId": "A3-FTC-07",
+      "defectNote": "Official FTC input has no STEP assembly occurrences"
+    },
+    {
+      "suiteId": "A",
+      "caseId": "A3-FTC-08",
+      "defectNote": "Official FTC input has no STEP assembly occurrences"
+    },
+    {
+      "suiteId": "A",
+      "caseId": "A3-FTC-09",
+      "defectNote": "Official FTC input has no STEP assembly occurrences; Error: STEP root transfer failed"
+    },
+    {
+      "suiteId": "A",
+      "caseId": "A3-FTC-10",
+      "defectNote": "Official FTC input has no STEP assembly occurrences"
+    },
+    {
+      "suiteId": "B",
+      "caseId": "B-plate-spacer-cover-pins",
+      "defectNote": "Topology drafts differ from independent mate truth"
+    },
+    {
+      "suiteId": "B",
+      "caseId": "B-l-bracket-flange",
+      "defectNote": "Topology drafts differ from independent mate truth"
+    },
+    {
+      "suiteId": "B",
+      "caseId": "B-stepped-shaft-seat-cover",
+      "defectNote": "Topology drafts differ from independent mate truth"
+    },
+    {
+      "suiteId": "B",
+      "caseId": "B-shell-four-corner-clamps",
+      "defectNote": "Topology drafts differ from independent mate truth; Draft and truth solves leave different numbers of free degrees"
+    },
+    {
+      "suiteId": "B",
+      "caseId": "B-eccentric-coupling",
+      "defectNote": "Topology drafts differ from independent mate truth; Draft and truth solves leave different numbers of free degrees"
+    },
+    {
+      "suiteId": "E",
+      "caseId": "E4",
+      "defectNote": "Production report export omits required fields: csv.evidence"
+    }
+  ]
+}
