@@ -1,5 +1,6 @@
 import type { EvidenceRef } from '../../document-extraction/types'
 import type {
+  AssemblyGroup,
   AssemblyMate,
   AssemblyModelV1,
   AssemblyPart,
@@ -14,6 +15,7 @@ import type { GdtContributionItem } from '../../transport/types'
 import type { M2MeshBounds, M2MeshTriangleRange, M2SidebarSection } from './m2WorkbenchBridge'
 
 export type {
+  AssemblyGroup,
   AssemblyMate,
   AssemblyModelV1,
   AssemblyPart,
@@ -60,10 +62,19 @@ export interface PartFaceTriangleRange extends M2MeshTriangleRange {
   readonly label?: string
 }
 
+export type PartRgbColorInput =
+  | string
+  | readonly [number, number, number]
+  | { readonly r: number; readonly g: number; readonly b: number }
+
 export interface PartMesh {
   readonly partId: string
   readonly displayName: string
   readonly color: string
+  /** Optional XCAF / STEP parent assembly group ID (matches AssemblyGroup.id). */
+  readonly groupId?: string
+  /** Optional XCAF display color (#rrggbb, rgb(...), [r, g, b] in 0..1 or 0..255, or { r, g, b }). */
+  readonly displayColor?: PartRgbColorInput
   readonly positions: readonly number[] | Float32Array
   readonly indices: readonly number[] | Uint32Array | Uint16Array
   readonly normals?: readonly number[] | Float32Array
