@@ -109,28 +109,46 @@ function thermal(seed) {
     'Thermal growth or free bilayer bend differs from the independent analytical result.')
 }
 
-function plate() {
+function plate(seed) {
   const geometry = JSON.parse(readFileSync(new URL('../fixtures/suiteD/plate.json', import.meta.url), 'utf8'))
   const { clampsMm, probesMm, thicknessMm, warpMm, material, source } = geometry
-  const spec = { points: clampsMm, footprint: probesMm, material, boundaryKind: 'simply-supported' }
-  const unconstrained = preparePlate({ ...spec, thickness: thicknessMm })
-  const residual = (solution, p, warp) => {
-    const [[initial], [correction]] = solution.at(p)
-    const clipped = Math.min(Math.abs(warp), solution.maxCorrection) * Math.sign(warp)
-    return initial * warp + correction * clipped
+  const toPoint = ([x, y]) => [x, y, 0]
+  const toQ = p => toPoint(p).map(value => Math.round(value * 10000))
+  const clampIds = clampsMm.map((_, index) => 'lock-' + index)
+  const sample = (thickness, warp, clampForceN) => {
+    const assembly = model([part('cover')], [
+      face('surface', 'cover', [0, 0, 0], [0, 0, 1]),
+      ...clampsMm.map((p, index) => point(clampIds[index], 'cover', toQ(p))),
+      ...probesMm.map((p, index) => point('probe-' + index, 'cover', toQ(p))),
+    ])
+    const run = solve(assembly, [{ ...aluminium, ...material, partId: "cover" }], [{
+      id: 'clamping', kind: 'plate-clamping', partId: 'cover', surfaceFeatureId: 'surface',
+      clampFeatureIds: clampIds, thicknessQ: Math.round(thickness * 10000),
+      initialWarpPeakQ: Math.round(warp * 10000), boundaryKind: 'simply-supported',
+      ...(clampForceN !== undefined && { clampForceN }),
+    }], seed)
+    return p => displacement(run, 'cover', toPoint(p))[2]
   }
-  const lockedResidualsMm = clampsMm.map(p => residual(unconstrained, p, warpMm))
-  const thicknessSweep = [1.25, thicknessMm, 2].map(thickness => {
-    const solution = preparePlate({ ...spec, thickness, clampForceN: 10 })
-    return { thickness, rigidity: solution.rigidity, centerResidualMm: residual(solution, [0, 0], warpMm) }
-  })
-  const warpSweep = [0.14, 0.21, warpMm].map(warp => residual(unconstrained, [0, 0], warp))
+  const lockedPlate = sample(thicknessMm, warpMm)
+  const lockedResidualsMm = clampsMm.map(lockedPlate)
+  const thicknessSweep = [1.25, thicknessMm, 2].map(thickness => ({
+    thickness, centerResidualMm: sample(thickness, warpMm, 10)([0, 0]),
+  }))
+  const warpSweep = [0.14, 0.21, warpMm].map(warp => sample(thicknessMm, warp)([0, 0]))
+  const thin = preparePlate({ points: clampsMm, footprint: probesMm, thickness: 1.25, material,
+    boundaryKind: 'simply-supported' })
+  const thick = preparePlate({ points: clampsMm, footprint: probesMm, thickness: 2, material,
+    boundaryKind: 'simply-supported' })
+  const rigidityRatio = thick.rigidity / thin.rigidity
+  const expectedRigidityRatio = (2 / 1.25) ** 3
   const monotone = values => values.every((value, index) => index === 0 || value > values[index - 1])
   const locked = lockedResidualsMm.every(value => Math.abs(value) <= 1e-10)
-  const pass = locked && monotone(thicknessSweep.map(item => item.centerResidualMm)) && monotone(warpSweep)
-  const metrics = { source, lockedResidualsMm, thicknessSweep, warpSweep,
-    rigidClampField: probesMm.map(point => ({ point, residualMm: residual(unconstrained, point, warpMm) })) }
-  if (!pass) return check(false, metrics, 'Plate clamp residual or force-limited monotonicity violated.')
+  const pass = locked && monotone(thicknessSweep.map(item => item.centerResidualMm)) && monotone(warpSweep) &&
+    relative(rigidityRatio, expectedRigidityRatio) <= 1e-12 && lockedPlate([0, 0]) > 0 && lockedPlate([0, 0]) < warpMm
+  const metrics = { source, implementation: 'createSimulation plate-clamping and preparePlate rigidity',
+    lockedResidualsMm, thicknessSweep, warpSweep, rigidityRatio, expectedRigidityRatio,
+    rigidClampField: probesMm.map(point => ({ point, residualMm: lockedPlate(point) })) }
+  if (!pass) return check(false, metrics, 'Plate clamp residual, rigidity scaling or force-limited monotonicity violated.')
   const ccx = spawnSync('which', ['ccx'], { encoding: 'utf8' })
   return { status: ccx.status === 0 ? 'SKIPPED_EXTERNAL_ASSET' : 'SKIPPED_NO_CCX',
     reason: 'No provenance-locked FEA displacement field or equivalent CalculiX input deck is available' +
@@ -169,7 +187,7 @@ export async function runSuite({ seed = 20261126, samples = 50000 } = {}) {
     await measure('D1', 'Axial compression and rebound', { relativeErrorLt: 0.005 }, () => axial(seed)),
     await measure('D2', 'Cantilever and simply supported beam', { relativeErrorLt: 0.005 }, () => beams(seed)),
     await measure('D3', 'Thermal growth and bilayer bending', { growthRelativeErrorLt: 0.005, bendRelativeErrorLt: 0.05 }, () => thermal(seed)),
-    await measure('D4', 'Warped four-corner cover plate', { maxClampResidualMm: 1e-10, strictMonotonicity: true }, plate),
+    await measure('D4', 'Warped four-corner cover plate', { maxClampResidualMm: 1e-10, strictMonotonicity: true }, () => plate(seed)),
     await measure('D5', 'MIC precision, batch and compliant throughput', {
       relativeErrorLt: 1e-9, samples: 50000, micBatchMsLt: 50, coupledMsLt: 2200,
     }, async () => {

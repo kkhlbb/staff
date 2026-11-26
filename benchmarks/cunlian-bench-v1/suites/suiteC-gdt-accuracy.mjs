@@ -150,17 +150,20 @@ function composite(seed, samples) {
   let maxLowerZoneMm = 0
   for (let i = 0; i < samples; i++) {
     const offset = i * 5
-    const centroid = [0, 1].map(k => upper.reduce((sum, draw) => sum + draw[offset + k], 0) / upper.length)
+    const displacement = (axes, draws, axis) =>
+      axes[0][axis] * draws[offset] + axes[1][axis] * draws[offset + 1]
+    const centroid = [0, 1, 2].map(axis => entries.reduce((sum, entry, member) =>
+      sum + displacement(entry.axes, upper[member], axis), 0) / entries.length)
     maxCentroidDriftMm = Math.max(maxCentroidDriftMm, Math.hypot(...centroid))
     for (let j = 0; j < entries.length; j++) {
       const a = entries[j].world.point
       for (let k = j + 1; k < entries.length; k++) {
         const b = entries[k].world.point
-        const dx = b[0] - a[0]
-        const dy = b[1] - a[1]
-        const actual = Math.hypot(dx + lower[k][offset] - lower[j][offset],
-          dy + lower[k][offset + 1] - lower[j][offset + 1])
-        maxPairDistanceErrorMm = Math.max(maxPairDistanceErrorMm, Math.abs(actual - Math.hypot(dx, dy)))
+        const nominal = b.map((value, axis) => value - a[axis])
+        const displaced = nominal.map((value, axis) => value +
+          displacement(entries[k].lower.axes, lower[k], axis) -
+          displacement(entries[j].lower.axes, lower[j], axis))
+        maxPairDistanceErrorMm = Math.max(maxPairDistanceErrorMm, Math.abs(Math.hypot(...displaced) - Math.hypot(...nominal)))
       }
       const draw = draws.get(entries[j].control.id)
       maxUpperZoneMm = Math.max(maxUpperZoneMm, draw.errors[i])
@@ -178,14 +181,26 @@ function profile(seed, samples) {
   const span = 80
   const tolerance = 0.4
   let meanOffsetMm = 0
+  let minProfileSurfaceMm = Infinity
+  let maxProfileSurfaceMm = -Infinity
+  let maxProjectionErrorMm = 0
   const maxima = {}
   for (const kind of ['profile-surface', 'flatness', 'cylindricity', 'perpendicularity', 'parallelism']) {
     const zone = kind === 'profile-surface' ? 'planar' : 'local'
     let max = 0
     for (let i = 0; i < samples; i++) {
       const { center, form } = sampleSdt(kind, zone, tolerance, span, rng, 'uniform', 0.75)
-      if (kind === 'profile-surface') meanOffsetMm += center[2] / samples
-      max = Math.max(max, zoneError(kind, zone, span, center[2], 0, center[3], center[4], form, 0.75))
+      const tilt = span * Math.sqrt(center[3] ** 2 + center[4] ** 2)
+      const error = zoneError(kind, zone, span, center[2], 0, center[3], center[4], form, 0.75)
+      if (kind === 'profile-surface') {
+        meanOffsetMm += center[2] / samples
+        minProfileSurfaceMm = Math.min(minProfileSurfaceMm, center[2] - (form + tilt) / 2)
+        maxProfileSurfaceMm = Math.max(maxProfileSurfaceMm, center[2] + (form + tilt) / 2)
+      }
+      if (kind === 'perpendicularity' || kind === 'parallelism') {
+        maxProjectionErrorMm = Math.max(maxProjectionErrorMm, Math.abs(error - tilt))
+      }
+      max = Math.max(max, error)
     }
     maxima[kind] = max
   }
@@ -194,9 +209,13 @@ function profile(seed, samples) {
   const orientationBounds = Object.fromEntries(['perpendicularity', 'parallelism'].map(kind => [
     kind, zoneError(kind, 'local', span, 0, 0, tolerance / span, 0),
   ]))
+  const asymmetricBoundsMm = [-0.25 * tolerance, 0.75 * tolerance]
   return check(relativeError < 0.02 && Object.values(maxima).every(max => max > 0 && max <= tolerance) &&
+    minProfileSurfaceMm >= asymmetricBoundsMm[0] - 1e-12 &&
+    maxProfileSurfaceMm <= asymmetricBoundsMm[1] + 1e-12 && maxProjectionErrorMm <= 1e-12 &&
     Object.values(orientationBounds).every(bound => relative(bound, tolerance) <= Number.EPSILON),
-  { meanOffsetMm, expectedMeanMm, relativeError, maxima, spanMm: span, orientationBounds },
+  { meanOffsetMm, expectedMeanMm, relativeError, maxima, spanMm: span, orientationBounds,
+    asymmetricBoundsMm, observedProfileEnvelopeMm: [minProfileSurfaceMm, maxProfileSurfaceMm], maxProjectionErrorMm },
   'Profile centroid, form, or span projection differs from the analytical bound.')
 }
 
@@ -211,9 +230,12 @@ export async function fullWorkload({ seed, samples, compliant, whatIf = false })
     const start = performance.now()
     const baseline = await run(input)
     const fullMs = performance.now() - start
+    const compliantKinds = baseline.compliant?.flexContributionItems.map(item => item.kind) ?? []
     if (baseline.status !== 'ok' || !baseline.measurements?.length ||
       baseline.gdt?.baseline.contributions.length !== input.assembly.gdt.length ||
-      (compliant && baseline.compliant?.flexContributionItems.length !== 4)) throw Error('Incomplete benchmark result')
+      (compliant && (compliantKinds.length !== 4 ||
+        !["axial-compression", "plate-clamping", "beam-bending", "thermal-expansion"].every(kind =>
+          compliantKinds.includes(kind))))) throw Error('Incomplete benchmark result')
     const incrementalMs = {}
     let prior = baseline
     if (whatIf) {
@@ -228,7 +250,7 @@ export async function fullWorkload({ seed, samples, compliant, whatIf = false })
       }
     }
     return { fullMs, incrementalMs, samples, gdtKinds: kinds.size, measurements: baseline.measurements.length,
-      compliantModels: baseline.compliant?.flexContributionItems.length ?? 0 }
+      compliantModels: compliantKinds.length, compliantKinds }
   } finally {
     await scheduler.close()
   }

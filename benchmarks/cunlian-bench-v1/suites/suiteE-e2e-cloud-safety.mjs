@@ -13,7 +13,7 @@ const sha256 = value => createHash('sha256').update(value).digest('hex')
 const thresholds = { documents: 6, pages: 269, wrongPending: 0 }
 
 async function pdf(repoRoot, offlineDir) {
-  const { MANIFEST_RELATIVE_PATH, defaultCorpusDir, measureCorpus } = await import('../../../scripts/real-docs/metrics.mjs')
+  const { BASELINE_RELATIVE_PATH, MANIFEST_RELATIVE_PATH, defaultCorpusDir, measureCorpus } = await import('../../../scripts/real-docs/metrics.mjs')
   const manifestPath = join(repoRoot, MANIFEST_RELATIVE_PATH)
   const corpusDir = offlineDir ?? process.env.REAL_DOC_CORPUS ?? defaultCorpusDir()
   try {
@@ -21,15 +21,15 @@ async function pdf(repoRoot, offlineDir) {
     return check(summary.documents === 6 && summary.pages === 269 &&
       summary.correctness.pendingChecked === summary.candidates.pending &&
       summary.correctness.pendingChecked > 0 && summary.correctness.wrongPending === 0,
-    { source: 'Live manifest-verified PDF extraction (GT-02)', ...summary },
+    { source: 'Live manifest-verified PDF extraction (GT-02)', corpusDir, ...summary },
     'Live extraction did not reproduce the corpus coverage or correctness required by GT-02.')
   } catch (error) {
     if (error.code !== 'CORPUS_MISSING') throw error
     const audit = JSON.parse(await readFile(join(repoRoot, 'docs/evidence/ground-truth/scope-audit.json'), 'utf8'))
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
-    const baseline = JSON.parse(await readFile(join(repoRoot, 'docs/evidence/real-doc-baseline/baseline.json'), 'utf8'))
+    const baseline = JSON.parse(await readFile(join(repoRoot, BASELINE_RELATIVE_PATH), 'utf8'))
     return { status: 'SKIPPED_EXTERNAL_ASSET', reason: error.message, metrics: {
-      source: 'Historical checked-in GT-02 audit and extraction baseline',
+      source: 'Historical checked-in GT-02 audit and extraction baseline', corpusDir,
       documents: manifest.documents.length, pages: manifest.documents.reduce((sum, item) => sum + item.pages, 0),
       correctness: audit.correctness, candidates: baseline.summary?.candidates ?? baseline.measured?.summary?.candidates,
       confirmableRate: baseline.summary?.confirmableRate ?? baseline.measured?.summary?.confirmableRate,
@@ -219,16 +219,22 @@ async function parity(seed, samples) {
         }), 200)
         draftRevision = staged.draftRevision
       }
-      const draft = project + '/drafts/' + draftRevision
+      const gatedProject = enabled ? project : "/projects/" + builtIn.projectId
+      const draft = gatedProject + '/drafts/' + draftRevision
       const options = { expectedWriterEpoch: writerEpoch, monteCarlo }
       const gdt = await call(draft + '/gdt-stackup', options)
       const flexible = await call(draft + '/compliant-stackup', options)
-      const report = await call(project + '/report', { format: 'json', seed })
+      const report = await call(gatedProject + '/report', { format: 'json', seed })
       const base = { featureFlagCorrect: capabilities.FEATURE_3D_ASSEMBLY_M1 === enabled,
         dimensionsExact: isDeepStrictEqual(dimension.extreme, extreme) &&
           isDeepStrictEqual(dimension.statistical, desktopStatistics) }
-      if (!enabled) return { ...base, gatedAsConfigured: [gdt, flexible, report].every(item =>
-        item.status === 422 && item.body.error?.code === 'FEATURE_DISABLED') }
+      if (!enabled) {
+        const disabledEndpoints = Object.fromEntries(Object.entries({ gdt, flexible, report }).map(([name, response]) => [
+          name, { status: response.status, code: response.body.error?.code ?? null },
+        ]))
+        return { ...base, disabledEndpoints, gatedAsConfigured: Object.values(disabledEndpoints).every(item =>
+          item.status === 422 && item.code === 'FEATURE_DISABLED') }
+      }
       const request = { ...options, projectId, draftRevision }
       const gdtAnalyzer = createGdtAnalyzer()
       const flexAnalyzer = createCompliantAnalyzer()
@@ -246,7 +252,9 @@ async function parity(seed, samples) {
       }
     })
   }
-  const success = Object.values(states).every(state => Object.values(state).every(Boolean))
+  const success = states.false.featureFlagCorrect && states.false.dimensionsExact && states.false.gatedAsConfigured &&
+    states.true.featureFlagCorrect && states.true.dimensionsExact && states.true.gdtExact &&
+    states.true.flexibleExact && states.true.reportExact
   if (!success) return check(false, { states }, 'Cloud behavior differs from the desktop core or the configured feature gate.')
   return { status: 'SKIPPED_EXTERNAL_ASSET', reason: 'Flag-off cloud intentionally exposes no GD&T, compliance, or report results to compare.',
     metrics: { states, localImplementation: 'Desktop authority analyzer modules and report numerical core',
@@ -261,11 +269,25 @@ export async function runSuite({ repoRoot = root, offlineDir = null, seed = 2026
     await measure('E3', 'Engineering input validation and service guard coverage', { rejectionOrWarningRate: 1 }, async () => {
       const metrics = await engineeringValidation(seed)
       metrics.writerLease = await leaseSerialization()
-      metrics.serviceGuardCoverage = { checksetFingerprint: 'not exercised', commitConfirmation: 'not exercised' }
+      const { matches } = await import('../../../cloud/server/contracts.mjs')
+      const openapi = JSON.parse(await readFile(join(repoRoot, 'cloud/contracts/openapi.json'), 'utf8'))
+      const schema = openapi.components.schemas.CommitDraftRequest
+      const valid = { projectId: 'fixture', baseRevision: null, draftRevision: 'draft',
+        requestId: 'fixture', checksetFingerprint: 'fixture-digest', confirmationToken: 'fixture-token' }
+      const { confirmationToken: _, ...withoutToken } = valid
+      const { checksetFingerprint: __, ...withoutFingerprint } = valid
+      metrics.commitContract = {
+        validShapeAccepted: matches(valid, schema),
+        missingTokenRejected: !matches(withoutToken, schema),
+        missingFingerprintRejected: !matches(withoutFingerprint, schema),
+      }
+      metrics.serviceGuardCoverage = { checksetFingerprint: 'runtime not exercised', commitConfirmation: 'runtime not exercised' }
+      if (!Object.values(metrics.commitContract).every(Boolean)) return check(false, metrics,
+        'Commit request schema does not enforce the required fingerprint and confirmation fields.')
       if (metrics.validated !== metrics.expected) return check(false, metrics, 'GD&T validation did not issue every required engineering warning.')
       if (metrics.writerLease.conflictFraction !== 1) return check(false, metrics,
         'Two eligible writers did not produce exactly one successful lease and one 409.')
-      return { status: 'SKIPPED_EXTERNAL_ASSET', reason: 'Fingerprint and commit-confirmation red-team coverage was not exercised.',
+      return { status: 'SKIPPED_EXTERNAL_ASSET', reason: 'Commit contract was checked in-process. Runtime fingerprint and confirmation red-team coverage remains unverified.',
         metrics }
     }),
     await measure('E4', 'Report provenance and seed replay', { formatsComplete: 1, numericalDeviation: 0 }, () => reports(seed)),

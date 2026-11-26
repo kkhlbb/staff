@@ -45,7 +45,7 @@ function parseArgs(args) {
     offlineDir: null, seed: 20261126, samples: 50000 }
   let mode
   let selection = Object.keys(files)
-  let out = join(root, 'docs/benchmarks/cunlian-bench-v1-report.json')
+  let out = null
   for (let i = 0; i < args.length; i++) {
     const flag = args[i]
     if (flag === '--offline' || flag === '--external') {
@@ -79,7 +79,7 @@ async function main(args) {
     if (!existsSync(path)) external = { status: 'SKIPPED_EXTERNAL_ASSET', reason: 'BENCH-01 fetcher is absent' }
     else {
       const fetch = spawnSync(process.execPath, [path, ...(options.offlineDir ? ['--offline-dir', options.offlineDir] : [])],
-        { cwd: root, stdio: 'inherit', timeout: 300_000 })
+        { cwd: root, stdio: ['ignore', 2, 2], timeout: 300_000 })
       external = fetch.status === 0 ? { status: 'PASS' }
         : { status: 'FAIL', reason: fetch.error?.message ?? 'Fetcher exited with ' + (fetch.status ?? fetch.signal) }
     }
@@ -119,9 +119,14 @@ async function main(args) {
       suiteId: suite.suiteId, caseId: item.id, defectNote: item.defectNote,
     }))),
   }
-  mkdirSync(dirname(out), { recursive: true })
-  writeFileSync(out, JSON.stringify(report, null, 2) + '\n')
-  console.log(JSON.stringify({ out, ...report.summary }))
+  const json = JSON.stringify(report, null, 2) + '\n'
+  if (out) {
+    mkdirSync(dirname(out), { recursive: true })
+    writeFileSync(out, json)
+    console.log(JSON.stringify({ out, ...report.summary }))
+  } else {
+    process.stdout.write(json)
+  }
   if (report.summary.fail || external?.status === 'FAIL') process.exitCode = 1
 }
 
