@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "nist": {
+    "organization": "NIST",
+    "source": "https://www.nist.gov/ctl/smart-connected-systems-division/smart-connected-manufacturing-systems-group/mbe-pmi-0",
+    "license": "NIST Disclaimer: test cases, CAD models and STEP files may be used without restrictions. NIST requests acknowledgment and prohibits use of its logo in promotional material.",
+    "archiveUrl": "https://www.nist.gov/document/nist-pmi-step-files",
+    "archiveSha256": "8fa78429e6d8d9b0d7681d223b6aa9ec98c3772185c55b1a0e3679b21c181911",
+    "assets": [
+      {
+        "id": "STC-06",
+        "case": "A1",
+        "file": "nist_stc_06_asme1_ap242-e3.stp",
+        "member": "NIST-PMI-STEP-Files/nist_stc_06_asme1_ap242-e3.stp",
+        "sha256": "71777c28da76da0e8a667e4cbe792d5f72c09b5c56440c9744d3d50ca96ecc8d",
+        "bytes": 1006401
+      },
+      {
+        "id": "STC-07",
+        "case": "A1",
+        "file": "nist_stc_07_asme1_ap242-e3.stp",
+        "member": "NIST-PMI-STEP-Files/nist_stc_07_asme1_ap242-e3.stp",
+        "sha256": "2dddf9b8894bc241f7ffddf3dc4502baa3d49c374e8784039d14b86473d54832",
+        "bytes": 1945387
+      },
+      {
+        "id": "CTC-01",
+        "case": "A2",
+        "file": "nist_ctc_01_asme1_ap242-e1.stp",
+        "member": "NIST-PMI-STEP-Files/nist_ctc_01_asme1_ap242-e1.stp",
+        "sha256": "85a5752da05f53c456ca3a9e038c90358e1d5a3141d1f0d6e5f0970f2356e821",
+        "bytes": 396445
+      },
+      {
+        "id": "CTC-02",
+        "case": "A2",
+        "file": "nist_ctc_02_asme1_ap242-e2.stp",
+        "member": "NIST-PMI-STEP-Files/nist_ctc_02_asme1_ap242-e2.stp",
+        "sha256": "99a0a2079ddeb64d05c2432cbe931fa17c89da60d8b0bcb0b11bd0ed94fa2e68",
+        "bytes": 1981342
+      },
+      {
+        "id": "FTC-07",
+        "case": "A3",
+        "file": "nist_ftc_07_asme1_ap242-e2.stp",
+        "member": "NIST-PMI-STEP-Files/nist_ftc_07_asme1_ap242-e2.stp",
+        "sha256": "aa8115c12e12a99cc439477cbfd222916f9ec629fbb3c9002b18e0c264c9a892",
+        "bytes": 1478375
+      },
+      {
+        "id": "FTC-08",
+        "case": "A3",
+        "file": "nist_ftc_08_asme1_ap242-e2.stp",
+        "member": "NIST-PMI-STEP-Files/nist_ftc_08_asme1_ap242-e2.stp",
+        "sha256": "7b9283b4288d152fd181d76c39285d7c79fbba34fda1e14a41ac4a983f6d68b3",
+        "bytes": 4722264
+      },
+      {
+        "id": "FTC-09",
+        "case": "A3",
+        "file": "nist_ftc_09_asme1_ap242-e1.stp",
+        "member": "NIST-PMI-STEP-Files/nist_ftc_09_asme1_ap242-e1.stp",
+        "sha256": "f1215fe15a78085a9fa78dd81714caf774b59071be92580b04ebfdc19f52a1bd",
+        "bytes": 6109836
+      },
+      {
+        "id": "FTC-10",
+        "case": "A3",
+        "file": "nist_ftc_10_asme1_ap242-e2.stp",
+        "member": "NIST-PMI-STEP-Files/nist_ftc_10_asme1_ap242-e2.stp",
+        "sha256": "9d7711f48e81831c5d1838fdac5c11c0de1aa9b61f3c1d67930a7638b3b25e69",
+        "bytes": 1879881
+      },
+      {
+        "id": "CTC-04",
+        "case": "A4",
+        "file": "nist_ctc_04_asme1_ap242-e1.stp",
+        "member": "NIST-PMI-STEP-Files/nist_ctc_04_asme1_ap242-e1.stp",
+        "sha256": "20b43b54ce25d4ed17cff794084c406e831c687f5b62471d3371eef33669e355",
+        "bytes": 1287291
+      },
+      {
+        "id": "CTC-05",
+        "case": "A4",
+        "file": "nist_ctc_05_asme1_ap242-e1.stp",
+        "member": "NIST-PMI-STEP-Files/nist_ctc_05_asme1_ap242-e1.stp",
+        "sha256": "59bbc09a34621c03106e4c1b2a5bc909fdb67463117c16c4965ee7a6fe5c1521",
+        "bytes": 878030
+      }
+    ]
+  },
+  "fusion360": {
+    "organization": "Autodesk, Inc.",
+    "source": "https://github.com/AutodeskAILab/Fusion360GalleryDataset/blob/1084b881f3bb710267801d812d6e9286b8667059/docs/assembly.md",
+    "downloads": "https://github.com/AutodeskAILab/Fusion360GalleryDataset/blob/1084b881f3bb710267801d812d6e9286b8667059/tools/assembly_download/README.md",
+    "licenseUrl": "https://github.com/AutodeskAILab/Fusion360GalleryDataset/blob/1084b881f3bb710267801d812d6e9286b8667059/LICENSE.md",
+    "license": "Fusion 360 Gallery Dataset License; use only for non-commercial research, with conditions on redistribution of portions.",
+    "release": "a1.0.0",
+    "archiveExampleUrl": "https://fusion-360-gallery-dataset.s3-us-west-2.amazonaws.com/assembly/a1.0.0/a1.0.0_04.7z",
+    "selection": {
+      "assemblies": [
+        10,
+        15
+      ],
+      "parts": [
+        2,
+        8
+      ]
+    },
+    "assets": [],
+    "preparedAssetFormat": {
+      "id": "Unique upstream assembly ID",
+      "step": "Assembled and posed STEP with unique part names. Set file, bytes, sha256, and optional HTTPS url.",
+      "truth": "Separate JSON object in the local fixture truth format. Set file, bytes, sha256, and optional HTTPS url."
+    },
+    "reason": "No verified research subset is supplied. Official downloads contain 7z collections; STEP is exported per body, while occurrence poses, joints and contact indices are kept separately. The source indexes refer to SMT B-Reps. A verified, license-eligible subset with normalized world-space truth and pinned hashes is required."
+  }
+}
