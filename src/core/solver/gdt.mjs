@@ -1,5 +1,6 @@
 import { createRng } from '../../domain/statistics.ts'
 import { resolveGdtMaterialConditions } from '../../project-file/assembly3d.ts'
+import { accumulateCompliance, accumulateModel, contributionRecords, contributionWeights, projectCompliance, recordContribution } from './compliance.mjs'
 import { buildDatumFrame } from './datumFrame.mjs'
 import { add, cross, dot, norm, perpendicular, placed, rotate, scale, sub, transverse, unit } from './spatial.mjs'
 
@@ -132,7 +133,7 @@ function datumMotionRows(group, length) {
       const gain = Math.hypot(...orthogonal)
       if (gain <= 1e-8) continue
       rows.push({ physical, axis: orthogonal.map(value => value / gain), gain, index: datum.index,
-        divisor: Math.sqrt(ownRows.length) })
+        direction, angular, leverLength: datum.span / 2, divisor: Math.sqrt(ownRows.length) })
     }
   }
   return rows
@@ -144,8 +145,7 @@ function sampleDatumMotion(group, samples, seed, distribution) {
   if (!group.datums.some(datum => datum.clearance)) return null
   const rng = createRng(seed)
   const result = new Float64Array(samples * 6)
-  const length = Math.max(...group.datums.map(datum => datum.span))
-  const rows = datumMotionRows(group, length)
+  const { length, rows } = group.motionFrame
   const clearances = new Float64Array(group.datums.length)
   const motion = [0, 0, 0, 0, 0, 0]
   for (let i = 0; i < samples; i++) {
@@ -213,12 +213,13 @@ function localBasis(control, world, frame, zone) {
   return [tangent, cross(axis, tangent), axis]
 }
 
-function sampleControl(entry, samples, parameters) {
+function sampleControl(entry, samples, parameters, cacheKinematics) {
   const rng = createRng(entry.seed)
   const { control, group, span, zone, axes, lever, nominal, effects, distribution } = entry
   const errors = new Float64Array(samples)
   const withoutShift = group?.motion ? new Float64Array(samples) : errors
   const quantiles = new Float64Array(samples)
+  const kinematics = cacheKinematics ? new Float64Array(samples * (group?.motion ? 9 : 5)) : null
   for (let i = 0; i < samples; i++) {
     quantiles[i] = unitDraw(rng, distribution)
     const processWidth = control.toleranceQ / 10000 +
@@ -233,16 +234,33 @@ function sampleControl(entry, samples, parameters) {
     const v = center[1] + nominal[1]
     const alpha = center[3] + nominal[2]
     const beta = center[4] + nominal[3]
+    const offset = i * (group?.motion ? 9 : 5)
+    if (kinematics) {
+      kinematics[offset] = u
+      kinematics[offset + 1] = v
+      kinematics[offset + 2] = alpha
+      kinematics[offset + 3] = beta
+      kinematics[offset + 4] = form
+    }
     withoutShift[i] = zoneError(control.kind, zone, span, u, v, alpha, beta, form)
     if (group?.motion) {
       const motion = group.motion.subarray(i * 6, i * 6 + 6)
       const omega = motion.subarray(3)
       const shift = add(motion, cross(omega, lever))
-      errors[i] = zoneError(control.kind, zone, span, u - dot(axes[0], shift), v - dot(axes[1], shift),
-        alpha - dot(axes[0], omega), beta - dot(axes[1], omega), form)
+      const du = dot(axes[0], shift)
+      const dv = dot(axes[1], shift)
+      const da = dot(axes[0], omega)
+      const db = dot(axes[1], omega)
+      if (kinematics) {
+        kinematics[offset + 5] = du
+        kinematics[offset + 6] = dv
+        kinematics[offset + 7] = da
+        kinematics[offset + 8] = db
+      }
+      errors[i] = zoneError(control.kind, zone, span, u - du, v - dv, alpha - da, beta - db, form)
     }
   }
-  return { errors, withoutShift, quantiles }
+  return { errors, withoutShift, quantiles, kinematics }
 }
 
 function score(entry, draws, edit, assembly) {
@@ -296,7 +314,7 @@ function summarize(entries, scores, failureCounts) {
   }
 }
 
-export function prepareGdt(assembly, geometry, parameters, transfers, samples, seed, featureGeometry = {}, distribution = 'uniform') {
+export function prepareGdt(assembly, geometry, parameters, transfers, samples, seed, featureGeometry = {}, distribution = 'uniform', cacheKinematics = false) {
   const datums = new Map((assembly.datums ?? []).map(datum => [datum.id, datum]))
   const parts = new Map(assembly.parts.map(part => [part.id, part]))
   const groups = new Map()
@@ -329,7 +347,11 @@ export function prepareGdt(assembly, geometry, parameters, transfers, samples, s
         })
         const frame = buildDatumFrame(references)
         group = { frame, datums: references }
-        if (!frame.code) group.motion = sampleDatumMotion(group, samples, nextSeed(), distribution)
+        if (!frame.code) {
+          const length = Math.max(...references.map(datum => datum.span))
+          group.motionFrame = { length, rows: datumMotionRows(group, length) }
+          group.motion = sampleDatumMotion(group, samples, nextSeed(), distribution)
+        }
         groups.set(key, group)
       }
       if (group.frame.code || control.kind === 'coaxiality' && !group.datums[0]?.cylinder) {
@@ -373,12 +395,12 @@ export function prepareGdt(assembly, geometry, parameters, transfers, samples, s
         nominal[3] = dot(axes[1], omega) * tilt
       }
     }
-    Object.assign(entry, { axes, group, lever, zone, nominal })
+    Object.assign(entry, { axes, group, lever, zone, nominal, world, feature })
     entry.effects = control.kind === 'flatness' ? []
       : parameterEffects(feature, group.datums[0], geometry, parameters, transfers, axes)
     return entry
   })
-  return { assembly, entries, samples }
+  return { assembly, entries, samples, cacheKinematics }
 }
 
 export function evaluateGdt(model, parameters, previous, edits = [], parameterId) {
@@ -400,7 +422,7 @@ export function evaluateGdt(model, parameters, previous, edits = [], parameterId
     if (edit) applied.set(id, { ...applied.get(id), ...edit })
     if (!entry.axes) continue
     const resample = !previous || entry.effects.some(effect => effect.parameter.id === parameterId)
-    if (resample) draws.set(id, sampleControl(entry, model.samples, parameters))
+    if (resample) draws.set(id, sampleControl(entry, model.samples, parameters, model.cacheKinematics))
     if (resample || edit) {
       const old = scores.get(id)?.failures
       const next = score(entry, draws.get(id), applied.get(id), model.assembly)
@@ -413,4 +435,101 @@ export function evaluateGdt(model, parameters, previous, edits = [], parameterId
     ? { ...entry, materialWarnings: resolveGdtMaterialConditions({ ...entry.control, ...applied.get(entry.control.id) }, model.assembly).warnings }
     : entry)
   return { draws, scores, applied, failureCounts, recalculatedGdtIds, metrics: summarize(warnings, scores, failureCounts) }
+}
+
+function compliantDatumMotion(group, effects, channel) {
+  const motion = [0, 0, 0, 0, 0, 0]
+  if (!group) return motion
+  const { rows, length } = group.motionFrame
+  for (const row of rows) {
+    const delta = effects.get(group.datums[row.index].featureId)[channel]
+    const value = row.angular ? dot(row.direction, delta.slice(3)) * row.leverLength : dot(row.direction, delta)
+    const gain = (value - dot6(row.physical, motion)) / row.gain
+    for (let k = 0; k < 6; k++) motion[k] += gain * row.axis[k]
+  }
+  for (let k = 3; k < 6; k++) motion[k] /= length
+  return motion
+}
+
+function flexDraws(entry, rigid, models, samples) {
+  const { control, axes, group, lever, zone, span } = entry
+  const flatness = control.kind === 'flatness'
+  const offsets = flatness ? [-0.5, 0, 0.5].flatMap(a => [-0.5, 0, 0.5].map(b =>
+    add(scale(axes[0], a * span), scale(axes[1], b * span)))) : []
+  const size = flatness ? offsets.length : 4
+  const projected = projectCompliance(models, size, (effects, channel, model) => {
+    if (flatness) {
+      // The local tangent is removed before measuring the sampled form.
+      if (!model.parts.includes(entry.feature.partId)) return Array(size).fill(0)
+      const { point, axis } = entry.world
+      const own = model.at(entry.feature.partId, point, control.featureId)[channel]
+      return offsets.map(offset => {
+        const displaced = model.at(entry.feature.partId, add(point, offset))[channel]
+        return dot(axis, sub(displaced, add(own, cross(own.slice(3), offset))))
+      })
+    }
+    const delta = effects.get(control.featureId)[channel]
+    const reference = compliantDatumMotion(group, effects, channel)
+    const refRotation = reference.slice(3)
+    const motion = sub(delta, add(reference, cross(refRotation, lever)))
+    const rotation = sub(delta.slice(3), refRotation)
+    return [dot(axes[0], motion), dot(axes[1], motion), dot(axes[0], rotation), dot(axes[1], rotation)]
+  })
+  if (!projected.length) return { draws: rigid, weights: [] }
+  const errors = new Float64Array(samples)
+  const withoutShift = group?.motion ? new Float64Array(samples) : errors
+  const { kinematics } = rigid
+  const records = contributionRecords(projected)
+  const delta = new Float64Array(size)
+  const omitted = new Float64Array(size)
+  const stride = group?.motion ? 9 : 5
+  const kind = control.kind
+  const error = flatness ? (offset, flex) => {
+    let min = 0
+    let max = 0
+    for (const height of flex) {
+      min = Math.min(min, height)
+      max = Math.max(max, height)
+    }
+    return rigid.errors[offset / stride] + max - min
+  } : (offset, flex, datumShift) => zoneError(kind, zone, span,
+    kinematics[offset] + flex[0] - (datumShift ? kinematics[offset + 5] : 0),
+    kinematics[offset + 1] + flex[1] - (datumShift ? kinematics[offset + 6] : 0),
+    kinematics[offset + 2] + flex[2] - (datumShift ? kinematics[offset + 7] : 0),
+    kinematics[offset + 3] + flex[3] - (datumShift ? kinematics[offset + 8] : 0),
+    kinematics[offset + 4])
+  for (let i = 0; i < samples; i++) {
+    const offset = i * stride
+    delta.fill(0)
+    accumulateCompliance(delta, projected, i)
+    errors[i] = error(offset, delta, group?.motion)
+    if (group?.motion) withoutShift[i] = error(offset, delta, false)
+    for (const record of records) {
+      omitted.set(delta)
+      accumulateModel(omitted, record.model, i, -1)
+      recordContribution(record, i, errors[i] - error(offset, omitted, group?.motion))
+    }
+  }
+  return { draws: { errors, withoutShift, quantiles: rigid.quantiles }, weights: contributionWeights(records, samples) }
+}
+
+export function evaluateCompliantGdt(model, parameters, rigid, models) {
+  const scores = new Map()
+  const failureCounts = new Uint32Array(model.samples)
+  const weights = []
+  for (const entry of model.entries) {
+    const id = entry.control.id
+    if (!entry.axes) continue
+    let original = rigid.draws.get(id)
+    if (!original.kinematics) original = sampleControl(entry, model.samples, parameters, true)
+    const flex = flexDraws(entry, original, models, model.samples)
+    const next = flex.draws === original ? rigid.scores.get(id)
+      : score(entry, flex.draws, rigid.applied.get(id), model.assembly)
+    scores.set(id, next)
+    for (let i = 0; i < model.samples; i++) failureCounts[i] += next.failures[i]
+    weights.push(...flex.weights)
+  }
+  const metrics = summarize(model.entries, scores, failureCounts)
+  metrics.warnings = rigid.metrics.warnings
+  return { metrics, weights, rigidVariance: [...rigid.scores.values()].reduce((sum, item) => sum + item.variance, 0) }
 }
