@@ -2736,3 +2736,364 @@
   color: var(--text-primary);
   font-weight: 600;
 }
+
+/* ============================================================================
+   M3G-FE-01: 3D GD&T CSS2D 框格、智能防遮挡、就地微调、配置气泡与四向金色脉冲高亮
+   ============================================================================ */
+.pa-css2d-webgl-host {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 7;
+}
+
+.pa-gdt-overlay-root {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 12;
+}
+
+.pa-gdt-mode-pill {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 20;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.84);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+.pa-gdt-mode-btn {
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pa-gdt-mode-btn:hover {
+  color: #ffffff;
+}
+
+.pa-gdt-mode-btn-active {
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.pa-gdt-leader-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.pa-gdt-leader-line {
+  stroke: #60a5fa;
+  stroke-width: 1.2;
+  opacity: 0.85;
+}
+
+.pa-gdt-leader-datum {
+  stroke: #34d399;
+}
+
+.pa-gdt-leader-golden {
+  stroke: #fbbf24;
+  stroke-width: 1.8;
+}
+
+.pa-gdt-anchor-dot {
+  fill: #3b82f6;
+  stroke: #ffffff;
+  stroke-width: 1;
+}
+
+.pa-gdt-anchor-dot-datum {
+  fill: #10b981;
+}
+
+.pa-gdt-anchor-dot-golden {
+  fill: #f59e0b;
+}
+
+.pa-gdt-anchor-wrap {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  z-index: 14;
+}
+
+.pa-gdt-preview {
+  opacity: 0.92;
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.65));
+}
+
+.pa-gdt-dot {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1.5px solid #60a5fa;
+  background: rgba(15, 23, 42, 0.92);
+  color: #e0f2fe;
+  font-size: 10.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: transform 0.14s ease, border-color 0.14s ease;
+}
+
+.pa-gdt-dot:hover {
+  transform: scale(1.14);
+  border-color: #fbbf24;
+}
+
+.pa-gdt-dot-idx {
+  font-size: 9px;
+  opacity: 0.85;
+}
+
+.pa-fcf-box {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 0;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1.5px solid #60a5fa;
+  border-radius: 4px;
+  color: #f8fafc;
+  font-family: var(--pa-font-mono);
+  font-size: 11px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pa-fcf-editing {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.38);
+}
+
+.pa-fcf-cell {
+  padding: 2px 6px;
+  border-right: 1px solid rgba(148, 163, 184, 0.38);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pa-fcf-cell:last-child {
+  border-right: none;
+}
+
+.pa-fcf-val {
+  color: #fde047;
+  font-weight: 700;
+}
+
+.pa-fcf-mod {
+  color: #93c5fd;
+  font-weight: 700;
+}
+
+.pa-datum-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(6, 78, 59, 0.92);
+  border: 1.5px solid #34d399;
+  color: #ecfdf5;
+  font-family: var(--pa-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.32);
+}
+
+@keyframes gdtGoldenPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.55), 0 0 12px rgba(245, 158, 11, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.85), 0 0 20px rgba(245, 158, 11, 0.78);
+  }
+}
+
+.gdt-fcf-golden-pulse {
+  border-color: #fbbf24 !important;
+  animation: gdtGoldenPulse 1.4s ease-in-out infinite;
+}
+
+.pa-gdt-inline-popover {
+  position: absolute;
+  top: 44px;
+  right: 12px;
+  z-index: 30;
+  pointer-events: auto;
+  width: 248px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pa-gdt-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+}
+
+.pa-gdt-inline-row input[type="range"] {
+  flex: 1;
+  min-width: 68px;
+}
+
+.pa-gdt-inline-num {
+  width: 64px;
+  padding: 3px 5px;
+  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--pa-font-mono);
+  font-size: 11.5px;
+}
+
+.pa-gdt-inline-mods {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.pa-gdt-inline-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.pa-gdt-config-popover {
+  width: min(420px, 92vw);
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pa-datum-picker-popover {
+  width: auto;
+  min-width: 260px;
+}
+
+.pa-datum-picker-row,
+.pa-gdt-symbol-grid,
+.pa-gdt-config-row,
+.pa-gdt-datum-ref-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.pa-gdt-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.pa-gdt-field-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.pa-gdt-field-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+}
+
+.pa-gdt-datum-ref-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pa-gdt-validation-box {
+  font-size: 11.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pa-sim-gdt-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 4px 0;
+}
+
+.pa-sim-fcf-line {
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+.pa-sim-gdt-whatif {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.pa-sim-warning-list {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 11.5px;
+}
+
+.pa-fourway-highlighted {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.28);
+}
+
+.pa-evidence-chip-active {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.14);
+}

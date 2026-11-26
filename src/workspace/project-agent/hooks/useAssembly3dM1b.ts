@@ -2,16 +2,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ElectronTransport } from '../../../transport/electronTransport'
 import {
   CAMERA_PRESETS,
-  computeLocalSimulationDiagnostics,
   createDefaultM1bAssemblyFixture,
   formatHumanReadableFeatureLabel,
 } from '../assembly3dMath'
+import {
+  computeLocalGdtSimulationDiagnostics,
+  createDefaultM3gGdtFixture,
+  formatFcfCells,
+  type DatumLetter,
+} from '../gdt3dMath'
 import type {
+  AiGdtDraftItem,
   AiMateDraftItem,
   AssemblyFeatureSelectionItem,
   AssemblyModelV1,
   CameraPresetId,
   ContextPillActionId,
+  DatumDefinition,
+  FourWayHighlightTarget,
+  GdtDisplayMode,
+  GdtFeatureControl,
+  GdtMaterialModifier,
   PartMesh,
   PickedFeatureGeometryKind,
   SimulationDiagnosticResult,
@@ -27,6 +38,9 @@ export interface UseAssembly3dM1bOptions {
   readonly initialAssembly3d?: AssemblyModelV1
   readonly initialPartMeshes?: readonly PartMesh[]
   readonly initialAiMateDrafts?: readonly AiMateDraftItem[]
+  readonly initialAiGdtDrafts?: readonly AiGdtDraftItem[]
+  readonly initialDatums?: readonly DatumDefinition[]
+  readonly initialGdtControls?: readonly GdtFeatureControl[]
   readonly initialSimulationSpec?: SimulationLoopSpec
   readonly selectedObjectIds: readonly string[]
   readonly onSelectFeature: (
@@ -109,6 +123,9 @@ export function useAssembly3dM1b({
   initialAssembly3d,
   initialPartMeshes,
   initialAiMateDrafts,
+  initialAiGdtDrafts,
+  initialDatums,
+  initialGdtControls,
   initialSimulationSpec,
   selectedObjectIds,
   onSelectFeature,
@@ -147,6 +164,7 @@ export function useAssembly3dM1b({
       : hasExplicitAssemblyContext || capabilityFlag
 
   const defaultFixture = useMemo(() => createDefaultM1bAssemblyFixture(), [])
+  const defaultGdtFixture = useMemo(() => createDefaultM3gGdtFixture(), [])
 
   const partMeshes: readonly PartMesh[] = useMemo(() => {
     if (!feature3dAssemblyM1) return []
@@ -159,10 +177,38 @@ export function useAssembly3dM1b({
     [partMeshes],
   )
 
+  const featureKindById = useMemo(() => {
+    const map = new Map<string, PickedFeatureGeometryKind>()
+    for (const [id, item] of assemblyFeatureMap.entries()) {
+      map.set(id, item.geometryKind)
+    }
+    return map
+  }, [assemblyFeatureMap])
+
+  const featureLabelById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const [id, item] of assemblyFeatureMap.entries()) {
+      map.set(id, formatHumanReadableFeatureLabel(item))
+    }
+    return map
+  }, [assemblyFeatureMap])
+
   const [hiddenPartIds, setHiddenPartIds] = useState<ReadonlySet<string>>(() => new Set())
   const [additivePickMode, setAdditivePickMode] = useState(false)
   const [activeCameraPreset, setActiveCameraPreset] = useState<CameraPresetId>('iso')
   const [hoveredFeatureId, setHoveredFeatureId] = useState<string | null>(null)
+
+  // M3G GD&T, Datums, Smart Anti-Occlusion & Four-Way Highlight state
+  const [datums, setDatums] = useState<readonly DatumDefinition[]>(() =>
+    initialDatums ?? initialAssembly3d?.datums ?? defaultGdtFixture.datums,
+  )
+  const [gdtControls, setGdtControls] = useState<readonly GdtFeatureControl[]>(() =>
+    initialGdtControls ?? initialAssembly3d?.gdt ?? defaultGdtFixture.gdtControls,
+  )
+  const [gdtDisplayMode, setGdtDisplayMode] = useState<GdtDisplayMode>('smart')
+  const [editingGdtId, setEditingGdtId] = useState<string | null>(null)
+  const [fourWayTarget, setFourWayTarget] = useState<FourWayHighlightTarget | null>(null)
+  const [hoveredGdtDraft, setHoveredGdtDraft] = useState<AiGdtDraftItem | null>(null)
 
   // AI Mate Drafts state
   const [aiMateDrafts, setAiMateDrafts] = useState<readonly AiMateDraftItem[]>(() =>
@@ -171,14 +217,34 @@ export function useAssembly3dM1b({
   const [mateDraftsFeedback, setMateDraftsFeedback] = useState<string | null>(null)
   const [appliedMatesCount, setAppliedMatesCount] = useState<number>(0)
 
+  // AI GD&T & Datum Drafts state
+  const [aiGdtDrafts, setAiGdtDrafts] = useState<readonly AiGdtDraftItem[]>(() =>
+    initialAiGdtDrafts ?? defaultGdtFixture.aiGdtDrafts,
+  )
+  const [gdtDraftsFeedback, setGdtDraftsFeedback] = useState<string | null>(null)
+  const [appliedGdtCount, setAppliedGdtCount] = useState<number>(0)
+
   // Simulation Diagnostics & What-If state
   const simulationSpec: SimulationLoopSpec = initialSimulationSpec ?? defaultFixture.simulationSpec
   const [toleranceOverrides, setToleranceOverrides] = useState<Record<string, number>>({})
   const [simulationComputing, setSimulationComputing] = useState(false)
   const [simulationResult, setSimulationResult] = useState<SimulationDiagnosticResult>(() =>
-    computeLocalSimulationDiagnostics(simulationSpec),
+    computeLocalGdtSimulationDiagnostics(simulationSpec, {
+      gdtControls: initialGdtControls ?? initialAssembly3d?.gdt ?? defaultGdtFixture.gdtControls,
+      datums: initialDatums ?? initialAssembly3d?.datums ?? defaultGdtFixture.datums,
+      featureKindById,
+      featureLabelById,
+    }),
   )
   const simDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const focusedLoopFeatureIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const c of simulationSpec.contributors) {
+      ids.add(c.featureId)
+    }
+    return ids
+  }, [simulationSpec.contributors])
 
   useEffect(() => {
     return () => {
@@ -327,12 +393,20 @@ export function useAssembly3dM1b({
     )
   }, [aiMateDrafts])
 
-  const updateWhatIfTolerance = useCallback(
-    (contributorId: string, nextTolMm: number) => {
-      const nextOverrides = { ...toleranceOverrides, [contributorId]: nextTolMm }
-      setToleranceOverrides(nextOverrides)
-      // Fast deterministic local recomputation (< 5ms) ensures responsive <500ms UI
-      const localResult = computeLocalSimulationDiagnostics(simulationSpec, nextOverrides)
+  const scheduleSimulationRefresh = useCallback(
+    (
+      nextOverrides: Readonly<Record<string, number>>,
+      nextControls: readonly GdtFeatureControl[],
+      nextDatums: readonly DatumDefinition[],
+    ) => {
+      // Fast deterministic local recomputation (< 5ms) ensures responsive <350ms UI
+      const localResult = computeLocalGdtSimulationDiagnostics(simulationSpec, {
+        toleranceOverrides: nextOverrides,
+        gdtControls: nextControls,
+        datums: nextDatums,
+        featureKindById,
+        featureLabelById,
+      })
       setSimulationResult(localResult)
 
       if (simDebounceRef.current) {
@@ -388,11 +462,173 @@ export function useAssembly3dM1b({
           })
       }, 60)
     },
-    [toleranceOverrides, simulationSpec, transport, projectId, draftRevision],
+    [simulationSpec, featureKindById, featureLabelById, transport, projectId, draftRevision],
+  )
+
+  const updateWhatIfTolerance = useCallback(
+    (contributorId: string, nextTolMm: number) => {
+      const nextOverrides = { ...toleranceOverrides, [contributorId]: nextTolMm }
+      setToleranceOverrides(nextOverrides)
+      scheduleSimulationRefresh(nextOverrides, gdtControls, datums)
+    },
+    [toleranceOverrides, gdtControls, datums, scheduleSimulationRefresh],
+  )
+
+  const assignDatum = useCallback(
+    (featureId: string, letter: DatumLetter) => {
+      const nextDatum: DatumDefinition = {
+        id: `datum-${letter}`,
+        label: letter,
+        featureId,
+        ...(featureKindById.get(featureId) === 'cylindrical-hole-axis'
+          ? { sizeToleranceQ: { lowerQ: -300, upperQ: 300 } }
+          : {}),
+      }
+      const nextDatums = [...datums.filter((d) => d.label !== letter), nextDatum].sort((a, b) =>
+        a.label.localeCompare(b.label),
+      )
+      setDatums(nextDatums)
+      const label = featureLabelById.get(featureId) ?? featureId
+      onSetContextFeedback(`已将「${label}」设为装配基准 ${letter}。`)
+      scheduleSimulationRefresh(toleranceOverrides, gdtControls, nextDatums)
+    },
+    [
+      datums,
+      featureKindById,
+      featureLabelById,
+      onSetContextFeedback,
+      scheduleSimulationRefresh,
+      toleranceOverrides,
+      gdtControls,
+    ],
+  )
+
+  const createGdtControl = useCallback(
+    (control: GdtFeatureControl) => {
+      const nextControls = [...gdtControls, control]
+      setGdtControls(nextControls)
+      const summary = formatFcfCells(control, datums, featureKindById.get(control.featureId)).summaryText
+      const label = featureLabelById.get(control.featureId) ?? control.featureId
+      onSetContextFeedback(`已为「${label}」贴附 GD&T 框格 ${summary}。`)
+      scheduleSimulationRefresh(toleranceOverrides, nextControls, datums)
+    },
+    [
+      gdtControls,
+      datums,
+      featureKindById,
+      featureLabelById,
+      onSetContextFeedback,
+      scheduleSimulationRefresh,
+      toleranceOverrides,
+    ],
+  )
+
+  const updateGdtControl = useCallback(
+    (
+      gdtId: string,
+      patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
+    ) => {
+      const nextControls = gdtControls.map((c) =>
+        c.id === gdtId
+          ? {
+              ...c,
+              ...(patch.toleranceQ !== undefined ? { toleranceQ: patch.toleranceQ } : {}),
+              ...(patch.modifier !== undefined ? { modifier: patch.modifier } : {}),
+            }
+          : c,
+      )
+      setGdtControls(nextControls)
+      scheduleSimulationRefresh(toleranceOverrides, nextControls, datums)
+    },
+    [gdtControls, toleranceOverrides, datums, scheduleSimulationRefresh],
+  )
+
+  const deleteGdtControl = useCallback(
+    (gdtId: string) => {
+      const nextControls = gdtControls.filter((c) => c.id !== gdtId)
+      setGdtControls(nextControls)
+      setEditingGdtId((prev) => (prev === gdtId ? null : prev))
+      scheduleSimulationRefresh(toleranceOverrides, nextControls, datums)
+    },
+    [gdtControls, toleranceOverrides, datums, scheduleSimulationRefresh],
+  )
+
+  const toggleGdtDraft = useCallback((draftId: string) => {
+    setAiGdtDrafts((prev) =>
+      prev.map((item) =>
+        item.id === draftId && !item.applied ? { ...item, selected: !item.selected } : item,
+      ),
+    )
+  }, [])
+
+  const applySelectedGdtDrafts = useCallback(() => {
+    const toApply = aiGdtDrafts.filter((item) => item.selected && !item.applied)
+    if (toApply.length === 0) return
+
+    let nextDatums = [...datums]
+    let nextControls = [...gdtControls]
+
+    for (const draft of toApply) {
+      if (draft.draftKind === 'datum' && draft.datum) {
+        nextDatums = [...nextDatums.filter((d) => d.label !== draft.datum!.label), draft.datum]
+      }
+      if (draft.draftKind === 'gdt' && draft.gdt) {
+        nextControls = [...nextControls.filter((g) => g.id !== draft.gdt!.id), draft.gdt]
+      }
+    }
+
+    setDatums(nextDatums)
+    setGdtControls(nextControls)
+    setAiGdtDrafts((prev) =>
+      prev.map((item) => (item.selected && !item.applied ? { ...item, applied: true } : item)),
+    )
+    setAppliedGdtCount((prev) => prev + toApply.length)
+    setHoveredGdtDraft(null)
+    setGdtDraftsFeedback(`已确认并应用 ${toApply.length} 条 AI 建议基准/GD&T 草案。`)
+    scheduleSimulationRefresh(toleranceOverrides, nextControls, nextDatums)
+  }, [aiGdtDrafts, datums, gdtControls, scheduleSimulationRefresh, toleranceOverrides])
+
+  const gdtPreviewControls = useMemo(
+    () => (hoveredGdtDraft?.draftKind === 'gdt' && hoveredGdtDraft.gdt ? [hoveredGdtDraft.gdt] : []),
+    [hoveredGdtDraft],
+  )
+  const gdtPreviewDatums = useMemo(
+    () =>
+      hoveredGdtDraft?.draftKind === 'datum' && hoveredGdtDraft.datum ? [hoveredGdtDraft.datum] : [],
+    [hoveredGdtDraft],
+  )
+
+  const goldenPulseFeatureIds = useMemo(() => {
+    const set = new Set<string>()
+    if (hoveredFeatureId) set.add(hoveredFeatureId)
+    if (fourWayTarget?.featureId) set.add(fourWayTarget.featureId)
+    if (hoveredGdtDraft?.featureId) set.add(hoveredGdtDraft.featureId)
+    return set
+  }, [hoveredFeatureId, fourWayTarget, hoveredGdtDraft])
+
+  const goldenPulseGdtIds = useMemo(() => {
+    const set = new Set<string>()
+    if (fourWayTarget?.gdtId) set.add(fourWayTarget.gdtId)
+    if (editingGdtId) set.add(editingGdtId)
+    return set
+  }, [fourWayTarget, editingGdtId])
+
+  const handleSelectGdtCallout = useCallback(
+    (gdtId: string | null) => {
+      setEditingGdtId(gdtId)
+      if (!gdtId) return
+      const found = gdtControls.find((c) => c.id === gdtId)
+      if (found) {
+        setFourWayTarget({ featureId: found.featureId, gdtId: found.id })
+        focusFeatureById(found.featureId)
+      }
+    },
+    [gdtControls, focusFeatureById],
   )
 
   const handleClearAssemblySelection = useCallback(() => {
     setAdditivePickMode(false)
+    setEditingGdtId(null)
     onClearSelection()
   }, [onClearSelection])
 
@@ -400,6 +636,7 @@ export function useAssembly3dM1b({
     feature3dAssemblyM1,
     partMeshes,
     assemblyFeatures,
+    featureKindById,
     hiddenPartIds,
     togglePartVisibility,
     additivePickMode,
@@ -418,6 +655,31 @@ export function useAssembly3dM1b({
     mateDraftsFeedback,
     toggleMateDraft,
     applySelectedMateDrafts,
+    // M3G GD&T & Datum state + actions
+    datums,
+    gdtControls,
+    gdtPreviewControls,
+    gdtPreviewDatums,
+    gdtDisplayMode,
+    setGdtDisplayMode,
+    editingGdtId,
+    handleSelectGdtCallout,
+    focusedLoopFeatureIds,
+    goldenPulseFeatureIds,
+    goldenPulseGdtIds,
+    fourWayTarget,
+    setFourWayTarget,
+    assignDatum,
+    createGdtControl,
+    updateGdtControl,
+    deleteGdtControl,
+    aiGdtDrafts,
+    appliedGdtCount,
+    gdtDraftsFeedback,
+    toggleGdtDraft,
+    applySelectedGdtDrafts,
+    hoveredGdtDraft,
+    setHoveredGdtDraft,
     simulationResult,
     simulationComputing,
     updateWhatIfTolerance,

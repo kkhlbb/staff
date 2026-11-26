@@ -1,6 +1,10 @@
 import type { RefObject } from 'react'
 import type {
+  AiGdtDraftItem,
   AiMateDraftItem,
+  DatumDefinition,
+  GdtFeatureControl,
+  GdtMaterialModifier,
   SimulationDiagnosticResult,
   WorkbenchSidebarSection,
 } from '../assembly3dTypes'
@@ -31,6 +35,7 @@ import {
   type SidebarTab,
   type WorkbenchChatMessage,
 } from '../workbenchHelpers'
+import { AiGdtDraftsCard } from './AiGdtDraftsCard'
 import { AiMateDraftsCard } from './AiMateDraftsCard'
 import { SimulationWhatIfPanel } from './SimulationWhatIfPanel'
 
@@ -60,13 +65,28 @@ export interface CollaborationSidebarProps {
   readonly simulationResult?: SimulationDiagnosticResult
   readonly simulationComputing?: boolean
   readonly activeAssemblyFeatureId?: string | null
+  readonly activeGdtId?: string | null
+  readonly datums?: readonly DatumDefinition[]
+  readonly gdtControls?: readonly GdtFeatureControl[]
+  readonly aiGdtDrafts?: readonly AiGdtDraftItem[]
+  readonly appliedGdtCount?: number
+  readonly gdtDraftsFeedback?: string | null
+  readonly onToggleGdtDraft?: (draftId: string) => void
+  readonly onApplySelectedGdtDrafts?: () => void
+  readonly onHoverGdtDraft?: (draft: AiGdtDraftItem | null) => void
+  readonly onFocusGdtDraft?: (draft: AiGdtDraftItem) => void
+  readonly onUpdateGdtControl?: (
+    gdtId: string,
+    patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
+  ) => void
   readonly onChangeContributorTolerance?: (contributorId: string, nextTolMm: number) => void
   readonly onHoverContributor?: (
-    target: { readonly featureId: string; readonly partId: string } | null,
+    target: { readonly featureId: string; readonly partId?: string; readonly gdtId?: string } | null,
   ) => void
   readonly onClickContributor?: (target: {
     readonly featureId: string
-    readonly partId: string
+    readonly partId?: string
+    readonly gdtId?: string
   }) => void
 
   // M2SidebarPanels props
@@ -155,6 +175,17 @@ export function CollaborationSidebar({
   simulationResult,
   simulationComputing = false,
   activeAssemblyFeatureId = null,
+  activeGdtId = null,
+  datums = [],
+  gdtControls = [],
+  aiGdtDrafts = [],
+  appliedGdtCount = 0,
+  gdtDraftsFeedback = null,
+  onToggleGdtDraft,
+  onApplySelectedGdtDrafts,
+  onHoverGdtDraft,
+  onFocusGdtDraft,
+  onUpdateGdtControl,
   onChangeContributorTolerance,
   onHoverContributor,
   onClickContributor,
@@ -310,7 +341,11 @@ export function CollaborationSidebar({
             result={simulationResult}
             computing={simulationComputing}
             activeFeatureId={activeAssemblyFeatureId}
+            activeGdtId={activeGdtId}
+            gdtControls={gdtControls}
+            datums={datums}
             onChangeContributorTolerance={(id, val) => onChangeContributorTolerance?.(id, val)}
+            onUpdateGdtControl={onUpdateGdtControl}
             onHoverContributor={onHoverContributor}
             onClickContributor={onClickContributor}
           />
@@ -358,6 +393,19 @@ export function CollaborationSidebar({
                 onToggleDraft={(id) => onToggleMateDraft?.(id)}
                 onApplySelected={() => onApplySelectedMateDrafts?.()}
                 onFocusFeature={onFocusAssemblyFeature}
+              />
+            ) : null}
+            {feature3dAssemblyM1 && aiGdtDrafts.length > 0 ? (
+              <AiGdtDraftsCard
+                drafts={aiGdtDrafts}
+                datums={datums}
+                appliedCount={appliedGdtCount}
+                feedbackMessage={gdtDraftsFeedback}
+                activeFeatureId={activeAssemblyFeatureId}
+                onToggleDraft={(id) => onToggleGdtDraft?.(id)}
+                onApplySelected={() => onApplySelectedGdtDrafts?.()}
+                onHoverDraft={onHoverGdtDraft}
+                onFocusDraft={onFocusGdtDraft}
               />
             ) : null}
             <div className="pa-header">
@@ -482,6 +530,19 @@ export function CollaborationSidebar({
                   onToggleDraft={(id) => onToggleMateDraft?.(id)}
                   onApplySelected={() => onApplySelectedMateDrafts?.()}
                   onFocusFeature={onFocusAssemblyFeature}
+                />
+              ) : null}
+              {feature3dAssemblyM1 && aiGdtDrafts.length > 0 ? (
+                <AiGdtDraftsCard
+                  drafts={aiGdtDrafts}
+                  datums={datums}
+                  appliedCount={appliedGdtCount}
+                  feedbackMessage={gdtDraftsFeedback}
+                  activeFeatureId={activeAssemblyFeatureId}
+                  onToggleDraft={(id) => onToggleGdtDraft?.(id)}
+                  onApplySelected={() => onApplySelectedGdtDrafts?.()}
+                  onHoverDraft={onHoverGdtDraft}
+                  onFocusDraft={onFocusGdtDraft}
                 />
               ) : null}
               {messages.length === 0 ? (

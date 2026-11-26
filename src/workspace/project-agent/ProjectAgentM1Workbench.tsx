@@ -6,8 +6,11 @@ import {
 } from '../../transport/electronTransport'
 import type { Transport } from '../../transport/types'
 import type {
+  AiGdtDraftItem,
   AiMateDraftItem,
   AssemblyModelV1,
+  DatumDefinition,
+  GdtFeatureControl,
   PartMesh,
   SimulationLoopSpec,
   WorkbenchSidebarSection,
@@ -79,6 +82,9 @@ export interface ProjectAgentM1WorkbenchProps {
   readonly initialAssembly3d?: AssemblyModelV1
   readonly initialPartMeshes?: readonly PartMesh[]
   readonly initialAiMateDrafts?: readonly AiMateDraftItem[]
+  readonly initialAiGdtDrafts?: readonly AiGdtDraftItem[]
+  readonly initialDatums?: readonly DatumDefinition[]
+  readonly initialGdtControls?: readonly GdtFeatureControl[]
   readonly initialSimulationSpec?: SimulationLoopSpec
 }
 
@@ -114,6 +120,9 @@ export function ProjectAgentM1Workbench({
   initialAssembly3d,
   initialPartMeshes,
   initialAiMateDrafts,
+  initialAiGdtDrafts,
+  initialDatums,
+  initialGdtControls,
   initialSimulationSpec,
 }: ProjectAgentM1WorkbenchProps) {
   const [simulationTabActive, setSimulationTabActive] = useState(
@@ -165,6 +174,9 @@ export function ProjectAgentM1Workbench({
     initialAssembly3d,
     initialPartMeshes,
     initialAiMateDrafts,
+    initialAiGdtDrafts,
+    initialDatums,
+    initialGdtControls,
     initialSimulationSpec,
     selectedObjectIds: viewport.selectedObjectIds,
     onSelectFeature: viewport.handleSelectFeature,
@@ -180,13 +192,42 @@ export function ProjectAgentM1Workbench({
   })
 
   const effectiveHighlightedFeatureIds = useMemo(() => {
-    if (!assembly3d.feature3dAssemblyM1 || !assembly3d.hoveredFeatureId) {
+    if (!assembly3d.feature3dAssemblyM1) {
       return viewport.highlightedFeatureIds
     }
     const next = new Set(viewport.highlightedFeatureIds)
-    next.add(assembly3d.hoveredFeatureId)
+    if (assembly3d.hoveredFeatureId) next.add(assembly3d.hoveredFeatureId)
+    for (const fid of assembly3d.goldenPulseFeatureIds) next.add(fid)
     return next
-  }, [assembly3d.feature3dAssemblyM1, assembly3d.hoveredFeatureId, viewport.highlightedFeatureIds])
+  }, [
+    assembly3d.feature3dAssemblyM1,
+    assembly3d.hoveredFeatureId,
+    assembly3d.goldenPulseFeatureIds,
+    viewport.highlightedFeatureIds,
+  ])
+
+  // Four-way sync: propagate active 3D/GD&T feature highlight to matching 2D drawing annotations
+  const effectiveHighlightedAnnotationIds = useMemo(() => {
+    if (!assembly3d.feature3dAssemblyM1 || assembly3d.goldenPulseFeatureIds.size === 0) {
+      return viewport.highlightedAnnotationIds
+    }
+    const next = new Set(viewport.highlightedAnnotationIds)
+    for (const ann of viewport.canvasState.annotations) {
+      if (ann.linkedFeatureIds.some((fid) => assembly3d.goldenPulseFeatureIds.has(fid))) {
+        next.add(ann.annotationId)
+      }
+    }
+    if (assembly3d.fourWayTarget?.annotationId) {
+      next.add(assembly3d.fourWayTarget.annotationId)
+    }
+    return next
+  }, [
+    assembly3d.feature3dAssemblyM1,
+    assembly3d.goldenPulseFeatureIds,
+    assembly3d.fourWayTarget,
+    viewport.highlightedAnnotationIds,
+    viewport.canvasState.annotations,
+  ])
 
   const activeSidebarSection: WorkbenchSidebarSection =
     assembly3d.feature3dAssemblyM1 && simulationTabActive ? 'simulation' : session.sidebarSection
@@ -493,7 +534,7 @@ export function ProjectAgentM1Workbench({
             selectedObjectIds={viewport.selectedObjectIds}
             selectedAnnotationId={viewport.canvasState.selectedAnnotationId}
             highlightedFeatureIds={effectiveHighlightedFeatureIds}
-            highlightedAnnotationIds={viewport.highlightedAnnotationIds}
+            highlightedAnnotationIds={effectiveHighlightedAnnotationIds}
             selectionInvalidated={viewport.canvasState.selectionInvalidated}
             invalidatedObjectLabel={viewport.canvasState.invalidatedObjectLabel}
             camera={viewport.canvasState.camera}
@@ -542,6 +583,30 @@ export function ProjectAgentM1Workbench({
             onPickAssemblyFeature={assembly3d.handlePickAssemblyFeature}
             onExecuteAssemblyAction={assembly3d.executeContextAction}
             onSelectCameraPreset={assembly3d.applyCameraPreset}
+            datums={assembly3d.datums}
+            gdtControls={assembly3d.gdtControls}
+            gdtPreviewControls={assembly3d.gdtPreviewControls}
+            gdtPreviewDatums={assembly3d.gdtPreviewDatums}
+            gdtDisplayMode={assembly3d.gdtDisplayMode}
+            onChangeGdtDisplayMode={assembly3d.setGdtDisplayMode}
+            focusedLoopFeatureIds={assembly3d.focusedLoopFeatureIds}
+            goldenPulseFeatureIds={assembly3d.goldenPulseFeatureIds}
+            goldenPulseGdtIds={assembly3d.goldenPulseGdtIds}
+            editingGdtId={assembly3d.editingGdtId}
+            featureKindById={assembly3d.featureKindById}
+            onSelectGdtCallout={assembly3d.handleSelectGdtCallout}
+            onHoverGdtCallout={(target) => {
+              assembly3d.setHoveredFeatureId(target ? target.featureId : null)
+              assembly3d.setFourWayTarget(
+                target
+                  ? { featureId: target.featureId, partId: target.partId, gdtId: target.gdtId, datumId: target.datumId }
+                  : null,
+              )
+            }}
+            onAssignDatum={assembly3d.assignDatum}
+            onCreateGdtControl={assembly3d.createGdtControl}
+            onUpdateGdtCallout={assembly3d.updateGdtControl}
+            onDeleteGdtCallout={assembly3d.deleteGdtControl}
           />
 
           <CollaborationSidebar
@@ -559,16 +624,61 @@ export function ProjectAgentM1Workbench({
             onToggleMateDraft={assembly3d.toggleMateDraft}
             onApplySelectedMateDrafts={assembly3d.applySelectedMateDrafts}
             onFocusAssemblyFeature={assembly3d.focusFeatureById}
+            datums={assembly3d.datums}
+            gdtControls={assembly3d.gdtControls}
+            aiGdtDrafts={assembly3d.aiGdtDrafts}
+            appliedGdtCount={assembly3d.appliedGdtCount}
+            gdtDraftsFeedback={assembly3d.gdtDraftsFeedback}
+            onToggleGdtDraft={assembly3d.toggleGdtDraft}
+            onApplySelectedGdtDrafts={assembly3d.applySelectedGdtDrafts}
+            onHoverGdtDraft={(draft) => {
+              assembly3d.setHoveredGdtDraft(draft)
+              assembly3d.setFourWayTarget(
+                draft
+                  ? {
+                      featureId: draft.featureId,
+                      partId: draft.partId,
+                      gdtId: draft.gdt?.id,
+                      datumId: draft.datum?.id,
+                      annotationId: draft.linkedAnnotationId,
+                    }
+                  : null,
+              )
+            }}
+            onFocusGdtDraft={(draft) => {
+              assembly3d.setFourWayTarget({
+                featureId: draft.featureId,
+                partId: draft.partId,
+                gdtId: draft.gdt?.id,
+                datumId: draft.datum?.id,
+                annotationId: draft.linkedAnnotationId,
+              })
+              assembly3d.focusFeatureById(draft.featureId)
+            }}
+            onUpdateGdtControl={assembly3d.updateGdtControl}
             simulationResult={assembly3d.simulationResult}
             simulationComputing={assembly3d.simulationComputing}
             activeAssemblyFeatureId={
-              assembly3d.hoveredFeatureId ?? viewport.canvasState.selectedObjectId
+              assembly3d.fourWayTarget?.featureId ??
+              assembly3d.hoveredFeatureId ??
+              viewport.canvasState.selectedObjectId
             }
+            activeGdtId={assembly3d.fourWayTarget?.gdtId ?? assembly3d.editingGdtId}
             onChangeContributorTolerance={assembly3d.updateWhatIfTolerance}
-            onHoverContributor={(target) =>
+            onHoverContributor={(target) => {
               assembly3d.setHoveredFeatureId(target ? target.featureId : null)
-            }
-            onClickContributor={(target) => assembly3d.focusFeatureById(target.featureId)}
+              assembly3d.setFourWayTarget(
+                target ? { featureId: target.featureId, partId: target.partId, gdtId: target.gdtId } : null,
+              )
+            }}
+            onClickContributor={(target) => {
+              assembly3d.setFourWayTarget({
+                featureId: target.featureId,
+                partId: target.partId,
+                gdtId: target.gdtId,
+              })
+              assembly3d.focusFeatureById(target.featureId)
+            }}
             requirements={viewport.canvasState.requirements}
             checks={viewport.canvasState.checks}
             checksInProgress={viewport.canvasState.checksInProgress}

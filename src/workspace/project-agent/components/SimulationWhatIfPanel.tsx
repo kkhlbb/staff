@@ -1,18 +1,34 @@
-import type { SimulationDiagnosticResult } from '../assembly3dTypes'
+import type {
+  DatumDefinition,
+  GdtFeatureControl,
+  GdtMaterialModifier,
+  SimulationDiagnosticResult,
+} from '../assembly3dTypes'
+import { formatFcfCells, GDT_KIND_META, GDT_MODIFIER_LABELS, mmToToleranceQ } from '../gdt3dMath'
 
 export interface SimulationWhatIfPanelProps {
   readonly result: SimulationDiagnosticResult
   readonly computing?: boolean
   readonly activeFeatureId?: string | null
+  readonly activeGdtId?: string | null
+  readonly gdtControls?: readonly GdtFeatureControl[]
+  readonly datums?: readonly DatumDefinition[]
   readonly onChangeContributorTolerance: (contributorId: string, nextTolMm: number) => void
+  readonly onUpdateGdtControl?: (
+    gdtId: string,
+    patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
+  ) => void
   readonly onHoverContributor?: (
-    target: { readonly featureId: string; readonly partId: string } | null,
+    target: { readonly featureId: string; readonly partId?: string; readonly gdtId?: string } | null,
   ) => void
   readonly onClickContributor?: (target: {
     readonly featureId: string
-    readonly partId: string
+    readonly partId?: string
+    readonly gdtId?: string
   }) => void
 }
+
+const GDT_QUICK_MODIFIERS: readonly GdtMaterialModifier[] = ['RFS', 'MMC', 'LMC']
 
 function formatStatusLabel(status: SimulationDiagnosticResult['status']): {
   readonly text: string
@@ -34,11 +50,18 @@ export function SimulationWhatIfPanel({
   result,
   computing = false,
   activeFeatureId = null,
+  activeGdtId = null,
+  gdtControls = [],
+  datums = [],
   onChangeContributorTolerance,
+  onUpdateGdtControl,
   onHoverContributor,
   onClickContributor,
 }: SimulationWhatIfPanelProps) {
   const statusMeta = formatStatusLabel(result.status)
+  const gdtById = new Map(gdtControls.map((g) => [g.id, g]))
+  const gdtContributions = result.gdtContributions ?? []
+  const gdtWarnings = result.gdtWarnings ?? []
 
   const histWidth = 260
   const histHeight = 84
@@ -247,6 +270,144 @@ export function SimulationWhatIfPanel({
           })}
         </ul>
       </div>
+
+      {/* M3G GD&T Contributions (Variance Share, MMC Bonus, Datum Shift) & What-If */}
+      {gdtContributions.length > 0 ? (
+        <div
+          className="pa-sim-pareto-section pa-sim-gdt-section"
+          data-testid="sim-gdt-contributions-section"
+        >
+          <div className="pa-header">
+            <span className="pa-card-label">GD&amp;T 贡献度 · MMC 补偿与基准偏移</span>
+            <span className="pa-mono pa-muted">{gdtContributions.length} 条</span>
+          </div>
+
+          <ul className="pa-sim-pareto-list" aria-label="GD&T 公差贡献度明细">
+            {gdtContributions.map((item) => {
+              const control = gdtById.get(item.gdtId)
+              const fcf = control ? formatFcfCells(control, datums) : null
+              const isHighlighted =
+                activeGdtId === item.gdtId ||
+                (control !== undefined && activeFeatureId === control.featureId)
+              const tolMm = control ? control.toleranceQ / 10000 : 0.1
+              const currentMod: GdtMaterialModifier = control?.modifier ?? 'RFS'
+              return (
+                <li
+                  key={item.gdtId}
+                  data-testid={`gdt-contrib-item-${item.gdtId}`}
+                  data-gdt-id={item.gdtId}
+                  data-highlighted={isHighlighted ? 'true' : 'false'}
+                  className={`pa-sim-pareto-item pa-sim-gdt-item ${isHighlighted ? 'pa-sim-pareto-item-active pa-fourway-highlighted' : ''}`}
+                  onMouseEnter={() => {
+                    if (control) {
+                      onHoverContributor?.({
+                        featureId: control.featureId,
+                        gdtId: control.id,
+                      })
+                    }
+                  }}
+                  onMouseLeave={() => onHoverContributor?.(null)}
+                >
+                  <button
+                    type="button"
+                    className="pa-sim-pareto-head"
+                    onClick={() => {
+                      if (control) {
+                        onClickContributor?.({
+                          featureId: control.featureId,
+                          gdtId: control.id,
+                        })
+                      }
+                    }}
+                  >
+                    <span>
+                      <strong>{GDT_KIND_META[item.kind].symbol}</strong> {item.label}
+                    </span>
+                    <span
+                      className="pa-mono pa-sim-share-pct"
+                      data-testid={`gdt-contrib-pct-${item.gdtId}`}
+                    >
+                      {item.varianceSharePct.toFixed(1)}%
+                    </span>
+                  </button>
+
+                  {fcf ? <div className="pa-mono pa-muted pa-sim-fcf-line">{fcf.summaryText}</div> : null}
+
+                  <div className="pa-sim-gdt-metrics">
+                    <span
+                      className="pa-pill pa-tone-pass pa-mono"
+                      data-testid={`gdt-bonus-${item.gdtId}`}
+                    >
+                      MMC Bonus +{item.bonusMeanMm.toFixed(3)} mm
+                    </span>
+                    <span
+                      className="pa-pill pa-tone-action pa-mono"
+                      data-testid={`gdt-shift-${item.gdtId}`}
+                    >
+                      Datum Shift {item.datumShiftContributionPct.toFixed(1)}%
+                    </span>
+                  </div>
+
+                  {control && onUpdateGdtControl ? (
+                    <div className="pa-sim-gdt-whatif">
+                      <label className="pa-whatif-slider-row">
+                        <span>试调</span>
+                        <input
+                          type="range"
+                          data-testid={`gdt-whatif-slider-${item.gdtId}`}
+                          aria-label={`${item.label} GD&T What-If 滑块`}
+                          min={0.01}
+                          max={0.5}
+                          step={0.01}
+                          value={Number(tolMm.toFixed(3))}
+                          onChange={(event) => {
+                            onUpdateGdtControl(control.id, {
+                              toleranceQ: mmToToleranceQ(Number(event.target.value)),
+                            })
+                          }}
+                        />
+                        <span className="pa-mono pa-whatif-val">{tolMm.toFixed(2)} mm</span>
+                      </label>
+                      <div className="pa-gdt-inline-mods" role="group" aria-label={`${item.label} 实体条件切换`}>
+                        {GDT_QUICK_MODIFIERS.map((mod) => (
+                          <button
+                            key={mod}
+                            type="button"
+                            data-testid={`gdt-whatif-mod-${item.gdtId}-${mod}`}
+                            aria-pressed={currentMod === mod}
+                            className={
+                              currentMod === mod
+                                ? 'pa-btn pa-btn-primary pa-btn-sm'
+                                : 'pa-btn pa-btn-ghost pa-btn-sm'
+                            }
+                            onClick={() => onUpdateGdtControl(control.id, { modifier: mod })}
+                          >
+                            {GDT_MODIFIER_LABELS[mod]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      ) : null}
+
+      {/* GD&T Validation Warnings */}
+      {gdtWarnings.length > 0 ? (
+        <div className="pa-notice pa-sim-gdt-warnings" role="status" data-testid="sim-gdt-warnings">
+          <strong>GD&amp;T 工程校验提示（{gdtWarnings.length}）</strong>
+          <ul className="pa-sim-warning-list">
+            {gdtWarnings.map((w, idx) => (
+              <li key={`${w.code}-${w.gdtId}-${idx}`} data-warning-code={w.code}>
+                <span className="pa-mono">[{w.code}]</span> {w.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   )
 }

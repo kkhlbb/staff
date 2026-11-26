@@ -449,3 +449,17 @@ body,
   flex-direction: column;
   gap: 10px;
 }
+
+/* M3G-FE-01: 云端审核页只读 GD&T 贡献度拆解样式 */
+.cw-gdt-contrib-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cw-gdt-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 3px;
+}

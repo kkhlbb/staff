@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { DatumDefinition, GdtFeatureControl, GdtValidationWarning } from '../../../src/project-file/assembly3d'
 import { createHttpTransport } from '../../../src/transport/httpTransport'
-import type { CheckSet, CommitDraftResult, Transport } from '../../../src/transport/types'
+import type {
+  CheckSet,
+  CommitDraftResult,
+  GdtContributionItem,
+  Transport,
+} from '../../../src/transport/types'
+import type { GdtDisplayMode, PartMesh } from '../../../src/workspace/project-agent/assembly3dTypes'
+import { formatFcfCells, GDT_KIND_META } from '../../../src/workspace/project-agent/gdt3dMath'
 import { M2ThreeMeshViewport } from '../../../src/workspace/project-agent/M2ThreeMeshViewport'
 import { M2VectorDrawingViewport } from '../../../src/workspace/project-agent/M2VectorDrawingViewport'
 import {
@@ -26,6 +34,14 @@ import {
 } from './reviewHelpers'
 import { parseReviewRoute, type ParsedReviewRoute, type RouteLocationLike } from './router'
 
+export interface ReviewGdtReadonlySnapshot {
+  readonly datums?: readonly DatumDefinition[]
+  readonly gdt?: readonly GdtFeatureControl[]
+  readonly contributions?: readonly GdtContributionItem[]
+  readonly warnings?: readonly GdtValidationWarning[]
+  readonly partMeshes?: readonly PartMesh[]
+}
+
 export interface ReviewPageProps {
   /** Optional parsed route override; defaults to parsing `window.location`. */
   readonly route?: ParsedReviewRoute
@@ -33,6 +49,9 @@ export interface ReviewPageProps {
   readonly locationLike?: RouteLocationLike
   /** Optional Transport injection for unit tests; defaults to `createHttpTransport`. */
   readonly transport?: Transport
+  /** Optional M3G 3D assembly GD&T read-only review flag & snapshot override. */
+  readonly feature3dAssemblyM1?: boolean
+  readonly initialGdtSnapshot?: ReviewGdtReadonlySnapshot
 }
 
 type LoadPhase = 'loading' | 'ready' | 'conflict' | 'committed' | 'error'
@@ -45,6 +64,7 @@ interface ReviewDataState {
   readonly drawingFingerprint: string | null
   readonly rawSvgAvailable: boolean
   readonly confirmationToken: string | null
+  readonly gdtSnapshot: ReviewGdtReadonlySnapshot | null
 }
 
 function createRequestToken(prefix: string): string {
@@ -54,7 +74,13 @@ function createRequestToken(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-export function ReviewPage({ route: routeProp, locationLike, transport: transportProp }: ReviewPageProps) {
+export function ReviewPage({
+  route: routeProp,
+  locationLike,
+  transport: transportProp,
+  feature3dAssemblyM1: feature3dAssemblyM1Prop,
+  initialGdtSnapshot,
+}: ReviewPageProps) {
   const route = useMemo<ParsedReviewRoute>(() => {
     if (routeProp) return routeProp
     if (locationLike) return parseReviewRoute(locationLike)
@@ -86,6 +112,10 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
   const [selectedCheckId, setSelectedCheckId] = useState<string | null>(null)
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null)
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
+  const [gdtDisplayMode, setGdtDisplayMode] = useState<GdtDisplayMode>('smart')
+  const [activeGdtId, setActiveGdtId] = useState<string | null>(null)
+  const [hoveredGdtFeatureId, setHoveredGdtFeatureId] = useState<string | null>(null)
+  const [capability3dAssembly, setCapability3dAssembly] = useState<boolean>(false)
 
   const [humanConfirmed, setHumanConfirmed] = useState(false)
   const [webhookUrl, setWebhookUrl] = useState(() =>
@@ -127,18 +157,49 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
       draftRevision: route.draftRevision,
     }
 
-    const [reviewRes, meshRes, drawingRes, statusRes] = await Promise.all([
+    const [reviewRes, meshRes, drawingRes, statusRes, capRes] = await Promise.all([
       transport.getReview(draftRef),
       transport.triangulate(draftRef),
       transport.getDrawing({ ...draftRef, format: 'svg' }),
       transport.getCommitStatus(draftRef),
+      transport.capabilities().catch(() => ({
+        ok: false as const,
+        error: { code: 'CAP_UNAVAILABLE', message: 'capabilities unavailable' },
+      })),
     ])
 
     if (loadSeqRef.current !== seq) return
 
+    if (capRes.ok && capRes.value.FEATURE_3D_ASSEMBLY_M1) {
+      setCapability3dAssembly(true)
+    }
+
+    const extractGdtSnapshot = (raw: unknown): ReviewGdtReadonlySnapshot | null => {
+      if (!raw || typeof raw !== 'object') return null
+      const rec = raw as {
+        readonly gdtSnapshot?: ReviewGdtReadonlySnapshot
+        readonly datums?: readonly DatumDefinition[]
+        readonly gdt?: readonly GdtFeatureControl[]
+        readonly gdtContributions?: readonly GdtContributionItem[]
+        readonly gdtWarnings?: readonly GdtValidationWarning[]
+        readonly assembly3d?: {
+          readonly datums?: readonly DatumDefinition[]
+          readonly gdt?: readonly GdtFeatureControl[]
+        }
+      }
+      if (rec.gdtSnapshot) return rec.gdtSnapshot
+      const datums = rec.datums ?? rec.assembly3d?.datums
+      const gdt = rec.gdt ?? rec.assembly3d?.gdt
+      const contributions = rec.gdtContributions
+      const warnings = rec.gdtWarnings
+      if (!datums && !gdt && !contributions && !warnings) return null
+      return { datums, gdt, contributions, warnings }
+    }
+
     const normalizedMesh = meshRes.ok ? normalizeM2ModelMesh(meshRes.value) : null
     const drawingFp = drawingRes.ok ? drawingRes.value.fingerprint : null
     const rawSvgAvailable = drawingRes.ok && drawingRes.value.bytes.byteLength > 0
+    const serverGdtSnapshot = reviewRes.ok ? extractGdtSnapshot(reviewRes.value) : null
 
     if (statusRes.ok && statusRes.value.state === 'committed') {
       const committed = statusRes.value.result
@@ -160,6 +221,7 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
         drawingFingerprint: drawingFp,
         rawSvgAvailable,
         confirmationToken: null,
+        gdtSnapshot: serverGdtSnapshot,
       })
       setSelectedCheckId(committedReview.checks[0]?.checkId ?? null)
       setSelectedObjectId(committedReview.checks[0]?.linkedFeatureIds[0] ?? null)
@@ -187,6 +249,7 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
       drawingFingerprint: drawingFp,
       rawSvgAvailable,
       confirmationToken: serverConfirmationToken,
+      gdtSnapshot: serverGdtSnapshot,
     }
     setData(nextData)
 
@@ -251,6 +314,27 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
     [checks, selectedCheckId],
   )
 
+  const effectiveGdtSnapshot = initialGdtSnapshot ?? data?.gdtSnapshot ?? null
+  const showReadonlyGdt =
+    (feature3dAssemblyM1Prop ?? (capability3dAssembly || effectiveGdtSnapshot !== null)) &&
+    effectiveGdtSnapshot !== null
+  const readonlyDatums = useMemo(
+    () => (showReadonlyGdt ? (effectiveGdtSnapshot?.datums ?? []) : []),
+    [showReadonlyGdt, effectiveGdtSnapshot],
+  )
+  const readonlyGdtControls = useMemo(
+    () => (showReadonlyGdt ? (effectiveGdtSnapshot?.gdt ?? []) : []),
+    [showReadonlyGdt, effectiveGdtSnapshot],
+  )
+  const readonlyGdtContributions = useMemo(
+    () => (showReadonlyGdt ? (effectiveGdtSnapshot?.contributions ?? []) : []),
+    [showReadonlyGdt, effectiveGdtSnapshot],
+  )
+  const readonlyGdtWarnings = useMemo(
+    () => (showReadonlyGdt ? (effectiveGdtSnapshot?.warnings ?? []) : []),
+    [showReadonlyGdt, effectiveGdtSnapshot],
+  )
+
   const highlightedFeatureIds = useMemo(() => {
     const ids = new Set<string>(failedFeatureIds)
     if (selectedCheck) {
@@ -261,8 +345,27 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
     if (selectedObjectId) {
       ids.add(selectedObjectId)
     }
+    if (hoveredGdtFeatureId) {
+      ids.add(hoveredGdtFeatureId)
+    }
     return ids
-  }, [failedFeatureIds, selectedCheck, selectedObjectId])
+  }, [failedFeatureIds, selectedCheck, selectedObjectId, hoveredGdtFeatureId])
+
+  const goldenPulseFeatureIds = useMemo(() => {
+    const ids = new Set<string>()
+    if (hoveredGdtFeatureId) ids.add(hoveredGdtFeatureId)
+    if (activeGdtId) {
+      const matched = readonlyGdtControls.find((g) => g.id === activeGdtId)
+      if (matched) ids.add(matched.featureId)
+    }
+    return ids
+  }, [hoveredGdtFeatureId, activeGdtId, readonlyGdtControls])
+
+  const goldenPulseGdtIds = useMemo(() => {
+    const ids = new Set<string>()
+    if (activeGdtId) ids.add(activeGdtId)
+    return ids
+  }, [activeGdtId])
 
   const highlightedAnnotationIds = useMemo(() => {
     const ids = new Set<string>()
@@ -592,6 +695,33 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
                       theme={theme}
                       onPickRange={handlePick3dRange}
                       onUpdateCamera={setCamera}
+                      partMeshes={showReadonlyGdt ? effectiveGdtSnapshot?.partMeshes : undefined}
+                      datums={showReadonlyGdt ? readonlyDatums : undefined}
+                      gdtControls={showReadonlyGdt ? readonlyGdtControls : undefined}
+                      gdtDisplayMode={showReadonlyGdt ? gdtDisplayMode : undefined}
+                      onChangeGdtDisplayMode={showReadonlyGdt ? setGdtDisplayMode : undefined}
+                      goldenPulseFeatureIds={showReadonlyGdt ? goldenPulseFeatureIds : undefined}
+                      goldenPulseGdtIds={showReadonlyGdt ? goldenPulseGdtIds : undefined}
+                      gdtReadOnly={true}
+                      onSelectGdtCallout={
+                        showReadonlyGdt
+                          ? (gdtId) => {
+                              setActiveGdtId(gdtId)
+                              const matched = readonlyGdtControls.find((g) => g.id === gdtId)
+                              if (matched) {
+                                setSelectedObjectId(matched.featureId)
+                              }
+                            }
+                          : undefined
+                      }
+                      onHoverGdtCallout={
+                        showReadonlyGdt
+                          ? (target) => {
+                              setHoveredGdtFeatureId(target ? target.featureId : null)
+                              setActiveGdtId(target?.gdtId ?? null)
+                            }
+                          : undefined
+                      }
                     />
                   ) : (
                     <div style={{ padding: 24 }} className="pa-muted">
@@ -715,6 +845,73 @@ export function ReviewPage({ route: routeProp, locationLike, transport: transpor
               ) : null}
             </div>
           </div>
+
+          {showReadonlyGdt &&
+          (readonlyGdtContributions.length > 0 || readonlyGdtWarnings.length > 0) ? (
+            <div className="cw-section" data-testid="review-gdt-contributions">
+              <h2 className="cw-section-title">
+                <span>GD&amp;T 贡献度拆解（只读）</span>
+                <span className="pa-mono">{readonlyGdtContributions.length} 项</span>
+              </h2>
+              <div className="cw-gdt-contrib-list" role="list" aria-label="云端只读 GD&T 贡献度列表">
+                {readonlyGdtContributions.map((item) => {
+                  const matchedControl = readonlyGdtControls.find((c) => c.id === item.gdtId)
+                  const fcf = matchedControl
+                    ? formatFcfCells(matchedControl, readonlyDatums)
+                    : null
+                  const isActive = activeGdtId === item.gdtId
+                  return (
+                    <button
+                      key={item.gdtId}
+                      type="button"
+                      role="listitem"
+                      className="cw-check-item cw-gdt-contrib-item"
+                      data-testid={`review-gdt-contrib-${item.gdtId}`}
+                      data-selected={isActive ? 'true' : 'false'}
+                      onMouseEnter={() => {
+                        setActiveGdtId(item.gdtId)
+                        if (matchedControl) setHoveredGdtFeatureId(matchedControl.featureId)
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredGdtFeatureId(null)
+                      }}
+                      onClick={() => {
+                        setActiveGdtId(item.gdtId)
+                        if (matchedControl) setSelectedObjectId(matchedControl.featureId)
+                      }}
+                    >
+                      <div className="cw-check-head">
+                        <span className="cw-check-title">
+                          {GDT_KIND_META[item.kind].symbol} {item.label}
+                        </span>
+                        <span className="pa-pill pa-tone-action pa-mono">
+                          {item.varianceSharePct.toFixed(1)}%
+                        </span>
+                      </div>
+                      {fcf ? <span className="pa-mono pa-muted">{fcf.summaryText}</span> : null}
+                      <div className="cw-gdt-metrics">
+                        <span className="pa-pill pa-tone-pass pa-mono">
+                          MMC Bonus +{item.bonusMeanMm.toFixed(3)} mm
+                        </span>
+                        <span className="pa-pill pa-tone-muted pa-mono">
+                          Datum Shift {item.datumShiftContributionPct.toFixed(1)}%
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+              {readonlyGdtWarnings.length > 0 ? (
+                <div className="cw-alert" role="status" data-testid="review-gdt-warnings">
+                  {readonlyGdtWarnings.map((w, idx) => (
+                    <div key={`${w.code}-${idx}`}>
+                      <span className="pa-mono">[{w.code}]</span> {w.message}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="cw-section" data-testid="review-evidence-panel">
             <h2 className="cw-section-title">
