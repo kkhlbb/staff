@@ -3,10 +3,13 @@ import { promises as fs } from 'node:fs'
 import { createHash, randomUUID } from 'node:crypto'
 import path from 'node:path'
 import { z } from 'zod'
-import { assemblyModelV1Schema } from '../../../src/project-file/assembly3d'
+import { assemblyModelV1Schema, assemblyPhysicsSpecSchema, micMatrixPayloadV1Schema } from '../../../src/project-file/assembly3d'
 import { analyzeGdtSchema, assemblyWarnings, gdtSources, stageControls, stageDatumSchema, stageDatums,
   stageGdtSchema } from '../../../mcp/lib/gdt'
-import type { GdtStageResult } from '../../../src/transport/types'
+import { analyzeCompliantSchema, importMicMatrixSchema, stageMicMatrix, stagePhysicsPatch, stagePhysicsSchema,
+  verifyEvidenceRefs } from '../../../mcp/lib/compliant'
+import { parseAndValidateMicMatrix } from '../../../src/core/solver/mic.mjs'
+import type { GdtStageResult, ImportMicMatrixResult, StagePhysicsResult } from '../../../src/transport/types'
 import { desktopGdtEnabled, readGdtSnapshot, type GdtToolName } from './gdtTools'
 import type { WriteReceipt } from './guards'
 import type { ProjectAgentOperation } from '../../shared/project-agent/contracts'
@@ -30,12 +33,27 @@ const gdtJournalSchema = z.strictObject({
   baseRevision: z.string(),
   datums: assemblyModelV1Schema.shape.datums,
   gdt: assemblyModelV1Schema.shape.gdt,
+  physics: assemblyPhysicsSpecSchema.optional(),
+  micAttachments: z.record(z.string(), z.strictObject({
+    fileName: z.string(),
+    attachment: z.strictObject({
+      kind: z.literal('mic-matrix'),
+      revisionId: z.string(),
+      blobKey: z.string(),
+      path: z.string(),
+      sha256: z.string(),
+      byteSize: z.number().int().positive(),
+    }),
+    payload: micMatrixPayloadV1Schema,
+    evidence: z.array(z.unknown()),
+  })).optional(),
   evidence: z.record(z.string(), z.unknown()),
   receipts: z.record(z.string(), z.strictObject({
     digest: z.string(), draftRevision: z.string(), warnings: z.array(z.strictObject({
       code: z.enum(['DRF_UNDERCONSTRAINED', 'DRF_REDUNDANT', 'ILLEGAL_MODIFIER', 'DRF_DEGENERATE']),
       gdtId: z.string(), datumId: z.string().optional(), message: z.string(),
-    })),
+    })).optional(),
+    result: z.unknown().optional(),
   })),
 })
 
@@ -629,7 +647,7 @@ export class M1InternalService {
       const prior = state.gdtDraft?.receipts[scope]
       if (prior) {
         if (prior.digest !== digest) throw Error('IDEMPOTENCY_CONFLICT')
-        return { projectId: id, draftRevision: prior.draftRevision, warnings: prior.warnings }
+        return { projectId: id, draftRevision: prior.draftRevision, warnings: prior.warnings ?? [] }
       }
       if (request.expectedDraftRevision !== state.draftRevision) throw Error('STALE_DRAFT')
       if (state.draftRevision && !state.gdtDraft) throw Error('DRAFT_NOT_EMPTY')
@@ -639,7 +657,10 @@ export class M1InternalService {
       const snapshot = await readGdtSnapshot(binding.canonicalPath, binding.baseRevision, id)
       const original = snapshot.project.assembly3d
       if (!original) throw Error('ASSEMBLY_REQUIRED')
-      const assembly = state.gdtDraft ? { ...original, datums: state.gdtDraft.datums, gdt: state.gdtDraft.gdt } : original
+      const assembly = state.gdtDraft
+        ? { ...original, datums: state.gdtDraft.datums, gdt: state.gdtDraft.gdt,
+            ...(state.gdtDraft.physics ? { physics: state.gdtDraft.physics } : {}) }
+        : original
       let updated
       try {
         updated = operation === 'stage_datum'
@@ -652,12 +673,185 @@ export class M1InternalService {
       for (const [itemId, citation] of Object.entries(sources)) evidence[operation + ':' + itemId] = citation
       const draftRevision = randomUUID()
       const warnings = assemblyWarnings(updated)
-      state.gdtDraft = { baseRevision: binding.baseRevision, datums: updated.datums, gdt: updated.gdt, evidence,
-        receipts: { ...state.gdtDraft?.receipts, [scope]: { digest, draftRevision, warnings } } }
+      state.gdtDraft = {
+        baseRevision: binding.baseRevision, datums: updated.datums, gdt: updated.gdt, evidence,
+        ...(state.gdtDraft?.physics ? { physics: state.gdtDraft.physics } : {}),
+        ...(state.gdtDraft?.micAttachments ? { micAttachments: state.gdtDraft.micAttachments } : {}),
+        receipts: { ...state.gdtDraft?.receipts, [scope]: { digest, draftRevision, warnings } },
+      }
       state.draftRevision = draftRevision
       state.events.push(this.contextEvent(state, binding.baseRevision))
       await this.save(state, this.beforeBindingCommit(verify, binding))
       return { projectId: id, draftRevision, warnings }
+    })
+  }
+
+  stagePhysics(id: string, caller: Caller, credentials: Omit<Credentials, 'idempotencyKey'>,
+    raw: unknown, verify: VerifyM1Binding, origin: 'model' | 'client' = 'client'): Promise<StagePhysicsResult> {
+    return this.serial(id, async () => {
+      if (!desktopGdtEnabled()) throw Error('FEATURE_DISABLED')
+      const state = await this.load(id)
+      const binding = await verify()
+      binding.seal()
+      this.checkSpacerWriter(state, caller, credentials)
+      const parsed = stagePhysicsSchema.safeParse(raw)
+      if (!parsed.success || parsed.data.projectId !== id) throw Error('INVALID_REQUEST')
+      const request = parsed.data
+      if (request.expectedWriterEpoch !== credentials.writerEpoch) throw Error('WRITER_REVOKED')
+      if (request.baseRevision !== binding.baseRevision ||
+          (state.gdtDraft && state.gdtDraft.baseRevision !== binding.baseRevision)) throw Error('STALE_BASE')
+      const scope = canonical([caller.callerId, credentials.writerEpoch, request.idempotencyKey])
+      const digest = digestText(canonical({ operation: 'stage_physics', ...request }))
+      const prior = state.gdtDraft?.receipts[scope]
+      if (prior) {
+        if (prior.digest !== digest) throw Error('IDEMPOTENCY_CONFLICT')
+        return prior.result as StagePhysicsResult
+      }
+      if (request.expectedDraftRevision !== state.draftRevision) throw Error('STALE_DRAFT')
+      if (state.draftRevision && !state.gdtDraft) throw Error('DRAFT_NOT_EMPTY')
+      const allEvidence = Object.values(request.evidenceByField).flat()
+      if (origin === 'model' && allEvidence.some(ref => ref.kind === 'user-attestation')) {
+        throw Error('REFERENCE_STALE')
+      }
+      const snapshot = await readGdtSnapshot(binding.canonicalPath, binding.baseRevision, id)
+      const original = snapshot.project.assembly3d
+      if (!original) throw Error('ASSEMBLY_REQUIRED')
+      verifyEvidenceRefs(snapshot, allEvidence)
+      const assembly = state.gdtDraft
+        ? { ...original, datums: state.gdtDraft.datums, gdt: state.gdtDraft.gdt,
+            ...(state.gdtDraft.physics ? { physics: state.gdtDraft.physics } : {}) }
+        : original
+      let updated
+      try {
+        updated = stagePhysicsPatch(assembly, request)
+      } catch {
+        throw Error('INVALID_PHYSICS')
+      }
+      const evidence = { ...state.gdtDraft?.evidence }
+      for (const [pointer, refs] of Object.entries(request.evidenceByField)) {
+        evidence['stage_physics:' + pointer] = refs
+      }
+      const draftRevision = randomUUID()
+      const result: StagePhysicsResult = { projectId: id, draftRevision, physics: updated.physics! }
+      state.gdtDraft = {
+        baseRevision: binding.baseRevision, datums: updated.datums, gdt: updated.gdt,
+        physics: updated.physics,
+        ...(state.gdtDraft?.micAttachments ? { micAttachments: state.gdtDraft.micAttachments } : {}),
+        evidence,
+        receipts: { ...state.gdtDraft?.receipts, [scope]: { digest, draftRevision, result } },
+      }
+      state.draftRevision = draftRevision
+      state.events.push(this.contextEvent(state, binding.baseRevision))
+      await this.save(state, this.beforeBindingCommit(verify, binding))
+      return result
+    })
+  }
+
+  importMicMatrix(id: string, caller: Caller, credentials: Omit<Credentials, 'idempotencyKey'>,
+    raw: unknown, verify: VerifyM1Binding, origin: 'model' | 'client' = 'client'): Promise<ImportMicMatrixResult> {
+    return this.serial(id, async () => {
+      if (!desktopGdtEnabled()) throw Error('FEATURE_DISABLED')
+      const state = await this.load(id)
+      const binding = await verify()
+      binding.seal()
+      this.checkSpacerWriter(state, caller, credentials)
+      const parsed = importMicMatrixSchema.safeParse(raw)
+      if (!parsed.success || parsed.data.projectId !== id) throw Error('INVALID_REQUEST')
+      const request = parsed.data
+      if (request.expectedWriterEpoch !== credentials.writerEpoch) throw Error('WRITER_REVOKED')
+      if (request.baseRevision !== binding.baseRevision ||
+          (state.gdtDraft && state.gdtDraft.baseRevision !== binding.baseRevision)) throw Error('STALE_BASE')
+      const scope = canonical([caller.callerId, credentials.writerEpoch, request.idempotencyKey])
+      const digest = digestText(canonical({ operation: 'import_mic_matrix', ...request }))
+      const prior = state.gdtDraft?.receipts[scope]
+      if (prior) {
+        if (prior.digest !== digest) throw Error('IDEMPOTENCY_CONFLICT')
+        return prior.result as ImportMicMatrixResult
+      }
+      if (request.expectedDraftRevision !== state.draftRevision) throw Error('STALE_DRAFT')
+      if (state.draftRevision && !state.gdtDraft) throw Error('DRAFT_NOT_EMPTY')
+      if (origin === 'model' && request.evidence.some(ref => ref.kind === 'user-attestation')) {
+        throw Error('REFERENCE_STALE')
+      }
+      const snapshot = await readGdtSnapshot(binding.canonicalPath, binding.baseRevision, id)
+      const original = snapshot.project.assembly3d
+      if (!original) throw Error('ASSEMBLY_REQUIRED')
+      verifyEvidenceRefs(snapshot, request.evidence)
+      const assembly = state.gdtDraft
+        ? { ...original, datums: state.gdtDraft.datums, gdt: state.gdtDraft.gdt,
+            ...(state.gdtDraft.physics ? { physics: state.gdtDraft.physics } : {}) }
+        : original
+      let staged
+      try {
+        staged = await stageMicMatrix(assembly, request)
+      } catch (error) {
+        throw Error(error instanceof Error && error.message === 'UNKNOWN_PART' ? 'UNKNOWN_PART' : 'INVALID_MIC', { cause: error })
+      }
+      const evidence = { ...state.gdtDraft?.evidence, ['import_mic_matrix:' + staged.prepared.micMatrixRef]: request.evidence }
+      const micAttachments = {
+        ...state.gdtDraft?.micAttachments,
+        [staged.prepared.micMatrixRef]: {
+          fileName: request.fileName,
+          attachment: { ...staged.prepared.attachment },
+          payload: staged.prepared.payload,
+          evidence: [...staged.prepared.evidence],
+        },
+      }
+      const draftRevision = randomUUID()
+      const result: ImportMicMatrixResult = { projectId: id, draftRevision, attachment: staged.prepared.attachment }
+      state.gdtDraft = {
+        baseRevision: binding.baseRevision, datums: staged.assembly.datums, gdt: staged.assembly.gdt,
+        physics: staged.assembly.physics,
+        micAttachments,
+        evidence,
+        receipts: { ...state.gdtDraft?.receipts, [scope]: { digest, draftRevision, result } },
+      }
+      state.draftRevision = draftRevision
+      state.events.push(this.contextEvent(state, binding.baseRevision))
+      await this.save(state, this.beforeBindingCommit(verify, binding))
+      return result
+    })
+  }
+
+  readCompliantAnalysis(id: string, caller: Caller, credentials: Omit<Credentials, 'idempotencyKey'>,
+    raw: unknown, verify: VerifyM1Binding) {
+    return this.serial(id, async () => {
+      if (!desktopGdtEnabled()) throw Error('FEATURE_DISABLED')
+      const state = await this.load(id)
+      const binding = await verify()
+      this.checkSpacerWriter(state, caller, credentials)
+      const parsed = analyzeCompliantSchema.safeParse(raw)
+      if (!parsed.success || parsed.data.projectId !== id) throw Error('INVALID_REQUEST')
+      const request = parsed.data
+      if (request.expectedWriterEpoch !== credentials.writerEpoch) throw Error('WRITER_REVOKED')
+      if (!state.gdtDraft || request.draftRevision !== state.draftRevision) throw Error('STALE_DRAFT')
+      if (state.gdtDraft.baseRevision !== binding.baseRevision) throw Error('STALE_BASE')
+      binding.seal()
+      const snapshot = await readGdtSnapshot(binding.canonicalPath, binding.baseRevision, id)
+      const { project } = snapshot
+      if (!project.assembly3d) throw Error('ASSEMBLY_REQUIRED')
+      binding.seal()
+      const micPayloads: Record<string, z.infer<typeof micMatrixPayloadV1Schema>> = {}
+      for (const rec of project.micMatrixAttachments ?? []) {
+        const blob = snapshot.attachments.find(a => a.blobKey === rec.blobKey)
+        if (blob) {
+          try { micPayloads[rec.id] = parseAndValidateMicMatrix(blob.bytes).payload as z.infer<typeof micMatrixPayloadV1Schema> } catch { /* ignore */ }
+        }
+      }
+      for (const [micId, entry] of Object.entries(state.gdtDraft.micAttachments ?? {})) {
+        micPayloads[micId] = entry.payload
+      }
+      return {
+        request,
+        baseRevision: binding.baseRevision,
+        micPayloads,
+        assembly: {
+          ...project.assembly3d,
+          datums: state.gdtDraft.datums,
+          gdt: state.gdtDraft.gdt,
+          ...(state.gdtDraft.physics ? { physics: state.gdtDraft.physics } : {}),
+        },
+      }
     })
   }
 

@@ -6,7 +6,7 @@ import { listenM1WindowsPipe } from './m1WindowsPipe.ts'
 import path from 'node:path'
 import { nat, object, oneOf, q, text, type Infer } from '../../shared/project-agent/schema.ts'
 import type { LocalM1Authority, M1ExternalScope, M1WriterConfirmation, M1WriterLease } from './m1LocalAuthority'
-import { desktopGdtEnabled, gdtToolNames, isGdtTool } from './gdtTools.ts'
+import { compliantToolNames, desktopGdtEnabled, gdtToolNames, isCompliantTool, isGdtTool } from './gdtTools.ts'
 import type { M1StageChangeRequest } from './m1StageContracts'
 import { checkM1Directory, checkM1Socket, isPrivateM1Node, M1_LOCAL_VERSION, M1_REQUEST_BYTES,
   isM1ClientName, M1_LOCAL_ERRORS, M1_LOCAL_OPERATIONS, nativeM1Check, optionalStat, readM1Frames, sameM1Peer } from './m1LocalTransport.ts'
@@ -22,7 +22,7 @@ const stage = object({ projectId: text, change: (value): value is M1StageChangeR
 const move = object({ projectId: text, baseRevision: text, expectedDraftRevision: text, idempotencyKey: text, deltaQ: q })
 type MoveRightHole = Infer<typeof move>
 const empty = object({})
-const envelope = object({ id: nat, method: oneOf('hello', ...M1_LOCAL_OPERATIONS, ...gdtToolNames), params: (value): value is object => !!value && typeof value === 'object' && !Array.isArray(value) })
+const envelope = object({ id: nat, method: oneOf('hello', ...M1_LOCAL_OPERATIONS, ...gdtToolNames, ...compliantToolNames), params: (value): value is object => !!value && typeof value === 'object' && !Array.isArray(value) })
 const hello = object({ version: (value): value is 1 => value === M1_LOCAL_VERSION,
   clientName: isM1ClientName })
 
@@ -171,7 +171,7 @@ export async function startM1LocalEndpoint(ports: EndpointPorts) {
       peer.ready = true
       const operations = M1_LOCAL_OPERATIONS.filter(name => name !== 'moveRightHoleX' || ports.moveRightHoleX)
       return { protocol: M1_LOCAL_VERSION, operations, draftOperations: ['createSpacerDraft', 'resumeSpacerDraft'],
-        ...(desktopGdtEnabled() && { gdtOperations: gdtToolNames }) }
+        ...(desktopGdtEnabled() && { gdtOperations: gdtToolNames, compliantOperations: compliantToolNames }) }
     }
     if (!peer.ready) throw Error('INVALID_REQUEST')
     if (method === 'authorizeProject') {
@@ -199,6 +199,12 @@ export async function startM1LocalEndpoint(ports: EndpointPorts) {
       if (!scope || !('projectId' in params) || params.projectId !== scope.projectId) throw Error('AUTH_REQUIRED')
       if (!peer.lease) throw Error('WRITER_REVOKED')
       return authority.runGdtTool(peer.lease, method, params, { scope, signal: peer.abort.signal })
+    }
+    if (isCompliantTool(method)) {
+      if (!desktopGdtEnabled()) throw Error('FEATURE_DISABLED')
+      if (!scope || !('projectId' in params) || params.projectId !== scope.projectId) throw Error('AUTH_REQUIRED')
+      if (!peer.lease) throw Error('WRITER_REVOKED')
+      return authority.runCompliantTool(peer.lease, method, params, { scope, signal: peer.abort.signal })
     }
     const args = method === 'moveRightHoleX' ? (move(params) ? params : null) :
       method === 'stageChange' ? (stage(params) ? params : null) :

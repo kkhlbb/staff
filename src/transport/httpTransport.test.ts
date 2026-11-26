@@ -442,3 +442,49 @@ it('routes GD&T requests by encoded project and draft and keeps server lease err
     ['https://cloud.cunlian.test/api/v1/projects/project%2Fid/drafts/draft%2Fid/gdt-stackup', 'POST', analysis],
   ])
 })
+
+it('routes compliant physics, MIC matrix, and compliant stackup requests with encoded IDs', async () => {
+  const denied = { ok: false, error: { code: 'STALE_DRAFT', message: 'Draft changed' } }
+  const physicsResult = { ok: true, value: { projectId: 'project/id', draftRevision: 'draft/id', physics: { enabled: true } } }
+  const micResult = {
+    ok: true,
+    value: {
+      projectId: 'project/id',
+      draftRevision: 'draft/id',
+      attachment: {
+        kind: 'mic-matrix', revisionId: 'mic-1', blobKey: 'mic-1',
+        path: 'attachments/mic-1.bin', sha256: 'b'.repeat(64), byteSize: 64,
+      },
+    },
+  }
+  const fetchMock = vi.fn<typeof fetch>()
+    .mockImplementationOnce(async () => jsonResponse(physicsResult))
+    .mockImplementationOnce(async () => jsonResponse(micResult))
+    .mockImplementationOnce(async () => jsonResponse(denied, 409))
+  const transport = createHttpTransport({ baseUrl: 'https://cloud.cunlian.test', fetchImpl: fetchMock })
+  const { projectId, draftRevision } = physicsResult.value
+  const physicsBody = {
+    baseRevision: 'base', expectedDraftRevision: null, idempotencyKey: 'k1', expectedWriterEpoch: 2,
+    physics: { enabled: true }, evidenceByField: { '/enabled': [] },
+  }
+  const micBody = {
+    baseRevision: 'base', expectedDraftRevision: draftRevision, idempotencyKey: 'k2', expectedWriterEpoch: 2,
+    fileName: 'part.mic.json',
+    payload: {
+      schemaVersion: 1 as const, partId: 'p1', units: 'mm' as const, forceUnits: 'N' as const,
+      controlPointsMm: [[0, 0, 0] as [number, number, number]],
+      measurePointsMm: [[1, 0, 0] as [number, number, number]],
+      sensitivityMatrix: [[0.01]],
+    },
+    evidence: [],
+  }
+  const analyzeBody = { expectedWriterEpoch: 2, monteCarlo: { seed: 7, samples: 1000, distribution: 'normal' as const } }
+  expect(await transport.stagePhysics!({ projectId, ...physicsBody })).toEqual(physicsResult)
+  expect(await transport.importMicMatrix!({ projectId, ...micBody })).toEqual(micResult)
+  expect(await transport.analyzeCompliantStackup!({ projectId, draftRevision, ...analyzeBody })).toEqual(denied)
+  expect(fetchMock.mock.calls.map(([url, init]) => [url, init?.method, JSON.parse(String(init?.body))])).toEqual([
+    ['https://cloud.cunlian.test/api/v1/projects/project%2Fid/drafts/physics', 'POST', physicsBody],
+    ['https://cloud.cunlian.test/api/v1/projects/project%2Fid/drafts/mic-matrix', 'POST', micBody],
+    ['https://cloud.cunlian.test/api/v1/projects/project%2Fid/drafts/draft%2Fid/compliant-stackup', 'POST', analyzeBody],
+  ])
+})

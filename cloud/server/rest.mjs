@@ -43,6 +43,9 @@ export function createRest(projects, engine, config) {
       case '/drafts/datums': return projects.stageGdt('stage_datum', { ...body, projectId }, principal, signal)
       case '/drafts/gdt': return projects.stageGdt('stage_gdt', { ...body, projectId }, principal, signal)
       case '/drafts/{draftRevision}/gdt-stackup': return projects.analyzeGdt({ ...body, projectId, draftRevision }, principal, signal)
+      case '/drafts/physics': return projects.stagePhysics({ ...body, projectId }, principal, signal)
+      case '/drafts/mic-matrix': return projects.importMicMatrix({ ...body, projectId }, principal, signal)
+      case '/drafts/{draftRevision}/compliant-stackup': return projects.analyzeCompliant({ ...body, projectId, draftRevision }, principal, signal)
       case '/drafts/changes': return projects.stage(projectId, body.change, principal, signal)
       case '/external-activities': return { draftRevision: state.draftRevision, activities }
       case '/context': {

@@ -8,6 +8,7 @@ import { decodeProjectFile } from '../../../src/project-file/codec'
 import { PROJECT_FILE_MAX_SOURCE_BYTES } from '../../../src/project-file/types'
 import { FEATURE_3D_ASSEMBLY_M1 } from '../../../src/transport/types'
 import { gdtTools } from '../../../mcp/lib/gdt'
+import { compliantTools } from '../../../mcp/lib/compliant'
 
 export const gdtToolNames = ['stage_datum', 'stage_gdt', 'analyze_gdt_stackup'] as const
 export type GdtToolName = (typeof gdtToolNames)[number]
@@ -15,7 +16,17 @@ export function isGdtTool(name: string): name is GdtToolName {
   return gdtToolNames.some(tool => tool === name)
 }
 
+export const compliantToolNames = ['stage_physics', 'import_mic_matrix', 'analyze_compliant_stackup'] as const
+export type CompliantToolName = (typeof compliantToolNames)[number]
+export function isCompliantTool(name: string): name is CompliantToolName {
+  return compliantToolNames.some(tool => tool === name)
+}
+
 export const builtinGdtTools: ToolSchema[] = gdtTools.map(tool => ({
+  name: tool.name, description: tool.description, parameters: tool.inputSchema,
+}))
+
+export const builtinCompliantTools: ToolSchema[] = compliantTools.map(tool => ({
   name: tool.name, description: tool.description, parameters: tool.inputSchema,
 }))
 

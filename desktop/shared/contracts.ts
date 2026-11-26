@@ -1,5 +1,9 @@
 import type { M3WorkbenchBridge } from './project-agent/m3-lifecycle'
-import type { StageDatumRequest, StageGdtRequest, GdtStageResult, AnalyzeGdtStackupRequest, AnalyzeGdtStackupResult } from '../../src/transport/types'
+import type {
+  StageDatumRequest, StageGdtRequest, GdtStageResult, AnalyzeGdtStackupRequest, AnalyzeGdtStackupResult,
+  StagePhysicsRequest, StagePhysicsResult, ImportMicMatrixRequest, ImportMicMatrixResult,
+  AnalyzeCompliantStackupRequest, AnalyzeCompliantStackupResult, FeaSidecarStatus,
+} from '../../src/transport/types'
 import type { M2PreviewApi, M2Result } from './project-agent/m2-preview'
 import type { M1WorkbenchApi } from './project-agent/m1-workbench'
 import type { M1AuthorizationRequest } from './project-agent/m1-local-authorization-2002.ts'
@@ -1507,6 +1511,10 @@ export interface CunlianApi extends M1WorkbenchApi, M2PreviewApi, Required<M3Wor
   stageDatum(request: StageDatumRequest): Promise<M2Result<GdtStageResult>>
   stageGdt(request: StageGdtRequest): Promise<M2Result<GdtStageResult>>
   analyzeGdtStackup(request: AnalyzeGdtStackupRequest): Promise<M2Result<AnalyzeGdtStackupResult>>
+  stagePhysics?(request: StagePhysicsRequest): Promise<M2Result<StagePhysicsResult>>
+  importMicMatrix?(request: ImportMicMatrixRequest): Promise<M2Result<ImportMicMatrixResult>>
+  analyzeCompliantStackup?(request: AnalyzeCompliantStackupRequest): Promise<M2Result<AnalyzeCompliantStackupResult>>
+  detectFeaSidecars?(): Promise<M2Result<{ available: boolean; statuses: FeaSidecarStatus[] }>>
   requestM1ProjectAuthorization(request: M1AuthorizationRequest): Promise<IpcResult<EntryScope>>
   revokeM1ProjectAuthorization(request: M1AuthorizationRequest): Promise<IpcResult<{ revoked: true }>>
   getM1ProjectContext: M1ReadMethod<'getM1ProjectContext'>

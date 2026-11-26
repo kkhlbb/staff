@@ -15,6 +15,7 @@ import { buildDxfDocument } from '../../src/drawing/dxfExport.ts'
 import { renderDrawingSvg } from '../../src/drawing/renderDrawingSvg.ts'
 import { HttpError } from './contracts.mjs'
 import { assemblyWarnings, createGdtAnalyzer } from '../../mcp/lib/gdt.ts'
+import { createCompliantAnalyzer } from '../../mcp/lib/compliant.ts'
 import { plateDrawing } from './plate-export.mjs'
 
 export const defaultSpacer = { innerDiameterQ: 200000, outerDiameterQ: 320000, lengthQ: 120000 }
@@ -54,6 +55,7 @@ export function createEngine(timeoutMs) {
   const geometry = createGeometryManager()
   const solver = createSolverScheduler()
   const gdtAnalyzer = createGdtAnalyzer()
+  const compliantAnalyzer = createCompliantAnalyzer()
   const reports = new Map()
 
   async function plate(state, signal) {
@@ -118,9 +120,20 @@ export function createEngine(timeoutMs) {
       items = state.gdtDraft ? [] : [check('draft-input', 'needsClarification', 'Draft parameters are required')]
     }
     if (state.gdtDraft) {
-      const { assembly, evidence } = state.gdtDraft
+      const { assembly, evidence, physicsEvidence, micAttachments } = state.gdtDraft
       items.push(check('gdt-draft', 'pass', JSON.stringify({ datums: assembly.datums, gdt: assembly.gdt,
         evidence, warnings: assemblyWarnings(assembly) })))
+      if (assembly.physics || physicsEvidence || micAttachments) {
+        items.push(check('compliant-draft', 'pass', JSON.stringify({
+          physics: assembly.physics ?? null,
+          physicsEvidence: physicsEvidence ?? {},
+          micAttachments: micAttachments
+            ? Object.fromEntries(Object.entries(micAttachments).map(([k, v]) => [k, {
+                attachment: v.attachment, record: v.record, evidence: v.evidence,
+              }]))
+            : {},
+        })))
+      }
     }
     return { projectId, draftRevision, checks: items, checksetFingerprint: fingerprint({
       projectId, draftRevision, baseRevision: state.baseRevision, items,
@@ -145,7 +158,7 @@ export function createEngine(timeoutMs) {
   }
 
   return {
-    simulate, checks, plate, gdtAnalyzer,
+    simulate, checks, plate, gdtAnalyzer, compliantAnalyzer,
     async mesh(state, signal) {
       if (state.template === 'builtin-mounting-plate') {
         const { mesh } = await plate(state, signal)
@@ -168,6 +181,6 @@ export function createEngine(timeoutMs) {
         fingerprint: data.fingerprint,
       }
     },
-    close: () => Promise.all([geometry.close(), solver.close(), gdtAnalyzer.close()]),
+    close: () => Promise.all([geometry.close(), solver.close(), gdtAnalyzer.close(), compliantAnalyzer.close()]),
   }
 }

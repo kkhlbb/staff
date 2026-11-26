@@ -11,7 +11,8 @@ import { ModelAdapterError } from '../modelAdapter'
 import type { RealModelRuntime } from '../realModelRuntime'
 import type { SenderInfo } from '../senderGuard'
 import { stageDatumSchema, stageGdtSchema } from '../../../mcp/lib/gdt'
-import { builtinGdtTools, desktopGdtEnabled, isGdtTool } from './gdtTools'
+import { importMicMatrixSchema, stagePhysicsSchema } from '../../../mcp/lib/compliant'
+import { builtinCompliantTools, builtinGdtTools, desktopGdtEnabled, isCompliantTool, isGdtTool } from './gdtTools'
 import { mateDraftTool, type MateDraftResult } from './mateDraftTool'
 import type { LocalM1Authority, M1WriterConfirmation, M1WriterLease } from './m1LocalAuthority'
 
@@ -50,6 +51,8 @@ const errors: Readonly<Record<string, string>> = {
   CANCELLED: '模型请求已取消', REQUEST_IN_PROGRESS: '当前项目已有模型请求正在处理',
   FEATURE_DISABLED: '未启用 3D 装配功能', STALE_DRAFT: '当前草稿版本已变更',
   ASSEMBLY_REQUIRED: '项目没有可用的 3D 装配', INVALID_GDT: '形位公差或基准不符合装配约束',
+  INVALID_PHYSICS: '柔性物理参数或证据指针无效', INVALID_MIC: 'MIC 影响系数矩阵格式或维度无效',
+  UNKNOWN_PART: '引用的零件不存在于当前装配中',
   SIMULATION_LIMIT: '采样数量超出支持范围',
   INVALID_WHAT_IF: '试算引用了未知或重复的公差', NO_GDT_CONTROLS: '草稿没有形位公差',
   ASSEMBLY_OVERCONSTRAINED: '装配配合过约束', SIMULATION_FAILED: '形位公差试算失败',
@@ -355,10 +358,10 @@ export class M1ModelApi {
       const mateDrafts = await this.scope.readMateDrafts?.(signal)
       await this.caller(signal)
       const args = { taskId: randomUUID(), systemPrompt: systemPrompt + (gdt
-        ? ' 可用 stage_datum 和 stage_gdt 暂存基准和形位公差，分析使用 analyze_gdt_stackup。仅引用实际工程资料，不得编造出处或用户佐证。待人工审阅。'
+        ? ' 可用 stage_datum 和 stage_gdt 暂存基准和形位公差，分析使用 analyze_gdt_stackup；可用 stage_physics 和 import_mic_matrix 暂存柔性物理参数与 MIC 矩阵，分析使用 analyze_compliant_stackup。仅引用实际工程资料，不得编造出处或用户佐证。待人工审阅。'
         : '') + (mateDrafts
         ? ' 可调用 suggest_assembly_mates 读取配合草案。草案须由人工核对，不代表已应用。' : ''),
-      tools: [tool, ...(mateDrafts ? [mateDraftTool] : []), ...(gdt ? builtinGdtTools : [])], budget }
+      tools: [tool, ...(mateDrafts ? [mateDraftTool] : []), ...(gdt ? [...builtinGdtTools, ...builtinCompliantTools] : [])], budget }
       const answer = await adapter.generate({ ...args, messages })
       await this.caller(signal)
       if (writer) await this.authority.readWriterContext(writer)
@@ -394,6 +397,34 @@ export class M1ModelApi {
           }
         }
         const result = await this.authority.runGdtTool(writer, call.name, body, {
+          origin: 'model', signal, checkRequest: check,
+        })
+        const followUp = await adapter.generate({ ...args, messages: toolExchange(messages,
+          { id: call.id, name: call.name, argumentsJson: connection.redact(call.argumentsJson) }, result, connection.redact) })
+        await this.caller(signal)
+        const current = await this.authority.readWriterContext(writer)
+        check()
+        if (current.draftRevision !== result.draftRevision) throw Error('STALE_DRAFT')
+        return success({ ...meta, reply: connection.redact(finalText(followUp, 'TOOL_ROUNDTRIP_FAILED')),
+          draftRevision: result.draftRevision, toolCalls: [{ name: call.name, status: 'succeeded' }] })
+      }
+      if (isCompliantTool(call.name)) {
+        const body = parseArguments(call)
+        if (call.name === 'stage_physics') {
+          const parsed = stagePhysicsSchema.safeParse(body)
+          if (!parsed.success) throw Error('INVALID_TOOL_CALL')
+          const allEvidence = Object.values(parsed.data.evidenceByField).flat()
+          if (allEvidence.some(ref => !attachments.some(attachment => isDeepStrictEqual(attachment.evidence, ref)))) {
+            throw Error('REFERENCE_STALE')
+          }
+        } else if (call.name === 'import_mic_matrix') {
+          const parsed = importMicMatrixSchema.safeParse(body)
+          if (!parsed.success) throw Error('INVALID_TOOL_CALL')
+          if (parsed.data.evidence.some(ref => !attachments.some(attachment => isDeepStrictEqual(attachment.evidence, ref)))) {
+            throw Error('REFERENCE_STALE')
+          }
+        }
+        const result = await this.authority.runCompliantTool(writer, call.name, body, {
           origin: 'model', signal, checkRequest: check,
         })
         const followUp = await adapter.generate({ ...args, messages: toolExchange(messages,

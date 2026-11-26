@@ -3,7 +3,8 @@ import { promises as fs } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import { createGdtAnalyzer } from '../../../mcp/lib/gdt.ts'
-import { desktopGdtWorkerUrl, type GdtToolName } from './gdtTools.ts'
+import { createCompliantAnalyzer } from '../../../mcp/lib/compliant.ts'
+import { desktopGdtWorkerUrl, type CompliantToolName, type GdtToolName } from './gdtTools.ts'
 import { M1FileBindings } from './m1FileBindings.ts'
 import { M1InternalService } from './m1InternalService.ts'
 import type { SenderInfo } from '../senderGuard.ts'
@@ -329,6 +330,7 @@ export class LocalM1Authority {
   }
 
   private gdtAnalyzer?: ReturnType<typeof createGdtAnalyzer>
+  private compliantAnalyzer?: ReturnType<typeof createCompliantAnalyzer>
 
   async runWindowGdtTool(sender: SenderInfo, projectId: string, operation: GdtToolName, raw: unknown,
     checkRequest: () => void) {
@@ -340,6 +342,45 @@ export class LocalM1Authority {
     if (!writer) throw Error('WRITER_REVOKED')
     if (writer.anchor !== grant) throw Error('WRITER_HELD')
     return this.runGdtTool(writer.lease, operation, raw, { checkRequest })
+  }
+
+  async runWindowCompliantTool(sender: SenderInfo, projectId: string, operation: CompliantToolName, raw: unknown,
+    checkRequest: () => void) {
+    const session = this.ports.sessionFor(sender.webContentsId)
+    if (!session || session.projectId !== projectId || !await this.resolve(sender, session)) throw Error('AUTH_REQUIRED')
+    checkRequest()
+    const grant = this.grants.get(sender.webContentsId)
+    const writer = grant && this.writers.get(grant.key)
+    if (!writer) throw Error('WRITER_REVOKED')
+    if (writer.anchor !== grant) throw Error('WRITER_HELD')
+    return this.runCompliantTool(writer.lease, operation, raw, { checkRequest })
+  }
+
+  async runCompliantTool(lease: M1WriterLease, operation: CompliantToolName, raw: unknown,
+    options: { scope?: M1ExternalScope; origin?: 'model' | 'client'; signal?: AbortSignal; checkRequest?: () => void } = {}) {
+    const writer = this.writerFor(lease)
+    const { anchor, caller } = writer
+    if (options.scope !== anchor.external) throw Error('AUTH_REQUIRED')
+    const verify = this.verifyWriterBinding(anchor, writer, () => {
+      options.signal?.throwIfAborted()
+      options.checkRequest?.()
+    })
+    if (operation === 'stage_physics') {
+      return anchor.service.stagePhysics(caller.projectId, caller, lease, raw, verify, options.origin)
+    }
+    if (operation === 'import_mic_matrix') {
+      return anchor.service.importMicMatrix(caller.projectId, caller, lease, raw, verify, options.origin)
+    }
+    const { assembly, request, baseRevision, micPayloads } =
+      await anchor.service.readCompliantAnalysis(caller.projectId, caller, lease, raw, verify)
+    this.compliantAnalyzer ??= createCompliantAnalyzer(desktopGdtWorkerUrl())
+    const result = await this.compliantAnalyzer.run(assembly, request, {
+      signal: options.signal, timeoutMs: 30_000, micPayloads,
+    })
+    const context = await anchor.service.writerContext(caller.projectId, caller, lease, verify)
+    if (context.baseRevision !== baseRevision) throw Error('STALE_BASE')
+    if (context.draftRevision !== request.draftRevision) throw Error('STALE_DRAFT')
+    return result
   }
 
   async runGdtTool(lease: M1WriterLease, operation: GdtToolName, raw: unknown,

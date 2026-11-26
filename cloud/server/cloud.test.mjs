@@ -463,7 +463,161 @@ test('GET /review returns real gdtSnapshot when FEATURE_3D_ASSEMBLY_M1=true and 
       await offService.request(`/api/v1/projects/${project.projectId}/drafts/${project.draftRevision}/review`),
     )
     assert.equal('gdtSnapshot' in reviewBody, false)
+    assert.equal('compliantSnapshot' in reviewBody, false)
   } finally {
     await offService.close()
+  }
+})
+
+test('compliant physics, MIC matrix, and compliant stackup tools work over REST + MCP and attach compliantSnapshot on review', async t => {
+  const { matches } = await import('./contracts.mjs')
+  const { compliantTools } = await import('../../mcp/lib/compliant.ts')
+  const { gdtFixture } = await import('../../src/core/solver/test/gdtFixture.mjs')
+  const { createNewProjectSnapshot } = await import('../../desktop/main/newProject.ts')
+  const { decodeProjectFile, encodeProjectFile } = await import('../../src/project-file/codec.ts')
+  const { createHttpTransport } = await import('../../src/transport/httpTransport.ts')
+  const { assembly } = gdtFixture()
+
+  // 1) FEATURE_3D_ASSEMBLY_M1=false -> endpoints disabled and tools hidden from MCP
+  const offFixture = await fixture(t, { FEATURE_3D_ASSEMBLY_M1: 'false' })
+  const offService = await offFixture.start()
+  try {
+    const offList = await value(await offService.request('/mcp', {
+      method: 'POST', headers: { accept: 'application/json' },
+      body: { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+    }))
+    const offNames = offList.result.tools.map(item => item.name)
+    for (const spec of compliantTools) assert.equal(offNames.includes(spec.name), false)
+    const disabled = await value(await offService.request('/api/v1/projects/p1/drafts/physics', {
+      method: 'POST', body: {},
+    }), 422)
+    assert.equal(disabled.error.code, 'FEATURE_DISABLED')
+  } finally {
+    await offService.close()
+  }
+
+  // 2) FEATURE_3D_ASSEMBLY_M1=true -> full REST + MCP + Review + Commit lifecycle
+  const onFixture = await fixture(t, { FEATURE_3D_ASSEMBLY_M1: 'true' })
+  const service = await onFixture.start()
+  try {
+    const post = (path, body, key = apiKey) => service.request(path, { method: 'POST', body, key })
+    const tool = async (name, args) => {
+      const response = await service.request('/mcp', {
+        method: 'POST', headers: { accept: 'application/json' },
+        body: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } },
+      })
+      return (await response.json()).result
+    }
+
+    const listed = await (await service.request('/mcp', {
+      method: 'POST', headers: { accept: 'application/json' },
+      body: { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+    })).json()
+    const listedNames = listed.result.tools.map(item => item.name)
+    for (const spec of compliantTools) assert.equal(listedNames.includes(spec.name), true)
+
+    const snapshot = createNewProjectSnapshot({
+      name: 'Compliant Cloud', template: 'empty', appVersion: 'fixture', electronVersion: 'fixture',
+    })
+    snapshot.project.assembly3d = { ...assembly, datums: [], gdt: [] }
+    const stepBytes = Buffer.from('ISO-10303-21;\nEND-ISO-10303-21;')
+    const stepSha = createHash('sha256').update(stepBytes).digest('hex')
+    snapshot.project.stepAttachments = [{ id: 'step-a', blobKey: 'step-a-bytes', fileName: 'fixture.step' }]
+    snapshot.blobs.push({ projectId: snapshot.project.id, blobKey: 'step-a-bytes', sha256: stepSha, byteSize: stepBytes.length })
+    snapshot.attachments.push({ blobKey: 'step-a-bytes', bytes: stepBytes })
+    const encoded = await encodeProjectFile(snapshot)
+    assert(encoded.ok, JSON.stringify(encoded))
+
+    const ref = await value(await post('/api/v1/projects/import', form('cunlian', 'compliant.cunlian', encoded.value.bytes)), 201)
+    const { projectId, baseRevision } = ref
+    const path = '/api/v1/projects/' + projectId
+    const original = await service.storage.read(projectId)
+    const { writerEpoch } = await value(await post(path + '/writer', { expectedWriterEpoch: 0 }))
+    const http = createHttpTransport({ baseUrl: service.origin, apiKey })
+
+    const evidence = [{
+      kind: 'user-attestation', actorId: 'operator', at: '2026-11-26T00:00:00Z',
+      sessionSeq: 1, sessionLabel: null, statement: 'Compliant fixture input', fieldPath: 'physics',
+    }]
+    const firstPartId = assembly.parts[0].id
+    const firstFeatureId = assembly.features.find(f => f.partId === firstPartId).id
+
+    // Stage physics via HttpTransport
+    const physicsPayload = {
+      baseRevision, expectedDraftRevision: null, expectedWriterEpoch: writerEpoch, idempotencyKey: 'phys-1',
+      physics: {
+        enabled: true,
+        materials: [{
+          partId: firstPartId, presetId: 'al-6061', name: '6061-T6',
+          youngsModulusMpa: 68900, poissonRatio: 0.33, thermalExpansionPerK: 23.6e-6, deltaTemperatureK: 0,
+        }],
+        compliantModels: [{
+          id: 'axial-1', kind: 'axial-compression', partId: firstPartId, featureId: firstFeatureId,
+          preloadN: 1000, preloadTolN: 100, stiffnessNPerMm: 50000, springbackRatio: 0.1,
+        }],
+      },
+      evidenceByField: { '/materials': evidence, '/compliantModels': evidence },
+    }
+    const stagedPhysicsRes = await http.stagePhysics({ projectId, ...physicsPayload })
+    assert(stagedPhysicsRes.ok, JSON.stringify(stagedPhysicsRes))
+    assert(matches(stagedPhysicsRes.value, compliantTools[0].outputSchema))
+    // Replay via MCP returns identical result
+    assert.deepEqual((await tool('stage_physics', { projectId, ...physicsPayload })).structuredContent, stagedPhysicsRes.value)
+
+    // Import MIC matrix via MCP
+    const micPayload = {
+      projectId, baseRevision, expectedDraftRevision: stagedPhysicsRes.value.draftRevision,
+      expectedWriterEpoch: writerEpoch, idempotencyKey: 'mic-1', fileName: 'plate.mic.json',
+      payload: {
+        schemaVersion: 1, partId: firstPartId, units: 'mm', forceUnits: 'N',
+        controlPointsMm: [[0, 0, 0], [10, 0, 0]], measurePointsMm: [[5, 5, 0]],
+        sensitivityMatrix: [[0.0005, 0.0005]], sourceMeta: { solverName: 'calculix', meshNodes: 400 },
+      },
+      evidence,
+    }
+    const micMcp = await tool('import_mic_matrix', micPayload)
+    assert.equal(Boolean(micMcp.isError), false, JSON.stringify(micMcp))
+    assert(matches(micMcp.structuredContent, compliantTools[1].outputSchema))
+
+    // Analyze compliant stackup via HttpTransport & MCP
+    const analyzeReq = {
+      projectId, draftRevision: micMcp.structuredContent.draftRevision, expectedWriterEpoch: writerEpoch,
+      monteCarlo: { seed: 42, samples: 1000, distribution: 'normal' },
+    }
+    const analyzedHttp = await http.analyzeCompliantStackup(analyzeReq)
+    assert(analyzedHttp.ok, JSON.stringify(analyzedHttp))
+    assert(matches(analyzedHttp.value, compliantTools[2].outputSchema))
+    assert.ok(analyzedHttp.value.summary.flexContributionItems.length >= 2)
+    assert.ok(analyzedHttp.value.displacementFields.length >= 1)
+    assert.deepEqual((await tool('analyze_compliant_stackup', analyzeReq)).structuredContent, analyzedHttp.value)
+
+    // Official archive untouched before human-confirmed commit
+    const before = await service.storage.read(projectId)
+    assert.equal(before.archive, original.archive)
+
+    // GET /review attaches compliantSnapshot when FEATURE_3D_ASSEMBLY_M1=true
+    const draftPath = `${path}/drafts/${micMcp.structuredContent.draftRevision}`
+    const reviewResponse = await service.request(`${draftPath}/review`, { headers: { 'x-cunlian-approval': human } })
+    const reviewBody = await value(reviewResponse)
+    assert.ok(reviewBody.compliantSnapshot, 'expected compliantSnapshot in GET /review')
+    assert.equal(reviewBody.compliantSnapshot.physics.enabled, true)
+    assert.equal(reviewBody.compliantSnapshot.physics.micMatrixRef, micMcp.structuredContent.attachment.revisionId)
+    assert.ok(reviewBody.compliantSnapshot.summary)
+
+    // Human-confirmed commit persists physics + micAttachments into official .cunlian archive
+    const committed = await value(await post(`${draftPath}/commit`, {
+      projectId, draftRevision: micMcp.structuredContent.draftRevision, baseRevision,
+      requestId: 'compliant-commit', checksetFingerprint: reviewBody.review.checksetFingerprint,
+      confirmationToken: reviewResponse.headers.get('x-cunlian-confirmation-token'),
+    }), 201)
+    const after = await service.storage.read(projectId)
+    const decoded = await decodeProjectFile(Buffer.from(after.archive, 'base64'))
+    assert(decoded.ok)
+    assert.equal(decoded.value.snapshot.project.currentRevisionId, committed.committedRevision)
+    assert.equal(decoded.value.snapshot.project.assembly3d.physics.enabled, true)
+    assert.equal(decoded.value.snapshot.project.assembly3d.physics.micMatrixRef, micMcp.structuredContent.attachment.revisionId)
+    assert.equal(decoded.value.snapshot.project.micMatrixAttachments.length, 1)
+  } finally {
+    await service.close()
   }
 })

@@ -7,6 +7,8 @@ import { importRequirements, interpret } from '../../desktop/main/project-agent/
 import { createMountingPlate } from '../../desktop/main/project-agent/m2/model.mjs'
 import { spacerParametersFromQ } from '../../mcp/lib/spacer.ts'
 import { analyzeGdtSchema, assemblyWarnings, gdtSources, stageControls, stageDatumSchema, stageDatums, stageGdtSchema } from '../../mcp/lib/gdt.ts'
+import { analyzeCompliantSchema, importMicMatrixSchema, stageMicMatrix, stagePhysicsPatch, stagePhysicsSchema, verifyEvidenceRefs } from '../../mcp/lib/compliant.ts'
+import { parseAndValidateMicMatrix } from '../../src/core/solver/mic.mjs'
 import { parseStl } from '../../src/parts/stlValidation.ts'
 import { HttpError } from './contracts.mjs'
 import { computeProjectSpacer, defaultSpacer } from './engine.mjs'
@@ -221,9 +223,28 @@ export function createProjects(storage, engine, config) {
     const { snapshot } = unwrap(await decodeProjectFile(Buffer.from(state.archive, 'base64')))
     const computed = state.spacer && state.template !== 'builtin-mounting-plate'
       && computeProjectSpacer(snapshot, state, result.committedRevision)
+    const stagedMics = state.gdtDraft?.micAttachments ? Object.values(state.gdtDraft.micAttachments) : []
+    const nextBlobs = [...snapshot.blobs]
+    const nextAttachments = [...snapshot.attachments]
+    const nextMicRecords = [...(snapshot.project.micMatrixAttachments ?? [])]
+    for (const entry of stagedMics) {
+      if (!nextBlobs.some(row => row.blobKey === entry.record.blobKey)) {
+        nextBlobs.push({
+          projectId: snapshot.project.id, blobKey: entry.record.blobKey,
+          sha256: entry.attachment.sha256, byteSize: entry.attachment.byteSize,
+        })
+      }
+      if (!nextAttachments.some(row => row.blobKey === entry.record.blobKey)) {
+        nextAttachments.push({ blobKey: entry.record.blobKey, bytes: Buffer.from(entry.bytes, 'base64') })
+      }
+      if (!nextMicRecords.some(row => row.id === entry.record.id)) {
+        nextMicRecords.push(entry.record)
+      }
+    }
     const project = {
       ...snapshot.project, currentRevisionId: result.committedRevision, updatedAt: result.committedAtLabel,
       ...(state.gdtDraft && { assembly3d: state.gdtDraft.assembly }),
+      ...(stagedMics.length > 0 && { micMatrixAttachments: nextMicRecords }),
       ...(computed && {
         parameters: computed.parameters,
         dimensionChain: computed.chain,
@@ -235,7 +256,7 @@ export function createProjects(storage, engine, config) {
     const event = { id: id('event'), projectId: project.id, type: 'project_revision_committed',
       revisionId: result.committedRevision, createdAt: result.committedAtLabel, message: result.summary }
     const archive = await encodeProjectFile({
-      ...snapshot, project, events: [...snapshot.events, event],
+      ...snapshot, blobs: nextBlobs, attachments: nextAttachments, project, events: [...snapshot.events, event],
       fileRevisions: [...snapshot.fileRevisions, {
         project, revisionId: result.committedRevision, parentId: state.baseRevision,
         createdAt: result.committedAtLabel, reason: '云端人工确认',
@@ -248,6 +269,9 @@ export function createProjects(storage, engine, config) {
     }))
     requireWriter(state, principal)
     state.archive = Buffer.from(unwrap(archive).bytes).toString('base64')
+    for (const entry of stagedMics) {
+      state.attachments[entry.record.id] = { ref: entry.attachment, fileName: entry.record.fileName, bytes: entry.bytes }
+    }
     state.commits.push({ result, requestId: body.requestId, plateModel: state.plateModel, spacer: state.spacer, review })
     for (const [format, item] of renderings) state.exports[body.draftRevision + ':' + format] = item
     state.baseRevision = result.committedRevision
@@ -330,12 +354,149 @@ export function createProjects(storage, engine, config) {
         requireWriter(state, principal)
         const evidence = { ...state.gdtDraft?.evidence }
         for (const [itemId, source] of Object.entries(sources)) evidence[operation + ':' + itemId] = source
-        state.gdtDraft = { assembly: updated, evidence }
+        state.gdtDraft = { ...state.gdtDraft, assembly: updated, evidence }
         state.draftRevision = id('draft')
         record(state, 'draft_staged', principal, { draftRevision: state.draftRevision })
         return { projectId: raw.projectId, draftRevision: state.draftRevision, warnings: assemblyWarnings(updated) }
       })
     }),
+    stagePhysics: (raw, principal, signal) => mutate(raw.projectId, principal, signal, state => {
+      if (!config.feature3dAssemblyM1) throw new HttpError(422, 'FEATURE_DISABLED')
+      requireWriter(state, principal)
+      const parsed = stagePhysicsSchema.safeParse(raw)
+      if (!parsed.success) throw new HttpError(422, 'INVALID_PHYSICS', parsed.error.message)
+      const request = parsed.data
+      if (state.epoch !== request.expectedWriterEpoch) throw new HttpError(409, 'STALE_WRITER_EPOCH')
+      return replay(state, principal, { operation: 'stage_physics', ...request }, async () => {
+        if (state.baseRevision !== request.baseRevision) throw new HttpError(409, 'STALE_BASE')
+        if (state.draftRevision !== request.expectedDraftRevision) throw new HttpError(409, 'STALE_DRAFT')
+        const { snapshot } = unwrap(await decodeProjectFile(Buffer.from(state.archive, 'base64')))
+        const assembly = state.gdtDraft?.assembly ?? snapshot.project.assembly3d
+        if (!assembly) throw new HttpError(422, 'ASSEMBLY_REQUIRED')
+        try {
+          verifyEvidenceRefs(snapshot, Object.values(request.evidenceByField).flat())
+        } catch {
+          throw new HttpError(422, 'REFERENCE_STALE')
+        }
+        let updated
+        try {
+          updated = stagePhysicsPatch(assembly, request)
+        } catch (error) {
+          throw new HttpError(422, 'INVALID_PHYSICS', error.message)
+        }
+        signal.throwIfAborted()
+        requireWriter(state, principal)
+        const physicsEvidence = { ...state.gdtDraft?.physicsEvidence, ...request.evidenceByField }
+        state.gdtDraft = {
+          ...state.gdtDraft,
+          assembly: updated,
+          evidence: state.gdtDraft?.evidence ?? {},
+          physicsEvidence,
+        }
+        state.draftRevision = id('draft')
+        record(state, 'draft_staged', principal, { draftRevision: state.draftRevision })
+        return { projectId: raw.projectId, draftRevision: state.draftRevision, physics: updated.physics }
+      })
+    }),
+    importMicMatrix: (raw, principal, signal) => mutate(raw.projectId, principal, signal, state => {
+      if (!config.feature3dAssemblyM1) throw new HttpError(422, 'FEATURE_DISABLED')
+      requireWriter(state, principal)
+      const parsed = importMicMatrixSchema.safeParse(raw)
+      if (!parsed.success) throw new HttpError(422, 'INVALID_MIC', parsed.error.message)
+      const request = parsed.data
+      if (state.epoch !== request.expectedWriterEpoch) throw new HttpError(409, 'STALE_WRITER_EPOCH')
+      return replay(state, principal, { operation: 'import_mic_matrix', ...request }, async () => {
+        if (state.baseRevision !== request.baseRevision) throw new HttpError(409, 'STALE_BASE')
+        if (state.draftRevision !== request.expectedDraftRevision) throw new HttpError(409, 'STALE_DRAFT')
+        const { snapshot } = unwrap(await decodeProjectFile(Buffer.from(state.archive, 'base64')))
+        const assembly = state.gdtDraft?.assembly ?? snapshot.project.assembly3d
+        if (!assembly) throw new HttpError(422, 'ASSEMBLY_REQUIRED')
+        try {
+          verifyEvidenceRefs(snapshot, request.evidence)
+        } catch {
+          throw new HttpError(422, 'REFERENCE_STALE')
+        }
+        let staged
+        try {
+          staged = await stageMicMatrix(assembly, request)
+        } catch (error) {
+          throw new HttpError(422, error.message === 'UNKNOWN_PART' ? 'UNKNOWN_PART' : 'INVALID_MIC', error.message)
+        }
+        signal.throwIfAborted()
+        requireWriter(state, principal)
+        const micAttachments = {
+          ...state.gdtDraft?.micAttachments,
+          [staged.prepared.micMatrixRef]: {
+            attachment: staged.prepared.attachment,
+            record: staged.prepared.record,
+            bytes: Buffer.from(staged.prepared.bytes).toString('base64'),
+            payload: staged.prepared.payload,
+            evidence: staged.prepared.evidence,
+          },
+        }
+        state.gdtDraft = {
+          ...state.gdtDraft,
+          assembly: staged.assembly,
+          evidence: state.gdtDraft?.evidence ?? {},
+          micAttachments,
+        }
+        state.draftRevision = id('draft')
+        record(state, 'draft_staged', principal, { draftRevision: state.draftRevision })
+        return { projectId: raw.projectId, draftRevision: state.draftRevision, attachment: staged.prepared.attachment }
+      })
+    }),
+    async analyzeCompliant(raw, principal, signal) {
+      if (!config.feature3dAssemblyM1) throw new HttpError(422, 'FEATURE_DISABLED')
+      const parsed = analyzeCompliantSchema.safeParse(raw)
+      if (!parsed.success) throw new HttpError(422, 'INVALID_PHYSICS', parsed.error.message)
+      const request = parsed.data
+      const verify = state => {
+        requireWriter(state, principal)
+        if (state.epoch !== request.expectedWriterEpoch) throw new HttpError(409, 'STALE_WRITER_EPOCH')
+        draftMatches(state, request.draftRevision)
+      }
+      const state = await read(raw.projectId, principal)
+      verify(state)
+      const { snapshot } = unwrap(await decodeProjectFile(Buffer.from(state.archive, 'base64')))
+      const assembly = state.gdtDraft?.assembly ?? snapshot.project.assembly3d
+      if (!assembly) throw new HttpError(422, 'ASSEMBLY_REQUIRED')
+      const micPayloads = {}
+      for (const rec of snapshot.project.micMatrixAttachments ?? []) {
+        const blob = snapshot.attachments.find(a => a.blobKey === rec.blobKey)
+        if (blob) {
+          try { micPayloads[rec.id] = parseAndValidateMicMatrix(blob.bytes).payload } catch { /* ignore */ }
+        }
+      }
+      for (const [micId, entry] of Object.entries(state.gdtDraft?.micAttachments ?? {})) {
+        micPayloads[micId] = entry.payload
+      }
+      let result
+      try {
+        result = await engine.compliantAnalyzer.run(assembly, request, {
+          signal, timeoutMs: config.timeoutMs, micPayloads,
+        })
+      } catch (error) {
+        signal.throwIfAborted()
+        throw new HttpError(422, /^[A-Z_]+$/.test(error.message) ? error.message : 'SIMULATION_FAILED')
+      }
+      verify(await read(raw.projectId, principal))
+      if (!request.whatIf) {
+        try {
+          await mutate(raw.projectId, principal, signal, current => {
+            if (current.gdtDraft && current.draftRevision === request.draftRevision) {
+              current.gdtDraft.compliantAnalysis = {
+                draftRevision: request.draftRevision,
+                summary: result.summary,
+                displacementFields: result.displacementFields,
+              }
+            }
+          })
+        } catch {
+          // Non-fatal cache update; analysis result is still valid
+        }
+      }
+      return result
+    },
     async analyzeGdt(raw, principal, signal) {
       if (!config.feature3dAssemblyM1) throw new HttpError(422, 'FEATURE_DISABLED')
       const parsed = analyzeGdtSchema.safeParse(raw)
@@ -494,6 +655,46 @@ export function createProjects(storage, engine, config) {
                   },
                 }
               : {}),
+          }
+        }
+        const hasStagedCompliant = Boolean(
+          assembly?.physics || state.gdtDraft?.compliantAnalysis || state.gdtDraft?.micAttachments,
+        )
+        if (hasStagedCompliant && assembly) {
+          let compliantAnalysis =
+            state.gdtDraft?.compliantAnalysis?.draftRevision === revision
+              ? state.gdtDraft.compliantAnalysis
+              : null
+          if (!compliantAnalysis) {
+            try {
+              const micPayloads = {}
+              for (const [micId, entry] of Object.entries(state.gdtDraft?.micAttachments ?? {})) {
+                micPayloads[micId] = entry.payload
+              }
+              const analyzed = await engine.compliantAnalyzer.run(
+                assembly,
+                {
+                  projectId: state.projectId,
+                  draftRevision: revision,
+                  expectedWriterEpoch: state.epoch,
+                  monteCarlo: { seed: 42, samples: 2000, distribution: 'normal' },
+                },
+                { signal, timeoutMs: config.timeoutMs, micPayloads },
+              )
+              compliantAnalysis = {
+                draftRevision: revision,
+                summary: analyzed.summary,
+                displacementFields: analyzed.displacementFields,
+              }
+            } catch {
+              signal.throwIfAborted()
+              compliantAnalysis = null
+            }
+          }
+          value.compliantSnapshot = {
+            physics: assembly.physics ?? null,
+            summary: compliantAnalysis?.summary ?? null,
+            displacementFields: compliantAnalysis?.displacementFields ?? [],
           }
         }
       }

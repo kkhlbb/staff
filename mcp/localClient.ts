@@ -57,6 +57,7 @@ export class LocalM1Client {
   private connecting?: Promise<Duplex>
   private pending?: { id: number; finish(error: Error | null, result?: Record<string, unknown>): void }
   private gdtOperations: string[] = []
+  private compliantOperations: string[] = []
   private id = 0
   private clientName: string | null = null
   constructor(ports: ClientPorts) {
@@ -110,12 +111,14 @@ export class LocalM1Client {
       throw error
     }
     this.gdtOperations = []
+    this.compliantOperations = []
     this.socket = socket
     socket.on('error', () => socket.destroy())
     socket.on('close', () => {
       if (this.socket !== socket) return
       this.socket = undefined
       this.gdtOperations = []
+      this.compliantOperations = []
       this.pending?.finish(Error('DESKTOP_DISCONNECTED'))
     })
     readM1Frames(socket, 8 * 1024 * 1024, value => {
@@ -136,6 +139,9 @@ export class LocalM1Client {
       if (capabilities.protocol !== M1_LOCAL_VERSION) throw Error('INCOMPATIBLE_BRIDGE')
       if (Array.isArray(capabilities.gdtOperations)) {
         this.gdtOperations = capabilities.gdtOperations.filter(name => typeof name === 'string')
+      }
+      if (Array.isArray(capabilities.compliantOperations)) {
+        this.compliantOperations = capabilities.compliantOperations.filter(name => typeof name === 'string')
       }
       return socket
     } catch (error) {
@@ -172,7 +178,7 @@ export class LocalM1Client {
   }
 
   supports(method: string) {
-    return this.gdtOperations.includes(method)
+    return this.gdtOperations.includes(method) || this.compliantOperations.includes(method)
   }
 
   async call(method: string, params: unknown) {

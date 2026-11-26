@@ -55,10 +55,17 @@ import {
 } from '../workspace/project-agent/m3WorkbenchBridge'
 import {
   FEATURE_3D_ASSEMBLY_M1,
+  type AnalyzeCompliantStackupRequest,
+  type AnalyzeCompliantStackupResult,
   type AnalyzeGdtStackupRequest,
   type AnalyzeGdtStackupResult,
+  type FeaSidecarStatus,
+  type ImportMicMatrixRequest,
+  type ImportMicMatrixResult,
   type StageDatumRequest,
   type StageGdtRequest,
+  type StagePhysicsRequest,
+  type StagePhysicsResult,
   type GdtStageResult,
   type AttachmentUpload,
   type CheckSet,
@@ -118,6 +125,7 @@ export interface WorkbenchEventSubscriptionHandle {
  */
 export interface ElectronTransport extends Transport {
   readonly kind: 'electron'
+  detectFeaSidecars?(): Promise<M2Result<{ available: boolean; statuses: FeaSidecarStatus[] }>>
   readonly probes: ElectronTransportProbes
 
   // Narrow M1 workbench methods
@@ -370,6 +378,27 @@ export function createElectronTransport(
 
     analyzeGdtStackup(request: AnalyzeGdtStackupRequest) {
       return invokeGdt<AnalyzeGdtStackupResult>('analyzeGdtStackup', request)
+    },
+
+    stagePhysics(request: StagePhysicsRequest) {
+      return invokeGdt<StagePhysicsResult>('stagePhysics', request)
+    },
+
+    importMicMatrix(request: ImportMicMatrixRequest) {
+      return invokeGdt<ImportMicMatrixResult>('importMicMatrix', request)
+    },
+
+    analyzeCompliantStackup(request: AnalyzeCompliantStackupRequest) {
+      return invokeGdt<AnalyzeCompliantStackupResult>('analyzeCompliantStackup', request)
+    },
+
+    detectFeaSidecars(): Promise<M2Result<{ available: boolean; statuses: FeaSidecarStatus[] }>> {
+      return invokeOptionalPreload<{ available: boolean; statuses: FeaSidecarStatus[] }>(
+        primaryRecord,
+        'detectFeaSidecars',
+        [],
+        '探测外部 FEA 插件失败',
+      )
     },
 
     async uploadAttachment(request: AttachmentUpload): Promise<M2Result<ProjectFileAttachmentRef>> {
@@ -1087,6 +1116,9 @@ export function resolveWorkbenchTransport(
       stageDatum: generic.stageDatum?.bind(generic),
       stageGdt: generic.stageGdt?.bind(generic),
       analyzeGdtStackup: generic.analyzeGdtStackup?.bind(generic),
+      stagePhysics: generic.stagePhysics?.bind(generic),
+      importMicMatrix: generic.importMicMatrix?.bind(generic),
+      analyzeCompliantStackup: generic.analyzeCompliantStackup?.bind(generic),
       commitDraft: generic.commitDraft.bind(generic),
       authorizeProject: generic.authorizeProject.bind(generic),
       getContext: generic.getContext.bind(generic),

@@ -12,10 +12,16 @@ import type { M2ModelMeshInput, M2Result } from '../../desktop/shared/project-ag
 import type { ProjectFileAttachmentRef } from '../project-file/types'
 import {
   FEATURE_3D_ASSEMBLY_M1,
+  type AnalyzeCompliantStackupRequest,
+  type AnalyzeCompliantStackupResult,
   type AnalyzeGdtStackupRequest,
   type AnalyzeGdtStackupResult,
+  type ImportMicMatrixRequest,
+  type ImportMicMatrixResult,
   type StageDatumRequest,
   type StageGdtRequest,
+  type StagePhysicsRequest,
+  type StagePhysicsResult,
   type GdtStageResult,
   type AttachmentUpload,
   type CheckSet,
@@ -561,6 +567,27 @@ export function createHttpTransport(options: HttpTransportOptions): HttpTranspor
     analyzeGdtStackup({ projectId, draftRevision, ...jsonBody }: AnalyzeGdtStackupRequest) {
       return requestJson<AnalyzeGdtStackupResult>(
         `/api/v1/projects/${encodeSegment(projectId)}/drafts/${encodeSegment(draftRevision)}/gdt-stackup`,
+        { method: 'POST', jsonBody },
+      )
+    },
+
+    stagePhysics({ projectId, ...jsonBody }: StagePhysicsRequest) {
+      return requestJson<StagePhysicsResult>(
+        `/api/v1/projects/${encodeSegment(projectId)}/drafts/physics`,
+        { method: 'POST', jsonBody },
+      )
+    },
+
+    importMicMatrix({ projectId, ...jsonBody }: ImportMicMatrixRequest) {
+      return requestJson<ImportMicMatrixResult>(
+        `/api/v1/projects/${encodeSegment(projectId)}/drafts/mic-matrix`,
+        { method: 'POST', jsonBody },
+      )
+    },
+
+    analyzeCompliantStackup({ projectId, draftRevision, ...jsonBody }: AnalyzeCompliantStackupRequest) {
+      return requestJson<AnalyzeCompliantStackupResult>(
+        `/api/v1/projects/${encodeSegment(projectId)}/drafts/${encodeSegment(draftRevision)}/compliant-stackup`,
         { method: 'POST', jsonBody },
       )
     },

@@ -3,7 +3,10 @@ import type { LocalM1Client } from '../localClient'
 import { createStdioServer } from '../stdio'
 import type { ToolSpec } from '../tools/index'
 import catalog from '../../cloud/contracts/mcp-gdt-tools.json' with { type: 'json' }
+import compliantCatalog from '../../cloud/contracts/mcp-compliant-tools.json' with { type: 'json' }
 import { mcpLog } from './log'
+
+const featureTools = [...catalog.tools, ...compliantCatalog.tools]
 
 const project = { projectId: { type: 'string' } }
 const writer = { ...project, expectedWriterEpoch: { type: 'integer', minimum: 0 } }
@@ -76,7 +79,7 @@ export function createLocalBridgeServer(client: LocalM1Client, version: () => Pr
     instructions: '打开寸链项目后，按项目 ID 申请读取权限。写入草稿需要在寸链确认。连接中断后重新申请项目权限。',
     tools: () => [
       ...toolsFor(client),
-      ...catalog.tools.filter(tool => client.supports(tool.name)).map(tool => ({
+      ...featureTools.filter(tool => client.supports(tool.name)).map(tool => ({
         definition: { ...tool, title: tool.name },
         run: (args: unknown) => client.call(tool.name, args),
       })),
@@ -91,7 +94,7 @@ export function createLocalBridgeServer(client: LocalM1Client, version: () => Pr
       client.initialize((params as { clientInfo?: { name?: unknown } } | undefined)?.clientInfo?.name)
     },
     async prepareCall(name) {
-      if (catalog.tools.some(tool => tool.name === name)) await client.ready()
+      if (featureTools.some(tool => tool.name === name)) await client.ready()
     },
     async list() {
       await client.ready().catch(() => mcpLog('本地桌面端点未就绪'))

@@ -349,3 +349,62 @@ it('passes each GD&T operation to the enabled preload and gates explicitly disab
   expect(bridge.stageGdt).toHaveBeenCalledExactlyOnceWith(request)
   expect(bridge.analyzeGdtStackup).toHaveBeenCalledExactlyOnceWith(analysis)
 })
+
+it('passes compliant physics, MIC, stackup, and FEA sidecar operations to preload with feature gating', async () => {
+  const draft = { projectId: 'project', draftRevision: 'draft' }
+  const physicsReq = {
+    projectId: draft.projectId, expectedWriterEpoch: 2, baseRevision: 'base',
+    expectedDraftRevision: null, idempotencyKey: 'phys-1',
+    physics: { enabled: true }, evidenceByField: { '/enabled': [] },
+  }
+  const micReq = {
+    projectId: draft.projectId, expectedWriterEpoch: 2, baseRevision: 'base',
+    expectedDraftRevision: 'draft', idempotencyKey: 'mic-1',
+    fileName: 'cover.mic.json',
+    payload: {
+      schemaVersion: 1 as const, partId: 'cover', units: 'mm' as const, forceUnits: 'N' as const,
+      controlPointsMm: [[0, 0, 0] as [number, number, number]],
+      measurePointsMm: [[10, 0, 0] as [number, number, number]],
+      sensitivityMatrix: [[0.001]],
+    },
+    evidence: [],
+  }
+  const analyzeReq = {
+    ...draft, expectedWriterEpoch: 2,
+    monteCarlo: { seed: 42, samples: 1000, distribution: 'normal' as const },
+  }
+  const physicsRes = { ok: true, value: { ...draft, physics: { enabled: true } } }
+  const micRes = {
+    ok: true,
+    value: {
+      ...draft,
+      attachment: {
+        kind: 'mic-matrix' as const, revisionId: 'mic-1', blobKey: 'mic-1',
+        path: 'attachments/mic-1.bin', sha256: 'a'.repeat(64), byteSize: 128,
+      },
+    },
+  }
+  const denied = { ok: false, error: { code: 'WRITER_REVOKED', message: 'lease revoked' } }
+  const feaRes = { ok: true, value: { available: false, statuses: [{ solver: 'calculix', available: false }] } }
+  const bridge = {
+    stagePhysics: vi.fn().mockResolvedValue(physicsRes),
+    importMicMatrix: vi.fn().mockResolvedValue(micRes),
+    analyzeCompliantStackup: vi.fn().mockResolvedValue(denied),
+    detectFeaSidecars: vi.fn().mockResolvedValue(feaRes),
+  }
+  const off = createElectronTransport({ bridge, feature3dAssemblyM1: false })
+  await expect(off.stagePhysics!(physicsReq)).resolves.toMatchObject({ ok: false, error: { code: 'FEATURE_DISABLED' } })
+  await expect(off.importMicMatrix!(micReq)).resolves.toMatchObject({ ok: false, error: { code: 'FEATURE_DISABLED' } })
+  await expect(off.analyzeCompliantStackup!(analyzeReq)).resolves.toMatchObject({ ok: false, error: { code: 'FEATURE_DISABLED' } })
+  expect(bridge.stagePhysics).not.toHaveBeenCalled()
+
+  const on = createElectronTransport({ bridge, feature3dAssemblyM1: true })
+  await expect(on.stagePhysics!(physicsReq)).resolves.toEqual(physicsRes)
+  await expect(on.importMicMatrix!(micReq)).resolves.toEqual(micRes)
+  await expect(on.analyzeCompliantStackup!(analyzeReq)).resolves.toEqual(denied)
+  await expect(on.detectFeaSidecars!()).resolves.toEqual(feaRes)
+  expect(bridge.stagePhysics).toHaveBeenCalledExactlyOnceWith(physicsReq)
+  expect(bridge.importMicMatrix).toHaveBeenCalledExactlyOnceWith(micReq)
+  expect(bridge.analyzeCompliantStackup).toHaveBeenCalledExactlyOnceWith(analyzeReq)
+  expect(bridge.detectFeaSidecars).toHaveBeenCalledTimes(1)
+})

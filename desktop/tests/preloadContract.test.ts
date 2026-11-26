@@ -53,6 +53,7 @@ const ADDED_FUNCTIONS = [
   'getM1ExternalActivities',
   'commitM3ApprovedDraft',
   'getGdtCapability', 'stageDatum', 'stageGdt', 'analyzeGdtStackup',
+  'stagePhysics', 'importMicMatrix', 'analyzeCompliantStackup', 'detectFeaSidecars',
   'undoDraftChange',
   'getMigrationReport',
   'openExternalProjectResult',
@@ -284,4 +285,47 @@ it('routes GD&T through the actual preload and preserves the host flag and write
   expect(electron.invoke).toHaveBeenLastCalledWith(ipc.gdt, 'analyze_gdt_stackup', analysis)
   electron.invoke.mockRejectedValueOnce(Error('Disconnected'))
   await expect(api.analyzeGdtStackup(analysis)).resolves.toMatchObject({ ok: false, error: { code: 'DISCONNECTED' } })
+
+  const physicsReq = {
+    projectId: stage.projectId, expectedWriterEpoch: 3, baseRevision: 'base', expectedDraftRevision: null,
+    idempotencyKey: 'phys', physics: { enabled: true }, evidenceByField: { '/enabled': [] },
+  }
+  const physicsRes = { ok: true, value: { projectId: stage.projectId, draftRevision: 'draft-p', physics: { enabled: true } } }
+  electron.invoke.mockResolvedValueOnce(physicsRes)
+  await expect(transport.stagePhysics!(physicsReq)).resolves.toEqual(physicsRes)
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.gdt, 'stage_physics', physicsReq)
+
+  const micReq = {
+    projectId: stage.projectId, expectedWriterEpoch: 3, baseRevision: 'base', expectedDraftRevision: 'draft-p',
+    idempotencyKey: 'mic', fileName: 'part.mic.json',
+    payload: {
+      schemaVersion: 1 as const, partId: 'p1', units: 'mm' as const, forceUnits: 'N' as const,
+      controlPointsMm: [[0, 0, 0] as [number, number, number]],
+      measurePointsMm: [[1, 0, 0] as [number, number, number]],
+      sensitivityMatrix: [[0.002]],
+    },
+    evidence: [],
+  }
+  const micRes = {
+    ok: true,
+    value: {
+      projectId: stage.projectId, draftRevision: 'draft-m',
+      attachment: {
+        kind: 'mic-matrix' as const, revisionId: 'mic-1', blobKey: 'mic-1',
+        path: 'attachments/mic-1.bin', sha256: 'c'.repeat(64), byteSize: 96,
+      },
+    },
+  }
+  electron.invoke.mockResolvedValueOnce(micRes)
+  await expect(transport.importMicMatrix!(micReq)).resolves.toEqual(micRes)
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.gdt, 'import_mic_matrix', micReq)
+
+  electron.invoke.mockResolvedValueOnce(revoked)
+  await expect(transport.analyzeCompliantStackup!(analysis)).resolves.toEqual(revoked)
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.gdt, 'analyze_compliant_stackup', analysis)
+
+  const feaRes = { ok: true, value: { available: false, statuses: [{ solver: 'calculix', available: false }] } }
+  electron.invoke.mockResolvedValueOnce(feaRes)
+  await expect(transport.detectFeaSidecars!()).resolves.toEqual(feaRes)
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.gdt, 'detect_fea_sidecars')
 })
