@@ -93,15 +93,14 @@ export function createGdtAnalyzer(workerUrl?: URL) {
       const { samples, seed, distribution } = monteCarlo
       const job = tail.then(async () => {
         options?.signal?.throwIfAborted()
-        if (distribution !== 'uniform') throw Error('UNSUPPORTED_DISTRIBUTION')
-        if (samples < 10_000 || samples > 50_000) throw Error('SIMULATION_LIMIT')
+        if (samples < 1 || samples > 50_000) throw Error('SIMULATION_LIMIT')
         const controls = new Map(assembly.gdt.map(control => [control.id, control]))
         if (edits && (new Set(edits.map(edit => edit.gdtId)).size !== edits.length ||
           edits.some(edit => !controls.has(edit.gdtId)))) throw Error('INVALID_WHAT_IF')
         const key = JSON.stringify([projectId, draftRevision, monteCarlo, assembly])
         if (cached?.key !== key) {
           cached = undefined
-          const result = await solver.run({ kind: 'multivariate', inputs: { assembly, samples, seed, parameters: [] } }, options)
+          const result = await solver.run({ kind: 'multivariate', inputs: { assembly, samples, seed, gdtDistribution: distribution, parameters: [] } }, options)
           if (result.status !== 'ok') throw Error('ASSEMBLY_OVERCONSTRAINED')
           if (!result.gdt) throw Error('NO_GDT_CONTROLS')
           cached = { key, revision: result.baselineRevision, baseline: result.gdt.baseline, edited: [] }

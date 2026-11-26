@@ -154,3 +154,61 @@ test('degenerate datum references carry frozen warnings and omit fabricated cont
     await solver.close()
   }
 })
+
+test('GD&T sampling distinguishes normal from uniform and keeps the same draws for edits', async t => {
+  const solver = createSolverScheduler()
+  t.after(() => solver.close())
+  const fixture = { ...gdtFixture(), samples: 1000, seed: 13 }
+  const run = inputs => solver.run({ kind: 'multivariate', inputs })
+  const uniform = await run({ ...fixture, gdtDistribution: 'uniform' })
+  const normal = await run({ ...fixture, gdtDistribution: 'normal' })
+  assert.equal(normal.status, 'ok')
+  assert.equal(uniform.status, 'ok')
+  assert.notDeepEqual(normal.gdt.baseline, uniform.gdt.baseline)
+  assert.deepEqual(normal.measurements, uniform.measurements)
+  const edits = [{ gdtId: 'position', toleranceQ: 10 }]
+  const changed = await run({ incremental: { baselineRevision: normal.baselineRevision, edits } })
+  const repeated = await run({ ...fixture, gdtDistribution: 'normal', gdtEdits: edits })
+  assert.deepEqual(changed.gdt.baseline, normal.gdt.baseline)
+  assert.deepEqual(changed.gdt.whatIf, repeated.gdt.whatIf)
+  const legacy = await run({ ...fixture, samples: 10000 })
+  const explicitUniform = await run({ ...fixture, samples: 10000, gdtDistribution: 'uniform' })
+  assert.deepEqual(legacy.gdt, explicitUniform.gdt)
+})
+
+test('a single GD&T draw has a point interval and null Cpk while sample limits stay enforced', async t => {
+  const solver = createSolverScheduler()
+  t.after(() => solver.close())
+  const fixture = { ...gdtFixture(), samples: 1, seed: 13 }
+  const run = inputs => solver.run({ kind: 'multivariate', inputs })
+  await assert.rejects(run(fixture), /3D samples must be 10000/)
+  await assert.rejects(run({ ...fixture, gdtDistribution: 'uniform', samples: 0 }), /GD&T samples/)
+  await assert.rejects(run({ ...fixture, gdtDistribution: 'normal', samples: 50001 }), /GD&T samples/)
+  for (const gdtDistribution of ['normal', 'uniform']) {
+    const result = await run({ ...fixture, gdtDistribution })
+    const { baseline } = result.gdt
+    assert.equal(baseline.cpk, null)
+    assert.ok([0, 1000000].includes(baseline.ppm))
+    assert.ok(Number.isFinite(baseline.threeSigmaIntervalMm[0]))
+    assert.equal(baseline.threeSigmaIntervalMm[0], baseline.threeSigmaIntervalMm[1])
+    assert.ok(baseline.contributions.length > 0)
+    assert.ok(baseline.contributions.every(row => row.varianceSharePct === 0))
+    assert.ok(result.measurements.every(row => row.sigma === 0 && row.cpk === null))
+  }
+})
+
+test('normal planar draws are centered, tighter than uniform and bounded by the tolerance', () => {
+  const rng = createRng(739)
+  const samples = 10000
+  let sum = 0
+  let squares = 0
+  for (let i = 0; i < samples; i++) {
+    const { center: [offset] } = sampleSdt('position', 'planar', 2, 1, rng, 'normal')
+    assert.ok(Math.abs(offset) <= 1)
+    sum += offset
+    squares += offset ** 2
+  }
+  near(sum / samples, 0, 0.015)
+  // A unit normal truncated at ±3σ contributes about 0.108 of the squared half-width.
+  near(squares / samples, 0.108, 0.01)
+})

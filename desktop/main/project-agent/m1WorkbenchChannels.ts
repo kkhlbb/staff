@@ -276,7 +276,7 @@ export function installM1WorkbenchChannels(ipc: { handle(channel: string, handle
     verifySender()
     return ok(value)
   })
-  install('cunlian:gdt', async (event, operation, raw, ...extra) => {
+  install(IPC_CHANNELS.gdt, async (event, operation, raw, ...extra) => {
     if (operation === 'capabilities' && raw === undefined && !extra.length) return ok({ enabled: desktopGdtEnabled() })
     if (!desktopGdtEnabled()) return { ok: false, error: { code: 'FEATURE_DISABLED', message: '未启用 3D 装配功能' } }
     const request = z.looseObject({ projectId: id }).safeParse(raw)

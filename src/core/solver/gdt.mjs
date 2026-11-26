@@ -12,23 +12,41 @@ export function materialBonus(tolerance, modifier, quantile, external = false) {
   return range * ((modifier === 'MMC') !== external ? quantile : 1 - quantile)
 }
 
-function disk(rng) {
-  const radius = Math.sqrt(rng.next())
+// Three standard deviations span the tolerance half-width. The normal
+// model conditions its scalar and radial draws on the allowed zone.
+function signedDraw(rng, distribution) {
+  if (distribution === 'uniform') return 2 * rng.next() - 1
+  let standard
+  do {
+    const radius = Math.sqrt(-2 * Math.log1p(-rng.next()))
+    standard = radius * Math.cos(2 * Math.PI * rng.next())
+  } while (Math.abs(standard) > 3)
+  return standard / 3
+}
+
+function unitDraw(rng, distribution) {
+  return distribution === 'uniform' ? rng.next() : (1 + signedDraw(rng, distribution)) / 2
+}
+
+function disk(rng, distribution) {
+  const quantile = rng.next()
+  const radius = distribution === 'uniform' ? Math.sqrt(quantile)
+    : Math.sqrt(-2 * Math.log1p(-quantile * (1 - Math.exp(-4.5)))) / 3
   const angle = 2 * Math.PI * rng.next()
   return [radius * Math.cos(angle), radius * Math.sin(angle)]
 }
 
-export function sampleSdt(kind, zone, tolerance, span, rng) {
-  const [x, y] = disk(rng)
+export function sampleSdt(kind, zone, tolerance, span, rng, distribution = 'uniform') {
+  const [x, y] = disk(rng, distribution)
   const radius = tolerance / 2
   const center = [0, 0, 0, 0, 0, 0]
   let form = 0
   switch (kind) {
     case 'position':
-      if (zone === 'planar') center[0] = radius * (2 * rng.next() - 1)
+      if (zone === 'planar') center[0] = radius * signedDraw(rng, distribution)
       else if (zone === 'bidirectional') {
-        center[0] = radius * (2 * rng.next() - 1)
-        center[1] = radius * (2 * rng.next() - 1)
+        center[0] = radius * signedDraw(rng, distribution)
+        center[1] = radius * signedDraw(rng, distribution)
       } else {
         center[0] = radius * x
         center[1] = radius * y
@@ -40,13 +58,13 @@ export function sampleSdt(kind, zone, tolerance, span, rng) {
       center[4] = tolerance * y / span
       break
     case 'flatness': {
-      form = tolerance * rng.next()
+      form = tolerance * (distribution === 'uniform' ? rng.next() : Math.abs(signedDraw(rng, distribution)))
       center[3] = (tolerance - form) * x / span
       center[4] = (tolerance - form) * y / span
       break
     }
     case 'coaxiality': {
-      const [endX, endY] = disk(rng)
+      const [endX, endY] = disk(rng, distribution)
       center[0] = radius * (x + endX) / 2
       center[1] = radius * (y + endY) / 2
       center[3] = radius * (y - endY) / span
@@ -122,7 +140,7 @@ function datumMotionRows(group, length) {
 
 // Solve one small-displacement rigid motion per DRF and draw. A row at
 // RFS has zero clearance, even when earlier references have mobility.
-function sampleDatumMotion(group, samples, seed) {
+function sampleDatumMotion(group, samples, seed, distribution) {
   if (!group.datums.some(datum => datum.clearance)) return null
   const rng = createRng(seed)
   const result = new Float64Array(samples * 6)
@@ -132,11 +150,11 @@ function sampleDatumMotion(group, samples, seed) {
   const motion = [0, 0, 0, 0, 0, 0]
   for (let i = 0; i < samples; i++) {
     for (const datum of group.datums) {
-      clearances[datum.index] = materialBonus(datum.clearance, datum.modifier, rng.next(), datum.external) / 2
+      clearances[datum.index] = materialBonus(datum.clearance, datum.modifier, unitDraw(rng, distribution), datum.external) / 2
     }
     motion.fill(0)
     for (const row of rows) {
-      const clearance = clearances[row.index] * (2 * rng.next() - 1) / row.divisor
+      const clearance = clearances[row.index] * signedDraw(rng, distribution) / row.divisor
       const step = (clearance - dot6(row.physical, motion)) / row.gain
       for (let k = 0; k < 6; k++) motion[k] += step * row.axis[k]
     }
@@ -197,15 +215,15 @@ function localBasis(control, world, frame, zone) {
 
 function sampleControl(entry, samples, parameters) {
   const rng = createRng(entry.seed)
-  const { control, group, span, zone, axes, lever, nominal, effects } = entry
+  const { control, group, span, zone, axes, lever, nominal, effects, distribution } = entry
   const errors = new Float64Array(samples)
   const withoutShift = group?.motion ? new Float64Array(samples) : errors
   const quantiles = new Float64Array(samples)
   for (let i = 0; i < samples; i++) {
-    quantiles[i] = rng.next()
+    quantiles[i] = unitDraw(rng, distribution)
     const processWidth = control.toleranceQ / 10000 +
       materialBonus(control.featureSizeToleranceQ, entry.modifier, quantiles[i], entry.external)
-    const { center, form } = sampleSdt(control.kind, zone, processWidth, span, rng)
+    const { center, form } = sampleSdt(control.kind, zone, processWidth, span, rng, distribution)
     for (const { parameter, coefficients } of effects) {
       const current = parameters.get(parameter.id)
       const value = current.draws[i] * current.sigma
@@ -252,9 +270,12 @@ function score(entry, draws, edit, assembly) {
     shiftSquares += (error - withoutShift[i]) ** 2
     bonusTotal += bonus
   }
-  const variance = m2 / (errors.length - 1)
+  // A single trial has no variance estimate. Return its observed error
+  // as a zero-width interval and omit Cpk, while counting observed failures.
+  const degreesOfFreedom = Math.max(1, errors.length - 1)
+  const variance = m2 / degreesOfFreedom
   const threeSigma = 3 * Math.sqrt(variance)
-  const deficitSigma = Math.sqrt(deficitM2 / (errors.length - 1))
+  const deficitSigma = Math.sqrt(deficitM2 / degreesOfFreedom)
   return { warnings, variance, failures, cpk: deficitSigma > 0 ? deficitMean / (3 * deficitSigma) : null,
     threeSigmaIntervalMm: [mean - threeSigma, mean + threeSigma],
     contribution: { gdtId: control.id, label: control.featureId, kind: control.kind, bonusMeanMm: bonusTotal / errors.length,
@@ -275,7 +296,7 @@ function summarize(entries, scores, failureCounts) {
   }
 }
 
-export function prepareGdt(assembly, geometry, parameters, transfers, samples, seed, featureGeometry = {}) {
+export function prepareGdt(assembly, geometry, parameters, transfers, samples, seed, featureGeometry = {}, distribution = 'uniform') {
   const datums = new Map((assembly.datums ?? []).map(datum => [datum.id, datum]))
   const parts = new Map(assembly.parts.map(part => [part.id, part]))
   const groups = new Map()
@@ -290,7 +311,7 @@ export function prepareGdt(assembly, geometry, parameters, transfers, samples, s
     const warnings = []
     const warn = (code, message, datumId) => warnings.push({ code, gdtId: control.id, message, ...(datumId && { datumId }) })
     const conditions = resolveGdtMaterialConditions(control, assembly)
-    const entry = { control, external, span, modifier: conditions.modifier, warnings, materialWarnings: conditions.warnings, seed: nextSeed() }
+    const entry = { control, external, span, modifier: conditions.modifier, warnings, materialWarnings: conditions.warnings, seed: nextSeed(), distribution }
     let group
     if (control.kind !== 'flatness') {
       const key = JSON.stringify([feature.partId, control.datumIds, conditions.datumModifiers])
@@ -308,7 +329,7 @@ export function prepareGdt(assembly, geometry, parameters, transfers, samples, s
         })
         const frame = buildDatumFrame(references)
         group = { frame, datums: references }
-        if (!frame.code) group.motion = sampleDatumMotion(group, samples, nextSeed())
+        if (!frame.code) group.motion = sampleDatumMotion(group, samples, nextSeed(), distribution)
         groups.set(key, group)
       }
       if (group.frame.code || control.kind === 'coaxiality' && !group.datums[0]?.cylinder) {

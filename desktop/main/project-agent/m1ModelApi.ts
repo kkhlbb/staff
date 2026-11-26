@@ -50,7 +50,7 @@ const errors: Readonly<Record<string, string>> = {
   CANCELLED: '模型请求已取消', REQUEST_IN_PROGRESS: '当前项目已有模型请求正在处理',
   FEATURE_DISABLED: '未启用 3D 装配功能', STALE_DRAFT: '当前草稿版本已变更',
   ASSEMBLY_REQUIRED: '项目没有可用的 3D 装配', INVALID_GDT: '形位公差或基准不符合装配约束',
-  UNSUPPORTED_DISTRIBUTION: '求解器暂不支持所选分布', SIMULATION_LIMIT: '采样数量超出支持范围',
+  SIMULATION_LIMIT: '采样数量超出支持范围',
   INVALID_WHAT_IF: '试算引用了未知或重复的公差', NO_GDT_CONTROLS: '草稿没有形位公差',
   ASSEMBLY_OVERCONSTRAINED: '装配配合过约束', SIMULATION_FAILED: '形位公差试算失败',
   STALE_BASE: '项目或草稿版本已更新', DRAFT_NOT_EMPTY: '当前草稿已有内容',

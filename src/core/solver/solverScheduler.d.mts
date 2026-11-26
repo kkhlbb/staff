@@ -17,6 +17,8 @@ export type SimulationInput = AssemblyInput & {
   bins?: number
   limits?: Record<string, { lower: number; upper: number }>
   parameters: ToleranceParameter[]
+  /** Opt in to GD&T sampling from 1 to 50,000 trials. Existing 3D parameter draws retain their normal model. */
+  gdtDistribution?: 'normal' | 'uniform'
   gdtFeatureGeometry?: Record<string, { spanQ?: number; external?: boolean }>
   gdtEdits?: readonly GdtWhatIfEdit[]
 }

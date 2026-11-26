@@ -6,6 +6,7 @@ import { gdtFixture } from './gdtFixture.mjs'
 
 const solver = createSolverScheduler(process.argv[2] && pathToFileURL(process.argv[2]))
 const input = gdtFixture()
+if (process.env.GDT_DISTRIBUTION !== undefined) input.gdtDistribution = process.env.GDT_DISTRIBUTION
 const fullMs = []
 const editsMs = []
 const run = inputs => solver.run({ kind: 'multivariate', inputs })
@@ -28,7 +29,7 @@ try {
   const sorted = editsMs.toSorted((a, b) => a - b)
   console.log(JSON.stringify({
     hardware: cpus()[0].model, logicalCpus: cpus().length, os: platform(), arch: arch(), release: release(), node: process.version,
-    samples: input.samples, parts: input.assembly.parts.length, mates: input.assembly.mates.length,
+    distribution: input.gdtDistribution ?? 'uniform', samples: input.samples, parts: input.assembly.parts.length, mates: input.assembly.mates.length,
     parameters: input.parameters.length, measurements: input.assembly.measurements.length, gdt: input.assembly.gdt.length,
     fullMs, editCount: editsMs.length, editP95Ms: sorted[Math.ceil(0.95 * sorted.length) - 1], editMaxMs: sorted.at(-1),
   }, null, 2))

@@ -155,7 +155,7 @@ function sampleMeasurement(m, allParameters, samples, bins, limit) {
     max = Math.max(max, value)
     if (limit && (value < limit.lower || value > limit.upper)) failures++
   }
-  const sigma = Math.sqrt(m2 / (samples - 1))
+  const sigma = Math.sqrt(m2 / Math.max(1, samples - 1))
   const counts = Array(bins).fill(0)
   const width = (max - min) / bins
   for (const value of values) counts[width ? Math.min(bins - 1, Math.floor((value - min) / width)) : 0]++
@@ -233,7 +233,14 @@ export function createSimulation(workerId) {
     }
 
     const { assembly, fixedPartIds, seed = 1, samples = 10_000, bins = 40, limits = {} } = input
-    if (!Number.isSafeInteger(samples) || samples < 10_000 || samples > 50_000) throw Error('3D samples must be 10000–50000')
+    const { gdtDistribution } = input
+    if (gdtDistribution !== undefined && gdtDistribution !== 'normal' && gdtDistribution !== 'uniform') {
+      throw Error('Invalid GD&T sampling distribution')
+    }
+    const minimumSamples = gdtDistribution === undefined ? 10_000 : 1
+    if (!Number.isSafeInteger(samples) || samples < minimumSamples || samples > 50_000) {
+      throw Error(gdtDistribution === undefined ? '3D samples must be 10000–50000' : 'GD&T samples must be 1–50000')
+    }
     if (!Number.isSafeInteger(bins) || bins < 1 || bins > 200) throw Error('Histogram bins must be 1–200')
     createRng(seed)
     if (!Array.isArray(input.parameters) || input.parameters.length > 128 || assembly.measurements.length > 128) {
@@ -256,7 +263,7 @@ export function createSimulation(workerId) {
       parameterId => transfers.get(parameterId)))
     const results = measurements.map(m => sampleMeasurement(m, parameters, samples, bins, limitFor(limits, m.spec.id)))
     const gdtModel = assembly.gdt?.length
-      ? prepareGdt(assembly, geometry, parameters, transfers, samples, seed, input.gdtFeatureGeometry) : null
+      ? prepareGdt(assembly, geometry, parameters, transfers, samples, seed, input.gdtFeatureGeometry, gdtDistribution) : null
     if (!gdtModel && input.gdtEdits?.length) throw Error('Assembly has no GD&T controls')
     const originalGdt = gdtModel && evaluateGdt(gdtModel, parameters)
     const gdt = originalGdt && input.gdtEdits?.length

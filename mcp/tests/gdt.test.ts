@@ -165,7 +165,7 @@ it('runs built-in GD&T with an approved PDF read and rejects manufactured eviden
     const message = JSON.parse(last!.content)
     const { draftRevision, ...context } = message.gdtWriterContext
     if (nextTool === 'analyze_gdt_stackup') return call(nextTool, { projectId, draftRevision,
-      expectedWriterEpoch: context.expectedWriterEpoch, monteCarlo: { seed: 5, distribution: 'uniform', samples: 10000 } })
+      expectedWriterEpoch: context.expectedWriterEpoch, monteCarlo: { seed: 5, distribution: 'normal', samples: 1 } })
     const evidence = message.attachments[0].evidence
     return call(nextTool, { ...context, expectedDraftRevision: draftRevision, idempotencyKey: forged ? 'forged' : nextTool,
       items: [{ value: nextTool === 'stage_datum' ? { id: 'A', label: 'A', featureId: 'plane' }

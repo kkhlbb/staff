@@ -1,5 +1,6 @@
 import type { M3WorkbenchBridge } from './project-agent/m3-lifecycle'
-import type { M2PreviewApi } from './project-agent/m2-preview'
+import type { StageDatumRequest, StageGdtRequest, GdtStageResult, AnalyzeGdtStackupRequest, AnalyzeGdtStackupResult } from '../../src/transport/types'
+import type { M2PreviewApi, M2Result } from './project-agent/m2-preview'
 import type { M1WorkbenchApi } from './project-agent/m1-workbench'
 import type { M1AuthorizationRequest } from './project-agent/m1-local-authorization-2002.ts'
 import type { EntryScope } from './project-agent/m1-entry-1933.ts'
@@ -43,6 +44,7 @@ import type { ExtractionCandidate } from '../../src/document-extraction/types'
 
 /** 批次 A 全部 IPC 通道（与任务卡 §3 表格逐项对应）。 */
 export const IPC_CHANNELS = {
+  gdt: 'cunlian:gdt',
   detectM1LocalAgents: 'm1-workbench:detectM1LocalAgents',
   registerM1LocalAgent: 'm1-workbench:registerM1LocalAgent',
   listM1ModelApiModels: 'm1-workbench:listM1ModelApiModels',
@@ -1501,6 +1503,10 @@ type M1ReadMethod<K extends keyof M1EntryCandidate> =
   (...args: Parameters<M1EntryCandidate[K]>) => Promise<IpcResult<Awaited<ReturnType<M1EntryCandidate[K]>>>>
 
 export interface CunlianApi extends M1WorkbenchApi, M2PreviewApi, Required<M3WorkbenchBridge> {
+  getGdtCapability(): Promise<M2Result<{ enabled: boolean }>>
+  stageDatum(request: StageDatumRequest): Promise<M2Result<GdtStageResult>>
+  stageGdt(request: StageGdtRequest): Promise<M2Result<GdtStageResult>>
+  analyzeGdtStackup(request: AnalyzeGdtStackupRequest): Promise<M2Result<AnalyzeGdtStackupResult>>
   requestM1ProjectAuthorization(request: M1AuthorizationRequest): Promise<IpcResult<EntryScope>>
   revokeM1ProjectAuthorization(request: M1AuthorizationRequest): Promise<IpcResult<{ revoked: true }>>
   getM1ProjectContext: M1ReadMethod<'getM1ProjectContext'>
