@@ -118,7 +118,8 @@ async function withCloud(enabled, work) {
   const data = await mkdtemp(join(tmpdir(), 'cunlian-cloud-bench-'))
   const key = 'bench02-ephemeral-writer'
   const peerKey = 'bench02-ephemeral-peer'
-  const config = configFrom({ CUNLIAN_DATA: data, FEATURE_3D_ASSEMBLY_M1: String(enabled),
+  const approval = "bench02-local-approval"
+  const config = configFrom({ CUNLIAN_DATA: data, CUNLIAN_APPROVAL_SECRET: approval, FEATURE_3D_ASSEMBLY_M1: String(enabled),
     CUNLIAN_KEYS: JSON.stringify([{ name: 'bench02', key, write: true }, { name: 'peer', key: peerKey, write: true }]) })
   let service
   try {
@@ -128,16 +129,17 @@ async function withCloud(enabled, work) {
       service.server.listen(0, '127.0.0.1', resolve)
     })
     const origin = 'http://127.0.0.1:' + service.server.address().port
-    const call = async (path, input, { credential = key, method } = {}) => {
+    const call = async (path, input, { credential = key, method, requestApproval = false } = {}) => {
       const form = input instanceof FormData
       const response = await fetch(origin + '/api/v1' + path, {
         method: method ?? (input === undefined ? 'GET' : 'POST'),
         headers: { authorization: 'Bearer ' + credential,
+          ...(requestApproval && { "x-cunlian-approval": approval }),
           ...(!form && input !== undefined && { 'content-type': 'application/json' }) },
         body: form ? input : JSON.stringify(input), signal: AbortSignal.timeout(30_000),
       })
       const body = await response.json()
-      return { path, status: response.status, body: body.value ?? body }
+      return { path, status: response.status, body: body.value ?? body, headers: response.headers }
     }
     return await work(call, peerKey)
   } finally {
@@ -161,6 +163,47 @@ async function leaseSerialization() {
     ])
     const statuses = responses.map(item => item.status).sort((a, b) => a - b)
     return { statuses, conflictFraction: isDeepStrictEqual(statuses, [200, 409]) ? 1 : 0 }
+  })
+}
+
+async function commitRejections() {
+  return withCloud(false, async call => {
+    const project = requireStatus(await call("/projects", { name: "Commit guard regression",
+      template: "builtin-shaft-spacer" }), 201)
+    const { projectId, baseRevision } = project
+    const path = "/projects/" + projectId
+    requireStatus(await call(path + "/writer", { expectedWriterEpoch: 0 }), 200)
+    const oldDraft = path + "/drafts/" + project.draftRevision
+    const oldReview = requireStatus(await call(oldDraft + "/review"), 200).review
+    const { draftRevision } = requireStatus(await call(path + "/drafts/changes", { change: {
+      baseRevision, expectedDraftRevision: project.draftRevision, idempotencyKey: "change-length",
+      operation: { type: "createSpacerDraft", lengthQ: 120100 },
+      sources: { lengthQ: { type: "userInput" } },
+    } }), 200)
+    const draft = path + "/drafts/" + draftRevision
+    const approved = await call(draft + "/review", undefined, { requestApproval: true })
+    const { review } = requireStatus(approved, 200)
+    const confirmationToken = approved.headers.get("x-cunlian-confirmation-token")
+    if (!confirmationToken || draftRevision === project.draftRevision ||
+      oldReview.checksetFingerprint === review.checksetFingerprint) {
+      throw Error("Commit regression fixture requires a fresh approved review and a superseded fingerprint")
+    }
+    const current = { projectId, baseRevision, draftRevision, checksetFingerprint: review.checksetFingerprint }
+    const observations = {}
+    for (const [name, fields, expectedStatus, expectedCode] of [
+      ["supersededFingerprint", { checksetFingerprint: oldReview.checksetFingerprint, confirmationToken }, 409, "STALE_CHECKSET"],
+      ["changedFingerprint", { checksetFingerprint: review.checksetFingerprint + "-changed", confirmationToken }, 409, "STALE_CHECKSET"],
+      ["missingConfirmationToken", {}, 400, "INVALID_REQUEST"],
+    ]) {
+      const { status, body } = await call(draft + "/commit", { ...current, ...fields, requestId: name })
+      const code = body.error?.code ?? null
+      const lookup = await call(draft + "/commit")
+      const state = lookup.body.state ?? null
+      observations[name] = { status, code, state, lookupStatus: lookup.status, rejectedAsExpected:
+        status === expectedStatus && code === expectedCode && lookup.status === 200 && state === "awaiting-confirmation" }
+      if (state === "committed") break
+    }
+    return observations
   })
 }
 
@@ -269,26 +312,14 @@ export async function runSuite({ repoRoot = root, offlineDir = null, seed = 2026
     await measure('E3', 'Engineering input validation and service guard coverage', { rejectionOrWarningRate: 1 }, async () => {
       const metrics = await engineeringValidation(seed)
       metrics.writerLease = await leaseSerialization()
-      const { matches } = await import('../../../cloud/server/contracts.mjs')
-      const openapi = JSON.parse(await readFile(join(repoRoot, 'cloud/contracts/openapi.json'), 'utf8'))
-      const schema = openapi.components.schemas.CommitDraftRequest
-      const valid = { projectId: 'fixture', baseRevision: null, draftRevision: 'draft',
-        requestId: 'fixture', checksetFingerprint: 'fixture-digest', confirmationToken: 'fixture-token' }
-      const { confirmationToken: _, ...withoutToken } = valid
-      const { checksetFingerprint: __, ...withoutFingerprint } = valid
-      metrics.commitContract = {
-        validShapeAccepted: matches(valid, schema),
-        missingTokenRejected: !matches(withoutToken, schema),
-        missingFingerprintRejected: !matches(withoutFingerprint, schema),
-      }
-      metrics.serviceGuardCoverage = { checksetFingerprint: 'runtime not exercised', commitConfirmation: 'runtime not exercised' }
-      if (!Object.values(metrics.commitContract).every(Boolean)) return check(false, metrics,
-        'Commit request schema does not enforce the required fingerprint and confirmation fields.')
+      metrics.commitRejections = await commitRejections()
+      if (Object.keys(metrics.commitRejections).length !== 3 ||
+        !Object.values(metrics.commitRejections).every(item => item.rejectedAsExpected)) return check(false, metrics,
+        "Runtime commit did not reject all invalid approval submissions with the expected response and unchanged draft.")
       if (metrics.validated !== metrics.expected) return check(false, metrics, 'GD&T validation did not issue every required engineering warning.')
       if (metrics.writerLease.conflictFraction !== 1) return check(false, metrics,
         'Two eligible writers did not produce exactly one successful lease and one 409.')
-      return { status: 'SKIPPED_EXTERNAL_ASSET', reason: 'Commit contract was checked in-process. Runtime fingerprint and confirmation red-team coverage remains unverified.',
-        metrics }
+      return check(true, metrics)
     }),
     await measure('E4', 'Report provenance and seed replay', { formatsComplete: 1, numericalDeviation: 0 }, () => reports(seed)),
   ]

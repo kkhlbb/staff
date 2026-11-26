@@ -45,7 +45,7 @@ function parseArgs(args) {
     offlineDir: null, seed: 20261126, samples: 50000 }
   let mode
   let selection = Object.keys(files)
-  let out = null
+  let out = join(root, "docs/benchmarks/cunlian-bench-v1-report.json")
   for (let i = 0; i < args.length; i++) {
     const flag = args[i]
     if (flag === '--offline' || flag === '--external') {
@@ -120,13 +120,9 @@ async function main(args) {
     }))),
   }
   const json = JSON.stringify(report, null, 2) + '\n'
-  if (out) {
-    mkdirSync(dirname(out), { recursive: true })
-    writeFileSync(out, json)
-    console.log(JSON.stringify({ out, ...report.summary }))
-  } else {
-    process.stdout.write(json)
-  }
+  mkdirSync(dirname(out), { recursive: true })
+  writeFileSync(out, json)
+  console.log(JSON.stringify({ out, ...report.summary }))
   if (report.summary.fail || external?.status === 'FAIL') process.exitCode = 1
 }
 
