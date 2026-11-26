@@ -161,53 +161,29 @@ export function ProjectAgentM1Workbench({
   )
 
   const session = useWorkbenchSession({
-    transport,
-    initialProjectId,
-    initialProjectName,
-    initialBaseRevision,
-    initialDraftRevision,
-    desktopBoundProjectId,
-    onRequestDesktopProjectForReadonlyAuth,
-    autoRequestReadonlyAuth,
-    onAutoReadonlyAuthConsumed,
-    availableObjectsProp,
-    availableTaskbooksProp,
-    initialConnectionSnapshot,
-    initialActivities,
-    initialMessages,
-    initialShowOnboarding,
-    initialPreviewSnapshot,
-    initialViewMode,
+    transport, initialProjectId, initialProjectName, initialBaseRevision, initialDraftRevision,
+    desktopBoundProjectId, onRequestDesktopProjectForReadonlyAuth, autoRequestReadonlyAuth,
+    onAutoReadonlyAuthConsumed, availableObjectsProp, availableTaskbooksProp,
+    initialConnectionSnapshot, initialActivities, initialMessages, initialShowOnboarding,
+    initialPreviewSnapshot, initialViewMode,
     initialSidebarSection: initialSidebarSection === 'simulation' ? 'conversation' : initialSidebarSection,
-    initialShowCompletionView,
-    initialFormalVersions,
-    initialUncommittedDrafts,
-    initialRestoreStatus,
-    initialMigrationReport,
-    forceNarrowViewport,
-    clipboardWriter,
+    initialShowCompletionView, initialFormalVersions, initialUncommittedDrafts,
+    initialRestoreStatus, initialMigrationReport, forceNarrowViewport, clipboardWriter,
   })
 
   const { viewport } = session
+  const effectiveAssembly3d = session.activeTemplateContext?.assembly3d ?? initialAssembly3d
+  const effectivePartMeshes = session.activeTemplateContext?.partMeshes ?? initialPartMeshes
+  const effectiveSimulationSpec = session.activeTemplateContext?.simulationSpec ?? initialSimulationSpec
 
   const assembly3d = useAssembly3dM1b({
-    transport,
-    projectId: session.projectId,
-    baseRevision: session.baseRevision,
-    draftRevision: session.draftRevision,
-    writerEpoch: session.writerEpoch,
-    feature3dAssemblyM1Prop,
-    initialAssembly3d,
-    initialPartMeshes,
-    initialAiMateDrafts,
-    initialAiGdtDrafts,
-    initialDatums,
-    initialGdtControls,
-    initialSimulationSpec,
-    selectedObjectIds: viewport.selectedObjectIds,
-    onSelectFeature: viewport.handleSelectFeature,
-    onClearSelection: viewport.handleClearSelection,
-    onUpdateCamera: viewport.updateCamera,
+    transport, projectId: session.projectId, baseRevision: session.baseRevision,
+    draftRevision: session.draftRevision, writerEpoch: session.writerEpoch, feature3dAssemblyM1Prop,
+    initialAssembly3d: effectiveAssembly3d, initialPartMeshes: effectivePartMeshes,
+    initialAiMateDrafts, initialAiGdtDrafts, initialDatums, initialGdtControls,
+    initialSimulationSpec: effectiveSimulationSpec,
+    selectedObjectIds: viewport.selectedObjectIds, onSelectFeature: viewport.handleSelectFeature,
+    onClearSelection: viewport.handleClearSelection, onUpdateCamera: viewport.updateCamera,
     onSetContextFeedback: viewport.setContextActionFeedback,
     onBringTextToChat: (promptText) => {
       setSimulationTabActive(false)
@@ -221,7 +197,8 @@ export function ProjectAgentM1Workbench({
     transport, enabled: assembly3d.feature3dAssemblyM1, projectId: session.projectId,
     baseRevision: session.baseRevision, draftRevision: session.draftRevision, writerEpoch: session.writerEpoch,
     partMeshes: assembly3d.partMeshes, baseSimulationResult: assembly3d.simulationResult,
-    initialPhysics: initialAssembly3d?.physics, initialAiPhysicsDrafts, initialDisplacementFields,
+    initialPhysics: effectiveAssembly3d?.physics, hasExplicitAssembly: Boolean(effectiveAssembly3d),
+    initialAiPhysicsDrafts, initialDisplacementFields,
     onSetContextFeedback: viewport.setContextActionFeedback,
   })
 
@@ -280,10 +257,11 @@ export function ProjectAgentM1Workbench({
       transport, projectId: session.projectId, projectName: session.projectName,
       baseRevision: session.baseRevision, draftRevision: session.draftRevision,
       checksetFingerprint: session.checkSetFingerprint, simulationResult: physics.simulationResult,
+      assembly3d: effectiveAssembly3d, seed: effectiveSimulationSpec?.seed,
       captureSnapshots: () => snapshotHandleRef.current?.captureSnapshots() ?? {},
       onExportComplete: (msg: string) => session.setPreviewMessage(msg),
     }),
-    [transport, session, physics.simulationResult],
+    [transport, session, physics.simulationResult, effectiveAssembly3d, effectiveSimulationSpec?.seed],
   )
 
   const rootClassName = className ? `pa-workbench ${className}` : 'pa-workbench'

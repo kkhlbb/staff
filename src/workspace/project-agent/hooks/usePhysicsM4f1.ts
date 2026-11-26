@@ -30,6 +30,7 @@ export interface UsePhysicsM4f1Options {
   readonly partMeshes: readonly PartMesh[]
   readonly baseSimulationResult: SimulationDiagnosticResult
   readonly initialPhysics?: AssemblyPhysicsSpec
+  readonly hasExplicitAssembly?: boolean
   readonly initialAiPhysicsDrafts?: readonly AiPhysicsDraftItem[]
   readonly initialDisplacementFields?: readonly PartDisplacementField[]
   readonly onSetContextFeedback: (message: string | null) => void
@@ -67,18 +68,27 @@ export function usePhysicsM4f1({
   partMeshes,
   baseSimulationResult,
   initialPhysics,
+  hasExplicitAssembly = false,
   initialAiPhysicsDrafts,
   initialDisplacementFields,
   onSetContextFeedback,
 }: UsePhysicsM4f1Options) {
   const defaultFixture = useMemo(() => createDefaultM4f1PhysicsFixture(), [])
+  const resolvedInitialPhysics =
+    initialPhysics !== undefined
+      ? initialPhysics
+      : hasExplicitAssembly
+        ? undefined
+        : defaultFixture.defaultPhysics
 
   const [physicsSpec, setPhysicsSpec] = useState<AssemblyPhysicsSpec | undefined>(() =>
-    initialPhysics !== undefined ? initialPhysics : defaultFixture.defaultPhysics,
+    resolvedInitialPhysics,
   )
-  const [userEditedPhysics, setUserEditedPhysics] = useState<boolean>(() => initialPhysics !== undefined)
+  const [userEditedPhysics, setUserEditedPhysics] = useState<boolean>(
+    () => initialPhysics !== undefined,
+  )
   const [includeCompliant, setIncludeCompliant] = useState<boolean>(() => {
-    const src = initialPhysics !== undefined ? initialPhysics : defaultFixture.defaultPhysics
+    const src = resolvedInitialPhysics
     return Boolean(
       src &&
         src.enabled !== false &&
@@ -104,10 +114,30 @@ export function usePhysicsM4f1({
   const seqRef = useRef(0)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestDraftRevRef = useRef<string | null>(draftRevision)
+  const prevProjectKeyRef = useRef<string>(`${projectId}:${hasExplicitAssembly ? '1' : '0'}:${Boolean(initialPhysics)}`)
 
   useEffect(() => {
     latestDraftRevRef.current = draftRevision
   }, [draftRevision])
+
+  useEffect(() => {
+    const nextKey = `${projectId}:${hasExplicitAssembly ? '1' : '0'}:${Boolean(initialPhysics)}`
+    if (prevProjectKeyRef.current === nextKey) return
+    prevProjectKeyRef.current = nextKey
+    setPhysicsSpec(resolvedInitialPhysics)
+    setUserEditedPhysics(initialPhysics !== undefined)
+    setIncludeCompliant(
+      Boolean(
+        resolvedInitialPhysics &&
+          resolvedInitialPhysics.enabled !== false &&
+          ((resolvedInitialPhysics.compliantModels?.length ?? 0) > 0 ||
+            Boolean(resolvedInitialPhysics.micMatrixRef)),
+      ),
+    )
+    setDeformationMode('nominal')
+    setTransportSummary(null)
+    setTransportFields(initialDisplacementFields ? [...initialDisplacementFields] : null)
+  }, [projectId, hasExplicitAssembly, initialPhysics, resolvedInitialPhysics, initialDisplacementFields])
 
   useEffect(() => {
     return () => {
@@ -257,7 +287,8 @@ export function usePhysicsM4f1({
           notify(`${feedbackPrefix}（已写入草稿 ${res.value.draftRevision}）。`)
         } else if (
           res.error.code === 'BACKEND_UNAVAILABLE' ||
-          res.error.code === 'FEATURE_DISABLED'
+          res.error.code === 'FEATURE_DISABLED' ||
+          res.error.code === 'AUTH_REQUIRED'
         ) {
           notify(`${feedbackPrefix}（本地草稿已更新）。`)
         } else {
@@ -358,7 +389,8 @@ export function usePhysicsM4f1({
           scheduleCompliantAnalysis()
         } else if (
           res.error.code === 'BACKEND_UNAVAILABLE' ||
-          res.error.code === 'FEATURE_DISABLED'
+          res.error.code === 'FEATURE_DISABLED' ||
+          res.error.code === 'AUTH_REQUIRED'
         ) {
           setPhysicsSpec((prev) => ({
             ...prev,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { getBuiltinTemplate } from '../../templates/registry'
 import { DesktopSessionAdapter, type DesktopSessionState } from '../desktopAdapter'
 import {
   ProjectAgentM1Workbench,
@@ -132,6 +133,7 @@ export function DesktopAgentWorkspace() {
     typeof desktopApi.openProject === 'function'
 
   const project = session?.snapshot?.project
+  const startupTemplate = !project ? getBuiltinTemplate('builtin-mounting-plate') : undefined
   const boundProjectId =
     session?.status === 'open' && session.path && session.fingerprint
       ? (project?.id ?? null)
@@ -145,9 +147,13 @@ export function DesktopAgentWorkspace() {
       {error && <p role="alert">{error}</p>}
       <ProjectAgentM1Workbench
         key={session?.sessionId ?? 'startup'}
-        initialProjectId={project?.id}
-        initialProjectName={project?.name}
-        initialBaseRevision={session?.fingerprint ?? null}
+        initialProjectId={project?.id ?? startupTemplate?.projectDefaults.projectId}
+        initialProjectName={project?.name ?? startupTemplate?.projectDefaults.projectName}
+        initialBaseRevision={session?.fingerprint ?? startupTemplate?.projectDefaults.baseRevision ?? null}
+        initialPreviewSnapshot={startupTemplate?.previewSnapshot}
+        initialAssembly3d={project?.assembly3d ?? startupTemplate?.assembly3d}
+        initialPartMeshes={startupTemplate?.partMeshes}
+        initialSimulationSpec={startupTemplate?.simulationSpec}
         desktopBoundProjectId={canOpenDesktopProject ? boundProjectId : undefined}
         onRequestDesktopProjectForReadonlyAuth={
           canOpenDesktopProject ? handleRequestDesktopProjectForReadonlyAuth : undefined

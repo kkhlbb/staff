@@ -27,6 +27,18 @@ function plot(check: ReportConclusion): string {
 <h4>Top contributors</h4><svg viewBox="0 0 480 ${Math.max(24, 24 * check.pareto.length)}" role="img" aria-label="Top contributor Pareto">${pareto}</svg>`
 }
 
+function encodeBase64Utf8(value: string): string {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(value, 'utf8').toString('base64')
+  }
+  const bytes = new TextEncoder().encode(value)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i]!)
+  }
+  return typeof btoa === 'function' ? btoa(binary) : ''
+}
+
 export function renderHtmlReport(report: SimulationReportPayloadV1): string {
   const snapshots = Object.entries(report.viewportSnapshots ?? {}).map(([name, value]) =>
     /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(value)
@@ -35,7 +47,7 @@ export function renderHtmlReport(report: SimulationReportPayloadV1): string {
   ).join('')
   // An isolated image document keeps embedded SVG inert. CSP blocks its external resources.
   const drawing = report.hlrSvg
-    ? `<figure><img src="data:image/svg+xml;base64,${Buffer.from(report.hlrSvg).toString('base64')}" alt="HLR engineering drawing"></figure>`
+    ? `<figure><img src="data:image/svg+xml;base64,${encodeBase64Utf8(report.hlrSvg)}" alt="HLR engineering drawing"></figure>`
     : ''
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">

@@ -6,9 +6,24 @@ import type {
   M2RequirementItem,
 } from '../../desktop/shared/project-agent/m2-preview'
 import type { M1TaskbookReference } from '../workspace/project-agent/m1WorkbenchBridge'
+import type { PartMesh, SimulationLoopSpec } from '../workspace/project-agent/assembly3dTypes'
 import type { ChainDefinition, DimensionTerm } from '../domain/types'
 import { parseMm } from '../domain/units'
 import type { AssemblyModelV1 } from '../project-file/types'
+import {
+  COMPLIANT_COVER_DRAWING_VECTOR,
+  COMPLIANT_COVER_MODEL_MESH,
+  COMPLIANT_COVER_PART_MESHES,
+  COMPLIANT_COVER_SIMULATION_SPEC,
+  MOUNTING_PLATE_DRAWING_VECTOR,
+  MOUNTING_PLATE_MODEL_MESH,
+  MOUNTING_PLATE_PART_MESHES,
+  MOUNTING_PLATE_SIMULATION_SPEC,
+  SHAFT_SPACER_DRAWING_VECTOR,
+  SHAFT_SPACER_MODEL_MESH,
+  SHAFT_SPACER_PART_MESHES,
+  SHAFT_SPACER_SIMULATION_SPEC,
+} from './templateGeometry'
 
 export type BuiltinTemplateId =
   | 'builtin-mounting-plate'
@@ -36,6 +51,8 @@ export interface BuiltinTemplateDefinition {
   readonly taskbooks: readonly M1TaskbookReference[]
   readonly chain: ChainDefinition | null
   readonly assembly3d: AssemblyModelV1
+  readonly partMeshes: readonly PartMesh[]
+  readonly simulationSpec: SimulationLoopSpec
   readonly regressionNotes: readonly string[]
 }
 
@@ -52,6 +69,8 @@ export interface ClonedTemplateDraft {
   readonly taskbooks: M1TaskbookReference[]
   readonly chain: ChainDefinition | null
   readonly assembly3d: AssemblyModelV1
+  readonly partMeshes: PartMesh[]
+  readonly simulationSpec: SimulationLoopSpec
   readonly regressionNotes: string[]
 }
 
@@ -603,6 +622,25 @@ const SHAFT_SPACER_ASSEMBLY: AssemblyModelV1 = {
         innerDiameterQ: parseMm('12.0000'),
         outerDiameterQ: parseMm('24.0000'),
         lengthQ: parseMm('59.8000'),
+      },
+      modifiers: [],
+    },
+    {
+      id: 'part-stepped-shaft',
+      displayName: '阶梯轴/端盖',
+      color: '#64748b',
+      nominalTransform: [
+        [...IDENTITY_TRANSFORM[0]],
+        [...IDENTITY_TRANSFORM[1]],
+        [...IDENTITY_TRANSFORM[2]],
+        [...IDENTITY_TRANSFORM[3]],
+      ],
+      kind: 'parametric-primitive',
+      baseKind: 'cylinder-spacer',
+      sizeQ: {
+        innerDiameterQ: parseMm('1.0000'),
+        outerDiameterQ: parseMm('12.0000'),
+        lengthQ: parseMm('100.0000'),
       },
       modifiers: [],
     },
@@ -1202,12 +1240,14 @@ const BUILTIN_TEMPLATES: readonly BuiltinTemplateDefinition[] = deepFreeze([
       requirements: MOUNTING_PLATE_REQUIREMENTS,
       checks: MOUNTING_PLATE_CHECKS,
       history: [],
-      modelMesh: null,
-      drawingVector: null,
+      modelMesh: MOUNTING_PLATE_MODEL_MESH,
+      drawingVector: MOUNTING_PLATE_DRAWING_VECTOR,
     },
     taskbooks: MOUNTING_PLATE_TASKBOOKS,
     chain: null,
     assembly3d: MOUNTING_PLATE_ASSEMBLY,
+    partMeshes: MOUNTING_PLATE_PART_MESHES,
+    simulationSpec: MOUNTING_PLATE_SIMULATION_SPEC,
     regressionNotes: [
       '80 × 50 × 8 mm 矩形安装板，双 Ø10 mm 通孔中心 (20,25) / (60,25) mm',
       '右孔至右端面剩余材料 ≥ 13 mm；参考盖板间隙 ≥ 1.5 mm',
@@ -1253,12 +1293,14 @@ const BUILTIN_TEMPLATES: readonly BuiltinTemplateDefinition[] = deepFreeze([
       requirements: SHAFT_SPACER_REQUIREMENTS,
       checks: SHAFT_SPACER_CHECKS,
       history: [],
-      modelMesh: null,
-      drawingVector: null,
+      modelMesh: SHAFT_SPACER_MODEL_MESH,
+      drawingVector: SHAFT_SPACER_DRAWING_VECTOR,
     },
     taskbooks: SHAFT_SPACER_TASKBOOKS,
     chain: SHAFT_SPACER_CHAIN,
     assembly3d: SHAFT_SPACER_ASSEMBLY,
+    partMeshes: SHAFT_SPACER_PART_MESHES,
+    simulationSpec: SHAFT_SPACER_SIMULATION_SPEC,
     regressionNotes: [
       '一维轴向尺寸链 H(100) - B1(20) - S(59.8) - B2(20)，目标间隙 [0.10, 0.30] mm',
       '保留 12.00 / 12.04 / 12.10 / 12.05 历史隔套四组回归基准',
@@ -1304,12 +1346,14 @@ const BUILTIN_TEMPLATES: readonly BuiltinTemplateDefinition[] = deepFreeze([
       requirements: COMPLIANT_COVER_REQUIREMENTS,
       checks: COMPLIANT_COVER_CHECKS,
       history: [],
-      modelMesh: null,
-      drawingVector: null,
+      modelMesh: COMPLIANT_COVER_MODEL_MESH,
+      drawingVector: COMPLIANT_COVER_DRAWING_VECTOR,
     },
     taskbooks: COMPLIANT_COVER_TASKBOOKS,
     chain: null,
     assembly3d: COMPLIANT_COVER_WARPAGE_ASSEMBLY,
+    partMeshes: COMPLIANT_COVER_PART_MESHES,
+    simulationSpec: COMPLIANT_COVER_SIMULATION_SPEC,
     regressionNotes: [
       '1.5 mm 6061-T6 薄铝盖板四角 450 N 锁紧 + 0.28 mm 初始翘曲 + 弹性隔套压缩耦合',
       '预配基准 A/B、右孔位置度 ⌖ Ø0.12 MMC、盖板平面度 ⏥ 0.28 mm 与残余间隙封闭环',
@@ -1335,6 +1379,20 @@ export function listBuiltinTemplates(): readonly BuiltinTemplateDefinition[] {
  */
 export function getBuiltinTemplate(templateId: string): BuiltinTemplateDefinition | undefined {
   return TEMPLATE_BY_ID.get(templateId)
+}
+
+/**
+ * Finds a built-in template matching either an explicit `templateId` or default `projectId`.
+ */
+export function findBuiltinTemplateForProject(
+  projectId: string,
+  templateId?: string,
+): BuiltinTemplateDefinition | undefined {
+  if (templateId) {
+    const byId = TEMPLATE_BY_ID.get(templateId)
+    if (byId) return byId
+  }
+  return BUILTIN_TEMPLATES.find((tpl) => tpl.projectDefaults.projectId === projectId)
 }
 
 /**
@@ -1391,6 +1449,8 @@ export function cloneTemplateToDraft(
     taskbooks: deepClone([...template.taskbooks]),
     chain: template.chain ? deepClone(template.chain) : null,
     assembly3d: deepClone(template.assembly3d),
+    partMeshes: deepClone([...template.partMeshes]),
+    simulationSpec: deepClone(template.simulationSpec),
     regressionNotes: [...template.regressionNotes],
   }
 }

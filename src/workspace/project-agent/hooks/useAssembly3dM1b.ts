@@ -322,10 +322,44 @@ export function useAssembly3dM1b({
   const latestDraftRevisionRef = useRef<string | null>(draftRevision)
   const gdtSeqRef = useRef<number>(0)
   const simSeqRef = useRef<number>(0)
+  const contextKeyRef = useRef<string>(`${projectId}:${simulationSpec.id}:${initialAssembly3d?.parts.length ?? 0}`)
 
   useEffect(() => {
     latestDraftRevisionRef.current = draftRevision
   }, [draftRevision])
+
+  useEffect(() => {
+    const nextKey = `${projectId}:${simulationSpec.id}:${initialAssembly3d?.parts.length ?? 0}`
+    if (contextKeyRef.current === nextKey) return
+    contextKeyRef.current = nextKey
+    const nextDatums = initialDatums ?? initialAssembly3d?.datums ?? defaultGdtFixture.datums
+    const nextControls = initialGdtControls ?? initialAssembly3d?.gdt ?? defaultGdtFixture.gdtControls
+    setHiddenPartIds(new Set())
+    setHoveredFeatureId(null)
+    setEditingGdtId(null)
+    setFourWayTarget(null)
+    setToleranceOverrides({})
+    setDatums(nextDatums)
+    setGdtControls(nextControls)
+    setSimulationResult(
+      computeLocalGdtSimulationDiagnostics(simulationSpec, {
+        gdtControls: nextControls,
+        datums: nextDatums,
+        featureKindById,
+        featureLabelById,
+      }),
+    )
+  }, [
+    projectId,
+    simulationSpec,
+    initialAssembly3d,
+    initialDatums,
+    initialGdtControls,
+    defaultGdtFixture.datums,
+    defaultGdtFixture.gdtControls,
+    featureKindById,
+    featureLabelById,
+  ])
 
   const focusedLoopFeatureIds = useMemo(() => {
     const ids = new Set<string>()
@@ -524,7 +558,8 @@ export function useAssembly3dM1b({
           }
         } else if (
           res.error.code !== 'BACKEND_UNAVAILABLE' &&
-          res.error.code !== 'FEATURE_DISABLED'
+          res.error.code !== 'FEATURE_DISABLED' &&
+          res.error.code !== 'AUTH_REQUIRED'
         ) {
           onFailure?.(`基准暂存失败（${res.error.code}）：${res.error.message}`)
         }
@@ -568,7 +603,8 @@ export function useAssembly3dM1b({
           }
         } else if (
           res.error.code !== 'BACKEND_UNAVAILABLE' &&
-          res.error.code !== 'FEATURE_DISABLED'
+          res.error.code !== 'FEATURE_DISABLED' &&
+          res.error.code !== 'AUTH_REQUIRED'
         ) {
           onFailure?.(`GD&T 暂存失败（${res.error.code}）：${res.error.message}`)
         }
@@ -683,7 +719,7 @@ export function useAssembly3dM1b({
                 return
               }
               setSimulationComputing(false)
-              if (res.error.code !== 'FEATURE_DISABLED') {
+              if (res.error.code !== 'FEATURE_DISABLED' && res.error.code !== 'AUTH_REQUIRED') {
                 onSetContextFeedback(`GD&T 仿真调用失败（${res.error.code}）：${res.error.message}`)
               }
             })

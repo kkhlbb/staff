@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { flushSync } from 'react-dom'
-import { cloneTemplateToDraft, type BuiltinTemplateId } from '../../../templates/registry'
+import {
+  cloneTemplateToDraft,
+  findBuiltinTemplateForProject,
+  type BuiltinTemplateId,
+} from '../../../templates/registry'
+import type {
+  AssemblyModelV1,
+  PartMesh,
+  SimulationLoopSpec,
+} from '../assembly3dTypes'
 import type { ElectronTransport } from '../../../transport/electronTransport'
 import {
   applyAuthoritativeScopeEpochSync,
@@ -181,6 +190,11 @@ export function useWorkbenchSession({
   const [projectName, setProjectName] = useState(resolvedInitialProjectName)
   const [baseRevision, setBaseRevision] = useState<string | null>(resolvedInitialBaseRevision)
   const [draftRevision, setDraftRevision] = useState<string | null>(resolvedInitialDraftRevision)
+  const [activeTemplateContext, setActiveTemplateContext] = useState<{
+    readonly assembly3d: AssemblyModelV1
+    readonly partMeshes: readonly PartMesh[]
+    readonly simulationSpec: SimulationLoopSpec
+  } | null>(null)
   const [theme, setTheme] = useState<WorkbenchTheme>(() => readStoredWorkbenchTheme('light'))
 
   const handleToggleTheme = () => {
@@ -1527,6 +1541,32 @@ export function useWorkbenchSession({
   }
 
   const handleOpenLocalProject = (item: WorkbenchLocalProject) => {
+    const matchedTemplate = findBuiltinTemplateForProject(item.projectId, item.templateId)
+    const clonedTemplate = matchedTemplate
+      ? cloneTemplateToDraft(matchedTemplate.templateId, {
+          projectId: item.projectId,
+          projectName: item.projectName,
+          draftRevision: item.draftRevision ?? item.baseRevision ?? undefined,
+        })
+      : null
+    const nextPreviewSnapshot: Partial<M2PreviewSnapshot> | undefined = clonedTemplate
+      ? {
+          ...clonedTemplate.previewSnapshot,
+          projectId: item.projectId,
+          currentRevision: item.draftRevision ?? item.baseRevision ?? clonedTemplate.previewSnapshot.currentRevision,
+          model: {
+            ...clonedTemplate.previewSnapshot.model,
+            revision: item.draftRevision ?? item.baseRevision ?? clonedTemplate.previewSnapshot.model.revision,
+            isDraft: Boolean(item.draftRevision),
+          },
+          drawing: {
+            ...clonedTemplate.previewSnapshot.drawing,
+            revision: item.draftRevision ?? item.baseRevision ?? clonedTemplate.previewSnapshot.drawing.revision,
+            isDraft: Boolean(item.draftRevision),
+          },
+        }
+      : undefined
+
     const tracker = trackerRef.current
     tracker.projectId = item.projectId
     tracker.draftRevision = item.draftRevision
@@ -1547,11 +1587,21 @@ export function useWorkbenchSession({
     setScopeEpoch(tracker.scopeEpoch)
     setSkippedConnection(connectionSource === 'none')
     setShowOnboarding(false)
+    setActiveTemplateContext(
+      clonedTemplate
+        ? {
+            assembly3d: clonedTemplate.assembly3d,
+            partMeshes: clonedTemplate.partMeshes,
+            simulationSpec: clonedTemplate.simulationSpec,
+          }
+        : null,
+    )
     resetProjectScopedStateForSwitch({
       nextProjectId: item.projectId,
       nextProjectName: item.projectName,
       nextBaseRevision: item.baseRevision,
       nextDraftRevision: item.draftRevision,
+      nextPreviewSnapshot,
     })
     setTakeoverNotice(`已打开本地项目：${item.projectName}（${item.projectId}）。`)
   }
@@ -1578,6 +1628,11 @@ export function useWorkbenchSession({
     setScopeEpoch(tracker.scopeEpoch)
     setSkippedConnection(connectionSource === 'none')
     setShowOnboarding(false)
+    setActiveTemplateContext({
+      assembly3d: cloned.assembly3d,
+      partMeshes: cloned.partMeshes,
+      simulationSpec: cloned.simulationSpec,
+    })
     resetProjectScopedStateForSwitch({
       nextProjectId: cloned.projectId,
       nextProjectName: cloned.projectName,
@@ -2779,6 +2834,7 @@ export function useWorkbenchSession({
     fetchModelApiModels,
     handleTestModelApi,
     // Projects & templates
+    activeTemplateContext,
     handleOpenLocalProject,
     handleOpenBuiltinTemplate,
     // Activities & chat

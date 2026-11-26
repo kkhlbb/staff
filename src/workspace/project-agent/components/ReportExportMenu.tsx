@@ -1,11 +1,16 @@
 import { useState } from 'react'
-import type { ReportViewportSnapshots } from '../../../report/types'
+import { renderHtmlReport } from '../../../report/renderHtmlReport'
+import type {
+  ReportConclusion,
+  ReportViewportSnapshots,
+  SimulationReportPayloadV1,
+} from '../../../report/types'
 import type {
   ExportSimulationReportRequest,
   ExportSimulationReportResult,
   Transport,
 } from '../../../transport/types'
-import type { SimulationDiagnosticResult } from '../assembly3dTypes'
+import type { AssemblyModelV1, SimulationDiagnosticResult } from '../assembly3dTypes'
 
 export type ReportExportFormat = ExportSimulationReportRequest['format']
 
@@ -17,6 +22,8 @@ export interface ReportExportMenuProps {
   readonly draftRevision?: string | null
   readonly checksetFingerprint?: string
   readonly simulationResult?: SimulationDiagnosticResult
+  readonly assembly3d?: AssemblyModelV1
+  readonly seed?: number
   readonly captureSnapshots?: () => Promise<ReportViewportSnapshots> | ReportViewportSnapshots
   readonly variant?: 'card' | 'inline' | 'menu-items'
   readonly onExportComplete?: (message: string) => void
@@ -37,12 +44,125 @@ function sanitizeFileSegment(raw: string): string {
   return raw.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'cunlian-report'
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+function csvCell(value: unknown): string {
+  const text = String(value ?? '')
+  const safe = typeof value === 'string' && /^[\s]*[=+@-]|^[\t\r\n]/.test(text) ? `'${text}` : text
+  return `"${safe.replaceAll('"', '""')}"`
+}
+
+function buildOfflineReportPayload(params: {
+  readonly projectId: string
+  readonly projectName: string
+  readonly revision: string
+  readonly isDraft: boolean
+  readonly checksetFingerprint: string
+  readonly seed: number
+  readonly simulationResult?: SimulationDiagnosticResult
+  readonly assembly3d?: AssemblyModelV1
+  readonly viewportSnapshots?: ReportViewportSnapshots
+}): SimulationReportPayloadV1 {
+  const generatedAtIso = new Date().toISOString()
+  const sim = params.simulationResult
+  const conclusions: ReportConclusion[] = []
+  if (sim) {
+    let cumulative = 0
+    const pareto = sim.pareto.map((item) => {
+      cumulative = Math.min(100, cumulative + item.varianceSharePercent)
+      return {
+        inputId: item.contributorId,
+        label: item.label,
+        varianceSharePct: Number(item.varianceSharePercent.toFixed(2)),
+        cumulativeSharePct: Number(cumulative.toFixed(2)),
+      }
+    })
+    const compliantMetrics = sim.compliantSummary?.compliantResult
+    const rigidMetrics = sim.compliantSummary?.rigidBaseline
+    const flexDeltaCpk =
+      compliantMetrics && rigidMetrics && compliantMetrics.cpk !== null && rigidMetrics.cpk !== null
+        ? Number((compliantMetrics.cpk - rigidMetrics.cpk).toFixed(3))
+        : null
+    conclusions.push({
+      checkId: sim.loopId,
+      label: sim.title,
+      requirementMm: [sim.lslMm, sim.uslMm],
+      extremeIntervalMm: [sim.threeSigmaLowMm, sim.threeSigmaHighMm],
+      status: sim.status === 'warn' ? 'indeterminate' : sim.status,
+      rigid: rigidMetrics
+        ? {
+            threeSigmaIntervalMm: rigidMetrics.threeSigmaIntervalMm,
+            cp: sim.cp,
+            cpk: rigidMetrics.cpk,
+            ppm: rigidMetrics.ppm,
+          }
+        : {
+            threeSigmaIntervalMm: [sim.threeSigmaLowMm, sim.threeSigmaHighMm],
+            cp: sim.cp,
+            cpk: sim.cpk,
+            ppm: sim.ppm,
+          },
+      compliant: compliantMetrics
+        ? {
+            threeSigmaIntervalMm: compliantMetrics.threeSigmaIntervalMm,
+            cp: sim.cp,
+            cpk: compliantMetrics.cpk,
+            ppm: compliantMetrics.ppm,
+          }
+        : null,
+      flexDeltaCpk,
+      histogram: sim.histogram.map((bin) => ({
+        intervalMm: [bin.startMm, bin.endMm],
+        count: bin.count,
+        outOfSpecCount: bin.outOfSpec ? bin.count : 0,
+      })),
+      pareto,
+    })
+  }
+
+  return {
+    schemaVersion: 1,
+    projectId: params.projectId,
+    projectName: params.projectName,
+    appVersion: '1.0.0',
+    revision: params.revision,
+    isDraft: params.isDraft,
+    checksetFingerprint: params.checksetFingerprint,
+    seed: params.seed,
+    sampleCount: sim?.sampleCount ?? 50000,
+    distribution: 'normal',
+    generatedAtIso,
+    conclusions,
+    ...(params.viewportSnapshots ? { viewportSnapshots: params.viewportSnapshots } : {}),
+    parameters: {
+      parts: params.assembly3d?.parts ?? [],
+      materials: params.assembly3d?.physics?.materials ?? [],
+      fits: params.assembly3d?.mates ?? [],
+      datums: params.assembly3d?.datums ?? [],
+      gdt: (params.assembly3d?.gdt ?? []).map((control) => ({
+        control,
+        bonusMeanMm: null,
+        datumShiftContributionPct: null,
+        warnings: [],
+      })),
+      compliantModels: params.assembly3d?.physics?.compliantModels ?? [],
+      loads: params.assembly3d?.physics?.loads ?? [],
+      initialWarp: params.assembly3d?.physics?.initialWarp ?? [],
+      mic: null,
+    },
+    evidence: [
+      {
+        target: `project:${params.projectId}`,
+        ref: {
+          kind: 'user-attestation',
+          actorId: 'desktop-local-workbench',
+          at: generatedAtIso,
+          sessionSeq: 1,
+          sessionLabel: '本地模板离线工程报告导出',
+          statement: `基于本地模板「${params.projectName}」(${params.revision}) 确定性求解器生成离线仿真报告。`,
+          fieldPath: '/simulation/report',
+        },
+      },
+    ],
+  }
 }
 
 async function computeFallbackSha256Hex(content: string): Promise<string> {
@@ -105,88 +225,70 @@ function triggerBrowserBlobDownload(
   }
 }
 
-function buildLocalFallbackReportContent(params: {
+async function buildLocalFallbackReportContent(params: {
   readonly format: Exclude<ReportExportFormat, 'pdf'>
   readonly projectId: string
   readonly projectName: string
   readonly revision: string
+  readonly isDraft: boolean
   readonly checksetFingerprint: string
+  readonly seed: number
   readonly simulationResult?: SimulationDiagnosticResult
+  readonly assembly3d?: AssemblyModelV1
   readonly viewportSnapshots?: ReportViewportSnapshots
-}): { readonly fileName: string; readonly mimeType: ExportSimulationReportResult['mimeType']; readonly content: string } {
+}): Promise<{ readonly fileName: string; readonly mimeType: ExportSimulationReportResult['mimeType']; readonly content: string }> {
   const baseName = `${sanitizeFileSegment(params.projectId)}-${sanitizeFileSegment(params.revision)}`
-  const sim = params.simulationResult
-  const generatedAtIso = new Date().toISOString()
+  const payload = buildOfflineReportPayload(params)
 
   if (params.format === 'json') {
-    const payload = {
-      schemaVersion: 1,
-      projectId: params.projectId,
-      projectName: params.projectName,
-      revision: params.revision,
-      checksetFingerprint: params.checksetFingerprint,
-      generatedAtIso,
-      simulation: sim
-        ? {
-            title: sim.title,
-            nominalMm: sim.nominalMm,
-            lslMm: sim.lslMm,
-            uslMm: sim.uslMm,
-            threeSigmaIntervalMm: [sim.threeSigmaLowMm, sim.threeSigmaHighMm],
-            cp: sim.cp,
-            cpk: sim.cpk,
-            ppm: sim.ppm,
-            status: sim.status,
-          }
-        : null,
-      hasViewportSnapshots: Boolean(
-        params.viewportSnapshots?.nominalPngDataUrl || params.viewportSnapshots?.heatmapPngDataUrl,
-      ),
-    }
+    const payloadJson = JSON.stringify(payload, null, 2)
+    const payloadSha = await computeFallbackSha256Hex(payloadJson)
     return {
-      fileName: `${baseName}-audit.json`,
+      fileName: `simulation-${baseName}.json`,
       mimeType: 'application/json',
-      content: JSON.stringify(payload, null, 2),
+      content: `${JSON.stringify({ ...payload, sha256: payloadSha }, null, 2)}\n`,
     }
   }
 
   if (params.format === 'csv') {
-    const header = 'projectId,revision,checksetFingerprint,loop,nominalMm,lslMm,uslMm,cp,cpk,ppm,status'
-    const row = sim
-      ? [
-          params.projectId,
-          params.revision,
-          params.checksetFingerprint,
-          `"${sim.title.replace(/"/g, '""')}"`,
-          sim.nominalMm.toFixed(4),
-          sim.lslMm.toFixed(4),
-          sim.uslMm.toFixed(4),
-          sim.cp.toFixed(3),
-          sim.cpk.toFixed(3),
-          String(sim.ppm),
-          sim.status,
-        ].join(',')
-      : `${params.projectId},${params.revision},${params.checksetFingerprint},N/A,,,,,,,`
+    const rows: unknown[][] = [[
+      'projectId', 'revision', 'draft', 'checksetFingerprint', 'seed', 'sampleCount', 'checkId', 'label',
+      'status', 'mode', 'requirementLowerMm', 'requirementUpperMm', 'extremeLowerMm', 'extremeUpperMm',
+      'threeSigmaLowerMm', 'threeSigmaUpperMm', 'Cp', 'Cpk', 'PPM', 'flexDeltaCpk',
+    ]]
+    const stamp = [
+      payload.projectId, payload.revision, payload.isDraft,
+      payload.checksetFingerprint, payload.seed, payload.sampleCount,
+    ]
+    for (const check of payload.conclusions) {
+      for (const [mode, metrics] of [['rigid', check.rigid], ['compliant', check.compliant]] as const) {
+        if (!metrics) continue
+        rows.push([
+          ...stamp, check.checkId, check.label, check.status, mode,
+          ...check.requirementMm, ...check.extremeIntervalMm, ...metrics.threeSigmaIntervalMm,
+          metrics.cp, metrics.cpk, metrics.ppm, check.flexDeltaCpk,
+        ])
+      }
+    }
     return {
-      fileName: `${baseName}-report.csv`,
+      fileName: `simulation-${baseName}.csv`,
       mimeType: 'text/csv',
-      content: `${header}\n${row}\n`,
+      content: `\uFEFF${rows.map((r) => r.map(csvCell).join(',')).join('\r\n')}\r\n`,
     }
   }
 
-  const snapshotImg = params.viewportSnapshots?.nominalPngDataUrl
-    ? `<section><h2>3D 视口快照</h2><img src="${params.viewportSnapshots.nominalPngDataUrl}" alt="3D 名义态快照" style="max-width:100%;border:1px solid #cbd5e1;border-radius:6px;" /></section>`
-    : ''
-  const simBlock = sim
-    ? `<section><h2>仿真结论：${escapeHtml(sim.title)}</h2><ul><li>名义值：${sim.nominalMm.toFixed(3)} mm</li><li>公差要求：[${sim.lslMm.toFixed(2)}, ${sim.uslMm.toFixed(2)}] mm</li><li>±3σ 区间：[${sim.threeSigmaLowMm.toFixed(3)}, ${sim.threeSigmaHighMm.toFixed(3)}] mm</li><li>Cp / Cpk：${sim.cp.toFixed(2)} / ${sim.cpk.toFixed(2)}</li><li>预测不良率：${sim.ppm} PPM</li></ul></section>`
-    : ''
-  const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8" /><title>${escapeHtml(params.projectName)} 工程仿真报告</title><style>body{font-family:system-ui,sans-serif;max-width:860px;margin:24px auto;padding:0 16px;color:#0f172a}code{background:#f1f5f9;padding:2px 6px;border-radius:4px}</style></head><body><h1>寸链工程仿真报告 · ${escapeHtml(params.projectName)}</h1><p>项目 ID：<code>${escapeHtml(params.projectId)}</code> · 修订：<code>${escapeHtml(params.revision)}</code> · 检查集指纹：<code>${escapeHtml(params.checksetFingerprint)}</code> · 生成时间：<code>${escapeHtml(generatedAtIso)}</code></p>${simBlock}${snapshotImg}</body></html>`
   return {
-    fileName: `${baseName}-report.html`,
+    fileName: `simulation-${baseName}.html`,
     mimeType: 'text/html',
-    content: html,
+    content: renderHtmlReport(payload),
   }
 }
+
+const LOCAL_FALLBACK_ERROR_CODES = new Set([
+  'AUTH_REQUIRED',
+  'FEATURE_DISABLED',
+  'BACKEND_UNAVAILABLE',
+])
 
 export interface ExportExecutionOutcome {
   readonly ok: boolean
@@ -208,8 +310,11 @@ export async function executeSimulationReportExport(params: {
   readonly projectName: string
   readonly format: ReportExportFormat
   readonly revision: string
+  readonly isDraft?: boolean
   readonly checksetFingerprint: string
+  readonly seed?: number
   readonly simulationResult?: SimulationDiagnosticResult
+  readonly assembly3d?: AssemblyModelV1
   readonly captureSnapshots?: () => Promise<ReportViewportSnapshots> | ReportViewportSnapshots
 }): Promise<ExportExecutionOutcome> {
   let viewportSnapshots: ReportViewportSnapshots | undefined
@@ -228,31 +333,34 @@ export async function executeSimulationReportExport(params: {
         projectId: params.projectId,
         format: params.format,
         includeSnapshots: true,
+        ...(params.seed !== undefined ? { seed: params.seed } : {}),
         ...(viewportSnapshots ? { viewportSnapshots } : {}),
       })
-      if (!res.ok) {
+      if (res.ok) {
+        const value = res.value
+        if (value.content !== undefined) {
+          triggerBrowserBlobDownload(
+            value.fileName,
+            value.mimeType,
+            value.content,
+            params.format === 'pdf',
+          )
+        }
+        const shortHash = value.sha256 ? value.sha256.slice(0, 12) : ''
+        const locationNote = value.filePath ? ` · 已保存至 ${value.filePath}` : ' · 已开始下载'
+        return {
+          ok: true,
+          fileName: value.fileName,
+          sha256: value.sha256,
+          filePath: value.filePath,
+          message: `已导出 ${value.fileName}${shortHash ? `（SHA-256 ${shortHash}…）` : ''}${locationNote}`,
+        }
+      }
+      if (!LOCAL_FALLBACK_ERROR_CODES.has(res.error.code)) {
         return {
           ok: false,
           message: `导出失败（${res.error.code}）：${res.error.message}`,
         }
-      }
-      const value = res.value
-      if (value.content !== undefined) {
-        triggerBrowserBlobDownload(
-          value.fileName,
-          value.mimeType,
-          value.content,
-          params.format === 'pdf',
-        )
-      }
-      const shortHash = value.sha256 ? value.sha256.slice(0, 12) : ''
-      const locationNote = value.filePath ? ` · 已保存至 ${value.filePath}` : ' · 已开始下载'
-      return {
-        ok: true,
-        fileName: value.fileName,
-        sha256: value.sha256,
-        filePath: value.filePath,
-        message: `已导出 ${value.fileName}${shortHash ? `（SHA-256 ${shortHash}…）` : ''}${locationNote}`,
       }
     } catch (err) {
       return {
@@ -262,28 +370,53 @@ export async function executeSimulationReportExport(params: {
     }
   }
 
-  // Pure-frontend fallback when transport does not implement exportSimulationReport
+  // Offline client-side report fallback for unbound/built-in templates or missing transport method
+  const seed = params.seed ?? 42
+  const isDraft = params.isDraft ?? /^draft/i.test(params.revision)
   if (params.format === 'pdf') {
     if (typeof window !== 'undefined' && typeof window.print === 'function') {
-      window.print()
-      return {
-        ok: true,
-        message: '已调用浏览器打印对话框导出 PDF（桌面端支持原生静默 PDF 导出）。',
+      try {
+        window.print()
+        return {
+          ok: true,
+          message: '已调用打印对话框导出 PDF（离线模板模式）。',
+        }
+      } catch {
+        // Fall through to printable offline HTML download
       }
     }
+    const printableHtml = await buildLocalFallbackReportContent({
+      format: 'html',
+      projectId: params.projectId,
+      projectName: params.projectName,
+      revision: params.revision,
+      isDraft,
+      checksetFingerprint: params.checksetFingerprint,
+      seed,
+      simulationResult: params.simulationResult,
+      assembly3d: params.assembly3d,
+      viewportSnapshots,
+    })
+    const sha256 = await computeFallbackSha256Hex(printableHtml.content)
+    triggerBrowserBlobDownload(printableHtml.fileName, printableHtml.mimeType, printableHtml.content, false)
     return {
-      ok: false,
-      message: '当前离线预览环境不支持原生 PDF 导出，请改用 HTML 离线报告或桌面端导出。',
+      ok: true,
+      fileName: printableHtml.fileName,
+      sha256,
+      message: `已生成可打印离线 HTML 报告 ${printableHtml.fileName}（SHA-256 ${sha256.slice(0, 12)}…，可直接使用浏览器打印为 PDF）`,
     }
   }
 
-  const localArtifact = buildLocalFallbackReportContent({
+  const localArtifact = await buildLocalFallbackReportContent({
     format: params.format,
     projectId: params.projectId,
     projectName: params.projectName,
     revision: params.revision,
+    isDraft,
     checksetFingerprint: params.checksetFingerprint,
+    seed,
     simulationResult: params.simulationResult,
+    assembly3d: params.assembly3d,
     viewportSnapshots,
   })
   const sha256 = await computeFallbackSha256Hex(localArtifact.content)
@@ -310,6 +443,8 @@ export function ReportExportMenu({
   draftRevision = null,
   checksetFingerprint = 'fp-local',
   simulationResult,
+  assembly3d,
+  seed,
   captureSnapshots,
   variant = 'card',
   onExportComplete,
@@ -329,8 +464,11 @@ export function ReportExportMenu({
       projectName,
       format,
       revision,
+      isDraft: Boolean(draftRevision),
       checksetFingerprint,
+      seed,
       simulationResult,
+      assembly3d,
       captureSnapshots,
     })
     setExportingFormat(null)

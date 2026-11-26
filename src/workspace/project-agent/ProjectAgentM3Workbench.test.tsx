@@ -1313,7 +1313,7 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
     await user.click(screen.getByTestId('more-menu-btn'))
     await user.click(screen.getByRole('menuitem', { name: /切换到内置模型对话/ }))
     await user.click(screen.getByTestId('attach-ref-btn'))
-    const taskbookBtn = screen.getByRole('button', { name: /安装板任务书\.pdf · P1/ })
+    const taskbookBtn = screen.getByRole('button', { name: /隔套轴向尺寸链基准\.pdf · P1/ })
     expect(taskbookBtn).toHaveAttribute('aria-pressed', 'false')
 
     // 3. 项目 A 的迁移报告与撤销响应迟到返回 -> 严禁写入项目 B

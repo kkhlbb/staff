@@ -360,4 +360,87 @@ describe('V100-FE-01: 5 类进阶 GD&T 3D 框格（含双层复合框格）+ 一
     await user.click(screen.getByTestId('theme-toggle-btn'))
     expect(main).toHaveAttribute('data-theme', 'dark')
   })
+
+  it('5. P1 回归：切换 3 套内置模板呈现 3 组独立 3D 零件与非空 2D 矢量图，未绑定模板报告导出与 What-If 滑块零 AUTH_REQUIRED/FEATURE_DISABLED', async () => {
+    const user = userEvent.setup()
+    const baseTransport = createElectronTransport({ bridge: {}, feature3dAssemblyM1: true })
+    const unboundTransport: Transport = {
+      ...baseTransport,
+      exportSimulationReport: vi.fn(async () => ({
+        ok: false as const,
+        error: { code: 'AUTH_REQUIRED', message: '请先授权当前窗口访问项目' },
+      })),
+      analyzeGdtStackup: vi.fn(async () => ({
+        ok: false as const,
+        error: { code: 'AUTH_REQUIRED', message: '请先授权当前窗口访问项目' },
+      })),
+    }
+
+    render(
+      <ProjectAgentM1Workbench
+        transport={unboundTransport}
+        feature3dAssemblyM1={true}
+        initialShowOnboarding={true}
+        initialViewMode="split"
+        forceNarrowViewport={false}
+      />,
+    )
+
+    // 1) 打开内置模板 1：安装板项目（2 个零件：安装板 + 参考盖板 + 非空 2D 工程图）
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: /切换本地项目/i }))
+    await user.click(screen.getByRole('button', { name: '打开项目 安装板项目' }))
+    await waitFor(() => {
+      expect(screen.getByTestId('m2-drawing-svg')).toBeInTheDocument()
+    })
+    const treeToggle = screen.getByTestId('toggle-structure-btn')
+    await user.click(treeToggle)
+    expect(screen.getByTestId('assembly-part-part-mounting-plate')).toHaveTextContent('安装板')
+    expect(screen.getByTestId('assembly-part-part-reference-cover')).toHaveTextContent('参考盖板')
+
+    // 2) 切换到内置模板 2：隔套兼容示例（2 个零件：隔套 + 阶梯轴/端盖 + 非空 2D 工程图）
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: /切换本地项目/i }))
+    await user.click(screen.getByRole('button', { name: '打开项目 隔套兼容示例' }))
+    await waitFor(() => {
+      expect(screen.getByTestId('m2-drawing-svg')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('assembly-part-part-shaft-spacer')).toHaveTextContent('隔套')
+    expect(screen.getByTestId('assembly-part-part-stepped-shaft')).toHaveTextContent('阶梯轴/端盖')
+
+    // 3) 切换到内置模板 3：薄铝盖板翘曲锁紧（3 个零件：双定位孔安装板 + 弹性隔套 + 薄铝盖板 + 非空 2D 工程图）
+    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByRole('menuitem', { name: /切换本地项目/i }))
+    await user.click(screen.getByRole('button', { name: '打开项目 薄铝盖板翘曲锁紧' }))
+    await waitFor(() => {
+      expect(screen.getByTestId('m2-drawing-svg')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('assembly-part-part-mounting-plate')).toHaveTextContent('双定位孔安装板')
+    expect(screen.getByTestId('assembly-part-part-elastic-spacer')).toHaveTextContent('弹性隔套')
+    expect(screen.getByTestId('assembly-part-part-thin-al-cover')).toHaveTextContent('薄铝盖板 (1.5mm 6061)')
+
+    // 4) 切到仿真区：拖动 What-If 滑块不应弹出 AUTH_REQUIRED 错误，且 HTML/CSV/JSON 离线报告导出全部成功
+    await user.click(screen.getByRole('tab', { name: /仿真/i }))
+    const slider = screen.getByTestId('whatif-slider-contrib-cover-warpage')
+    fireEvent.change(slider, { target: { value: '0.08' } })
+    await waitFor(() => {
+      expect(unboundTransport.analyzeGdtStackup).toHaveBeenCalled()
+    })
+    expect(screen.queryByText(/AUTH_REQUIRED/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByTestId('export-report-html'))
+    await waitFor(() => {
+      expect(screen.getByTestId('report-export-feedback')).toHaveTextContent(/已生成本地报告.*\.html/)
+    })
+    expect(screen.getByTestId('report-export-feedback')).not.toHaveTextContent(/AUTH_REQUIRED|FEATURE_DISABLED/)
+
+    await user.click(screen.getByTestId('export-report-csv'))
+    await waitFor(() => {
+      expect(screen.getByTestId('report-export-feedback')).toHaveTextContent(/已生成本地报告.*\.csv/)
+    })
+    await user.click(screen.getByTestId('export-report-json'))
+    await waitFor(() => {
+      expect(screen.getByTestId('report-export-feedback')).toHaveTextContent(/已生成本地报告.*\.json/)
+    })
+  })
 })

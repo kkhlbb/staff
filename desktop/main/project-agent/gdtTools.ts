@@ -6,7 +6,6 @@ import { open } from 'node:fs/promises'
 import type { ToolSchema } from '../../../src/agent/types'
 import { decodeProjectFile } from '../../../src/project-file/codec'
 import { PROJECT_FILE_MAX_SOURCE_BYTES } from '../../../src/project-file/types'
-import { FEATURE_3D_ASSEMBLY_M1 } from '../../../src/transport/types'
 import { gdtTools } from '../../../mcp/lib/gdt'
 import { compliantTools } from '../../../mcp/lib/compliant'
 
@@ -31,7 +30,11 @@ export const builtinCompliantTools: ToolSchema[] = compliantTools.map(tool => ({
 }))
 
 export function desktopGdtEnabled() {
-  return FEATURE_3D_ASSEMBLY_M1 || ['true', '1'].includes(process.env.FEATURE_3D_ASSEMBLY_M1 ?? '')
+  const envFlag = process.env.FEATURE_3D_ASSEMBLY_M1?.trim().toLowerCase()
+  if (envFlag !== undefined && envFlag !== '') {
+    return envFlag === 'true' || envFlag === '1'
+  }
+  return true
 }
 
 /** Resolve the existing unpacked SolverWorker in a packaged or Forge development app. */
