@@ -1,0 +1,16 @@
+PASS exports construction BRepPrimAPI_MakeBox BRepPrimAPI_MakeCylinder BRepPrimAPI_MakePrism BRepBuilderAPI_Transform gp_Pnt gp_Dir gp_Vec gp_Ax1 gp_Ax2 gp_Trsf Message_ProgressRange
+PASS exports booleans BRepAlgoAPI_Cut BRepAlgoAPI_Fuse BRepAlgoAPI_Common
+PASS exports finishing BRepFilletAPI_MakeChamfer BRepFilletAPI_MakeFillet ChFi3d_FilletShape BRepOffsetAPI_MakeThickSolid TopTools_ListOfShape
+PASS exports measurement BRepExtrema_DistShapeShape BRepBndLib Bnd_Box BRepGProp GProp_GProps Precision BRepCheck_Analyzer
+PASS exports topology BRepAdaptor_Surface BRepAdaptor_Curve GeomAbs_SurfaceType GeomAbs_CurveType TopExp_Explorer TopLoc_Location TopAbs_Orientation TopAbs_ShapeEnum TopoDS TopoDS_Shape TopoDS_Builder TopoDS_Compound gp_Ax1 gp_Circ gp_Cylinder gp_Pln
+PASS exports tessellation BRepMesh_IncrementalMesh BRep_Tool Poly_Triangulation Poly_Triangle
+PASS exports hiddenLine HLRAlgo_Projector HLRBRep_Algo HLRBRep_HLRToShape BRepLib
+PASS exports step STEPControl_Reader STEPControl_Writer STEPControl_StepModelType IFSelect_ReturnStatus _spacer_step FS
+PASS exports runtime wasmMemory getExceptionMessage decrementExceptionRefcount
+PASS exports xcaf XCAFApp_Application TDocStd_Document STEPCAFControl_Reader STEPCAFControl_Writer XCAFDoc_DocumentTool XCAFDoc_ShapeTool XCAFDoc_ColorTool TDataStd_Name TDF_Label TDF_LabelSequence XCAFDoc_ColorType
+PASS product plate, tessellation, HLR and STEP (184 triangles)
+PASS box placement overload, fuse/common, compound STEP, distance, chamfer/fillet, prism and shell
+PASS native WASM C++ exception inspection and release
+PASS spacer AP214 geometry/readback and failure cleanup (9306 bytes)
+PASS STEPCAF named hierarchy, repeated instances, composed pose and part/face RGB (19845 bytes)
+{"bytes":34129104,"sha256":"6cb34be8e7cd73b121618bb8d3900d2950dc1b67043e59c9e499771afaf89282"}
