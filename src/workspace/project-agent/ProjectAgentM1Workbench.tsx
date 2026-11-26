@@ -569,6 +569,7 @@ export function ProjectAgentM1Workbench({
             onUpdateCamera={viewport.updateCamera}
             onUpdateDrawingViewport={viewport.updateDrawingViewport}
             feature3dAssemblyM1={assembly3d.feature3dAssemblyM1}
+            assemblyGroups={assembly3d.assemblyGroups}
             partMeshes={assembly3d.partMeshes}
             hiddenPartIds={assembly3d.hiddenPartIds}
             explosionFactor={viewport.explosionFactor}
@@ -577,6 +578,7 @@ export function ProjectAgentM1Workbench({
             additivePickMode={assembly3d.additivePickMode}
             activeCameraPreset={assembly3d.activeCameraPreset}
             onTogglePartVisibility={assembly3d.togglePartVisibility}
+            onSetPartsVisibility={assembly3d.setPartsVisibility}
             onSelectPart={assembly3d.selectPart}
             onChangeExplosionFactor={viewport.setExplosionFactor}
             onToggleXrayMode={viewport.toggleXrayMode}

@@ -2,6 +2,7 @@ import type { RefObject } from 'react'
 import { CAMERA_PRESET_LABELS } from './assembly3dMath'
 import type {
   AssemblyFeatureSelectionItem,
+  AssemblyGroup,
   CameraPresetId,
   ContextPillActionId,
   DatumDefinition,
@@ -94,6 +95,7 @@ export interface M2CenterCanvasProps {
   ) => void
   /** M1B 3D assembly extensions (disabled when FEATURE_3D_ASSEMBLY_M1 is false). */
   readonly feature3dAssemblyM1?: boolean
+  readonly assemblyGroups?: readonly AssemblyGroup[]
   readonly partMeshes?: readonly PartMesh[]
   readonly hiddenPartIds?: ReadonlySet<string>
   readonly explosionFactor?: number
@@ -102,6 +104,7 @@ export interface M2CenterCanvasProps {
   readonly additivePickMode?: boolean
   readonly activeCameraPreset?: CameraPresetId
   readonly onTogglePartVisibility?: (partId: string) => void
+  readonly onSetPartsVisibility?: (partIds: readonly string[], hidden: boolean) => void
   readonly onSelectPart?: (partId: string) => void
   readonly onChangeExplosionFactor?: (factor: number) => void
   readonly onToggleXrayMode?: () => void
@@ -246,6 +249,7 @@ export function M2CenterCanvas({
   onUpdateCamera,
   onUpdateDrawingViewport,
   feature3dAssemblyM1 = false,
+  assemblyGroups,
   partMeshes = [],
   hiddenPartIds,
   explosionFactor = 0,
@@ -254,6 +258,7 @@ export function M2CenterCanvas({
   additivePickMode = false,
   activeCameraPreset = 'iso',
   onTogglePartVisibility,
+  onSetPartsVisibility,
   onSelectPart,
   onChangeExplosionFactor,
   onToggleXrayMode,
@@ -456,9 +461,11 @@ export function M2CenterCanvas({
             onCloseStructure={onCloseStructure}
             onSelectFeature={onSelectFeature}
             showAssemblyControls={feature3dAssemblyM1}
+            assemblyGroups={feature3dAssemblyM1 ? assemblyGroups : undefined}
             partMeshes={feature3dAssemblyM1 ? partMeshes : undefined}
             hiddenPartIds={hiddenPartIds}
             onTogglePartVisibility={onTogglePartVisibility}
+            onSetPartsVisibility={onSetPartsVisibility}
             onSelectPart={onSelectPart}
             explosionFactor={explosionFactor}
             onChangeExplosionFactor={onChangeExplosionFactor}

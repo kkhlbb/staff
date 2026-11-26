@@ -5,6 +5,7 @@ import {
   createDefaultM1bAssemblyFixture,
   formatHumanReadableFeatureLabel,
 } from '../assembly3dMath'
+import { resolvePartDisplayColor } from '../assemblyTreeModel'
 import {
   computeLocalGdtSimulationDiagnostics,
   createDefaultM3gGdtFixture,
@@ -15,6 +16,7 @@ import type {
   AiGdtDraftItem,
   AiMateDraftItem,
   AssemblyFeatureSelectionItem,
+  AssemblyGroup,
   AssemblyModelV1,
   CameraPresetId,
   ContextPillActionId,
@@ -166,11 +168,33 @@ export function useAssembly3dM1b({
   const defaultFixture = useMemo(() => createDefaultM1bAssemblyFixture(), [])
   const defaultGdtFixture = useMemo(() => createDefaultM3gGdtFixture(), [])
 
+  const assemblyGroups: readonly AssemblyGroup[] = useMemo(
+    () => (feature3dAssemblyM1 ? (initialAssembly3d?.assemblyGroups ?? []) : []),
+    [feature3dAssemblyM1, initialAssembly3d?.assemblyGroups],
+  )
+
   const partMeshes: readonly PartMesh[] = useMemo(() => {
     if (!feature3dAssemblyM1) return []
-    if (initialPartMeshes && initialPartMeshes.length > 0) return initialPartMeshes
-    return defaultFixture.partMeshes
-  }, [feature3dAssemblyM1, initialPartMeshes, defaultFixture.partMeshes])
+    const baseMeshes =
+      initialPartMeshes && initialPartMeshes.length > 0
+        ? initialPartMeshes
+        : defaultFixture.partMeshes
+    const modelPartById = new Map((initialAssembly3d?.parts ?? []).map((p) => [p.id, p]))
+    return baseMeshes.map((mesh, index) => {
+      const modelPart = modelPartById.get(mesh.partId)
+      const groupId =
+        mesh.groupId ?? (modelPart?.kind === 'imported-step' ? modelPart.groupId : undefined)
+      const resolvedColor = resolvePartDisplayColor(mesh, index, modelPart?.color)
+      if (groupId === mesh.groupId && resolvedColor === mesh.color) {
+        return mesh
+      }
+      return {
+        ...mesh,
+        color: resolvedColor,
+        ...(groupId !== undefined ? { groupId } : {}),
+      }
+    })
+  }, [feature3dAssemblyM1, initialPartMeshes, initialAssembly3d?.parts, defaultFixture.partMeshes])
 
   const { features: assemblyFeatures, itemById: assemblyFeatureMap } = useMemo(
     () => deriveFeaturesFromPartMeshes(partMeshes),
@@ -261,6 +285,21 @@ export function useAssembly3dM1b({
         next.delete(partId)
       } else {
         next.add(partId)
+      }
+      return next
+    })
+  }, [])
+
+  const setPartsVisibility = useCallback((partIds: readonly string[], hidden: boolean) => {
+    if (partIds.length === 0) return
+    setHiddenPartIds((prev) => {
+      const next = new Set(prev)
+      for (const partId of partIds) {
+        if (hidden) {
+          next.add(partId)
+        } else {
+          next.delete(partId)
+        }
       }
       return next
     })
@@ -634,11 +673,13 @@ export function useAssembly3dM1b({
 
   return {
     feature3dAssemblyM1,
+    assemblyGroups,
     partMeshes,
     assemblyFeatures,
     featureKindById,
     hiddenPartIds,
     togglePartVisibility,
+    setPartsVisibility,
     additivePickMode,
     activeCameraPreset,
     applyCameraPreset,
