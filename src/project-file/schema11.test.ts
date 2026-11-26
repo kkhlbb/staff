@@ -1,11 +1,12 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { readZipEntries, writeZipEntries } from '../backup/zip'
 import { sha256Hex } from '../sources/hash'
 import { createSampleSnapshot } from './__fixtures__/sampleProjectFile'
-import { assemblyModelV1Schema, gdtFeatureControlEditSchema, resolveGdtMaterialConditions } from './assembly3d'
+import { assemblyModelV1Schema, compliantModelSpecSchema, gdtFeatureControlEditSchema, micMatrixPayloadV1Schema, resolveGdtMaterialConditions } from './assembly3d'
 import { decodeProjectFile, encodeProjectFile } from './codec'
-import type { AssemblyModelV1, ProjectFileSnapshot } from './types'
+import type { AssemblyModelV1, CompliantModelSpec, MicMatrixPayloadV1, ProjectFileSnapshot } from './types'
 import { upgradeSnapshotToCurrent } from './upgrade'
 import { parseProject, validateAttachmentBytes } from './validation'
 
@@ -220,5 +221,181 @@ describe('M3 additive Schema 11 fields', () => {
     expect(resolveGdtMaterialConditions(assembly3d.gdt[0], assembly3d)).toEqual({
       modifier: 'RFS', datumModifiers: ['RFS'], warnings: [],
     })
+  })
+})
+
+const compliantModels = [
+  { id: 'axial', kind: 'axial-compression', partId: 'plate', featureId: 'f2', preloadN: 0, preloadTolN: 0,
+    stiffnessNPerMm: 12.4, effectiveAreaMm2: 25.6, lengthMm: 2.4, springbackRatio: 1 },
+  { id: 'plate', kind: 'plate-clamping', partId: 'plate', surfaceFeatureId: 'f2', thicknessQ: 15000,
+    initialWarpPeakQ: -2800, warpTolQ: 50, clampFeatureIds: ['f1', 'f2'], clampForceN: 100, boundaryKind: 'simply-supported' },
+  { id: 'beam', kind: 'beam-bending', partId: 'plate', loadFeatureId: 'f2', supportKind: 'cantilever',
+    spanMm: 18, momentOfInertiaMm4: 30.4, forceN: -25, forceTolN: 0, direction: [0, 0, -1] },
+  { id: 'thermal', kind: 'thermal-expansion', partIds: ['plate', 'imported'], deltaTemperatureK: -40,
+    deltaTempTolK: 2.5, referenceFeatureId: 'f1', bimetallicCoupling: false },
+] satisfies CompliantModelSpec[]
+
+const material = {
+  partId: 'plate', youngsModulusMpa: 69000, poissonRatio: 0.33, thermalExpansionPerK: 0.000023, deltaTemperatureK: -40,
+}
+const legacyPhysics = {
+  materials: [material], loads: [{ featureId: 'f2', forceN: [0, 0, -12] }],
+  initialWarp: [{ featureId: 'f2', offsetQ: [0, 0, -2800] }], micMatrixRef: 'mic-1',
+} satisfies AssemblyModelV1['physics']
+
+const micPayload: MicMatrixPayloadV1 = {
+  schemaVersion: 1, partId: 'plate', units: 'mm', forceUnits: 'N',
+  controlPointsMm: [[0, 0, 0], [2.5, 0, 0]], measurePointsMm: [[0, 1, 0]],
+  sensitivityMatrix: [[-0.025, 0.033]],
+  sourceMeta: { solverName: 'example-solver', meshNodes: 240, generatedAtIso: '2026-11-26T03:00:00Z' },
+}
+
+async function addMicAttachment(snapshot: ProjectFileSnapshot, payload: unknown) {
+  const bytes = new TextEncoder().encode(JSON.stringify(payload))
+  const blobKey = 'mic-bytes'
+  snapshot.project.micMatrixAttachments = [{ id: 'mic-1', blobKey, fileName: 'plate.json' }]
+  const sha256 = await sha256Hex(bytes)
+  snapshot.blobs.push({ blobKey, projectId: snapshot.project.id, byteSize: bytes.length, sha256 })
+  snapshot.attachments.push({ blobKey, bytes })
+  return { blobKey, bytes, sha256 }
+}
+
+describe('M4 additive Schema 11 physics', () => {
+  it('preserves all legacy physics fields from a v0.7.0-beta archive', async () => {
+    // Encoded using the v0.7.0-beta source at 2176919.
+    const bytes = readFileSync(new URL('./__fixtures__/v070-schema11-physics.cunlian', import.meta.url))
+    const decoded = await decodeProjectFile(new Uint8Array(bytes))
+    if (!decoded.ok) throw Error(JSON.stringify(decoded))
+    const snapshot = decoded.value.snapshot
+    expect(decoded.value.manifest.writer.appVersion).toBe('0.7.0-beta')
+    expect(decoded.value.manifest.project.projectSchemaVersion).toBe(11)
+    expect(snapshot.project.assembly3d?.physics).toStrictEqual(legacyPhysics)
+    expect(snapshot.project).not.toHaveProperty('micMatrixAttachments')
+    const encoded = await encodeProjectFile(snapshot)
+    if (!encoded.ok) throw Error(JSON.stringify(encoded))
+    const roundTrip = await decodeProjectFile(encoded.value.bytes)
+    if (!roundTrip.ok) throw Error(JSON.stringify(roundTrip))
+    expect(roundTrip.value.snapshot).toStrictEqual(snapshot)
+  })
+
+  it('keeps physics absent in a legacy rigid assembly', async () => {
+    const original = await fixture()
+    original.project.assembly3d = { ...assembly3d }
+    delete original.project.assembly3d.physics
+    const encoded = await encodeProjectFile(original)
+    if (!encoded.ok) throw Error(JSON.stringify(encoded))
+    const decoded = await decodeProjectFile(encoded.value.bytes)
+    if (!decoded.ok) throw Error(JSON.stringify(decoded))
+    expect(decoded.value.snapshot.project.assembly3d).not.toHaveProperty('physics')
+  })
+
+  it('round trips all four models and optional material fields with the legacy values', async () => {
+    const original = await fixture()
+    const model: AssemblyModelV1 = { ...assembly3d, physics: {
+      ...legacyPhysics,
+      enabled: false,
+      compliantModels,
+      materials: [{ ...material, presetId: 'al-6061', name: '6061-T6', yieldStrengthMpa: 276 }],
+    } }
+    original.project.assembly3d = model
+    const encoded = await encodeProjectFile(original)
+    if (!encoded.ok) throw Error(JSON.stringify(encoded))
+    const decoded = await decodeProjectFile(encoded.value.bytes)
+    if (!decoded.ok) throw Error(JSON.stringify(decoded))
+    expect(decoded.value.snapshot.project.assembly3d).toStrictEqual(model)
+    for (const yieldStrengthMpa of [0, -1, Infinity]) {
+      const physics = { materials: [{ ...material, yieldStrengthMpa }] }
+      expect(assemblyModelV1Schema.safeParse({ ...model, physics }).success).toBe(false)
+    }
+  })
+
+  it.each([
+    [0, [{ preloadN: -1 }, { preloadTolN: -1 }, { stiffnessNPerMm: 0 }, { effectiveAreaMm2: 0 },
+      { lengthMm: 0 }, { springbackRatio: -0.1 }, { springbackRatio: 1.1 }]],
+    [1, [{ thicknessQ: 0 }, { initialWarpPeakQ: 1.5 }, { warpTolQ: -1 }, { warpTolQ: 1.5 },
+      { clampFeatureIds: ['f1'] }, { clampFeatureIds: Array(17).fill('f1') },
+      { clampForceN: 0 }, { boundaryKind: 'free' }]],
+    [2, [{ supportKind: 'fixed' }, { spanMm: 0 }, { momentOfInertiaMm4: 0 }, { forceN: Infinity },
+      { forceTolN: -1 }, { direction: [1, 2] }]],
+    [3, [{ partIds: [] }, { deltaTemperatureK: NaN }, { deltaTempTolK: -1 }, { bimetallicCoupling: 0 }]],
+  ] as const)('enforces ranges and shape for model %i', (index, invalidFields) => {
+    const model = compliantModels[index]
+    expect(compliantModelSpecSchema.parse(model)).toEqual(model)
+    for (const fields of invalidFields) {
+      expect(compliantModelSpecSchema.safeParse({ ...model, ...fields }).success, JSON.stringify(fields)).toBe(false)
+    }
+    expect(compliantModelSpecSchema.safeParse({ ...model, unknown: true }).success).toBe(false)
+  })
+})
+
+describe('M4 MIC matrix attachment', () => {
+  it('accepts a non-square m × n matrix and optional source metadata', () => {
+    expect(micMatrixPayloadV1Schema.parse(micPayload)).toEqual(micPayload)
+    const withoutMeta = { ...micPayload, sourceMeta: undefined }
+    expect(micMatrixPayloadV1Schema.safeParse(withoutMeta).success).toBe(true)
+  })
+
+  it.each([
+    { schemaVersion: 2 }, { partId: '' }, { units: 'cm' }, { forceUnits: 'kN' },
+    { controlPointsMm: [[0, 0]] },
+    { controlPointsMm: [[0, Infinity, 0], [0, 0, 0]] }, { measurePointsMm: [[NaN, 0, 0]] },
+    { sensitivityMatrix: [] }, { sensitivityMatrix: [[0, 0], [0, 0]] },
+    { sensitivityMatrix: [[0]] }, { sensitivityMatrix: [[0, 0, 0]] },
+    { sensitivityMatrix: [[NaN, 0]] }, { sensitivityMatrix: [[0, Infinity]] },
+    { sourceMeta: { solverName: 'solver', meshNodes: -2 } },
+    { sourceMeta: { solverName: 'solver', anotherField: 'unexpected' } },
+    { unexpected: true },
+  ])('rejects invalid MIC fields %j', overrides => {
+    expect(micMatrixPayloadV1Schema.safeParse({ ...micPayload, ...overrides }).success).toBe(false)
+  })
+
+  it('round trips MIC bytes and SHA-256 for a historical-only attachment', async () => {
+    const original = await fixture()
+    const { blobKey, bytes, sha256 } = await addMicAttachment(original, micPayload)
+    original.project = { ...original.project }
+    delete original.project.micMatrixAttachments
+    delete original.project.assembly3d
+    const encoded = await encodeProjectFile(original)
+    if (!encoded.ok) throw Error(JSON.stringify(encoded))
+    const path = 'attachments/mic-bytes.bin'
+    expect(encoded.value.manifest.attachments).toContainEqual({
+      kind: 'mic-matrix', revisionId: 'mic-1', path, blobKey, byteSize: bytes.length, sha256,
+    })
+    expect(encoded.value.manifest.entries).toContainEqual({ role: 'attachment', path, byteSize: bytes.length, sha256 })
+    const decoded = await decodeProjectFile(encoded.value.bytes)
+    if (!decoded.ok) throw Error(JSON.stringify(decoded))
+    expect(decoded.value.snapshot.fileRevisions).toEqual(original.fileRevisions)
+    expect(decoded.value.snapshot.attachments).toContainEqual({ blobKey, bytes })
+
+    const zip = await readZipEntries(encoded.value.bytes)
+    if (!zip.ok) throw Error(JSON.stringify(zip))
+    const corrupt = bytes.slice()
+    corrupt[0] ^= 1
+    zip.value.set(path, corrupt)
+    const changed = await writeZipEntries([...zip.value].map(([path, bytes]) => ({ path, bytes })))
+    if (!changed.ok) throw Error(JSON.stringify(changed))
+    expect(await decodeProjectFile(changed.value)).toMatchObject({ ok: false, error: { code: 'HASH_MISMATCH' } })
+    original.attachments.at(-1)!.bytes = corrupt
+    expect(await encodeProjectFile(original)).toMatchObject({ ok: false, error: { code: 'HASH_MISMATCH' } })
+    original.attachments.pop()
+    expect(await encodeProjectFile(original)).toMatchObject({ ok: false, error: { code: 'MISSING_REFERENCE' } })
+  })
+
+  it('retains the active MIC reference, registry and payload', async () => {
+    const original = await fixture()
+    const { blobKey, bytes } = await addMicAttachment(original, micPayload)
+    const encoded = await encodeProjectFile(original)
+    if (!encoded.ok) throw Error(JSON.stringify(encoded))
+    const decoded = await decodeProjectFile(encoded.value.bytes)
+    if (!decoded.ok) throw Error(JSON.stringify(decoded))
+    expect(decoded.value.snapshot.project.assembly3d?.physics?.micMatrixRef).toBe('mic-1')
+    expect(decoded.value.snapshot.project.micMatrixAttachments).toStrictEqual(original.project.micMatrixAttachments)
+    expect(decoded.value.snapshot.attachments).toContainEqual({ blobKey, bytes })
+  })
+
+  it('rejects the wrong dimensions even when MIC bytes match their hash', async () => {
+    const original = await fixture()
+    await addMicAttachment(original, { ...micPayload, sensitivityMatrix: [[0]] })
+    expect(await encodeProjectFile(original)).toMatchObject({ ok: false, error: { code: 'INVALID_RECORD' } })
   })
 })

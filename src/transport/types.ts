@@ -6,7 +6,10 @@ import type { M3CommitApprovedDraftRequest, M3CommitApprovedDraftResult } from '
 import type { ChainDefinition, ChainResult } from '../domain/types'
 import type { MonteCarloOptions, StatisticalSummary } from '../domain/statistics'
 import type { EvidenceRef } from '../document-extraction/types'
-import type { ProjectFileAttachmentRef, AssemblyModelV1, DatumDefinition, GdtFeatureControl } from '../project-file/types'
+import type {
+  AssemblyModelV1, AssemblyPhysicsSpec, CompliantModelSpec, DatumDefinition,
+  GdtFeatureControl, MicMatrixPayloadV1, ProjectFileAttachmentRef,
+} from '../project-file/types'
 import type { GdtValidationWarning } from '../project-file/assembly3d'
 
 export type { GdtValidationWarning } from '../project-file/assembly3d'
@@ -81,6 +84,8 @@ export interface SimulationRequest extends DraftRef {
 export interface SimulationResult {
   extreme: ChainResult
   statistical: StatisticalSummary | null
+  compliant?: CompliantSimulationSummary
+  displacementFields?: readonly PartDisplacementField[]
 }
 
 export interface GdtContributionItem {
@@ -132,6 +137,80 @@ export interface AnalyzeGdtStackupResult extends DraftRef {
   whatIf?: GdtStackupMetrics
 }
 
+export type CompliantStackupMetrics = Pick<GdtStackupMetrics, 'cpk' | 'ppm' | 'threeSigmaIntervalMm'>
+
+/** Uses the same variance percentage scale and denominator as GD&T contributions. */
+export interface FlexContributionItem extends Pick<GdtContributionItem, 'label' | 'varianceSharePct'> {
+  modelId: string
+  kind: CompliantModelSpec['kind'] | 'mic-matrix'
+}
+
+export interface CompliantSimulationSummary {
+  rigidBaseline: CompliantStackupMetrics
+  compliantResult: CompliantStackupMetrics
+  /** Compliant Cpk minus rigid Cpk, or null when either Cpk is unavailable. */
+  flexDeltaCpk: number | null
+  flexContributionItems: readonly FlexContributionItem[]
+}
+
+export interface PartDisplacementField {
+  partId: string
+  maxDisplacementMm: number
+  minDisplacementMm: number
+  samples: readonly {
+    posMm: readonly [number, number, number]
+    dispMm: readonly [number, number, number]
+    magMm: number
+  }[]
+}
+
+/** Adapter ID, such as calculix or gmsh, with the local probe result. */
+export type FeaSidecarStatus = { solver: string } & (
+  | { available: true; version: string }
+  | { available: false; reason?: string }
+)
+
+interface PhysicsDraftWriteRequest extends WriterRequest {
+  baseRevision: string
+  expectedDraftRevision: string | null
+  idempotencyKey: string
+}
+
+export type PhysicsPatch = Omit<AssemblyPhysicsSpec, 'micMatrixRef'>
+
+export interface StagePhysicsRequest extends PhysicsDraftWriteRequest {
+  /** Each supplied field replaces that field in the draft physics object. */
+  physics: PhysicsPatch
+  /** JSON Pointers relative to physics, with at least one EvidenceRef per changed engineering input. */
+  evidenceByField: Readonly<Record<string, readonly EvidenceRef[]>>
+}
+
+export interface StagePhysicsResult extends DraftRef {
+  physics: AssemblyPhysicsSpec
+}
+
+export interface ImportMicMatrixRequest extends PhysicsDraftWriteRequest {
+  fileName: string
+  payload: MicMatrixPayloadV1
+  evidence: readonly EvidenceRef[]
+}
+
+export interface ImportMicMatrixResult extends DraftRef {
+  attachment: ProjectFileAttachmentRef & { kind: 'mic-matrix' }
+}
+
+export interface AnalyzeCompliantStackupRequest extends DraftRef, WriterRequest {
+  monteCarlo: MonteCarloOptions
+  /** Temporary trial values. They are never written to a revision. */
+  whatIf?: PhysicsPatch
+}
+
+export interface AnalyzeCompliantStackupResult extends DraftRef {
+  monteCarlo: MonteCarloOptions
+  summary: CompliantSimulationSummary
+  displacementFields: readonly PartDisplacementField[]
+}
+
 export interface DrawingRequest extends DraftRef {
   format: 'svg' | 'dxf-r12' | 'dxf-2000'
 }
@@ -170,6 +249,10 @@ export interface Transport {
   stageDatum?(request: StageDatumRequest): Promise<M2Result<GdtStageResult>>
   stageGdt?(request: StageGdtRequest): Promise<M2Result<GdtStageResult>>
   analyzeGdtStackup?(request: AnalyzeGdtStackupRequest): Promise<M2Result<AnalyzeGdtStackupResult>>
+  /** Optional until the host implements the M4 draft and analysis tools. */
+  stagePhysics?(request: StagePhysicsRequest): Promise<M2Result<StagePhysicsResult>>
+  importMicMatrix?(request: ImportMicMatrixRequest): Promise<M2Result<ImportMicMatrixResult>>
+  analyzeCompliantStackup?(request: AnalyzeCompliantStackupRequest): Promise<M2Result<AnalyzeCompliantStackupResult>>
   /** Requires explicit, single-use human confirmation bound to this draft and check set. */
   commitDraft(request: CommitDraftRequest): Promise<M2Result<CommitDraftResult>>
   authorizeProject(request: ProjectRef): Promise<M2Result<ProjectRef & { authorized: true }>>

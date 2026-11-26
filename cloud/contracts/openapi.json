@@ -3,6 +3,131 @@
   "info": {"title": "Cunlian Cloud API", "version": "1.0.0"},
   "security": [{"bearerAuth": []}, {"apiKey": []}],
   "paths": {
+    "/api/v1/projects/{projectId}/drafts/physics": {
+      "post": {
+        "operationId": "stage_physics",
+        "description": "Stage a physics patch with a nonempty EvidenceRef list for each changed engineering input, keyed by JSON Pointer relative to physics. Each supplied field replaces the matching draft field. Requires the active writer lease, epoch and matching revisions. Apply via the existing fingerprint-bound human review and commit flow.",
+        "x-feature-flag": "FEATURE_3D_ASSEMBLY_M1",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {"type":"string","minLength":1,"pattern":"\\S"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json":{"schema":{"$ref":"#/components/schemas/StagePhysicsBody"}}}
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {"ok":{"const":true},"value":{"$ref":"#/components/schemas/StagePhysicsResult"}},
+                  "required": ["ok","value"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/drafts/mic-matrix": {
+      "post": {
+        "operationId": "import_mic_matrix",
+        "description": "Validate the MIC JSON and its part reference. Atomically stage the MIC attachment, its SHA-256 and EvidenceRef citations, and set physics.micMatrixRef to the attachment ID. Requires the active writer lease, epoch and matching revisions. Apply via the existing fingerprint-bound human review and commit flow.",
+        "x-feature-flag": "FEATURE_3D_ASSEMBLY_M1",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {"type":"string","minLength":1,"pattern":"\\S"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json":{"schema":{"$ref":"#/components/schemas/ImportMicMatrixBody"}}}
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {"ok":{"const":true},"value":{"$ref":"#/components/schemas/ImportMicMatrixResult"}},
+                  "required": ["ok","value"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/drafts/{draftRevision}/compliant-stackup": {
+      "post": {
+        "operationId": "analyze_compliant_stackup",
+        "description": "Analyze the leased draft using explicit Monte Carlo settings. Use the same samples for the rigid and compliant calculations. Optional What-If inputs affect the trial only. Results are advisory and do not approve or commit any revision.",
+        "x-feature-flag": "FEATURE_3D_ASSEMBLY_M1",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {"type":"string","minLength":1,"pattern":"\\S"}
+          },
+          {
+            "name": "draftRevision",
+            "in": "path",
+            "required": true,
+            "schema": {"type":"string","minLength":1,"pattern":"\\S"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {"schema":{"$ref":"#/components/schemas/AnalyzeCompliantStackupBody"}}
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {"const":true},
+                    "value": {"$ref":"#/components/schemas/AnalyzeCompliantStackupResult"}
+                  },
+                  "required": ["ok","value"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}
+          }
+        }
+      }
+    },
     "/api/v1/projects/{projectId}/drafts/datums": {
       "post": {
         "operationId": "stage_datum",
@@ -727,7 +852,9 @@
                       "type": "object",
                       "properties": {
                         "extreme": {"$ref": "#/components/schemas/Extreme"},
-                        "statistical": {"oneOf": [{"$ref": "#/components/schemas/Statistics"}, {"type": "null"}]}
+                        "statistical": {"oneOf": [{"$ref": "#/components/schemas/Statistics"}, {"type": "null"}]},
+                        "compliant": {"$ref": "#/components/schemas/CompliantSimulationSummary"},
+                        "displacementFields": {"type": "array", "items": {"$ref": "#/components/schemas/PartDisplacementField"}}
                       },
                       "required": ["extreme", "statistical"],
                       "additionalProperties": false
@@ -1554,6 +1681,597 @@
       "apiKey": {"type": "apiKey", "in": "header", "name": "X-API-Key"}
     },
     "schemas": {
+      "AssemblyPhysicsSpec": {
+        "type": "object",
+        "properties": {
+          "materials": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "partId": {"type":"string","minLength":1,"maxLength":200},
+                "presetId": {"type":"string","minLength":1,"maxLength":200},
+                "name": {"type":"string","minLength":1,"maxLength":200},
+                "youngsModulusMpa": {"type":"number","exclusiveMinimum":0},
+                "poissonRatio": {"type":"number","exclusiveMinimum":-1,"exclusiveMaximum":0.5},
+                "thermalExpansionPerK": {"type":"number"},
+                "deltaTemperatureK": {"type":"number"},
+                "yieldStrengthMpa": {"type":"number","exclusiveMinimum":0}
+              },
+              "required": ["partId","youngsModulusMpa","poissonRatio","thermalExpansionPerK","deltaTemperatureK"],
+              "additionalProperties": false
+            }
+          },
+          "loads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "featureId": {"type":"string","minLength":1,"maxLength":200},
+                "forceN": {
+                  "type": "array",
+                  "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              },
+              "required": ["featureId","forceN"],
+              "additionalProperties": false
+            }
+          },
+          "initialWarp": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "featureId": {"type":"string","minLength":1,"maxLength":200},
+                "offsetQ": {
+                  "type": "array",
+                  "prefixItems": [
+                    {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                    {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                    {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              },
+              "required": ["featureId","offsetQ"],
+              "additionalProperties": false
+            }
+          },
+          "micMatrixRef": {"type":"string","minLength":1,"maxLength":200},
+          "enabled": {"type":"boolean"},
+          "compliantModels": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type":"string","minLength":1,"maxLength":200},
+                    "kind": {"type":"string","const":"axial-compression"},
+                    "partId": {"type":"string","minLength":1,"maxLength":200},
+                    "featureId": {"type":"string","minLength":1,"maxLength":200},
+                    "preloadN": {"type":"number","minimum":0},
+                    "preloadTolN": {"type":"number","minimum":0},
+                    "stiffnessNPerMm": {"type":"number","exclusiveMinimum":0},
+                    "effectiveAreaMm2": {"type":"number","exclusiveMinimum":0},
+                    "lengthMm": {"type":"number","exclusiveMinimum":0},
+                    "springbackRatio": {"type":"number","minimum":0,"maximum":1}
+                  },
+                  "required": ["id","kind","partId","featureId","preloadN"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type":"string","minLength":1,"maxLength":200},
+                    "kind": {"type":"string","const":"plate-clamping"},
+                    "partId": {"type":"string","minLength":1,"maxLength":200},
+                    "surfaceFeatureId": {"type":"string","minLength":1,"maxLength":200},
+                    "thicknessQ": {"type":"integer","exclusiveMinimum":0,"maximum":9007199254740991},
+                    "initialWarpPeakQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                    "warpTolQ": {"type":"integer","minimum":0,"maximum":9007199254740991},
+                    "clampFeatureIds": {
+                      "minItems": 2,
+                      "maxItems": 16,
+                      "type": "array",
+                      "items": {"type":"string","minLength":1,"maxLength":200}
+                    },
+                    "clampForceN": {"type":"number","exclusiveMinimum":0},
+                    "boundaryKind": {"type":"string","enum":["clamped","simply-supported"]}
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "partId",
+                    "surfaceFeatureId",
+                    "thicknessQ",
+                    "initialWarpPeakQ",
+                    "clampFeatureIds"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type":"string","minLength":1,"maxLength":200},
+                    "kind": {"type":"string","const":"beam-bending"},
+                    "partId": {"type":"string","minLength":1,"maxLength":200},
+                    "loadFeatureId": {"type":"string","minLength":1,"maxLength":200},
+                    "supportKind": {"type":"string","enum":["cantilever","simply-supported"]},
+                    "spanMm": {"type":"number","exclusiveMinimum":0},
+                    "momentOfInertiaMm4": {"type":"number","exclusiveMinimum":0},
+                    "forceN": {"type":"number"},
+                    "forceTolN": {"type":"number","minimum":0},
+                    "direction": {
+                      "type": "array",
+                      "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
+                      "items": false,
+                      "minItems": 3,
+                      "maxItems": 3
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "partId",
+                    "loadFeatureId",
+                    "supportKind",
+                    "spanMm",
+                    "momentOfInertiaMm4",
+                    "forceN"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type":"string","minLength":1,"maxLength":200},
+                    "kind": {"type":"string","const":"thermal-expansion"},
+                    "partIds": {"minItems":1,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}},
+                    "deltaTemperatureK": {"type":"number"},
+                    "deltaTempTolK": {"type":"number","minimum":0},
+                    "referenceFeatureId": {"type":"string","minLength":1,"maxLength":200},
+                    "bimetallicCoupling": {"type":"boolean"}
+                  },
+                  "required": ["id","kind","partIds","deltaTemperatureK"],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PhysicsPatch": {
+        "type": "object",
+        "properties": {
+          "materials": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "partId": {"type":"string","minLength":1,"maxLength":200},
+                "presetId": {"type":"string","minLength":1,"maxLength":200},
+                "name": {"type":"string","minLength":1,"maxLength":200},
+                "youngsModulusMpa": {"type":"number","exclusiveMinimum":0},
+                "poissonRatio": {"type":"number","exclusiveMinimum":-1,"exclusiveMaximum":0.5},
+                "thermalExpansionPerK": {"type":"number"},
+                "deltaTemperatureK": {"type":"number"},
+                "yieldStrengthMpa": {"type":"number","exclusiveMinimum":0}
+              },
+              "required": ["partId","youngsModulusMpa","poissonRatio","thermalExpansionPerK","deltaTemperatureK"],
+              "additionalProperties": false
+            }
+          },
+          "loads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "featureId": {"type":"string","minLength":1,"maxLength":200},
+                "forceN": {
+                  "type": "array",
+                  "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              },
+              "required": ["featureId","forceN"],
+              "additionalProperties": false
+            }
+          },
+          "initialWarp": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "featureId": {"type":"string","minLength":1,"maxLength":200},
+                "offsetQ": {
+                  "type": "array",
+                  "prefixItems": [
+                    {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                    {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                    {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              },
+              "required": ["featureId","offsetQ"],
+              "additionalProperties": false
+            }
+          },
+          "enabled": {"type":"boolean"},
+          "compliantModels": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type":"string","minLength":1,"maxLength":200},
+                    "kind": {"type":"string","const":"axial-compression"},
+                    "partId": {"type":"string","minLength":1,"maxLength":200},
+                    "featureId": {"type":"string","minLength":1,"maxLength":200},
+                    "preloadN": {"type":"number","minimum":0},
+                    "preloadTolN": {"type":"number","minimum":0},
+                    "stiffnessNPerMm": {"type":"number","exclusiveMinimum":0},
+                    "effectiveAreaMm2": {"type":"number","exclusiveMinimum":0},
+                    "lengthMm": {"type":"number","exclusiveMinimum":0},
+                    "springbackRatio": {"type":"number","minimum":0,"maximum":1}
+                  },
+                  "required": ["id","kind","partId","featureId","preloadN"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type":"string","minLength":1,"maxLength":200},
+                    "kind": {"type":"string","const":"plate-clamping"},
+                    "partId": {"type":"string","minLength":1,"maxLength":200},
+                    "surfaceFeatureId": {"type":"string","minLength":1,"maxLength":200},
+                    "thicknessQ": {"type":"integer","exclusiveMinimum":0,"maximum":9007199254740991},
+                    "initialWarpPeakQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                    "warpTolQ": {"type":"integer","minimum":0,"maximum":9007199254740991},
+                    "clampFeatureIds": {
+                      "minItems": 2,
+                      "maxItems": 16,
+                      "type": "array",
+                      "items": {"type":"string","minLength":1,"maxLength":200}
+                    },
+                    "clampForceN": {"type":"number","exclusiveMinimum":0},
+                    "boundaryKind": {"type":"string","enum":["clamped","simply-supported"]}
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "partId",
+                    "surfaceFeatureId",
+                    "thicknessQ",
+                    "initialWarpPeakQ",
+                    "clampFeatureIds"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type":"string","minLength":1,"maxLength":200},
+                    "kind": {"type":"string","const":"beam-bending"},
+                    "partId": {"type":"string","minLength":1,"maxLength":200},
+                    "loadFeatureId": {"type":"string","minLength":1,"maxLength":200},
+                    "supportKind": {"type":"string","enum":["cantilever","simply-supported"]},
+                    "spanMm": {"type":"number","exclusiveMinimum":0},
+                    "momentOfInertiaMm4": {"type":"number","exclusiveMinimum":0},
+                    "forceN": {"type":"number"},
+                    "forceTolN": {"type":"number","minimum":0},
+                    "direction": {
+                      "type": "array",
+                      "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
+                      "items": false,
+                      "minItems": 3,
+                      "maxItems": 3
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "partId",
+                    "loadFeatureId",
+                    "supportKind",
+                    "spanMm",
+                    "momentOfInertiaMm4",
+                    "forceN"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type":"string","minLength":1,"maxLength":200},
+                    "kind": {"type":"string","const":"thermal-expansion"},
+                    "partIds": {"minItems":1,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}},
+                    "deltaTemperatureK": {"type":"number"},
+                    "deltaTempTolK": {"type":"number","minimum":0},
+                    "referenceFeatureId": {"type":"string","minLength":1,"maxLength":200},
+                    "bimetallicCoupling": {"type":"boolean"}
+                  },
+                  "required": ["id","kind","partIds","deltaTemperatureK"],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "minProperties": 1
+      },
+      "MicMatrixPayloadV1": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {"type":"number","const":1},
+          "partId": {"type":"string","minLength":1,"maxLength":200},
+          "units": {"type":"string","const":"mm"},
+          "forceUnits": {"type":"string","const":"N"},
+          "controlPointsMm": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
+              "items": false,
+              "minItems": 3,
+              "maxItems": 3
+            }
+          },
+          "measurePointsMm": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
+              "items": false,
+              "minItems": 3,
+              "maxItems": 3
+            }
+          },
+          "sensitivityMatrix": {"type":"array","items":{"type":"array","items":{"type":"number"}}},
+          "sourceMeta": {
+            "type": "object",
+            "properties": {
+              "solverName": {"type":"string","minLength":1,"maxLength":200},
+              "meshNodes": {"type":"integer","minimum":0,"maximum":9007199254740991},
+              "generatedAtIso": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              }
+            },
+            "required": ["solverName"],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "partId",
+          "units",
+          "forceUnits",
+          "controlPointsMm",
+          "measurePointsMm",
+          "sensitivityMatrix"
+        ],
+        "additionalProperties": false,
+        "description": "The runtime parser must reject non-finite numbers and enforce one matrix row per measurement point and one column per control point."
+      },
+      "MicMatrixAttachmentRef": {
+        "type": "object",
+        "properties": {
+          "kind": {"const":"mic-matrix"},
+          "revisionId": {"type":"string","minLength":1,"maxLength":200},
+          "blobKey": {"type":"string","minLength":1,"maxLength":200},
+          "path": {"type":"string","minLength":1,"pattern":"\\S"},
+          "sha256": {"type":"string","pattern":"^[a-f0-9]{64}$"},
+          "byteSize": {"type":"integer","minimum":1,"maximum":9007199254740991}
+        },
+        "required": ["kind","revisionId","blobKey","path","sha256","byteSize"],
+        "additionalProperties": false
+      },
+      "CompliantStackupMetrics": {
+        "type": "object",
+        "properties": {
+          "cpk": {"anyOf":[{"type":"number"},{"type":"null"}]},
+          "ppm": {"type":"number","minimum":0,"maximum":1000000},
+          "threeSigmaIntervalMm": {"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2}
+        },
+        "required": ["cpk","ppm","threeSigmaIntervalMm"],
+        "additionalProperties": false
+      },
+      "CompliantSimulationSummary": {
+        "type": "object",
+        "properties": {
+          "rigidBaseline": {"$ref":"#/components/schemas/CompliantStackupMetrics"},
+          "compliantResult": {"$ref":"#/components/schemas/CompliantStackupMetrics"},
+          "flexDeltaCpk": {"anyOf":[{"type":"number"},{"type":"null"}]},
+          "flexContributionItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "modelId": {"type":"string","minLength":1,"maxLength":200},
+                "label": {"type":"string","minLength":1,"pattern":"\\S"},
+                "kind": {
+                  "type": "string",
+                  "enum": ["axial-compression","plate-clamping","beam-bending","thermal-expansion","mic-matrix"]
+                },
+                "varianceSharePct": {"type":"number","minimum":0,"maximum":100}
+              },
+              "required": ["modelId","label","kind","varianceSharePct"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["rigidBaseline","compliantResult","flexDeltaCpk","flexContributionItems"],
+        "additionalProperties": false
+      },
+      "PartDisplacementField": {
+        "type": "object",
+        "properties": {
+          "partId": {"type":"string","minLength":1,"maxLength":200},
+          "maxDisplacementMm": {"type":"number","minimum":0},
+          "minDisplacementMm": {"type":"number","minimum":0},
+          "samples": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "posMm": {"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3},
+                "dispMm": {"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3},
+                "magMm": {"type":"number","minimum":0}
+              },
+              "required": ["posMm","dispMm","magMm"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["partId","maxDisplacementMm","minDisplacementMm","samples"],
+        "additionalProperties": false
+      },
+      "FeaSidecarStatus": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "solver": {"type":"string","minLength":1,"examples":["calculix","gmsh"]},
+              "available": {"const":true},
+              "version": {"type":"string","minLength":1,"pattern":"\\S"}
+            },
+            "required": ["solver","available","version"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "solver": {"type":"string","minLength":1,"examples":["calculix","gmsh"]},
+              "available": {"const":false},
+              "reason": {"type":"string","minLength":1,"pattern":"\\S"}
+            },
+            "required": ["solver","available"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "StagePhysicsBody": {
+        "type": "object",
+        "properties": {
+          "expectedWriterEpoch": {"type":"integer","minimum":0,"maximum":9007199254740991},
+          "baseRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+          "expectedDraftRevision": {"anyOf":[{"type":"string","minLength":1,"pattern":"\\S"},{"type":"null"}]},
+          "idempotencyKey": {"type":"string","minLength":1,"pattern":"\\S"},
+          "physics": {"$ref":"#/components/schemas/PhysicsPatch"},
+          "evidenceByField": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": {"pattern":"^/"},
+            "additionalProperties": {"type":"array","items":{"$ref":"#/components/schemas/EvidenceRef"},"minItems":1}
+          }
+        },
+        "required": [
+          "expectedWriterEpoch",
+          "baseRevision",
+          "expectedDraftRevision",
+          "idempotencyKey",
+          "physics",
+          "evidenceByField"
+        ],
+        "additionalProperties": false
+      },
+      "StagePhysicsResult": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type":"string","minLength":1,"pattern":"\\S"},
+          "draftRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+          "physics": {"$ref":"#/components/schemas/AssemblyPhysicsSpec"}
+        },
+        "required": ["projectId","draftRevision","physics"],
+        "additionalProperties": false
+      },
+      "ImportMicMatrixBody": {
+        "type": "object",
+        "properties": {
+          "expectedWriterEpoch": {"type":"integer","minimum":0,"maximum":9007199254740991},
+          "baseRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+          "expectedDraftRevision": {"anyOf":[{"type":"string","minLength":1,"pattern":"\\S"},{"type":"null"}]},
+          "idempotencyKey": {"type":"string","minLength":1,"pattern":"\\S"},
+          "fileName": {"type":"string","minLength":1,"maxLength":200},
+          "payload": {"$ref":"#/components/schemas/MicMatrixPayloadV1"},
+          "evidence": {"type":"array","items":{"$ref":"#/components/schemas/EvidenceRef"},"minItems":1}
+        },
+        "required": [
+          "expectedWriterEpoch",
+          "baseRevision",
+          "expectedDraftRevision",
+          "idempotencyKey",
+          "fileName",
+          "payload",
+          "evidence"
+        ],
+        "additionalProperties": false
+      },
+      "ImportMicMatrixResult": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type":"string","minLength":1,"pattern":"\\S"},
+          "draftRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+          "attachment": {"$ref":"#/components/schemas/MicMatrixAttachmentRef"}
+        },
+        "required": ["projectId","draftRevision","attachment"],
+        "additionalProperties": false
+      },
+      "AnalyzeCompliantStackupBody": {
+        "type": "object",
+        "properties": {
+          "expectedWriterEpoch": {"type":"integer","minimum":0,"maximum":9007199254740991},
+          "monteCarlo": {
+            "type": "object",
+            "properties": {
+              "seed": {"type":"integer","minimum":0,"maximum":4294967295},
+              "samples": {"type":"integer","minimum":1,"maximum":9007199254740991},
+              "distribution": {"enum":["normal","uniform"]}
+            },
+            "required": ["seed","samples","distribution"],
+            "additionalProperties": false
+          },
+          "whatIf": {"$ref":"#/components/schemas/PhysicsPatch"}
+        },
+        "required": ["expectedWriterEpoch","monteCarlo"],
+        "additionalProperties": false
+      },
+      "AnalyzeCompliantStackupResult": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type":"string","minLength":1,"pattern":"\\S"},
+          "draftRevision": {"type":"string","minLength":1,"pattern":"\\S"},
+          "monteCarlo": {
+            "type": "object",
+            "properties": {
+              "seed": {"type":"integer","minimum":0,"maximum":4294967295},
+              "samples": {"type":"integer","minimum":1,"maximum":9007199254740991},
+              "distribution": {"enum":["normal","uniform"]}
+            },
+            "required": ["seed","samples","distribution"],
+            "additionalProperties": false
+          },
+          "summary": {"$ref":"#/components/schemas/CompliantSimulationSummary"},
+          "displacementFields": {"type":"array","items":{"$ref":"#/components/schemas/PartDisplacementField"}}
+        },
+        "required": ["projectId","draftRevision","monteCarlo","summary","displacementFields"],
+        "additionalProperties": false
+      },
       "AssemblyModelV1": {
         "type": "object",
         "properties": {
@@ -3107,19 +3825,16 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "partId": {"type": "string", "minLength": 1, "maxLength": 200},
-                    "youngsModulusMpa": {"type": "number", "exclusiveMinimum": 0},
-                    "poissonRatio": {"type": "number", "exclusiveMinimum": -1, "exclusiveMaximum": 0.5},
-                    "thermalExpansionPerK": {"type": "number"},
-                    "deltaTemperatureK": {"type": "number"}
+                    "partId": {"type":"string","minLength":1,"maxLength":200},
+                    "presetId": {"type":"string","minLength":1,"maxLength":200},
+                    "name": {"type":"string","minLength":1,"maxLength":200},
+                    "youngsModulusMpa": {"type":"number","exclusiveMinimum":0},
+                    "poissonRatio": {"type":"number","exclusiveMinimum":-1,"exclusiveMaximum":0.5},
+                    "thermalExpansionPerK": {"type":"number"},
+                    "deltaTemperatureK": {"type":"number"},
+                    "yieldStrengthMpa": {"type":"number","exclusiveMinimum":0}
                   },
-                  "required": [
-                    "partId",
-                    "youngsModulusMpa",
-                    "poissonRatio",
-                    "thermalExpansionPerK",
-                    "deltaTemperatureK"
-                  ],
+                  "required": ["partId","youngsModulusMpa","poissonRatio","thermalExpansionPerK","deltaTemperatureK"],
                   "additionalProperties": false
                 }
               },
@@ -3128,16 +3843,16 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "featureId": {"type": "string", "minLength": 1, "maxLength": 200},
+                    "featureId": {"type":"string","minLength":1,"maxLength":200},
                     "forceN": {
                       "type": "array",
-                      "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}],
+                      "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
                       "items": false,
                       "minItems": 3,
                       "maxItems": 3
                     }
                   },
-                  "required": ["featureId", "forceN"],
+                  "required": ["featureId","forceN"],
                   "additionalProperties": false
                 }
               },
@@ -3146,24 +3861,125 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "featureId": {"type": "string", "minLength": 1, "maxLength": 200},
+                    "featureId": {"type":"string","minLength":1,"maxLength":200},
                     "offsetQ": {
                       "type": "array",
                       "prefixItems": [
-                        {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
-                        {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
-                        {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991}
+                        {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                        {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                        {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}
                       ],
                       "items": false,
                       "minItems": 3,
                       "maxItems": 3
                     }
                   },
-                  "required": ["featureId", "offsetQ"],
+                  "required": ["featureId","offsetQ"],
                   "additionalProperties": false
                 }
               },
-              "micMatrixRef": {"type": "string", "minLength": 1, "maxLength": 200}
+              "micMatrixRef": {"type":"string","minLength":1,"maxLength":200},
+              "enabled": {"type":"boolean"},
+              "compliantModels": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {"type":"string","minLength":1,"maxLength":200},
+                        "kind": {"type":"string","const":"axial-compression"},
+                        "partId": {"type":"string","minLength":1,"maxLength":200},
+                        "featureId": {"type":"string","minLength":1,"maxLength":200},
+                        "preloadN": {"type":"number","minimum":0},
+                        "preloadTolN": {"type":"number","minimum":0},
+                        "stiffnessNPerMm": {"type":"number","exclusiveMinimum":0},
+                        "effectiveAreaMm2": {"type":"number","exclusiveMinimum":0},
+                        "lengthMm": {"type":"number","exclusiveMinimum":0},
+                        "springbackRatio": {"type":"number","minimum":0,"maximum":1}
+                      },
+                      "required": ["id","kind","partId","featureId","preloadN"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {"type":"string","minLength":1,"maxLength":200},
+                        "kind": {"type":"string","const":"plate-clamping"},
+                        "partId": {"type":"string","minLength":1,"maxLength":200},
+                        "surfaceFeatureId": {"type":"string","minLength":1,"maxLength":200},
+                        "thicknessQ": {"type":"integer","exclusiveMinimum":0,"maximum":9007199254740991},
+                        "initialWarpPeakQ": {"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},
+                        "warpTolQ": {"type":"integer","minimum":0,"maximum":9007199254740991},
+                        "clampFeatureIds": {
+                          "minItems": 2,
+                          "maxItems": 16,
+                          "type": "array",
+                          "items": {"type":"string","minLength":1,"maxLength":200}
+                        },
+                        "clampForceN": {"type":"number","exclusiveMinimum":0},
+                        "boundaryKind": {"type":"string","enum":["clamped","simply-supported"]}
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "partId",
+                        "surfaceFeatureId",
+                        "thicknessQ",
+                        "initialWarpPeakQ",
+                        "clampFeatureIds"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {"type":"string","minLength":1,"maxLength":200},
+                        "kind": {"type":"string","const":"beam-bending"},
+                        "partId": {"type":"string","minLength":1,"maxLength":200},
+                        "loadFeatureId": {"type":"string","minLength":1,"maxLength":200},
+                        "supportKind": {"type":"string","enum":["cantilever","simply-supported"]},
+                        "spanMm": {"type":"number","exclusiveMinimum":0},
+                        "momentOfInertiaMm4": {"type":"number","exclusiveMinimum":0},
+                        "forceN": {"type":"number"},
+                        "forceTolN": {"type":"number","minimum":0},
+                        "direction": {
+                          "type": "array",
+                          "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "partId",
+                        "loadFeatureId",
+                        "supportKind",
+                        "spanMm",
+                        "momentOfInertiaMm4",
+                        "forceN"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {"type":"string","minLength":1,"maxLength":200},
+                        "kind": {"type":"string","const":"thermal-expansion"},
+                        "partIds": {"minItems":1,"type":"array","items":{"type":"string","minLength":1,"maxLength":200}},
+                        "deltaTemperatureK": {"type":"number"},
+                        "deltaTempTolK": {"type":"number","minimum":0},
+                        "referenceFeatureId": {"type":"string","minLength":1,"maxLength":200},
+                        "bimetallicCoupling": {"type":"boolean"}
+                      },
+                      "required": ["id","kind","partIds","deltaTemperatureK"],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
             },
             "additionalProperties": false
           },

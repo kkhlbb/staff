@@ -92,6 +92,101 @@ export const gdtFeatureControlEditSchema = gdtFeatureControlSchema.superRefine((
 
 export const assemblyGroupSchema = z.strictObject({ id, name: id, parentGroupId: id.optional() })
 
+export const materialSpecSchema = z.strictObject({
+  partId: id,
+  presetId: id.optional(),
+  name: id.optional(),
+  youngsModulusMpa: number.positive(),
+  poissonRatio: number.gt(-1).lt(0.5),
+  thermalExpansionPerK: number,
+  deltaTemperatureK: number,
+  yieldStrengthMpa: number.positive().optional(),
+})
+
+export const compliantModelSpecSchema = z.discriminatedUnion('kind', [
+  z.strictObject({
+    id,
+    kind: z.literal('axial-compression'),
+    partId: id,
+    featureId: id,
+    preloadN: number.nonnegative(),
+    preloadTolN: number.nonnegative().optional(),
+    stiffnessNPerMm: number.positive().optional(),
+    effectiveAreaMm2: number.positive().optional(),
+    lengthMm: number.positive().optional(),
+    springbackRatio: number.min(0).max(1).optional(),
+  }),
+  z.strictObject({
+    id,
+    kind: z.literal('plate-clamping'),
+    partId: id,
+    surfaceFeatureId: id,
+    thicknessQ: positiveQ,
+    initialWarpPeakQ: q,
+    warpTolQ: q.nonnegative().optional(),
+    clampFeatureIds: z.array(id).min(2).max(16),
+    clampForceN: number.positive().optional(),
+    boundaryKind: z.enum(['clamped', 'simply-supported']).optional(),
+  }),
+  z.strictObject({
+    id,
+    kind: z.literal('beam-bending'),
+    partId: id,
+    loadFeatureId: id,
+    supportKind: z.enum(['cantilever', 'simply-supported']),
+    spanMm: number.positive(),
+    momentOfInertiaMm4: number.positive(),
+    forceN: number,
+    forceTolN: number.nonnegative().optional(),
+    direction: vector.optional(),
+  }),
+  z.strictObject({
+    id,
+    kind: z.literal('thermal-expansion'),
+    partIds: z.array(id).min(1),
+    deltaTemperatureK: number,
+    deltaTempTolK: number.nonnegative().optional(),
+    referenceFeatureId: id.optional(),
+    bimetallicCoupling: z.boolean().optional(),
+  }),
+])
+
+export const assemblyPhysicsSpecSchema = z.strictObject({
+  materials: z.array(materialSpecSchema).optional(),
+  loads: z.array(z.strictObject({ featureId: id, forceN: vector })).optional(),
+  initialWarp: z.array(z.strictObject({ featureId: id, offsetQ: qVector })).optional(),
+  micMatrixRef: id.optional(),
+  // Preserve absence on disk. Solvers default to on with models or a MIC reference.
+  enabled: z.boolean().optional(),
+  compliantModels: z.array(compliantModelSpecSchema).optional(),
+})
+
+export const micMatrixAttachmentSchema = z.strictObject({ id, blobKey: id, fileName: id })
+
+export const micMatrixPayloadV1Schema = z.strictObject({
+  schemaVersion: z.literal(1),
+  partId: id,
+  units: z.literal('mm'),
+  forceUnits: z.literal('N'),
+  controlPointsMm: z.array(vector),
+  measurePointsMm: z.array(vector),
+  sensitivityMatrix: z.array(z.array(number)),
+  sourceMeta: z.strictObject({
+    solverName: id,
+    meshNodes: q.nonnegative().optional(),
+    generatedAtIso: z.iso.datetime({ offset: true }).optional(),
+  }).optional(),
+}).superRefine((payload, context) => {
+  if (payload.sensitivityMatrix.length !== payload.measurePointsMm.length) {
+    context.addIssue({ code: 'custom', path: ['sensitivityMatrix'], message: 'Expected one row per measurement point' })
+  }
+  payload.sensitivityMatrix.forEach((row, index) => {
+    if (row.length !== payload.controlPointsMm.length) {
+      context.addIssue({ code: 'custom', path: ['sensitivityMatrix', index], message: 'Expected one column per control point' })
+    }
+  })
+})
+
 export const stepAttachmentSchema = z.strictObject({ id, blobKey: id, fileName: id })
 export const assemblyModelV1Schema = z.strictObject({
   schemaVersion: z.literal(1),
@@ -102,15 +197,7 @@ export const assemblyModelV1Schema = z.strictObject({
   datums: z.array(datumDefinitionSchema),
   gdt: z.array(gdtFeatureControlSchema),
   assemblyGroups: z.array(assemblyGroupSchema).optional(),
-  physics: z.strictObject({
-    materials: z.array(z.strictObject({
-      partId: id, youngsModulusMpa: number.positive(), poissonRatio: number.gt(-1).lt(0.5),
-      thermalExpansionPerK: number, deltaTemperatureK: number,
-    })).optional(),
-    loads: z.array(z.strictObject({ featureId: id, forceN: vector })).optional(),
-    initialWarp: z.array(z.strictObject({ featureId: id, offsetQ: qVector })).optional(),
-    micMatrixRef: id.optional(),
-  }).optional(),
+  physics: assemblyPhysicsSpecSchema.optional(),
   measurements: z.array(z.strictObject({
     id,
     kind: z.enum(['gap', 'flush', 'coaxiality', 'center-distance', 'angle', 'interference']),
@@ -170,7 +257,11 @@ export type PersistentFeature = AssemblyModelV1['features'][number]
 export type AssemblyMate = AssemblyModelV1['mates'][number]
 export type DatumDefinition = AssemblyModelV1['datums'][number]
 export type GdtFeatureControl = AssemblyModelV1['gdt'][number]
-export type AssemblyPhysicsSpec = NonNullable<AssemblyModelV1['physics']>
+export type AssemblyPhysicsSpec = z.infer<typeof assemblyPhysicsSpecSchema>
+export type CompliantModelSpec = z.infer<typeof compliantModelSpecSchema>
+export type MaterialSpec = z.infer<typeof materialSpecSchema>
+export type MicMatrixAttachment = z.infer<typeof micMatrixAttachmentSchema>
+export type MicMatrixPayloadV1 = z.infer<typeof micMatrixPayloadV1Schema>
 export type MeasurementSpec = AssemblyModelV1['measurements'][number]
 export type StepAttachment = z.infer<typeof stepAttachmentSchema>
 

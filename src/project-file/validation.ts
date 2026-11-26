@@ -8,7 +8,7 @@
  *
  * 保存端与打开端调用同一套函数，避免“能写不能读”的两套规则。
  */
-import { assemblyModelV1Schema, stepAttachmentSchema } from './assembly3d'
+import { assemblyModelV1Schema, micMatrixAttachmentSchema, micMatrixPayloadV1Schema, stepAttachmentSchema } from './assembly3d'
 import { z } from 'zod'
 import { validateEntryPath } from '../backup/zip'
 import { validateChain } from '../domain/validation'
@@ -980,6 +980,7 @@ const projectV11Schema = z.strictObject({
   ...projectV10Shape.shape,
   schemaVersion: z.literal(PROJECT_FILE_SCHEMA_VERSION),
   stepAttachments: z.array(stepAttachmentSchema).optional(),
+  micMatrixAttachments: z.array(micMatrixAttachmentSchema).optional(),
   assembly3d: assemblyModelV1Schema.optional(),
 }).superRefine(validateIntentProject).superRefine((project, context) => {
   const ids = new Set<string>()
@@ -988,6 +989,13 @@ const projectV11Schema = z.strictObject({
       context.addIssue({ code: 'custom', path: ['stepAttachments', index, 'id'], message: 'Duplicate STEP attachment ID' })
     }
     ids.add(attachment.id)
+  }
+  const micIds = new Set<string>()
+  for (const [index, attachment] of (project.micMatrixAttachments ?? []).entries()) {
+    if (micIds.has(attachment.id)) {
+      context.addIssue({ code: 'custom', path: ['micMatrixAttachments', index, 'id'], message: 'Duplicate MIC attachment ID' })
+    }
+    micIds.add(attachment.id)
   }
   for (const [index, part] of (project.assembly3d?.parts ?? []).entries()) {
     if (part.kind === 'imported-step' && !ids.has(part.attachmentId)) {
@@ -1176,9 +1184,11 @@ const legacyArchiveSchema = z
   })
   .passthrough()
 
+const attachmentKinds = ['pdf', 'model', 'step', 'mic-matrix'] as const
+
 const attachmentRefSchema = z
   .object({
-    kind: z.enum(['pdf', 'model', 'step']),
+    kind: z.enum(attachmentKinds),
     revisionId: idSchema,
     blobKey: idSchema,
     path: z.string().min(1).max(PROJECT_FILE_MAX_PATH_LENGTH),
@@ -1800,12 +1810,12 @@ export function computeCounts(snapshot: ProjectFileSnapshot): ProjectFileCounts 
   }
 }
 
-/** STEP bytes referenced by immutable revisions remain in the container. */
-function stepAttachments(snapshot: ProjectFileSnapshot) {
+/** Attachments owned by immutable revisions remain in the container. */
+function assemblyAttachments(snapshot: ProjectFileSnapshot, key: 'stepAttachments' | 'micMatrixAttachments') {
   return [
-    ...(snapshot.project.stepAttachments ?? []),
+    ...(snapshot.project[key] ?? []),
     ...snapshot.fileRevisions.flatMap(({ project }) =>
-      project.schemaVersion === PROJECT_FILE_SCHEMA_VERSION ? project.stepAttachments ?? [] : []),
+      project.schemaVersion === PROJECT_FILE_SCHEMA_VERSION ? project[key] ?? [] : []),
   ]
 }
 
@@ -1813,7 +1823,12 @@ export function expectedAttachmentRefs(
   snapshot: ProjectFileSnapshot,
 ): ProjectFileAttachmentRef[] {
   const refs: ProjectFileAttachmentRef[] = []
-  const steps = [...new Map(stepAttachments(snapshot).map(step => [step.id, step])).values()]
+  const assemblyRefs = ([
+    ['step', 'stepAttachments'],
+    ['mic-matrix', 'micMatrixAttachments'],
+  ] as const).flatMap(([kind, key]) =>
+    [...new Map(assemblyAttachments(snapshot, key).map(item => [item.id, item])).values()]
+      .map(item => ({ kind, ...item })))
   for (const blob of snapshot.blobs) {
     const pdfRevisions = snapshot.revisions.filter((item) => item.blobKey === blob.blobKey)
     const modelRevisions = snapshot.project.modelRevisions.filter(
@@ -1839,18 +1854,18 @@ export function expectedAttachmentRefs(
         byteSize: blob.byteSize,
       })
     }
-    const stepRefs = steps.filter(step => step.blobKey === blob.blobKey)
-    for (const step of stepRefs) {
+    const matchingRefs = assemblyRefs.filter(item => item.blobKey === blob.blobKey)
+    for (const item of matchingRefs) {
       refs.push({
-        kind: 'step',
-        revisionId: step.id,
+        kind: item.kind,
+        revisionId: item.id,
         blobKey: blob.blobKey,
         path: attachmentEntryPath(blob.blobKey),
         sha256: blob.sha256,
         byteSize: blob.byteSize,
       })
     }
-    if (pdfRevisions.length === 0 && modelRevisions.length === 0 && stepRefs.length === 0) {
+    if (pdfRevisions.length === 0 && modelRevisions.length === 0 && matchingRefs.length === 0) {
       // 保存端与打开端共用本函数；没有版本引用的孤立 blob 不应出现，
       // 仍保留旧行为给出空 revisionId，由引用校验拒绝。
       refs.push({
@@ -1865,7 +1880,7 @@ export function expectedAttachmentRefs(
   }
   return refs.sort((left, right) => {
     if (left.path !== right.path) return left.path < right.path ? -1 : 1
-    if (left.kind !== right.kind) return ['pdf', 'model', 'step'].indexOf(left.kind) - ['pdf', 'model', 'step'].indexOf(right.kind)
+    if (left.kind !== right.kind) return attachmentKinds.indexOf(left.kind) - attachmentKinds.indexOf(right.kind)
     return left.revisionId < right.revisionId ? -1 : left.revisionId > right.revisionId ? 1 : 0
   })
 }
@@ -2440,27 +2455,30 @@ export function validateSnapshotReferences(
       cursor = modelById.get(cursor)?.parentModelRevisionId ?? null
     }
   }
-  const stepBlobById = new Map<string, string>()
-  for (const step of stepAttachments(snapshot)) {
-    const previous = stepBlobById.get(step.id)
-    if (previous !== undefined && previous !== step.blobKey) {
-      return fail('INVALID_RECORD', '同一 STEP 附件 ID 指向不同字节', step.id)
-    }
-    stepBlobById.set(step.id, step.blobKey)
-    if (!blobByKey.has(step.blobKey) || !attachmentByKey.has(step.blobKey)) {
-      return fail('MISSING_REFERENCE', 'STEP 附件缺少 blob 元数据或字节', step.id)
+  const assemblyBlobKeys = new Set<string>()
+  for (const [label, key] of ([['STEP', 'stepAttachments'], ['MIC', 'micMatrixAttachments']] as const)) {
+    const blobById = new Map<string, string>()
+    for (const item of assemblyAttachments(snapshot, key)) {
+      const previous = blobById.get(item.id)
+      if (previous !== undefined && previous !== item.blobKey) {
+        return fail('INVALID_RECORD', `同一 ${label} 附件 ID 指向不同字节`, item.id)
+      }
+      blobById.set(item.id, item.blobKey)
+      if (!blobByKey.has(item.blobKey) || !attachmentByKey.has(item.blobKey)) {
+        return fail('MISSING_REFERENCE', `${label} 附件缺少 blob 元数据或字节`, item.id)
+      }
+      assemblyBlobKeys.add(item.blobKey)
     }
   }
 
-  const stepBlobKeys = new Set(stepBlobById.values())
   // 每个 blob 至少要有一个版本引用；不允许无来源的孤立字节。
   for (const blob of snapshot.blobs) {
     const referenced =
       snapshot.revisions.some((item) => item.blobKey === blob.blobKey) ||
       snapshot.project.modelRevisions.some((item) => item.blobKey === blob.blobKey) ||
-      stepBlobKeys.has(blob.blobKey)
+      assemblyBlobKeys.has(blob.blobKey)
     if (!referenced) {
-      return fail('MISSING_REFERENCE', 'blob 没有被任何来源、模型版本或 STEP 附件引用', blob.blobKey)
+      return fail('MISSING_REFERENCE', 'blob 没有被任何来源、模型版本或装配附件引用', blob.blobKey)
     }
     if (!attachmentByKey.has(blob.blobKey)) {
       const missing = snapshot.missingAttachments.some((item) => item.blobKey === blob.blobKey)
@@ -3163,6 +3181,7 @@ export async function validateAttachmentBytes(
     }
     attachmentByKey.set(attachment.blobKey, attachment)
   }
+  const micBlobKeys = new Set(assemblyAttachments(snapshot, 'micMatrixAttachments').map(item => item.blobKey))
   for (const [blobKey, attachment] of attachmentByKey) {
     const blob = blobByKey.get(blobKey)
     if (blob === undefined) {
@@ -3178,6 +3197,18 @@ export async function validateAttachmentBytes(
     const digest = await hash(attachment.bytes)
     if (digest !== blob.sha256) {
       return fail('HASH_MISMATCH', `附件哈希不一致：${blobKey}`)
+    }
+    if (micBlobKeys.has(blobKey)) {
+      let payload: unknown
+      try {
+        payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(attachment.bytes))
+      } catch {
+        return fail('INVALID_JSON', 'MIC 附件必须是 UTF-8 JSON', blobKey)
+      }
+      const parsed = micMatrixPayloadV1Schema.safeParse(payload)
+      if (!parsed.success) {
+        return fail('INVALID_RECORD', '无效的 MIC 矩阵', blobKey)
+      }
     }
   }
   return ok(undefined)

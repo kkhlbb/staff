@@ -87,19 +87,23 @@ function setManifestSchema(parts: Map<string, Uint8Array>, schema: number): void
 }
 
 /** 把当前 schema11 容器降级为旧 schema（并删除旧格式不允许的新字段）。 */
-async function downgradeTo(schema: 4 | 5 | 6, bytes: Uint8Array): Promise<Uint8Array> {
+async function downgradeTo(schema: 4 | 5 | 6 | 7 | 8 | 9 | 10, bytes: Uint8Array): Promise<Uint8Array> {
   return rebuildArchive(bytes, (parts) => {
     patchAllProjects(parts, (project) => {
       project.schemaVersion = schema
-      delete project.requirementRevisions
-      delete project.activeRequirementRevisionId
-      delete project.currentRequirementCheck
-      delete project.extractionDrafts
-      delete project.sourceKind
-      delete project.actorId
-      delete project.sessionSeq
-      delete project.sessionLabel
-      delete project.attestations
+      if (schema < 7) {
+        delete project.requirementRevisions
+        delete project.activeRequirementRevisionId
+        delete project.currentRequirementCheck
+      }
+      if (schema < 8) delete project.extractionDrafts
+      if (schema < 10) {
+        delete project.sourceKind
+        delete project.actorId
+        delete project.sessionSeq
+        delete project.sessionLabel
+        delete project.attestations
+      }
       if (schema <= 5) {
         project.dimensionLinks = []
         project.parameters = (project.parameters as Record<string, unknown>[]).map(
@@ -138,10 +142,12 @@ describe('V3.5 schema7 迁移矩阵：旧 3/4/5/6 默认无条款（工作形状
     expect(decoded.value.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(3)
     // PDF 字节未变。
     expect(decoded.value.snapshot.attachments[0]?.bytes.byteLength).toBe(1126)
+    expect(project).not.toHaveProperty('assembly3d')
+    expect(project).not.toHaveProperty('micMatrixAttachments')
   })
 
-  for (const schema of [4, 5, 6] as const) {
-    it(`schema${schema} 读入：工作形状 7、默认无条款、旧历史保持 ${schema}`, async () => {
+  for (const schema of [4, 5, 6, 7, 8, 9, 10] as const) {
+    it(`schema${schema} 读入：工作形状 11、无柔性字段、旧历史保持 ${schema}`, async () => {
       const base = await createSpacerSnapshot({ length: '12.00', confirmed: true })
       const encoded = await encodeProjectFile(base)
       if (!encoded.ok) throw new Error('encode failed')
@@ -165,7 +171,9 @@ describe('V3.5 schema7 迁移矩阵：旧 3/4/5/6 默认无条款（工作形状
       ])
       expect(decoded.value.snapshot.attachments[0]?.bytes.byteLength).toBeGreaterThan(0)
 
-      // 首次保存：追加 schema7 版本，旧历史原样。
+      expect(project).not.toHaveProperty('assembly3d')
+      expect(project).not.toHaveProperty('micMatrixAttachments')
+      // 首次保存：追加 schema11 版本，旧历史原样。
       const upgraded = upgradeSnapshotToCurrent(decoded.value.snapshot, {
         newRevisionId: () => `rev-upgrade-${schema}`,
       })
@@ -173,7 +181,13 @@ describe('V3.5 schema7 迁移矩阵：旧 3/4/5/6 默认无条款（工作形状
       expect(upgraded.snapshot.fileRevisions[0]?.project.schemaVersion).toBe(schema)
       expect(upgraded.snapshot.fileRevisions.at(-1)?.project.schemaVersion).toBe(11)
       const reopened = await encodeProjectFile(upgraded.snapshot)
-      expect(reopened.ok, reopened.ok ? '' : reopened.error.message).toBe(true)
+      if (!reopened.ok) throw Error(JSON.stringify(reopened))
+      const roundTrip = await decodeProjectFile(reopened.value.bytes)
+      if (!roundTrip.ok) throw Error(JSON.stringify(roundTrip))
+      expect(roundTrip.value.snapshot.fileRevisions.slice(0, -1)).toEqual(decoded.value.snapshot.fileRevisions)
+      expect(roundTrip.value.snapshot.project.dimensionChain).toEqual(project.dimensionChain)
+      expect(roundTrip.value.snapshot.attachments).toEqual(decoded.value.snapshot.attachments)
+      expect(roundTrip.value.snapshot.analysisSnapshots).toEqual(decoded.value.snapshot.analysisSnapshots)
     })
   }
 

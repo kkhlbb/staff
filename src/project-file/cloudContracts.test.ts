@@ -9,16 +9,27 @@ import { TOOLS } from '../../mcp/tools'
 import { M1_LOCAL_OPERATIONS } from '../../desktop/main/project-agent/m1LocalTransport'
 import mcp from '../../cloud/contracts/mcp-tools.json'
 import gdt from '../../cloud/contracts/mcp-gdt-tools.json'
+import compliant from '../../cloud/contracts/mcp-compliant-tools.json'
 import rest from '../../cloud/contracts/openapi.json'
 import flags from '../../cloud/contracts/feature-flags.schema.json'
 import { FEATURE_3D_ASSEMBLY_M1 } from '../transport'
-import { assemblyModelV1Schema } from './assembly3d'
+import { assemblyModelV1Schema, micMatrixPayloadV1Schema } from './assembly3d'
 import { provenanceRefSchema } from './validation'
 
 // TypeScript widens enum/type literals when importing JSON. The tests exercise the actual schemas.
 const fromJson = (schema: unknown) => z.fromJSONSchema(schema as Parameters<typeof z.fromJSONSchema>[0])
 
 const fixture = (relative: string) => fileURLToPath(new URL(`../../${relative}`, import.meta.url))
+
+const resolve = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(resolve)
+  if (!value || typeof value !== 'object') return value
+  if ('$ref' in value && typeof value.$ref === 'string') {
+    const name = value.$ref.split('/').at(-1) as keyof typeof rest.components.schemas
+    return resolve(rest.components.schemas[name])
+  }
+  return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, resolve(child)]))
+}
 
 describe('Cloud contract freeze', () => {
   it('publishes the same five stdio tool names and input schemas and ten local bridge operations', () => {
@@ -126,15 +137,6 @@ describe('Cloud contract freeze', () => {
       { input: { ...draft, ...writer, monteCarlo, edits: [{ gdtId: control.id, modifier: 'LMC' }] },
         output: { ...draft, monteCarlo, baseline: metrics, whatIf: metrics } },
     ]
-    const resolve = (value: unknown): unknown => {
-      if (Array.isArray(value)) return value.map(resolve)
-      if (!value || typeof value !== 'object') return value
-      if ('$ref' in value && typeof value.$ref === 'string') {
-        const name = value.$ref.split('/').at(-1) as keyof typeof rest.components.schemas
-        return resolve(rest.components.schemas[name])
-      }
-      return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, resolve(child)]))
-    }
 
     expect(gdt.tools.map(tool => tool.name)).toEqual(['stage_datum', 'stage_gdt', 'analyze_gdt_stackup'])
     for (const [index, tool] of gdt.tools.entries()) {
@@ -164,6 +166,77 @@ describe('Cloud contract freeze', () => {
       const body = Object.fromEntries(Object.entries(input)
         .filter(([key]) => key !== 'projectId' && key !== 'draftRevision'))
       expect(fromJson(restInput).safeParse(body).success).toBe(true)
+    }
+  })
+
+  it('publishes matching REST and remote MCP contracts for leased M4 drafts and analysis', () => {
+    const evidence = { kind: 'user-attestation', actorId: 'reviewer', at: '2026-11-26',
+      sessionSeq: 1, sessionLabel: null, statement: 'Preload is 20 N', fieldPath: 'preloadN' }
+    const projectId = 'p'
+    const draft = { projectId, draftRevision: 'draft-2' }
+    const writer = { projectId, expectedWriterEpoch: 1, baseRevision: 'base-1',
+      expectedDraftRevision: null, idempotencyKey: 'stage-1' }
+    const physics = { compliantModels: [
+      { id: 'compression', kind: 'axial-compression', partId: 'plate', featureId: 'face', preloadN: 20 },
+    ] }
+    const payload = { schemaVersion: 1, partId: 'plate', units: 'mm', forceUnits: 'N',
+      controlPointsMm: [[0, 0, 0]], measurePointsMm: [[0, 0, 1]], sensitivityMatrix: [[0.01]] }
+    const attachment = { kind: 'mic-matrix', revisionId: 'mic-1', blobKey: 'mic-blob',
+      path: 'attachments/mic-blob.bin', sha256: 'a'.repeat(64), byteSize: 200 }
+    const monteCarlo = { seed: 7, samples: 50000, distribution: 'normal' }
+    const rigidBaseline = { cpk: 1.5, ppm: 20, threeSigmaIntervalMm: [0.02, 0.03] }
+    const compliantResult = { cpk: 1.25, ppm: 120, threeSigmaIntervalMm: [0.02, 0.04] }
+    const summary = { rigidBaseline, compliantResult, flexDeltaCpk: -0.25, flexContributionItems: [
+      { modelId: 'compression', kind: 'axial-compression', label: 'Preload', varianceSharePct: 12 },
+    ] }
+    const examples = [
+      { input: { ...writer, physics, evidenceByField: { '/compliantModels/0/preloadN': [evidence] } },
+        output: { ...draft, physics } },
+      { input: { ...writer, fileName: 'plate.json', payload, evidence: [evidence] },
+        output: { ...draft, attachment } },
+      { input: { ...draft, expectedWriterEpoch: 1, monteCarlo, whatIf: physics },
+        output: { ...draft, monteCarlo, summary, displacementFields: [
+          { partId: 'plate', maxDisplacementMm: 0.04, minDisplacementMm: 0.04, samples: [
+            { posMm: [0, 0, 1], dispMm: [0, 0, 0.04], magMm: 0.04 },
+          ] },
+        ] } },
+    ]
+
+    const micSchema = structuredClone(rest.components.schemas.MicMatrixPayloadV1)
+    const { $schema: dialect, ...generated } = z.toJSONSchema(micMatrixPayloadV1Schema)
+    expect(dialect).toBe('https://json-schema.org/draft/2020-12/schema')
+    expect(micSchema).toEqual({ ...generated, description: expect.stringContaining('one matrix row') })
+    expect(compliant.tools.map(tool => tool.name)).toEqual(['stage_physics', 'import_mic_matrix', 'analyze_compliant_stackup'])
+    for (const [index, tool] of compliant.tools.entries()) {
+      const operation = Object.values(rest.paths).flatMap(path => Object.values(path))
+        .find(candidate => candidate.operationId === tool.name)
+      if (!operation || !('x-feature-flag' in operation)) throw Error('Missing gated M4 operation')
+      expect(operation['x-feature-flag']).toBe('FEATURE_3D_ASSEMBLY_M1')
+      const { input, output } = examples[index]
+      const mcpInput = fromJson(tool.inputSchema)
+      const mcpOutput = fromJson(tool.outputSchema)
+      expect(mcpInput.safeParse(input).success, tool.name).toBe(true)
+      expect(mcpInput.safeParse({ ...input, expectedWriterEpoch: undefined }).success).toBe(false)
+      expect(mcpInput.safeParse({ ...input, confirmationToken: 'human-only' }).success).toBe(false)
+      expect(mcpOutput.safeParse(output).success, tool.name).toBe(true)
+      if ('expectedDraftRevision' in input) {
+        expect(mcpInput.safeParse({ ...input, expectedDraftRevision: undefined }).success).toBe(false)
+      }
+      if ('physics' in input) {
+        expect(mcpInput.safeParse({ ...input, physics: { ...physics, micMatrixRef: 'mic-1' } }).success).toBe(false)
+        expect(mcpInput.safeParse({ ...input, evidenceByField: { '/compliantModels/0/preloadN': [] } }).success).toBe(false)
+      }
+      if ('payload' in input) {
+        expect(mcpInput.safeParse({ ...input, evidence: [] }).success).toBe(false)
+        expect(mcpInput.safeParse({ ...input, payload: { ...payload, units: 'cm' } }).success).toBe(false)
+      }
+
+      const response = fromJson(resolve(operation.responses['200'].content['application/json'].schema))
+      expect(response.safeParse({ ok: true, value: output }).success).toBe(true)
+      const restInput = fromJson(resolve(operation.requestBody.content['application/json'].schema))
+      const body = Object.fromEntries(Object.entries(input)
+        .filter(([key]) => key !== 'projectId' && key !== 'draftRevision'))
+      expect(restInput.safeParse(body).success).toBe(true)
     }
   })
 

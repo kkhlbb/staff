@@ -9,7 +9,7 @@
  * 本模块只描述纯数据形状与常量，不导入 Electron、React 或 IndexedDB；
  * 对 V2 领域类型的引用只用 `import type`（编译后擦除）。
  */
-import type { AssemblyModelV1, StepAttachment } from './assembly3d'
+import type { AssemblyModelV1, MicMatrixAttachment, StepAttachment } from './assembly3d'
 import type { ChainDefinition, Project, RelationReview, ProjectMigration } from '../domain/types'
 import type { ChangeEvent } from '../history/events'
 import type { AnalysisSnapshot } from '../history/snapshots'
@@ -26,6 +26,7 @@ import {
 export type {
   AssemblyModelV1, AssemblyPart, PersistentFeature, AssemblyMate, DatumDefinition,
   GdtFeatureControl, GdtMaterialModifier, AssemblyGroup, AssemblyPhysicsSpec, MeasurementSpec, StepAttachment,
+  CompliantModelSpec, MaterialSpec, MicMatrixAttachment, MicMatrixPayloadV1,
 } from './assembly3d'
 
 export const PROJECT_FILE_FORMAT = 'cunlian-project'
@@ -33,7 +34,7 @@ export const PROJECT_FILE_FORMAT = 'cunlian-project'
 export const PROJECT_FILE_FORMAT_VERSION = 2
 /**
  * 当前写端项目 schema：
- * - 11：可选 STEP 附件及三维装配。旧 schema 10 直接提升工作形状，不改原历史版本；
+ * - 11：可选 STEP/MIC 附件、三维装配与柔性配置。旧 schema 10 直接提升工作形状，不改原历史版本；
  * - 10：无任务书入口的加法字段：`sourceKind`（pdf | user-intent）、`actorId`/
  *   `sessionSeq`/`sessionLabel` 与项目级 `attestations` 集合；提取草稿新增可选
  *   `intentBindings`。schema 9 读入时 `sourceKind='pdf'`，**不重算、不改值**；
@@ -148,11 +149,11 @@ export interface ProjectFileCounts {
   legacyArchiveRecords: number
 }
 
-export type ProjectFileAttachmentKind = 'pdf' | 'model' | 'step'
+export type ProjectFileAttachmentKind = 'pdf' | 'model' | 'step' | 'mic-matrix'
 
 export interface ProjectFileAttachmentRef {
   kind: ProjectFileAttachmentKind
-  /** PDF 为 SourceRevision.id，模型为 ModelRevision.modelRevisionId，STEP 为 StepAttachment.id。 */
+  /** PDF 为 SourceRevision.id，模型为 ModelRevision.modelRevisionId，STEP 和 MIC 使用各自附件记录的 id。 */
   revisionId: string
   blobKey: string
   path: string
@@ -460,10 +461,12 @@ export interface ProjectFileProject {
   attestations: UserAttestation[]
   /** STEP IDs are project-scoped and immutable across saved revisions. */
   stepAttachments?: StepAttachment[]
+  /** MIC IDs are project-scoped and immutable across saved revisions. */
+  micMatrixAttachments?: MicMatrixAttachment[]
   assembly3d?: AssemblyModelV1
 }
 
-export type ProjectFileProjectV10 = Omit<ProjectFileProject, 'schemaVersion' | 'stepAttachments' | 'assembly3d'> & {
+export type ProjectFileProjectV10 = Omit<ProjectFileProject, 'schemaVersion' | 'stepAttachments' | 'micMatrixAttachments' | 'assembly3d'> & {
   schemaVersion: typeof V10_PROJECT_FILE_SCHEMA_VERSION
 }
 
