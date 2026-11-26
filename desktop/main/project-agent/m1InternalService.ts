@@ -1,3 +1,7 @@
+import { assemblyDrawing } from '../../../src/report/assemblyDrawing.mjs'
+import { buildReport, journalReportEvidence } from '../../../src/report/buildReport'
+import { chainConclusion, REPORT_SAMPLES } from '../../../src/report/chainConclusion'
+import type { ExportSimulationReportRequest } from '../../../src/transport/types'
 // Main-process journal and internal transaction primitives.
 import { promises as fs } from 'node:fs'
 import { createHash, randomUUID } from 'node:crypto'
@@ -10,7 +14,7 @@ import { analyzeCompliantSchema, importMicMatrixSchema, stageMicMatrix, stagePhy
   verifyEvidenceRefs } from '../../../mcp/lib/compliant'
 import { parseAndValidateMicMatrix } from '../../../src/core/solver/mic.mjs'
 import type { GdtStageResult, ImportMicMatrixResult, StagePhysicsResult } from '../../../src/transport/types'
-import { desktopGdtEnabled, readGdtSnapshot, type GdtToolName } from './gdtTools'
+import { desktopGdtEnabled, desktopGdtWorkerUrl, readGdtSnapshot, type GdtToolName } from './gdtTools'
 import type { WriteReceipt } from './guards'
 import type { ProjectAgentOperation } from '../../shared/project-agent/contracts'
 import { checkWrite, checkWriterAcquisition } from './guards'
@@ -852,6 +856,42 @@ export class M1InternalService {
           ...(state.gdtDraft.physics ? { physics: state.gdtDraft.physics } : {}),
         },
       }
+    })
+  }
+
+  readSimulationReport(request: ExportSimulationReportRequest, verify: VerifyM1Binding) {
+    return this.serial(request.projectId, async () => {
+      const state = await this.load(request.projectId)
+      const binding = await verify()
+      const snapshot = await readGdtSnapshot(binding.canonicalPath, binding.baseRevision, request.projectId)
+      const { project } = snapshot
+      const draft = state.gdtDraft?.baseRevision === binding.baseRevision ? state.gdtDraft : undefined
+      const assembly = project.assembly3d && draft
+        ? { ...project.assembly3d, datums: draft.datums, gdt: draft.gdt, physics: draft.physics ?? project.assembly3d.physics }
+        : project.assembly3d
+      const conclusions = chainConclusion(project.dimensionChain, request.seed ?? 42)
+      const evidence = project.dimensionChain.terms.flatMap(term =>
+        (term.provenance ?? []).map(ref => ({ target: term.id, ref })))
+      evidence.push(...journalReportEvidence(draft?.evidence))
+      const micId = assembly?.physics?.micMatrixRef
+      const stagedMic = micId ? draft?.micAttachments?.[micId] : undefined
+      const record = project.micMatrixAttachments?.find(item => item.id === micId)
+      const blob = record && snapshot.attachments.find(item => item.blobKey === record.blobKey)
+      const mic = micId && stagedMic ? { id: micId, sha256: stagedMic.attachment.sha256, payload: stagedMic.payload }
+        : micId && blob ? { id: micId, sha256: createHash('sha256').update(blob.bytes).digest('hex'),
+          payload: micMatrixPayloadV1Schema.parse(parseAndValidateMicMatrix(blob.bytes).payload) } : undefined
+      const revision = draft && state.draftRevision ? state.draftRevision : project.currentRevisionId
+      const solverUrl = desktopGdtWorkerUrl()
+      const workerUrl = solverUrl && new URL('./m2-geometry-worker.mjs', solverUrl)
+      const hlrSvg = await assemblyDrawing(snapshot, assembly, revision, { workerUrl })
+      binding.seal()
+      return buildReport(request, {
+        projectName: project.name, appVersion: '1.0.0', revision, isDraft: Boolean(draft && state.draftRevision),
+        checksetFingerprint: createHash('sha256').update(JSON.stringify({
+          baseRevision: binding.baseRevision, revision, assembly, conclusions: conclusions.map(item => item.extremeIntervalMm),
+        })).digest('hex'),
+        sampleCount: conclusions.length ? REPORT_SAMPLES : 0, distribution: 'uniform',
+      }, assembly, { conclusions, evidence, mic, hlrSvg })
     })
   }
 

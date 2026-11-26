@@ -55,6 +55,8 @@ import {
 } from '../workspace/project-agent/m3WorkbenchBridge'
 import {
   FEATURE_3D_ASSEMBLY_M1,
+  type ExportSimulationReportRequest,
+  type ExportSimulationReportResult,
   type AnalyzeCompliantStackupRequest,
   type AnalyzeCompliantStackupResult,
   type AnalyzeGdtStackupRequest,
@@ -386,6 +388,10 @@ export function createElectronTransport(
 
     importMicMatrix(request: ImportMicMatrixRequest) {
       return invokeGdt<ImportMicMatrixResult>('importMicMatrix', request)
+    },
+
+    exportSimulationReport(request: ExportSimulationReportRequest) {
+      return invokeGdt<ExportSimulationReportResult>('exportSimulationReport', request)
     },
 
     analyzeCompliantStackup(request: AnalyzeCompliantStackupRequest) {
@@ -1119,6 +1125,7 @@ export function resolveWorkbenchTransport(
       stagePhysics: generic.stagePhysics?.bind(generic),
       importMicMatrix: generic.importMicMatrix?.bind(generic),
       analyzeCompliantStackup: generic.analyzeCompliantStackup?.bind(generic),
+      exportSimulationReport: generic.exportSimulationReport?.bind(generic),
       commitDraft: generic.commitDraft.bind(generic),
       authorizeProject: generic.authorizeProject.bind(generic),
       getContext: generic.getContext.bind(generic),

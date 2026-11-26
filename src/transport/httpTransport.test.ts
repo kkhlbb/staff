@@ -488,3 +488,14 @@ it('routes compliant physics, MIC matrix, and compliant stackup requests with en
     ['https://cloud.cunlian.test/api/v1/projects/project%2Fid/drafts/draft%2Fid/compliant-stackup', 'POST', analyzeBody],
   ])
 })
+
+it('routes report export to the authorized project endpoint and preserves renderer errors', async () => {
+  const denied = { ok: false, error: { code: 'PDF_UNAVAILABLE', message: 'Use HTML' } }
+  const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse(denied, 422))
+  const transport = createHttpTransport({ baseUrl: 'https://cloud.cunlian.test', fetchImpl: fetchMock })
+  expect(await transport.exportSimulationReport!({ projectId: 'project/id', format: 'pdf', seed: 17 })).toEqual(denied)
+  const [url, init] = fetchMock.mock.calls[0]!
+  expect(url).toBe('https://cloud.cunlian.test/api/v1/projects/project%2Fid/report')
+  expect(init?.method).toBe('POST')
+  expect(JSON.parse(String(init?.body))).toEqual({ format: 'pdf', seed: 17 })
+})

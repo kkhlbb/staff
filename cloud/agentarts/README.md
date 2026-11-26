@@ -20,3 +20,7 @@
 6. **报告与撤租**。报告角色使用 `/api/v1/projects/{projectId}/archive` 作为 `describe_project` 的虚拟路径，引用正式修订号和可下载的同源图纸。设计身份在编排结束后撤租。
 
 所有 15 个工具合计分配给四角色、工作流控制和人工接管。编排控制与接管是独立凭据用途。
+
+## 工具配置
+
+默认比赛保底工具为各角色的 `tools`。开启 `FEATURE_3D_ASSEMBLY_M1` 后，将获授权角色的 `advancedTools` 合并至其 MCP 白名单。先进工具涵盖 3D GD&T、柔性/MIC 与工程报告。报告角色调用 `export_simulation_report`，保存 SHA-256、修订和检查集指纹。云端使用 HTML、CSV 或 JSON。

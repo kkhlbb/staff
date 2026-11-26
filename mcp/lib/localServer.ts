@@ -6,7 +6,9 @@ import catalog from '../../cloud/contracts/mcp-gdt-tools.json' with { type: 'jso
 import compliantCatalog from '../../cloud/contracts/mcp-compliant-tools.json' with { type: 'json' }
 import { mcpLog } from './log'
 
-const featureTools = [...catalog.tools, ...compliantCatalog.tools]
+import reportCatalog from '../../cloud/contracts/mcp-report-tools.json' with { type: 'json' }
+
+const featureTools = [...catalog.tools, ...compliantCatalog.tools, ...reportCatalog.tools]
 
 const project = { projectId: { type: 'string' } }
 const writer = { ...project, expectedWriterEpoch: { type: 'integer', minimum: 0 } }

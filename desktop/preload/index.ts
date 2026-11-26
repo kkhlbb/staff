@@ -123,6 +123,7 @@ const api: CunlianApi = {
   analyzeGdtStackup: request => invokeM1(IPC_CHANNELS.gdt, 'analyze_gdt_stackup', request),
   stagePhysics: request => invokeM1(IPC_CHANNELS.gdt, 'stage_physics', request),
   importMicMatrix: request => invokeM1(IPC_CHANNELS.gdt, 'import_mic_matrix', request),
+  exportSimulationReport: request => invokeM1(IPC_CHANNELS.gdt, 'export_simulation_report', request),
   analyzeCompliantStackup: request => invokeM1(IPC_CHANNELS.gdt, 'analyze_compliant_stackup', request),
   detectFeaSidecars: () => invokeM1(IPC_CHANNELS.gdt, 'detect_fea_sidecars'),
   detectM1LocalAgents: () => invokeM1(IPC_CHANNELS.detectM1LocalAgents),

@@ -13,6 +13,9 @@ import { createNewProjectSnapshot } from '../../desktop/main/newProject'
 import { encodeProjectFile } from '../../src/project-file/codec'
 import { axis, face, model, part } from '../../src/core/solver/test/fixture'
 import { compliantTools } from '../lib/compliant'
+import reportCatalog from '../../cloud/contracts/mcp-report-tools.json' with { type: 'json' }
+
+const reportTool = reportCatalog.tools[0]!
 
 const approve = async () => 'approve' as const
 
@@ -69,7 +72,9 @@ it.skipIf(process.platform !== 'darwin' || process.getuid?.() === 0)(
       vi.stubEnv('FEATURE_3D_ASSEMBLY_M1', 'false')
       const offNames = (await rpc('tools/list')).tools.map((item: { name: string }) => item.name)
       for (const spec of compliantTools) expect(offNames).not.toContain(spec.name)
+      expect(offNames).not.toContain(reportTool.name)
       expect((await call('stage_physics', { projectId })).isError).toBe(true)
+      expect((await call('export_simulation_report', { projectId, format: 'json' })).isError).toBe(true)
 
       // Feature flag on -> advertised and executable with lease + evidence
       const enabledClient = new LocalM1Client({ executable: process.execPath, socketPath, peerHelper })
@@ -82,6 +87,7 @@ it.skipIf(process.platform !== 'darwin' || process.getuid?.() === 0)(
         await enabledRpc('initialize', { clientInfo: { name: 'enabled compliant MCP' } })
         const listed = (await enabledRpc('tools/list')).tools
         for (const spec of compliantTools) expect(listed).toContainEqual({ ...spec, title: spec.name })
+        expect(listed).toContainEqual({ ...reportTool, title: reportTool.name })
 
         await invoke('authorizeProject', { projectId })
         const acquired = await invoke('acquireWriter', { projectId, expectedWriterEpoch: 0 })
@@ -170,6 +176,22 @@ it.skipIf(process.platform !== 'darwin' || process.getuid?.() === 0)(
           projectId, draftRevision: stagedMic.draftRevision, expectedWriterEpoch: writerEpoch,
           monteCarlo: { seed: 7, samples: 1000, distribution: 'normal' },
         })).isError).toBe(true)
+
+        // Read-only report export works on authorized project even after writer revocation
+        for (const format of ['html', 'csv', 'json'] as const) {
+          const exported = (await invoke('export_simulation_report', { projectId, format, seed: 19 })).structuredContent
+          expect(exported.revision).toBe(stagedMic.draftRevision)
+          expect(exported.checksetFingerprint).toMatch(/^[a-f0-9]{64}$/)
+          expect(exported.sha256).toBe(createHash('sha256').update(exported.content).digest('hex'))
+          if (format === 'html') {
+            expect(exported.content).toContain(projectId)
+            expect(exported.content).toContain('6061-T6')
+            expect(exported.content).not.toMatch(/<(?:img|script|link)\b[^>]*(?:src|href)=["']https?:/i)
+          }
+          if (format === 'json') {
+            expect(JSON.parse(exported.content).seed).toBe(19)
+          }
+        }
 
         // Official .cunlian file bytes on disk remain 100% untouched
         expect(await readFile(projectPath)).toEqual(bytes)

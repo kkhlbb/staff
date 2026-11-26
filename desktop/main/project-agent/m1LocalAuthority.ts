@@ -1,3 +1,6 @@
+import { reportRequestSchema } from '../../../mcp/lib/report'
+import { exportReport } from '../../../src/report/exportReport'
+import { printSimulationReport } from './reportPdf'
 // Main-process trust owner. This module is never exposed to renderer or a local bridge.
 import { promises as fs } from 'node:fs'
 import { randomUUID } from 'node:crypto'
@@ -326,6 +329,23 @@ export class LocalM1Authority {
     const result = await anchor.service.stageChange(caller.projectId, caller, lease, structuredClone(request),
       this.verifyWriterBinding(anchor, writer, checkRequest), anchor.external ? 'external' : 'internal')
     if (anchor.external) this.ports.onExternalDraft?.(anchor.windowId, result, lease)
+    return result
+  }
+
+  async exportSimulationReport(raw: unknown, caller: SenderInfo | M1ExternalScope, checkRequest?: () => void) {
+    const parsed = reportRequestSchema.safeParse(raw)
+    if (!parsed.success) throw Error('INVALID_REQUEST')
+    const request = parsed.data
+    const grant = 'webContentsId' in caller
+      ? this.grants.get(caller.webContentsId)
+      : this.external.get(caller)?.grant
+    if (!grant || grant.session.projectId !== request.projectId) throw Error('AUTH_REQUIRED')
+    const verify = this.verifyWriterBinding(grant, undefined, checkRequest)
+    const binding = await verify()
+    const payload = await grant.service.readSimulationReport(request, verify)
+    binding.seal()
+    const result = await exportReport(payload, request.format, printSimulationReport)
+    binding.seal()
     return result
   }
 

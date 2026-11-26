@@ -29,6 +29,7 @@ export function createRest(projects, engine, config) {
     const activities = projects.activities(state)
     switch (suffix) {
       case '': return projects.summary(state)
+      case '/report': return projects.exportReport({ ...body, projectId }, principal, signal)
       case '/attachments': return projects.attach(projectId, body, principal, signal)
       case '/attachments/{attachmentId}': {
         const attachment = state.attachments[attachmentId] ?? state.importedAttachments?.[attachmentId]

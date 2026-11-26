@@ -1,3 +1,8 @@
+import { assemblyDrawing } from '../../src/report/assemblyDrawing.mjs'
+import { buildReport, journalReportEvidence } from '../../src/report/buildReport.ts'
+import { exportReport } from '../../src/report/exportReport.ts'
+import { chainConclusion, REPORT_SAMPLES } from '../../src/report/chainConclusion.ts'
+import { reportRequestSchema } from '../../mcp/lib/report.ts'
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import { decodeProjectFile, encodeProjectFile } from '../../src/project-file/codec.ts'
 import { upgradeSnapshotToCurrent } from '../../src/project-file/upgrade.ts'
@@ -599,6 +604,47 @@ export function createProjects(storage, engine, config) {
       if (revision !== body.draftRevision) throw new HttpError(409, 'STALE_DRAFT')
       return commit(state, body, principal, signal)
     }),
+    async exportReport(raw, principal, signal) {
+      if (!config.feature3dAssemblyM1) throw new HttpError(422, 'FEATURE_DISABLED')
+      const parsed = reportRequestSchema.safeParse(raw)
+      if (!parsed.success) throw new HttpError(400, 'INVALID_REQUEST')
+      const request = parsed.data
+      const state = await read(request.projectId, principal)
+      if (request.format === 'pdf') throw new HttpError(422, 'PDF_UNAVAILABLE', 'Export HTML to print offline')
+      const snapshot = unwrap(await decodeProjectFile(Buffer.from(state.archive, 'base64'))).snapshot
+      const { project } = snapshot
+      const assembly = state.gdtDraft?.assembly ?? project.assembly3d
+      const review = await engine.checks(state, signal)
+      const checksetFingerprint = review.checksetFingerprint
+      const chain = state.spacer
+        ? computeProjectSpacer(snapshot, state, state.draftRevision).chain
+        : project.dimensionChain
+      const evidence = chain.terms.flatMap(term => (term.provenance ?? []).map(ref => ({ target: term.id, ref })))
+      evidence.push(...journalReportEvidence(state.gdtDraft?.evidence),
+        ...journalReportEvidence(state.gdtDraft?.physicsEvidence))
+      const micId = assembly?.physics?.micMatrixRef
+      const stagedMic = micId && state.gdtDraft?.micAttachments?.[micId]
+      const micRecord = project.micMatrixAttachments?.find(item => item.id === micId)
+      const micBlob = micRecord && snapshot.attachments.find(item => item.blobKey === micRecord.blobKey)
+      const mic = stagedMic
+        ? { id: micId, sha256: stagedMic.attachment.sha256, payload: stagedMic.payload }
+        : micBlob ? { id: micId, sha256: digest(micBlob.bytes), payload: parseAndValidateMicMatrix(micBlob.bytes).payload }
+          : undefined
+      let hlrSvg
+      if (assembly?.parts.length) {
+        hlrSvg = await assemblyDrawing(snapshot, assembly, state.draftRevision ?? state.baseRevision,
+          { signal, timeoutMs: config.timeoutMs })
+      } else if (state.template === 'builtin-mounting-plate' || state.spacer) {
+        hlrSvg = Buffer.from((await engine.drawing(state, 'svg', signal)).bytes).toString('utf8')
+      }
+      const conclusions = chainConclusion(chain, request.seed ?? 42)
+      signal.throwIfAborted()
+      return exportReport(buildReport(request, {
+        projectName: project.name, appVersion: '1.0.0', revision: state.draftRevision ?? state.baseRevision,
+        isDraft: Boolean(state.draftRevision), checksetFingerprint, sampleCount: conclusions.length ? REPORT_SAMPLES : 0,
+        distribution: 'uniform',
+      }, assembly, { conclusions, evidence, hlrSvg, mic }), request.format)
+    },
     async review(state, principal, revision, approval, signal) {
       draftMatches(state, revision)
       const review = await engine.checks(state, signal)

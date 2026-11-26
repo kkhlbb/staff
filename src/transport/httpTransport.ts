@@ -12,6 +12,8 @@ import type { M2ModelMeshInput, M2Result } from '../../desktop/shared/project-ag
 import type { ProjectFileAttachmentRef } from '../project-file/types'
 import {
   FEATURE_3D_ASSEMBLY_M1,
+  type ExportSimulationReportRequest,
+  type ExportSimulationReportResult,
   type AnalyzeCompliantStackupRequest,
   type AnalyzeCompliantStackupResult,
   type AnalyzeGdtStackupRequest,
@@ -581,6 +583,13 @@ export function createHttpTransport(options: HttpTransportOptions): HttpTranspor
     importMicMatrix({ projectId, ...jsonBody }: ImportMicMatrixRequest) {
       return requestJson<ImportMicMatrixResult>(
         `/api/v1/projects/${encodeSegment(projectId)}/drafts/mic-matrix`,
+        { method: 'POST', jsonBody },
+      )
+    },
+
+    exportSimulationReport({ projectId, ...jsonBody }: ExportSimulationReportRequest) {
+      return requestJson<ExportSimulationReportResult>(
+        `/api/v1/projects/${encodeSegment(projectId)}/report`,
         { method: 'POST', jsonBody },
       )
     },

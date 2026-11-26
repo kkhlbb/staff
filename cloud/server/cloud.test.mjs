@@ -604,6 +604,16 @@ test('compliant physics, MIC matrix, and compliant stackup tools work over REST 
     assert.equal(reviewBody.compliantSnapshot.physics.micMatrixRef, micMcp.structuredContent.attachment.revisionId)
     assert.ok(reviewBody.compliantSnapshot.summary)
 
+    const reportRequest = { projectId, format: 'json', seed: 33 }
+    const exported = await value(await post(`${path}/report`, { format: 'json', seed: 33 }))
+    assert.equal(exported.revision, micMcp.structuredContent.draftRevision)
+    assert.equal(exported.checksetFingerprint, reviewBody.review.checksetFingerprint)
+    assert.equal(JSON.parse(exported.content).seed, 33)
+    assert.equal((await tool('export_simulation_report', reportRequest)).structuredContent.revision, exported.revision)
+    const pdfError = await value(await post(`${path}/report`, { format: 'pdf' }), 422)
+    assert.equal(pdfError.error.code, 'PDF_UNAVAILABLE')
+    assert.equal((await service.storage.read(projectId)).archive, original.archive)
+
     // Human-confirmed commit persists physics + micAttachments into official .cunlian archive
     const committed = await value(await post(`${draftPath}/commit`, {
       projectId, draftRevision: micMcp.structuredContent.draftRevision, baseRevision,
