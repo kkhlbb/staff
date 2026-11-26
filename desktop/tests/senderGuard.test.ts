@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { isProductionRendererUrl } from '../main/rendererUrl'
 import { SenderGuard } from '../main/senderGuard'
 
 const PROD_URL =
@@ -96,6 +97,28 @@ describe('SenderGuard', () => {
     guard.unregister(1)
     expect(
       guard.verify({ webContentsId: 1, frameUrl: PROD_URL, isMainFrame: true }).ok,
+    ).toBe(false)
+  })
+
+  it('Windows 打包态主窗口 file:///C:/... 经 isProductionRendererUrl 放行所有 IPC', () => {
+    const guard = new SenderGuard()
+    const winRendererIndex =
+      'C:\\Users\\Engineer\\AppData\\Local\\Programs\\寸链\\resources\\app.asar\\.vite\\renderer\\main_window\\index.desktop.html'
+    guard.register({
+      webContentsId: 42,
+      isDestroyed: () => false,
+      isAllowedFrameUrl: (url) => isProductionRendererUrl(url, winRendererIndex),
+    })
+
+    const frameUrl =
+      'file:///C:/Users/Engineer/AppData/Local/Programs/%E5%AF%B8%E9%93%BE/resources/app.asar/.vite/renderer/main_window/index.desktop.html'
+    expect(guard.verify({ webContentsId: 42, frameUrl, isMainFrame: true })).toEqual({ ok: true })
+    expect(
+      guard.verify({
+        webContentsId: 42,
+        frameUrl: 'file:///C:/Users/Engineer/evil.html',
+        isMainFrame: true,
+      }).ok,
     ).toBe(false)
   })
 })

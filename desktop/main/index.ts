@@ -78,6 +78,7 @@ import type { DrawingData } from '../../src/drawing/types'
 import { SessionController, runCloseGate, type GateChoice } from './sessionController'
 import { SenderGuard } from './senderGuard'
 import { createOpenFileRouter, extractDxfArg } from './launchArgs'
+import { recordStartupError } from './startupDiagnostics'
 import { createMainWindow, type MainWindowHandle } from './window'
 
 // 应用名与 userData 目录必须在任何路径读取前固定，避免 staff → 寸链 改名漂移。
@@ -136,9 +137,27 @@ function closeNow(handle: MainWindowHandle): void {
   handle.window.close()
 }
 
+function reportMainError(stage: string, error: unknown, showBox: boolean): void {
+  console.error(`[cunlian] ${stage}:`, error)
+  recordStartupError(stage, error, {
+    userDataDir: app.getPath('userData'),
+    showDialog: showBox && app.isReady() ? (title, content) => dialog.showErrorBox(title, content) : undefined,
+  })
+}
+
+process.on('uncaughtException', (error) => {
+  reportMainError('process.uncaughtException', error, true)
+})
+process.on('unhandledRejection', (reason) => {
+  reportMainError('process.unhandledRejection', reason, false)
+})
+
 function createWindow(): MainWindowHandle {
   const handle = createMainWindow({
     guard,
+    onLoadError: (stage, error) => {
+      reportMainError(stage, error, true)
+    },
     onClosed: (webContentsId) => {
       closeGuard.cancelWindow(webContentsId)
       m1WorkbenchForClose?.invalidate(webContentsId, true)
@@ -1169,6 +1188,9 @@ function bootstrap(): void {
         createWindow()
       }
     })
+  }).catch((error: unknown) => {
+    reportMainError('app.whenReady', error, true)
+    app.exit(1)
   })
 
   app.on('window-all-closed', () => {

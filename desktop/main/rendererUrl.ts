@@ -1,9 +1,49 @@
+import path from 'node:path'
+
 /**
  * 渲染入口 URL 判定（与 Electron 无关，便于单元测试）。
  *
  * 判定刻意收紧：生产只认打包后的那一个 index.desktop.html；开发只认同源
  * 本地 Vite 地址。不做“前缀包含 localhost”这类可被路径/端口绕过的判断。
  */
+
+function isWindowsPath(filePath: string): boolean {
+  return /^(?:\\\\\?\\)?[a-zA-Z]:[\\/]/.test(filePath) || /^\\\\[^\\]/.test(filePath)
+}
+
+function normalizeWindowsFilePath(input: string): string {
+  let normalized = input.replaceAll('/', '\\')
+  if (/^\\\\\?\\UNC\\/i.test(normalized)) {
+    normalized = '\\\\' + normalized.slice(8)
+  } else if (/^\\\\\?\\[a-zA-Z]:\\/i.test(normalized)) {
+    normalized = normalized.slice(4)
+  }
+  return path.win32.normalize(normalized).toLowerCase()
+}
+
+function fileUrlToWindowsPath(parsed: URL): string | null {
+  let decodedPath: string
+  try {
+    decodedPath = decodeURIComponent(parsed.pathname)
+  } catch {
+    return null
+  }
+  if (parsed.hostname.length > 0) {
+    // UNC path: file://server/share/path -> \\server\share\path
+    let decodedHost: string
+    try {
+      decodedHost = decodeURIComponent(parsed.hostname)
+    } catch {
+      return null
+    }
+    return normalizeWindowsFilePath(`\\\\${decodedHost}${decodedPath}`)
+  }
+  // Local drive path: file:///C:/path -> /C:/path -> C:\path
+  if (!/^\/[a-zA-Z]:\//.test(decodedPath)) {
+    return null
+  }
+  return normalizeWindowsFilePath(decodedPath.slice(1))
+}
 
 export function isProductionRendererUrl(url: string, rendererIndexPath: string): boolean {
   let parsed: URL
@@ -13,6 +53,16 @@ export function isProductionRendererUrl(url: string, rendererIndexPath: string):
     return false
   }
   if (parsed.protocol !== 'file:') {
+    return false
+  }
+  if (isWindowsPath(rendererIndexPath)) {
+    const candidate = fileUrlToWindowsPath(parsed)
+    if (candidate === null) {
+      return false
+    }
+    return candidate === normalizeWindowsFilePath(rendererIndexPath)
+  }
+  if (parsed.hostname.length > 0) {
     return false
   }
   let pathname: string

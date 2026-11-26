@@ -26,6 +26,7 @@ export interface MainWindowHandle {
 export interface CreateMainWindowOptions {
   guard: SenderGuard
   onClosed: (webContentsId: number) => void
+  onLoadError?: (stage: string, error: unknown) => void
 }
 
 /**
@@ -103,10 +104,22 @@ export function createMainWindow(options: CreateMainWindowOptions): MainWindowHa
     options.onClosed(webContentsId)
   })
 
+  window.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    if (!isMainFrame) return
+    options.onLoadError?.(
+      'window.did-fail-load',
+      new Error(`加载主界面失败 (${errorCode}): ${errorDescription} [${validatedURL}]`),
+    )
+  })
+
   if (devServerUrl !== null) {
-    void window.loadURL(devServerUrl)
+    void window.loadURL(devServerUrl).catch((error: unknown) => {
+      options.onLoadError?.('window.loadURL', error)
+    })
   } else {
-    void window.loadFile(rendererIndexPath)
+    void window.loadFile(rendererIndexPath).catch((error: unknown) => {
+      options.onLoadError?.('window.loadFile', error)
+    })
   }
 
   return handle
