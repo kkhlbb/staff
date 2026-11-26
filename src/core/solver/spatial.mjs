@@ -44,6 +44,15 @@ export function scene(assembly) {
     const rows = nominalTransform.slice(0, 3)
     return { rotation: rows.map(row => row.slice(0, 3)), translation: rows.map(row => row[3]) }
   })
+  const gdtOnly = new Set((assembly.gdt ?? []).map(control => control.featureId))
+  const referencedDatums = new Set((assembly.gdt ?? []).flatMap(control => control.datumIds))
+  for (const datum of assembly.datums ?? []) if (referencedDatums.has(datum.id)) gdtOnly.add(datum.featureId)
+  for (const mate of assembly.mates) {
+    for (const id of mate.featureIds ?? mate.contactPairs.flat()) gdtOnly.delete(id)
+  }
+  for (const measurement of assembly.measurements) {
+    for (const id of measurement.featureIds) gdtOnly.delete(id)
+  }
   const features = new Map()
   for (const feature of assembly.features) {
     const { id, partId, kind } = feature
@@ -54,9 +63,12 @@ export function scene(assembly) {
     const axial = kind === 'cylindrical-hole-axis' || kind === 'cone'
     const direction = plane ? feature.normal : axial ? feature.axis
       : kind === 'edge' && feature.curve === 'line' ? sub(feature.endQ, feature.startQ) : null
+    // A GD&T-only direction can be unresolvable in a historical archive.
+    // Give the control a structured warning without invalidating the assembly solve.
+    const axis = direction && (!gdtOnly.has(id) || norm(direction) > 0) ? unit(direction) : null
     features.set(id, {
-      id, partId, part: parts.get(partId), plane, axial, radius: feature.radiusQ / 10000,
-      point: scale(originQ, 0.0001), axis: direction ? unit(direction) : null,
+      id, partId, part: parts.get(partId), plane, axial, cylinder: kind === 'cylindrical-hole-axis', radius: feature.radiusQ / 10000,
+      point: scale(originQ, 0.0001), axis,
     })
   }
   function feature(id) {

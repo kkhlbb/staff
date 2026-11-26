@@ -1,4 +1,5 @@
 import { createRng } from '../../domain/statistics.ts'
+import { evaluateGdt, prepareGdt } from './gdt.mjs'
 import { linearizedMateResponse, solveAssembly } from './assemblySolver.mjs'
 import { add, cross, dofs, dot, norm, placed, scene, sub, transverse, turn } from './spatial.mjs'
 
@@ -199,25 +200,36 @@ export function createSimulation(workerId) {
   const nextRevision = () => workerId + ':' + ++sequence
   return function run(input) {
     if ('incremental' in input) {
-      const { baselineRevision, parameter } = input.incremental
+      const { baselineRevision, parameter, edits = [] } = input.incremental
       if (!baseline || baseline.revision !== baselineRevision) throw Error('Stale simulation baseline')
       const { geometry, samples, seed, bins, limits, measurements } = baseline
-      const updated = bind(parameter, geometry)
-      const original = baseline.parameters.get(updated.id)
-      if (!original || ['partId', 'featureId', 'dof'].some(key => original[key] !== updated[key])) {
+      if (!parameter && !edits.length) throw Error('Expected an incremental tolerance edit')
+      const updated = parameter && bind(parameter, geometry)
+      const original = updated && baseline.parameters.get(updated.id)
+      if (updated && (!original || ['partId', 'featureId', 'dof'].some(key => original[key] !== updated[key]))) {
         throw Error('Incremental recomputation requires the same parameter ID and binding')
       }
-      const parameters = new Map(baseline.parameters).set(updated.id, { ...updated, draws: original.draws })
+      const parameters = updated
+        ? new Map(baseline.parameters).set(updated.id, { ...updated, draws: original.draws }) : baseline.parameters
       const recalculatedMeasurementIds = []
       const results = baseline.results.map((result, i) => {
         const m = measurements[i]
-        if (!m.changes.some(change => change.id === updated.id)) return result
+        if (!updated || !m.changes.some(change => change.id === updated.id)) return result
         recalculatedMeasurementIds.push(m.spec.id)
         return sampleMeasurement(m, parameters, samples, bins, limitFor(limits, m.spec.id))
       })
+      if (!baseline.gdtModel && edits.length) throw Error('Baseline has no GD&T controls')
+      const prior = baseline.gdt
+      const gdt = prior && evaluateGdt(baseline.gdtModel, parameters, prior, edits, updated?.id)
       const revision = nextRevision()
-      baseline = { ...baseline, revision, parameters, results }
-      return { status: 'ok', baselineRevision: revision, seed, samples, recalculatedMeasurementIds, measurements: results }
+      baseline = { ...baseline, revision, parameters, results, gdt }
+      return {
+        status: 'ok', baselineRevision: revision, seed, samples,
+        recalculatedMeasurementIds, measurements: results,
+        ...(gdt && { gdt: {
+          baseline: prior.metrics, whatIf: gdt.metrics, recalculatedGdtIds: gdt.recalculatedGdtIds,
+        } }),
+      }
     }
 
     const { assembly, fixedPartIds, seed = 1, samples = 10_000, bins = 40, limits = {} } = input
@@ -243,9 +255,17 @@ export function createSimulation(workerId) {
     const measurements = assembly.measurements.map(spec => measurement(spec, geometry, [...parameters.values()],
       parameterId => transfers.get(parameterId)))
     const results = measurements.map(m => sampleMeasurement(m, parameters, samples, bins, limitFor(limits, m.spec.id)))
+    const gdtModel = assembly.gdt?.length
+      ? prepareGdt(assembly, geometry, parameters, transfers, samples, seed, input.gdtFeatureGeometry) : null
+    if (!gdtModel && input.gdtEdits?.length) throw Error('Assembly has no GD&T controls')
+    const originalGdt = gdtModel && evaluateGdt(gdtModel, parameters)
+    const gdt = originalGdt && input.gdtEdits?.length
+      ? evaluateGdt(gdtModel, parameters, originalGdt, input.gdtEdits) : originalGdt
     const revision = nextRevision()
-    baseline = { revision, seed, samples, bins, limits, parameters, results, measurements, geometry }
+    baseline = { revision, seed, samples, bins, limits, parameters, results, measurements, geometry, gdtModel, gdt }
     return {
+      ...(gdt && { gdt: { baseline: originalGdt.metrics, ...(gdt !== originalGdt && { whatIf: gdt.metrics }),
+        recalculatedGdtIds: gdt.recalculatedGdtIds } }),
       status: 'ok', baselineRevision: revision, seed, samples, solution,
       recalculatedMeasurementIds: measurements.map(m => m.spec.id), measurements: results,
     }
