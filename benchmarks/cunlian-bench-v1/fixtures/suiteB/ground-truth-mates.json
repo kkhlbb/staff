@@ -1,0 +1,63 @@
+{
+  "plate-spacer-cover-pins": {
+    "partCount": 5,
+    "underConstrained": true,
+    "mates": [
+      {"kind": "face-contact", "features": [{"part": "Mounting plate", "point": [21, 15, 5], "axis": [0, 0, 1]}, {"part": "Spacer", "point": [21, 15, 5], "axis": [0, 0, -1]}]},
+      {"kind": "face-contact", "features": [{"part": "Spacer", "point": [21, 15, 12], "axis": [0, 0, 1]}, {"part": "Cover", "point": [21, 15, 12], "axis": [0, 0, -1]}]},
+      {"kind": "coaxial", "features": [{"part": "Mounting plate", "point": [9, 8, 0], "axis": [0, 0, 1], "radius": 2}, {"part": "Dowel 1", "point": [9, 8, 0], "axis": [0, 0, 1], "radius": 2}]},
+      {"kind": "coaxial", "features": [{"part": "Cover", "point": [9, 8, 0], "axis": [0, 0, 1], "radius": 2}, {"part": "Dowel 1", "point": [9, 8, 0], "axis": [0, 0, 1], "radius": 2}]},
+      {"kind": "coaxial", "features": [{"part": "Mounting plate", "point": [33, 8, 0], "axis": [0, 0, 1], "radius": 2}, {"part": "Dowel 2", "point": [33, 8, 0], "axis": [0, 0, 1], "radius": 2}]},
+      {"kind": "coaxial", "features": [{"part": "Cover", "point": [33, 8, 0], "axis": [0, 0, 1], "radius": 2}, {"part": "Dowel 2", "point": [33, 8, 0], "axis": [0, 0, 1], "radius": 2}]}
+    ]
+  },
+  "l-bracket-flange": {
+    "partCount": 2,
+    "underConstrained": false,
+    "mates": [
+      {"kind": "face-contact", "features": [{"part": "L bracket", "point": [26, 19, 5], "axis": [0, 0, 1]}, {"part": "Flange", "point": [26, 19, 5], "axis": [0, 0, -1]}]},
+      {"kind": "coaxial", "features": [{"part": "L bracket", "point": [26, 19, 5], "axis": [0, 0, 1], "radius": 3}, {"part": "Flange", "point": [26, 19, 5], "axis": [0, 0, 1], "radius": 3}]},
+      {"kind": "coaxial", "features": [{"part": "L bracket", "point": [36, 19, 5], "axis": [0, 0, 1], "radius": 3}, {"part": "Flange", "point": [36, 19, 5], "axis": [0, 0, 1], "radius": 3}]}
+    ]
+  },
+  "stepped-shaft-seat-cover": {
+    "partCount": 3,
+    "underConstrained": true,
+    "mates": [
+      {"kind": "face-contact", "features": [{"part": "Bearing seat", "point": [0, 0, 9], "axis": [0, 0, 1]}, {"part": "Stepped shaft", "point": [0, 0, 9], "axis": [0, 0, -1]}]},
+      {"kind": "face-contact", "features": [{"part": "Stepped shaft", "point": [0, 0, 12], "axis": [0, 0, 1]}, {"part": "End cap", "point": [0, 0, 12], "axis": [0, 0, -1]}]},
+      {"kind": "coaxial", "features": [{"part": "Bearing seat", "point": [0, 0, 0], "axis": [0, 0, 1], "radius": 6}, {"part": "Stepped shaft", "point": [0, 0, 0], "axis": [0, 0, 1], "radius": 6}]},
+      {"kind": "coaxial", "features": [{"part": "Stepped shaft", "point": [0, 0, 12], "axis": [0, 0, 1], "radius": 4}, {"part": "End cap", "point": [0, 0, 12], "axis": [0, 0, 1], "radius": 4}]}
+    ]
+  },
+  "shell-four-corner-clamps": {
+    "partCount": 6,
+    "underConstrained": true,
+    "mates": [
+      {"kind": "face-contact", "features": [{"part": "Thin-wall housing", "point": [22, 0, 14], "axis": [0, 0, 1]}, {"part": "Lid", "point": [22, 0, 14], "axis": [0, 0, -1]}]},
+      {"kind": "face-contact", "features": [{"part": "Lid", "point": [2, 2, 17], "axis": [0, 0, 1]}, {"part": "Clamp screw 1", "point": [2, 2, 17], "axis": [0, 0, -1]}]},
+      {"kind": "coaxial", "features": [{"part": "Thin-wall housing", "point": [2, 2, 9], "axis": [0, 0, 1], "radius": 1.4}, {"part": "Clamp screw 1", "point": [2, 2, 9], "axis": [0, 0, 1], "radius": 1.4}]},
+      {"kind": "floating-clearance", "features": [{"part": "Lid", "point": [2, 2, 14], "axis": [0, 0, 1], "radius": 1.7}, {"part": "Clamp screw 1", "point": [2, 2, 9], "axis": [0, 0, 1], "radius": 1.4}], "minMm": 0, "maxMm": 0.3},
+      {"kind": "face-contact", "features": [{"part": "Lid", "point": [48, 2, 17], "axis": [0, 0, 1]}, {"part": "Clamp screw 2", "point": [48, 2, 17], "axis": [0, 0, -1]}]},
+      {"kind": "coaxial", "features": [{"part": "Thin-wall housing", "point": [48, 2, 9], "axis": [0, 0, 1], "radius": 1.4}, {"part": "Clamp screw 2", "point": [48, 2, 9], "axis": [0, 0, 1], "radius": 1.4}]},
+      {"kind": "floating-clearance", "features": [{"part": "Lid", "point": [48, 2, 14], "axis": [0, 0, 1], "radius": 1.7}, {"part": "Clamp screw 2", "point": [48, 2, 9], "axis": [0, 0, 1], "radius": 1.4}], "minMm": 0, "maxMm": 0.3},
+      {"kind": "face-contact", "features": [{"part": "Lid", "point": [2, 32, 17], "axis": [0, 0, 1]}, {"part": "Clamp screw 3", "point": [2, 32, 17], "axis": [0, 0, -1]}]},
+      {"kind": "coaxial", "features": [{"part": "Thin-wall housing", "point": [2, 32, 9], "axis": [0, 0, 1], "radius": 1.4}, {"part": "Clamp screw 3", "point": [2, 32, 9], "axis": [0, 0, 1], "radius": 1.4}]},
+      {"kind": "floating-clearance", "features": [{"part": "Lid", "point": [2, 32, 14], "axis": [0, 0, 1], "radius": 1.7}, {"part": "Clamp screw 3", "point": [2, 32, 9], "axis": [0, 0, 1], "radius": 1.4}], "minMm": 0, "maxMm": 0.3},
+      {"kind": "face-contact", "features": [{"part": "Lid", "point": [48, 32, 17], "axis": [0, 0, 1]}, {"part": "Clamp screw 4", "point": [48, 32, 17], "axis": [0, 0, -1]}]},
+      {"kind": "coaxial", "features": [{"part": "Thin-wall housing", "point": [48, 32, 9], "axis": [0, 0, 1], "radius": 1.4}, {"part": "Clamp screw 4", "point": [48, 32, 9], "axis": [0, 0, 1], "radius": 1.4}]},
+      {"kind": "floating-clearance", "features": [{"part": "Lid", "point": [48, 32, 14], "axis": [0, 0, 1], "radius": 1.7}, {"part": "Clamp screw 4", "point": [48, 32, 9], "axis": [0, 0, 1], "radius": 1.4}], "minMm": 0, "maxMm": 0.3}
+    ]
+  },
+  "eccentric-coupling": {
+    "partCount": 3,
+    "underConstrained": true,
+    "mates": [
+      {"kind": "face-contact", "features": [{"part": "Driving hub", "point": [0, 0, 7], "axis": [0, 0, 1]}, {"part": "Driven hub", "point": [0, 0, 7], "axis": [0, 0, -1]}]},
+      {"kind": "coaxial", "features": [{"part": "Driving hub", "point": [-6, 6, 7], "axis": [0, 0, 1], "radius": 2.2}, {"part": "Driven hub", "point": [-6, 6, 7], "axis": [0, 0, 1], "radius": 2.2}]},
+      {"kind": "coaxial", "features": [{"part": "Driving hub", "point": [-6, -6, 7], "axis": [0, 0, 1], "radius": 2.2}, {"part": "Driven hub", "point": [-6, -6, 7], "axis": [0, 0, 1], "radius": 2.2}]},
+      {"kind": "floating-clearance", "features": [{"part": "Driving hub", "point": [3, 0, 0], "axis": [0, 0, 1], "radius": 2.2}, {"part": "Eccentric key", "point": [3.1, 0, 0], "axis": [0, 0, 1], "radius": 2}], "minMm": 0, "maxMm": 0.2},
+      {"kind": "floating-clearance", "features": [{"part": "Driven hub", "point": [3, 0, 0], "axis": [0, 0, 1], "radius": 2.2}, {"part": "Eccentric key", "point": [3.1, 0, 0], "axis": [0, 0, 1], "radius": 2}], "minMm": 0, "maxMm": 0.2}
+    ]
+  }
+}
