@@ -324,3 +324,28 @@ describe('ElectronTransport', () => {
     expect(mockGetConnectionStatus).toHaveBeenCalledTimes(1)
   })
 })
+
+it('passes each GD&T operation to the enabled preload and gates explicitly disabled calls', async () => {
+  const draft = { projectId: 'project', draftRevision: 'draft' }
+  const request = { projectId: draft.projectId, expectedWriterEpoch: 2,
+    baseRevision: 'base', expectedDraftRevision: null, idempotencyKey: 'stage', items: [] }
+  const stage = { ok: true, value: { ...draft, warnings: [] } }
+  const denied = { ok: false, error: { code: 'WRITER_REVOKED', message: 'lease revoked' } }
+  const bridge = {
+    stageDatum: vi.fn().mockResolvedValue(stage),
+    stageGdt: vi.fn().mockResolvedValue(stage),
+    analyzeGdtStackup: vi.fn().mockResolvedValue(denied),
+  }
+  const analysis = { ...draft, expectedWriterEpoch: 2,
+    monteCarlo: { seed: 50, samples: 10000, distribution: 'uniform' as const } }
+  const off = createElectronTransport({ bridge, feature3dAssemblyM1: false })
+  await expect(off.stageDatum!(request)).resolves.toMatchObject({ ok: false, error: { code: 'FEATURE_DISABLED' } })
+  expect(bridge.stageDatum).not.toHaveBeenCalled()
+  const on = createElectronTransport({ bridge, feature3dAssemblyM1: true })
+  await expect(on.stageDatum!(request)).resolves.toEqual(stage)
+  await expect(on.stageGdt!(request)).resolves.toEqual(stage)
+  await expect(on.analyzeGdtStackup!(analysis)).resolves.toEqual(denied)
+  expect(bridge.stageDatum).toHaveBeenCalledExactlyOnceWith(request)
+  expect(bridge.stageGdt).toHaveBeenCalledExactlyOnceWith(request)
+  expect(bridge.analyzeGdtStackup).toHaveBeenCalledExactlyOnceWith(analysis)
+})

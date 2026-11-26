@@ -56,6 +56,7 @@ export class LocalM1Client {
   private socket?: Duplex
   private connecting?: Promise<Duplex>
   private pending?: { id: number; finish(error: Error | null, result?: Record<string, unknown>): void }
+  private gdtOperations: string[] = []
   private id = 0
   private clientName: string | null = null
   constructor(ports: ClientPorts) {
@@ -108,11 +109,13 @@ export class LocalM1Client {
       if (startup.aborted) throw Error('DESKTOP_TIMEOUT', { cause: error })
       throw error
     }
+    this.gdtOperations = []
     this.socket = socket
     socket.on('error', () => socket.destroy())
     socket.on('close', () => {
       if (this.socket !== socket) return
       this.socket = undefined
+      this.gdtOperations = []
       this.pending?.finish(Error('DESKTOP_DISCONNECTED'))
     })
     readM1Frames(socket, 8 * 1024 * 1024, value => {
@@ -131,6 +134,9 @@ export class LocalM1Client {
       if (hello.version !== M1_LOCAL_VERSION) throw Error('INCOMPATIBLE_BRIDGE')
       const capabilities = await this.exchange(socket, 'capabilities', {}, deadline - performance.now())
       if (capabilities.protocol !== M1_LOCAL_VERSION) throw Error('INCOMPATIBLE_BRIDGE')
+      if (Array.isArray(capabilities.gdtOperations)) {
+        this.gdtOperations = capabilities.gdtOperations.filter(name => typeof name === 'string')
+      }
       return socket
     } catch (error) {
       socket.destroy()
@@ -163,6 +169,10 @@ export class LocalM1Client {
     if (this.socket && !this.socket.destroyed) return this.socket
     this.connecting = this.establish().finally(() => { this.connecting = undefined })
     return this.connecting
+  }
+
+  supports(method: string) {
+    return this.gdtOperations.includes(method)
   }
 
   async call(method: string, params: unknown) {

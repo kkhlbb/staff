@@ -14,6 +14,7 @@ import { ASSUMPTION_NOTE, STATISTICS_GENERATOR_VERSION, crossCheck, rssOf } from
 import { buildDxfDocument } from '../../src/drawing/dxfExport.ts'
 import { renderDrawingSvg } from '../../src/drawing/renderDrawingSvg.ts'
 import { HttpError } from './contracts.mjs'
+import { assemblyWarnings, createGdtAnalyzer } from '../../mcp/lib/gdt.ts'
 import { plateDrawing } from './plate-export.mjs'
 
 export const defaultSpacer = { innerDiameterQ: 200000, outerDiameterQ: 320000, lengthQ: 120000 }
@@ -52,6 +53,7 @@ async function spacer(state) {
 export function createEngine(timeoutMs) {
   const geometry = createGeometryManager()
   const solver = createSolverScheduler()
+  const gdtAnalyzer = createGdtAnalyzer()
   const reports = new Map()
 
   async function plate(state, signal) {
@@ -113,7 +115,12 @@ export function createEngine(timeoutMs) {
       items = [check('spacer-closed-interval', verdict ? (verdict.satisfied ? 'pass' : 'fail') : 'needsClarification',
         JSON.stringify({ extreme, target, verdict }), ['spacer'], ['length'])]
     } else {
-      items = [check('draft-input', 'needsClarification', 'Draft parameters are required')]
+      items = state.gdtDraft ? [] : [check('draft-input', 'needsClarification', 'Draft parameters are required')]
+    }
+    if (state.gdtDraft) {
+      const { assembly, evidence } = state.gdtDraft
+      items.push(check('gdt-draft', 'pass', JSON.stringify({ datums: assembly.datums, gdt: assembly.gdt,
+        evidence, warnings: assemblyWarnings(assembly) })))
     }
     return { projectId, draftRevision, checks: items, checksetFingerprint: fingerprint({
       projectId, draftRevision, baseRevision: state.baseRevision, items,
@@ -138,7 +145,7 @@ export function createEngine(timeoutMs) {
   }
 
   return {
-    simulate, checks, plate,
+    simulate, checks, plate, gdtAnalyzer,
     async mesh(state, signal) {
       if (state.template === 'builtin-mounting-plate') {
         const { mesh } = await plate(state, signal)
@@ -161,6 +168,6 @@ export function createEngine(timeoutMs) {
         fingerprint: data.fingerprint,
       }
     },
-    close: () => Promise.all([geometry.close(), solver.close()]),
+    close: () => Promise.all([geometry.close(), solver.close(), gdtAnalyzer.close()]),
   }
 }

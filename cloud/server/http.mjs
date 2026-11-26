@@ -181,6 +181,9 @@ export async function createCloudServer(
       }
       if (route && principal) {
         routeLabel = route.path
+        if (route.operation['x-feature-flag'] === 'FEATURE_3D_ASSEMBLY_M1' && !config.feature3dAssemblyM1) {
+          throw new HttpError(422, 'FEATURE_DISABLED')
+        }
         const { params, query } = parameters(route, url)
         projectId = params.projectId
         const content = route.operation.requestBody?.content

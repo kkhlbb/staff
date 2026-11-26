@@ -12,6 +12,11 @@ import type { M2ModelMeshInput, M2Result } from '../../desktop/shared/project-ag
 import type { ProjectFileAttachmentRef } from '../project-file/types'
 import {
   FEATURE_3D_ASSEMBLY_M1,
+  type AnalyzeGdtStackupRequest,
+  type AnalyzeGdtStackupResult,
+  type StageDatumRequest,
+  type StageGdtRequest,
+  type GdtStageResult,
   type AttachmentUpload,
   type CheckSet,
   type CommitDraftRequest,
@@ -539,6 +544,25 @@ export function createHttpTransport(options: HttpTransportOptions): HttpTranspor
               : FEATURE_3D_ASSEMBLY_M1,
         },
       }
+    },
+
+    stageDatum({ projectId, ...jsonBody }: StageDatumRequest) {
+      return requestJson<GdtStageResult>(`/api/v1/projects/${encodeSegment(projectId)}/drafts/datums`, {
+        method: 'POST', jsonBody,
+      })
+    },
+
+    stageGdt({ projectId, ...jsonBody }: StageGdtRequest) {
+      return requestJson<GdtStageResult>(`/api/v1/projects/${encodeSegment(projectId)}/drafts/gdt`, {
+        method: 'POST', jsonBody,
+      })
+    },
+
+    analyzeGdtStackup({ projectId, draftRevision, ...jsonBody }: AnalyzeGdtStackupRequest) {
+      return requestJson<AnalyzeGdtStackupResult>(
+        `/api/v1/projects/${encodeSegment(projectId)}/drafts/${encodeSegment(draftRevision)}/gdt-stackup`,
+        { method: 'POST', jsonBody },
+      )
     },
 
     async listProjects(): Promise<M2Result<{ projects: ProjectSummary[] }>> {

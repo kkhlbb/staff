@@ -4,6 +4,7 @@ import { basename, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { findTool } from '../../mcp/tools/index.ts'
 import { tools, validate, HttpError } from './contracts.mjs'
+import { gdtTools } from '../../mcp/lib/gdt.ts'
 import { digest } from './projects.mjs'
 
 const operations = tools.slice(5).map(tool => tool.name)
@@ -11,6 +12,7 @@ const protocols = ['2025-06-18', '2025-03-26', '2024-11-05']
 const enabled = (principal, tool) => !principal.tools || principal.tools.includes(tool.name)
 
 export function createMcp(projects, config) {
+  const available = config.feature3dAssemblyM1 ? [...tools, ...gdtTools] : tools
   const streams = new Map()
   const exportRoot = join(config.root, 'mcp-exports')
 
@@ -36,7 +38,7 @@ export function createMcp(projects, config) {
   }
 
   async function toolCall(name, args, principal, signal) {
-    const spec = tools.find(tool => tool.name === name && enabled(principal, tool))
+    const spec = available.find(tool => tool.name === name && enabled(principal, tool))
     if (!spec) throw new HttpError(403, 'TOOL_FORBIDDEN')
     validate(args, spec.inputSchema)
     const { projectId, change } = args
@@ -65,6 +67,9 @@ export function createMcp(projects, config) {
       case 'acquireWriter': return projects.lease(projectId, 'acquire', args, principal, signal)
       case 'takeOverWriter': return projects.lease(projectId, 'takeover', args, principal, signal)
       case 'revokeWriter': return projects.lease(projectId, 'revoke', args, principal, signal)
+      case 'stage_datum':
+      case 'stage_gdt': return projects.stageGdt(name, args, principal, signal)
+      case 'analyze_gdt_stackup': return projects.analyzeGdt(args, principal, signal)
       case 'stageChange': return projects.stage(projectId, change, principal, signal)
       case 'moveRightHoleX': return projects.move(projectId, args, principal, signal)
       default: {
@@ -151,7 +156,7 @@ export function createMcp(projects, config) {
             capabilities: { tools: {} }, serverInfo: { name: 'cunlian-cloud', version: '1.0.0' },
           } })
         case 'ping': return reply({ result: {} })
-        case 'tools/list': return reply({ result: { tools: tools.filter(tool => enabled(principal, tool)) } })
+        case 'tools/list': return reply({ result: { tools: available.filter(tool => enabled(principal, tool)) } })
         case 'tools/call': {
           try {
             const result = await toolCall(message.params?.name, message.params?.arguments ?? {}, principal, signal)

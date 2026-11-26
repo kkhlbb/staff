@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createHmac } from 'node:crypto'
+import { createHash, createHmac } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
 import { VolumeStorageAdapter } from './storage.mjs'
 import { configFrom } from './config.mjs'
@@ -197,6 +197,15 @@ test('dual-state FEATURE_3D_ASSEMBLY_M1 reports false by default and true when e
     const capsOff = await value(await offService.request('/api/v1/capabilities'))
     assert.equal(capsOff.FEATURE_3D_ASSEMBLY_M1, false)
     assert.deepEqual(capsOff.attachments, ['pdf', 'stl'])
+    for (const endpoint of ['datums', 'gdt', 'draft/gdt-stackup']) {
+      const response = await offService.request('/api/v1/projects/unknown/drafts/' + endpoint, { method: 'POST', body: {} })
+      assert.equal((await value(response, 422)).error.code, 'FEATURE_DISABLED')
+    }
+    const list = await offService.request('/mcp', { method: 'POST', body: { jsonrpc: '2.0', id: 1, method: 'tools/list' } })
+    assert.equal((await value(list)).result.tools.length, 15)
+    const call = await offService.request('/mcp', { method: 'POST',
+      body: { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'stage_datum' } } })
+    assert.equal((await value(call)).result.isError, true)
   } finally {
     await offService.close()
   }
@@ -277,4 +286,97 @@ test('HttpTransport getReview -> commitDraft succeeds end-to-end with server-iss
   } finally {
     await close()
   }
+})
+
+test('GD&T stages A/B/C and all controls via REST and MCP, keeps the official archive and leases the analysis', async t => {
+  const { gdtFixture } = await import('../../src/core/solver/test/gdtFixture.mjs')
+  const { createNewProjectSnapshot } = await import('../../desktop/main/newProject.ts')
+  const { encodeProjectFile } = await import('../../src/project-file/codec.ts')
+  const { gdtTools } = await import('../../mcp/lib/gdt.ts')
+  const { matches } = await import('./contracts.mjs')
+  const { createHttpTransport } = await import('../../src/transport/httpTransport.ts')
+  const { assembly } = gdtFixture()
+  const { start } = await fixture(t, { FEATURE_3D_ASSEMBLY_M1: 'true' })
+  const service = await start()
+  t.after(() => service.close())
+  const post = (path, body, key) => service.request(path, { method: 'POST', body, key })
+  const rpc = async (method, params) => (await value(await post('/mcp', { jsonrpc: '2.0', id: 1, method, params }))).result
+  const tool = (name, args) => rpc('tools/call', { name, arguments: args })
+  const catalog = (await rpc('tools/list')).tools
+  for (const spec of gdtTools) assert.deepEqual(catalog.find(tool => tool.name === spec.name), spec)
+  const snapshot = createNewProjectSnapshot({
+    name: 'GD&T fixture', template: 'empty', appVersion: 'fixture', electronVersion: 'fixture',
+  })
+  snapshot.project.assembly3d = { ...assembly, datums: [], gdt: [] }
+  const bytes = Buffer.from('ISO-10303-21;\nEND-ISO-10303-21;')
+  const sha256 = createHash('sha256').update(bytes).digest('hex')
+  const blobKey = 'step-a-bytes'
+  snapshot.project.stepAttachments = [{ id: 'step-a', blobKey, fileName: 'fixture.step' }]
+  snapshot.blobs.push({ projectId: snapshot.project.id, blobKey, sha256, byteSize: bytes.length })
+  snapshot.attachments.push({ blobKey, bytes })
+  const encoded = await encodeProjectFile(snapshot)
+  assert(encoded.ok, JSON.stringify(encoded))
+  const ref = await value(await post('/api/v1/projects/import', form('cunlian', 'assembly.cunlian', encoded.value.bytes)), 201)
+  const { projectId, baseRevision } = ref
+  const path = '/api/v1/projects/' + projectId
+  const original = await service.storage.read(projectId)
+  const { writerEpoch } = await value(await post(path + '/writer', { expectedWriterEpoch: 0 }))
+  const evidence = [{ kind: 'user-attestation', actorId: 'operator', at: '2026-11-25T00:00:00Z',
+    sessionSeq: 1, sessionLabel: null, statement: 'Approved fixture dimensions', fieldPath: 'assembly3d' }]
+  const payload = { baseRevision, expectedDraftRevision: null, expectedWriterEpoch: writerEpoch,
+    idempotencyKey: 'datums', items: assembly.datums.map(value => ({ value, evidence })) }
+  assert.equal((await value(await post(path + '/drafts/datums', { ...payload, expectedWriterEpoch: 0 }), 409)).error.code, 'STALE_WRITER_EPOCH')
+  assert.equal((await value(await post(path + '/drafts/datums', { ...payload, items: [{ ...payload.items[0], evidence: [] }] }), 400)).error.code, 'INVALID_REQUEST')
+  const http = createHttpTransport({ baseUrl: service.origin, apiKey })
+  const stagedResult = await http.stageDatum({ projectId, ...payload })
+  assert(stagedResult.ok)
+  const staged = stagedResult.value
+  assert.equal((await value(await post(path + '/drafts/datums', { ...payload, items: payload.items.slice(1) }), 409)).error.code,
+    'REQUEST_COLLISION')
+  assert.deepEqual((await tool('stage_datum', { projectId, ...payload })).structuredContent, staged)
+  assert(matches(staged, gdtTools[0].outputSchema))
+  const controls = { ...payload, expectedDraftRevision: staged.draftRevision, idempotencyKey: 'controls',
+    items: assembly.gdt.map(value => ({ value: value.kind === 'flatness' ? { ...value, modifier: 'MMC', anchorOffsetMm: [1, 0, 0] } : value, evidence })) }
+  const invalid = { ...controls, items: [{ value: { ...assembly.gdt[0], datumIds: ['unknown'] }, evidence }] }
+  assert.equal((await tool('stage_gdt', { projectId, ...invalid })).isError, true)
+  assert.equal((await value(await post(path + '/drafts/gdt', { ...controls,
+    items: [{ value: { ...assembly.gdt[0], anchorOffsetMm: [1, 'bad', 0] }, evidence }] }), 400)).error.code, 'INVALID_REQUEST')
+  const result = (await tool('stage_gdt', { projectId, ...controls })).structuredContent
+  assert(matches(result, gdtTools[1].outputSchema))
+  assert(result.warnings.some(warning => warning.gdtId === 'flatness' && warning.code === 'ILLEGAL_MODIFIER'))
+  const draftPath = path + '/drafts/' + result.draftRevision
+  const analyze = { projectId, draftRevision: result.draftRevision, expectedWriterEpoch: writerEpoch,
+    monteCarlo: { seed: 42, samples: 10000, distribution: 'uniform' }, edits: [{ gdtId: 'position', modifier: 'MMC' }] }
+  const analyzed = (await tool('analyze_gdt_stackup', analyze)).structuredContent
+  assert(matches(analyzed, gdtTools[2].outputSchema))
+  assert.equal(analyzed.baseline.contributions.length, 6)
+  assert(analyzed.whatIf.contributions.find(row => row.gdtId === 'position').bonusMeanMm > 0)
+  const anotherEdit = { gdtId: 'flatness', toleranceQ: 100 }
+  const rest = await http.analyzeGdtStackup({ ...analyze, edits: [anotherEdit] })
+  assert(rest.ok, JSON.stringify(rest))
+  assert.deepEqual(rest.value.baseline, analyzed.baseline)
+  assert.equal(rest.value.whatIf.contributions.find(row => row.gdtId === 'position').bonusMeanMm, 0)
+  assert.deepEqual((await http.stageGdt({ projectId, ...controls })).value, result)
+  assert.equal((await tool('analyze_gdt_stackup', { ...analyze, edits: [{ gdtId: 'unknown', toleranceQ: 0 }] })).isError, true)
+  await value(await post(path + '/authorization', {}, peerKey))
+  assert.equal((await value(await post(path + '/writer', { expectedWriterEpoch: writerEpoch }, peerKey), 409)).error.code, 'WRITER_OCCUPIED')
+  assert.equal((await tool('analyze_gdt_stackup', { ...analyze, draftRevision: staged.draftRevision })).isError, true)
+  const before = await service.storage.read(projectId)
+  assert.equal(before.archive, original.archive)
+  assert.deepEqual(before.gdtDraft.evidence['stage_datum:A'].step,
+    { attachmentId: 'step-a', sha256, solidIndex: 0, featureId: 'plate-top' })
+  assert.equal(before.baseRevision, baseRevision)
+  assert.equal(before.gdtDraft.assembly.gdt.find(row => row.id === 'position').modifier, undefined)
+  const reviewResponse = await service.request(draftPath + '/review', { headers: { 'x-cunlian-approval': human } })
+  const { review } = await value(reviewResponse)
+  const commit = { projectId, draftRevision: result.draftRevision, baseRevision,
+    requestId: 'gdt-review', checksetFingerprint: review.checksetFingerprint }
+  assert.equal((await value(await post(draftPath + '/commit', { ...commit, confirmationToken: 'unapproved' }), 422)).error.code, 'CONFIRMATION_INVALID')
+  const committed = await value(await post(draftPath + '/commit', { ...commit,
+    confirmationToken: reviewResponse.headers.get('x-cunlian-confirmation-token') }), 201)
+  const after = await service.storage.read(projectId)
+  const decoded = await decodeProjectFile(Buffer.from(after.archive, 'base64'))
+  assert(decoded.ok)
+  assert.equal(decoded.value.snapshot.project.currentRevisionId, committed.committedRevision)
+  assert.equal(decoded.value.snapshot.project.assembly3d.gdt.length, assembly.gdt.length)
 })

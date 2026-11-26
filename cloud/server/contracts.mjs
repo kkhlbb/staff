@@ -30,7 +30,10 @@ export function matches(value, schema) {
         })
     case 'array':
       return Array.isArray(value) && value.length >= (schema.minItems ?? 0)
-        && value.length <= (schema.maxItems ?? Infinity) && value.every(item => matches(item, schema.items ?? {}))
+        && value.length <= (schema.maxItems ?? Infinity) && value.every((item, index) => {
+          const child = schema.prefixItems?.[index] ?? schema.items ?? {}
+          return child !== false && (child === true || matches(item, child))
+        })
     case 'string':
       if (schema.format === 'binary') return Buffer.isBuffer(value)
       return typeof value === 'string' && value.length >= (schema.minLength ?? 0)
