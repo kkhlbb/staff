@@ -2,6 +2,8 @@ import type { ChainDefinition, ChainResult } from '../../domain/types.ts'
 import type { MonteCarloOptions, MonteCarloResult } from '../../domain/statistics.ts'
 import type { AssemblyModelV1 } from '../../project-file/assembly3d.ts'
 
+import type { GdtStackupMetrics, GdtWhatIfEdit } from '../../transport/types.ts'
+
 type TaskOptions = { signal?: AbortSignal; timeoutMs?: number }
 type Dof = 'tx' | 'ty' | 'tz' | 'rx' | 'ry' | 'rz'
 type AssemblyInput = { assembly: AssemblyModelV1; fixedPartIds?: string[] }
@@ -15,8 +17,15 @@ export type SimulationInput = AssemblyInput & {
   bins?: number
   limits?: Record<string, { lower: number; upper: number }>
   parameters: ToleranceParameter[]
+  /** Opt in to GD&T sampling from 1 to 50,000 trials. Existing 3D parameter draws retain their normal model. */
+  gdtDistribution?: 'normal' | 'uniform'
+  gdtFeatureGeometry?: Record<string, { spanQ?: number; external?: boolean }>
+  gdtEdits?: readonly GdtWhatIfEdit[]
 }
-type IncrementalInput = { incremental: { baselineRevision: string; parameter: ToleranceParameter } }
+type IncrementalInput = { incremental: { baselineRevision: string } & (
+  { parameter: ToleranceParameter; edits?: readonly GdtWhatIfEdit[] } |
+  { edits: readonly GdtWhatIfEdit[]; parameter?: ToleranceParameter }
+) }
 export type SolverRequest =
   | { kind: 'extremes1d'; chain: ChainDefinition }
   | { kind: 'monteCarlo1d'; chain: ChainDefinition; options?: MonteCarloOptions }
@@ -53,6 +62,7 @@ type MeasurementResult = {
 }
 type SimulationResult = { status: 'overconstrained'; solution: AssemblySolution }
   | { status: 'ok'; baselineRevision: string; seed: number; samples: number; solution?: AssemblySolution;
+      gdt?: { baseline: GdtStackupMetrics; whatIf?: GdtStackupMetrics; recalculatedGdtIds: string[] };
       recalculatedMeasurementIds: string[]; measurements: MeasurementResult[] }
 
 type SolverResult<T extends SolverRequest> = T extends { kind: 'extremes1d' } ? ChainResult

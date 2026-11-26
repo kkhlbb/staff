@@ -2,6 +2,12 @@
 import { promises as fs } from 'node:fs'
 import { createHash, randomUUID } from 'node:crypto'
 import path from 'node:path'
+import { z } from 'zod'
+import { assemblyModelV1Schema } from '../../../src/project-file/assembly3d'
+import { analyzeGdtSchema, assemblyWarnings, gdtSources, stageControls, stageDatumSchema, stageDatums,
+  stageGdtSchema } from '../../../mcp/lib/gdt'
+import type { GdtStageResult } from '../../../src/transport/types'
+import { desktopGdtEnabled, readGdtSnapshot, type GdtToolName } from './gdtTools'
 import type { WriteReceipt } from './guards'
 import type { ProjectAgentOperation } from '../../shared/project-agent/contracts'
 import { checkWrite, checkWriterAcquisition } from './guards'
@@ -20,6 +26,19 @@ import type { M1StageResult, M1WriterContext, VerifyM1Binding, VerifiedM1Binding
 
 type Caller = Parameters<typeof checkWriterAcquisition>[3]
 type Operation = Parameters<typeof checkWrite>[0]
+const gdtJournalSchema = z.strictObject({
+  baseRevision: z.string(),
+  datums: assemblyModelV1Schema.shape.datums,
+  gdt: assemblyModelV1Schema.shape.gdt,
+  evidence: z.record(z.string(), z.unknown()),
+  receipts: z.record(z.string(), z.strictObject({
+    digest: z.string(), draftRevision: z.string(), warnings: z.array(z.strictObject({
+      code: z.enum(['DRF_UNDERCONSTRAINED', 'DRF_REDUNDANT', 'ILLEGAL_MODIFIER', 'DRF_DEGENERATE']),
+      gdtId: z.string(), datumId: z.string().optional(), message: z.string(),
+    })),
+  })),
+})
+
 type RecordState = Parameters<typeof checkWrite>[2] & {
   spacerDraft: M1SpacerDraft | null; revoked: string[]; storage: 2; boot: string; cursor: number; floor: number
   tasks: M1Activity[]; steps: TaskStep[]; draftRefs: string[]
@@ -28,6 +47,7 @@ type RecordState = Parameters<typeof checkWrite>[2] & {
   receiptPayloads: Record<string, string>
   grants: Authorization[]
   writerScope: string | null
+  gdtDraft?: z.infer<typeof gdtJournalSchema>
   spacerReceipts: SpacerReceipt[]
   receipts: Record<string, WriteReceipt<ProjectAgentOperation>>; events: JournalEvent[]
 }
@@ -124,7 +144,7 @@ function dictionary<T>(check: (value: unknown) => value is T) {
     Reflect.ownKeys(value).every(key => typeof key === 'string' && text(key) && check((value as Record<string, unknown>)[key]))
 }
 const isM0Receipt = object({ scope: text, digest: hash, result: (value: unknown): value is unknown => value !== undefined })
-const recordShape = object({
+const recordFields = {
   storage: (value: unknown): value is 2 => value === 2, boot: text, projectId: text,
   baseRevision: nullable(text), draftRevision: nullable(text), writerEpoch: nat,
   writer: nullable(object({ callerId: text, token: text })), writerScope: nullable(text),
@@ -134,7 +154,10 @@ const recordShape = object({
   receipts: dictionary(isM0Receipt), receiptReferences: dictionary(list(text)), receiptPayloads: dictionary(text),
   spacerReceipts: list(validReceipt),
   events: list((value: unknown): value is JournalEvent => isEventHeader(value) || isTaskEvent(value) || isFullJournalEvent(value) || isConnectionMarker(value)),
-})
+}
+const legacyRecord = object(recordFields)
+const gdtRecord = object({ ...recordFields, gdtDraft: (value): value is z.infer<typeof gdtJournalSchema> =>
+  gdtJournalSchema.safeParse(value).success })
 function unique(values: string[]) { return new Set(values).size === values.length }
 function sourceAnchors(result: SpacerResult) {
   if (isM1SpacerDraft(result)) return Object.values(result.sources).flatMap(source => source.type === 'document' ? [source.anchor] : [])
@@ -149,7 +172,7 @@ function sourceReferences(anchors: ReturnType<typeof sourceAnchors>) {
   return [...new Set(anchors.map(entry => entry.documentRef))]
 }
 function validRecord(value: unknown, projectId: string): value is RecordState {
-  if (!recordShape(value) || value.projectId !== projectId || value.cursor !== value.floor + value.events.length ||
+  if ((!legacyRecord(value) && !gdtRecord(value)) || value.projectId !== projectId || value.cursor !== value.floor + value.events.length ||
     !validTaskJournal(projectId, value.tasks, value.steps) ||
     value.tasks.some(task => !isInternalId(task.taskId)) ||
     value.steps.some(step => !isInternalId(step.stepId)) ||
@@ -163,7 +186,9 @@ function validRecord(value: unknown, projectId: string): value is RecordState {
       ('activity' in event && (event.activity?.projectId !== projectId ||
         !value.tasks.some(task => task.taskId === event.activity?.taskId)))) ||
     value.references.some(ref => ref.projectId !== projectId || digestText(ref.content) !== ref.digest) ||
-    (value.spacerDraft !== null && value.spacerDraft.draftRevision !== value.draftRevision)) return false
+    (value.spacerDraft !== null && value.spacerDraft.draftRevision !== value.draftRevision) ||
+    (gdtRecord(value) && (value.spacerDraft !== null || value.draftRevision === null ||
+      !Object.values(value.gdtDraft.receipts).some(receipt => receipt.draftRevision === value.draftRevision)))) return false
   const refs = new Map(value.references.map(ref => [ref.ref, ref]))
   if (value.draftRefs.some(id => !refs.has(id)) || refs.size !== value.draftRefs.length) return false
   for (const grant of value.grants) {
@@ -582,6 +607,81 @@ export class M1InternalService {
   writerContext(id: string, caller: Caller, credentials: Omit<Credentials, 'idempotencyKey'>,
     verify: VerifyM1Binding): Promise<M1WriterContext> {
     return this.withWriter(id, caller, credentials, verify, context => context)
+  }
+
+  stageGdt(id: string, caller: Caller, credentials: Omit<Credentials, 'idempotencyKey'>,
+    operation: Exclude<GdtToolName, 'analyze_gdt_stackup'>, raw: unknown, verify: VerifyM1Binding,
+    origin: 'model' | 'client' = 'client'): Promise<GdtStageResult> {
+    return this.serial(id, async () => {
+      if (!desktopGdtEnabled()) throw Error('FEATURE_DISABLED')
+      const state = await this.load(id)
+      const binding = await verify()
+      binding.seal()
+      this.checkSpacerWriter(state, caller, credentials)
+      const parsed = (operation === 'stage_datum' ? stageDatumSchema : stageGdtSchema).safeParse(raw)
+      if (!parsed.success || parsed.data.projectId !== id) throw Error('INVALID_REQUEST')
+      const request = parsed.data
+      if (request.expectedWriterEpoch !== credentials.writerEpoch) throw Error('WRITER_REVOKED')
+      if (request.baseRevision !== binding.baseRevision ||
+          (state.gdtDraft && state.gdtDraft.baseRevision !== binding.baseRevision)) throw Error('STALE_BASE')
+      const scope = canonical([caller.callerId, credentials.writerEpoch, request.idempotencyKey])
+      const digest = digestText(canonical({ operation, ...request }))
+      const prior = state.gdtDraft?.receipts[scope]
+      if (prior) {
+        if (prior.digest !== digest) throw Error('IDEMPOTENCY_CONFLICT')
+        return { projectId: id, draftRevision: prior.draftRevision, warnings: prior.warnings }
+      }
+      if (request.expectedDraftRevision !== state.draftRevision) throw Error('STALE_DRAFT')
+      if (state.draftRevision && !state.gdtDraft) throw Error('DRAFT_NOT_EMPTY')
+      if (origin === 'model' && request.items.some(item => item.evidence.some(ref => ref.kind === 'user-attestation'))) {
+        throw Error('REFERENCE_STALE')
+      }
+      const snapshot = await readGdtSnapshot(binding.canonicalPath, binding.baseRevision, id)
+      const original = snapshot.project.assembly3d
+      if (!original) throw Error('ASSEMBLY_REQUIRED')
+      const assembly = state.gdtDraft ? { ...original, datums: state.gdtDraft.datums, gdt: state.gdtDraft.gdt } : original
+      let updated
+      try {
+        updated = operation === 'stage_datum'
+          ? stageDatums(assembly, stageDatumSchema.parse(raw)) : stageControls(assembly, stageGdtSchema.parse(raw))
+      } catch {
+        throw Error('INVALID_GDT')
+      }
+      const sources = gdtSources(snapshot, updated, request.items)
+      const evidence = { ...state.gdtDraft?.evidence }
+      for (const [itemId, citation] of Object.entries(sources)) evidence[operation + ':' + itemId] = citation
+      const draftRevision = randomUUID()
+      const warnings = assemblyWarnings(updated)
+      state.gdtDraft = { baseRevision: binding.baseRevision, datums: updated.datums, gdt: updated.gdt, evidence,
+        receipts: { ...state.gdtDraft?.receipts, [scope]: { digest, draftRevision, warnings } } }
+      state.draftRevision = draftRevision
+      state.events.push(this.contextEvent(state, binding.baseRevision))
+      await this.save(state, this.beforeBindingCommit(verify, binding))
+      return { projectId: id, draftRevision, warnings }
+    })
+  }
+
+  readGdtAnalysis(id: string, caller: Caller, credentials: Omit<Credentials, 'idempotencyKey'>,
+    raw: unknown, verify: VerifyM1Binding) {
+    return this.serial(id, async () => {
+      if (!desktopGdtEnabled()) throw Error('FEATURE_DISABLED')
+      const state = await this.load(id)
+      const binding = await verify()
+      this.checkSpacerWriter(state, caller, credentials)
+      const parsed = analyzeGdtSchema.safeParse(raw)
+      if (!parsed.success || parsed.data.projectId !== id) throw Error('INVALID_REQUEST')
+      const request = parsed.data
+      if (request.expectedWriterEpoch !== credentials.writerEpoch) throw Error('WRITER_REVOKED')
+      if (!state.gdtDraft || request.draftRevision !== state.draftRevision) throw Error('STALE_DRAFT')
+      if (state.gdtDraft.baseRevision !== binding.baseRevision) throw Error('STALE_BASE')
+      binding.seal()
+      const { project } = await readGdtSnapshot(binding.canonicalPath, binding.baseRevision, id)
+      if (!project.assembly3d) throw Error('ASSEMBLY_REQUIRED')
+      binding.seal()
+      return { request, baseRevision: binding.baseRevision, assembly: {
+        ...project.assembly3d, datums: state.gdtDraft.datums, gdt: state.gdtDraft.gdt,
+      } }
+    })
   }
 
   stageChange(id: string, caller: Caller, credentials: Omit<Credentials, 'idempotencyKey'>,

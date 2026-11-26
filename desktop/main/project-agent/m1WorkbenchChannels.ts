@@ -15,6 +15,8 @@ import { M1AgentRegistration } from './m1AgentRegistration'
 import { listM1ModelApiModels } from './m1ModelList'
 import { getExternalActivities } from './m1LocalAgent'
 import { readMateDrafts } from './mateDraftTool'
+import { desktopGdtEnabled, isGdtTool } from './gdtTools'
+import { M1_LOCAL_ERRORS } from './m1LocalTransport'
 import { M1ModelApi } from './m1ModelApi'
 import type { M1ModelAttachment, M1ModelScope } from './m1ModelApi'
 
@@ -274,6 +276,29 @@ export function installM1WorkbenchChannels(ipc: { handle(channel: string, handle
     verifySender()
     return ok(value)
   })
+  install(IPC_CHANNELS.gdt, async (event, operation, raw, ...extra) => {
+    if (operation === 'capabilities' && raw === undefined && !extra.length) return ok({ enabled: desktopGdtEnabled() })
+    if (!desktopGdtEnabled()) return { ok: false, error: { code: 'FEATURE_DISABLED', message: '未启用 3D 装配功能' } }
+    const request = z.looseObject({ projectId: id }).safeParse(raw)
+    if (extra.length || typeof operation !== 'string' || !isGdtTool(operation) || !request.success) {
+      throw Error('INVALID_REQUEST')
+    }
+    const sender = toSenderInfo(event)
+    const frame = event.senderFrame
+    const checkRequest = () => {
+      if (event.senderFrame !== frame || frame?.url !== sender.frameUrl ||
+        !guard.verify(toSenderInfo(event)).ok) throw Error('FORBIDDEN_SENDER')
+    }
+    try {
+      return ok(await authority.runWindowGdtTool(sender, request.data.projectId, operation, raw, checkRequest))
+    } catch (error) {
+      if (error instanceof Error && M1_LOCAL_ERRORS.has(error.message)) {
+        return { ok: false, error: { code: error.message, message: codes[error.message] ?? error.message } }
+      }
+      throw error
+    }
+  })
+
   scoped(IPC_CHANNELS.listM1ModelApiModels, m1ModelListRequest, async (_event, state, request) => {
     try { return ok(await listM1ModelApiModels(request, state.controller.signal)) }
     catch (error) { return failure(error) }

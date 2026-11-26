@@ -15,6 +15,8 @@ export const M1_LOCAL_OPERATIONS = ['capabilities', 'authorizeProject', 'getCont
   'acquireWriter', 'takeOverWriter', 'stageChange', 'readWriterContext', 'revokeWriter', 'moveRightHoleX'] as const
 export const M1_LOCAL_ERRORS = new Set(['AUTH_REQUIRED', 'WRITER_HELD', 'WRITER_REVOKED', 'INVALID_REQUEST', 'STALE_BASE',
   'DRAFT_NOT_EMPTY', 'INVALID_TRANSITION', 'REFERENCE_STALE', 'IDEMPOTENCY_CONFLICT', 'TASK_SCOPE_MISMATCH',
+  'FEATURE_DISABLED', 'STALE_DRAFT', 'ASSEMBLY_REQUIRED', 'INVALID_GDT', 'SIMULATION_LIMIT',
+  'INVALID_WHAT_IF', 'ASSEMBLY_OVERCONSTRAINED', 'NO_GDT_CONTROLS', 'SIMULATION_FAILED',
   'UNSUPPORTED_SCOPE', 'SAVE_FAILED', 'STEP_FAILED', 'REQUEST_COLLISION', 'STALE_SOURCE'])
 
 export function isM1ClientName(value: unknown): value is string {

@@ -10,9 +10,10 @@ interface ServerOptions {
   name: string
   version(): Promise<string>
   instructions: string
-  tools: readonly ToolSpec[]
+  tools: readonly ToolSpec[] | (() => readonly ToolSpec[])
   initialize?(params: unknown): void
   list?(): Promise<void>
+  prepareCall?(name: string): Promise<void>
   toolError?(error: unknown): ReturnType<typeof toolErrorPayload>
 }
 
@@ -49,12 +50,17 @@ function toolErrorPayload(error: unknown): { code: string; message: string; deta
   return { code: 'TOOL_FAILED', message: String(error), detail: null }
 }
 
+function availableTools(options: ServerOptions) {
+  return typeof options.tools === 'function' ? options.tools() : options.tools
+}
+
 async function callTool(options: ServerOptions, name: string, arguments_: unknown): Promise<Record<string, unknown>> {
-  const tool = options.tools.find(candidate => candidate.definition.name === name)
+  await options.prepareCall?.(name)
+  const tool = availableTools(options).find(candidate => candidate.definition.name === name)
   if (tool === undefined) {
     throw new ToolInputError(
       'INVALID_ARGUMENTS',
-      `未知工具 ${name}；只有 ${options.tools.map((item) => item.definition.name).join(', ')}`,
+      `未知工具 ${name}；只有 ${availableTools(options).map((item) => item.definition.name).join(', ')}`,
     )
   }
   mcpLog(`tools/call ${name}`)
@@ -111,11 +117,13 @@ async function handleRequest(options: ServerOptions, request: JsonRpcRequest): P
       jsonrpc: '2.0',
       id,
       result: {
-        tools: options.tools.map((tool) => ({
+        tools: availableTools(options).map((tool) => ({
           name: tool.definition.name,
           title: tool.definition.title,
           description: tool.definition.description,
           inputSchema: tool.definition.inputSchema,
+          ...(tool.definition.outputSchema && { outputSchema: tool.definition.outputSchema }),
+          ...(tool.definition.annotations && { annotations: tool.definition.annotations }),
         })),
       },
     }

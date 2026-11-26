@@ -1,4 +1,5 @@
 import type { ProjectFileSnapshot } from '../../../src/project-file/types'
+import { desktopGdtEnabled } from './gdtTools'
 import type { M1ModelAttachment } from './m1ModelApi'
 
 export function readWorkbenchAttachment(snapshot: ProjectFileSnapshot | undefined, ref: string,
@@ -16,16 +17,22 @@ export function readWorkbenchAttachment(snapshot: ProjectFileSnapshot | undefine
   if (requirement && source) {
     if (source.documentId !== revision.documentId || source.sha256 !== revision.sha256 ||
       source.blobKey !== revision.blobKey) return null
-    return { excerpt: requirement.confirmedText, page: source.page }
+    return { excerpt: requirement.confirmedText, page: source.page,
+      ...(desktopGdtEnabled() && { pdfSource: { kind: 'pdf-page' as const, revisionId: revision.id, sha256: revision.sha256, page: source.page } }) }
   }
-  return readM2(revision.id)
+  const excerpt = readM2(revision.id)
+  return excerpt && desktopGdtEnabled() ? { ...excerpt, pdfSource: { kind: 'pdf-page', revisionId: revision.id,
+    sha256: revision.sha256, page: excerpt.page } } : excerpt
 }
 
 export function readWorkbenchSelectedObject(snapshot: ProjectFileSnapshot | undefined, ref: string,
   readM2: (featureId: string) => string | null): string | null {
   if (!snapshot) return null
   const term = snapshot.project.dimensionChain.terms.find(item => item.id === ref)
-  if (!term) return readM2(ref)
+  if (!term) {
+    const feature = desktopGdtEnabled() && snapshot.project.assembly3d?.features.find(item => item.id === ref)
+    return feature ? JSON.stringify({ featureId: feature.id, partId: feature.partId, kind: feature.kind }) : readM2(ref)
+  }
   const { name, symbol, nominalQ, lowerDeviationQ, upperDeviationQ, sign } = term
   return JSON.stringify({ name, symbol, nominalQ, lowerDeviationQ, upperDeviationQ, sign })
 }

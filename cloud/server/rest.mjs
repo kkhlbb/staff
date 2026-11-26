@@ -40,6 +40,9 @@ export function createRest(projects, engine, config) {
       case '/writer':
         if (method === 'get') return projects.context(state)
         return projects.lease(projectId, method === 'delete' ? 'revoke' : 'acquire', body, principal, signal)
+      case '/drafts/datums': return projects.stageGdt('stage_datum', { ...body, projectId }, principal, signal)
+      case '/drafts/gdt': return projects.stageGdt('stage_gdt', { ...body, projectId }, principal, signal)
+      case '/drafts/{draftRevision}/gdt-stackup': return projects.analyzeGdt({ ...body, projectId, draftRevision }, principal, signal)
       case '/drafts/changes': return projects.stage(projectId, body.change, principal, signal)
       case '/external-activities': return { draftRevision: state.draftRevision, activities }
       case '/context': {

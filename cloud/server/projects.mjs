@@ -6,6 +6,7 @@ import { inspectSourcePdf } from '../../desktop/main/pdfSourceInspect.ts'
 import { importRequirements, interpret } from '../../desktop/main/project-agent/m2/requirements.ts'
 import { createMountingPlate } from '../../desktop/main/project-agent/m2/model.mjs'
 import { spacerParametersFromQ } from '../../mcp/lib/spacer.ts'
+import { analyzeGdtSchema, assemblyWarnings, gdtSources, stageControls, stageDatumSchema, stageDatums, stageGdtSchema } from '../../mcp/lib/gdt.ts'
 import { parseStl } from '../../src/parts/stlValidation.ts'
 import { HttpError } from './contracts.mjs'
 import { computeProjectSpacer, defaultSpacer } from './engine.mjs'
@@ -71,7 +72,7 @@ function context(state) {
   }
 }
 
-function replay(state, principal, input, action) {
+async function replay(state, principal, input, action) {
   const key = input.idempotencyKey
   const prior = state.receipts.find(row => row.key === key && row.actor === principal.name)
   const fingerprint = hash(input)
@@ -79,7 +80,7 @@ function replay(state, principal, input, action) {
     if (prior.fingerprint !== fingerprint) throw new HttpError(409, 'REQUEST_COLLISION')
     return prior.value
   }
-  const value = action()
+  const value = await action()
   state.receipts.push({ key, actor: principal.name, fingerprint, value })
   return value
 }
@@ -198,6 +199,7 @@ export function createProjects(storage, engine, config) {
   }
 
   async function commit(state, body, principal, signal) {
+    if (state.gdtDraft && !config.feature3dAssemblyM1) throw new HttpError(422, 'FEATURE_DISABLED')
     if (body.projectId !== state.projectId || body.baseRevision !== state.baseRevision) throw new HttpError(409, 'STALE_BASE')
     draftMatches(state, body.draftRevision)
     requireWriter(state, principal)
@@ -221,6 +223,7 @@ export function createProjects(storage, engine, config) {
       && computeProjectSpacer(snapshot, state, result.committedRevision)
     const project = {
       ...snapshot.project, currentRevisionId: result.committedRevision, updatedAt: result.committedAtLabel,
+      ...(state.gdtDraft && { assembly3d: state.gdtDraft.assembly }),
       ...(computed && {
         parameters: computed.parameters,
         dimensionChain: computed.chain,
@@ -238,7 +241,8 @@ export function createProjects(storage, engine, config) {
         createdAt: result.committedAtLabel, reason: '云端人工确认',
       }],
     })
-    const renderings = await Promise.all(['svg', 'dxf-r12', 'dxf-2000'].map(async format => {
+    const formats = state.spacer || state.template === 'builtin-mounting-plate' ? ['svg', 'dxf-r12', 'dxf-2000'] : []
+    const renderings = await Promise.all(formats.map(async format => {
       const item = await engine.drawing(state, format, signal)
       return [format, { fingerprint: item.fingerprint, bytes: Buffer.from(item.bytes).toString('base64') }]
     }))
@@ -248,6 +252,7 @@ export function createProjects(storage, engine, config) {
     for (const [format, item] of renderings) state.exports[body.draftRevision + ':' + format] = item
     state.baseRevision = result.committedRevision
     state.draftRevision = null
+    delete state.gdtDraft
     if (body.webhook) state.outbox.push({ url: body.webhook.url, result, attempts: 0, next: Date.now() })
     record(state, event.type, principal, { revisionId: result.committedRevision, draftRevision: result.committedDraftRevision })
     return result
@@ -295,6 +300,67 @@ export function createProjects(storage, engine, config) {
       return writerState(state)
     }),
     context, holder,
+    stageGdt: (operation, raw, principal, signal) => mutate(raw.projectId, principal, signal, state => {
+      if (!config.feature3dAssemblyM1) throw new HttpError(422, 'FEATURE_DISABLED')
+      requireWriter(state, principal)
+      const isDatum = operation === 'stage_datum'
+      const parsed = (isDatum ? stageDatumSchema : stageGdtSchema).safeParse(raw)
+      if (!parsed.success) throw new HttpError(422, 'INVALID_GDT', parsed.error.message)
+      const request = parsed.data
+      if (state.epoch !== request.expectedWriterEpoch) throw new HttpError(409, 'STALE_WRITER_EPOCH')
+      return replay(state, principal, { operation, ...request }, async () => {
+        if (state.baseRevision !== request.baseRevision) throw new HttpError(409, 'STALE_BASE')
+        if (state.draftRevision !== request.expectedDraftRevision) throw new HttpError(409, 'STALE_DRAFT')
+        const { snapshot } = unwrap(await decodeProjectFile(Buffer.from(state.archive, 'base64')))
+        const assembly = state.gdtDraft?.assembly ?? snapshot.project.assembly3d
+        if (!assembly) throw new HttpError(422, 'ASSEMBLY_REQUIRED')
+        let updated
+        try {
+          updated = isDatum ? stageDatums(assembly, request) : stageControls(assembly, request)
+        } catch (error) {
+          throw new HttpError(422, 'INVALID_GDT', error.message)
+        }
+        let sources
+        try {
+          sources = gdtSources(snapshot, updated, request.items)
+        } catch {
+          throw new HttpError(422, 'REFERENCE_STALE')
+        }
+        signal.throwIfAborted()
+        requireWriter(state, principal)
+        const evidence = { ...state.gdtDraft?.evidence }
+        for (const [itemId, source] of Object.entries(sources)) evidence[operation + ':' + itemId] = source
+        state.gdtDraft = { assembly: updated, evidence }
+        state.draftRevision = id('draft')
+        record(state, 'draft_staged', principal, { draftRevision: state.draftRevision })
+        return { projectId: raw.projectId, draftRevision: state.draftRevision, warnings: assemblyWarnings(updated) }
+      })
+    }),
+    async analyzeGdt(raw, principal, signal) {
+      if (!config.feature3dAssemblyM1) throw new HttpError(422, 'FEATURE_DISABLED')
+      const parsed = analyzeGdtSchema.safeParse(raw)
+      if (!parsed.success) throw new HttpError(422, 'INVALID_GDT', parsed.error.message)
+      const request = parsed.data
+      const verify = state => {
+        requireWriter(state, principal)
+        if (state.epoch !== request.expectedWriterEpoch) throw new HttpError(409, 'STALE_WRITER_EPOCH')
+        draftMatches(state, request.draftRevision)
+      }
+      const state = await read(raw.projectId, principal)
+      verify(state)
+      const assembly = state.gdtDraft?.assembly ??
+        unwrap(await decodeProjectFile(Buffer.from(state.archive, 'base64'))).snapshot.project.assembly3d
+      if (!assembly) throw new HttpError(422, 'ASSEMBLY_REQUIRED')
+      let result
+      try {
+        result = await engine.gdtAnalyzer.run(assembly, request, { signal, timeoutMs: config.timeoutMs })
+      } catch (error) {
+        signal.throwIfAborted()
+        throw new HttpError(422, /^[A-Z_]+$/.test(error.message) ? error.message : 'SIMULATION_FAILED')
+      }
+      verify(await read(raw.projectId, principal))
+      return result
+    },
     stage: (projectId, change, principal, signal) => mutate(projectId, principal, signal, state => {
       requireWriter(state, principal)
       return replay(state, principal, change, () => {

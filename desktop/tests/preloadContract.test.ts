@@ -52,6 +52,7 @@ const ADDED_FUNCTIONS = [
   'cancelM1ChatMessage',
   'getM1ExternalActivities',
   'commitM3ApprovedDraft',
+  'getGdtCapability', 'stageDatum', 'stageGdt', 'analyzeGdtStackup',
   'undoDraftChange',
   'getMigrationReport',
   'openExternalProjectResult',
@@ -254,4 +255,33 @@ it('wires the five M3 preload methods and fences events queued after unsubscribe
   expect(listener).toHaveBeenCalledTimes(1)
   expect(electron.live.size).toBe(0)
   expect(electron.invoke).toHaveBeenLastCalledWith(ipc.unsubscribeM3ExternalProjectEvents, subscription.value.subscriptionId)
+})
+
+it('routes GD&T through the actual preload and preserves the host flag and writer errors', async () => {
+  await import('../preload/index')
+  const { createElectronTransport } = await import('../../src/transport/electronTransport')
+  const api = electron.getApi()
+  const transport = createElectronTransport({ bridge: api })
+  electron.invoke.mockResolvedValueOnce({ ok: true, value: { enabled: false } })
+  await expect(transport.capabilities()).resolves.toMatchObject({ ok: true, value: { FEATURE_3D_ASSEMBLY_M1: false } })
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.gdt, 'capabilities')
+  electron.invoke.mockResolvedValueOnce({ ok: true, value: { enabled: true } })
+  await expect(transport.capabilities()).resolves.toMatchObject({ ok: true, value: { FEATURE_3D_ASSEMBLY_M1: true } })
+  const stage = { projectId: 'assembly', expectedWriterEpoch: 3, baseRevision: 'base', expectedDraftRevision: null,
+    idempotencyKey: 'stage', items: [] }
+  const staged = { ok: true, value: { projectId: stage.projectId, draftRevision: 'draft', warnings: [] } }
+  electron.invoke.mockResolvedValueOnce(staged)
+  await expect(transport.stageDatum!(stage)).resolves.toEqual(staged)
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.gdt, 'stage_datum', stage)
+  electron.invoke.mockResolvedValueOnce(staged)
+  await expect(transport.stageGdt!(stage)).resolves.toEqual(staged)
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.gdt, 'stage_gdt', stage)
+  const analysis = { projectId: stage.projectId, draftRevision: 'draft', expectedWriterEpoch: 3,
+    monteCarlo: { samples: 1, seed: 42, distribution: 'normal' as const } }
+  const revoked = { ok: false, error: { code: 'WRITER_REVOKED', message: 'Writer revoked' } }
+  electron.invoke.mockResolvedValueOnce(revoked)
+  await expect(transport.analyzeGdtStackup!(analysis)).resolves.toEqual(revoked)
+  expect(electron.invoke).toHaveBeenLastCalledWith(ipc.gdt, 'analyze_gdt_stackup', analysis)
+  electron.invoke.mockRejectedValueOnce(Error('Disconnected'))
+  await expect(api.analyzeGdtStackup(analysis)).resolves.toMatchObject({ ok: false, error: { code: 'DISCONNECTED' } })
 })

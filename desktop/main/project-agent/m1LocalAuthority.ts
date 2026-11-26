@@ -2,6 +2,8 @@
 import { promises as fs } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
+import { createGdtAnalyzer } from '../../../mcp/lib/gdt.ts'
+import { desktopGdtWorkerUrl, type GdtToolName } from './gdtTools.ts'
 import { M1FileBindings } from './m1FileBindings.ts'
 import { M1InternalService } from './m1InternalService.ts'
 import type { SenderInfo } from '../senderGuard.ts'
@@ -323,6 +325,41 @@ export class LocalM1Authority {
     const result = await anchor.service.stageChange(caller.projectId, caller, lease, structuredClone(request),
       this.verifyWriterBinding(anchor, writer, checkRequest), anchor.external ? 'external' : 'internal')
     if (anchor.external) this.ports.onExternalDraft?.(anchor.windowId, result, lease)
+    return result
+  }
+
+  private gdtAnalyzer?: ReturnType<typeof createGdtAnalyzer>
+
+  async runWindowGdtTool(sender: SenderInfo, projectId: string, operation: GdtToolName, raw: unknown,
+    checkRequest: () => void) {
+    const session = this.ports.sessionFor(sender.webContentsId)
+    if (!session || session.projectId !== projectId || !await this.resolve(sender, session)) throw Error('AUTH_REQUIRED')
+    checkRequest()
+    const grant = this.grants.get(sender.webContentsId)
+    const writer = grant && this.writers.get(grant.key)
+    if (!writer) throw Error('WRITER_REVOKED')
+    if (writer.anchor !== grant) throw Error('WRITER_HELD')
+    return this.runGdtTool(writer.lease, operation, raw, { checkRequest })
+  }
+
+  async runGdtTool(lease: M1WriterLease, operation: GdtToolName, raw: unknown,
+    options: { scope?: M1ExternalScope; origin?: 'model' | 'client'; signal?: AbortSignal; checkRequest?: () => void } = {}) {
+    const writer = this.writerFor(lease)
+    const { anchor, caller } = writer
+    if (options.scope !== anchor.external) throw Error('AUTH_REQUIRED')
+    const verify = this.verifyWriterBinding(anchor, writer, () => {
+      options.signal?.throwIfAborted()
+      options.checkRequest?.()
+    })
+    if (operation !== 'analyze_gdt_stackup') {
+      return anchor.service.stageGdt(caller.projectId, caller, lease, operation, raw, verify, options.origin)
+    }
+    const { assembly, request, baseRevision } = await anchor.service.readGdtAnalysis(caller.projectId, caller, lease, raw, verify)
+    this.gdtAnalyzer ??= createGdtAnalyzer(desktopGdtWorkerUrl())
+    const result = await this.gdtAnalyzer.run(assembly, request, { signal: options.signal, timeoutMs: 30_000 })
+    const context = await anchor.service.writerContext(caller.projectId, caller, lease, verify)
+    if (context.baseRevision !== baseRevision) throw Error('STALE_BASE')
+    if (context.draftRevision !== request.draftRevision) throw Error('STALE_DRAFT')
     return result
   }
 

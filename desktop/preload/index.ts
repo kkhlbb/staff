@@ -117,6 +117,10 @@ async function invokeM2<T>(channel: string, request: unknown): Promise<M2Result<
 }
 
 const api: CunlianApi = {
+  getGdtCapability: () => invokeM1(IPC_CHANNELS.gdt, 'capabilities'),
+  stageDatum: request => invokeM1(IPC_CHANNELS.gdt, 'stage_datum', request),
+  stageGdt: request => invokeM1(IPC_CHANNELS.gdt, 'stage_gdt', request),
+  analyzeGdtStackup: request => invokeM1(IPC_CHANNELS.gdt, 'analyze_gdt_stackup', request),
   detectM1LocalAgents: () => invokeM1(IPC_CHANNELS.detectM1LocalAgents),
   registerM1LocalAgent: request => invokeM1(IPC_CHANNELS.registerM1LocalAgent, request),
   listM1ModelApiModels: request => invokeM1(IPC_CHANNELS.listM1ModelApiModels, request),

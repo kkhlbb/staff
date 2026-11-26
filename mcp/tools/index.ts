@@ -13,6 +13,8 @@ export interface ToolSpec {
     readonly title: string
     readonly description: string
     readonly inputSchema: Record<string, unknown>
+    readonly outputSchema?: Record<string, unknown>
+    readonly annotations?: Record<string, unknown>
   }
   readonly run: (arguments_: unknown) => Promise<Record<string, unknown>>
 }

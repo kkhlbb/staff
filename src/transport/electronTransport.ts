@@ -55,6 +55,11 @@ import {
 } from '../workspace/project-agent/m3WorkbenchBridge'
 import {
   FEATURE_3D_ASSEMBLY_M1,
+  type AnalyzeGdtStackupRequest,
+  type AnalyzeGdtStackupResult,
+  type StageDatumRequest,
+  type StageGdtRequest,
+  type GdtStageResult,
   type AttachmentUpload,
   type CheckSet,
   type CommitDraftRequest,
@@ -263,6 +268,13 @@ export function createElectronTransport(
     m3: probeM3WorkbenchBridge(m3Candidate),
   }
 
+  function invokeGdt<T>(method: string, request: unknown): Promise<M2Result<T>> {
+    if (!feature3dFlag && (options.feature3dAssemblyM1 === false || typeof primaryRecord?.[method] !== 'function')) {
+      return Promise.resolve({ ok: false, error: { code: 'FEATURE_DISABLED', message: '未启用 3D 装配功能' } })
+    }
+    return invokeOptionalPreload<T>(primaryRecord, method, [request], 'GD&T 操作失败')
+  }
+
   const transport: ElectronTransport = {
     kind: 'electron',
     probes,
@@ -324,8 +336,14 @@ export function createElectronTransport(
           '查询传输能力失败',
         )
       }
+      let enabled = feature3dFlag
+      if (options.feature3dAssemblyM1 === undefined && typeof primaryRecord?.getGdtCapability === 'function') {
+        const capability = await invokeOptionalPreload<{ enabled: boolean }>(primaryRecord, 'getGdtCapability', [], '查询 3D 装配功能失败')
+        if (!capability.ok) return capability
+        enabled = capability.value.enabled === true
+      }
       const attachments: AttachmentUpload['kind'][] = ['pdf', 'stl']
-      if (feature3dFlag) {
+      if (enabled) {
         attachments.push('step')
       }
       const drawingFormats: DrawingRequest['format'][] = ['svg', 'dxf-r12', 'dxf-2000']
@@ -337,9 +355,21 @@ export function createElectronTransport(
           writerLeases: probes.m1.capabilities.takeover || probes.auth.available,
           modelConnection:
             probes.m1.capabilities.modelApiTest || probes.connUx.capabilities.listModelApiModels,
-          FEATURE_3D_ASSEMBLY_M1: feature3dFlag,
+          FEATURE_3D_ASSEMBLY_M1: enabled,
         },
       }
+    },
+
+    stageDatum(request: StageDatumRequest) {
+      return invokeGdt<GdtStageResult>('stageDatum', request)
+    },
+
+    stageGdt(request: StageGdtRequest) {
+      return invokeGdt<GdtStageResult>('stageGdt', request)
+    },
+
+    analyzeGdtStackup(request: AnalyzeGdtStackupRequest) {
+      return invokeGdt<AnalyzeGdtStackupResult>('analyzeGdtStackup', request)
     },
 
     async uploadAttachment(request: AttachmentUpload): Promise<M2Result<ProjectFileAttachmentRef>> {
@@ -1054,6 +1084,9 @@ export function resolveWorkbenchTransport(
       revokeWriter: generic.revokeWriter.bind(generic),
       readWriterContext: generic.readWriterContext.bind(generic),
       stageChange: generic.stageChange.bind(generic),
+      stageDatum: generic.stageDatum?.bind(generic),
+      stageGdt: generic.stageGdt?.bind(generic),
+      analyzeGdtStackup: generic.analyzeGdtStackup?.bind(generic),
       commitDraft: generic.commitDraft.bind(generic),
       authorizeProject: generic.authorizeProject.bind(generic),
       getContext: generic.getContext.bind(generic),

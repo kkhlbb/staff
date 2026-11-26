@@ -421,3 +421,24 @@ describe('HttpTransport', () => {
     ).toBeUndefined()
   })
 })
+
+it('routes GD&T requests by encoded project and draft and keeps server lease errors', async () => {
+  const denied = { ok: false, error: { code: 'STALE_DRAFT', message: 'Draft changed' } }
+  const result = { ok: true, value: { projectId: 'project/id', draftRevision: 'draft/id', warnings: [] } }
+  const fetchMock = vi.fn<typeof fetch>()
+    .mockImplementationOnce(async () => jsonResponse(result))
+    .mockImplementationOnce(async () => jsonResponse(result))
+    .mockImplementationOnce(async () => jsonResponse(denied, 409))
+  const transport = createHttpTransport({ baseUrl: 'https://cloud.cunlian.test', fetchImpl: fetchMock })
+  const { projectId, draftRevision } = result.value
+  const stage = { baseRevision: 'base', expectedDraftRevision: null, idempotencyKey: 'key', expectedWriterEpoch: 2, items: [] }
+  const analysis = { expectedWriterEpoch: 2, monteCarlo: { seed: 0, samples: 10000, distribution: 'uniform' as const } }
+  expect(await transport.stageDatum!({ projectId, ...stage })).toEqual(result)
+  expect(await transport.stageGdt!({ projectId, ...stage })).toEqual(result)
+  expect(await transport.analyzeGdtStackup!({ projectId, draftRevision, ...analysis })).toEqual(denied)
+  expect(fetchMock.mock.calls.map(([url, init]) => [url, init?.method, JSON.parse(String(init?.body))])).toEqual([
+    ['https://cloud.cunlian.test/api/v1/projects/project%2Fid/drafts/datums', 'POST', stage],
+    ['https://cloud.cunlian.test/api/v1/projects/project%2Fid/drafts/gdt', 'POST', stage],
+    ['https://cloud.cunlian.test/api/v1/projects/project%2Fid/drafts/draft%2Fid/gdt-stackup', 'POST', analysis],
+  ])
+})
