@@ -287,6 +287,7 @@ export function resolveContextPillActions(
     return [
       { id: 'set-datum', label: '设为基准 A/B/C' },
       ...(supportsGdt ? [{ id: 'attach-gdt' as const, label: '贴 GD&T 框格' }] : []),
+      { id: 'configure-physics', label: '开启/配置柔性形变' },
       {
         id: 'add-second-feature',
         label: '+ 加选第二特征',
@@ -295,10 +296,18 @@ export function resolveContextPillActions(
       { id: 'send-to-ai', label: '带入 AI 对话', primary: true },
     ]
   }
+  const hasHoleAxis = selectedItems.some((item) => item.geometryKind === 'cylindrical-hole-axis')
+  const hasFace = selectedItems.some((item) => item.geometryKind === 'face')
+  const clampAction: readonly ContextPillActionSpec[] =
+    hasHoleAxis && (hasFace || selectedItems.length >= 2)
+      ? [{ id: 'set-clamp-warpage', label: '设为锁紧点 & 翘曲拉平' }]
+      : [{ id: 'configure-physics', label: '开启/配置柔性形变' }]
+
   const [first, second] = selectedItems
   if (first.geometryKind === 'face' && second.geometryKind === 'face') {
     return [
       { id: 'create-face-contact', label: '建立面贴合配合', primary: true },
+      ...clampAction,
       { id: 'create-3d-loop', label: '设为 3D 封闭环测量目标' },
       { id: 'send-to-ai', label: '带入 AI 对话' },
     ]
@@ -309,12 +318,14 @@ export function resolveContextPillActions(
   ) {
     return [
       { id: 'create-coaxial', label: '建立同轴配合', primary: true },
+      ...clampAction,
       { id: 'create-3d-loop', label: '设为 3D 封闭环测量目标' },
       { id: 'send-to-ai', label: '带入 AI 对话' },
     ]
   }
   return [
     { id: 'create-distance-align', label: '建立距离/对齐配合', primary: true },
+    ...clampAction,
     { id: 'create-3d-loop', label: '设为 3D 封闭环测量目标' },
     { id: 'send-to-ai', label: '带入 AI 对话' },
   ]

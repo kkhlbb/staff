@@ -3,12 +3,18 @@ import { CAMERA_PRESET_LABELS } from './assembly3dMath'
 import type {
   AssemblyFeatureSelectionItem,
   AssemblyGroup,
+  AssemblyPhysicsSpec,
   CameraPresetId,
+  CompliantModelSpec,
   ContextPillActionId,
   DatumDefinition,
+  DeformationViewMode,
   GdtDisplayMode,
   GdtFeatureControl,
   GdtMaterialModifier,
+  MaterialSpec,
+  MicMatrixPayloadV1,
+  PartDisplacementField,
   PartMesh,
   PickedFeatureGeometryKind,
 } from './assembly3dTypes'
@@ -139,6 +145,26 @@ export interface M2CenterCanvasProps {
     patch: { readonly toleranceQ?: number; readonly modifier?: GdtMaterialModifier },
   ) => void
   readonly onDeleteGdtCallout?: (gdtId: string) => void
+  /** M4F1 compliant deformation viewport, assembly tree badges & physics popover bundle. */
+  readonly physicsM4?: {
+    readonly physicsSpec?: AssemblyPhysicsSpec
+    readonly compliantPartIds?: ReadonlySet<string>
+    readonly displacementFields?: readonly PartDisplacementField[]
+    readonly deformationMode?: DeformationViewMode
+    readonly onChangeDeformationMode?: (mode: DeformationViewMode) => void
+    readonly exaggerationScale?: number
+    readonly onChangeExaggerationScale?: (scale: number) => void
+    readonly onSavePhysics?: (params: {
+      readonly partId: string
+      readonly partName: string
+      readonly material: MaterialSpec
+      readonly models: readonly CompliantModelSpec[]
+    }) => void
+    readonly onImportMicMatrix?: (params: {
+      readonly fileName: string
+      readonly payload: MicMatrixPayloadV1
+    }) => Promise<void> | void
+  }
 }
 
 export interface M2ArtifactStatusMeta {
@@ -282,6 +308,7 @@ export function M2CenterCanvas({
   onCreateGdtControl,
   onUpdateGdtCallout,
   onDeleteGdtCallout,
+  physicsM4,
 }: M2CenterCanvasProps) {
   const effectiveViewMode = resolveEffectiveViewMode(viewMode, isNarrow, lastSingleTab)
   const showModelPane = effectiveViewMode === 'model' || effectiveViewMode === 'split'
@@ -471,6 +498,7 @@ export function M2CenterCanvas({
             onChangeExplosionFactor={onChangeExplosionFactor}
             xrayMode={xrayMode}
             onToggleXrayMode={onToggleXrayMode}
+            compliantPartIds={feature3dAssemblyM1 ? physicsM4?.compliantPartIds : undefined}
           />
 
           {isDraftDisplay ? (
@@ -553,6 +581,16 @@ export function M2CenterCanvas({
                       onHoverGdtCallout={feature3dAssemblyM1 ? onHoverGdtCallout : undefined}
                       onUpdateGdtCallout={feature3dAssemblyM1 ? onUpdateGdtCallout : undefined}
                       onDeleteGdtCallout={feature3dAssemblyM1 ? onDeleteGdtCallout : undefined}
+                      displacementFields={feature3dAssemblyM1 ? physicsM4?.displacementFields : undefined}
+                      deformationMode={feature3dAssemblyM1 ? physicsM4?.deformationMode : undefined}
+                      onChangeDeformationMode={
+                        feature3dAssemblyM1 ? physicsM4?.onChangeDeformationMode : undefined
+                      }
+                      exaggerationScale={feature3dAssemblyM1 ? physicsM4?.exaggerationScale : undefined}
+                      onChangeExaggerationScale={
+                        feature3dAssemblyM1 ? physicsM4?.onChangeExaggerationScale : undefined
+                      }
+                      showDeformationControls={feature3dAssemblyM1}
                     />
                   ) : (
                     <div className="pa-feature-canvas" role="group" aria-label="三维模型特征拾取区">
@@ -723,6 +761,9 @@ export function M2CenterCanvas({
           featureKindById={feature3dAssemblyM1 ? featureKindById : undefined}
           onAssignDatum={feature3dAssemblyM1 ? onAssignDatum : undefined}
           onCreateGdtControl={feature3dAssemblyM1 ? onCreateGdtControl : undefined}
+          currentPhysics={feature3dAssemblyM1 ? physicsM4?.physicsSpec : undefined}
+          onSavePhysics={feature3dAssemblyM1 ? physicsM4?.onSavePhysics : undefined}
+          onImportMicMatrix={feature3dAssemblyM1 ? physicsM4?.onImportMicMatrix : undefined}
         />
 
         {previewMessage ? (

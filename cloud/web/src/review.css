@@ -463,3 +463,34 @@ body,
   gap: 5px;
   margin-top: 3px;
 }
+
+/* M4F1 Read-only Rigid vs Compliant Comparison Card */
+.cw-compliant-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.cw-compliant-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cw-compliant-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-subtle);
+}
+
+.cw-compliant-metric-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}

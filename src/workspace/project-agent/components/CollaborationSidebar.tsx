@@ -2,6 +2,8 @@ import type { RefObject } from 'react'
 import type {
   AiGdtDraftItem,
   AiMateDraftItem,
+  AiPhysicsDraftItem,
+  AssemblyPhysicsSpec,
   DatumDefinition,
   GdtFeatureControl,
   GdtMaterialModifier,
@@ -37,6 +39,7 @@ import {
 } from '../workbenchHelpers'
 import { AiGdtDraftsCard } from './AiGdtDraftsCard'
 import { AiMateDraftsCard } from './AiMateDraftsCard'
+import { AiPhysicsDraftsCard } from './AiPhysicsDraftsCard'
 import { SimulationWhatIfPanel } from './SimulationWhatIfPanel'
 
 export interface CollaborationSidebarProps {
@@ -88,6 +91,20 @@ export interface CollaborationSidebarProps {
     readonly partId?: string
     readonly gdtId?: string
   }) => void
+  /** M4F1 compliant physics comparison & AI physics drafts bundle. */
+  readonly physicsM4?: {
+    readonly physicsSpec?: AssemblyPhysicsSpec
+    readonly includeCompliant?: boolean
+    readonly onToggleIncludeCompliant?: (next: boolean) => void
+    readonly aiPhysicsDrafts?: readonly AiPhysicsDraftItem[]
+    readonly appliedPhysicsCount?: number
+    readonly physicsDraftsFeedback?: string | null
+    readonly activePartId?: string | null
+    readonly onTogglePhysicsDraft?: (draftId: string) => void
+    readonly onApplySelectedPhysicsDrafts?: () => void
+    readonly onHoverPhysicsDraft?: (draft: AiPhysicsDraftItem | null) => void
+    readonly onFocusPhysicsDraft?: (draft: AiPhysicsDraftItem) => void
+  }
 
   // M2SidebarPanels props
   readonly requirements: readonly M2RequirementItem[]
@@ -189,6 +206,7 @@ export function CollaborationSidebar({
   onChangeContributorTolerance,
   onHoverContributor,
   onClickContributor,
+  physicsM4,
   requirements,
   checks,
   checksInProgress,
@@ -344,6 +362,9 @@ export function CollaborationSidebar({
             activeGdtId={activeGdtId}
             gdtControls={gdtControls}
             datums={datums}
+            includeCompliant={physicsM4?.includeCompliant}
+            onToggleIncludeCompliant={physicsM4?.onToggleIncludeCompliant}
+            physicsSpec={physicsM4?.physicsSpec}
             onChangeContributorTolerance={(id, val) => onChangeContributorTolerance?.(id, val)}
             onUpdateGdtControl={onUpdateGdtControl}
             onHoverContributor={onHoverContributor}
@@ -406,6 +427,18 @@ export function CollaborationSidebar({
                 onApplySelected={() => onApplySelectedGdtDrafts?.()}
                 onHoverDraft={onHoverGdtDraft}
                 onFocusDraft={onFocusGdtDraft}
+              />
+            ) : null}
+            {feature3dAssemblyM1 && (physicsM4?.aiPhysicsDrafts?.length ?? 0) > 0 ? (
+              <AiPhysicsDraftsCard
+                drafts={physicsM4!.aiPhysicsDrafts!}
+                appliedCount={physicsM4?.appliedPhysicsCount ?? 0}
+                feedbackMessage={physicsM4?.physicsDraftsFeedback ?? null}
+                activePartId={physicsM4?.activePartId ?? null}
+                onToggleDraft={(id) => physicsM4?.onTogglePhysicsDraft?.(id)}
+                onApplySelected={() => physicsM4?.onApplySelectedPhysicsDrafts?.()}
+                onHoverDraft={physicsM4?.onHoverPhysicsDraft}
+                onFocusDraft={physicsM4?.onFocusPhysicsDraft}
               />
             ) : null}
             <div className="pa-header">
@@ -543,6 +576,18 @@ export function CollaborationSidebar({
                   onApplySelected={() => onApplySelectedGdtDrafts?.()}
                   onHoverDraft={onHoverGdtDraft}
                   onFocusDraft={onFocusGdtDraft}
+                />
+              ) : null}
+              {feature3dAssemblyM1 && (physicsM4?.aiPhysicsDrafts?.length ?? 0) > 0 ? (
+                <AiPhysicsDraftsCard
+                  drafts={physicsM4!.aiPhysicsDrafts!}
+                  appliedCount={physicsM4?.appliedPhysicsCount ?? 0}
+                  feedbackMessage={physicsM4?.physicsDraftsFeedback ?? null}
+                  activePartId={physicsM4?.activePartId ?? null}
+                  onToggleDraft={(id) => physicsM4?.onTogglePhysicsDraft?.(id)}
+                  onApplySelected={() => physicsM4?.onApplySelectedPhysicsDrafts?.()}
+                  onHoverDraft={physicsM4?.onHoverPhysicsDraft}
+                  onFocusDraft={physicsM4?.onFocusPhysicsDraft}
                 />
               ) : null}
               {messages.length === 0 ? (

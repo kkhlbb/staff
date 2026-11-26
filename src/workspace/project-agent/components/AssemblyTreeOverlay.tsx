@@ -33,6 +33,8 @@ export interface AssemblyTreeOverlayProps {
   readonly onChangeExplosionFactor?: (factor: number) => void
   readonly xrayMode?: boolean
   readonly onToggleXrayMode?: () => void
+  /** M4F1 part IDs with active compliant deformation config (renders amber "柔性" badge). */
+  readonly compliantPartIds?: ReadonlySet<string>
 }
 
 /**
@@ -66,6 +68,7 @@ export function AssemblyTreeOverlay({
   onChangeExplosionFactor,
   xrayMode = false,
   onToggleXrayMode,
+  compliantPartIds,
 }: AssemblyTreeOverlayProps) {
   const objectItemRefs = useRef<Array<HTMLButtonElement | null>>([])
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<string>>(() => new Set())
@@ -186,6 +189,16 @@ export function AssemblyTreeOverlay({
               aria-hidden="true"
             />
             <span>{part.displayName}</span>
+            {compliantPartIds?.has(part.partId) ? (
+              <span
+                className="pa-part-compliant-badge"
+                data-compliant-badge="true"
+                data-testid={`part-compliant-badge-${part.partId}`}
+                title="已开启柔性形变耦合"
+              >
+                柔性
+              </span>
+            ) : null}
           </button>
           <button
             type="button"

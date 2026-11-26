@@ -2,12 +2,17 @@ import { useMemo, useState } from 'react'
 import { formatHumanReadableFeatureLabel, resolveContextPillActions } from '../assembly3dMath'
 import type {
   AssemblyFeatureSelectionItem,
+  AssemblyPhysicsSpec,
+  CompliantModelSpec,
   ContextPillActionId,
   DatumDefinition,
   GdtFeatureControl,
   GdtMaterialModifier,
+  MaterialSpec,
+  MicMatrixPayloadV1,
   PickedFeatureGeometryKind,
 } from '../assembly3dTypes'
+import { PhysicsConfigPopover } from './PhysicsConfigPopover'
 import {
   DATUM_LETTER_OPTIONS,
   GDT_KIND_META,
@@ -37,6 +42,18 @@ export interface ContextActionPillProps {
   readonly featureKindById?: ReadonlyMap<string, PickedFeatureGeometryKind>
   readonly onAssignDatum?: (featureId: string, letter: DatumLetter) => void
   readonly onCreateGdtControl?: (control: GdtFeatureControl) => void
+  /** M4F1 lightweight compliant physics popover callbacks. */
+  readonly currentPhysics?: AssemblyPhysicsSpec
+  readonly onSavePhysics?: (params: {
+    readonly partId: string
+    readonly partName: string
+    readonly material: MaterialSpec
+    readonly models: readonly CompliantModelSpec[]
+  }) => void
+  readonly onImportMicMatrix?: (params: {
+    readonly fileName: string
+    readonly payload: MicMatrixPayloadV1
+  }) => Promise<void> | void
 }
 
 const MODIFIER_OPTIONS: readonly GdtMaterialModifier[] = ['RFS', 'MMC', 'LMC']
@@ -65,8 +82,11 @@ export function ContextActionPill({
   featureKindById,
   onAssignDatum,
   onCreateGdtControl,
+  currentPhysics,
+  onSavePhysics,
+  onImportMicMatrix,
 }: ContextActionPillProps) {
-  const [openPopover, setOpenPopover] = useState<'none' | 'datum' | 'gdt'>('none')
+  const [openPopover, setOpenPopover] = useState<'none' | 'datum' | 'gdt' | 'physics' | 'clamp'>('none')
   const [gdtKind, setGdtKind] = useState<GdtFeatureControl['kind']>('position')
   const [toleranceMmInput, setToleranceMmInput] = useState('0.12')
   const [modifier, setModifier] = useState<GdtMaterialModifier>('RFS')
@@ -156,6 +176,14 @@ export function ContextActionPill({
           defaultKind === 'flatness' ? [] : datums[0] ? [datums[0].id] : [],
         )
         setOpenPopover((prev) => (prev === 'gdt' ? 'none' : 'gdt'))
+        return
+      }
+      if (actionId === 'configure-physics' && onSavePhysics) {
+        setOpenPopover((prev) => (prev === 'physics' ? 'none' : 'physics'))
+        return
+      }
+      if (actionId === 'set-clamp-warpage' && onSavePhysics) {
+        setOpenPopover((prev) => (prev === 'clamp' ? 'none' : 'clamp'))
         return
       }
       setOpenPopover('none')
@@ -427,6 +455,18 @@ export function ContextActionPill({
               </button>
             </div>
           </div>
+        ) : null}
+
+        {/* Lightweight Compliant Physics Config Popover (M4F1) */}
+        {(openPopover === 'physics' || openPopover === 'clamp') && onSavePhysics ? (
+          <PhysicsConfigPopover
+            selectedItems={selectedAssemblyItems}
+            initialClampMode={openPopover === 'clamp'}
+            currentPhysics={currentPhysics}
+            onSavePhysics={onSavePhysics}
+            onImportMicMatrix={onImportMicMatrix}
+            onClose={() => setOpenPopover('none')}
+          />
         ) : null}
 
         <section

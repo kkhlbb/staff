@@ -1,10 +1,12 @@
 import type {
+  AssemblyPhysicsSpec,
   DatumDefinition,
   GdtFeatureControl,
   GdtMaterialModifier,
   SimulationDiagnosticResult,
 } from '../assembly3dTypes'
 import { formatFcfCells, GDT_KIND_META, GDT_MODIFIER_LABELS, mmToToleranceQ } from '../gdt3dMath'
+import { buildUnifiedParetoItems } from '../physics3dMath'
 
 export interface SimulationWhatIfPanelProps {
   readonly result: SimulationDiagnosticResult
@@ -13,6 +15,10 @@ export interface SimulationWhatIfPanelProps {
   readonly activeGdtId?: string | null
   readonly gdtControls?: readonly GdtFeatureControl[]
   readonly datums?: readonly DatumDefinition[]
+  /** M4F1 rigid-vs-compliant comparison & unified Pareto props. */
+  readonly includeCompliant?: boolean
+  readonly onToggleIncludeCompliant?: (next: boolean) => void
+  readonly physicsSpec?: AssemblyPhysicsSpec
   readonly onChangeContributorTolerance: (contributorId: string, nextTolMm: number) => void
   readonly onUpdateGdtControl?: (
     gdtId: string,
@@ -53,6 +59,9 @@ export function SimulationWhatIfPanel({
   activeGdtId = null,
   gdtControls = [],
   datums = [],
+  includeCompliant,
+  onToggleIncludeCompliant,
+  physicsSpec,
   onChangeContributorTolerance,
   onUpdateGdtControl,
   onHoverContributor,
@@ -62,6 +71,19 @@ export function SimulationWhatIfPanel({
   const gdtById = new Map(gdtControls.map((g) => [g.id, g]))
   const gdtContributions = result.gdtContributions ?? []
   const gdtWarnings = result.gdtWarnings ?? []
+  const compliantSummary = result.compliantSummary
+  const effectiveIncludeCompliant = includeCompliant ?? result.includeCompliant ?? true
+  const hasCompliantComparison = Boolean(
+    compliantSummary &&
+      (compliantSummary.flexContributionItems.length > 0 ||
+        compliantSummary.flexDeltaCpk !== 0 ||
+        onToggleIncludeCompliant),
+  )
+  const unifiedPareto = buildUnifiedParetoItems(result, {
+    includeCompliant: effectiveIncludeCompliant,
+    gdtControls,
+    physics: physicsSpec,
+  })
 
   const histWidth = 260
   const histHeight = 84
@@ -95,13 +117,70 @@ export function SimulationWhatIfPanel({
       <div className="pa-card pa-sim-kpi-card">
         <div className="pa-header">
           <strong>封闭环：{result.title}</strong>
-          <span
-            className={`pa-pill ${statusMeta.toneClass}`}
-            data-testid="sim-status-pill"
-          >
-            {statusMeta.text}
-          </span>
+          <div className="pa-row">
+            {onToggleIncludeCompliant ? (
+              <label className="pa-toggle pa-sim-compliant-toggle">
+                <input
+                  type="checkbox"
+                  data-testid="toggle-include-compliant"
+                  checked={effectiveIncludeCompliant}
+                  onChange={(e) => onToggleIncludeCompliant(e.target.checked)}
+                />
+                <span>计入柔性形变</span>
+              </label>
+            ) : null}
+            <span
+              className={`pa-pill ${statusMeta.toneClass}`}
+              data-testid="sim-status-pill"
+            >
+              {statusMeta.text}
+            </span>
+          </div>
         </div>
+
+        {onToggleIncludeCompliant && !effectiveIncludeCompliant ? (
+          <div
+            className="pa-danger-box pa-rigid-warning-banner"
+            role="alert"
+            data-testid="rigid-assumption-warning"
+          >
+            ⚠ 当前为纯刚体假设，忽略形变将低估风险
+          </div>
+        ) : null}
+
+        {hasCompliantComparison && compliantSummary ? (
+          <div
+            className="pa-sim-compliant-compare"
+            data-testid="rigid-vs-compliant-card"
+            aria-label="纯刚体与柔性形变结果对比"
+          >
+            <div className="pa-sim-compare-col">
+              <span className="pa-sim-kpi-label">纯刚体基线</span>
+              <span className="pa-mono" data-testid="compare-rigid-cpk">
+                Cpk {compliantSummary.rigidBaseline.cpk?.toFixed(2) ?? '—'} ·{' '}
+                {compliantSummary.rigidBaseline.ppm.toLocaleString('en-US')} PPM
+              </span>
+            </div>
+            <div className="pa-sim-compare-col">
+              <span className="pa-sim-kpi-label">柔性耦合</span>
+              <span className="pa-mono" data-testid="compare-compliant-cpk">
+                Cpk {compliantSummary.compliantResult.cpk?.toFixed(2) ?? '—'} ·{' '}
+                {compliantSummary.compliantResult.ppm.toLocaleString('en-US')} PPM
+              </span>
+            </div>
+            {compliantSummary.flexDeltaCpk !== null ? (
+              <span
+                className={`pa-pill pa-mono ${
+                  compliantSummary.flexDeltaCpk < 0 ? 'pa-tone-danger' : 'pa-tone-pass'
+                }`}
+                data-testid="compare-flex-delta-cpk"
+              >
+                ΔCpk {compliantSummary.flexDeltaCpk >= 0 ? '+' : ''}
+                {compliantSummary.flexDeltaCpk.toFixed(2)}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="pa-sim-spec-meta">
           <span>
@@ -192,6 +271,90 @@ export function SimulationWhatIfPanel({
           </svg>
         </div>
       </div>
+
+      {/* M4F1 Unified Pareto (Flex + GD&T ranked descending by variance share) */}
+      {effectiveIncludeCompliant &&
+      compliantSummary &&
+      compliantSummary.flexContributionItems.length > 0 ? (
+        <div
+          className="pa-sim-pareto-section pa-sim-unified-pareto"
+          data-testid="unified-pareto-section"
+        >
+          <div className="pa-header">
+            <span className="pa-card-label">柔性 + GD&amp;T 统一贡献度帕累托</span>
+            <span className="pa-mono pa-muted">{unifiedPareto.length} 项</span>
+          </div>
+          <ul
+            className="pa-sim-pareto-list"
+            data-testid="unified-pareto-list"
+            aria-label="柔性因素与 GD&T 统一帕累托排名"
+          >
+            {unifiedPareto.map((item, rank) => {
+              const isHighlighted =
+                (item.gdtId !== undefined && activeGdtId === item.gdtId) ||
+                (item.featureId !== undefined && activeFeatureId === item.featureId)
+              return (
+                <li
+                  key={item.id}
+                  data-testid={`unified-pareto-item-${item.id}`}
+                  data-kind={item.kind}
+                  data-rank={String(rank + 1)}
+                  data-share-pct={item.varianceSharePct.toFixed(1)}
+                  data-highlighted={isHighlighted ? 'true' : 'false'}
+                  className={`pa-sim-pareto-item ${isHighlighted ? 'pa-sim-pareto-item-active pa-fourway-highlighted' : ''}`}
+                  onMouseEnter={() => {
+                    if (item.featureId) {
+                      onHoverContributor?.({
+                        featureId: item.featureId,
+                        partId: item.partId,
+                        gdtId: item.gdtId,
+                      })
+                    }
+                  }}
+                  onMouseLeave={() => onHoverContributor?.(null)}
+                >
+                  <button
+                    type="button"
+                    className="pa-sim-pareto-head"
+                    onClick={() => {
+                      if (item.featureId) {
+                        onClickContributor?.({
+                          featureId: item.featureId,
+                          partId: item.partId,
+                          gdtId: item.gdtId,
+                        })
+                      }
+                    }}
+                  >
+                    <span>
+                      <strong>{rank + 1}.</strong>{' '}
+                      <span
+                        className={`pa-pill ${
+                          item.kind === 'flex' ? 'pa-tone-pending' : 'pa-tone-action'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>{' '}
+                      {item.label}
+                    </span>
+                    <span className="pa-mono pa-sim-share-pct">
+                      {item.varianceSharePct.toFixed(1)}%
+                    </span>
+                  </button>
+                  <div className="pa-pareto-bar-track" aria-hidden="true">
+                    <div
+                      className={`pa-pareto-bar-fill ${
+                        item.kind === 'flex' ? 'pa-pareto-fill-mid' : 'pa-pareto-fill-high'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(2, item.varianceSharePct))}%` }}
+                    />
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      ) : null}
 
       {/* Top Contributors Pareto + What-If Sliders */}
       <div className="pa-sim-pareto-section">

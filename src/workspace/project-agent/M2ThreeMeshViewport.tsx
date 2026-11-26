@@ -42,9 +42,11 @@ import {
 import type {
   Css2dAnnotationItem,
   DatumDefinition,
+  DeformationViewMode,
   GdtDisplayMode,
   GdtFeatureControl,
   GdtMaterialModifier,
+  PartDisplacementField,
   PartEdgeSegment,
   PartMesh,
   PickedFeatureGeometryKind,
@@ -53,6 +55,15 @@ import type {
 } from './assembly3dTypes'
 import { Gdt3dOverlayLayer, type ProjectedGdtAnchor } from './components/Gdt3dOverlayLayer'
 import { computeFeatureWorldAnchor } from './gdt3dMath'
+import {
+  applyExaggeratedDisplacement,
+  buildVertexColorBuffer,
+  computeAnimationPhase,
+  interpolatePartDisplacementField,
+  mapNormalizedValueToTurboColor,
+  turboRgbToCssHex,
+  type InterpolatedPartDisplacement,
+} from './physics3dMath'
 import {
   resolveMeshTrianglePick,
   type M2CameraState,
@@ -117,6 +128,13 @@ export interface M2ThreeMeshViewportProps {
   /** M4 pre-wired BufferGeometry vertexColors & displacement channels. */
   readonly colorFieldChannels?: readonly VertexColorFieldChannel[]
   readonly displacementChannels?: readonly VertexDisplacementChannel[]
+  /** M4F1 compliant deformation heatmap & 60fps exaggerated animation props. */
+  readonly displacementFields?: readonly PartDisplacementField[]
+  readonly deformationMode?: DeformationViewMode
+  readonly onChangeDeformationMode?: (mode: DeformationViewMode) => void
+  readonly exaggerationScale?: number
+  readonly onChangeExaggerationScale?: (scale: number) => void
+  readonly showDeformationControls?: boolean
 }
 
 const DEG2RAD = Math.PI / 180
@@ -247,6 +265,7 @@ interface PartSceneEntry {
   readonly featureEdgeSegments: Array<{ readonly segment: PartEdgeSegment; readonly lines: LineSegments }>
   highlightMesh: Mesh | null
   highlightGeometry: BufferGeometry | null
+  cachedColorBuffer: Float32Array | null
 }
 
 interface ThreeSceneController {
@@ -270,6 +289,13 @@ interface ThreeSceneController {
   applyM4Channels(
     colorChannels?: readonly VertexColorFieldChannel[],
     displacementChannels?: readonly VertexDisplacementChannel[],
+  ): void
+  applyDeformationVisuals(
+    mode: DeformationViewMode,
+    interpolatedByPart: ReadonlyMap<string, InterpolatedPartDisplacement>,
+    globalMaxMm: number,
+    scale: number,
+    phase: number,
   ): void
   updateCamera(
     camera: M2CameraState,
@@ -333,6 +359,12 @@ export function M2ThreeMeshViewport({
   onDeleteGdtCallout,
   colorFieldChannels,
   displacementChannels,
+  displacementFields,
+  deformationMode: deformationModeProp,
+  onChangeDeformationMode,
+  exaggerationScale: exaggerationScaleProp,
+  onChangeExaggerationScale,
+  showDeformationControls,
 }: M2ThreeMeshViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const css2dHostRef = useRef<HTMLDivElement | null>(null)
@@ -340,7 +372,69 @@ export function M2ThreeMeshViewport({
   const [renderMode, setRenderMode] = useState<'webgl' | 'fallback'>(() =>
     canAttemptWebGL() ? 'webgl' : 'fallback',
   )
+  const [localDeformationMode, setLocalDeformationMode] = useState<DeformationViewMode>('nominal')
+  const [localExaggerationScale, setLocalExaggerationScale] = useState<number>(25)
+  const [isAnimationPlaying, setIsAnimationPlaying] = useState<boolean>(true)
+  const [deformationEmptyHint, setDeformationEmptyHint] = useState<string | null>(null)
   const isMultiPart = Boolean(partMeshes && partMeshes.length > 0)
+
+  const effectiveDeformationMode: DeformationViewMode = deformationModeProp ?? localDeformationMode
+  const effectiveExaggerationScale = Math.max(
+    1,
+    Math.min(50, exaggerationScaleProp ?? localExaggerationScale),
+  )
+  const displayDeformationHud =
+    showDeformationControls ?? (isMultiPart || Boolean(displacementFields && displacementFields.length > 0))
+
+  const handleSelectDeformationMode = (nextMode: DeformationViewMode) => {
+    const hasFields = Boolean(displacementFields && displacementFields.length > 0)
+    if (nextMode !== 'nominal' && !hasFields) {
+      setDeformationEmptyHint('当前暂无柔性形变位移场，请先选中零件「开启/配置柔性形变」。')
+    } else {
+      setDeformationEmptyHint(null)
+    }
+    if (nextMode === 'animation') {
+      setIsAnimationPlaying(true)
+    }
+    if (onChangeDeformationMode) {
+      onChangeDeformationMode(nextMode)
+    } else {
+      setLocalDeformationMode(nextMode)
+    }
+  }
+
+  const handleChangeExaggeration = (nextScale: number) => {
+    const clamped = Math.max(1, Math.min(50, Math.round(nextScale)))
+    if (onChangeExaggerationScale) {
+      onChangeExaggerationScale(clamped)
+    } else {
+      setLocalExaggerationScale(clamped)
+    }
+  }
+
+  // Pre-compute per-part interpolated displacement fields (zero rebuild of BufferGeometry!)
+  const { interpolatedByPart, globalMaxDisplacementMm } = useMemo(() => {
+    const map = new Map<string, InterpolatedPartDisplacement>()
+    let globalMax = 0
+    if (!displacementFields || displacementFields.length === 0) {
+      return { interpolatedByPart: map, globalMaxDisplacementMm: 0 }
+    }
+    const fieldByPart = new Map(displacementFields.map((f) => [f.partId, f]))
+    if (isMultiPart && partMeshes) {
+      for (const part of partMeshes) {
+        const field = fieldByPart.get(part.partId)
+        if (!field) continue
+        const interp = interpolatePartDisplacementField(part.positions, field)
+        map.set(part.partId, interp)
+        if (interp.maxDisplacementMm > globalMax) globalMax = interp.maxDisplacementMm
+      }
+    } else {
+      for (const field of displacementFields) {
+        if (field.maxDisplacementMm > globalMax) globalMax = field.maxDisplacementMm
+      }
+    }
+    return { interpolatedByPart: map, globalMaxDisplacementMm: globalMax }
+  }, [displacementFields, isMultiPart, partMeshes])
 
   // Stable key representing part geometry identity (excludes explosionFactor & nominalTransform)
   const partGeometryIdentity = useMemo(() => {
@@ -656,6 +750,7 @@ export function M2ThreeMeshViewport({
           featureEdgeSegments,
           highlightMesh: hlMesh,
           highlightGeometry: hlGeom,
+          cachedColorBuffer: null,
         })
       }
       singleGroup.visible = parts.length === 0
@@ -928,6 +1023,62 @@ export function M2ThreeMeshViewport({
         }
         scheduleRender()
       },
+      applyDeformationVisuals(mode, interpolatedMap, globalMaxMm, scale, phase) {
+        if (disposed) return
+        for (const [partId, entry] of partEntries.entries()) {
+          const posAttr = entry.geometry.getAttribute('position')
+          const interp = interpolatedMap.get(partId)
+          if (mode === 'nominal' || !interp || globalMaxMm <= 1e-9) {
+            if (posAttr && posAttr.array instanceof Float32Array) {
+              posAttr.array.set(entry.basePositions)
+              posAttr.needsUpdate = true
+            }
+            if (entry.material.vertexColors) {
+              entry.material.vertexColors = false
+              entry.material.color.set(entry.part.color)
+              entry.material.needsUpdate = true
+            }
+            continue
+          }
+
+          // Write Turbo/Jet vertex colors in-place using cached buffer
+          const colorBuf = buildVertexColorBuffer(
+            interp.magnitudes,
+            globalMaxMm,
+            entry.cachedColorBuffer ?? undefined,
+          )
+          entry.cachedColorBuffer = colorBuf
+          applyVertexColorField(entry.geometry, { partId, colors: colorBuf })
+          if (!entry.material.vertexColors) {
+            entry.material.vertexColors = true
+            entry.material.color.setHex(0xffffff)
+            entry.material.needsUpdate = true
+          }
+
+          // Update vertex positions in-place without rebuilding BufferGeometry
+          if (posAttr && posAttr.array instanceof Float32Array) {
+            if (mode === 'animation') {
+              applyExaggeratedDisplacement(
+                entry.basePositions,
+                interp.displacements,
+                posAttr.array,
+                scale,
+                phase,
+              )
+            } else {
+              applyExaggeratedDisplacement(
+                entry.basePositions,
+                interp.displacements,
+                posAttr.array,
+                1,
+                1,
+              )
+            }
+            posAttr.needsUpdate = true
+          }
+        }
+        scheduleRender()
+      },
       updateCamera(camState, bounds) {
         if (disposed) return
         syncCamera(camState, bounds)
@@ -1036,6 +1187,61 @@ export function M2ThreeMeshViewport({
     controllerRef.current?.applyM4Channels(colorFieldChannels, displacementChannels)
   }, [isMultiPart, colorFieldChannels, displacementChannels])
 
+  // M4F1 vertexColors heatmap + 60fps requestAnimationFrame exaggerated displacement loop (zero geometry rebuild)
+  useEffect(() => {
+    if (!isMultiPart) return
+    if (effectiveDeformationMode !== 'animation' || !isAnimationPlaying) {
+      controllerRef.current?.applyDeformationVisuals(
+        effectiveDeformationMode,
+        interpolatedByPart,
+        globalMaxDisplacementMm,
+        effectiveExaggerationScale,
+        effectiveDeformationMode === 'animation' ? 1 : 0,
+      )
+      return
+    }
+
+    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+      controllerRef.current?.applyDeformationVisuals(
+        'animation',
+        interpolatedByPart,
+        globalMaxDisplacementMm,
+        effectiveExaggerationScale,
+        1,
+      )
+      return
+    }
+
+    let animRafId = 0
+    const startMs = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    const step = (nowMs: number) => {
+      const elapsedSec = Math.max(0, (nowMs - startMs) / 1000)
+      const phase = computeAnimationPhase(elapsedSec)
+      controllerRef.current?.applyDeformationVisuals(
+        'animation',
+        interpolatedByPart,
+        globalMaxDisplacementMm,
+        effectiveExaggerationScale,
+        phase,
+      )
+      animRafId = window.requestAnimationFrame(step)
+    }
+    animRafId = window.requestAnimationFrame(step)
+
+    return () => {
+      if (animRafId !== 0) {
+        window.cancelAnimationFrame(animRafId)
+      }
+    }
+  }, [
+    isMultiPart,
+    effectiveDeformationMode,
+    isAnimationPlaying,
+    interpolatedByPart,
+    globalMaxDisplacementMm,
+    effectiveExaggerationScale,
+  ])
+
   // Sync camera state without rebuilding geometry
   useEffect(() => {
     const bounds =
@@ -1109,11 +1315,26 @@ export function M2ThreeMeshViewport({
             ? part.faceTriangleRanges.find((r) => r.objectId === picked.objectId)
             : undefined
 
+          let resolvedFillColor = part.color
+          if (effectiveDeformationMode !== 'nominal' && globalMaxDisplacementMm > 1e-9) {
+            const interp = interpolatedByPart.get(part.partId)
+            if (interp) {
+              const avgMag =
+                ((interp.magnitudes[i0] ?? 0) +
+                  (interp.magnitudes[i1] ?? 0) +
+                  (interp.magnitudes[i2] ?? 0)) /
+                3
+              resolvedFillColor = turboRgbToCssHex(
+                mapNormalizedValueToTurboColor(avgMag / globalMaxDisplacementMm),
+              )
+            }
+          }
+
           projectedTriangles.push({
             key: `${part.partId}-tri-${t}`,
             partId: part.partId,
             partName: part.displayName,
-            partColor: part.color,
+            partColor: resolvedFillColor,
             triangleIndex: t,
             points: `${p0[0].toFixed(1)},${p0[1].toFixed(1)} ${p1[0].toFixed(1)},${p1[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`,
             objectId: matchedRange?.objectId ?? '',
@@ -1191,7 +1412,17 @@ export function M2ThreeMeshViewport({
       })
     }
     return { mode: 'single' as const, totalTriangles, projectedTriangles, projectedEdges: [] }
-  }, [isMultiPart, partMeshes, explosionFactor, hiddenPartIds, modelMesh, camera])
+  }, [
+    isMultiPart,
+    partMeshes,
+    explosionFactor,
+    hiddenPartIds,
+    modelMesh,
+    camera,
+    effectiveDeformationMode,
+    interpolatedByPart,
+    globalMaxDisplacementMm,
+  ])
 
   const fallbackDragRef = useRef<{ x: number; y: number } | null>(null)
 
@@ -1438,6 +1669,12 @@ export function M2ThreeMeshViewport({
       data-geometry-build-count={String(geometryBuildCount)}
       data-triangle-count={String(fallbackProjection.totalTriangles)}
       data-selected-object-id={selectedObjectId ?? ''}
+      data-deformation-mode={effectiveDeformationMode}
+      data-exaggeration-scale={String(effectiveExaggerationScale)}
+      data-animation-playing={
+        effectiveDeformationMode === 'animation' && isAnimationPlaying ? 'true' : 'false'
+      }
+      data-max-displacement-mm={globalMaxDisplacementMm.toFixed(3)}
     >
       {renderMode === 'webgl' ? (
         <>
@@ -1605,6 +1842,107 @@ export function M2ThreeMeshViewport({
           onUpdateGdtCallout={onUpdateGdtCallout}
           onDeleteGdtCallout={onDeleteGdtCallout}
         />
+      ) : null}
+
+      {/* M4F1 Bottom-Left Deformation Mode Switcher, Legend & Exaggeration Animation HUD */}
+      {displayDeformationHud ? (
+        <div
+          className="pa-deformation-hud-bl"
+          data-testid="deformation-hud"
+          aria-label="三维形变云图与夸张动画控制"
+        >
+          {effectiveDeformationMode === 'animation' ? (
+            <div
+              className="pa-deformation-anim-pill"
+              data-testid="deformation-animation-controls"
+            >
+              <button
+                type="button"
+                data-testid="deformation-play-pause-btn"
+                className="pa-deformation-play-btn"
+                aria-label={isAnimationPlaying ? '暂停夸张动画' : '播放夸张动画'}
+                aria-pressed={isAnimationPlaying}
+                onClick={() => setIsAnimationPlaying((prev) => !prev)}
+              >
+                {isAnimationPlaying ? '⏸ 暂停' : '▶ 播放'}
+              </button>
+              <label className="pa-deformation-scale-label">
+                <span>倍率</span>
+                <input
+                  type="range"
+                  data-testid="exaggeration-scale-slider"
+                  aria-label="形变夸张倍率滑块"
+                  min={1}
+                  max={50}
+                  step={1}
+                  value={effectiveExaggerationScale}
+                  onChange={(e) => handleChangeExaggeration(Number(e.target.value))}
+                />
+                <span className="pa-mono" data-testid="exaggeration-scale-value">
+                  {effectiveExaggerationScale}×
+                </span>
+              </label>
+            </div>
+          ) : null}
+
+          {effectiveDeformationMode !== 'nominal' ? (
+            <div
+              className="pa-deformation-legend"
+              data-testid="deformation-heatmap-legend"
+              role="status"
+              aria-label={`形变云图色标：0.00 mm 至 ${globalMaxDisplacementMm.toFixed(3)} mm`}
+            >
+              <span className="pa-mono">0.00 mm</span>
+              <span className="pa-deformation-legend-bar" aria-hidden="true" />
+              <span className="pa-mono">
+                {globalMaxDisplacementMm.toFixed(3)} mm 变形
+              </span>
+            </div>
+          ) : null}
+
+          {deformationEmptyHint ? (
+            <div
+              className="pa-deformation-hint"
+              role="status"
+              data-testid="deformation-empty-hint"
+            >
+              {deformationEmptyHint}
+            </div>
+          ) : null}
+
+          <div
+            className="pa-deformation-switcher"
+            role="group"
+            aria-label="形变显示模式切换"
+            data-testid="deformation-mode-switcher"
+          >
+            {(
+              [
+                { id: 'nominal', label: '名义态' },
+                { id: 'heatmap', label: '形变云图' },
+                { id: 'animation', label: '夸张动画' },
+              ] as const
+            ).map((item) => {
+              const active = effectiveDeformationMode === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  data-testid={`deformation-mode-${item.id}`}
+                  aria-pressed={active}
+                  className={
+                    active
+                      ? 'pa-deformation-mode-btn pa-deformation-mode-btn-active'
+                      : 'pa-deformation-mode-btn'
+                  }
+                  onClick={() => handleSelectDeformationMode(item.id)}
+                >
+                  {item.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       ) : null}
 
       {/* M3 pre-wired CSS2DRenderer annotation overlay container */}
