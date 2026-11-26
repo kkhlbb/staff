@@ -33,7 +33,11 @@
   ```bash
   xattr -dr com.apple.quarantine /Applications/寸链.app
   ```
-- **Windows x64**（`cunlian-v1.0.0-windows-x64.zip` 免安装版 & `cunlian-v1.0.0-windows-x64-setup.exe` NSIS 安装程序）：内置 Windows 命名管道与 `cunlian-mcp.cmd` 本地桥接；未做商业代码签名，SmartScreen 提示选择「仍要运行」即可。
+- **Windows x64**（`cunlian-v1.0.0-windows-x64.zip` 免安装版 & `cunlian-v1.0.0-windows-x64-setup.exe` NSIS 每用户安装程序）：内置 Windows 命名管道与 `cunlian-mcp.cmd` 本地桥接；当前社区版未附商业代码签名，首次下载运行前请先对照 `SHA256SUMS.txt` 校验完整性：
+  ```cmd
+  certutil -hashfile cunlian-v1.0.0-windows-x64-setup.exe SHA256
+  ```
+  校验一致后，若遇 Windows SmartScreen 拦截提示，点击「更多信息」→「仍要运行」（或直接使用免安装 `.zip`）。如需配置 Authenticode 代码签名（SignPath.io 开源免费 / Azure Trusted Signing / 本地 PFX），详见 [`docs/windows-code-signing.md`](docs/windows-code-signing.md)。
 
 ---
 
