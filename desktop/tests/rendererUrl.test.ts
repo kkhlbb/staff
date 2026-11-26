@@ -27,6 +27,60 @@ describe('isProductionRendererUrl', () => {
       'file:///Applications/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/other.html'
     expect(isProductionRendererUrl(other, RENDERER_PATH)).toBe(false)
   })
+
+  it('拒绝 POSIX 路径带非空 hostname 的 file URL', () => {
+    const spoofed =
+      'file://attacker/Applications/%E5%AF%B8%E9%93%BE.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.desktop.html'
+    expect(isProductionRendererUrl(spoofed, RENDERER_PATH)).toBe(false)
+  })
+
+  it('Windows：接受带盘符、反斜杠、中文目录与大小写差异的 file:///C:/... URL', () => {
+    const winPath =
+      'C:\\Users\\Alice\\AppData\\Local\\Programs\\寸链\\resources\\app.asar\\.vite\\renderer\\main_window\\index.desktop.html'
+    const encoded =
+      'file:///C:/Users/Alice/AppData/Local/Programs/%E5%AF%B8%E9%93%BE/resources/app.asar/.vite/renderer/main_window/index.desktop.html'
+    const lowerDriveAndHash =
+      'file:///c:/users/alice/appdata/local/programs/%E5%AF%B8%E9%93%BE/resources/app.asar/.vite/renderer/main_window/index.desktop.html#/desktop-legacy'
+    const extendedWinPath = `\\\\?\\${winPath}`
+    const spacedWinPath =
+      'D:\\My Apps\\寸链 1.0\\resources\\app.asar\\.vite\\renderer\\main_window\\index.desktop.html'
+    const spacedUrl =
+      'file:///D:/My%20Apps/%E5%AF%B8%E9%93%BE%201.0/resources/app.asar/.vite/renderer/main_window/index.desktop.html'
+
+    expect(isProductionRendererUrl(encoded, winPath)).toBe(true)
+    expect(isProductionRendererUrl(lowerDriveAndHash, winPath)).toBe(true)
+    expect(isProductionRendererUrl(encoded, extendedWinPath)).toBe(true)
+    expect(isProductionRendererUrl(spacedUrl, spacedWinPath)).toBe(true)
+  })
+
+  it('Windows：接受 UNC 共享路径并拒绝错误盘符/主机/文件', () => {
+    const uncPath =
+      '\\\\fileserver\\share\\寸链\\resources\\app.asar\\.vite\\renderer\\main_window\\index.desktop.html'
+    const uncUrl =
+      'file://fileserver/share/%E5%AF%B8%E9%93%BE/resources/app.asar/.vite/renderer/main_window/index.desktop.html'
+    expect(isProductionRendererUrl(uncUrl, uncPath)).toBe(true)
+
+    const winPath =
+      'C:\\Users\\Alice\\Programs\\寸链\\resources\\app.asar\\.vite\\renderer\\main_window\\index.desktop.html'
+    expect(
+      isProductionRendererUrl(
+        'file:///D:/Users/Alice/Programs/%E5%AF%B8%E9%93%BE/resources/app.asar/.vite/renderer/main_window/index.desktop.html',
+        winPath,
+      ),
+    ).toBe(false)
+    expect(
+      isProductionRendererUrl(
+        'file://evil-host/C:/Users/Alice/Programs/%E5%AF%B8%E9%93%BE/resources/app.asar/.vite/renderer/main_window/index.desktop.html',
+        winPath,
+      ),
+    ).toBe(false)
+    expect(
+      isProductionRendererUrl(
+        'file:///C:/Users/Alice/Programs/%E5%AF%B8%E9%93%BE/resources/app.asar/.vite/renderer/main_window/other.html',
+        winPath,
+      ),
+    ).toBe(false)
+  })
 })
 
 describe('isDevServerFrameUrl', () => {

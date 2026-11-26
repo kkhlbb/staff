@@ -1,10 +1,37 @@
+!ifndef APP_VERSION
+  !define APP_VERSION "1.0.0"
+!endif
+!ifndef VI_VERSION
+  !define VI_VERSION "1.0.0.0"
+!endif
+!ifndef PRODUCT_NAME
+  !define PRODUCT_NAME "寸链"
+!endif
+!ifndef COMPANY_NAME
+  !define COMPANY_NAME "寸链 (Cunlian)"
+!endif
+!ifndef FILE_DESCRIPTION
+  !define FILE_DESCRIPTION "寸链 Windows x64 安装程序"
+!endif
+!ifndef LEGAL_COPYRIGHT
+  !define LEGAL_COPYRIGHT "Copyright (c) 寸链 (MIT License)"
+!endif
+!ifndef ORIGINAL_FILENAME
+  !define ORIGINAL_FILENAME "cunlian-v${APP_VERSION}-windows-x64-setup.exe"
+!endif
+!ifndef INTERNAL_NAME
+  !define INTERNAL_NAME "cunlian-setup"
+!endif
+
 Unicode true
 RequestExecutionLevel user
-Name "寸链 1.0.0"
+Name "${PRODUCT_NAME} ${APP_VERSION}"
 OutFile "${EXECUTABLE}"
 InstallDir "$LOCALAPPDATA\Programs\寸链"
-SetCompressor lzma
+; Standard non-solid zlib avoids AV heuristic false positives commonly triggered by /SOLID lzma stubs.
+SetCompressor zlib
 ManifestDPIAware true
+ManifestSupportedOS all
 ShowInstDetails show
 ShowUninstDetails show
 
@@ -24,12 +51,16 @@ ShowUninstDetails show
 !define MUI_FINISHPAGE_RUN "$INSTDIR\寸链.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "立即启动寸链"
 
-VIProductVersion "1.0.0.0"
-VIAddVersionKey /LANG=2052 "ProductName" "寸链"
-VIAddVersionKey /LANG=2052 "FileDescription" "寸链 Windows x64 安装程序"
-VIAddVersionKey /LANG=2052 "ProductVersion" "1.0.0"
-VIAddVersionKey /LANG=2052 "FileVersion" "1.0.0"
-VIAddVersionKey /LANG=2052 "LegalCopyright" "寸链"
+VIProductVersion "${VI_VERSION}"
+VIFileVersion "${VI_VERSION}"
+VIAddVersionKey /LANG=2052 "ProductName" "${PRODUCT_NAME}"
+VIAddVersionKey /LANG=2052 "CompanyName" "${COMPANY_NAME}"
+VIAddVersionKey /LANG=2052 "FileDescription" "${FILE_DESCRIPTION}"
+VIAddVersionKey /LANG=2052 "FileVersion" "${APP_VERSION}"
+VIAddVersionKey /LANG=2052 "ProductVersion" "${APP_VERSION}"
+VIAddVersionKey /LANG=2052 "LegalCopyright" "${LEGAL_COPYRIGHT}"
+VIAddVersionKey /LANG=2052 "OriginalFilename" "${ORIGINAL_FILENAME}"
+VIAddVersionKey /LANG=2052 "InternalName" "${INTERNAL_NAME}"
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_COMPONENTS
@@ -97,8 +128,9 @@ Section "寸链（必需）" Core
   File "mcp-config.mjs"
   File "run-mcp-config.mjs"
   IfErrors failed
-  WriteRegStr HKCU "${UNINSTALL}" "DisplayName" "寸链"
-  WriteRegStr HKCU "${UNINSTALL}" "DisplayVersion" "1.0.0"
+  WriteRegStr HKCU "${UNINSTALL}" "DisplayName" "${PRODUCT_NAME}"
+  WriteRegStr HKCU "${UNINSTALL}" "DisplayVersion" "${APP_VERSION}"
+  WriteRegStr HKCU "${UNINSTALL}" "Publisher" "${COMPANY_NAME}"
   WriteRegStr HKCU "${UNINSTALL}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${UNINSTALL}" "DisplayIcon" "$INSTDIR\寸链.exe"
   WriteRegStr HKCU "${UNINSTALL}" "UninstallString" '$\"$INSTDIR\uninstall.exe$\"'

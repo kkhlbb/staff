@@ -61,7 +61,12 @@ function windowsExecutableIdentity(executable: string) {
 }
 
 export function localM1WindowsProfile(executable: string) {
-  const canonical = realpathSync.native(executable)
+  let canonical: string
+  try {
+    canonical = realpathSync.native(executable)
+  } catch {
+    canonical = path.win32.resolve(executable)
+  }
   return createHash('sha256').update(windowsExecutableIdentity(canonical)).digest('hex').slice(0, 24)
 }
 
