@@ -40,13 +40,16 @@ import {
 } from './workbenchHelpers'
 import { useAssembly3dM1b } from './hooks/useAssembly3dM1b'
 import { usePhysicsM4f1 } from './hooks/usePhysicsM4f1'
-import { useWorkbenchSession } from './hooks/useWorkbenchSession'
+import {
+  useWorkbenchSession,
+  type DesktopProjectOpenForAuthResult,
+} from './hooks/useWorkbenchSession'
 import { WorkbenchTopBar } from './components/WorkbenchTopBar'
 import { WorkbenchStatusBanners } from './components/WorkbenchStatusBanners'
 import { OnboardingWizard } from './components/OnboardingWizard'
 import { CollaborationSidebar } from './components/CollaborationSidebar'
 
-export type { WorkbenchLocalProject, WorkbenchChatMessage }
+export type { WorkbenchLocalProject, WorkbenchChatMessage, DesktopProjectOpenForAuthResult }
 
 export interface ProjectAgentM1WorkbenchProps {
   /** Optional unified M0 Transport (ElectronTransport or custom Transport). */
@@ -60,6 +63,13 @@ export interface ProjectAgentM1WorkbenchProps {
   readonly initialProjectName?: string
   readonly initialBaseRevision?: string | null
   readonly initialDraftRevision?: string | null
+  /** Desktop host binding metadata for launching native file selection before readonly auth when unbound. */
+  readonly desktopBoundProjectId?: string | null
+  readonly onRequestDesktopProjectForReadonlyAuth?: (
+    requestedProjectId: string,
+  ) => Promise<DesktopProjectOpenForAuthResult>
+  readonly autoRequestReadonlyAuth?: boolean
+  readonly onAutoReadonlyAuthConsumed?: () => void
   readonly localProjects?: readonly WorkbenchLocalProject[]
   readonly availableObjects?: readonly M1SelectedObjectRef[]
   readonly availableTaskbooks?: readonly M1TaskbookReference[]
@@ -101,6 +111,10 @@ export function ProjectAgentM1Workbench({
   initialProjectName = '安装板项目',
   initialBaseRevision = 'v1',
   initialDraftRevision = null,
+  desktopBoundProjectId,
+  onRequestDesktopProjectForReadonlyAuth,
+  autoRequestReadonlyAuth = false,
+  onAutoReadonlyAuthConsumed,
   localProjects = DEFAULT_LOCAL_PROJECTS,
   availableObjects: availableObjectsProp,
   availableTaskbooks: availableTaskbooksProp,
@@ -152,6 +166,10 @@ export function ProjectAgentM1Workbench({
     initialProjectName,
     initialBaseRevision,
     initialDraftRevision,
+    desktopBoundProjectId,
+    onRequestDesktopProjectForReadonlyAuth,
+    autoRequestReadonlyAuth,
+    onAutoReadonlyAuthConsumed,
     availableObjectsProp,
     availableTaskbooksProp,
     initialConnectionSnapshot,

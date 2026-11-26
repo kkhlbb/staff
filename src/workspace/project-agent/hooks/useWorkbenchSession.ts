@@ -92,12 +92,23 @@ import type {
 } from '../components/OnboardingWizard'
 import { useAssemblyViewport } from './useAssemblyViewport'
 
+export type DesktopProjectOpenForAuthResult =
+  | { readonly ok: true; readonly projectId: string; readonly sessionId: string }
+  | { readonly ok: false; readonly cancelled: true }
+  | { readonly ok: false; readonly cancelled?: false; readonly message: string }
+
 export interface UseWorkbenchSessionOptions {
   readonly transport: ElectronTransport
   readonly initialProjectId: string
   readonly initialProjectName: string
   readonly initialBaseRevision: string | null
   readonly initialDraftRevision: string | null
+  readonly desktopBoundProjectId?: string | null
+  readonly onRequestDesktopProjectForReadonlyAuth?: (
+    requestedProjectId: string,
+  ) => Promise<DesktopProjectOpenForAuthResult>
+  readonly autoRequestReadonlyAuth?: boolean
+  readonly onAutoReadonlyAuthConsumed?: () => void
   readonly availableObjectsProp?: readonly M1SelectedObjectRef[]
   readonly availableTaskbooksProp?: readonly M1TaskbookReference[]
   readonly initialConnectionSnapshot?: Partial<M1ConnectionStatusSnapshot>
@@ -129,6 +140,10 @@ export function useWorkbenchSession({
   initialProjectName,
   initialBaseRevision,
   initialDraftRevision,
+  desktopBoundProjectId,
+  onRequestDesktopProjectForReadonlyAuth,
+  autoRequestReadonlyAuth = false,
+  onAutoReadonlyAuthConsumed,
   availableObjectsProp,
   availableTaskbooksProp,
   initialConnectionSnapshot,
@@ -1890,6 +1905,41 @@ export function useWorkbenchSession({
     const tracker = trackerRef.current
     const capturedProjectId = tracker.projectId
     const capturedSwitchEpoch = tracker.switchProjectEpoch
+    if (
+      onRequestDesktopProjectForReadonlyAuth &&
+      desktopBoundProjectId !== capturedProjectId
+    ) {
+      tracker.readonlyAuthRequestEpoch += 1
+      const capturedAuthEpoch = tracker.readonlyAuthRequestEpoch
+      setReadonlyAuthPending(true)
+      let openResult: DesktopProjectOpenForAuthResult
+      try {
+        openResult = await onRequestDesktopProjectForReadonlyAuth(capturedProjectId)
+      } catch (err) {
+        const normalized = normalizeWorkbenchBridgeError(err, '打开本地项目文件失败')
+        openResult = { ok: false, message: normalized.message }
+      }
+      if (
+        !tracker.mounted ||
+        tracker.projectId !== capturedProjectId ||
+        tracker.switchProjectEpoch !== capturedSwitchEpoch ||
+        tracker.readonlyAuthRequestEpoch !== capturedAuthEpoch
+      ) {
+        if (tracker.mounted && tracker.readonlyAuthRequestEpoch === capturedAuthEpoch) {
+          setReadonlyAuthPending(false)
+        }
+        return
+      }
+      setReadonlyAuthPending(false)
+      if (!openResult.ok) {
+        if (openResult.cancelled) {
+          setReadonlyAuthNotice('已取消选择本地 .cunlian 项目文件，未发起原生只读授权。')
+        } else {
+          setReadonlyAuthError(`打开本地项目文件失败：${openResult.message}`)
+        }
+      }
+      return
+    }
     tracker.readonlyAuthRequestEpoch += 1
     const capturedAuthEpoch = tracker.readonlyAuthRequestEpoch
     const requestGeneration = tracker.readonlyAuthGeneration
@@ -1950,6 +2000,24 @@ export function useWorkbenchSession({
       `已完成项目 ${acceptedScope.projectId} 的原生只读授权，现在可继续申请原生写入或接管草稿。`,
     )
   }
+
+  const autoReadonlyAuthTriggeredRef = useRef(false)
+  const handleRequestReadonlyAuthorizationRef = useRef(handleRequestReadonlyAuthorization)
+  useEffect(() => {
+    handleRequestReadonlyAuthorizationRef.current = handleRequestReadonlyAuthorization
+  })
+  useEffect(() => {
+    if (!autoRequestReadonlyAuth) {
+      autoReadonlyAuthTriggeredRef.current = false
+      return
+    }
+    if (autoReadonlyAuthTriggeredRef.current) {
+      return
+    }
+    autoReadonlyAuthTriggeredRef.current = true
+    onAutoReadonlyAuthConsumed?.()
+    void handleRequestReadonlyAuthorizationRef.current()
+  }, [autoRequestReadonlyAuth, onAutoReadonlyAuthConsumed])
 
   const handleTakeoverDraft = async (
     explicitTargetSource?: 'local-agent' | 'model-api',
