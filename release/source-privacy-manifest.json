@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineCommit": "7e11f5ee3da00aa157659e92cc42f205bf7fc6e4",
+  "baselineCommit": "4506e1378e9255a233c72531814244e7bde6507f",
   "frozenHistoryCommit": "9fe22fd",
   "policy": "Exact allowlisted offsets only; all other bytes unchanged. No original private strings included. Image derivation authenticated by original/published hashes, not claimed pixel-equivalent.",
   "files": {
@@ -274,14 +274,26 @@
       ]
     },
     "desktop/tests/senderGuard.test.ts": {
-      "originalSha256": "4422f2fe5a1cfed7a4ebdf5a25df1cc28a2b1404ba82a8fb75a2ccc8b60d0d08",
-      "publishedSha256": "f55abc460a4592518e0719af42b8ebaca7a72a0b066be57798d6eb3c2d62695f",
+      "originalSha256": "3c0a36f28f3acbc3ab6035b62af151f3365654b4c4a25e4e7295debab163a8d3",
+      "publishedSha256": "cf51b7dc673e98dbff80fc1acf4408b68e5cf8ec610101476a7f84f3be534704",
       "rule": "exact-home-username-display-edits",
       "edits": [
         {
-          "offset": 2382,
+          "offset": 2444,
           "length": 5,
           "originalFragmentSha256": "c465235bb8a2fa3c14c5a72484fb2635c180d3db626a1b34ab7e12d53749094d",
+          "replacement": "fixture-user"
+        },
+        {
+          "offset": 3285,
+          "length": 8,
+          "originalFragmentSha256": "d93352a70395db3de0632a6b203cbc58aebb331e74bc417e7d75d4c6e8997434",
+          "replacement": "fixture-user"
+        },
+        {
+          "offset": 3597,
+          "length": 8,
+          "originalFragmentSha256": "d93352a70395db3de0632a6b203cbc58aebb331e74bc417e7d75d4c6e8997434",
           "replacement": "fixture-user"
         }
       ]
