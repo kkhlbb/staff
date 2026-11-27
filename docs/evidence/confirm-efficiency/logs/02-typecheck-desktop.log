@@ -1,7 +1,0 @@
-$ npm run typecheck:desktop
-
-> staff@0.4.0-beta typecheck:desktop
-> tsc -p tsconfig.desktop.json --noEmit
-
-
-EXIT=0

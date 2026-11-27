@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/scripts/build_dependency_supply.py", line 149, in <module>
-    build(sys.argv[1], sys.argv[2])
-  File "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/scripts/build_dependency_supply.py", line 121, in build
-    metadata = json.loads(download(metadata_url, output/(key+'.registry.json'), events))
-  File "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/scripts/build_dependency_supply.py", line 92, in download
-    raise RuntimeError('OFFICIAL_DOWNLOAD_FAILED: '+url)
-RuntimeError: OFFICIAL_DOWNLOAD_FAILED: https://registry.npmjs.org/%40electron%2Fasar/4.3.2

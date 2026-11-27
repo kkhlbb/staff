@@ -1,46 +1,23 @@
-# 当前产品窄核告知（历史记录在后）
+# NOTICE — 寸链（Cunlian）`v1.0.2` 统一 OCCT 7.8.1 XCAF WASM 内核及许可边界
 
-本产品STEP出口现在使用固定源OCCT 8.0.1窄C ABI，不再通过npm旧绑定运行。
-OCCT为LGPL2.1及OCCT header exception；应用/手写wrapper/worker保持MIT边界，
-Emscripten glue与musl/LLVM/dlmalloc/Strtod等各依原文，不统称MIT。
-新运行资源为step-narrow-v1，精确hash见STEP-NARROW-SBOM.cdx.json与运行manifest。
-旧npm/旧缓存不进入新包；下文旧版本字节与四项来源缺口仅为原版历史事实。
+寸链自身源代码、手写 C++ wrapper 与 worker 按根目录 `LICENSE` 的 **MIT** 许可发布；本告知不覆盖或改写任何第三方组件的原始许可。
 
-真实产品wrapper已重编，保留几何安全检查并重链接默认/源修改OCCT库。
-本地可移植对应材料与应用对象见docs/step-narrow-runtime.md。
-允许用户修改LGPL库、重新链接以及为调试这些修改而逆向工程；应用MIT许可不变。
-正式源供给渠道、完整notice与法律审查仍BLOCKED，不是法律认证或分发授权。
-完整许可原文随外置资源；本地显式用户WASM入口不允许自选JS/worker或默认回退。
+## 1. Open CASCADE Technology (OCCT) 7.8.1
 
-## 以下为旧npm版本历史告知（不代表当前运行核）
+本产品的 STEP AP214/AP203 装配导入/导出、XCAF 装配特征提取、三维构形与 2D HLR 矢量工程图能力使用 **Open CASCADE Technology (OCCT) 7.8.1**，以统一编译的外置 WASM 内核 `occt-unified/cunlian_occt.wasm` 与配套 glue `occt-unified/cunlian_occt.mjs` 运行。
 
-# NOTICE — STEP 内核及许可边界
+- **许可条款**：OCCT 7.8.1 适用 **LGPL-2.1-only** 及 **OCCT LGPL Exception**。完整原文随外置资源提供于 `occt-unified/LICENSE_LGPL_21.txt` 与 `occt-unified/OCCT_LGPL_EXCEPTION.txt`（仓库源路径位于 `vendor/occt-unified/`）。OCCT Exception 仅涉及头文件材料，不免除整个库的 LGPL-2.1 义务。
+- **固定上游源码**：[Open-Cascade-SAS/OCCT](https://github.com/Open-Cascade-SAS/OCCT) 标签 `V7_8_1`（commit `bd2a789f15235755ce4d1a3b07379a2e062fdc2e`，归档 SHA-256：`7321af48c34dc253bf8aae3f0430e8cb10976961d534d8509e72516978aa82f5`）。
+- **可重现构建与 SBOM**：Emscripten `4.0.23` 可重现构建脚本见 `scripts/occt-wasm-build/reproduce.sh` 与 `vendor/occt-unified/SOURCE.md`；全部运行时资产精确 SHA-256 与发布放行状态（`APPROVED_UNIFIED_OCCT_LGPL_21` / `COMPLETE`）见 `STEP-NARROW-SBOM.cdx.json`（随包副本 `occt-unified/STEP-SBOM.cdx.json`）。
 
-寸链自身源代码继续按根目录 LICENSE 的 MIT 许可；本告知不改写第三方许可。
-本产品的隔套 STEP 出口使用 Open CASCADE Technology，经 replicad-opencascadejs
-1.2.1 / OpenCascade.js 绑定运行。未使用 MIT 的高层 replicad 包，不能由其 MIT
-推导 WASM 的许可。外置 step-kernel 中的 OCCT/绑定遵循 LGPL-2.1，OCCT 另有
-additional exception；完整原文见 LICENSE_LGPL_21.txt、OCCT_LGPL_EXCEPTION.txt
-及 REPLICAD_OCJS_LICENSE.txt。exception 只涉及头文件材料，不免除整个库义务。
+## 2. 用户修改、重链接与调试权利（LGPL-2.1）
 
-发布状态：BLOCKED_PROVENANCE_AND_LGPL_SOURCE_SUPPLY。
-这份本地研究包不是完整对应源码交付，不是法律认证或分发授权。
-STEP-SBOM.cdx.json 是机器可读的部分清单；精确静态对象/ports 清单未知，不能当完整SBOM。
+本应用不以任何条款禁止用户为自用修改 OCCT 等 LGPL 库、重新链接修改后的库，或为调试这些修改而进行逆向工程；应用自身的 MIT 许可保持不变。
 
-已核实 npm 1.2.1 tarball SRI：
-sha512-nFWkL5+24JiN1sv5fLGhdQr3FKCOLR3PIBkeZJcLm37p4eraEtD7Jueo8dP2BoqClJwb9hTSkf2QMli3GVqhpg==
-固定源码仓库提交：5e4ad9bb5a35bb9ae0571e91c25fa1897ba0570c（sgenoud/replicad）。
-该提交内的 dist 与 npm 单线程 JS/CJS/WASM 逐字节相同；这不是可重复构建证明。
-运行自报 OCCT 8.0，不能用它认定补丁号。
+- 用户可按 `docs/step-source-supply.md` 与 `vendor/occt-unified/SOURCE.md` 获取对应源码并从头重编译。
+- 用户可在启动主进程前通过显式本地 opt-in（`CUNLIAN_STEP_LOCAL_OPT_IN=1`、`CUNLIAN_STEP_LOCAL_WASM`、`CUNLIAN_STEP_LOCAL_SHA256`）加载自行编译的兼容 WASM 内核，或按 MIT 许可重钉默认资产哈希后重新打包；详见 `docs/step-kernel-replacement.md` 与 `docs/step-narrow-runtime.md`。
 
-构建脚本引用的 taucad/opencascade.js v3.1.0 解析到
-341fa789f49ce73db76a0209d89ae518cc64a52d；此参考 DEPS 固定 OCCT V8_0_1
-b8f597c677811d1f9f4d8a97f5ae2825c0353a42，但目标 npm WASM 的历史容器 digest、
-实际平台和生成绑定未取得，因此不能把这个参考源树冒充目标精确对应源码。
-必要源码、补丁、工具链及未闭环项见 docs/step-license-provenance.md。
+## 3. 其它第三方组件与运行时许可
 
-不以应用条款禁止对修改版 LGPL 库的替换、重新链接或为调试这些修改而进行的
-逆向工程。对应用 MIT 授权保持原样；不声称已满足 LGPL 第6节技术/供给义务。
-当前完整性固定哈希会拒绝直接换入不同字节的 WASM；没有隐藏开关绕过校验。
-替换验证、可执行本地探针和仍阻塞的源构建路径见 docs/step-kernel-replacement.md。
-在完整对应源码、必要对象/绑定、可重链接步骤和实际运行验证闭合前不得分发。
+- Emscripten 运行时 glue、musl、LLVM 子库、dlmalloc、David Gay `strtod` 等组件分别按其原始许可分发，不统称为 MIT；原文汇总随包位于 `occt-unified/STEP-NARROW-RUNTIME-NOTICES.txt`、`STEP-TRANSITIVE-NOTICES.txt` 与 `STEP-CANDIDATE-LICENSES.txt`。
+- 前端、桌面运行时及 Electron / Chromium 许可汇总见根目录 `THIRD-PARTY-NOTICES.md` 及外置资源中的 `APP-RUNTIME-NOTICES.txt`、`RELEASE-SUPPLEMENTAL-NOTICES.txt`、`ELECTRON-LICENSE.txt` 与 `ELECTRON-CHROMIUM-LICENSES.html`。

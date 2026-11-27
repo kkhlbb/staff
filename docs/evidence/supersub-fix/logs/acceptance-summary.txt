@@ -1,9 +1,0 @@
-sandbox-exec -p '(version 1)(allow default)(deny network*)' npm test => exit=0
-sandbox-exec -p '(version 1)(allow default)(deny network*)(allow network-bind (local ip "localhost:*"))(allow network-inbound (local ip "localhost:*"))(allow network-outbound (remote ip "localhost:*"))' npm run test:desktop => exit=0
-sandbox-exec -p '(version 1)(allow default)(deny network*)' npm run typecheck => exit=0
-sandbox-exec -p '(version 1)(allow default)(deny network*)' npm run lint => exit=0
-sandbox-exec -p '(version 1)(allow default)(deny network*)' npm run test:real-docs => exit=0
-sandbox-exec -p '(version 1)(allow default)(deny network*)' npm run metrics:real-docs => exit=0
-sandbox-exec -p '(version 1)(allow default)(deny network*)' npm run typecheck:desktop => exit=0
-sandbox-exec -p '(version 1)(allow default)(deny network*)' npm run test:mcp => exit=0
-sandbox-exec -p '(version 1)(allow default)(deny network*)' npm run build => exit=0

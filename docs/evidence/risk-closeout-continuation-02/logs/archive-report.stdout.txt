@@ -1,9 +1,0 @@
-{
-  "report": "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/docs/evidence/risk-closeout-continuation-02-supply/README.zh-CN.md",
-  "filesArchived": 67,
-  "licenseDeclarationCounts": {
-    "MIT": 14,
-    "Apache-2.0": 1,
-    "BlueOak-1.0.0": 4
-  }
-}

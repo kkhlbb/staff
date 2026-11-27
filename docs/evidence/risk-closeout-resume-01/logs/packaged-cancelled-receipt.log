@@ -1,7 +1,0 @@
-{
-  "ok": false,
-  "error": {
-    "code": "CANCELLED",
-    "message": "已取消选择导出位置"
-  }
-}

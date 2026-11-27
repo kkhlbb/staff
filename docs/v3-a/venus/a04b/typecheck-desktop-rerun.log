@@ -1,6 +1,0 @@
-
-> staff@2.0.0 typecheck:desktop
-> tsc -p tsconfig.desktop.json --noEmit
-
-
-EXIT_CODE=0

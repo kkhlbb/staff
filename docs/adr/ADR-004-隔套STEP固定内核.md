@@ -1,6 +1,8 @@
-# ADR-004：隔套 STEP 固定低层 OCCT WASM（本地实现，发布仍阻塞）
+# ADR-004：隔套 STEP 固定低层 OCCT WASM（历史方案）
 
-状态：用户批准的有限实现；不代表已批准二进制再分发。替代 ADR-003 中仅针对
+> **Status**: Superseded by [ADR-004-unified-occt-xcaf.md](ADR-004-unified-occt-xcaf.md)
+
+状态：历史记录（已被 `v1.0.2` 统一 OCCT 7.8.1 XCAF WASM 内核取代）。替代 ADR-003 中仅针对
 本隔套出口的“不引 B-rep 内核/不引 OCCT”限定，不扩展为通用 CAD 平台。
 
 ## 依据与选择

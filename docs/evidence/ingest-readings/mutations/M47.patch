@@ -1,4 +1,0 @@
---- src/document-extraction/ingestReadings.ts
-+++ src/document-extraction/ingestReadings.ts
--provenance: [ref]
-+provenance: [{ kind: 'pdf-text', documentId: draft.sourceIdentity.documentId, revisionId: draft.sourceIdentity.revisionId, sha256: draft.sourceIdentity.sha256, blobKey: draft.sourceIdentity.blobKey, page: 1, rectPdf: [0, 0, 1, 1], pageBoxPdf: [0, 0, 100, 100], textSnippet: input.statement, normalizedSnippet: input.statement, textItemIndexes: [] }]

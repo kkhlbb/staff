@@ -1,5 +1,0 @@
---- a/scripts/real-docs/metrics.mjs
-+++ b/scripts/real-docs/metrics.mjs
-@@
--const verified = cropValid && pending.length === 1 ? pending : []
-+const verified = (cropValid || !truth.cropFile) && pending.length === 1 ? pending : []

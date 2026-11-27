@@ -1,8 +1,0 @@
-file:///Users/aston/DSH/staff/scripts/v40-stage1-packaged.mjs:56
-  if (attached?.value?.snapshot?.project?.id !== 'v40-stage1-seed') throw new Error(`seed not active: ${JSON.stringify(attached)}`)
-                                                                          ^
-
-Error: seed not active: {"ok":true,"value":{"session":null}}
-    at file:///Users/aston/DSH/staff/scripts/v40-stage1-packaged.mjs:56:75
-
-Node.js v26.12.1

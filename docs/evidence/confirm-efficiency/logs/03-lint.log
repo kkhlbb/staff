@@ -1,7 +1,0 @@
-$ npm run lint
-
-> staff@0.4.0-beta lint
-> eslint .
-
-
-EXIT=0

@@ -1,4 +1,0 @@
-
-> staff@0.4.0-beta typecheck
-> tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.mcp.json --noEmit
-

@@ -1,7 +1,0 @@
-{
-  "wasmValid": true,
-  "originalSha256": "c309d6a202aab5b2b2a498bdd1515b8b03f470ea238dfb99ba5ccb00b8a80108",
-  "candidateSha256": "85979946d27fa0ec6b1e466ddc08285307b29bbdfa846fb42d55f7495c80de5f",
-  "status": "BLOCKED_DIRECT_BINARY_REPLACEMENT",
-  "reason": "Pinned default integrity rejects direct changed bytes; explicit user opt-in is a separate tested source-rebuild path."
-}

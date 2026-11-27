@@ -1,5 +1,0 @@
---- a/scripts/real-docs/metrics.mjs
-+++ b/scripts/real-docs/metrics.mjs
-@@
--const details = truths.filter(t => t.docId === docId).map(truth => {
-+const details = truths.filter(t => t.docId === docId).slice(0, -1).map(truth => {

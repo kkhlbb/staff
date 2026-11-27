@@ -1,5 +1,0 @@
---- a/src/domain/units.ts
-+++ b/src/domain/units.ts
-@@ -82,1 +82,1 @@
--  const displayedFraction = abs % 10 === 0 ? fracPart.slice(0, 3) : fracPart
-+  const displayedFraction = fracPart.slice(0, 3)

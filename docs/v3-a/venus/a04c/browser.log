@@ -1,8 +1,0 @@
-PASS real open IPC/container fixture 07b850a4-4fab-40c1-add4-9b253a081287
-PASS real recent:list Rev=rev-a1 from fixture on disk
-PASS real numeric edit -> stageDraft -> main readback seq=1 nominalQ=523000
-PASS full reload reattaches same main session and edited draft
-PASS real source read bytes/render/page-2/highlight { ok: true, size: 1126 }
-PASS historical snapshot read-only labels/comparison missing
-PASS 1440/1280/375 actual Chromium viewports; no root horizontal overflow at 375
-PASS center confined above footer; binding write button disabled
