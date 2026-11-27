@@ -44,6 +44,7 @@ import type { ReportExportMenuProps } from './ReportExportMenu'
 import { SimulationWhatIfPanel } from './SimulationWhatIfPanel'
 
 export interface CollaborationSidebarProps {
+  readonly sidebarWidth?: number
   readonly sidebarRegionRef: RefObject<HTMLElement | null>
   readonly chatInputRef: RefObject<HTMLTextAreaElement | null>
   readonly retryChatButtonRef: RefObject<HTMLButtonElement | null>
@@ -183,6 +184,7 @@ export interface CollaborationSidebarProps {
  * unified single composer and `+ 引用` popover.
  */
 export function CollaborationSidebar({
+  sidebarWidth,
   sidebarRegionRef,
   chatInputRef,
   retryChatButtonRef,
@@ -276,7 +278,29 @@ export function CollaborationSidebar({
       tabIndex={-1}
       className="pa-panel pa-sidebar-column pa-focus-region"
       aria-label="主工作台侧栏"
+      style={sidebarWidth ? { width: `${sidebarWidth}px` } : undefined}
+      data-sidebar-width={sidebarWidth ? String(sidebarWidth) : undefined}
     >
+      {feature3dAssemblyM1 && sidebarSection === 'conversation' && simulationResult ? (
+        <SimulationWhatIfPanel
+          result={simulationResult}
+          computing={simulationComputing}
+          reportExport={reportExport}
+          activeFeatureId={activeAssemblyFeatureId}
+          activeGdtId={activeGdtId}
+          gdtControls={gdtControls}
+          datums={datums}
+          includeCompliant={physicsM4?.includeCompliant}
+          onToggleIncludeCompliant={physicsM4?.onToggleIncludeCompliant}
+          physicsSpec={physicsM4?.physicsSpec}
+          onChangeContributorTolerance={(id, val) => onChangeContributorTolerance?.(id, val)}
+          onUpdateGdtControl={onUpdateGdtControl}
+          onHoverContributor={onHoverContributor}
+          onClickContributor={onClickContributor}
+          defaultExpanded={false}
+        />
+      ) : null}
+
       <div className="pa-sidebar-tabs" role="tablist" aria-label="侧栏功能切换">
         <button
           type="button"
@@ -379,6 +403,7 @@ export function CollaborationSidebar({
             onUpdateGdtControl={onUpdateGdtControl}
             onHoverContributor={onHoverContributor}
             onClickContributor={onClickContributor}
+            defaultExpanded={true}
           />
         ) : null}
 
@@ -651,16 +676,27 @@ export function CollaborationSidebar({
                         </span>
                       ) : null}
                       {msg.toolCalls && msg.toolCalls.length > 0 ? (
-                        <div className="pa-row">
+                        <div className="pa-tool-steps" data-testid={`tool-steps-${msg.id}`}>
                           {msg.toolCalls.map((tc, index) => {
                             const display = formatChatToolCallItem(tc)
                             return (
-                              <span
+                              <details
                                 key={`${msg.id}-tool-${index}`}
-                                className={`pa-pill ${display.tone}`}
+                                className="pa-tool-step"
+                                data-testid={`tool-step-${msg.id}-${index}`}
                               >
-                                {display.label}
-                              </span>
+                                <summary>
+                                  <span className="pa-t-dot" aria-hidden="true" />
+                                  <span>{display.label}</span>
+                                </summary>
+                                <div className="pa-tool-detail">
+                                  {typeof tc === 'string'
+                                    ? '已完成调用'
+                                    : 'summary' in tc && tc.summary && tc.summary !== display.label
+                                      ? tc.summary
+                                      : `状态：${tc.status ?? 'ok'}`}
+                                </div>
+                              </details>
                             )
                           })}
                         </div>
@@ -690,7 +726,7 @@ export function CollaborationSidebar({
               ) : null}
             </div>
 
-            {/* Modern Unified Composer: Selected Tags + Clean Textarea + "+ 引用" Popover + Single Send/Stop */}
+            {/* Quiet Claude Code Single-Box Composer: › caret + input + lightweight attach + ↵ send */}
             <div className="pa-composer">
               {attachedTaskbooks.length > 0 || (includeSelectedInChat && selectedObject) ? (
                 <div className="pa-composer-tags">
@@ -708,43 +744,45 @@ export function CollaborationSidebar({
                         aria-label={`移除引用 ${tb.documentName} P${tb.page}`}
                         onClick={() => onToggleTaskbookAttachment(tb.refId)}
                       >
-                        ×
+                        ✕
                       </button>
                     </span>
                   ))}
                 </div>
               ) : null}
 
-              <textarea
-                ref={chatInputRef}
-                aria-label="内置对话输入框"
-                className="pa-composer-input"
-                placeholder="描述你想创建或修改的零件特征…"
-                value={chatInput}
-                disabled={!builtinUnlocked || chatPending}
-                onChange={(event) => onChangeChatInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-                    event.preventDefault()
-                    if (builtinUnlocked && !chatPending && chatInput.trim().length > 0) {
-                      onSendChat()
+              <div className="pa-composer-box">
+                <span className="pa-composer-caret" aria-hidden="true">
+                  ›
+                </span>
+                <textarea
+                  ref={chatInputRef}
+                  rows={1}
+                  aria-label="内置对话输入框"
+                  className="pa-composer-input"
+                  placeholder="描述公差、配合或修改需求…"
+                  value={chatInput}
+                  disabled={!builtinUnlocked || chatPending}
+                  onChange={(event) => onChangeChatInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                      event.preventDefault()
+                      if (builtinUnlocked && !chatPending && chatInput.trim().length > 0) {
+                        onSendChat()
+                      }
                     }
-                  }
-                }}
-              />
-
-              <div className="pa-composer-footer">
+                  }}
+                />
                 <div className="pa-popover-anchor">
                   <button
                     type="button"
                     data-testid="attach-ref-btn"
-                    className="pa-btn pa-btn-ghost pa-btn-sm"
+                    className="pa-composer-attach-btn"
                     aria-label="附加任务书引用"
                     aria-expanded={attachPopoverOpen}
                     onClick={onToggleAttachPopover}
                   >
-                    + 引用
-                    {attachedTaskbooks.length > 0 ? ` (${attachedTaskbooks.length})` : ''}
+                    + 引用{attachedTaskbooks.length > 0 ? `(${attachedTaskbooks.length})` : ''}
                   </button>
 
                   {attachPopoverOpen ? (
@@ -763,7 +801,7 @@ export function CollaborationSidebar({
                           aria-label="关闭引用选择"
                           onClick={onCloseAttachPopover}
                         >
-                          ×
+                          ✕
                         </button>
                       </div>
                       {availableTaskbooks.length === 0 ? (
@@ -804,17 +842,19 @@ export function CollaborationSidebar({
                 </div>
 
                 {chatPending ? (
-                  <button type="button" className="pa-btn pa-btn-sm" onClick={onStopChat}>
+                  <button type="button" className="pa-send-btn" onClick={onStopChat}>
                     停止
                   </button>
                 ) : (
                   <button
                     type="button"
-                    className="pa-btn pa-btn-primary pa-btn-sm"
+                    className="pa-send-btn"
+                    aria-label="发送"
+                    title="发送 (Enter)"
                     disabled={!builtinUnlocked || chatInput.trim().length === 0}
                     onClick={onSendChat}
                   >
-                    发送
+                    ↵
                   </button>
                 )}
               </div>

@@ -16,7 +16,7 @@ describe('寸链 v2 GUI 工作台专项验收（极简工作流、渐进披露�
     vi.restoreAllMocks()
   })
 
-  it('默认启用 Light Studio（data-theme="light"），通过「更多 ⋯」菜单切换 Dark CAD 并持久化到 localStorage', async () => {
+  it('默认启用暖炭灰暗色主题（data-theme="dark"），通过顶栏「浅色/深色」按钮切换并持久化到 localStorage', async () => {
     const user = userEvent.setup()
 
     const { unmount } = render(
@@ -28,19 +28,18 @@ describe('寸链 v2 GUI 工作台专项验收（极简工作流、渐进披露�
     )
 
     const root = screen.getByRole('main', { name: '寸链 M1 双入口工作台' })
-    expect(root).toHaveAttribute('data-theme', 'light')
+    expect(root).toHaveAttribute('data-theme', 'dark')
 
-    // 打开「更多 ⋯」菜单并切换主题
-    await user.click(screen.getByTestId('more-menu-btn'))
+    // 顶栏直接切换主题
     const themeBtn = screen.getByTestId('theme-toggle-btn')
-    expect(themeBtn).toHaveAttribute('aria-pressed', 'false')
-    expect(themeBtn).toHaveTextContent('Light Studio')
+    expect(themeBtn).toHaveAttribute('aria-pressed', 'true')
+    expect(themeBtn).toHaveTextContent('浅色')
 
     await user.click(themeBtn)
-    expect(root).toHaveAttribute('data-theme', 'dark')
-    expect(window.localStorage.getItem(WORKBENCH_THEME_STORAGE_KEY)).toBe('dark')
+    expect(root).toHaveAttribute('data-theme', 'light')
+    expect(window.localStorage.getItem(WORKBENCH_THEME_STORAGE_KEY)).toBe('light')
 
-    // 重挂载后应恢复 Dark CAD 主题
+    // 重挂载后应恢复暖羊皮纸浅色主题
     unmount()
     render(
       <ProjectAgentM1Workbench
@@ -51,7 +50,7 @@ describe('寸链 v2 GUI 工作台专项验收（极简工作流、渐进披露�
     )
     expect(screen.getByRole('main', { name: '寸链 M1 双入口工作台' })).toHaveAttribute(
       'data-theme',
-      'dark',
+      'light',
     )
   })
 
@@ -63,8 +62,8 @@ describe('寸链 v2 GUI 工作台专项验收（极简工作流、渐进披露�
       throw new Error('QuotaExceededError')
     })
 
-    expect(readStoredWorkbenchTheme('light')).toBe('light')
-    expect(persistWorkbenchTheme('dark')).toBe(false)
+    expect(readStoredWorkbenchTheme('dark')).toBe('dark')
+    expect(persistWorkbenchTheme('light')).toBe(false)
 
     render(
       <ProjectAgentM1Workbench
@@ -75,11 +74,11 @@ describe('寸链 v2 GUI 工作台专项验收（极简工作流、渐进披露�
     )
     expect(screen.getByRole('main', { name: '寸链 M1 双入口工作台' })).toHaveAttribute(
       'data-theme',
-      'light',
+      'dark',
     )
   })
 
-  it('顶栏精简单行（右侧常驻 ≤ 3 控件），「更多 ⋯」菜单完整触达主题、模式、切项目、只读视图与旧工作台', async () => {
+  it('36px 一体化顶栏集成项目菜单完整触达导入、模板、模式切换、只读视图与旧工作台', async () => {
     const user = userEvent.setup()
 
     render(
@@ -93,23 +92,16 @@ describe('寸链 v2 GUI 工作台专项验收（极简工作流、渐进披露�
     )
 
     const topbar = screen.getByLabelText('顶部连接状态栏')
-    expect(topbar).toHaveTextContent('正式版 v1 · 草稿 draft-8')
+    expect(topbar).toHaveTextContent('草稿 draft-8')
 
     // 常态顶栏不再平铺展示低频链接或授权下拉框
     expect(within(topbar).queryByRole('link', { name: '只读授权视图' })).not.toBeInTheDocument()
     expect(within(topbar).queryByRole('link', { name: '返回旧工作台' })).not.toBeInTheDocument()
     expect(within(topbar).queryByLabelText('写入目标入口')).not.toBeInTheDocument()
 
-    // 顶栏右侧常驻控件严格 ≤ 3 个（连接胶囊 + 完成并保存 + 更多 ⋯）
-    const topbarButtons = within(topbar).getAllByRole('button')
-    // 含 3 个居中视图 tab，顶栏右侧非 tab 按钮 ≤ 3 个
-    const nonTabButtons = topbarButtons.filter((btn) => btn.getAttribute('role') !== 'tab')
-    expect(nonTabButtons.length).toBeLessThanOrEqual(3)
-
-    // 打开「更多 ⋯」菜单验证全部低频入口可达
+    // 打开左侧「项目名 ▾」集成项目菜单验证全部入口可达
     await user.click(screen.getByTestId('more-menu-btn'))
-    const menu = screen.getByRole('menu', { name: '更多操作菜单' })
-    expect(within(menu).getByRole('menuitem', { name: /切换浅色\/深色主题/ })).toBeInTheDocument()
+    const menu = screen.getByRole('menu', { name: '项目与工作台菜单' })
     expect(within(menu).getByRole('menuitem', { name: /切换本地项目/ })).toBeInTheDocument()
     expect(within(menu).getByRole('menuitem', { name: '只读授权视图' })).toHaveAttribute(
       'href',
@@ -126,7 +118,7 @@ describe('寸链 v2 GUI 工作台专项验收（极简工作流、渐进披露�
 
     await user.click(screen.getByTestId('more-menu-btn'))
     await user.click(
-      within(screen.getByRole('menu', { name: '更多操作菜单' })).getByRole('menuitem', {
+      within(screen.getByRole('menu', { name: '项目与工作台菜单' })).getByRole('menuitem', {
         name: /切换到外置 Agent 活动/,
       }),
     )
@@ -306,7 +298,7 @@ describe('寸链 v2 GUI 工作台专项验收（极简工作流、渐进披露�
     await user.click(within(screen.getByRole('tablist', { name: '侧栏功能切换' })).getByRole('tab', { name: /检查/ }))
     expect(screen.getByLabelText('检查结果面板')).toHaveTextContent('右孔边距 ≥ 13 mm')
 
-    await user.click(screen.getByRole('button', { name: '完成并保存' }))
+    await user.click(screen.getByTestId('complete-and-save-btn'))
     const completionView = screen.getByTestId('completion-view')
     await user.click(within(completionView).getByRole('button', { name: '保存正式版本' }))
     await user.click(within(completionView).getByRole('button', { name: '确认提交正式版本' }))
@@ -339,10 +331,12 @@ describe('寸链 v2 GUI 工作台专项验收（极简工作流、渐进披露�
       />,
     )
 
-    // 通过「更多 ⋯」菜单切换 Dark CAD 主题
-    await user.click(screen.getByTestId('more-menu-btn'))
-    await user.click(screen.getByTestId('theme-toggle-btn'))
+    // 默认处于暖炭灰暗色主题，切换一次到浅色再切回暗色验证
     const workbench = screen.getByRole('main', { name: '寸链 M1 双入口工作台' })
+    expect(workbench).toHaveAttribute('data-theme', 'dark')
+    await user.click(screen.getByTestId('theme-toggle-btn'))
+    expect(workbench).toHaveAttribute('data-theme', 'light')
+    await user.click(screen.getByTestId('theme-toggle-btn'))
     expect(workbench).toHaveAttribute('data-theme', 'dark')
 
     // 6 类检查统计网格全部渲染（图形+文字）

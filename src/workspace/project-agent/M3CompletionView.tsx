@@ -43,7 +43,7 @@ function formatSlotStatus(slot: M2ArtifactSlotState, label: string): {
   if (slot.status === 'ready') {
     return {
       text: slot.isDraft
-        ? `✓ ${label}就绪 · ✎ 草稿（${formatRevisionDisplay(slot.revision)}）`
+        ? `✓ ${label}就绪 · 草稿（${formatRevisionDisplay(slot.revision)}）`
         : `✓ ${label}就绪（${formatRevisionDisplay(slot.revision)}）`,
       tone: 'pa-tone-pass',
     }

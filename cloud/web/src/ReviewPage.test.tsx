@@ -813,4 +813,30 @@ describe('ReviewPage', () => {
     await user.click(screen.getByTestId('review-print-pdf-btn'))
     expect(printSpy).toHaveBeenCalledTimes(1)
   })
+
+  it('UI110-FE-01: 云端审核页默认启用暖炭灰暗色主题并支持无 Emoji 的浅色/深色切换', async () => {
+    const user = userEvent.setup()
+    const transport = createMockTransport({
+      review: {
+        projectId: 'proj-ui110',
+        draftRevision: 'draft-4',
+        fingerprint: 'fp-ui110',
+        checks: [],
+        evidenceByCheckId: {},
+      },
+    })
+    render(
+      <ReviewPage
+        locationLike={{ pathname: '/review/proj-ui110/draft-4' }}
+        transport={transport}
+      />,
+    )
+
+    const shell = await screen.findByTestId('cloud-review-workbench')
+    expect(shell).toHaveAttribute('data-theme', 'dark')
+    const toggleBtn = screen.getByRole('button', { name: '浅色' })
+    await user.click(toggleBtn)
+    expect(shell).toHaveAttribute('data-theme', 'light')
+    expect(screen.getByRole('button', { name: '深色' })).toBeInTheDocument()
+  })
 })

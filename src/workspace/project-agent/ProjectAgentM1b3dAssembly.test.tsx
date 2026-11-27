@@ -126,7 +126,7 @@ describe('M1B-FE-01: 3D 多零件装配视口、装配树、精确拾取与智�
 
     // 默认收起为紧凑胶囊
     const toggleBtn = screen.getByTestId('toggle-structure-btn')
-    expect(toggleBtn).toHaveTextContent('装配树 (3 零件)')
+    expect(toggleBtn).toHaveTextContent('装配 (3)')
     expect(screen.queryByLabelText('装配树列表')).not.toBeInTheDocument()
 
     // 展开后可见全部零件与控制项
@@ -335,7 +335,7 @@ describe('M1B-FE-01: 3D 多零件装配视口、装配树、精确拾取与智�
       />,
     )
 
-    expect(screen.getByTestId('toggle-structure-btn')).toHaveTextContent('零件结构')
+    expect(screen.getByTestId('toggle-structure-btn')).toHaveTextContent('零件')
     expect(screen.queryByTestId('sidebar-tab-simulation')).not.toBeInTheDocument()
     expect(screen.queryByTestId('ai-mate-drafts-card')).not.toBeInTheDocument()
     expect(screen.queryByTestId('camera-preset-group')).not.toBeInTheDocument()

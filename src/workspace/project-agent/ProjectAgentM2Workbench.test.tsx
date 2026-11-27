@@ -60,7 +60,7 @@ describe('ProjectAgentM1Workbench (M2-FE-01 双视图联动、对象上下文与
     expect(within(canvas).queryByRole('region', { name: '二维图纸视图' })).not.toBeInTheDocument()
 
     // 切到“图纸”视图
-    await user.click(within(viewTabs).getByRole('tab', { name: '图纸' }))
+    await user.click(within(viewTabs).getByRole('tab', { name: /工程图/ }))
     expect(canvas).toHaveAttribute('data-effective-view', 'drawing')
     expect(within(canvas).queryByRole('region', { name: '三维模型视图' })).not.toBeInTheDocument()
     expect(within(canvas).getByRole('region', { name: '二维图纸视图' })).toBeInTheDocument()

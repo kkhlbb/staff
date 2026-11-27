@@ -35,27 +35,22 @@ export function AiPhysicsDraftsCard({
 
   return (
     <section
-      className="pa-card pa-ai-physics-drafts-card"
+      className="pa-approval pa-ai-physics-drafts-card"
       aria-label="AI 建议柔性形变草案"
       data-testid="ai-physics-drafts-card"
     >
-      <div className="pa-header">
-        <div className="pa-row">
-          <span className="pa-pill pa-tone-pending">AI 柔性草案</span>
-          <strong>建议柔性形变配置</strong>
-        </div>
+      <div className="pa-approval-head">
+        <span>建议柔性形变配置</span>
         {appliedCount > 0 ? (
-          <span className="pa-pill pa-tone-pass" data-testid="ai-physics-applied-count">
+          <span className="pa-mono pa-d-add" data-testid="ai-physics-applied-count">
             已应用 {appliedCount} 项
           </span>
-        ) : null}
+        ) : (
+          <span className="pa-mono pa-muted">{drafts.length} 项待核对</span>
+        )}
       </div>
 
-      <p className="pa-muted">
-        悬停草案可高亮目标柔性零件；核对材料、物理模型与原文依据后一键确认应用：
-      </p>
-
-      <ul className="pa-mate-draft-list" aria-label="AI 建议柔性草案列表">
+      <ul className="pa-approval-diff pa-mate-draft-list" aria-label="AI 建议柔性草案列表">
         {drafts.map((draft) => {
           const isHighlighted = activePartId === draft.partId
           return (
@@ -77,19 +72,20 @@ export function AiPhysicsDraftsCard({
                     aria-label={`选择柔性草案：${draft.title}`}
                     onChange={() => onToggleDraft(draft.id)}
                   />
+                  <span className="pa-d-add pa-mono">+ 柔性</span>
                   <span className="pa-mate-draft-title">{draft.partName}</span>
                 </label>
                 <div className="pa-mate-draft-badges">
                   {draft.materialName ? (
-                    <span className="pa-pill pa-tone-pending">{draft.materialName}</span>
+                    <span className="pa-mono pa-muted">{draft.materialName}</span>
                   ) : null}
                   <span
-                    className="pa-pill pa-tone-muted pa-mono"
+                    className="pa-mono pa-muted"
                     aria-label={`置信度 ${draft.confidencePercent}%`}
                   >
                     {draft.confidencePercent}%
                   </span>
-                  {draft.applied ? <span className="pa-pill pa-tone-pass">已确认</span> : null}
+                  {draft.applied ? <span className="pa-mono pa-d-add">已确认</span> : null}
                 </div>
               </div>
 
@@ -127,11 +123,11 @@ export function AiPhysicsDraftsCard({
         })}
       </ul>
 
-      <div className="pa-mate-draft-actions">
+      <div className="pa-approval-foot">
         <button
           type="button"
           data-testid="apply-physics-drafts-btn"
-          className="pa-btn pa-btn-primary pa-btn-sm"
+          className="pa-ap-allow"
           disabled={selectedCount === 0}
           onClick={onApplySelected}
         >

@@ -64,10 +64,6 @@ export function AssemblyTreeOverlay({
   onTogglePartVisibility,
   onSetPartsVisibility,
   onSelectPart,
-  explosionFactor = 0,
-  onChangeExplosionFactor,
-  xrayMode = false,
-  onToggleXrayMode,
   compliantPartIds,
 }: AssemblyTreeOverlayProps) {
   const objectItemRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -203,13 +199,13 @@ export function AssemblyTreeOverlay({
           <button
             type="button"
             data-testid={`toggle-part-visibility-${part.partId}`}
-            className={`pa-icon-btn pa-part-eye-btn ${isHidden ? 'pa-part-eye-hidden' : ''}`}
+            className={`pa-tree-vis-btn ${isHidden ? 'pa-tree-vis-hidden' : ''}`}
             aria-label={isHidden ? `显示 ${part.displayName}` : `隐藏 ${part.displayName}`}
             aria-pressed={isHidden}
             title={isHidden ? '点击显示零件' : '点击隐藏零件'}
             onClick={() => onTogglePartVisibility?.(part.partId)}
           >
-            {isHidden ? '○' : '👁'}
+            {isHidden ? '隐' : '显'}
           </button>
         </div>
 
@@ -284,14 +280,14 @@ export function AssemblyTreeOverlay({
             type="button"
             data-testid={`toggle-group-visibility-${group.id}`}
             data-visibility-state={visState}
-            className={`pa-icon-btn pa-part-eye-btn ${isHidden ? 'pa-part-eye-hidden' : ''} ${isPartial ? 'pa-part-eye-partial' : ''}`}
+            className={`pa-tree-vis-btn ${isHidden ? 'pa-tree-vis-hidden' : ''} ${isPartial ? 'pa-tree-vis-partial' : ''}`}
             aria-label={visLabel}
             aria-pressed={isHidden ? true : isPartial ? 'mixed' : false}
             title={visLabel}
             disabled={isEmpty}
             onClick={() => handleToggleGroupVisibility(group)}
           >
-            {isHidden ? '○' : isPartial ? '◐' : '👁'}
+            {isHidden ? '隐' : isPartial ? '半' : '显'}
           </button>
         </div>
 
@@ -313,13 +309,15 @@ export function AssemblyTreeOverlay({
       <button
         type="button"
         data-testid="toggle-structure-btn"
-        className={`pa-float-chip ${structureOpen ? 'pa-float-chip-active' : ''}`}
+        className={`pa-tree-trigger ${structureOpen ? 'pa-tree-trigger-active' : ''}`}
         aria-expanded={structureOpen}
         aria-controls="pa-structure-popover"
         onClick={onToggleStructure}
       >
-        {isMultiPartTree ? `装配树 (${partMeshes.length} 零件)` : `零件结构 (${features.length})`}{' '}
-        <span aria-hidden="true">{structureOpen ? '▴' : '▾'}</span>
+        <span aria-hidden="true">{structureOpen ? '▾' : '▸'}</span>
+        <span>
+          {isMultiPartTree ? `装配 (${partMeshes.length})` : `零件 (${features.length})`}
+        </span>
       </button>
 
       {structureOpen ? (
@@ -333,7 +331,7 @@ export function AssemblyTreeOverlay({
         >
           <div className="pa-header">
             <span className="pa-card-label">
-              {isMultiPartTree ? `装配树（${partMeshes.length} 零件）` : '零件结构（↑/↓ 切换）'}
+              {isMultiPartTree ? `装配 (${partMeshes.length})` : '零件结构'}
             </span>
             <button
               type="button"
@@ -341,7 +339,7 @@ export function AssemblyTreeOverlay({
               aria-label={isMultiPartTree ? '收起装配树' : '收起零件结构'}
               onClick={onCloseStructure}
             >
-              ×
+              ✕
             </button>
           </div>
 
@@ -390,39 +388,6 @@ export function AssemblyTreeOverlay({
               })}
             </div>
           )}
-
-          {showAssemblyControls ? (
-            <div className="pa-assembly-controls" aria-label="三维装配视图控制">
-              <label className="pa-field">
-                <span className="pa-assembly-ctrl-row">
-                  <span>爆炸视图</span>
-                  <span className="pa-mono" data-testid="assembly-explosion-value">
-                    {Math.round(explosionFactor * 100)}%
-                  </span>
-                </span>
-                <input
-                  type="range"
-                  data-testid="assembly-explosion-slider"
-                  aria-label="爆炸视图滑块"
-                  min={0}
-                  max={100}
-                  value={Math.round(explosionFactor * 100)}
-                  onChange={(event) => {
-                    onChangeExplosionFactor?.(Number(event.target.value) / 100)
-                  }}
-                />
-              </label>
-              <label className="pa-toggle">
-                <input
-                  type="checkbox"
-                  data-testid="assembly-xray-toggle"
-                  checked={xrayMode}
-                  onChange={() => onToggleXrayMode?.()}
-                />
-                X-Ray 半透明透视
-              </label>
-            </div>
-          ) : null}
         </section>
       ) : null}
     </div>

@@ -88,7 +88,7 @@ describe('focusRecovery 与产物状态纯函数', () => {
     )
     expect(readyDraft).toMatchObject({ symbol: '✓', stateKey: 'draft-ready' })
     expect(readyDraft.text).toContain('草稿')
-    expect(readyDraft.text).toContain('✎')
+    expect(readyDraft.text).toContain('草稿')
 
     const building = getArtifactStatusMeta(
       { status: 'building', revision: 'draft-3', revisionOrder: 3, isDraft: true, fingerprint: null },
@@ -441,7 +441,7 @@ describe('第一部分 §3 文字+图形状态标识、窄屏降级与键盘全�
 
     // 窄屏降级状态栏：同时展示模型就绪(草稿)与图纸失败(保留旧图)的图形+文字
     const narrowStatus = screen.getByRole('status', { name: '窄屏标签页降级状态' })
-    expect(narrowStatus).toHaveTextContent(/✓\s*模型就绪 · ✎ 草稿/)
+    expect(narrowStatus).toHaveTextContent(/✓\s*模型就绪 · 草稿/)
     expect(narrowStatus).toHaveTextContent(/✕\s*图纸失败（保留 草稿 7）/)
 
     // 窄屏标签按钮本身也保留可访问名称与状态属性
@@ -450,7 +450,7 @@ describe('第一部分 §3 文字+图形状态标识、窄屏降级与键盘全�
       'data-artifact-status',
       'draft-ready',
     )
-    expect(within(viewTabs).getByRole('tab', { name: '图纸' })).toHaveAttribute(
+    expect(within(viewTabs).getByRole('tab', { name: /工程图/ })).toHaveAttribute(
       'data-artifact-status',
       'failed',
     )

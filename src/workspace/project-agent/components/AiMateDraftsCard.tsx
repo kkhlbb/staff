@@ -31,27 +31,22 @@ export function AiMateDraftsCard({
 
   return (
     <section
-      className="pa-card pa-ai-mate-drafts-card"
+      className="pa-approval pa-ai-mate-drafts-card"
       aria-label="AI 建议配合草案"
       data-testid="ai-mate-drafts-card"
     >
-      <div className="pa-header">
-        <div className="pa-row">
-          <span className="pa-pill pa-tone-action">AI 起草配合</span>
-          <strong>建议装配配合草案</strong>
-        </div>
+      <div className="pa-approval-head">
+        <span>建议装配配合草案</span>
         {appliedCount > 0 ? (
-          <span className="pa-pill pa-tone-pass" data-testid="ai-mates-applied-count">
+          <span className="pa-mono pa-d-add" data-testid="ai-mates-applied-count">
             已应用 {appliedCount} 项
           </span>
-        ) : null}
+        ) : (
+          <span className="pa-mono pa-muted">{drafts.length} 项待核对</span>
+        )}
       </div>
 
-      <p className="pa-muted">
-        已基于几何拓扑识别候选配合（默认干净导入，不自动写入约束）。勾选后可一键应用：
-      </p>
-
-      <ul className="pa-mate-draft-list" aria-label="AI 建议配合列表">
+      <ul className="pa-approval-diff pa-mate-draft-list" aria-label="AI 建议配合列表">
         {drafts.map((draft) => {
           const isChecked = draft.selected
           return (
@@ -69,20 +64,20 @@ export function AiMateDraftsCard({
                     aria-label={`选择配合草案：${draft.featureLabels[0]} 与 ${draft.featureLabels[1]}（${draft.mateTypeLabel}）`}
                     onChange={() => onToggleDraft(draft.id)}
                   />
+                  <span className="pa-d-add pa-mono">+ 配合</span>
                   <span className="pa-mate-draft-title">
-                    {draft.featureLabels[0]} ↔ {draft.featureLabels[1]}
+                    {draft.featureLabels[0]} ↔ {draft.featureLabels[1]}（{draft.mateTypeLabel}）
                   </span>
                 </label>
                 <div className="pa-mate-draft-badges">
-                  <span className="pa-pill pa-tone-muted">{draft.mateTypeLabel}</span>
                   <span
-                    className="pa-pill pa-tone-action pa-mono"
+                    className="pa-mono pa-muted"
                     aria-label={`置信度 ${draft.confidencePercent}%`}
                   >
                     {draft.confidencePercent}%
                   </span>
                   {draft.applied ? (
-                    <span className="pa-pill pa-tone-pass">已确认</span>
+                    <span className="pa-mono pa-d-add">已确认</span>
                   ) : null}
                 </div>
               </div>
@@ -120,11 +115,11 @@ export function AiMateDraftsCard({
         })}
       </ul>
 
-      <div className="pa-mate-draft-actions">
+      <div className="pa-approval-foot">
         <button
           type="button"
           data-testid="apply-mate-drafts-btn"
-          className="pa-btn pa-btn-primary pa-btn-sm"
+          className="pa-ap-allow"
           disabled={selectedCount === 0}
           onClick={onApplySelected}
         >

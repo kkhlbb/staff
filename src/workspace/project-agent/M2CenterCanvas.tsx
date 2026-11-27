@@ -1,4 +1,4 @@
-import type { RefObject } from 'react'
+import { useState, type RefObject } from 'react'
 import { CAMERA_PRESET_LABELS } from './assembly3dMath'
 import type {
   AssemblyFeatureSelectionItem,
@@ -216,7 +216,7 @@ export function getArtifactStatusMeta(
     if (slot.isDraft) {
       return {
         symbol: '✓',
-        text: `${label}就绪 · ✎ 草稿（${formatRevisionDisplay(slot.revision)}）`,
+        text: `${label}就绪 · 草稿（${formatRevisionDisplay(slot.revision)}）`,
         toneClass: 'pa-tone-pass',
         stateKey: 'draft-ready',
       }
@@ -316,14 +316,17 @@ export function M2CenterCanvas({
   snapshotHandleRef,
   physicsM4,
 }: M2CenterCanvasProps) {
+  const [animationPlaying, setAnimationPlaying] = useState(true)
   const effectiveViewMode = resolveEffectiveViewMode(viewMode, isNarrow, lastSingleTab)
   const showModelPane = effectiveViewMode === 'model' || effectiveViewMode === 'split'
   const showDrawingPane = effectiveViewMode === 'drawing' || effectiveViewMode === 'split'
   const sameRevisionAligned = areArtifactsRevisionAligned(model, drawing)
-  const selectedFeature = features.find((f) => f.objectId === selectedObjectId) ?? null
   const isDraftDisplay = model.isDraft || drawing.isDraft
+  const selectedFeature = features.find((f) => f.objectId === selectedObjectId) ?? null
   const modelStatusMeta = getArtifactStatusMeta(model, '模型')
   const drawingStatusMeta = getArtifactStatusMeta(drawing, '图纸', drawingFailure)
+  const activeDeformationMode: DeformationViewMode = physicsM4?.deformationMode ?? 'nominal'
+  const activeExaggerationScale = physicsM4?.exaggerationScale ?? 25
 
   const handlePickMeshRange = (range: M2MeshTriangleRange) => {
     const matched =
@@ -479,9 +482,9 @@ export function M2CenterCanvas({
         </div>
       ) : null}
 
-      {/* Main Canvas Stage with Minimal Floating Overlays */}
+      {/* Main Canvas Stage with Minimal Quiet Overlays */}
       <div className="pa-canvas-stage-wrap">
-        {/* Top-Left Lightweight Overlay: Collapsible Structure Chip + Quiet Status Pills */}
+        {/* Top-Left Quiet Assembly Outline Trigger: ▸ 装配 (N) */}
         <div className="pa-canvas-overlay-tl">
           <AssemblyTreeOverlay
             features={features}
@@ -500,28 +503,18 @@ export function M2CenterCanvas({
             onTogglePartVisibility={onTogglePartVisibility}
             onSetPartsVisibility={onSetPartsVisibility}
             onSelectPart={onSelectPart}
-            explosionFactor={explosionFactor}
-            onChangeExplosionFactor={onChangeExplosionFactor}
-            xrayMode={xrayMode}
-            onToggleXrayMode={onToggleXrayMode}
             compliantPartIds={feature3dAssemblyM1 ? physicsM4?.compliantPartIds : undefined}
           />
-
-          {isDraftDisplay ? (
-            <span className="pa-pill pa-tone-pending pa-float-pill" aria-label="草稿预览标识">
-              ✎ 草稿
-            </span>
-          ) : null}
-          {sameRevisionAligned ? (
-            <span className="pa-pill pa-tone-pass pa-float-pill" aria-label="同版对齐标识">
-              ✓ 同版就绪
-            </span>
-          ) : null}
           {checksInProgress ? (
-            <span className="pa-pill pa-tone-action pa-float-pill" aria-label="检查进行中标识">
-              ◌ 检查中
+            <span className="pa-stage-status-note" aria-label="检查进行中标识">
+              检查中…
             </span>
           ) : null}
+          <span className="pa-sr-only">
+            <span>3D · {formatRevisionDisplay(model.revision)}</span>
+            {isDraftDisplay ? <span aria-label="草稿预览标识">草稿</span> : null}
+            {sameRevisionAligned ? <span aria-label="同版对齐标识">✓ 同版就绪</span> : null}
+          </span>
         </div>
 
         {/* Dual View / Single View Split Canvas */}
@@ -535,19 +528,9 @@ export function M2CenterCanvas({
           {/* 3D Model View Pane */}
           {showModelPane ? (
             <section className="pa-viewport-card pa-viewport-clean" aria-label="三维模型视图">
-              <div className="pa-viewport-corner-tag">
-                <span className="pa-mono">3D · {formatRevisionDisplay(model.revision)}</span>
-                <span
-                  className={`pa-pill ${modelStatusMeta.toneClass}`}
-                  data-artifact-status={modelStatusMeta.stateKey}
-                >
-                  <span aria-hidden="true">{modelStatusMeta.symbol}</span> {modelStatusMeta.text}
-                </span>
-              </div>
-
               {model.status === 'empty' && !(feature3dAssemblyM1 && partMeshes.length > 0) ? (
                 <div className="pa-viewport-empty">
-                  <p className="pa-muted">○ 尚未生成三维模型，可在右侧对话中描述需求开始建模。</p>
+                  <p className="pa-muted">尚未生成三维模型，可在右侧对话中描述需求开始建模。</p>
                 </div>
               ) : (
                 <div className="pa-viewport-body">
@@ -598,6 +581,10 @@ export function M2CenterCanvas({
                         feature3dAssemblyM1 ? physicsM4?.onChangeExaggerationScale : undefined
                       }
                       showDeformationControls={feature3dAssemblyM1}
+                      hideDeformationControlsInViewport={feature3dAssemblyM1}
+                      hideGdtModeToggle={feature3dAssemblyM1}
+                      animationPlaying={animationPlaying}
+                      onToggleAnimationPlaying={() => setAnimationPlaying((prev) => !prev)}
                     />
                   ) : (
                     <div className="pa-feature-canvas" role="group" aria-label="三维模型特征拾取区">
@@ -623,73 +610,39 @@ export function M2CenterCanvas({
                   )}
                 </div>
               )}
-
-              {/* Subtle Bottom Telemetry + Camera Presets (M1B only) + Fit Button */}
-              <div className="pa-viewport-overlay-bottom">
-                <span className="pa-viewport-meta pa-mono" aria-label="模型视角状态">
-                  视角 {camera.yawDeg}°/{camera.pitchDeg}° · 缩放 {camera.zoomPercent}%
-                </span>
-                <div className="pa-viewport-camera-actions">
-                  {feature3dAssemblyM1 ? (
-                    <div
-                      className="pa-camera-preset-group"
-                      role="group"
-                      aria-label="三维标准视角预设"
-                      data-testid="camera-preset-group"
-                    >
-                      {CAMERA_PRESET_ORDER.map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          data-testid={`camera-preset-${preset}`}
-                          aria-pressed={activeCameraPreset === preset}
-                          className={`pa-float-fit-btn ${activeCameraPreset === preset ? 'pa-float-fit-btn-active' : ''}`}
-                          onClick={() => onSelectCameraPreset?.(preset)}
-                        >
-                          {CAMERA_PRESET_LABELS[preset]}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="pa-float-fit-btn"
-                    aria-label="适合窗口"
-                    title="复位三维视角并适合窗口（支持拖拽旋转、滚轮缩放）"
-                    onClick={() => {
-                      if (feature3dAssemblyM1 && onSelectCameraPreset) {
-                        onSelectCameraPreset('iso')
-                      } else {
-                        onUpdateCamera(() => ({ yawDeg: 35, pitchDeg: 25, zoomPercent: 100 }))
-                      }
-                    }}
-                  >
-                    适配
-                  </button>
-                </div>
-              </div>
             </section>
           ) : null}
 
           {/* 2D Drawing View Pane */}
           {showDrawingPane ? (
-            <section className="pa-viewport-card pa-viewport-clean" aria-label="二维图纸视图">
-              <div className="pa-viewport-corner-tag">
-                <span className="pa-mono">2D · {formatRevisionDisplay(drawing.revision)}</span>
-                <span
-                  className={`pa-pill ${drawingStatusMeta.toneClass}`}
-                  data-artifact-status={drawingStatusMeta.stateKey}
-                >
-                  <span aria-hidden="true">{drawingStatusMeta.symbol}</span> {drawingStatusMeta.text}
+            <section className="pa-viewport-card pa-viewport-clean pa-drawing-pane" aria-label="二维图纸视图">
+              <div className="pa-drawing-pane-head">
+                <span className="pa-muted pa-mono">
+                  工程图投影 · {formatRevisionDisplay(drawing.revision)}
+                </span>
+                <span className="pa-muted pa-mono" aria-label="图纸缩放状态">
+                  图纸缩放 {drawingViewport.zoomPercent}% · 平移 ({drawingViewport.panX},{' '}
+                  {drawingViewport.panY})
                 </span>
                 {drawingFailure ? (
-                  <span className="pa-pill pa-tone-pending">⚠ 显示上一有效图纸</span>
+                  <span className="pa-muted">显示上一有效图纸</span>
                 ) : null}
+                <button
+                  type="button"
+                  className="pa-vp-opt"
+                  aria-label="图纸适合窗口"
+                  title="复位二维图纸并适合窗口"
+                  onClick={() =>
+                    onUpdateDrawingViewport(() => ({ panX: 0, panY: 0, zoomPercent: 100 }))
+                  }
+                >
+                  复位
+                </button>
               </div>
 
               {drawing.status === 'empty' ? (
                 <div className="pa-viewport-empty">
-                  <p className="pa-muted">○ 当前暂无二维图纸，等待投影完成后自动展示。</p>
+                  <p className="pa-muted">当前暂无二维图纸，等待投影完成后自动展示。</p>
                 </div>
               ) : (
                 <div className="pa-viewport-body">
@@ -729,55 +682,242 @@ export function M2CenterCanvas({
                   )}
                 </div>
               )}
-
-              {/* Subtle Bottom Telemetry + Single Transparent Fit Button */}
-              <div className="pa-viewport-overlay-bottom">
-                <span className="pa-viewport-meta pa-mono" aria-label="图纸缩放状态">
-                  图纸缩放 {drawingViewport.zoomPercent}% · 平移 ({drawingViewport.panX},{' '}
-                  {drawingViewport.panY})
-                </span>
-                <button
-                  type="button"
-                  className="pa-float-fit-btn"
-                  aria-label="图纸适合窗口"
-                  title="复位二维图纸并适合窗口（支持拖拽平移、滚轮缩放）"
-                  onClick={() =>
-                    onUpdateDrawingViewport(() => ({ panX: 0, panY: 0, zoomPercent: 100 }))
-                  }
-                >
-                  适配
-                </button>
-              </div>
             </section>
           ) : null}
         </div>
-
-        {/* Floating Selection Context Bar: 100% HIDDEN when nothing is selected */}
-        <ContextActionPill
-          selectedFeature={selectedFeature}
-          sidebarMode={sidebarMode}
-          contextActionFeedback={contextActionFeedback}
-          onBringIntoNextPrompt={onBringIntoNextPrompt}
-          onCopyToExternalSession={onCopyToExternalSession}
-          onClearSelection={onClearSelection}
-          assemblyMode={feature3dAssemblyM1}
-          selectedAssemblyItems={feature3dAssemblyM1 ? selectedAssemblyItems : undefined}
-          additivePickMode={feature3dAssemblyM1 ? additivePickMode : false}
-          onExecuteAssemblyAction={feature3dAssemblyM1 ? onExecuteAssemblyAction : undefined}
-          datums={feature3dAssemblyM1 ? datums : undefined}
-          featureKindById={feature3dAssemblyM1 ? featureKindById : undefined}
-          onAssignDatum={feature3dAssemblyM1 ? onAssignDatum : undefined}
-          onCreateGdtControl={feature3dAssemblyM1 ? onCreateGdtControl : undefined}
-          currentPhysics={feature3dAssemblyM1 ? physicsM4?.physicsSpec : undefined}
-          onSavePhysics={feature3dAssemblyM1 ? physicsM4?.onSavePhysics : undefined}
-          onImportMicMatrix={feature3dAssemblyM1 ? physicsM4?.onImportMicMatrix : undefined}
-        />
 
         {previewMessage ? (
           <div className="pa-preview-toast" role="status">
             <span>{previewMessage}</span>
           </div>
         ) : null}
+      </div>
+
+      {/* Flush 30px Selection Strip directly above Bottom Viewport Bar (100% hidden when 0 selected) */}
+      <ContextActionPill
+        selectedFeature={selectedFeature}
+        sidebarMode={sidebarMode}
+        contextActionFeedback={contextActionFeedback}
+        onBringIntoNextPrompt={onBringIntoNextPrompt}
+        onCopyToExternalSession={onCopyToExternalSession}
+        onClearSelection={onClearSelection}
+        assemblyMode={feature3dAssemblyM1}
+        selectedAssemblyItems={feature3dAssemblyM1 ? selectedAssemblyItems : undefined}
+        additivePickMode={feature3dAssemblyM1 ? additivePickMode : false}
+        onExecuteAssemblyAction={feature3dAssemblyM1 ? onExecuteAssemblyAction : undefined}
+        datums={feature3dAssemblyM1 ? datums : undefined}
+        featureKindById={feature3dAssemblyM1 ? featureKindById : undefined}
+        onAssignDatum={feature3dAssemblyM1 ? onAssignDatum : undefined}
+        onCreateGdtControl={feature3dAssemblyM1 ? onCreateGdtControl : undefined}
+        currentPhysics={feature3dAssemblyM1 ? physicsM4?.physicsSpec : undefined}
+        onSavePhysics={feature3dAssemblyM1 ? physicsM4?.onSavePhysics : undefined}
+        onImportMicMatrix={feature3dAssemblyM1 ? physicsM4?.onImportMicMatrix : undefined}
+      />
+
+      {/* Unified 30px Borderless Bottom Viewport Control Bar */}
+      <div
+        className="pa-vp-bar"
+        data-testid="viewport-control-bar"
+        aria-label="画布底部控制条"
+      >
+        <div className="pa-vp-grp">
+          {feature3dAssemblyM1 && physicsM4?.onChangeDeformationMode ? (
+            <>
+              <div
+                className="pa-vp-grp"
+                role="group"
+                aria-label="形变显示模式切换"
+                data-testid="deformation-mode-switcher"
+              >
+                {(
+                  [
+                    { id: 'nominal', label: '名义' },
+                    { id: 'heatmap', label: '云图' },
+                    { id: 'animation', label: '动画' },
+                  ] as const
+                ).map((item) => {
+                  const active = activeDeformationMode === item.id
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      data-testid={`deformation-mode-${item.id}`}
+                      aria-pressed={active}
+                      className={active ? 'pa-vp-opt pa-vp-opt-active' : 'pa-vp-opt'}
+                      onClick={() => physicsM4.onChangeDeformationMode?.(item.id)}
+                    >
+                      {item.label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {activeDeformationMode === 'animation' ? (
+                <span
+                  className="pa-vp-grp"
+                  data-testid="deformation-animation-controls"
+                >
+                  <button
+                    type="button"
+                    data-testid="deformation-play-pause-btn"
+                    className="pa-vp-opt"
+                    aria-label={animationPlaying ? '暂停夸张动画' : '播放夸张动画'}
+                    aria-pressed={animationPlaying}
+                    onClick={() => setAnimationPlaying((prev) => !prev)}
+                  >
+                    {animationPlaying ? '暂停' : '播放'}
+                  </button>
+                  <input
+                    type="range"
+                    className="pa-thin-slider"
+                    data-testid="exaggeration-scale-slider"
+                    aria-label="形变夸张倍率滑块"
+                    min={1}
+                    max={50}
+                    step={1}
+                    value={activeExaggerationScale}
+                    onChange={(event) =>
+                      physicsM4.onChangeExaggerationScale?.(Number(event.target.value))
+                    }
+                  />
+                  <span className="pa-mono" data-testid="exaggeration-scale-value">
+                    {activeExaggerationScale}×
+                  </span>
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <span className="pa-mono" aria-label="模型视角状态">
+              {showModelPane
+                ? `视角 ${camera.yawDeg}°/${camera.pitchDeg}° · 缩放 ${camera.zoomPercent}%`
+                : `图纸缩放 ${drawingViewport.zoomPercent}% · 平移 (${drawingViewport.panX}, ${drawingViewport.panY})`}
+            </span>
+          )}
+        </div>
+
+        <div className="pa-vp-grp">
+          {feature3dAssemblyM1 ? (
+            <>
+              <label className="pa-vp-slider-label">
+                <span>爆炸</span>
+                <input
+                  type="range"
+                  className="pa-thin-slider"
+                  data-testid="assembly-explosion-slider"
+                  aria-label="爆炸视图滑块"
+                  min={0}
+                  max={100}
+                  value={Math.round(explosionFactor * 100)}
+                  onChange={(event) => {
+                    onChangeExplosionFactor?.(Number(event.target.value) / 100)
+                  }}
+                />
+                <span className="pa-mono" data-testid="assembly-explosion-value">
+                  {Math.round(explosionFactor * 100)}%
+                </span>
+              </label>
+
+              <button
+                type="button"
+                data-testid="assembly-xray-toggle"
+                aria-pressed={xrayMode}
+                className={xrayMode ? 'pa-vp-opt pa-vp-opt-active' : 'pa-vp-opt'}
+                onClick={() => onToggleXrayMode?.()}
+              >
+                透视
+              </button>
+
+              {onChangeGdtDisplayMode ? (
+                <div
+                  className="pa-vp-presets"
+                  role="group"
+                  aria-label="GD&T 标注显示模式"
+                  data-testid="gdt-display-mode-toggle"
+                  data-display-mode={gdtDisplayMode}
+                >
+                  <span>标注:</span>
+                  <button
+                    type="button"
+                    data-testid="gdt-mode-smart"
+                    aria-pressed={gdtDisplayMode === 'smart'}
+                    className={
+                      gdtDisplayMode === 'smart' ? 'pa-vp-opt pa-vp-opt-active' : 'pa-vp-opt'
+                    }
+                    onClick={() => onChangeGdtDisplayMode('smart')}
+                  >
+                    智能
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="gdt-mode-expand-all"
+                    aria-pressed={gdtDisplayMode === 'expand-all'}
+                    className={
+                      gdtDisplayMode === 'expand-all' ? 'pa-vp-opt pa-vp-opt-active' : 'pa-vp-opt'
+                    }
+                    onClick={() => onChangeGdtDisplayMode('expand-all')}
+                  >
+                    全展
+                  </button>
+                </div>
+              ) : null}
+              <span className="pa-sr-only" aria-label="模型视角状态">
+                视角 {camera.yawDeg}°/{camera.pitchDeg}° · 缩放 {camera.zoomPercent}%
+              </span>
+
+              <div
+                className="pa-vp-presets"
+                role="group"
+                aria-label="三维标准视角预设"
+                data-testid="camera-preset-group"
+              >
+                {CAMERA_PRESET_ORDER.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    data-testid={`camera-preset-${preset}`}
+                    aria-pressed={activeCameraPreset === preset}
+                    className={
+                      activeCameraPreset === preset ? 'pa-vp-opt pa-vp-opt-active' : 'pa-vp-opt'
+                    }
+                    onClick={() => onSelectCameraPreset?.(preset)}
+                  >
+                    {CAMERA_PRESET_LABELS[preset]}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
+
+          {showDrawingPane && !showModelPane ? (
+            <button
+              type="button"
+              className="pa-vp-opt"
+              aria-label="图纸适合窗口"
+              title="复位二维图纸并适合窗口"
+              onClick={() =>
+                onUpdateDrawingViewport(() => ({ panX: 0, panY: 0, zoomPercent: 100 }))
+              }
+            >
+              复位
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="pa-vp-opt"
+              aria-label="适合窗口"
+              title="复位三维视角并适合窗口"
+              onClick={() => {
+                if (feature3dAssemblyM1 && onSelectCameraPreset) {
+                  onSelectCameraPreset('iso')
+                } else {
+                  onUpdateCamera(() => ({ yawDeg: 35, pitchDeg: 25, zoomPercent: 100 }))
+                }
+              }}
+            >
+              复位
+            </button>
+          )}
+        </div>
       </div>
     </section>
   )

@@ -191,7 +191,7 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
 
     // 顶部栏入口存在并打开完成视图
     const topBar = screen.getByRole('banner', { name: '顶部连接状态栏' })
-    await user.click(within(topBar).getByRole('button', { name: '完成并保存' }))
+    await user.click(within(topBar).getByTestId('complete-and-save-btn'))
 
     const view = screen.getByTestId('completion-view')
     expect(within(view).getByTestId('completion-part-name')).toHaveTextContent('零件：安装板')
@@ -351,7 +351,7 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
     )
 
     // 点击顶部栏打开完成视图 -> 此时图纸和检查仍在生成中
-    await user.click(screen.getByRole('button', { name: '完成并保存' }))
+    await user.click(screen.getByTestId('complete-and-save-btn'))
     const view = screen.getByTestId('completion-view')
     expect(within(view).getByRole('status', { name: '完成视图生成实时进度' })).toBeInTheDocument()
     expect(within(view).getByRole('button', { name: '保存正式版本' })).toBeDisabled()
@@ -929,7 +929,7 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
     await user.click(screen.getByRole('button', { name: '打开查看' }))
     const topBar = screen.getByRole('banner', { name: '顶部连接状态栏' })
     expect(await within(topBar).findByText('项目 B')).toBeInTheDocument()
-    expect(within(topBar).getByText(/正式版 v10 · 草稿 draft-11/)).toBeInTheDocument()
+    expect(within(topBar).getByText(/草稿 draft-11/)).toBeInTheDocument()
 
     // 项目 A 的迟到提交返回 -> 必须被丢弃，项目 B 正式版仍为 v10
     await act(async () => {
@@ -945,7 +945,7 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
         },
       })
     })
-    expect(within(topBar).getByText(/正式版 v10 · 草稿 draft-11/)).toBeInTheDocument()
+    expect(within(topBar).getByText(/草稿 draft-11/)).toBeInTheDocument()
     expect(screen.queryByText(/v2-from-A/)).not.toBeInTheDocument()
   })
 
@@ -1263,7 +1263,7 @@ describe('ProjectAgentM1Workbench (M3-FE-01 完成视图、一次性确认提交
 
     expect(await within(view).findByText(/正式版本提交绑定校验失败/)).toBeInTheDocument()
     const topBar = screen.getByRole('banner', { name: '顶部连接状态栏' })
-    expect(within(topBar).getByText(/正式版 v1/)).toBeInTheDocument()
+    expect(within(topBar).getByLabelText('修订版本状态')).toHaveAttribute('title', expect.stringContaining('正式版 v1'))
     expect(screen.queryByText(/v99-bad/)).not.toBeInTheDocument()
   })
 

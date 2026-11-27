@@ -64,6 +64,7 @@ import { focusRecoveryElement } from '../focusRecovery'
 import {
   persistWorkbenchTheme,
   readStoredWorkbenchTheme,
+  syncWindowTitleBarTheme,
   type WorkbenchTheme,
 } from '../workbenchTheme'
 import {
@@ -195,7 +196,11 @@ export function useWorkbenchSession({
     readonly partMeshes: readonly PartMesh[]
     readonly simulationSpec: SimulationLoopSpec
   } | null>(null)
-  const [theme, setTheme] = useState<WorkbenchTheme>(() => readStoredWorkbenchTheme('light'))
+  const [theme, setTheme] = useState<WorkbenchTheme>(() => readStoredWorkbenchTheme('dark'))
+
+  useEffect(() => {
+    syncWindowTitleBarTheme(theme)
+  }, [theme])
 
   const handleToggleTheme = () => {
     setTheme((prev) => {

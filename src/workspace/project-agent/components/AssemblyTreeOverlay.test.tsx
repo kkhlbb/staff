@@ -113,7 +113,7 @@ describe('M3X-INT-01-FE: 多层级 XCAF 装配树、防环回退、整组显隐�
     it('规范化支持 #rrggbb、#rgb、rgb(...)、[r,g,b] 0–1 浮点 / 0–255 整数浮点与 {r,g,b}，非法输入回退默认配色', () => {
       expect(normalizePartDisplayColor('#D9480F')).toBe('#d9480f')
       expect(normalizePartDisplayColor('#0f8')).toBe('#00ff88')
-      expect(normalizePartDisplayColor('rgb(30, 94, 255)')).toBe('#1e5eff')
+      expect(normalizePartDisplayColor('rgb(204, 120, 92)')).toBe('#cc785c')
       expect(normalizePartDisplayColor('rgba(0.5, 0.25, 1, 0.8)')).toBe('#8040ff')
       expect(normalizePartDisplayColor([1, 0, 0])).toBe('#ff0000')
       expect(normalizePartDisplayColor([0, 0.5, 1])).toBe('#0080ff')
@@ -189,7 +189,7 @@ describe('M3X-INT-01-FE: 多层级 XCAF 装配树、防环回退、整组显隐�
         { id: 'grp-frame', name: '机架总成' },
       ]
       const parts: readonly PartMesh[] = [
-        makePartMesh('p-motor', '伺服电机', { groupId: 'grp-drive', color: '#2563eb' }),
+        makePartMesh('p-motor', '伺服电机', { groupId: 'grp-drive', color: '#cc785c' }),
         makePartMesh('p-shaft', '传动主轴', { groupId: 'grp-trans', color: '#16a34a' }),
         makePartMesh('p-gear', '行星齿轮', { groupId: 'grp-gearbox', color: '#ea580c' }),
         makePartMesh('p-base', '底座机架', { groupId: 'grp-frame', color: '#64748b' }),
@@ -251,7 +251,7 @@ describe('M3X-INT-01-FE: 多层级 XCAF 装配树、防环回退、整组显隐�
       await user.click(screen.getByTestId('toggle-part-visibility-p-gear'))
       expect(driveVisBtn).toHaveAttribute('data-visibility-state', 'partial')
       expect(driveVisBtn).toHaveAttribute('aria-pressed', 'mixed')
-      expect(driveVisBtn).toHaveTextContent('◐')
+      expect(driveVisBtn).toHaveTextContent('半')
       expect(screen.getByTestId('toggle-group-visibility-grp-trans')).toHaveAttribute(
         'data-visibility-state',
         'partial',

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type {
   AssemblyPhysicsSpec,
   DatumDefinition,
@@ -40,6 +41,8 @@ export interface SimulationWhatIfPanelProps {
   }) => void
   /** V100 one-click engineering simulation report export props. */
   readonly reportExport?: Omit<ReportExportMenuProps, 'variant' | 'simulationResult'>
+  /** Default collapsed 36px 1-line readout bar (v4); pass true when opened in dedicated tab. */
+  readonly defaultExpanded?: boolean
 }
 
 const GDT_QUICK_MODIFIERS: readonly GdtMaterialModifier[] = ['RFS', 'MMC', 'LMC']
@@ -75,8 +78,12 @@ export function SimulationWhatIfPanel({
   onHoverContributor,
   onClickContributor,
   reportExport,
+  defaultExpanded = false,
 }: SimulationWhatIfPanelProps) {
+  const [drawerOpen, setDrawerOpen] = useState(defaultExpanded)
   const statusMeta = formatStatusLabel(result.status)
+  const cpkToneClass =
+    result.cpk >= 1.33 ? 'pa-readout-ok' : result.cpk >= 0.95 ? 'pa-readout-warn' : 'pa-readout-bad'
   const gdtById = new Map(gdtControls.map((g) => [g.id, g]))
   const gdtContributions = result.gdtContributions ?? []
   const gdtWarnings = result.gdtWarnings ?? []
@@ -118,12 +125,44 @@ export function SimulationWhatIfPanel({
 
   return (
     <section
-      className="pa-sim-panel"
+      className="pa-sim-panel pa-readout-bar"
       aria-label="3D 仿真诊断与 What-If 面板"
       data-testid="simulation-whatif-panel"
+      data-expanded={drawerOpen ? 'true' : 'false'}
     >
-      {/* Closed-loop KPI Summary Card */}
-      <div className="pa-card pa-sim-kpi-card">
+      {/* 36px 1-line monospace summary bar (default collapsed in conversation view) */}
+      <button
+        type="button"
+        className="pa-readout-summary"
+        data-testid="simulation-readout-summary"
+        aria-expanded={drawerOpen}
+        aria-controls="pa-sim-readout-drawer"
+        onClick={() => setDrawerOpen((prev) => !prev)}
+      >
+        <span className="pa-readout-nums pa-mono">
+          <span data-testid="readout-sum-range">
+            间隙 {result.threeSigmaLowMm.toFixed(2)}–{result.threeSigmaHighMm.toFixed(2)}
+          </span>
+          <span className={cpkToneClass} data-testid="readout-sum-cpk">
+            Cpk {result.cpk.toFixed(2)}
+          </span>
+          <span className="pa-readout-ppm" data-testid="readout-sum-ppm">
+            {result.ppm.toLocaleString('en-US')} ppm
+          </span>
+        </span>
+        <span className="pa-readout-hint" data-testid="simulation-readout-toggle-hint">
+          {drawerOpen ? '收起 ▴' : '调参 ▾'}
+        </span>
+      </button>
+
+      {drawerOpen ? (
+        <div
+          id="pa-sim-readout-drawer"
+          className="pa-readout-drawer"
+          data-testid="simulation-readout-drawer"
+        >
+      {/* Closed-loop KPI Summary */}
+      <div className="pa-sim-kpi-block">
         <div className="pa-header">
           <strong>封闭环：{result.title}</strong>
           <div className="pa-row">
@@ -153,7 +192,7 @@ export function SimulationWhatIfPanel({
             role="alert"
             data-testid="rigid-assumption-warning"
           >
-            ⚠ 当前为纯刚体假设，忽略形变将低估风险
+            提示：当前为纯刚体假设，忽略形变将低估风险
           </div>
         ) : null}
 
@@ -584,6 +623,8 @@ export function SimulationWhatIfPanel({
       {/* One-Click Engineering Simulation Report Export */}
       {reportExport ? (
         <ReportExportMenu {...reportExport} simulationResult={result} variant="card" />
+      ) : null}
+        </div>
       ) : null}
     </section>
   )
