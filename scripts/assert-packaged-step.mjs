@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { statSync, readFileSync, readdirSync } from 'node:fs'
 import { listPackage, statFile } from '@electron/asar'
-import { verifyAssets, hashes } from './step-assets.mjs'
+import { verifyAssets, hashes, buildPackagedSha256Sums } from './step-assets.mjs'
 
 // Pass an actual Resources (macOS) / resources (Windows/Linux) directory.
 const resources = process.argv[2]
@@ -38,8 +38,11 @@ if (resourceEntries.includes('step-kernel') || resourceEntries.includes('step-na
   throw new Error('STEP_LEGACY_KERNEL_PACKAGED')
 }
 // Require exact texts, not placeholder notices, in the packaged external resources.
-for (const name of ['LICENSE_LGPL_21.txt', 'OCCT_LGPL_EXCEPTION.txt', 'SOURCE.md', 'SHA256SUMS']) {
+for (const name of ['LICENSE_LGPL_21.txt', 'OCCT_LGPL_EXCEPTION.txt', 'SOURCE.md']) {
   const source = new URL(`../vendor/occt-unified/${name}`, import.meta.url)
   if (!readFileSync(source).equals(readFileSync(path.join(directory, name)))) throw new Error(`STEP_LICENSE_CHANGED: ${name}`)
+}
+if (!buildPackagedSha256Sums().equals(readFileSync(path.join(directory, 'SHA256SUMS')))) {
+  throw new Error('STEP_LICENSE_CHANGED: SHA256SUMS')
 }
 console.log(JSON.stringify({ status: 'PACKAGED_UNIFIED_OCCT_ASSETS_VERIFIED', directory, hashes, distributionApproval: 'APPROVED_UNIFIED_OCCT_LGPL_21' }, null, 2))

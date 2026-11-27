@@ -49,3 +49,13 @@ test('release gate succeeds on prepared unified OCCT assets', () => {
   assert.equal(result.status, 0)
   assert.equal(JSON.parse(result.stdout).status, 'APPROVED_UNIFIED_OCCT_LGPL_21')
 })
+test('packaged SHA256SUMS only lists packaged runtime files and verifies cleanly', () => {
+  const sums = readFileSync(path.join(original, 'SHA256SUMS'), 'utf8')
+  assert.match(sums, /  cunlian_occt\.wasm$/m)
+  assert.match(sums, /  cunlian_occt\.mjs$/m)
+  assert.doesNotMatch(sums, /cunlian_occt\.d\.mts/)
+  if (process.platform !== 'win32') {
+    const check = spawnSync('shasum', ['-a', '256', '-c', 'SHA256SUMS'], { cwd: original, encoding: 'utf8' })
+    assert.equal(check.status, 0, check.stderr || check.stdout)
+  }
+})

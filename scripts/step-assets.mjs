@@ -29,6 +29,20 @@ export const legalFiles = {
   'step-license-provenance.md': 'docs/step-license-provenance.md',
   'step-kernel-replacement.md': 'docs/step-kernel-replacement.md',
 }
+export function buildPackagedSha256Sums() {
+  const raw = readFileSync(path.join(root, legalFiles.SHA256SUMS), 'utf8')
+  const packagedNames = new Set([...Object.keys(hashes), ...Object.keys(legalFiles), 'package.json'])
+  const kept = raw
+    .split(/\r?\n/)
+    .filter(line => line.trim().length > 0)
+    .filter(line => {
+      const match = /^([0-9a-f]{64})  (.+)$/.exec(line)
+      if (!match) throw new Error(`STEP_SHA256SUMS_FORMAT: ${line}`)
+      return packagedNames.has(match[2])
+    })
+  if (kept.length === 0) throw new Error('STEP_SHA256SUMS_EMPTY')
+  return Buffer.from(kept.join('\n') + '\n', 'utf8')
+}
 export function verifyAssets(directory) {
   if (readdirSync(directory).some(name => /\.(?:[cm]?js|wasm)$/.test(name) && !(name in hashes))) throw new Error('STEP_UNEXPECTED_RUNTIME_ASSET')
   for (const [name, expected] of Object.entries(hashes)) {
@@ -37,9 +51,24 @@ export function verifyAssets(directory) {
   }
   const pkg = JSON.parse(readFileSync(path.join(directory, 'package.json'), 'utf8'))
   if (pkg.type !== 'module') throw new Error('STEP_ASSET_MODULE_TYPE')
+  const expectedSha256Sums = buildPackagedSha256Sums()
   for (const [name, source] of Object.entries(legalFiles)) {
     const actual = readFileSync(path.join(directory, name))
-    if (!actual.length || !actual.equals(readFileSync(path.join(root, source)))) throw new Error(`STEP_LICENSE_CHANGED: ${name}`)
+    const expected = name === 'SHA256SUMS' ? expectedSha256Sums : readFileSync(path.join(root, source))
+    if (!actual.length || !actual.equals(expected)) throw new Error(`STEP_LICENSE_CHANGED: ${name}`)
+  }
+  const sumLines = readFileSync(path.join(directory, 'SHA256SUMS'), 'utf8')
+    .split(/\r?\n/)
+    .filter(line => line.trim().length > 0)
+  if (sumLines.length === 0) throw new Error('STEP_SHA256SUMS_EMPTY')
+  for (const line of sumLines) {
+    const match = /^([0-9a-f]{64})  (.+)$/.exec(line)
+    if (!match) throw new Error(`STEP_SHA256SUMS_FORMAT: ${line}`)
+    const [, expectedHash, fileName] = match
+    const targetBytes = readFileSync(path.join(directory, fileName))
+    if (createHash('sha256').update(targetBytes).digest('hex') !== expectedHash) {
+      throw new Error(`STEP_SHA256SUMS_MISMATCH: ${fileName}`)
+    }
   }
   const bom = JSON.parse(readFileSync(path.join(directory, 'STEP-SBOM.cdx.json'), 'utf8'))
   const properties = Object.fromEntries(bom.metadata.properties.map(p => [p.name, p.value]))
@@ -58,7 +87,11 @@ export function prepareStepAssets() {
     copyFileSync(source, path.join(assetDirectory, name))
   }
   writeFileSync(path.join(assetDirectory, 'package.json'), '{"type":"module","private":true}\n')
-  for (const [name, source] of Object.entries(legalFiles)) copyFileSync(path.join(root, source), path.join(assetDirectory, name))
+  const packagedSha256Sums = buildPackagedSha256Sums()
+  for (const [name, source] of Object.entries(legalFiles)) {
+    if (name === 'SHA256SUMS') writeFileSync(path.join(assetDirectory, name), packagedSha256Sums)
+    else copyFileSync(path.join(root, source), path.join(assetDirectory, name))
+  }
   verifyAssets(assetDirectory)
   return assetDirectory
 }

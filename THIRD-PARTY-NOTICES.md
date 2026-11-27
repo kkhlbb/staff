@@ -1,10 +1,10 @@
-# 第三方组件与许可（寸链 `v1.0.2`）
+# 第三方组件与许可（寸链 `v1.0.3`）
 
 寸链自身代码以 **MIT** 许可发布（见根目录 `LICENSE`）。随附的第三方组件按各自的原始许可分发，应用 MIT 许可不覆盖或替换第三方许可条款。
 
 ## 一、统一几何内核：Open CASCADE Technology (OCCT) 7.8.1
 
-寸链 `v1.0.2` 使用统一编译的 **OCCT 7.8.1 XCAF WASM** 内核（外置资源目录 `occt-unified/`，含 `cunlian_occt.mjs`、`cunlian_occt.wasm`、`step-worker.cjs`），承担 STEP AP214/AP203 装配导入/导出、XCAF 装配特征提取、三维构形与 2D HLR 矢量工程图能力。
+寸链 `v1.0.3` 使用统一编译的 **OCCT 7.8.1 XCAF WASM** 内核（外置资源目录 `occt-unified/`，含 `cunlian_occt.mjs`、`cunlian_occt.wasm`、`step-worker.cjs`），承担 STEP AP214/AP203 装配导入/导出、XCAF 装配特征提取、三维构形与 2D HLR 矢量工程图能力。
 
 - **许可**：**LGPL-2.1-only** + **OCCT LGPL Exception**（Exception 仅适用于头文件材料，不免除整个库的 LGPL-2.1 义务）。
 - **完整原文**：随仓库位于 `vendor/occt-unified/LICENSE_LGPL_21.txt` 与 `vendor/occt-unified/OCCT_LGPL_EXCEPTION.txt`，并由 `scripts/step-assets.mjs` 逐字节复制入应用外置资源目录 `occt-unified/`。

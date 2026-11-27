@@ -1,4 +1,4 @@
-# 用户修改库、替换与调试指南（`v1.0.2` 统一 OCCT 7.8.1 XCAF WASM）
+# 用户修改库、替换与调试指南（`v1.0.3` 统一 OCCT 7.8.1 XCAF WASM）
 
 本文件说明用户依据 LGPL-2.1 修改 Open CASCADE Technology (OCCT) 7.8.1 库、重编译并替换寸链运行时 WASM 内核的受支持路径与安全边界。
 

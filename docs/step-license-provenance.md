@@ -1,6 +1,6 @@
-# 统一 OCCT 7.8.1 WASM 内核：来源溯源、许可义务与发布门禁（`v1.0.2`）
+# 统一 OCCT 7.8.1 WASM 内核：来源溯源、许可义务与发布门禁（`v1.0.3`）
 
-本文件记录寸链 `v1.0.2` 所打包的统一 **OCCT 7.8.1 XCAF WASM** 运行时资产的来源溯源、许可边界与自动化发布门禁。历史 `replicad-opencascadejs` 与 `step-narrow-v1` 过渡期文档已归档至 Git 标签 `archive/pre-cleanup-v1.0.2`。
+本文件记录寸链 `v1.0.3` 所打包的统一 **OCCT 7.8.1 XCAF WASM** 运行时资产的来源溯源、许可边界与自动化发布门禁。历史 `replicad-opencascadejs` 与 `step-narrow-v1` 过渡期文档已归档至 Git 标签 `archive/pre-cleanup-v1.0.2`。
 
 ## 一、运行资产字节身份（已闭环）
 
