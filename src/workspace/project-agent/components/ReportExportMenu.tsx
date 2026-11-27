@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { version as appVersion } from '../../../../package.json'
+import { renderCsvReport } from '../../../report/renderCsvReport'
 import { renderHtmlReport } from '../../../report/renderHtmlReport'
 import type {
   ReportConclusion,
@@ -42,12 +44,6 @@ const FORMAT_OPTIONS: readonly {
 
 function sanitizeFileSegment(raw: string): string {
   return raw.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'cunlian-report'
-}
-
-function csvCell(value: unknown): string {
-  const text = String(value ?? '')
-  const safe = typeof value === 'string' && /^[\s]*[=+@-]|^[\t\r\n]/.test(text) ? `'${text}` : text
-  return `"${safe.replaceAll('"', '""')}"`
 }
 
 function buildOfflineReportPayload(params: {
@@ -122,7 +118,7 @@ function buildOfflineReportPayload(params: {
     schemaVersion: 1,
     projectId: params.projectId,
     projectName: params.projectName,
-    appVersion: '1.0.0',
+    appVersion,
     revision: params.revision,
     isDraft: params.isDraft,
     checksetFingerprint: params.checksetFingerprint,
@@ -251,29 +247,10 @@ async function buildLocalFallbackReportContent(params: {
   }
 
   if (params.format === 'csv') {
-    const rows: unknown[][] = [[
-      'projectId', 'revision', 'draft', 'checksetFingerprint', 'seed', 'sampleCount', 'checkId', 'label',
-      'status', 'mode', 'requirementLowerMm', 'requirementUpperMm', 'extremeLowerMm', 'extremeUpperMm',
-      'threeSigmaLowerMm', 'threeSigmaUpperMm', 'Cp', 'Cpk', 'PPM', 'flexDeltaCpk',
-    ]]
-    const stamp = [
-      payload.projectId, payload.revision, payload.isDraft,
-      payload.checksetFingerprint, payload.seed, payload.sampleCount,
-    ]
-    for (const check of payload.conclusions) {
-      for (const [mode, metrics] of [['rigid', check.rigid], ['compliant', check.compliant]] as const) {
-        if (!metrics) continue
-        rows.push([
-          ...stamp, check.checkId, check.label, check.status, mode,
-          ...check.requirementMm, ...check.extremeIntervalMm, ...metrics.threeSigmaIntervalMm,
-          metrics.cp, metrics.cpk, metrics.ppm, check.flexDeltaCpk,
-        ])
-      }
-    }
     return {
       fileName: `simulation-${baseName}.csv`,
       mimeType: 'text/csv',
-      content: `\uFEFF${rows.map((r) => r.map(csvCell).join(',')).join('\r\n')}\r\n`,
+      content: renderCsvReport(payload),
     }
   }
 

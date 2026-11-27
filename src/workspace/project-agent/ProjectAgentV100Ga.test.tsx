@@ -2,6 +2,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { version as pkgVersion } from '../../../package.json'
 import { createElectronTransport } from '../../transport/electronTransport'
 import type { ExportSimulationReportRequest, Transport } from '../../transport/types'
 import type { DatumDefinition, GdtFeatureControl, PickedFeatureGeometryKind } from './assembly3dTypes'
@@ -548,5 +549,78 @@ describe('V100-FE-01: 5 类进阶 GD&T 3D 框格（含双层复合框格）+ 一
     await waitFor(() => {
       expect(Number(screen.getByTestId('m2-three-viewport').getAttribute('data-max-displacement-mm'))).toBe(0)
     })
+  })
+
+  it('8. 离线 CSV 复用单一实现包含完整 EvidenceRef 审计附录，且 HTML/JSON/CSV 报告版本号动态对齐 package.json', async () => {
+    const user = userEvent.setup()
+    const capturedBlobs: Array<{ readonly type: string; readonly text: string }> = []
+    const originalCreateObjectURL = URL.createObjectURL
+    const originalRevokeObjectURL = URL.revokeObjectURL
+    const createObjectUrlSpy = vi.fn((obj: Blob | MediaSource) => {
+      if (obj instanceof Blob) {
+        void obj.text().then((text) => {
+          capturedBlobs.push({ type: obj.type, text })
+        })
+      }
+      return 'blob:mock-report'
+    })
+    const revokeObjectUrlSpy = vi.fn()
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, writable: true, value: createObjectUrlSpy })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, writable: true, value: revokeObjectUrlSpy })
+
+    try {
+      const baseTransport = createElectronTransport({ bridge: {}, feature3dAssemblyM1: true })
+      const authRequiredTransport: Transport = {
+        ...baseTransport,
+        exportSimulationReport: vi.fn(async () => ({
+          ok: false as const,
+          error: { code: 'AUTH_REQUIRED', message: '请先授权当前窗口访问项目' },
+        })),
+      }
+
+      render(
+        <ReportExportMenu
+          transport={authRequiredTransport}
+          projectId="sample-cover-warpage-01"
+          projectName="薄铝盖板翘曲锁紧"
+          draftRevision="draft-1"
+          checksetFingerprint="fp-v102-audit"
+          seed={20261126}
+        />,
+      )
+
+      await user.click(screen.getByTestId('export-report-csv'))
+      await waitFor(() => {
+        expect(capturedBlobs.some((b) => b.type.startsWith('text/csv'))).toBe(true)
+      })
+      const csvBlob = capturedBlobs.find((b) => b.type.startsWith('text/csv'))!
+      expect(csvBlob.text).toContain('"section","projectId","revision","draft","checksetFingerprint","seed","sampleCount","evidenceTarget","evidenceKind","evidenceSource","evidenceExcerpt","evidenceActor","evidenceHash","evidenceTimestamp","evidenceRefJson"')
+      expect(csvBlob.text).toContain('"evidenceRef"')
+      expect(csvBlob.text).toContain('"project:sample-cover-warpage-01"')
+      expect(csvBlob.text).toContain('"user-attestation"')
+      expect(csvBlob.text).toContain('"desktop-local-workbench"')
+      expect(csvBlob.text).toContain('"fp-v102-audit"')
+
+      await user.click(screen.getByTestId('export-report-json'))
+      await waitFor(() => {
+        expect(capturedBlobs.some((b) => b.type.startsWith('application/json'))).toBe(true)
+      })
+      const jsonBlob = capturedBlobs.find((b) => b.type.startsWith('application/json'))!
+      const parsed = JSON.parse(jsonBlob.text) as { appVersion: string; evidence: unknown[] }
+      expect(parsed.appVersion).toBe(pkgVersion)
+      expect(parsed.appVersion).toBe('1.0.2')
+      expect(parsed.evidence.length).toBeGreaterThan(0)
+
+      await user.click(screen.getByTestId('export-report-html'))
+      await waitFor(() => {
+        expect(capturedBlobs.some((b) => b.type.startsWith('text/html'))).toBe(true)
+      })
+      const htmlBlob = capturedBlobs.find((b) => b.type.startsWith('text/html'))!
+      expect(htmlBlob.text).toContain(`Cunlian v${pkgVersion}`)
+      expect(htmlBlob.text).not.toContain('Cunlian v1.0.0')
+    } finally {
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, writable: true, value: originalCreateObjectURL })
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, writable: true, value: originalRevokeObjectURL })
+    }
   })
 })
