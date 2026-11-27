@@ -2,6 +2,20 @@
 
 All notable changes to **寸链 (Cunlian)** are documented in this file.
 
+## v1.0.2 - 2026-11-26
+
+Benchmark-driven engineering upgrade release improving STEP import resilience, AI mate drafting precision/recall, and offline CSV audit report provenance.
+
+### Fixed & Improved
+- **STEP Partial Root Transfer Resilience (`NIST FTC-09`)**:
+  - Updated `stepImport.mjs` / `topology.mjs` to gracefully accept partial OCCT STEP root transfer when valid solids/shapes are recovered instead of failing the entire import, lifting NIST MBE PMI STEP import and HLR orthographic projection coverage from `9/10` to `10/10`.
+- **AI Mate Drafting Precision/Recall & DOF Accuracy (Suite B)**:
+  - Upgraded `mateDrafts.ts` with 2D planar contact overlap area checks, cylindrical axial span verification, and floating-clearance detection across multi-part assemblies, raising Suite B mate recommendation to `100%` Precision / `100%` Recall / `100%` F1 with `0` residual DOF delta across all 5 local assembly benchmarks.
+- **CSV Offline Audit Provenance (`EvidenceRef` Appendix) & Reproducibility**:
+  - Added an RFC 4180 compliant `EvidenceRef` audit appendix to CSV report exports (`src/report/exportReport.ts`), achieving 3/3 format coverage (HTML, JSON, CSV) for Suite E (`E4` PASS) and synchronizing the source privacy manifest baseline so `evidenceRepro.test.ts` passes cleanly.
+
+---
+
 ## v1.0.1 - 2026-11-26
 
 Patch release fixing out-of-the-box desktop GA workflows, built-in template switching, read-only authorization ergonomics, and Windows P0 packaging/IPC reliability.

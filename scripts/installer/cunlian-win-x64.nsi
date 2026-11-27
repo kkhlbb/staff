@@ -1,8 +1,8 @@
 !ifndef APP_VERSION
-  !define APP_VERSION "1.0.1"
+  !define APP_VERSION "1.0.2"
 !endif
 !ifndef VI_VERSION
-  !define VI_VERSION "1.0.1.0"
+  !define VI_VERSION "1.0.2.0"
 !endif
 !ifndef PRODUCT_NAME
   !define PRODUCT_NAME "寸链"
