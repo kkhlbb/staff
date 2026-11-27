@@ -47,8 +47,30 @@ import type {
 import type { PdfPageBox, PdfRect } from '../../src/sources/pdfCoordinates'
 import type { ExtractionCandidate } from '../../src/document-extraction/types'
 
-/** 批次 A 全部 IPC 通道（与任务卡 §3 表格逐项对应）。 */
+export type TitleBarTheme = 'dark' | 'light'
+
+export interface WindowChromeInfo {
+  readonly platform: 'win32' | 'darwin' | 'linux'
+  readonly hasCustomTitlebar: boolean
+  readonly titlebarHeightPx: 36
+  readonly rightInsetPx: number
+  readonly leftInsetPx: number
+}
+
+export interface CunlianDesktopApi {
+  readonly windowChrome: WindowChromeInfo
+  setTitleBarTheme(theme: TitleBarTheme): Promise<{ ok: true }>
+}
+
+declare global {
+  interface Window {
+    readonly cunlianDesktop?: CunlianDesktopApi
+  }
+}
+
+/** 桌面 IPC 通道白名单。 */
 export const IPC_CHANNELS = {
+  windowSetTitleBarTheme: 'window:setTitleBarTheme',
   gdt: 'cunlian:gdt',
   detectM1LocalAgents: 'm1-workbench:detectM1LocalAgents',
   registerM1LocalAgent: 'm1-workbench:registerM1LocalAgent',

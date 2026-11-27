@@ -184,6 +184,32 @@ const genericEscape = await evaluate(
 )
 check('没有通用 IPC 转义口 / Node 全局', Array.isArray(genericEscape) && genericEscape.length === 0, `got=${JSON.stringify(genericEscape)}`)
 
+const chrome = await evaluate(`(async () => {
+  const api = window.cunlianDesktop
+  return {
+    keys: Object.keys(api).sort(),
+    info: api.windowChrome,
+    frozen: Object.isFrozen(api.windowChrome),
+    light: await api.setTitleBarTheme('light'),
+    dark: await api.setTitleBarTheme('dark'),
+    rejectsInvalid: await api.setTitleBarTheme('invalid').then(() => false, () => true),
+  }
+})()`)
+const expectedChrome = {
+  platform: process.platform,
+  hasCustomTitlebar: true,
+  titlebarHeightPx: 36,
+  rightInsetPx: process.platform === 'win32' ? 138 : 0,
+  leftInsetPx: process.platform === 'darwin' ? 72 : 0,
+}
+check(
+  '原生窗口桥只暴露只读元数据和主题方法，支持深浅主题并拒绝非法参数',
+  JSON.stringify(chrome.keys) === JSON.stringify(['setTitleBarTheme', 'windowChrome']) &&
+    Object.entries(expectedChrome).every(([key, value]) => chrome.info[key] === value) &&
+    chrome.frozen && chrome.light.ok && chrome.dark.ok && chrome.rejectsInvalid,
+  `got=${JSON.stringify(chrome)}`,
+)
+
 const resourceUrls = await evaluate(
   'performance.getEntriesByType("resource").map((entry) => entry.name)',
 )
@@ -194,11 +220,11 @@ const frameBridge = await evaluate(`(() => {
   const frame = document.createElement('iframe')
   frame.srcdoc = '<!doctype html><html><body>frame</body></html>'
   document.body.appendChild(frame)
-  const result = typeof frame.contentWindow.cunlian
+  const result = [typeof frame.contentWindow.cunlian, typeof frame.contentWindow.cunlianDesktop]
   frame.remove()
   return result
 })()`)
-check('子框架拿不到 preload 桥', frameBridge === 'undefined', `got=${frameBridge}`)
+check('子框架拿不到 preload 桥', frameBridge?.length === 2 && frameBridge.every((value) => value === 'undefined'), `got=${frameBridge}`)
 
 // 记录真实 renderer 收到的 editor:flush，回复由旧工作台的会话适配器发送。
 const flushSeen = await evaluate(`(async () => {

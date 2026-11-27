@@ -10,10 +10,10 @@ import { startM1LocalEndpoint } from './project-agent/m1LocalEndpoint'
 import { localM1PeerHelper, localM1Socket, localM1WindowsProfile } from './project-agent/m1LocalTransport'
 import {
   BrowserWindow,
-  Menu,
   app,
   dialog,
   ipcMain,
+  type IpcMainInvokeEvent,
   session,
   safeStorage,
   shell,
@@ -30,15 +30,17 @@ import {
   type IpcResult,
   type MenuAction,
   type RequestCloseResult,
+  type TitleBarTheme,
 } from '../shared/contracts'
 import { CloseGuard } from './closeGuard'
 import {
   IpcFailure,
   installChannel,
   installSenderChannel,
+  toSenderInfo,
   type IpcMainLike,
 } from './ipc'
-import { buildApplicationMenu } from './menu'
+import { installApplicationMenu } from './menu'
 import {
   MIGRATION_BUNDLE_MAX_BYTES,
   MIGRATION_JSON_MAX_BYTES,
@@ -79,7 +81,19 @@ import { SessionController, runCloseGate, type GateChoice } from './sessionContr
 import { SenderGuard } from './senderGuard'
 import { createOpenFileRouter, extractDxfArg } from './launchArgs'
 import { recordStartupError } from './startupDiagnostics'
-import { createMainWindow, type MainWindowHandle } from './window'
+import { resolveRendererIndexPath, type MainWindowHandle } from './window'
+import {
+  isDevServerFrameUrl,
+  isProductionRendererUrl,
+  normalizeDevServerUrl,
+} from './rendererUrl'
+
+declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined
+
+const WINDOW_THEMES = {
+  dark: { overlay: { color: '#1b1b19', symbolColor: '#9d9a92', height: 36 }, backgroundColor: '#161615' },
+  light: { overlay: { color: '#faf9f6', symbolColor: '#625f57', height: 36 }, backgroundColor: '#f6f4ef' },
+} as const
 
 // 应用名与 userData 目录必须在任何路径读取前固定，避免 staff → 寸链 改名漂移。
 app.setName(DESKTOP_APP_NAME)
@@ -152,21 +166,99 @@ process.on('unhandledRejection', (reason) => {
   reportMainError('process.unhandledRejection', reason, false)
 })
 
-function createWindow(): MainWindowHandle {
-  const handle = createMainWindow({
-    guard,
-    onLoadError: (stage, error) => {
-      reportMainError(stage, error, true)
-    },
-    onClosed: (webContentsId) => {
-      closeGuard.cancelWindow(webContentsId)
-      m1WorkbenchForClose?.invalidate(webContentsId, true)
-      m2PreviewForClose?.invalidate(webContentsId)
-      void m1AuthorityForClose?.revokeWindow(webContentsId).catch(() => {})
-      windows.delete(webContentsId)
+export function createWindow(): MainWindowHandle {
+  const rendererIndexPath = resolveRendererIndexPath()
+  const devServerUrl = normalizeDevServerUrl(
+    typeof MAIN_WINDOW_VITE_DEV_SERVER_URL === 'string'
+      ? MAIN_WINDOW_VITE_DEV_SERVER_URL
+      : undefined,
+  )
+
+  const window = new BrowserWindow({
+    width: 1440,
+    height: 900,
+    minWidth: 960,
+    minHeight: 640,
+    show: false,
+    title: '寸链',
+    backgroundColor: WINDOW_THEMES.dark.backgroundColor,
+    ...(process.platform !== 'darwin' && { autoHideMenuBar: true }),
+    ...(process.platform === 'win32' && {
+      titleBarStyle: 'hidden',
+      titleBarOverlay: WINDOW_THEMES.dark.overlay,
+    }),
+    ...(process.platform === 'darwin' && {
+      titleBarStyle: 'hiddenInset',
+      trafficLightPosition: { x: 12, y: 11 },
+    }),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      nodeIntegrationInSubFrames: false,
+      sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      webviewTag: false,
+      spellcheck: false,
+      // 生产包关闭 DevTools；开发构建（有受控 Vite URL）保留便于排错。
+      devTools: devServerUrl !== null,
     },
   })
-  const webContentsId = handle.window.webContents.id
+
+  // Removing the application menu leaves Alt with no menu to reveal.
+  if (process.platform !== 'darwin') window.setMenuBarVisibility(false)
+
+  const handle: MainWindowHandle = {
+    window,
+    rendererIndexPath,
+    devServerUrl,
+    forceClose: false,
+  }
+
+  const webContentsId = window.webContents.id
+  guard.register({
+    webContentsId,
+    isDestroyed: () => window.isDestroyed() || window.webContents.isDestroyed(),
+    isAllowedFrameUrl: (url) => {
+      if (devServerUrl !== null) {
+        return isDevServerFrameUrl(url, devServerUrl)
+      }
+      return isProductionRendererUrl(url, rendererIndexPath)
+    },
+  })
+
+  // 单页应用：任何导航都拒绝，避免被 file:// 或远程页面替换。
+  window.webContents.on('will-navigate', (event) => {
+    event.preventDefault()
+  })
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  window.webContents.on('will-attach-webview', (event) => {
+    event.preventDefault()
+  })
+
+  window.once('ready-to-show', () => {
+    window.show()
+  })
+
+  window.on('closed', () => {
+    guard.unregister(webContentsId)
+    closeGuard.cancelWindow(webContentsId)
+    m1WorkbenchForClose?.invalidate(webContentsId, true)
+    m2PreviewForClose?.invalidate(webContentsId)
+    void m1AuthorityForClose?.revokeWindow(webContentsId).catch(() => {})
+    windows.delete(webContentsId)
+  })
+
+  window.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    if (!isMainFrame) return
+    reportMainError(
+      'window.did-fail-load',
+      new Error(`加载主界面失败 (${errorCode}): ${errorDescription} [${validatedURL}]`),
+      true,
+    )
+  })
+
   handle.window.webContents.on('render-process-gone', () => {
     closeGuard.cancelWindow(webContentsId)
     m1WorkbenchForClose?.invalidate(webContentsId, true)
@@ -202,6 +294,16 @@ function createWindow(): MainWindowHandle {
       }
     })
   })
+
+  if (devServerUrl !== null) {
+    void window.loadURL(devServerUrl).catch((error: unknown) => {
+      reportMainError('window.loadURL', error, true)
+    })
+  } else {
+    void window.loadFile(rendererIndexPath).catch((error: unknown) => {
+      reportMainError('window.loadFile', error, true)
+    })
+  }
 
   return handle
 }
@@ -570,8 +672,33 @@ async function printDrawingPdf(data: DrawingData): Promise<Uint8Array> {
   })
 }
 
+export function setTitleBarTheme(event: IpcMainInvokeEvent, ...args: unknown[]): { ok: true } {
+  const sender = event.sender
+  const window = windows.get(sender.id)?.window
+  if (
+    window === undefined ||
+    window.isDestroyed() ||
+    window.webContents !== sender ||
+    sender.isDestroyed() ||
+    !guard.verify(toSenderInfo(event)).ok
+  ) {
+    throw new Error('FORBIDDEN_SENDER')
+  }
+
+  const [theme] = args
+  if (args.length !== 1 || (theme !== 'dark' && theme !== 'light')) {
+    throw new Error('INVALID_ARGUMENT')
+  }
+
+  const colors = WINDOW_THEMES[theme satisfies TitleBarTheme]
+  if (process.platform === 'win32') window.setTitleBarOverlay(colors.overlay)
+  window.setBackgroundColor(colors.backgroundColor)
+  return { ok: true }
+}
+
 function installIpcHandlers(): void {
   const ipc: IpcMainLike = ipcMain
+  ipcMain.handle(IPC_CHANNELS.windowSetTitleBarTheme, setTitleBarTheme)
   const deps = { guard, log: logStage }
   const projectService = new ProjectService({ bindingAuthority: () => m1AuthorityForClose })
   const recovery = new RecoveryStore({ rootDir: WORKSPACE_ROOT })
@@ -1257,7 +1384,7 @@ function bootstrap(): void {
     app.on('web-contents-created', (_event, contents) => {
       contents.setWindowOpenHandler(() => ({ action: 'deny' }))
     })
-    Menu.setApplicationMenu(buildApplicationMenu({ sendAction: sendMenuAction }))
+    installApplicationMenu({ sendAction: sendMenuAction })
     const handle = createWindow()
     handle.window.webContents.once('did-finish-load', () => {
       // 启动前排队的 Finder 打开请求：由 renderer 走正常 openProject/gate。

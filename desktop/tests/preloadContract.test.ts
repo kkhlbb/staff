@@ -8,7 +8,7 @@ const electron = vi.hoisted(() => {
   let api!: CunlianApi
   const live = new Set<(...args: unknown[]) => void>()
   return { getApi: () => api, live, invoke: vi.fn(),
-    exposeInMainWorld: (_key: string, bridge: CunlianApi) => { api = bridge },
+    exposeInMainWorld: (key: string, bridge: CunlianApi) => { if (key === 'cunlian') api = bridge },
     on: (_channel: string, listener: (...args: unknown[]) => void) => live.add(listener),
     removeListener: (_channel: string, listener: (...args: unknown[]) => void) => live.delete(listener) }
 })

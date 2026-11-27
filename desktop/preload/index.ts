@@ -12,6 +12,8 @@ import {
   M1_READ_CAPABILITIES,
   IPC_EVENTS,
   type CunlianApi,
+  type CunlianDesktopApi,
+  type WindowChromeInfo,
   type EditorFlushRequest,
   type EditorFlushedPayload,
   type IpcResult,
@@ -469,3 +471,22 @@ const api: CunlianApi = {
 }
 
 contextBridge.exposeInMainWorld('cunlian', api)
+
+const platform = process.platform === 'win32' || process.platform === 'darwin'
+  ? process.platform
+  : 'linux'
+
+const windowChrome: WindowChromeInfo = Object.freeze({
+  platform,
+  hasCustomTitlebar: true,
+  titlebarHeightPx: 36,
+  rightInsetPx: platform === 'win32' ? 138 : 0,
+  leftInsetPx: platform === 'darwin' ? 72 : 0,
+})
+
+const desktopApi: CunlianDesktopApi = {
+  windowChrome,
+  setTitleBarTheme: (theme) => ipcRenderer.invoke(IPC_CHANNELS.windowSetTitleBarTheme, theme),
+}
+
+contextBridge.exposeInMainWorld('cunlianDesktop', desktopApi)

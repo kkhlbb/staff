@@ -87,3 +87,7 @@ export function buildApplicationMenu(options: ApplicationMenuOptions): Menu {
 
   return Menu.buildFromTemplate(template)
 }
+
+export function installApplicationMenu(options: ApplicationMenuOptions): void {
+  Menu.setApplicationMenu(process.platform === 'darwin' ? buildApplicationMenu(options) : null)
+}
