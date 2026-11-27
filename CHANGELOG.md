@@ -2,6 +2,22 @@
 
 All notable changes to **寸链 (Cunlian)** are documented in this file.
 
+## v1.0.3 - 2026-11-26
+
+Repository slimming, dependency cleanup, cross-layer deduplication, and STEP/OCCT 7.8.1 compliance documentation refresh release.
+
+### Changed & Cleaned Up
+- **Repository Slimming (-1,913 files / -79.4 MB)**:
+  - Pruned legacy Vitest/Vite configs, zero-reference historical scripts, outdated milestone E2E/evidence artifacts, and duplicate license copies, while archiving historical process docs under `docs/archive/` and keeping `benchmarks/` untouched.
+- **Removed Deprecated `replicad-opencascadejs` (22.9 MB) & Fixed Cloud Dockerfile**:
+  - Removed the deprecated `replicad-opencascadejs` production dependency along with obsolete M0 geometry probe code and updated `cloud/deploy/Dockerfile` accordingly.
+- **Eliminated `m2`/`m3` Cross-Layer Duplication & Unified `mic-solver` Types**:
+  - Deduplicated `m2WorkbenchBridge.ts` and `m3WorkbenchBridge.ts` cross-layer logic and consolidated `mic-solver.d.ts` into a single canonical definition at `src/types/mic-solver.d.ts`.
+- **Refreshed Bundled STEP / OCCT 7.8.1 Compliance Documentation**:
+  - Refreshed `NOTICE`, `THIRD-PARTY-NOTICES.md`, and `docs/step-*.md` to accurately reflect the unified OCCT 7.8.1 XCAF WASM runtime (`occt-unified/`) with full LGPL-2.1-only + OCCT Exception release gate verification.
+
+---
+
 ## v1.0.2 - 2026-11-26
 
 Benchmark-driven engineering upgrade release improving STEP import resilience, AI mate drafting precision/recall, and offline CSV audit report provenance.

@@ -1,6 +1,6 @@
 # 寸链（Cunlian）· 机械制图与三维装配公差 Agent 工作台
 
-> **最新版本**：[`v1.0.2`](https://github.com/kkhlbb/staff/releases/tag/v1.0.2)（[Latest Release](https://github.com/kkhlbb/staff/releases/latest)）｜**实测基准**：[`Cunlian-Bench v1`：25 PASS / 4 FAIL / 4 SKIP](docs/BENCHMARK.md#cunlian-bench-v1-全链路实测成绩单)
+> **最新版本**：[`v1.0.3`](https://github.com/kkhlbb/staff/releases/tag/v1.0.3)（[Latest Release](https://github.com/kkhlbb/staff/releases/latest)）｜**实测基准**：[`Cunlian-Bench v1`：25 PASS / 4 FAIL / 4 SKIP](docs/BENCHMARK.md#cunlian-bench-v1-全链路实测成绩单)
 > **技术架构**：Electron + React + TypeScript + Open CASCADE 7.8.1 Unified XCAF WASM
 > **开源许可**：MIT（Open CASCADE LGPL-2.1-only + OCCT Exception 与第三方组件许可见 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)）
 
@@ -8,9 +8,9 @@
 
 ---
 
-## 一、核心能力（`v1.0.2`）
+## 一、核心能力（`v1.0.3`）
 
-| 能力领域 | `v1.0.2` 实装能力 |
+| 能力领域 | `v1.0.3` 实装能力 |
 |---|---|
 | **统一 OCCT 7.8.1 XCAF WASM 几何内核** | 单一统一 `cunlian_occt.wasm`（Open CASCADE 7.8.1，LGPL-2.1 + OCCT Exception，支持动态替换与完整源码/SBOM 溯源），覆盖 STEP AP214/AP203 装配导入、XCAF 装配树与特征提取、三维构形、**2D HLR 矢量工程图**与 AP214 STEP / SVG / DXF / PDF 导出，内置 Three.js 真 3D 拾取。 |
 | **10 类 GD&T 6-DOF 小位移旋量（SDT）与柔性形变公差仿真** | 支持 3-2-1 基准参考系（DRF A/B/C）、MMC/LMC 实体补偿与共享基准偏移（Datum Shift），覆盖 **10 类 GD&T**：位置度、平行度、垂直度、平面度、同轴度、轮廓度（含不等双边 `UZ`）、圆跳动、全跳动、圆柱度、复合位置度。<br>原生耦合 **4 类解析柔性模型**（轴向压紧回弹、Kirchhoff 薄板压装变形、Euler–Bernoulli 悬臂/简支梁弯曲、热膨胀/双层热翘曲）与 **MIC 刚度/影响系数矩阵** 批量评估（+0 MB 内置 FEA 二进制），支持 CalculiX / Code_Aster / ANSYS / Abaqus 外置 FEA Sidecar 协议与 **3D 变形云图动画**（刚性 vs 柔性 Cp/Cpk/PPM 对比）。 |
@@ -52,15 +52,15 @@ npm run bench:v1 -- --out /tmp/cunlian-bench-v1-offline.json
 
 ---
 
-## 三、下载与体验（`v1.0.2`）
+## 三、下载与体验（`v1.0.3`）
 
-前往 **[GitHub Releases `v1.0.2`](https://github.com/kkhlbb/staff/releases/tag/v1.0.2)** 或 **[Latest Release](https://github.com/kkhlbb/staff/releases/latest)** 下载对应平台安装包，并对照 `SHA256SUMS.txt` 校验文件完整性：
+前往 **[GitHub Releases `v1.0.3`](https://github.com/kkhlbb/staff/releases/tag/v1.0.3)** 或 **[Latest Release](https://github.com/kkhlbb/staff/releases/latest)** 下载对应平台安装包，并对照 `SHA256SUMS.txt` 校验文件完整性：
 
 | 平台 | 发布包 | 说明 |
 |---|---|---|
-| **macOS (Apple Silicon / arm64)** | `cunlian-v1.0.2-macOS-arm64.zip` | 解压拖入 `/Applications` 使用 |
-| **Windows x64（安装程序）** | `cunlian-v1.0.2-windows-x64-setup.exe` | NSIS 每用户安装程序，内置 Windows 命名管道与 `cunlian-mcp.cmd` 桥接 |
-| **Windows x64（便携版）** | `cunlian-v1.0.2-windows-x64.zip` | 免安装解压即用 |
+| **macOS (Apple Silicon / arm64)** | `cunlian-v1.0.3-macOS-arm64.zip` | 解压拖入 `/Applications` 使用 |
+| **Windows x64（安装程序）** | `cunlian-v1.0.3-windows-x64-setup.exe` | NSIS 每用户安装程序，内置 Windows 命名管道与 `cunlian-mcp.cmd` 桥接 |
+| **Windows x64（便携版）** | `cunlian-v1.0.3-windows-x64.zip` | 免安装解压即用 |
 | **校验清单** | `SHA256SUMS.txt` | 所有发布包 SHA-256 校验和 |
 
 ### 签名与首次启动说明
@@ -71,7 +71,7 @@ npm run bench:v1 -- --out /tmp/cunlian-bench-v1-offline.json
   ```
 - **Windows x64**：当前社区版未附商业代码签名，首次下载运行前请先对照 `SHA256SUMS.txt` 校验完整性：
   ```cmd
-  certutil -hashfile cunlian-v1.0.2-windows-x64-setup.exe SHA256
+  certutil -hashfile cunlian-v1.0.3-windows-x64-setup.exe SHA256
   ```
   校验一致后，若遇 Windows SmartScreen 拦截提示，点击「更多信息」→「仍要运行」（或直接使用免安装 `.zip`）。如需配置 Authenticode 代码签名（SignPath.io 开源免费 / Azure Trusted Signing / 本地 PFX），详见 [`docs/windows-code-signing.md`](docs/windows-code-signing.md)。
 
