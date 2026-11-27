@@ -11,11 +11,9 @@ import { copyPlatformRuntimeNotices } from './scripts/platform-runtime-notices.m
  * 可完全跳过下载；不设置时行为与原来一致（官方下载 + 校验）。
  */
 const electronZipDir = process.env.ELECTRON_ZIP_DIR
-const geometryPrototypeDir = process.env.CUNLIAN_M0_GEOMETRY_RESOURCES
 
 const resources = [
   prepareStepAssets(),
-  ...(geometryPrototypeDir === undefined ? [] : [geometryPrototypeDir]),
 ]
 
 const config: ForgeConfig = {

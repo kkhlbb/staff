@@ -139,7 +139,7 @@ const COVER_PLATE_TRANSFORM = [
   [0, 0, 0, 1],
 ] as const satisfies AssemblyModelV1['parts'][number]['nominalTransform']
 
-const MOUNTING_PLATE_FEATURES: readonly M2ModelFeatureItem[] = [
+export const MOUNTING_PLATE_FEATURES: readonly M2ModelFeatureItem[] = [
   {
     objectId: 'obj-right-hole',
     breadcrumb: '安装板 › 右孔 › 圆柱面',
@@ -182,7 +182,7 @@ const MOUNTING_PLATE_FEATURES: readonly M2ModelFeatureItem[] = [
   },
 ]
 
-const MOUNTING_PLATE_ANNOTATIONS: readonly M2DrawingAnnotationItem[] = [
+export const MOUNTING_PLATE_ANNOTATIONS: readonly M2DrawingAnnotationItem[] = [
   {
     annotationId: 'ann-right-margin',
     label: '右孔至右端面边距',
@@ -225,7 +225,7 @@ const MOUNTING_PLATE_ANNOTATIONS: readonly M2DrawingAnnotationItem[] = [
   },
 ]
 
-const MOUNTING_PLATE_REQUIREMENTS: readonly M2RequirementItem[] = [
+export const MOUNTING_PLATE_REQUIREMENTS: readonly M2RequirementItem[] = [
   {
     requirementId: 'req-right-margin',
     title: '右孔至右端面剩余材料 ≥ 13 mm',
@@ -278,7 +278,7 @@ const MOUNTING_PLATE_REQUIREMENTS: readonly M2RequirementItem[] = [
   },
 ]
 
-const MOUNTING_PLATE_CHECKS: readonly M2CheckItem[] = [
+export const MOUNTING_PLATE_CHECKS: readonly M2CheckItem[] = [
   {
     checkId: 'chk-right-margin',
     requirementId: 'req-right-margin',

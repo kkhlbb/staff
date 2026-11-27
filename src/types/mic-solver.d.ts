@@ -1,7 +1,7 @@
 declare module '*/src/core/solver/mic.mjs' {
-  import type { EvidenceRef } from '../src/document-extraction/types'
-  import type { MicMatrixPayloadV1 } from '../src/project-file/assembly3d'
-  import type { PartDisplacementField } from '../src/transport/types'
+  import type { EvidenceRef } from '../document-extraction/types'
+  import type { MicMatrixPayloadV1 } from '../project-file/assembly3d'
+  import type { PartDisplacementField } from '../transport/types'
 
   export class MicValidationError extends Error {
     readonly code: string

@@ -175,7 +175,7 @@ export interface M3WorkbenchBridge {
   >
 }
 
-function fnv1aHex(input: string): string {
+export function fnv1aHex(input: string): string {
   let hash = 0x811c9dc5
   for (let i = 0; i < input.length; i += 1) {
     hash ^= input.charCodeAt(i)
@@ -184,7 +184,7 @@ function fnv1aHex(input: string): string {
   return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
-function canonicalizeSourceAnchor(anchor: M2SourceAnchor | null | undefined) {
+export function canonicalizeSourceAnchor(anchor: M2SourceAnchor | null | undefined) {
   if (!anchor) return null
   return [
     anchor.documentRef,

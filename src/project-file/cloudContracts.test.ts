@@ -14,7 +14,7 @@ import report from '../../cloud/contracts/mcp-report-tools.json'
 import type { ExportSimulationReportRequest, ExportSimulationReportResult } from '../transport/types'
 import rest from '../../cloud/contracts/openapi.json'
 import flags from '../../cloud/contracts/feature-flags.schema.json'
-import { FEATURE_3D_ASSEMBLY_M1 } from '../transport'
+import { FEATURE_3D_ASSEMBLY_M1 } from '../transport/types'
 import { assemblyModelV1Schema, micMatrixPayloadV1Schema } from './assembly3d'
 import { provenanceRefSchema } from './validation'
 

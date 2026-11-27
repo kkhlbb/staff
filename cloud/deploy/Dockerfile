@@ -1,8 +1,9 @@
 FROM node:24-bookworm-slim AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY vendor/occt-unified ./vendor/occt-unified
 RUN npm ci --omit=dev --ignore-scripts \
-    && test -s node_modules/replicad-opencascadejs/dist/replicad_single.wasm
+    && test -s vendor/occt-unified/cunlian_occt.wasm
 
 FROM node:24-bookworm-slim AS web
 WORKDIR /app
@@ -21,6 +22,7 @@ WORKDIR /app
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=8787 CUNLIAN_DATA=/data CUNLIAN_WEB=/web
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY package.json ./
+COPY vendor/occt-unified ./vendor/occt-unified
 COPY src/ ./src/
 COPY desktop/main/ ./desktop/main/
 COPY desktop/shared/ ./desktop/shared/

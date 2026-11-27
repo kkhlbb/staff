@@ -26,6 +26,7 @@
     "desktop/**/*.ts",
     "src/desktop/**/*.ts",
     "src/desktop/**/*.tsx",
+    "src/types/mic-solver.d.ts",
     "forge.config.ts",
     "vite.main.config.ts",
     "vite.preload.config.ts",

@@ -17,5 +17,5 @@
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["mcp"]
+  "include": ["mcp", "src/types/mic-solver.d.ts"]
 }
