@@ -184,14 +184,14 @@ function createWindow(): MainWindowHandle {
   windows.set(webContentsId, handle)
 
   handle.window.on('close', (event) => {
-    if (handle.forceClose) {
+    if (handle.forceClose || allowQuit) {
       handle.forceClose = false
       return
     }
     // 红点 / ⌘W / app.quit 都走同一个 dirty gate；失败或取消不销毁窗口。
     event.preventDefault()
     void withCloseGate(webContentsId, 'close').then((result) => {
-      if (result.ok) {
+      if (result.ok || handle.window.isDestroyed() || handle.window.webContents.isDestroyed()) {
         closeNow(handle)
       } else {
         logStage({
@@ -1084,6 +1084,50 @@ const openFileRouter = createOpenFileRouter({
   onDeliver: queueOpenProjectFile,
 })
 
+const QUIT_CLEANUP_TIMEOUT_MS = 1800
+const QUIT_IDLE_GATE_TIMEOUT_MS = 1500
+
+async function raceWithTimeout(task: Promise<unknown>, timeoutMs: number): Promise<void> {
+  await new Promise<void>((resolve) => {
+    let settled = false
+    const done = () => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve()
+    }
+    const timer = setTimeout(done, timeoutMs)
+    timer.unref?.()
+    void task.then(done, done)
+  })
+}
+
+async function shutdownBackgroundResources(): Promise<void> {
+  closeGuard.dispose()
+  for (const id of [...windows.keys()]) {
+    m1WorkbenchForClose?.invalidate(id, true)
+  }
+  m2PreviewForClose?.disposeAll()
+  const endpoint = localAgentEndpoint
+  localAgentEndpoint = undefined
+  const tasks: Promise<unknown>[] = []
+  if (m1AuthorityForClose) {
+    tasks.push(m1AuthorityForClose.dispose().catch(() => {}))
+  }
+  if (endpoint) {
+    tasks.push(
+      endpoint
+        .then((value) => value?.close())
+        .catch(() => {
+          logStage({ channel: 'm1-local-agent', code: 'LOCAL_ENDPOINT_CLOSE_FAILED' })
+        }),
+    )
+  }
+  if (tasks.length > 0) {
+    await raceWithTimeout(Promise.allSettled(tasks), QUIT_CLEANUP_TIMEOUT_MS)
+  }
+}
+
 function bootstrap(): void {
   // Windows/Linux 冷启动命令行传入 `.cunlian` 路径：先入队，待窗口 did-finish-load 后由 renderer 消费。
   openFileRouter.enqueueColdStart(process.argv, process.cwd())
@@ -1124,23 +1168,48 @@ function bootstrap(): void {
     void (async () => {
       let allOk = true
       for (const window of allWindows) {
-        if (window.isDestroyed()) {
+        if (window.isDestroyed() || window.webContents.isDestroyed()) {
           continue
         }
         const id = window.webContents.id
-        // ⌘Q 与红点走同一个 withCloseGate；保存失败/取消时 quit 中止。
-        const result = await withCloseGate(id, 'quit')
+        const hasActiveSession = controllerForClose?.sessionFor(id) !== null
+        // ⌘Q 与红点走同一个 withCloseGate；有活动会话且用户取消/保存失败时中止 quit；
+        // 无活动会话（启动页/内置模板）或窗口/渲染进程已销毁时，限定短超时兜底避免退出挂起。
+        const gatePromise = withCloseGate(id, 'quit')
+        const result = hasActiveSession
+          ? await gatePromise
+          : await Promise.race([
+              gatePromise,
+              new Promise<IpcResult<null>>((resolve) => {
+                const timer = setTimeout(
+                  () =>
+                    resolve({
+                      ok: false,
+                      error: { code: 'EDITOR_TIMEOUT', message: '空闲窗口退出屏障超时，继续退出' },
+                    }),
+                  QUIT_IDLE_GATE_TIMEOUT_MS,
+                )
+                timer.unref?.()
+              }),
+            ])
         if (!result.ok) {
-          allOk = false
-          logStage({
-            channel: IPC_CHANNELS.windowRequestClose,
-            code: result.error.code,
-            detail: result.error.detail,
-          })
-          break
+          const windowGone = window.isDestroyed() || window.webContents.isDestroyed()
+          const canBypassOnQuit =
+            windowGone ||
+            (!hasActiveSession &&
+              (result.error.code === 'CANCELLED' || result.error.code === 'EDITOR_TIMEOUT'))
+          if (!canBypassOnQuit) {
+            allOk = false
+            logStage({
+              channel: IPC_CHANNELS.windowRequestClose,
+              code: result.error.code,
+              detail: result.error.detail,
+            })
+            break
+          }
         }
         const handle = windows.get(id)
-        if (handle !== undefined) {
+        if (handle !== undefined && !handle.window.isDestroyed()) {
           closeNow(handle)
         }
       }
@@ -1148,24 +1217,38 @@ function bootstrap(): void {
       if (allOk) {
         allowQuit = true
         app.quit()
+        // 兜底：若平台事件循环未触发 will-quit，在短暂等待后强制完成清理并退出。
+        const exitFallback = setTimeout(() => {
+          if (!localAgentClosing) {
+            localAgentClosing = true
+            void shutdownBackgroundResources().finally(() => {
+              app.exit(0)
+            })
+          }
+        }, 500)
+        exitFallback.unref?.()
       }
     })()
   })
 
-  app.on('will-quit', event => {
-    if (!localAgentEndpoint && !localAgentClosing) return
+  app.on('will-quit', (event) => {
+    if (localAgentClosing) {
+      event.preventDefault()
+      return
+    }
     event.preventDefault()
-    const endpoint = localAgentEndpoint
-    if (!endpoint) return
-    localAgentEndpoint = undefined
     localAgentClosing = true
-    void endpoint.then(value => value?.close()).catch(() => {
-      logStage({ channel: 'm1-local-agent', code: 'LOCAL_ENDPOINT_CLOSE_FAILED' })
-    }).finally(() => {
-      localAgentClosing = false
-      app.quit()
+    void shutdownBackgroundResources().finally(() => {
+      app.exit(0)
     })
   })
+
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.on(signal, () => {
+      if (localAgentClosing) return
+      app.quit()
+    })
+  }
 
   void app.whenReady().then(() => {
     applySessionSecurity()

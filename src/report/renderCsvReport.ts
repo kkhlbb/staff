@@ -83,11 +83,11 @@ function describeEvidenceRef(ref: EvidenceRef): {
 
 export function renderCsvReport(payload: SimulationReportPayloadV1): string {
   const rows: unknown[][] = [[
-    'projectId', 'revision', 'draft', 'checksetFingerprint', 'seed', 'sampleCount', 'checkId', 'label',
+    'projectId', 'appVersion', 'revision', 'draft', 'checksetFingerprint', 'seed', 'sampleCount', 'checkId', 'label',
     'status', 'mode', 'requirementLowerMm', 'requirementUpperMm', 'extremeLowerMm', 'extremeUpperMm',
     'threeSigmaLowerMm', 'threeSigmaUpperMm', 'Cp', 'Cpk', 'PPM', 'flexDeltaCpk',
   ]]
-  const stamp = [payload.projectId, payload.revision, payload.isDraft, payload.checksetFingerprint, payload.seed, payload.sampleCount]
+  const stamp = [payload.projectId, payload.appVersion, payload.revision, payload.isDraft, payload.checksetFingerprint, payload.seed, payload.sampleCount]
   for (const check of payload.conclusions) {
     for (const [mode, metrics] of [['rigid', check.rigid], ['compliant', check.compliant]] as const) {
       if (!metrics) continue
@@ -97,7 +97,7 @@ export function renderCsvReport(payload: SimulationReportPayloadV1): string {
   }
   rows.push([])
   rows.push([
-    'section', 'projectId', 'revision', 'draft', 'checksetFingerprint', 'seed', 'sampleCount',
+    'section', 'projectId', 'appVersion', 'revision', 'draft', 'checksetFingerprint', 'seed', 'sampleCount',
     'evidenceTarget', 'evidenceKind', 'evidenceSource', 'evidenceExcerpt', 'evidenceActor',
     'evidenceHash', 'evidenceTimestamp', 'evidenceRefJson',
   ])

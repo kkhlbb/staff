@@ -558,4 +558,12 @@ export class LocalM1Authority {
     if (!isM1FullEventPage(caller.projectId, after)(page)) throw Error('STEP_FAILED')
     return { page, connectionSequences }
   }
+
+  async dispose(): Promise<void> {
+    const gdt = this.gdtAnalyzer
+    const compliant = this.compliantAnalyzer
+    this.gdtAnalyzer = undefined
+    this.compliantAnalyzer = undefined
+    await Promise.allSettled([gdt?.close(), compliant?.close()])
+  }
 }

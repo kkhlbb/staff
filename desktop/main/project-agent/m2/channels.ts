@@ -490,5 +490,10 @@ export function installM2PreviewChannels(ipc: { handle(channel: string, handler:
       state.live()
       await importSource(state, windowId)
     },
+    disposeAll() {
+      for (const windowId of [...states.keys()]) {
+        invalidate(windowId)
+      }
+    },
   }
 }

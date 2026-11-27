@@ -130,6 +130,7 @@ describe('offline simulation report', () => {
       expect(result.content!.charCodeAt(0)).toBe(0xfeff)
       expect(result.content).toContain('""轴""')
       for (const token of [
+        '"appVersion"', '"1.0.0"',
         '"project-123"', '"draft-3"', '"fp-123"', '"321"', '"500"',
         '"rigid"', '"compliant"',
         '"evidenceRef"', '"evidenceTarget"', '"evidenceKind"', '"evidenceSource"',
