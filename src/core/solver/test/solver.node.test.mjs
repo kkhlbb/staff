@@ -190,3 +190,53 @@ test('drafts use the actual geometry worker coplanar and coaxial extraction', as
     await geometry.close()
   }
 })
+
+test('mate drafting detects eccentric floating-clearance, rejects non-overlapping planes, and suppresses transitive hole-hole mates', async () => {
+  const { createGeometryManager } = await import('../../geometry/geometryManager.mjs')
+  const geometry = createGeometryManager()
+  const plateA = {
+    id: 'plate-a', color: '#778899', displayName: 'Plate A', nominalTransform: pose(0, 0, 0),
+    kind: 'parametric-primitive', baseKind: 'plate',
+    sizeQ: { lengthQ: 200000, widthQ: 200000, thicknessQ: 50000 },
+    modifiers: [{ id: 'hole-a', kind: 'through-hole', originQ: [100000, 100000, 0], axis: [0, 0, 1], diameterQ: 44000 }],
+  }
+  const plateB = {
+    id: 'plate-b', color: '#778899', displayName: 'Plate B', nominalTransform: pose(0, 0, 5),
+    kind: 'parametric-primitive', baseKind: 'plate',
+    sizeQ: { lengthQ: 200000, widthQ: 200000, thicknessQ: 50000 },
+    modifiers: [{ id: 'hole-b', kind: 'through-hole', originQ: [100000, 100000, 0], axis: [0, 0, 1], diameterQ: 44000 }],
+  }
+  const plateFar = {
+    id: 'plate-far', color: '#778899', displayName: 'Plate Far', nominalTransform: pose(60, 0, 5),
+    kind: 'parametric-primitive', baseKind: 'plate',
+    sizeQ: { lengthQ: 200000, widthQ: 200000, thicknessQ: 50000 },
+    modifiers: [],
+  }
+  const pin = {
+    id: 'pin', color: '#998877', displayName: 'Pin', nominalTransform: pose(10.1, 10, 0),
+    kind: 'parametric-primitive', baseKind: 'cylinder-spacer',
+    sizeQ: { outerDiameterQ: 40000, innerDiameterQ: 10000, lengthQ: 100000 },
+    modifiers: [],
+  }
+  const base = model([plateA, plateB, plateFar, pin], [])
+  try {
+    const { report } = await geometry.rebuildAssembly(base, { jobId: 'clearance-draft-test', attempt: 1 })
+    const assembly = { ...base, features: report.features }
+    const candidates = recoverCandidates(assembly)
+    const { drafts } = suggestMateDrafts(assembly, candidates)
+    const faceContacts = drafts.filter(item => item.mate.kind === 'face-contact')
+    const clearances = drafts.filter(item => item.mate.kind === 'floating-clearance')
+    const coaxials = drafts.filter(item => item.mate.kind === 'coaxial')
+    assert.equal(faceContacts.length, 1)
+    assert.deepEqual(faceContacts[0].basis.partIds.slice().sort(), ['plate-a', 'plate-b'])
+    assert.equal(clearances.length, 2)
+    for (const draft of clearances) {
+      assert.equal(draft.mate.minQ, 0)
+      assert.equal(draft.mate.maxQ, 2000)
+      assert.equal(draft.basis.partIds[1], 'pin')
+    }
+    assert.equal(coaxials.length, 0)
+  } finally {
+    await geometry.close()
+  }
+})

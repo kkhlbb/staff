@@ -211,30 +211,163 @@ export function extractPart(oc, shape, part) {
     normals: new Float64Array(normals), indices: new Uint32Array(indices), faceTriangleRanges, edgeSegments } }
 }
 
+function canonicalAxis(axis) {
+  for (const value of axis) {
+    if (Math.abs(value) > 1e-6) return value < 0 ? scale(axis, -1) : axis
+  }
+  return axis
+}
+
+function planeBasis(axis) {
+  const n = canonicalAxis(direction(axis))
+  const ref = Math.abs(n[0]) < 0.8 ? [1, 0, 0] : [0, 1, 0]
+  const u = direction(cross(n, ref))
+  const v = cross(n, u)
+  return { n, u, v }
+}
+
+function worldBoxCorners(boundsBox, world, translation) {
+  const { min, max } = boundsBox
+  const corners = []
+  for (const x of [min[0], max[0]]) {
+    for (const y of [min[1], max[1]]) {
+      for (const z of [min[2], max[2]]) {
+        corners.push(add(world([x, y, z]), translation))
+      }
+    }
+  }
+  return corners
+}
+
+function projectedRange(points, axis) {
+  let min = Infinity
+  let max = -Infinity
+  for (const point of points) {
+    const value = dot(point, axis)
+    if (value < min) min = value
+    if (value > max) max = value
+  }
+  return [min, max]
+}
+
+function isInternalCylinder(face, world, translation) {
+  if (face.surface !== 'cylinder' || !face.normal || !face.origin || !face.axis || !face.centroid) return null
+  // Outward normal on a cylinder points toward the axis for internal bores and away for external shafts.
+  const radial = subtract(face.centroid, face.origin)
+  const perp = subtract(radial, scale(face.axis, dot(radial, face.axis)))
+  const perpLen = Math.hypot(...perp)
+  if (perpLen > 1e-9) return dot(face.normal, perp) < 0
+  // Full 360-degree cylinder has centroid on the axis; fall back to part bounds check if needed.
+  void world
+  void translation
+  return null
+}
+
 export function candidateSummary(parts, toleranceMm) {
+  const overlapTol = 1e-4
+  const abutmentTol = 1e-3
+  const radiusMatchTol = 1e-3
   const facesByPart = parts.map(({ mesh, faces }) => {
     const matrix = mesh.nominalTransform.slice(0, 3)
     const world = vector => matrix.map(row => dot(vector, row))
     const translation = matrix.map(row => row[3])
-    return faces.filter(face => face.normal || face.axis).map(face => ({
-      featureId: face.featureId, plane: face.surface === 'plane',
-      axis: world(face.axis ?? face.normal), origin: add(world(face.origin ?? face.centroid), translation),
-    }))
+    const allWorldCorners = faces.flatMap(face => face.bounds ? worldBoxCorners(face.bounds, world, translation) : [])
+    return faces.filter(face => face.normal || face.axis).map(face => {
+      const plane = face.surface === 'plane'
+      const axis = direction(world(face.axis ?? face.normal))
+      const origin = add(world(face.origin ?? face.centroid), translation)
+      const corners = face.bounds ? worldBoxCorners(face.bounds, world, translation) : []
+      let planeBox = null
+      let axialSpan = null
+      let isHole = null
+      if (plane && corners.length) {
+        const { u, v } = planeBasis(axis)
+        const [uMin, uMax] = projectedRange(corners, u)
+        const [vMin, vMax] = projectedRange(corners, v)
+        planeBox = { uMin, uMax, vMin, vMax }
+      } else if (!plane && corners.length) {
+        const { n, u, v } = planeBasis(axis)
+        axialSpan = projectedRange(corners, n)
+        if (face.surface === 'cylinder' && Number.isFinite(face.radius)) {
+          isHole = isInternalCylinder(face, world, translation)
+          if (isHole === null && allWorldCorners.length) {
+            const [tMin, tMax] = axialSpan
+            const sliceCorners = allWorldCorners.filter(pt => {
+              const t = dot(pt, n)
+              return t >= tMin - abutmentTol && t <= tMax + abutmentTol
+            })
+            if (sliceCorners.length) {
+              const [uMin, uMax] = projectedRange(sliceCorners, u)
+              const [vMin, vMax] = projectedRange(sliceCorners, v)
+              const cu = dot(origin, u)
+              const cv = dot(origin, v)
+              isHole = uMin < cu - face.radius - overlapTol && uMax > cu + face.radius + overlapTol &&
+                vMin < cv - face.radius - overlapTol && vMax > cv + face.radius + overlapTol
+            }
+          }
+        }
+      }
+      return {
+        featureId: face.featureId,
+        plane,
+        cylinder: face.surface === 'cylinder',
+        radius: face.radius,
+        axis,
+        origin,
+        planeBox,
+        axialSpan,
+        isHole,
+      }
+    })
   })
   const coplanar = []
   const coaxial = []
+  const clearance = []
   facesByPart.forEach((left, index) => {
     for (let i = index + 1; i < facesByPart.length; i++) {
       for (const a of left) {
         for (const b of facesByPart[i]) {
           if (a.plane !== b.plane || Math.hypot(...cross(a.axis, b.axis)) > 1e-7) continue
           const separation = subtract(a.origin, b.origin)
-          const pair = [a.featureId, b.featureId]
-          if (a.plane && Math.abs(dot(a.axis, separation)) <= toleranceMm) coplanar.push(pair)
-          if (!a.plane && Math.hypot(...cross(a.axis, separation)) <= toleranceMm) coaxial.push(pair)
+          if (a.plane) {
+            if (dot(a.axis, b.axis) >= 0) continue
+            if (Math.abs(dot(a.axis, separation)) > toleranceMm) continue
+            if (a.planeBox && b.planeBox) {
+              const uOverlap = Math.min(a.planeBox.uMax, b.planeBox.uMax) - Math.max(a.planeBox.uMin, b.planeBox.uMin)
+              const vOverlap = Math.min(a.planeBox.vMax, b.planeBox.vMax) - Math.max(a.planeBox.vMin, b.planeBox.vMin)
+              if (uOverlap <= overlapTol || vOverlap <= overlapTol) continue
+            }
+            coplanar.push([a.featureId, b.featureId])
+            continue
+          }
+          const radialSep = Math.hypot(...cross(a.axis, separation))
+          const axialOverlap = a.axialSpan && b.axialSpan
+            ? Math.min(a.axialSpan[1], b.axialSpan[1]) - Math.max(a.axialSpan[0], b.axialSpan[0])
+            : Infinity
+          if (a.cylinder && b.cylinder && Number.isFinite(a.radius) && Number.isFinite(b.radius)) {
+            const radiusDiff = Math.abs(a.radius - b.radius)
+            if (radiusDiff <= radiusMatchTol) {
+              if (radialSep <= toleranceMm && axialOverlap >= -abutmentTol) {
+                if (a.isHole === false && b.isHole === false) continue
+                if (a.isHole !== b.isHole && axialOverlap <= overlapTol) continue
+                coaxial.push([a.featureId, b.featureId])
+              }
+            } else if (a.isHole !== null && b.isHole !== null && a.isHole !== b.isHole) {
+              const hole = a.isHole ? a : b
+              const pin = a.isHole ? b : a
+              const radialClearance = hole.radius - pin.radius
+              const maxClearance = Math.min(2.0, Math.max(0.5, 0.35 * pin.radius))
+              if (radialClearance > radiusMatchTol && radialClearance <= maxClearance &&
+                  axialOverlap > overlapTol && radialSep <= radialClearance + toleranceMm) {
+                clearance.push([hole.featureId, pin.featureId])
+              }
+            }
+          } else if (radialSep <= toleranceMm && axialOverlap >= -abutmentTol) {
+            coaxial.push([a.featureId, b.featureId])
+          }
         }
       }
     }
   })
-  return { coplanar, coaxial }
+  return { coplanar, coaxial, clearance }
 }
