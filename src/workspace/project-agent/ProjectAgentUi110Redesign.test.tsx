@@ -14,7 +14,7 @@ import {
   type WindowChromeInfo,
 } from './workbenchTheme'
 
-interface MockDesktopWindow extends Window {
+type MockDesktopWindow = Omit<Window, 'cunlianDesktop'> & {
   cunlianDesktop?: {
     windowChrome?: WindowChromeInfo
     setTitleBarTheme?: (theme: 'dark' | 'light') => Promise<{ ok: true }>

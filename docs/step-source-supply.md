@@ -1,6 +1,6 @@
-# 统一 OCCT 7.8.1 WASM 对应源码与许可告知供给索引（`v1.0.3`）
+# 统一 OCCT 7.8.1 WASM 对应源码与许可告知供给索引（`v1.1.0`）
 
-本产品（寸链 `v1.0.3`）的 STEP 导入/导出、XCAF 装配特征提取与 2D HLR 工程图能力基于 **Open CASCADE Technology (OCCT) 7.8.1**，经统一编译的 WASM 内核 `occt-unified/cunlian_occt.wasm` 运行。
+本产品（寸链 `v1.1.0`）的 STEP 导入/导出、XCAF 装配特征提取与 2D HLR 工程图能力基于 **Open CASCADE Technology (OCCT) 7.8.1**，经统一编译的 WASM 内核 `occt-unified/cunlian_occt.wasm` 运行。
 
 ## 许可边界与用户权利
 

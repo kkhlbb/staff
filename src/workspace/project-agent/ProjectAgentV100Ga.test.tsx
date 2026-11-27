@@ -596,7 +596,7 @@ describe('V100-FE-01: 5 类进阶 GD&T 3D 框格（含双层复合框格）+ 一
       expect(csvBlob.text).toContain('"projectId","appVersion","revision","draft","checksetFingerprint","seed","sampleCount"')
       expect(csvBlob.text).toContain('"section","projectId","appVersion","revision","draft","checksetFingerprint","seed","sampleCount","evidenceTarget","evidenceKind","evidenceSource","evidenceExcerpt","evidenceActor","evidenceHash","evidenceTimestamp","evidenceRefJson"')
       expect(csvBlob.text).toContain(`"${pkgVersion}"`)
-      expect(csvBlob.text).toContain('"1.0.3"')
+      expect(csvBlob.text).toContain('"1.1.0"')
       expect(csvBlob.text).toContain('"evidenceRef"')
       expect(csvBlob.text).toContain('"project:sample-cover-warpage-01"')
       expect(csvBlob.text).toContain('"user-attestation"')
@@ -610,7 +610,7 @@ describe('V100-FE-01: 5 类进阶 GD&T 3D 框格（含双层复合框格）+ 一
       const jsonBlob = capturedBlobs.find((b) => b.type.startsWith('application/json'))!
       const parsed = JSON.parse(jsonBlob.text) as { appVersion: string; evidence: unknown[] }
       expect(parsed.appVersion).toBe(pkgVersion)
-      expect(parsed.appVersion).toBe('1.0.3')
+      expect(parsed.appVersion).toBe('1.1.0')
       expect(parsed.evidence.length).toBeGreaterThan(0)
 
       await user.click(screen.getByTestId('export-report-html'))

@@ -1,6 +1,6 @@
-# 统一 OCCT 7.8.1 XCAF WASM 运行核：资产与边界（`v1.0.3`）
+# 统一 OCCT 7.8.1 XCAF WASM 运行核：资产与边界（`v1.1.0`）
 
-当前正式发布版本（`v1.0.3`）采用统一编译的 **Open CASCADE Technology 7.8.1 XCAF WASM** 内核，取代历史上的 `replicad-opencascadejs`（npm 绑定）与 `step-narrow-v1/spacer.wasm` 窄核过渡方案。架构决策见 [ADR-004-unified-occt-xcaf.md](adr/ADR-004-unified-occt-xcaf.md)。
+当前正式发布版本（`v1.1.0`）采用统一编译的 **Open CASCADE Technology 7.8.1 XCAF WASM** 内核，取代历史上的 `replicad-opencascadejs`（npm 绑定）与 `step-narrow-v1/spacer.wasm` 窄核过渡方案。架构决策见 [ADR-004-unified-occt-xcaf.md](adr/ADR-004-unified-occt-xcaf.md)。
 
 ## 运行时资产与打包位置
 
@@ -27,4 +27,4 @@
 - **构建脚本与工具链**：基于 Emscripten `4.0.23` 的可重现构建脚本位于 `scripts/occt-wasm-build/reproduce.sh` 与 `scripts/occt-wasm-build/README.md`，源码溯源说明见 `vendor/occt-unified/SOURCE.md`。
 - **机器校验门禁**：
   - `STEP-NARROW-SBOM.cdx.json` 标记 `cunlian:completeness=COMPLETE`、`cunlian:distributionApproval=APPROVED_UNIFIED_OCCT_LGPL_21`、`cunlian:blockers=""`。
-  - `npm run check:release:step` 与 `npm run test:step-license` 对随包二进制与全部法律告知文件执行字节级校验，在 `v1.0.3` 发布链路中退出码为 `0` 放行。
+  - `npm run check:release:step` 与 `npm run test:step-license` 对随包二进制与全部法律告知文件执行字节级校验，在 `v1.1.0` 发布链路中退出码为 `0` 放行。

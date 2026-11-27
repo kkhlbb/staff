@@ -2,6 +2,26 @@
 
 All notable changes to **寸链 (Cunlian)** are documented in this file.
 
+## v1.1.0 - 2026-11-27
+
+Desktop window chrome modernization and warm-neutral UI/UX redesign release aligned pixel-for-pixel to the v4 workbench prototype across Desktop and Cloud/Web.
+
+### Added & Changed
+- **Native Desktop Window Chrome & Dynamic Titlebar Theme Bridge**:
+  - **Windows**: Removed the native menu bar (`setMenu(null)` / `autoHideMenuBar: true`) and enabled a 36px `titleBarOverlay` with real-time theme synchronization (`window.cunlianDesktop.setTitleBarTheme('dark' | 'light')`) and safe-area inset reporting (`windowChrome`).
+  - **macOS**: Adopted `titleBarStyle: 'hiddenInset'` with `trafficLightPosition` tuned for the 36px custom top bar while keeping standard macOS application menus and keyboard shortcuts intact.
+- **Warm-Neutral Design System & Site-Wide De-AI-Slop Polish**:
+  - Aligned typography, warm-neutral dark/light palettes, hairline borders, and quiet visual hierarchy pixel-for-pixel to the v4 prototype, removing decorative gradients, glow effects, and noisy AI-badge chrome across the workbench.
+- **36px Unified Top Bar, Integrated Project Menu & 5px Resizable Dual-Pane Layout**:
+  - Consolidated project switching, templates, import/export, theme switching, and legacy workbench navigation into the 36px custom titlebar with automatic platform safe-area insets (`leftInsetPx` on macOS, `rightInsetPx` on Windows).
+  - Added a persistent 5px draggable split handle (`useWorkbenchLayout`) between the 3D/2D viewport and the right-hand collaboration pane.
+- **Decluttered 3D Viewport & Monochrome Warmth Displacement Heatmap**:
+  - Cleared redundant floating chrome from the 3D canvas, refined assembly tree and context action pills, and upgraded compliant deformation visualization to a monochrome warm-amber heatmap.
+- **Claude Code-Style Quiet Collaboration Stream & `cloud/web` Sync**:
+  - Redesigned the right-hand agent/review stream for calm, scannable engineering telemetry and synchronized the warm-neutral visual system to the `cloud/web` review console.
+
+---
+
 ## v1.0.3 - 2026-11-26
 
 Repository slimming, dependency cleanup, cross-layer deduplication, and STEP/OCCT 7.8.1 compliance documentation refresh release.

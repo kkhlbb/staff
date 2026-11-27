@@ -140,7 +140,7 @@ const title = await evaluate('document.title')
 check('窗口标题为 寸链', title === '寸链', `got=${title}`)
 
 check('渲染出默认工作台', defaultWorkbench === true)
-await evaluate(`document.querySelector('button[aria-label="更多操作"]')?.click()`)
+await evaluate(`document.querySelector('[data-testid="more-menu-btn"], button[aria-label="更多操作"]')?.click()`)
 const legacyLink = 'a[href="#/desktop-legacy"]'
 check('更多菜单提供旧工作台入口', await waitForElement(legacyLink))
 await evaluate(`document.querySelector(${JSON.stringify(legacyLink)})?.click()`)

@@ -1,4 +1,4 @@
-# NOTICE — 寸链（Cunlian）`v1.0.3` 统一 OCCT 7.8.1 XCAF WASM 内核及许可边界
+# NOTICE — 寸链（Cunlian）`v1.1.0` 统一 OCCT 7.8.1 XCAF WASM 内核及许可边界
 
 寸链自身源代码、手写 C++ wrapper 与 worker 按根目录 `LICENSE` 的 **MIT** 许可发布；本告知不覆盖或改写任何第三方组件的原始许可。
 
