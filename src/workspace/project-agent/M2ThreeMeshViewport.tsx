@@ -576,10 +576,10 @@ export function M2ThreeMeshViewport({
 
     const initialDark = themeRef.current === 'dark'
     renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2))
-    renderer.setClearColor(new Color(initialDark ? '#0B0E14' : '#EEF1F5'), 1)
+    renderer.setClearColor(new Color(initialDark ? '#141413' : '#F2F0EA'), 1)
 
     const scene = new Scene()
-    scene.background = new Color(initialDark ? '#0B0E14' : '#EEF1F5')
+    scene.background = new Color(initialDark ? '#141413' : '#F2F0EA')
     const threeCamera = new PerspectiveCamera(42, 16 / 10, 0.1, 10000)
 
     const orbitControls = new OrbitControls(threeCamera, canvas)
@@ -1137,7 +1137,7 @@ export function M2ThreeMeshViewport({
       updateTheme(nextTheme) {
         if (disposed) return
         const isDark = nextTheme === 'dark'
-        const bgColor = new Color(isDark ? '#0B0E14' : '#EEF1F5')
+        const bgColor = new Color(isDark ? '#141413' : '#F2F0EA')
         renderer.setClearColor(bgColor, 1)
         scene.background = bgColor
         primaryMaterial.color.setHex(isDark ? 0x6c6a63 : 0xc4c0b6)

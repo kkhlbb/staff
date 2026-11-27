@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -264,5 +266,33 @@ describe('UI110-FE-01: v1.1.0 应用级 UI 焕新（v4 原型像素级对齐专�
     expect(toolStep.tagName).toBe('DETAILS')
     expect(screen.getByLabelText('内置对话输入框')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '发送' })).toHaveTextContent('↵')
+  })
+
+  it('6. 回归：项目菜单不被顶栏裁切或被画布遮挡（overflow: visible & 层级高于主工作区），且浅色主题完整覆盖 .pa-panel / 画布 / 底栏 / 侧栏', () => {
+    const css = readFileSync(path.resolve(__dirname, 'ProjectAgentPanel.css'), 'utf8')
+
+    // P1: .pa-topbar-left 不得设置 overflow: hidden（否则会裁切 36px 顶栏下方弹出的 .pa-proj-menu）
+    const topbarLeftBlocks = [...css.matchAll(/\.pa-topbar-left\s*\{([^}]*)\}/g)].map((m) => m[1])
+    expect(topbarLeftBlocks.length).toBeGreaterThan(0)
+    for (const block of topbarLeftBlocks) {
+      expect(block).not.toMatch(/overflow\s*:\s*hidden/i)
+    }
+
+    // P1: 顶栏与下拉菜单层级严格高于主工作区 .pa-workbench-body，且菜单声明 no-drag
+    expect(css).toMatch(/\.pa-workbench-topbar\s*\{[^}]*overflow:\s*visible;[^}]*z-index:\s*60;/s)
+    expect(css).toMatch(/\.pa-proj-menu\s*\{[^}]*z-index:\s*80;[^}]*-webkit-app-region:\s*no-drag;/s)
+    expect(css).toMatch(/\.pa-workbench-body\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*1;/s)
+
+    // P2: 深色默认 token 选择器不得包含后代 .pa-panel / .pa-preview，否则会覆盖外层 [data-theme="light"] 浅色变量
+    const darkTokenHeader = css.slice(0, css.indexOf('--bg: #161615;'))
+    expect(darkTokenHeader).not.toContain('.pa-panel')
+    expect(darkTokenHeader).not.toContain('.pa-preview')
+
+    // P2: 浅色暖羊皮纸变量完整声明于 [data-theme="light"] 与 .pa-workbench--light
+    expect(css).toMatch(/\.pa-workbench\[data-theme="light"\],\s*\.pa-workbench\.pa-workbench--light\s*\{/)
+    expect(css).toContain('--bg: #F6F4EF;')
+    expect(css).toContain('--panel: #FAF9F6;')
+    expect(css).toContain('--elev: #EFEDE6;')
+    expect(css).toContain('--canvas: #F2F0EA;')
   })
 })

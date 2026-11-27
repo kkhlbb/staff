@@ -6,9 +6,7 @@
 
 :root,
 .pa-workbench,
-.pa-workbench[data-theme="dark"],
-.pa-panel,
-.pa-preview {
+.pa-workbench[data-theme="dark"] {
   /* Core v4 Warm Charcoal Tokens (Dark Default) */
   --bg: #161615;
   --panel: #1B1B19;
@@ -93,7 +91,8 @@
   color-scheme: dark;
 }
 
-.pa-workbench[data-theme="light"] {
+.pa-workbench[data-theme="light"],
+.pa-workbench.pa-workbench--light {
   /* Core v4 Warm Parchment Tokens (Light) */
   --bg: #F6F4EF;
   --panel: #FAF9F6;
@@ -1546,7 +1545,7 @@
 
 .pa-topbar-left {
   flex-wrap: nowrap;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .pa-topbar-center {
@@ -3525,7 +3524,8 @@
   border-bottom: 1px solid var(--line);
   user-select: none;
   position: relative;
-  z-index: 30;
+  overflow: visible;
+  z-index: 60;
   -webkit-app-region: drag;
 }
 
@@ -3534,7 +3534,9 @@
 .pa-workbench-topbar input,
 .pa-workbench-topbar select,
 .pa-workbench-topbar [role="menu"],
+.pa-workbench-topbar [role="menu"] *,
 .pa-workbench-topbar [role="dialog"],
+.pa-workbench-topbar [role="dialog"] *,
 .pa-workbench-topbar .pa-popover-anchor {
   -webkit-app-region: no-drag;
 }
@@ -3545,6 +3547,7 @@
   padding-left: 12px;
   gap: 6px;
   min-width: 0;
+  overflow: visible;
 }
 
 .pa-app-mark {
@@ -3601,8 +3604,9 @@
   border: 1px solid var(--line-2);
   border-radius: 6px;
   padding: 5px 0;
-  z-index: 50;
+  z-index: 80;
   box-shadow: var(--shadow-md);
+  -webkit-app-region: no-drag;
 }
 .pa-pm-label {
   padding: 5px 12px 3px;
@@ -3677,6 +3681,7 @@
 .pa-topbar-right {
   display: flex;
   align-items: stretch;
+  overflow: visible;
 }
 .pa-tb-tools {
   display: flex;
@@ -3727,6 +3732,8 @@
   gap: 0;
   padding: 0;
   background: var(--bg);
+  position: relative;
+  z-index: 1;
 }
 
 .pa-canvas-column {
