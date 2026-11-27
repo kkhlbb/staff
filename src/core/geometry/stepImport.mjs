@@ -153,7 +153,7 @@ function readStepPlain(oc, path, scope) {
   using progress = new oc.Message_ProgressRange()
   if (reader.ReadFile(path) !== oc.IFSelect_ReturnStatus.IFSelect_RetDone) throw new Error('STEP read failed')
   const transferred = reader.TransferRoots(progress)
-  if (!transferred || transferred !== reader.NbRootsForTransfer()) throw new Error('STEP root transfer failed')
+  if (!transferred) throw new Error('STEP root transfer failed')
   using shape = reader.OneShape()
   if (shape.IsNull()) throw new Error('STEP transfer returned a null shape')
   uniqueSubshapes(oc, shape, oc.TopAbs_ShapeEnum.TopAbs_SOLID, child => {

@@ -421,6 +421,31 @@ test('XCAF multi-level STEP imports assemblyGroups, UTF-8 names, composed transf
   }
 })
 
+test('candidateSummary requires 2D face overlap and detects floating-clearance hole-pin pairs', async () => {
+  const manager = createGeometryManager()
+  try {
+    const plateA = part('plate', { length: 20, width: 20, thickness: 5 }, {
+      id: 'plate-a',
+      modifiers: [{ id: 'hole-a', kind: 'through-hole', originQ: [q(10), q(10), 0], axis: [0, 0, 1], diameterQ: q(4.4) }],
+    })
+    const plateFar = part('plate', { length: 20, width: 20, thickness: 5 }, {
+      id: 'plate-far',
+      nominalTransform: pose(50, 0, 5),
+    })
+    const pin = part('cylinder-spacer', { length: 10, innerDiameter: 1, outerDiameter: 4 }, {
+      id: 'pin',
+      nominalTransform: pose(10.1, 10, 0),
+    })
+    const { report } = await manager.rebuildAssembly(model([plateA, plateFar, pin]), options())
+    // plateA top (z=5, x=[0,20]) and plateFar bottom (z=5, x=[50,70]) are coplanar but do not overlap in 2D.
+    assert.equal(report.candidates.coplanar.length, 0)
+    // plateA hole (r=2.2 at x=10) and pin OD (r=2.0 at x=10.1) have 0.2 mm radial clearance and axial overlap [0,5].
+    assert.equal(report.candidates.clearance.length, 1)
+  } finally {
+    await manager.close()
+  }
+})
+
 test('loads the locked unified OCCT WASM asset byte-for-byte', () => {
   const binary = readFileSync(new URL('../../../vendor/occt-unified/cunlian_occt.wasm', import.meta.url))
   assert.equal(binary.length, 34129104)
