@@ -774,7 +774,7 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
     })
 
     // 打开完成视图：正式保存禁用、焦点落到撤销按钮、可调用 locateM2Evidence 定位条款与右孔
-    const completionToggle = screen.getByRole('button', { name: '完成并保存' })
+    const completionToggle = screen.getByTestId('complete-and-save-btn')
     await user.click(completionToggle)
 
     const completionView = screen.getByTestId('completion-view')
@@ -802,7 +802,7 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
     expect(undoDraftChange).toHaveBeenCalledTimes(1)
     expect(await within(completionView).findByText(/当前所有条款均已通过/)).toBeInTheDocument()
     expect(within(completionView).getByRole('button', { name: '保存正式版本' })).not.toBeDisabled()
-    expect(screen.getByLabelText('顶部连接状态栏')).toHaveTextContent('正式版 v1 · 草稿 draft-2')
+    expect(screen.getByLabelText('修订版本状态')).toHaveAttribute('title', '正式版 v1 · 草稿 draft-2')
   })
 
   it('A05 + A06（三维变化旋转 90° 与固定姿态接触/重叠检查 + 非当前前台项目外部修改无打断通知）', async () => {
@@ -1156,7 +1156,7 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
     firstMount.unmount()
 
     const reopened = render(<ProjectAgentM1Workbench {...persistedProps} />)
-    expect(screen.getByLabelText('顶部连接状态栏')).toHaveTextContent('正式版 v1 · 草稿 draft-2')
+    expect(screen.getByLabelText('修订版本状态')).toHaveAttribute('title', '正式版 v1 · 草稿 draft-2')
     expect(screen.getByLabelText('当前连接来源')).toHaveTextContent('本地 Agent · Claude Desktop')
     expect(screen.getByLabelText('重开项目恢复状态')).toHaveTextContent('✓ 视图与提交快照一致')
     expect(screen.getByTestId('m2-drawing-svg')).toBeInTheDocument()
@@ -1333,7 +1333,7 @@ describe('M3-FE-02：A01–A12 全链路前端验收走查', () => {
       }),
     )
     expect(await screen.findByText(/已正式保存版本.*v2/)).toBeInTheDocument()
-    expect(screen.getByLabelText('顶部连接状态栏')).toHaveTextContent('正式版 v2')
+    expect(screen.getByLabelText('顶部连接状态栏')).toHaveTextContent('已提交 v2')
   })
 
   it('A12（删孔新建同径孔不同 objectId 触发选中对象失效提示，不静默改绑）', async () => {

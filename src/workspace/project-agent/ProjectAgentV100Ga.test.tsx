@@ -331,7 +331,7 @@ describe('V100-FE-01: 5 类进阶 GD&T 3D 框格（含双层复合框格）+ 一
       expect(capturedRequests.some((r) => r.format === 'pdf')).toBe(true)
     })
 
-    await user.click(screen.getByTestId('more-menu-btn'))
+    await user.click(screen.getByTestId('topbar-export-btn'))
     expect(screen.getByTestId('topbar-report-export-group')).toBeInTheDocument()
     await user.click(screen.getByTestId('topbar-export-report-html'))
     await waitFor(() => {
@@ -356,10 +356,9 @@ describe('V100-FE-01: 5 类进阶 GD&T 3D 框格（含双层复合框格）+ 一
     )
 
     const main = container.querySelector('main.pa-workbench')
-    expect(main).toHaveAttribute('data-theme', 'light')
-    await user.click(screen.getByTestId('more-menu-btn'))
-    await user.click(screen.getByTestId('theme-toggle-btn'))
     expect(main).toHaveAttribute('data-theme', 'dark')
+    await user.click(screen.getByTestId('theme-toggle-btn'))
+    expect(main).toHaveAttribute('data-theme', 'light')
   })
 
   it('5. P1 回归：切换 3 套内置模板呈现 3 组独立 3D 零件与非空 2D 矢量图，未绑定模板报告导出与 What-If 滑块零 AUTH_REQUIRED/FEATURE_DISABLED', async () => {

@@ -112,7 +112,7 @@ export function ReviewPage({
   }, [routeProp, locationLike])
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    route.matched && route.theme ? route.theme : 'light',
+    route.matched && route.theme ? route.theme : 'dark',
   )
   const [viewMode, setViewMode] = useState<M2ViewMode>('split')
   const [camera, setCamera] = useState<M2CameraState>(DEFAULT_M2_CAMERA)
@@ -688,7 +688,7 @@ export function ReviewPage({
             className="cw-btn"
             onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
           >
-            {theme === 'light' ? '深色 CAD' : '浅色工作台'}
+            {theme === 'dark' ? '浅色' : '深色'}
           </button>
           <button
             type="button"
@@ -788,7 +788,7 @@ export function ReviewPage({
                       data-testid="review-failed-feature-overlay"
                       role="status"
                     >
-                      <span>⚠ 问题特征红框高亮：</span>
+                      <span>问题特征高亮：</span>
                       {Array.from(failedFeatureIds).map((fid) => (
                         <button
                           key={fid}
@@ -1058,7 +1058,7 @@ export function ReviewPage({
 
               {!reviewIncludeCompliant ? (
                 <div className="cw-alert cw-alert-danger" role="alert" data-testid="review-rigid-warning">
-                  ⚠ 当前正在查看纯刚体基线，忽略柔性形变将低估风险。
+                  提示：当前正在查看纯刚体基线，忽略柔性形变将低估风险。
                 </div>
               ) : null}
 

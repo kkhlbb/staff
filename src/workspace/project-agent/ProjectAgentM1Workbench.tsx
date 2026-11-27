@@ -40,6 +40,7 @@ import {
 } from './workbenchHelpers'
 import { useAssembly3dM1b } from './hooks/useAssembly3dM1b'
 import { usePhysicsM4f1 } from './hooks/usePhysicsM4f1'
+import { useWorkbenchLayout } from './hooks/useWorkbenchLayout'
 import {
   useWorkbenchSession,
   type DesktopProjectOpenForAuthResult,
@@ -264,6 +265,20 @@ export function ProjectAgentM1Workbench({
     [transport, session, physics.simulationResult, effectiveAssembly3d, effectiveSimulationSpec?.seed],
   )
 
+  const bodyRef = useRef<HTMLDivElement | null>(null)
+  const layout = useWorkbenchLayout({
+    bodyRef,
+    onShortcutImportStep: () => session.setPreviewMessage('已触发 STEP 装配导入（干净导入模式）。'),
+    onShortcutNewBlock: () => { session.setOnboardingChoice('skip-local'); session.setShowOnboarding(true) },
+    onShortcutOpenProject: () => { session.setOnboardingChoice('skip-local'); session.setShowOnboarding(true) },
+    onShortcutSave: () => {
+      if (session.hasSaveableResult && !session.showOnboarding) {
+        session.setCommitFeedback(null); session.setShowCompletionView((prev) => !prev)
+      } else { session.setPreviewMessage('当前暂无可保存的修订草稿。') }
+    },
+    onShortcutOpenSettings: () => { session.setOnboardingChoice('model-api'); session.setShowOnboarding((prev) => !prev) },
+  })
+
   const rootClassName = className ? `pa-workbench ${className}` : 'pa-workbench'
 
   return (
@@ -296,51 +311,32 @@ export function ProjectAgentM1Workbench({
         readonlyAuthPending={session.readonlyAuthPending}
         takeoverPending={session.takeoverPending}
         selectedTakeoverTarget={session.selectedTakeoverTarget}
-        onToggleConnectionPopover={() => {
-          session.setMoreMenuOpen(false)
-          session.setConnectionPopoverOpen((prev) => !prev)
-        }}
+        onToggleConnectionPopover={() => { session.setMoreMenuOpen(false); session.setConnectionPopoverOpen((prev) => !prev) }}
         onCloseConnectionPopover={() => session.setConnectionPopoverOpen(false)}
-        onRequestReadonlyAuthorization={() => {
-          void session.handleRequestReadonlyAuthorization()
-        }}
+        onRequestReadonlyAuthorization={() => { void session.handleRequestReadonlyAuthorization() }}
         onChangeSelectedTakeoverTarget={session.setSelectedTakeoverTarget}
-        onTakeoverDraft={() => {
-          void session.handleTakeoverDraft()
-        }}
-        onToggleOnboardingFromPopover={() => {
-          session.setConnectionPopoverOpen(false)
-          session.setShowOnboarding((prev) => !prev)
-        }}
+        onTakeoverDraft={() => { void session.handleTakeoverDraft() }}
+        onToggleOnboardingFromPopover={() => { session.setConnectionPopoverOpen(false); session.setShowOnboarding((prev) => !prev) }}
         hasSaveableResult={session.hasSaveableResult}
         showCompletionView={session.showCompletionView}
-        onToggleCompletionView={() => {
-          session.setCommitFeedback(null)
-          session.setShowCompletionView((prev) => !prev)
-        }}
+        onToggleCompletionView={() => { session.setCommitFeedback(null); session.setShowCompletionView((prev) => !prev) }}
         moreMenuOpen={session.moreMenuOpen}
         sidebarTab={session.sidebarTab}
         theme={session.theme}
         hasMigrationReport={session.migrationReport !== null}
-        onToggleMoreMenu={() => {
-          session.setConnectionPopoverOpen(false)
-          session.setMoreMenuOpen((prev) => !prev)
-        }}
+        onToggleMoreMenu={() => { session.setConnectionPopoverOpen(false); session.setMoreMenuOpen((prev) => !prev) }}
         onCloseMoreMenu={() => session.setMoreMenuOpen(false)}
         onSwitchSidebarMode={() => {
           session.setSidebarSection('conversation')
           session.setSidebarTab((prev) => (prev === 'builtin' ? 'external' : 'builtin'))
           session.setMoreMenuOpen(false)
         }}
-        onToggleTheme={() => {
-          session.handleToggleTheme()
-          session.setMoreMenuOpen(false)
-        }}
-        onOpenLocalProjectSelector={() => {
-          session.setOnboardingChoice('skip-local')
-          session.setShowOnboarding(true)
-          session.setMoreMenuOpen(false)
-        }}
+        onToggleTheme={() => { session.handleToggleTheme(); session.setMoreMenuOpen(false) }}
+        onOpenLocalProjectSelector={() => { session.setOnboardingChoice('skip-local'); session.setShowOnboarding(true); session.setMoreMenuOpen(false) }}
+        localProjects={localProjects}
+        onOpenLocalProject={session.handleOpenLocalProject}
+        onImportStep={() => session.setPreviewMessage('已触发 STEP 装配导入（干净导入模式）。')}
+        onCreateNewBlock={() => { session.setOnboardingChoice('skip-local'); session.setShowOnboarding(true) }}
         onOpenMigrationReport={() => {
           session.setMoreMenuOpen(false)
           if (session.migrationReport) session.setMigrationDrawerOpen(true)
@@ -448,29 +444,15 @@ export function ProjectAgentM1Workbench({
           takeoverPending={session.takeoverPending}
           localAgentCopyFeedback={session.localAgentCopyFeedback}
           localAgentNotice={session.localAgentNotice}
-          onDetectLocalAgents={() => {
-            void session.handleDetectLocalAgents()
-          }}
-          onRegisterLocalAgent={(agent) => {
-            void session.handleRegisterLocalAgent(agent)
-          }}
-          onCopyLocalAgent={(text, label) => {
-            void session.handleCopy(text, label, 'local-agent')
-          }}
-          onRefreshConnectionStatus={() => {
-            void session.handleRefreshConnectionStatus()
-          }}
-          onRequestReadonlyAuthorization={() => {
-            void session.handleRequestReadonlyAuthorization()
-          }}
-          onTakeoverForLocalAgent={() => {
-            void session.handleTakeoverDraft('local-agent')
-          }}
-          onEnterWorkbenchExternal={() => {
-            session.setSidebarSection('conversation')
-            session.setSidebarTab('external')
-            session.setShowOnboarding(false)
-          }}
+        onDetectLocalAgents={() => { void session.handleDetectLocalAgents() }}
+        onRegisterLocalAgent={(agent) => { void session.handleRegisterLocalAgent(agent) }}
+        onCopyLocalAgent={(text, label) => { void session.handleCopy(text, label, 'local-agent') }}
+        onRefreshConnectionStatus={() => { void session.handleRefreshConnectionStatus() }}
+        onRequestReadonlyAuthorization={() => { void session.handleRequestReadonlyAuthorization() }}
+        onTakeoverForLocalAgent={() => { void session.handleTakeoverDraft('local-agent') }}
+        onEnterWorkbenchExternal={() => {
+          session.setSidebarSection('conversation'); session.setSidebarTab('external'); session.setShowOnboarding(false)
+        }}
           apiProviderId={session.apiProviderId}
           currentProviderPreset={session.currentProviderPreset}
           apiBaseUrl={session.apiBaseUrl}
@@ -530,7 +512,7 @@ export function ProjectAgentM1Workbench({
           onOpenLocalProject={session.handleOpenLocalProject}
         />
       ) : (
-        <div className="pa-workbench-body">
+        <div ref={bodyRef} className="pa-workbench-body">
           <M2CenterCanvas
             viewMode={viewport.canvasState.viewMode}
             lastSingleTab={viewport.canvasState.lastSingleTab}
@@ -632,7 +614,25 @@ export function ProjectAgentM1Workbench({
             physicsM4={physics.canvasBundle}
           />
 
+          <div
+            role="separator"
+            tabIndex={0}
+            aria-orientation="vertical"
+            aria-label="拖动调节分栏宽度"
+            aria-valuemin={300}
+            aria-valuemax={560}
+            aria-valuenow={layout.sidebarWidth}
+            data-testid="pane-resizer"
+            className={layout.isResizing ? 'pa-pane-resizer dragging' : 'pa-pane-resizer'}
+            title="拖动调节分栏宽度"
+            onPointerDown={layout.handleResizerPointerDown}
+            onPointerMove={layout.handleResizerPointerMove}
+            onPointerUp={layout.handleResizerPointerUp}
+            onKeyDown={layout.handleResizerKeyDown}
+          />
+
           <CollaborationSidebar
+            sidebarWidth={layout.sidebarWidth}
             sidebarRegionRef={session.sidebarRegionRef}
             chatInputRef={session.chatInputRef}
             retryChatButtonRef={session.retryChatButtonRef}

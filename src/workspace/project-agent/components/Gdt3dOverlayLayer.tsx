@@ -36,6 +36,7 @@ export interface Gdt3dOverlayLayerProps {
   readonly featureKindById: ReadonlyMap<string, PickedFeatureGeometryKind>
   readonly displayMode: GdtDisplayMode
   readonly onChangeDisplayMode?: (mode: GdtDisplayMode) => void
+  readonly hideModeToggle?: boolean
   readonly focusedPartIds: ReadonlySet<string>
   readonly focusedFeatureIds: ReadonlySet<string>
   readonly focusedLoopFeatureIds: ReadonlySet<string>
@@ -74,6 +75,7 @@ export function Gdt3dOverlayLayer({
   featureKindById,
   displayMode,
   onChangeDisplayMode,
+  hideModeToggle = false,
   focusedPartIds,
   focusedFeatureIds,
   focusedLoopFeatureIds,
@@ -140,8 +142,8 @@ export function Gdt3dOverlayLayer({
 
   return (
     <div className="pa-gdt-overlay-root" data-testid="gdt-3d-overlay-layer" data-display-mode={displayMode}>
-      {/* Top-right lightweight Smart Anti-Occlusion <-> Expand All pill */}
-      {onChangeDisplayMode ? (
+      {/* Top-right lightweight Smart Anti-Occlusion <-> Expand All pill (hidden when hosted in bottom bar) */}
+      {onChangeDisplayMode && !hideModeToggle ? (
         <div
           className="pa-gdt-mode-pill"
           role="group"

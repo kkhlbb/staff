@@ -141,6 +141,10 @@ export interface M2ThreeMeshViewportProps {
   readonly exaggerationScale?: number
   readonly onChangeExaggerationScale?: (scale: number) => void
   readonly showDeformationControls?: boolean
+  readonly hideDeformationControlsInViewport?: boolean
+  readonly hideGdtModeToggle?: boolean
+  readonly animationPlaying?: boolean
+  readonly onToggleAnimationPlaying?: () => void
 }
 
 const DEG2RAD = Math.PI / 180
@@ -372,6 +376,10 @@ export function M2ThreeMeshViewport({
   exaggerationScale: exaggerationScaleProp,
   onChangeExaggerationScale,
   showDeformationControls,
+  hideDeformationControlsInViewport = false,
+  hideGdtModeToggle = false,
+  animationPlaying: animationPlayingProp,
+  onToggleAnimationPlaying,
   snapshotHandleRef,
 }: M2ThreeMeshViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -382,7 +390,12 @@ export function M2ThreeMeshViewport({
   )
   const [localDeformationMode, setLocalDeformationMode] = useState<DeformationViewMode>('nominal')
   const [localExaggerationScale, setLocalExaggerationScale] = useState<number>(25)
-  const [isAnimationPlaying, setIsAnimationPlaying] = useState<boolean>(true)
+  const [localAnimationPlaying, setLocalAnimationPlaying] = useState<boolean>(true)
+  const isAnimationPlaying = animationPlayingProp ?? localAnimationPlaying
+  const toggleAnimationPlaying = () => {
+    if (onToggleAnimationPlaying) onToggleAnimationPlaying()
+    else setLocalAnimationPlaying((prev) => !prev)
+  }
   const [deformationEmptyHint, setDeformationEmptyHint] = useState<string | null>(null)
   const isMultiPart = Boolean(partMeshes && partMeshes.length > 0)
 
@@ -440,7 +453,7 @@ export function M2ThreeMeshViewport({
       setDeformationEmptyHint(null)
     }
     if (nextMode === 'animation') {
-      setIsAnimationPlaying(true)
+      setLocalAnimationPlaying(true)
     }
     if (onChangeDeformationMode) {
       onChangeDeformationMode(nextMode)
@@ -575,31 +588,31 @@ export function M2ThreeMeshViewport({
     orbitControls.enablePan = true
     orbitControls.enableZoom = true
 
-    const ambient = new AmbientLight(0xffffff, 1.0)
-    const hemi = new HemisphereLight(0xffffff, 0x64748b, 1.0)
-    const key = new DirectionalLight(0xffffff, 1.8)
+    const ambient = new AmbientLight(0xffffff, 0.95)
+    const hemi = new HemisphereLight(0xfaf9f6, 0x5a5853, 0.95)
+    const key = new DirectionalLight(0xfffaf4, 1.65)
     key.position.set(120, 180, 140)
-    const fill = new DirectionalLight(0xdbeafe, 0.7)
+    const fill = new DirectionalLight(0xf2f0ea, 0.65)
     fill.position.set(-140, -80, -100)
     scene.add(ambient, hemi, key, fill)
 
     const primaryMaterial = new MeshStandardMaterial({
-      color: initialDark ? 0x64748b : 0xcbd5e1,
-      metalness: 0.15,
-      roughness: 0.55,
+      color: initialDark ? 0x6c6a63 : 0xc4c0b6,
+      metalness: 0.08,
+      roughness: 0.72,
       side: DoubleSide,
       polygonOffset: true,
       polygonOffsetFactor: 1,
       polygonOffsetUnits: 1,
     })
-    const edgeMaterial = new LineBasicMaterial({ color: initialDark ? 0x94a3b8 : 0x334155 })
-    const featureEdgeMaterial = new LineBasicMaterial({ color: 0x38bdf8 })
+    const edgeMaterial = new LineBasicMaterial({ color: initialDark ? 0x9d9a92 : 0x625f57 })
+    const featureEdgeMaterial = new LineBasicMaterial({ color: 0xcfa15c })
     const highlightMaterial = new MeshStandardMaterial({
-      color: initialDark ? 0x4b83ff : 0x1e5eff,
-      emissive: initialDark ? 0x1e40af : 0x1749cc,
-      emissiveIntensity: 0.4,
-      metalness: 0.1,
-      roughness: 0.4,
+      color: initialDark ? 0xcc785c : 0xb85d3e,
+      emissive: initialDark ? 0x7c3e2b : 0x6e311d,
+      emissiveIntensity: 0.32,
+      metalness: 0.08,
+      roughness: 0.52,
       side: DoubleSide,
       polygonOffset: true,
       polygonOffsetFactor: -1,
@@ -716,8 +729,8 @@ export function M2ThreeMeshViewport({
         )
         const material = new MeshStandardMaterial({
           color: new Color(part.color),
-          metalness: 0.15,
-          roughness: 0.5,
+          metalness: 0.08,
+          roughness: 0.68,
           side: DoubleSide,
           transparent: xray,
           opacity: xray ? 0.28 : 1,
@@ -1127,10 +1140,10 @@ export function M2ThreeMeshViewport({
         const bgColor = new Color(isDark ? '#0B0E14' : '#EEF1F5')
         renderer.setClearColor(bgColor, 1)
         scene.background = bgColor
-        primaryMaterial.color.setHex(isDark ? 0x64748b : 0xcbd5e1)
-        edgeMaterial.color.setHex(isDark ? 0x94a3b8 : 0x334155)
-        highlightMaterial.color.setHex(isDark ? 0x4b83ff : 0x1e5eff)
-        highlightMaterial.emissive.setHex(isDark ? 0x1e40af : 0x1749cc)
+        primaryMaterial.color.setHex(isDark ? 0x6c6a63 : 0xc4c0b6)
+        edgeMaterial.color.setHex(isDark ? 0x9d9a92 : 0x625f57)
+        highlightMaterial.color.setHex(isDark ? 0xcc785c : 0xb85d3e)
+        highlightMaterial.emissive.setHex(isDark ? 0x7c3e2b : 0x6e311d)
         scheduleRender()
       },
       captureSnapshots(hasDisplacementFields) {
@@ -1867,6 +1880,7 @@ export function M2ThreeMeshViewport({
           featureKindById={featureKindById}
           displayMode={gdtDisplayMode}
           onChangeDisplayMode={onChangeGdtDisplayMode}
+          hideModeToggle={hideGdtModeToggle}
           focusedPartIds={focusedPartIds}
           focusedFeatureIds={selectedIdSet}
           focusedLoopFeatureIds={effectiveLoopFeatures}
@@ -1881,8 +1895,32 @@ export function M2ThreeMeshViewport({
         />
       ) : null}
 
-      {/* M4F1 Bottom-Left Deformation Mode Switcher, Legend & Exaggeration Animation HUD */}
-      {displayDeformationHud ? (
+      {/* Top-right subtle 4px warm monochromatic deformation scale */}
+      {displayDeformationHud && effectiveDeformationMode !== 'nominal' ? (
+        <div
+          className="pa-heat-scale"
+          data-testid="deformation-heatmap-legend"
+          role="status"
+          aria-label={`形变云图色标：0.00 mm 至 ${globalMaxDisplacementMm.toFixed(3)} mm`}
+        >
+          <span className="pa-mono">0.00 mm</span>
+          <span className="pa-heat-bar" aria-hidden="true" />
+          <span className="pa-mono">{globalMaxDisplacementMm.toFixed(3)} mm 变形</span>
+        </div>
+      ) : null}
+
+      {displayDeformationHud && deformationEmptyHint && globalMaxDisplacementMm <= 1e-6 ? (
+        <div
+          className="pa-deformation-hint-tr"
+          role="status"
+          data-testid="deformation-empty-hint"
+        >
+          {deformationEmptyHint}
+        </div>
+      ) : null}
+
+      {/* Standalone Deformation Switcher (only when NOT hosted in the bottom 30px viewport control bar) */}
+      {displayDeformationHud && !hideDeformationControlsInViewport ? (
         <div
           className="pa-deformation-hud-bl"
           data-testid="deformation-hud"
@@ -1899,9 +1937,9 @@ export function M2ThreeMeshViewport({
                 className="pa-deformation-play-btn"
                 aria-label={isAnimationPlaying ? '暂停夸张动画' : '播放夸张动画'}
                 aria-pressed={isAnimationPlaying}
-                onClick={() => setIsAnimationPlaying((prev) => !prev)}
+                onClick={toggleAnimationPlaying}
               >
-                {isAnimationPlaying ? '⏸ 暂停' : '▶ 播放'}
+                {isAnimationPlaying ? '暂停' : '播放'}
               </button>
               <label className="pa-deformation-scale-label">
                 <span>倍率</span>
@@ -1919,31 +1957,6 @@ export function M2ThreeMeshViewport({
                   {effectiveExaggerationScale}×
                 </span>
               </label>
-            </div>
-          ) : null}
-
-          {effectiveDeformationMode !== 'nominal' ? (
-            <div
-              className="pa-deformation-legend"
-              data-testid="deformation-heatmap-legend"
-              role="status"
-              aria-label={`形变云图色标：0.00 mm 至 ${globalMaxDisplacementMm.toFixed(3)} mm`}
-            >
-              <span className="pa-mono">0.00 mm</span>
-              <span className="pa-deformation-legend-bar" aria-hidden="true" />
-              <span className="pa-mono">
-                {globalMaxDisplacementMm.toFixed(3)} mm 变形
-              </span>
-            </div>
-          ) : null}
-
-          {deformationEmptyHint && globalMaxDisplacementMm <= 1e-6 ? (
-            <div
-              className="pa-deformation-hint"
-              role="status"
-              data-testid="deformation-empty-hint"
-            >
-              {deformationEmptyHint}
             </div>
           ) : null}
 

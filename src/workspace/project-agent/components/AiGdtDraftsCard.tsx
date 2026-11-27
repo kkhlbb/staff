@@ -39,27 +39,22 @@ export function AiGdtDraftsCard({
 
   return (
     <section
-      className="pa-card pa-ai-gdt-drafts-card"
+      className="pa-approval pa-ai-gdt-drafts-card"
       aria-label="AI 建议基准与 GD&T 草案"
       data-testid="ai-gdt-drafts-card"
     >
-      <div className="pa-header">
-        <div className="pa-row">
-          <span className="pa-pill pa-tone-action">AI 起草 GD&amp;T</span>
-          <strong>建议基准与 GD&amp;T 草案</strong>
-        </div>
+      <div className="pa-approval-head">
+        <span>建议基准与 GD&amp;T 草案</span>
         {appliedCount > 0 ? (
-          <span className="pa-pill pa-tone-pass" data-testid="ai-gdt-applied-count">
+          <span className="pa-mono pa-d-add" data-testid="ai-gdt-applied-count">
             已应用 {appliedCount} 项
           </span>
-        ) : null}
+        ) : (
+          <span className="pa-mono pa-muted">{drafts.length} 项待核对</span>
+        )}
       </div>
 
-      <p className="pa-muted">
-        悬停任意草案可在 3D 视口实时预览对应特征与框格；勾选核对后点击一键确认应用：
-      </p>
-
-      <ul className="pa-mate-draft-list" aria-label="AI 建议基准与 GD&T 列表">
+      <ul className="pa-approval-diff pa-mate-draft-list" aria-label="AI 建议基准与 GD&T 列表">
         {drafts.map((draft) => {
           const isHighlighted = activeFeatureId === draft.featureId
           const previewText =
@@ -87,21 +82,18 @@ export function AiGdtDraftsCard({
                     aria-label={`选择 GD&T 草案：${draft.title}`}
                     onChange={() => onToggleDraft(draft.id)}
                   />
+                  <span className="pa-d-add pa-mono">+ 公差</span>
                   <span className="pa-mate-draft-title">{draft.featureLabel}</span>
                 </label>
                 <div className="pa-mate-draft-badges">
+                  <span className="pa-mono pa-d-add">{previewText}</span>
                   <span
-                    className={`pa-pill pa-mono ${draft.draftKind === 'datum' ? 'pa-tone-pass' : 'pa-tone-action'}`}
-                  >
-                    {previewText}
-                  </span>
-                  <span
-                    className="pa-pill pa-tone-muted pa-mono"
+                    className="pa-mono pa-muted"
                     aria-label={`置信度 ${draft.confidencePercent}%`}
                   >
                     {draft.confidencePercent}%
                   </span>
-                  {draft.applied ? <span className="pa-pill pa-tone-pass">已确认</span> : null}
+                  {draft.applied ? <span className="pa-mono pa-d-add">已确认</span> : null}
                 </div>
               </div>
 
@@ -139,11 +131,11 @@ export function AiGdtDraftsCard({
         })}
       </ul>
 
-      <div className="pa-mate-draft-actions">
+      <div className="pa-approval-foot">
         <button
           type="button"
           data-testid="apply-gdt-drafts-btn"
-          className="pa-btn pa-btn-primary pa-btn-sm"
+          className="pa-ap-allow"
           disabled={selectedCount === 0}
           onClick={onApplySelected}
         >

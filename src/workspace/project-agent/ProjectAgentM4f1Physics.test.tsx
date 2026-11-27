@@ -51,14 +51,15 @@ describe('M4F1-FE-01: Three.js 形变热力云图、60fps 夸张动画、极简�
     vi.restoreAllMocks()
   })
 
-  it('1. 纯数学引擎：Turbo/Jet 色带钳位、IDW 位移插值、顶点色缓冲与零分配原地夸张更新', () => {
-    // Turbo/Jet 边界与钳位
-    const blue = mapNormalizedValueToTurboColor(-0.5)
+  it('1. 纯数学引擎：单色暖度色带钳位、IDW 位移插值、顶点色缓冲与零分配原地夸张更新', () => {
+    // 单色暖度色带边界与钳位（中性石色 -> 暖砂 -> 陶土 -> 哑光锈红）
+    const stone = mapNormalizedValueToTurboColor(-0.5)
     const mid = mapNormalizedValueToTurboColor(0.5)
-    const red = mapNormalizedValueToTurboColor(1.5)
-    expect(blue[2]).toBeGreaterThan(blue[0]) // blue dominant at t=0
-    expect(mid[1]).toBeGreaterThan(mid[0]) // green dominant at t=0.5
-    expect(red[0]).toBeGreaterThan(red[2]) // red dominant at t=1
+    const rust = mapNormalizedValueToTurboColor(1.5)
+    expect(stone[0]).toBeGreaterThan(0.3)
+    expect(mid[0]).toBeGreaterThan(stone[0]) // warms up from stone to sand/terracotta
+    expect(rust[0]).toBeGreaterThan(rust[2]) // rust red dominant at t=1
+    expect(rust[0]).toBeGreaterThan(stone[0])
 
     // 9 种工程材料预设完整覆盖
     expect(ENGINEERING_MATERIAL_PRESETS).toHaveLength(9)
@@ -100,8 +101,8 @@ describe('M4F1-FE-01: Three.js 形变热力云图、60fps 夸张动画、极简�
     const reusedColorBuf = new Float32Array(9)
     const returned = buildVertexColorBuffer(interp.magnitudes, interp.maxDisplacementMm, reusedColorBuf)
     expect(returned).toBe(reusedColorBuf)
-    expect(reusedColorBuf[2]).toBeGreaterThan(reusedColorBuf[0]) // v0 (mag=0) -> blue
-    expect(reusedColorBuf[3]).toBeGreaterThan(reusedColorBuf[5]) // v1 (mag=0.28) -> red
+    expect(reusedColorBuf[3]).toBeGreaterThan(reusedColorBuf[0]) // v1 (mag=0.28) warmer than v0 (mag=0)
+    expect(reusedColorBuf[3]).toBeGreaterThan(reusedColorBuf[5]) // v1 (mag=0.28) -> matte rust red
 
     // 原地夸张位移更新（零分配）
     const targetPositions = new Float32Array(basePositions)

@@ -189,10 +189,12 @@ export function ContextActionPill({
     if (selectedAssemblyItems.length === 0) {
       if (!contextActionFeedback) return null
       return (
-        <div className="pa-context-float-bottom">
-          <span className="pa-context-toast" role="status">
-            {contextActionFeedback}
-          </span>
+        <div className="pa-sel-bar-wrap">
+          <div className="pa-sel-bar pa-sel-bar-feedback">
+            <span className="pa-context-toast" role="status" data-testid="context-action-feedback">
+              {contextActionFeedback}
+            </span>
+          </div>
         </div>
       )
     }
@@ -241,7 +243,7 @@ export function ContextActionPill({
     }
 
     return (
-      <div className="pa-context-float-bottom">
+      <div className="pa-sel-bar-wrap">
         {/* Lightweight Datum A/B/C Picker Popover */}
         {isSingle && openPopover === 'datum' && onAssignDatum ? (
           <div
@@ -622,26 +624,28 @@ export function ContextActionPill({
         ) : null}
 
         <section
-          className="pa-context-pill pa-context-pill-assembly"
-          aria-label="智能上下文胶囊"
+          className="pa-sel-bar pa-context-pill-assembly"
+          aria-label="特征选择操作条"
           data-testid="assembly-context-pill"
           data-selection-active="true"
           data-selection-count={String(selectedAssemblyItems.length)}
         >
-          <span className="pa-selection-dot" aria-hidden="true" />
-          <span className="pa-pill pa-tone-action" data-testid="selection-count-badge">
-            {countLabel}
-          </span>
-          <div className="pa-context-labels" data-testid="selection-breadcrumb">
-            {selectedAssemblyItems.map((item, idx) => (
-              <span key={item.featureId} className="pa-context-feature-label">
-                {idx > 0 ? <span className="pa-muted"> + </span> : null}
-                <strong>{formatHumanReadableFeatureLabel(item)}</strong>
-              </span>
-            ))}
+          <div className="pa-sel-left">
+            <span className="pa-sel-count pa-mono" data-testid="selection-count-badge">
+              {countLabel}
+            </span>
+            <span className="pa-sel-prefix">已选：</span>
+            <div className="pa-context-labels pa-mono" data-testid="selection-breadcrumb">
+              {selectedAssemblyItems.map((item, idx) => (
+                <span key={item.featureId} className="pa-context-feature-label">
+                  {idx > 0 ? <span className="pa-muted"> + </span> : null}
+                  <span>{formatHumanReadableFeatureLabel(item)}</span>
+                </span>
+              ))}
+            </div>
           </div>
 
-          <div className="pa-context-actions">
+          <div className="pa-sel-acts">
             {actions.map((action) => (
               <button
                 key={action.id}
@@ -650,10 +654,10 @@ export function ContextActionPill({
                 aria-pressed={action.active ? true : undefined}
                 className={
                   action.primary
-                    ? 'pa-btn pa-btn-primary pa-btn-sm'
+                    ? 'pa-text-act pa-text-act-accent'
                     : action.active
-                      ? 'pa-btn pa-btn-active pa-btn-sm'
-                      : 'pa-btn pa-btn-ghost pa-btn-sm'
+                      ? 'pa-text-act pa-text-act-active'
+                      : 'pa-text-act'
                 }
                 onClick={() => handleActionClick(action.id)}
               >
@@ -662,7 +666,7 @@ export function ContextActionPill({
             ))}
             <button
               type="button"
-              className="pa-icon-btn"
+              className="pa-text-act"
               aria-label="取消选择"
               title="取消选择"
               onClick={() => {
@@ -670,14 +674,16 @@ export function ContextActionPill({
                 onClearSelection()
               }}
             >
-              ×
+              取消
             </button>
           </div>
         </section>
         {contextActionFeedback ? (
-          <span className="pa-context-toast" role="status" data-testid="context-action-feedback">
-            {contextActionFeedback}
-          </span>
+          <div className="pa-sel-bar-toast-row">
+            <span className="pa-context-toast" role="status" data-testid="context-action-feedback">
+              {contextActionFeedback}
+            </span>
+          </div>
         ) : null}
       </div>
     )
@@ -689,43 +695,49 @@ export function ContextActionPill({
   if (!selectedFeature) {
     if (!contextActionFeedback) return null
     return (
-      <div className="pa-context-float-bottom">
-        <span className="pa-context-toast" role="status">
-          {contextActionFeedback}
-        </span>
+      <div className="pa-sel-bar-wrap">
+        <div className="pa-sel-bar pa-sel-bar-feedback">
+          <span className="pa-context-toast" role="status">
+            {contextActionFeedback}
+          </span>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="pa-context-float-bottom">
+    <div className="pa-sel-bar-wrap">
       <section
-        className="pa-context-pill"
+        className="pa-sel-bar"
         aria-label="对象引用上下文区"
         data-selection-active="true"
       >
-        <span className="pa-selection-dot" aria-hidden="true" />
-        <strong data-testid="selection-breadcrumb">{selectedFeature.breadcrumb}</strong>
-        {extraCount > 0 ? (
-          <span className="pa-pill pa-tone-action" aria-label="多选特征数量">
-            +{extraCount}
+        <div className="pa-sel-left">
+          <span className="pa-sel-prefix">已选：</span>
+          <span className="pa-mono" data-testid="selection-breadcrumb">
+            {selectedFeature.breadcrumb}
           </span>
-        ) : null}
-        <span className="pa-mono pa-muted pa-context-ref">{selectedFeature.featureRef}</span>
+          {extraCount > 0 ? (
+            <span className="pa-mono pa-muted" aria-label="多选特征数量">
+              +{extraCount}
+            </span>
+          ) : null}
+          <span className="pa-mono pa-muted pa-context-ref">{selectedFeature.featureRef}</span>
+        </div>
 
-        <div className="pa-context-actions">
+        <div className="pa-sel-acts">
           {sidebarMode === 'builtin' ? (
             <>
               <button
                 type="button"
-                className="pa-btn pa-btn-primary pa-btn-sm"
+                className="pa-text-act pa-text-act-accent"
                 onClick={onBringIntoNextPrompt}
               >
                 带入下一句话
               </button>
               <button
                 type="button"
-                className="pa-btn pa-btn-ghost pa-btn-sm"
+                className="pa-text-act"
                 title="复制对象引用到外部会话"
                 onClick={onCopyToExternalSession}
               >
@@ -736,14 +748,14 @@ export function ContextActionPill({
             <>
               <button
                 type="button"
-                className="pa-btn pa-btn-primary pa-btn-sm"
+                className="pa-text-act pa-text-act-accent"
                 onClick={onCopyToExternalSession}
               >
                 复制到外部会话
               </button>
               <button
                 type="button"
-                className="pa-btn pa-btn-ghost pa-btn-sm"
+                className="pa-text-act"
                 title="带入内置对话的下一句话"
                 onClick={onBringIntoNextPrompt}
               >
@@ -753,19 +765,21 @@ export function ContextActionPill({
           )}
           <button
             type="button"
-            className="pa-icon-btn"
+            className="pa-text-act"
             aria-label="取消选择"
             title="取消选择"
             onClick={onClearSelection}
           >
-            ×
+            取消
           </button>
         </div>
       </section>
       {contextActionFeedback ? (
-        <span className="pa-context-toast" role="status">
-          {contextActionFeedback}
-        </span>
+        <div className="pa-sel-bar-toast-row">
+          <span className="pa-context-toast" role="status">
+            {contextActionFeedback}
+          </span>
+        </div>
       ) : null}
     </div>
   )

@@ -141,22 +141,22 @@ export function createMaterialFromPreset(partId: string, presetId: string): Mate
 }
 
 /**
- * Turbo/Jet blue -> cyan -> green -> yellow -> red colormap.
+ * Warm monochromatic deformation colormap (v1.1.0):
+ * neutral stone (#5a5853) -> warm sand (#9b876a) -> terracotta (#cc785c) -> matte rust red (#c9564b).
  * Clamps normalized `t` into [0, 1] and returns RGB components in [0, 1].
  */
-const TURBO_STOPS: readonly (readonly [number, number, number, number])[] = [
-  [0.0, 0.145, 0.388, 0.922], // blue #2563eb
-  [0.25, 0.024, 0.714, 0.831], // cyan #06b6d4
-  [0.5, 0.133, 0.773, 0.369], // green #22c55e
-  [0.75, 0.961, 0.62, 0.043], // yellow/amber #f59e0b
-  [1.0, 0.937, 0.267, 0.267], // red #ef4444
+export const WARM_HEAT_STOPS: readonly (readonly [number, number, number, number])[] = [
+  [0.0, 90 / 255, 88 / 255, 83 / 255], // neutral stone #5a5853
+  [0.45, 155 / 255, 135 / 255, 106 / 255], // warm sand #9b876a
+  [0.8, 204 / 255, 120 / 255, 92 / 255], // terracotta #cc785c
+  [1.0, 201 / 255, 86 / 255, 75 / 255], // matte rust red #c9564b
 ]
 
 export function mapNormalizedValueToTurboColor(t: number): readonly [number, number, number] {
   const clamped = Number.isFinite(t) ? Math.max(0, Math.min(1, t)) : 0
-  for (let i = 0; i < TURBO_STOPS.length - 1; i += 1) {
-    const a = TURBO_STOPS[i]
-    const b = TURBO_STOPS[i + 1]
+  for (let i = 0; i < WARM_HEAT_STOPS.length - 1; i += 1) {
+    const a = WARM_HEAT_STOPS[i]
+    const b = WARM_HEAT_STOPS[i + 1]
     if (clamped >= a[0] && clamped <= b[0]) {
       const span = b[0] - a[0]
       const f = span > 0 ? (clamped - a[0]) / span : 0
@@ -167,7 +167,7 @@ export function mapNormalizedValueToTurboColor(t: number): readonly [number, num
       ]
     }
   }
-  const last = TURBO_STOPS[TURBO_STOPS.length - 1]
+  const last = WARM_HEAT_STOPS[WARM_HEAT_STOPS.length - 1]
   return [last[1], last[2], last[3]]
 }
 
