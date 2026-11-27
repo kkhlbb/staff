@@ -1,113 +1,59 @@
-# 当前产品窄核告知（历史记录在后）
+# 第三方组件与许可（寸链 `v1.0.2`）
 
-本次分发收尾补充：准确供给/包内路径见 `SOURCE-SUPPLY.zh-CN.md`（源码 `docs/step-source-supply.md`）。
-新包内 `Contents/Resources/step-narrow-v1/` 另含 STEP-TRANSITIVE-NOTICES.txt、APP-RUNTIME-NOTICES.txt、
-ELECTRON-LICENSE.txt、ELECTRON-CHROMIUM-LICENSES.html。旧历史段落所称 Resources 根目录自动存在 Electron 许可不准确：
-前阶段发行只在 .app 旁置这两份文件，本次特意复制原文入 .app 防止丢失。
-逐源/传递头文件/系统对象通知保留原条款，生成 JS 采用保守源文件超集，仍不宣称法律审查或完整 SBOM 通过。
-FORMAL_SOURCE_DELIVERY、TRANSITIVE_NOTICE_REVIEW、LGPL_LEGAL_REVIEW 保持人工门禁；本地材料没有公开发布。
+寸链自身代码以 **MIT** 许可发布（见根目录 `LICENSE`）。随附的第三方组件按各自的原始许可分发，应用 MIT 许可不覆盖或替换第三方许可条款。
 
+## 一、统一几何内核：Open CASCADE Technology (OCCT) 7.8.1
 
-本产品STEP出口现在使用固定源OCCT 8.0.1窄C ABI，不再通过npm旧绑定运行。
-OCCT为LGPL2.1及OCCT header exception；应用/手写wrapper/worker保持MIT边界，
-Emscripten glue与musl/LLVM/dlmalloc/Strtod等各依原文，不统称MIT。
-新运行资源为step-narrow-v1，精确hash见STEP-NARROW-SBOM.cdx.json与运行manifest。
-旧npm/旧缓存不进入新包；下文旧版本字节与四项来源缺口仅为原版历史事实。
+寸链 `v1.0.2` 使用统一编译的 **OCCT 7.8.1 XCAF WASM** 内核（外置资源目录 `occt-unified/`，含 `cunlian_occt.mjs`、`cunlian_occt.wasm`、`step-worker.cjs`），承担 STEP AP214/AP203 装配导入/导出、XCAF 装配特征提取、三维构形与 2D HLR 矢量工程图能力。
 
-真实产品wrapper已重编，保留几何安全检查并重链接默认/源修改OCCT库。
-本地可移植对应材料与应用对象见docs/step-narrow-runtime.md。
-允许用户修改LGPL库、重新链接以及为调试这些修改而逆向工程；应用MIT许可不变。
-正式源供给渠道、完整notice与法律审查仍BLOCKED，不是法律认证或分发授权。
-完整许可原文随外置资源；本地显式用户WASM入口不允许自选JS/worker或默认回退。
+- **许可**：**LGPL-2.1-only** + **OCCT LGPL Exception**（Exception 仅适用于头文件材料，不免除整个库的 LGPL-2.1 义务）。
+- **完整原文**：随仓库位于 `vendor/occt-unified/LICENSE_LGPL_21.txt` 与 `vendor/occt-unified/OCCT_LGPL_EXCEPTION.txt`，并由 `scripts/step-assets.mjs` 逐字节复制入应用外置资源目录 `occt-unified/`。
+- **固定源码与可重现构建**：
+  - 上游仓库：[Open-Cascade-SAS/OCCT](https://github.com/Open-Cascade-SAS/OCCT)，标签 `V7_8_1`，提交 `bd2a789f15235755ce4d1a3b07379a2e062fdc2e`（官方归档 SHA-256：`7321af48c34dc253bf8aae3f0430e8cb10976961d534d8509e72516978aa82f5`）。
+  - 构建脚本：`scripts/occt-wasm-build/reproduce.sh`（Emscripten `4.0.23`）与 `vendor/occt-unified/SOURCE.md`。
+- **资产清单与发布门禁**：`STEP-NARROW-SBOM.cdx.json`（随包副本 `occt-unified/STEP-SBOM.cdx.json`）已标记 `COMPLETE` 与 `APPROVED_UNIFIED_OCCT_LGPL_21`，可通过 `npm run check:release:step` 与 `npm run test:step-license` 逐字节核验。
+- **用户修改与替换权利**：允许用户为自用修改 LGPL 库、重新链接以及为调试这些修改而逆向工程；详细供给、本地 WASM opt-in 替换及源码重编译步骤见 `NOTICE`、`docs/step-source-supply.md`、`docs/step-narrow-runtime.md`、`docs/step-license-provenance.md` 与 `docs/step-kernel-replacement.md`。
+- **Emscripten 与传递运行时许可**：Emscripten glue、musl、LLVM 子库、dlmalloc、David Gay `strtod` 等均遵循各自原始许可，不统称为 MIT；完整原文随包位于 `occt-unified/STEP-NARROW-RUNTIME-NOTICES.txt`、`STEP-TRANSITIVE-NOTICES.txt` 与 `STEP-CANDIDATE-LICENSES.txt`。
 
-## 以下为旧npm版本历史告知（不代表当前运行核）
-
-
-# 第三方组件与许可
-
-寸链自身代码以 MIT 许可发布（见 `LICENSE`）。随附的第三方组件按各自的许可分发，以下为实际打包进应用的版本。
-
-## 运行时依赖
+## 二、应用运行时依赖
 
 | 组件 | 版本 | 许可 | 用途 |
 |---|---|---|---|
 | Electron | 45.2.3 | MIT | 桌面运行时 |
-| React / React DOM | 19.3.1 | MIT | 界面 |
-| three | 0.187.0 | MIT | 3D 轴系展示与 STL 预览 |
-| pdfjs-dist | 6.5.438 | **Apache-2.0** | 来源 PDF 渲染 |
-| zod | 4.6.7 | MIT | 项目文件与 IPC 载荷校验 |
+| React / React DOM | 19.3.1 | MIT | 界面渲染 |
+| three | 0.187.0 | MIT | 3D 装配展示、拾取与变形云图动画 |
+| pdfjs-dist | 6.5.438 | **Apache-2.0** | 来源任务书 PDF 渲染与文本提取 |
+| @zip.js/zip.js | 2.24.0 | **BSD-3-Clause** | `.cunlian` 项目归档读写 |
+| papaparse | 5.7.0 | MIT | CSV 数据解析 |
+| smol-toml | 1.9.1 | MIT | 配置文件解析 |
+| zod | 4.6.7 | MIT | 项目文件、IPC、MCP 与 REST 契约校验 |
 
-## 字体
+运行时依赖完整许可汇编随包位于 `occt-unified/APP-RUNTIME-NOTICES.txt` 与 `occt-unified/RELEASE-SUPPLEMENTAL-NOTICES.txt`。
+
+## 三、字体
 
 | 字体 | 许可 | 说明 |
 |---|---|---|
 | Noto Sans SC（子集 `NotoSansSC-Cunlian-subset.woff2`） | **SIL Open Font License 1.1** | 仅保留数值、`⌀`、`±` 与图框/标注所需字形 |
 | Noto Sans Math（子集 `NotoSansMath-Cunlian-symbols.woff2`） | **SIL Open Font License 1.1** | 数学与直径符号 |
 
-完整许可原文见 `public/fonts/LICENSE-OFL-1.1.txt`，字体来源与子集方式见 `public/fonts/SOURCE.md`。
+完整许可原文见 `public/fonts/LICENSE-OFL-1.1.txt`，字体来源与子集方式见 `public/fonts/SOURCE.md`。OFL-1.1 要求再分发时随附许可原文、不得单独售卖字体本身、不得使用保留字体名（Reserved Font Name）命名修改版本。本项目未修改字形，仅做子集化并重命名标明用途（`*-Cunlian`）。
 
-OFL-1.1 要求：再分发时必须随附许可原文；不得单独售卖字体本身；不得使用保留字体名（Reserved Font Name）命名修改版本。本项目**未修改**字形，仅做子集化与重命名以标明用途（`*-Cunlian`）。
+## 四、Apache-2.0 组件（pdfjs-dist）
 
-## 关于 Apache-2.0 组件（pdfjs-dist）
+Apache-2.0 要求分发时保留其 `LICENSE` 与 `NOTICE`（若有）。安装依赖后原文位于 `node_modules/pdfjs-dist/LICENSE`，且已纳入随包 `APP-RUNTIME-NOTICES.txt`。
 
-Apache-2.0 要求分发时保留其 `LICENSE` 与 `NOTICE`（若有）。安装依赖后原文位于 `node_modules/pdfjs-dist/LICENSE`。
+## 五、Electron 与 Chromium 随发行许可
 
-## Electron 应用内的其它许可
+Electron 45.2.3 打包产物包含 Chromium 与 Node.js 的第三方组件许可清单。为防止仅移动 `.app` 时遗漏旁置文件，本产品同时在 `occt-unified/` 内随包复制完整原文：
 
-Electron 打包产物体内还包含 Chromium 与 Node.js 的第三方组件，其许可清单由 Electron Forge 自动生成在产物根目录：
+- `occt-unified/ELECTRON-LICENSE.txt`
+- `occt-unified/ELECTRON-CHROMIUM-LICENSES.html`
 
-- `<app>.app/Contents/Resources/LICENSE`
-- `<app>.app/Contents/Resources/LICENSES.chromium.html`
-
-它们随产物一同分发，无需额外处理。
-
-## STEP：Open CASCADE Technology（本地接入，发布阻塞）
-
-本应用通过固定 `replicad-opencascadejs@1.2.1`（Steve Genoud）使用
-Open CASCADE Technology (OCCT)。npm 包声明 LGPL-2.1-only；OCCT 适用
-LGPL 2.1 及 OCCT additional exception。应用 MIT 不覆盖内核；例外不取消
-库的 LGPL 义务。未使用高层 replicad 包。
-
-完整文本随外置运行资源放在 `step-kernel/LICENSE_LGPL_21.txt` 与
-`step-kernel/OCCT_LGPL_EXCEPTION.txt`，源码副本位于
-`desktop/main/cad/licenses/`，逐字复制批准 spike 已保存的官方 V8_0_0 文本：
-
-- https://raw.githubusercontent.com/Open-Cascade-SAS/OCCT/V8_0_0/LICENSE_LGPL_21.txt
-- https://raw.githubusercontent.com/Open-Cascade-SAS/OCCT/V8_0_0/OCCT_LGPL_EXCEPTION.txt
-- 包源码：https://github.com/sgenoud/replicad/tree/5e4ad9bb5a35bb9ae0571e91c25fa1897ba0570c/packages/replicad-opencascadejs
-- 构建参考：https://github.com/taucad/opencascade.js/tree/v3.1.0
-
-运行字节自报 OCCT 8.0；不能由此证明精确补丁/提交。固定 WASM SHA-256：
-`a9335919fa64bfeaee3e241d3139ad134022682429c6688e20d8ca12093d33d9`。
-npm build script 引用 `ghcr.io/taucad/opencascade.js:3.1.0-single-threaded`，
-不等于已核实对应容器 digest、完整源码、补丁、工具链或完整 SBOM。
-
-**发布阻塞，尚未闭合：**本地实现/测试不等于批准分发。分发前需确定与字节对应
-的完整 source/build provenance，按适用 LGPL 路径提供库源码、修改及构建信息；
-审查静态组合组件与 Emscripten 运行时许可；落实并验证 LGPL 第6节适用的替换/
-重链接及调试修改库权利。上游 URL 不是完整源码供给。当前固定哈希是完整性
-机制，**不是已验证合规的库替换机制**；发布兼容替换途径及说明仍待解决。
-不声称法律合规认证、完整 SBOM 或再分发许可已通过。
-
-## 固定资产补充核查（仍阻塞，不是分发许可）
-
-显著使用告知见根目录 `NOTICE`；本项目 MIT 不改，OCCT/绑定仍按自身许可。
-新增 `STEP-SBOM.cdx.json` 是 STEP 专用部分清单，明确 `INCOMPLETE`，不是整个
-Electron 产品或完整 WASM 静态组件认证。上述 V8_0_0 链接只说明早期许可文本
-取得位置，不是目标精确源码证明；固定构建参考实际指向 V8_0_1，文本相同。
-
-npm tarball SRI、固定 gitHead 中 dist 与实装字节已核对；源码/构建证据、候选
-静态组件许可与尚缺材料见 `docs/step-license-provenance.md`。不把当前容器 tag
-或主分支 URL 当作 npm 构建时的精确来源。额外保留 npm 原始 LGPL 及候选
-Emscripten/runtime/OCCT嵌入条款全文于外置资源，均未被根目录 MIT 替换。
-
-用户替换/重链接与调试权利、可执行探针及阻塞见 `docs/step-kernel-replacement.md`。
-直接替换当前仍被完整性hash拒绝，修改库源重编/重链接未证明，不宣称已合规。
-`npm run check:release:step` 必须非零退出，普通打包绿灯仅表示本地资源核验。
-
-## 如何自行核对
+## 六、自行核对命令
 
 ```bash
-npm install
-node -e "for (const p of ['electron','three','pdfjs-dist','react','zod']) console.log(p, require('./node_modules/'+p+'/package.json').version, require('./node_modules/'+p+'/package.json').license)"
+npm run check:release:step
+npm run test:step-license
+node -e "for (const p of ['electron','three','pdfjs-dist','react','zod','@zip.js/zip.js','papaparse','smol-toml']) console.log(p, require('./node_modules/'+p+'/package.json').version, require('./node_modules/'+p+'/package.json').license)"
 ```

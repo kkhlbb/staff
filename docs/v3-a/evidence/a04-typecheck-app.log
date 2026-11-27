@@ -1,2 +1,0 @@
-# npx tsc -p tsconfig.app.json --noEmit
-EXIT=0

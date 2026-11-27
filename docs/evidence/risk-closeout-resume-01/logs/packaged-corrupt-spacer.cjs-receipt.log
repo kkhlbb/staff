@@ -1,7 +1,0 @@
-{
-  "ok": false,
-  "error": {
-    "code": "STEP_EXPORT_FAILED",
-    "message": "STEP 内核未生成有效文件：STEP_ASSET_HASH"
-  }
-}

@@ -1,5 +1,0 @@
-> npx tsc -p tsconfig.app.json --noEmit  （在 0fad9d0 的 git archive 副本中运行，node_modules 符号链接）
-> 用途：证明 app typecheck 在本卡起点已失败，与 A-04d 改动无关
-
-src/pages/DesktopWorkspace.test.tsx(16,3): error TS2739: Type '{ newProject: Mock<() => Promise<{ ok: true; value: ProjectOpenValue; }>>; openProject: Mock<() => Promise<{ ok: true; value: ProjectOpenValue; }>>; ... 12 more ...; respondEditorFlush: Mock<...>; }' is missing the following properties from type 'CunlianApi': readAttachment, revealProject
-EXIT=2

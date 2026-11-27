@@ -1,9 +1,0 @@
-
- RUN  v5.1.0 /Users/aston/DSH/tmp/cunlian-v4/risk-closeout
-
-
- Test Files  2 passed | 1 skipped (3)
-      Tests  4 passed | 15 skipped (19)
-   Start at  02:34:19
-   Duration  1.08s (import 63%, tests 21%, transform 16%)
-

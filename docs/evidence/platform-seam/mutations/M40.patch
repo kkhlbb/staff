@@ -1,7 +1,0 @@
---- src/agent/redact.ts
-+++ src/agent/redact.ts
--  const cleaned = redactWindowsPaths(text)
-    .replace(posixAbsolutePath, '<path>')
-+  // M40: 不做 Windows 路径脱敏
-  const cleaned = text.replace(posixAbsolutePath, '<path>')
-# 去掉 Windows 路径脱敏；盘符/UNC/环境变量用例必须红。

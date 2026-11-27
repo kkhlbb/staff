@@ -1,2 +1,0 @@
-docs/evidence/risk-closeout-continuation-02-supply/logs/actual-resources-release-gate.stdout.txt:4: new blank line at EOF.
-docs/evidence/risk-closeout-continuation-02-supply/logs/release-gate-after-smoke.stdout.txt:4: new blank line at EOF.

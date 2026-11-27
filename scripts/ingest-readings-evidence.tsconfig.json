@@ -1,8 +1,0 @@
-{
-  "extends": "../tsconfig.desktop.json",
-  "compilerOptions": {
-    "incremental": false,
-    "noEmit": true
-  },
-  "include": ["./ingest-readings-evidence.ts", "./ingest-readings-evidence.config.ts"]
-}

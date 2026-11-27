@@ -1,9 +1,0 @@
-$ node scripts/reproduce-evidence.mjs
-REGENERATED docs/evidence/V3-B1/b1-electron-report.json
-REGENERATED docs/evidence/V3-B2/fix-refit/before-report.json
-REGENERATED docs/evidence/V3-B2/fix-refit/after-report.json
-REGENERATED docs/evidence/V3.6/1110-extraction.json
-REGENERATED docs/evidence/V3.6/stage2-e2e.json
-REGENERATED docs/evidence/V3.6/ambiguous-e2e.json
-
-EXIT 0

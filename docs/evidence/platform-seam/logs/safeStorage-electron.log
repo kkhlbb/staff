@@ -1,7 +1,0 @@
-# node scripts/platform-seam-safe-storage-evidence.mjs
-# exit=0 signal=none
-PROBE_RESULT={"platform":"darwin","electron":"45.2.3","appName":"Electron","encryptionAvailable":true,"backend":"keychain","roundTrip":true,"file":{"bytes":137,"containsPlaintext":false,"entries":1,"mode":"0o600"},"migration":{"preseeded":true,"firstRead":true,"storedInSafeStorage":true,"legacyDeleted":true,"readAfterLegacyDelete":true,"readByNewInstance":true,"plaintextInFile":false,"deleteClearedLegacy":true,"readAfterRemove":true},"plaintextHitsInTempDirs":[],"afterRemove":true,"verdict":"pass"}
-(electron) 'safeStorage.isEncryptionAvailable' is deprecated and will be removed. Please use 'safeStorage.isAsyncEncryptionAvailable' instead.
-(electron) 'safeStorage.encryptString' is deprecated and will be removed. Please use 'safeStorage.encryptStringAsync' instead.
-(electron) 'safeStorage.decryptString' is deprecated and will be removed. Please use 'safeStorage.decryptStringAsync' instead.
-

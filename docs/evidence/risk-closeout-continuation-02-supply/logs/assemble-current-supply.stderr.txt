@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/aston/DSH/tmp/cunlian-v4/risk-closeout/../risk-closeout-evidence/continuation-02/supply/assemble.py", line 53, in <module>
-    assert resource_files[rel]==expected,rel
-KeyError: 'step-narrow-v1/REPLICAD_OCJS_LICENSE.txt'

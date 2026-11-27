@@ -1,6 +1,0 @@
---- src/domain/statistics.ts
-+++ src/domain/statistics.ts
--  const combinedSigmaQ = Math.sqrt(sumSquares)
-+  // M55: 公差直接相加，取代均方根
-  const combinedSigmaQ = terms.reduce((sum, item) => sum + item.toleranceQ, 0)
-# RSS 改成 ΣT（直接相加）而不是 √Σσᵢ²；RSS 区间断言必须红。

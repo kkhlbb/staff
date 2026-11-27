@@ -1,9 +1,0 @@
-$ npx vitest run src/history/__probe_event_id.test.ts   # 临时探针，跑完已删除
-
-[
-  "raw second add: name=ConstraintError message=A mutation operation in the transaction failed because a constraint was not satisfied. For example, an object such as an object store or index already exists and a request attempted to create a new one.",
-  "transaction done: name=Error",
-  "addChangeEvent same base -> 2 rows",
-  "id=source_binding_reviewed:probe2:2026-03-01T00:00:00.000Z#23l400000001",
-  "id=source_binding_reviewed:probe2:2026-03-01T00:00:00.000Z#23l400000002"
-]

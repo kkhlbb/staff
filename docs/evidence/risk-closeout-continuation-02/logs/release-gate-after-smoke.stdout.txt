@@ -1,4 +1,0 @@
-
-> staff@0.4.1-beta check:release:step
-> node scripts/check-step-release.mjs ../risk-closeout-evidence/continuation-02/supply/app/寸链.app/Contents/Resources
-

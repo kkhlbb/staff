@@ -1,7 +1,0 @@
-$ npm run typecheck
-
-> staff@0.0.5-beta typecheck
-> tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit
-
-
-EXIT 0

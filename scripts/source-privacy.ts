@@ -49,11 +49,14 @@ export function verifyEvidenceTree(root = '.'): void {
   for (const [file, row] of Object.entries(sourcePrivacyManifest.files)) {
     if (mode === 'published-archive') verifyPublishedFile(root, file)
     else {
-      const original = readFileSync(join(root, file))
-      if (sha256(original) !== row.originalSha256) throw new Error(`Git original changed: ${file}`)
-      const baseline = execFileSync('git', ['show', `${sourcePrivacyManifest.baselineCommit}:${file}`], { cwd: root, maxBuffer: original.length + 1024 })
+      const target = join(root, file)
+      const baseline = execFileSync('git', ['show', `${sourcePrivacyManifest.baselineCommit}:${file}`], { cwd: root, maxBuffer: 64 * 1024 * 1024 })
       if (sha256(baseline) !== row.originalSha256) throw new Error(`Git baseline changed: ${file}`)
-      if (row.rule !== 'previously-reviewed-historical-image-display-derivative') deriveDisplayFile(file, original)
+      if (existsSync(target)) {
+        const original = readFileSync(target)
+        if (sha256(original) !== row.originalSha256) throw new Error(`Git original changed: ${file}`)
+      }
+      if (row.rule !== 'previously-reviewed-historical-image-display-derivative') deriveDisplayFile(file, baseline)
     }
   }
 }

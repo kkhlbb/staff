@@ -1,51 +1,30 @@
-# 产品窄 ABI 运行核：当前资产与边界
+# 统一 OCCT 7.8.1 XCAF WASM 运行核：资产与边界（`v1.0.2`）
 
-当前默认核不再采用 npm replicad-opencascadejs 或248-symbol Embind ABI。
-仅打包 `step-narrow-v1/{spacer.cjs,spacer.wasm,step-worker.cjs}`；开发源在
-`vendor/step-narrow-v1/`，独立缓存 `node_modules/.cache/step-narrow-v1/`。
-旧npm、缓存及旧STEP-SBOM保留为历史输入，不进入新包运行资源。
+当前正式发布版本（`v1.0.2`）采用统一编译的 **Open CASCADE Technology 7.8.1 XCAF WASM** 内核，取代历史上的 `replicad-opencascadejs`（npm 绑定）与 `step-narrow-v1/spacer.wasm` 窄核过渡方案。架构决策见 [ADR-004-unified-occt-xcaf.md](adr/ADR-004-unified-occt-xcaf.md)。
 
-## 几何和隔离
+## 运行时资产与打包位置
 
-工厂 createNarrowSpacer；C ABI `_spacer_step(Dmm,dmm,Lmm)`，零返回码才读取
-虚拟FS `/spacer.step`。固定glue与worker先严格hash；只有主进程启动时显式
-`CUNLIAN_STEP_LOCAL_OPT_IN=1`、绝对路径 `CUNLIAN_STEP_LOCAL_WASM`、小写
-64位 `CUNLIAN_STEP_LOCAL_SHA256` 三项同意才采用用户WASM的同fd有界快照。
-本地核不允许用户JS/worker；编译/ABI/资源/运行失败不回退默认核。
+- **仓库源码与预编译产物**：`vendor/occt-unified/`（含 `cunlian_occt.mjs`、`cunlian_occt.wasm`、`LICENSE_LGPL_21.txt`、`OCCT_LGPL_EXCEPTION.txt`、`SOURCE.md`、`SHA256SUMS`）与 `desktop/main/cad/step-worker.cjs`。
+- **本地准备缓存**：`node_modules/.cache/occt-unified/`（由 `npm run step:assets` / `scripts/step-assets.mjs` 生成并校验）。
+- **应用随包外置目录**：`<app>/Contents/Resources/occt-unified/`（macOS）或 `<app>/resources/occt-unified/`（Windows），仅包含经哈希锁定的三项运行时文件及完整许可/SBOM/告知文档：
+  - `cunlian_occt.mjs`（SHA-256：`0727731066be7847ab67312f187592db3ee5fe285621cf94cd6baa6aac4eed91`）
+  - `cunlian_occt.wasm`（SHA-256：`6cb34be8e7cd73b121618bb8d3900d2950dc1b67043e59c9e499771afaf89282`）
+  - `step-worker.cjs`（SHA-256：`389fe39a8dc571247d5a6aa2d3b2cd4789d91f721a84ffe32ac1b8ecb84e0790`）
+- 权威哈希清单唯一定义在 `desktop/main/cad/stepAssetManifest.ts`，与 `STEP-NARROW-SBOM.cdx.json`（随包副本命名为 `occt-unified/STEP-SBOM.cdx.json`）逐项一致。打包断言严格拒绝任何未登记的旧内核文件（如 `replicad_single.wasm`、`spacer.wasm`、`spacer.cjs`）。
 
-q整数、奇数q和旧几何边界不变。旧worker中单solid、单closed shell、四解析面、
-两圆柱半径、两平面、体积及三孔点/材料点与距离断言迁至产品C++ wrapper，
-在写STEP前及真实STEP回读后均执行。体积阈值max(1e-6,参考*1e-9)，
-线性1e-6mm；没有用仅BRepCheck替代几何检查。默认与源修改核均真实重编
-新应用对象后重链接，不能直接用缺检查的旧实验spacer.o。
+## 几何能力与进程隔离边界
 
-默认/本地两支均检查实际WASM内存和表声明：单非共享32位memory，
-最大8192页/512MiB；单funcref表有最大值且<=100万项。worker V8限额
-256/32/4MiB不冒充WASM限制或总RSS硬上限。30秒、单任务、取消/超时等待
-terminate、16MiB输出、冻结会话、原子写入及脱敏保持原契约。
-不是OS sandbox；不可加载不信任的用户核，不能保证恶意库数学正确或引擎无漏洞。
+- 统一 `cunlian_occt.wasm` 覆盖 STEP AP214/AP203 装配导入、XCAF 装配树与几何特征提取、三维构形、2D HLR 矢量工程图投影与 AP214 STEP 导出。
+- 隔套 STEP 导出继续保留整数 `q`（`1q = 0.0001 mm`）精度边界与解析几何守卫（单 solid、单闭合 shell、四解析面、圆柱半径、端面平面、体积与通孔点/壁中点距离断言，写 STEP 前与回读后双校验）。
+- 运行时隔离约束：
+  - 主进程与 worker 每次执行前先严格核验固定资产哈希；仅在启动主进程前由用户显式同时设置 `CUNLIAN_STEP_LOCAL_OPT_IN=1`、`CUNLIAN_STEP_LOCAL_WASM`（绝对路径）与 `CUNLIAN_STEP_LOCAL_SHA256`（小写 64 位摘要）时，才采用用户自选 WASM 的同 fd 有界快照。
+  - 默认与本地替换两支均检查实际 WASM 内存与表声明（单非共享 32 位 memory，最大 8192 页 / 512 MiB；单 `funcref` 表有上界且 <= 100 万项），不允许用户替换固定 JS glue 或 worker，且编译/ABI/资源/运行失败不静默回退默认核。
+  - 30 秒超时、单任务并发、取消/超时等待真实 `worker.terminate()`、16 MiB 输出上限、会话冻结、原子写入与路径脱敏契约保持不变。此隔离机制不是 OS 级沙箱，不应加载不受信任的二进制文件。
 
-## 对应材料及真实源修改
+## 对应源码、可重现构建与发布门禁
 
-本地证据根 `../step-newkernel-integration/runtime/`：
-- `rebuild-product.py`：真实编译新wrapper并重链接默认/修改OCCT库，map、why-extract、
-  reproduce、完整命令与日志保留；非全库新编译。
-- `core-supply-product.tar.gz`：独立产品应用对象/源码供给；配套工具实物仍为
-  `../step-newkernel-integration/supply/tool-materials/`（供给内TOOLS.json精确核查）。
-- 解包后的可移植 `rebuild.py --tools <工具材料> --work <全新目录>` 重编wrapper见证、
-  默认链接、真实Controller源patch/重编/更新库并重链接同应用对象；不依赖旧绝对路径。
-- `kernel-modified/spacer.wasm`：真实OCCT源修改产物，用主进程显式opt-in验证，
-  成包结果由父任务独立收集。不是把data-section探针冒称源码重建。
-
-固定OCCT源 b8f597c677811d1f9f4d8a97f5ae2825c0353a42及26文件补丁，
-SDK6.0.5-git、23供应archive与系统组件原文/对象材料保留。
-当前 `STEP-NARROW-SBOM.cdx.json` 对应新资产；旧 `STEP-SBOM.cdx.json`
-是原npm历史记录，未被改写。新机器门禁仍INCOMPLETE/BLOCKED，绝无环境豁免。
-
-新链已具本地源码/构建/对象/链接材料。expanded-default-v2与expanded-local-v2已真实
-成包IPC/worker/磁盘导出；修改核回执hash为aba946481d18427a351dd1cafd7768a594eb2d1cb91a5e402172abc39fa0408a，
-STEP含实际Controller源码修改标记，历史冻结/奇数q/取消/非法退化/资源缺坏拒绝成立。
-据此仅移除PRODUCT_PACKAGED_MODIFIED_KERNEL_EXECUTION；正式对应源交付机制、修改通知、
-传递头文件/生成JS逐项notice与法律审查仍未闭合，发布状态保持BLOCKED。
-不得借新链补写旧npm历史来源或以普通打包成功宣称LGPL认证/发布许可。
-OCP读回同OCCT家族，默认transfer可能heal，不是异厂商或无修复证明。
+- **上游固定源码**：Open CASCADE Technology `7.8.1`（tag `V7_8_1`，commit `bd2a789f15235755ce4d1a3b07379a2e062fdc2e`，源码归档 SHA-256：`7321af48c34dc253bf8aae3f0430e8cb10976961d534d8509e72516978aa82f5`）。
+- **构建脚本与工具链**：基于 Emscripten `4.0.23` 的可重现构建脚本位于 `scripts/occt-wasm-build/reproduce.sh` 与 `scripts/occt-wasm-build/README.md`，源码溯源说明见 `vendor/occt-unified/SOURCE.md`。
+- **机器校验门禁**：
+  - `STEP-NARROW-SBOM.cdx.json` 标记 `cunlian:completeness=COMPLETE`、`cunlian:distributionApproval=APPROVED_UNIFIED_OCCT_LGPL_21`、`cunlian:blockers=""`。
+  - `npm run check:release:step` 与 `npm run test:step-license` 对随包二进制与全部法律告知文件执行字节级校验，在 `v1.0.2` 发布链路中退出码为 `0` 放行。

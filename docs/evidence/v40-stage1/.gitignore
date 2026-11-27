@@ -1,4 +1,0 @@
-# Keep the actual command/mutation output despite the repository-wide *.log rule.
-!logs/
-!logs/*.log
-!mutations/*.log

@@ -1,7 +1,0 @@
-$ sandbox-exec -p '(version 1)(allow default)(deny network*)' npm run typecheck:desktop
-
-> staff@0.4.0-beta typecheck:desktop
-> tsc -p tsconfig.desktop.json --noEmit
-
-
-exit=0
