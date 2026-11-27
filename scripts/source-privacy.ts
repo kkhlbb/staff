@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process'
 import { resolve, join } from 'node:path'
 import { legacyCaptures } from './evidence-json'
 
-export const manifestSha256 = '715f43e743a57c72a65ec928710573be51cae6819f8ea19359578034c37f67f9'
+export const manifestSha256 = '9ad682ea06f29fd933461968e4a818c9e18317460b7b40894085b04a663a7582'
 export const privacyManifestPath = 'release/source-privacy-manifest.json'
 export const sha256 = (bytes: Uint8Array | string) => createHash('sha256').update(bytes).digest('hex')
 interface DisplayEdit { offset: number; length: number; originalFragmentSha256: string; replacement: string }

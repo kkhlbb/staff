@@ -15,7 +15,7 @@ assert not git('status', '--porcelain'), 'commit the reviewed inputs before arch
 head = git('rev-parse', 'HEAD').decode().strip()
 manifest_bytes = (r/'release/source-privacy-manifest.json').read_bytes()
 # Same independent trust anchor as the test verifier; never accept an arbitrary mapping.
-assert sha(manifest_bytes) == '715f43e743a57c72a65ec928710573be51cae6819f8ea19359578034c37f67f9'
+assert sha(manifest_bytes) == '9ad682ea06f29fd933461968e4a818c9e18317460b7b40894085b04a663a7582'
 manifest = json.loads(manifest_bytes)
 images = json.loads(pathlib.Path(a.images).read_text())
 out = pathlib.Path(a.output);out.mkdir(parents=True, exist_ok=False)

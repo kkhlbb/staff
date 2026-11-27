@@ -129,6 +129,19 @@ describe('offline simulation report', () => {
     if (format === 'csv') {
       expect(result.content!.charCodeAt(0)).toBe(0xfeff)
       expect(result.content).toContain('""轴""')
+      for (const token of [
+        '"project-123"', '"draft-3"', '"fp-123"', '"321"', '"500"',
+        '"rigid"', '"compliant"',
+        '"evidenceRef"', '"evidenceTarget"', '"evidenceKind"', '"evidenceSource"',
+        '"evidenceExcerpt"', '"evidenceActor"', '"evidenceHash"', '"evidenceRefJson"',
+        '"dim-pdf-text"', '"pdf-text"', 'L=12.00±0.05', hashA,
+        '"dim-pdf-ocr"', '"pdf-ocr"', 'D=20.00', hashB,
+        '"dim-image-ocr"', '"image-ocr"', 'sketch.png', 't=1.50', hashC,
+        '"physics-user"', '"user-attestation"', '"eng-1"', '6061-T6 verified',
+        '"mic-agent"', '"agent-read"', 'agent-1 (model-v1)', 'Read MIC table from FEA appendix',
+      ]) {
+        expect(result.content).toContain(token)
+      }
     }
     if (format === 'json') expect(JSON.parse(result.content!).sha256).toMatch(/^[a-f0-9]{64}$/)
   })
